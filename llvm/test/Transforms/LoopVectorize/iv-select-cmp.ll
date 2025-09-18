@@ -1646,8 +1646,8 @@ exit:                                             ; preds = %for.body
 define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC1-LABEL: define i64 @select_icmp_unsigned_iv_range(
 ; CHECK-VF4IC1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
-; CHECK-VF4IC1-NEXT:  [[ENTRY:.*]]:
-; CHECK-VF4IC1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-VF4IC1-NEXT:  [[ENTRY:.*:]]
+; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -1668,16 +1668,13 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[TMP5]])
 ; CHECK-VF4IC1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-VF4IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP7]], i64 [[RDX_START]]
-; CHECK-VF4IC1-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-VF4IC1-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK-VF4IC1:       [[SCALAR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -4, %[[MIDDLE_BLOCK]] ], [ -9223372036854775808, %[[ENTRY]] ]
-; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 9223372036854775804, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[FOR_BODY]]:
-; CHECK-VF4IC1-NEXT:    [[IV_J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[IV_I:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[IV_J:%.*]] = phi i64 [ -4, %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[IV_I:%.*]] = phi i64 [ 9223372036854775804, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_I]]
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_I]]
@@ -1694,8 +1691,8 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ;
 ; CHECK-VF4IC4-LABEL: define i64 @select_icmp_unsigned_iv_range(
 ; CHECK-VF4IC4-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
-; CHECK-VF4IC4-NEXT:  [[ENTRY:.*]]:
-; CHECK-VF4IC4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-VF4IC4-NEXT:  [[ENTRY:.*:]]
+; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -1743,16 +1740,13 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[RDX_MINMAX12]])
 ; CHECK-VF4IC4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP19]], 0
 ; CHECK-VF4IC4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP19]], i64 [[RDX_START]]
-; CHECK-VF4IC4-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-VF4IC4-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK-VF4IC4:       [[SCALAR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -16, %[[MIDDLE_BLOCK]] ], [ -9223372036854775808, %[[ENTRY]] ]
-; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ 9223372036854775792, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-VF4IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF4IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[FOR_BODY]]:
-; CHECK-VF4IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[IV_I:%.*]] = phi i64 [ [[BC_RESUME_VAL13]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ -16, %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[IV_I:%.*]] = phi i64 [ 9223372036854775792, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_I]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-VF4IC4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_I]]
@@ -1769,8 +1763,8 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ;
 ; CHECK-VF1IC4-LABEL: define i64 @select_icmp_unsigned_iv_range(
 ; CHECK-VF1IC4-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
-; CHECK-VF1IC4-NEXT:  [[ENTRY:.*]]:
-; CHECK-VF1IC4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-VF1IC4-NEXT:  [[ENTRY:.*:]]
+; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -1819,16 +1813,13 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF1IC4-NEXT:    [[RDX_MINMAX5:%.*]] = call i64 @llvm.umax.i64(i64 [[RDX_MINMAX4]], i64 [[TMP29]])
 ; CHECK-VF1IC4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[RDX_MINMAX5]], 0
 ; CHECK-VF1IC4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 [[RDX_START]]
-; CHECK-VF1IC4-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-VF1IC4-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK-VF1IC4:       [[SCALAR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -4, %[[MIDDLE_BLOCK]] ], [ -9223372036854775808, %[[ENTRY]] ]
-; CHECK-VF1IC4-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ 9223372036854775804, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-VF1IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ [[RDX_START]], %[[ENTRY]] ]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
-; CHECK-VF1IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[IV_I1:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[IV_J:%.*]] = phi i64 [ -4, %[[SCALAR_PH]] ], [ [[INC3:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[IV_I1:%.*]] = phi i64 [ 9223372036854775804, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_I1]]
 ; CHECK-VF1IC4-NEXT:    [[TMP31:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
 ; CHECK-VF1IC4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_I1]]

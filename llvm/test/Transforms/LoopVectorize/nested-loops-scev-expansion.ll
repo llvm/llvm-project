@@ -234,7 +234,7 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[TMP3]], -100
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
@@ -265,14 +265,12 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 24
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 32, %[[MIDDLE_BLOCK]] ], [ 8, %[[LOOP_2_HEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i16 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP_3:.*]]
 ; CHECK:       [[LOOP_3]]:
-; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_3_NEXT:%.*]], %[[LOOP_3]] ]
-; CHECK-NEXT:    [[SUB_PHI:%.*]] = phi i16 [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP_3]] ]
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ 32, %[[SCALAR_PH]] ], [ [[IV_3_NEXT:%.*]], %[[LOOP_3]] ]
+; CHECK-NEXT:    [[SUB_PHI:%.*]] = phi i16 [ [[TMP5]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP_3]] ]
 ; CHECK-NEXT:    [[SUB]] = sub i16 [[SUB_PHI]], [[REM_TRUNC]]
 ; CHECK-NEXT:    [[SUB_EXT:%.*]] = zext i16 [[SUB]] to i32
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i32 [[IV_3]]

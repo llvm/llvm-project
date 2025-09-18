@@ -6,7 +6,7 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-LABEL: define void @struct_return_1xi64_replicate(
 ; VF4-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -47,7 +47,7 @@ define void @struct_return_1xi64_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-LABEL: define void @struct_return_1xi64_replicate(
 ; VF2IC2-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
@@ -112,7 +112,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-LABEL: define void @struct_return_2xf32_replicate(
 ; VF4-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -172,7 +172,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-LABEL: define void @struct_return_2xf32_replicate(
 ; VF2IC2-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
@@ -263,7 +263,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-LABEL: define void @struct_return_3xi32_replicate(
 ; VF4-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[DST_A:%.*]], ptr noalias [[DST_B:%.*]], ptr noalias [[DST_C:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -342,7 +342,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-LABEL: define void @struct_return_3xi32_replicate(
 ; VF2IC2-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[DST_A:%.*]], ptr noalias [[DST_B:%.*]], ptr noalias [[DST_C:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:

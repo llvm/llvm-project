@@ -8,7 +8,7 @@
 define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-LABEL: @foo(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SSE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; SSE:       vector.ph:
 ; SSE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SSE:       vector.body:
@@ -40,11 +40,11 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE:       for.cond.cleanup:
 ; SSE-NEXT:    ret void
 ; SSE:       for.body:
-; SSE-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; SSE-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 ; AVX1-LABEL: @foo(
 ; AVX1-NEXT:  entry:
-; AVX1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -94,11 +94,11 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1:       for.cond.cleanup:
 ; AVX1-NEXT:    ret void
 ; AVX1:       for.body:
-; AVX1-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; AVX1-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 ; AVX2-LABEL: @foo(
 ; AVX2-NEXT:  entry:
-; AVX2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -148,7 +148,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2:       for.cond.cleanup:
 ; AVX2-NEXT:    ret void
 ; AVX2:       for.body:
-; AVX2-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; AVX2-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 ; ATOM-LABEL: @foo(
 ; ATOM-NEXT:  entry:

@@ -23,7 +23,7 @@ define void @drop_scalar_nuw_nsw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-LABEL: define void @drop_scalar_nuw_nsw(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -65,7 +65,7 @@ define void @drop_scalar_gep_nusw(ptr noalias nocapture readonly %input, ptr %ou
 ; CHECK-LABEL: define void @drop_scalar_gep_nusw(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -107,7 +107,7 @@ define void @drop_scalar_gep_nuw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-LABEL: define void @drop_scalar_gep_nuw(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -150,7 +150,7 @@ define void @drop_nonpred_scalar_nuw_nsw(ptr noalias nocapture readonly %input, 
 ; CHECK-LABEL: define void @drop_nonpred_scalar_nuw_nsw(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -192,7 +192,7 @@ define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr 
 ; CHECK-LABEL: define void @preserve_vector_nuw_nsw(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -235,7 +235,7 @@ define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-LABEL: define void @drop_vector_nuw_nsw(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -283,7 +283,7 @@ define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, 
 ; CHECK-LABEL: define void @drop_nonvector_nuw_nsw_avx1(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]], ptr noalias [[PTRS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -342,7 +342,7 @@ define void @preserve_nuw_nsw_no_addr(ptr %output) local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @preserve_nuw_nsw_no_addr(
 ; CHECK-SAME: ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -379,7 +379,7 @@ define void @drop_scalar_exact(ptr noalias nocapture readonly %input, ptr %outpu
 ; CHECK-LABEL: define void @drop_scalar_exact(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -422,7 +422,7 @@ define void @drop_zext_nneg(ptr noalias %p, ptr noalias %p1) #0 {
 ; CHECK-LABEL: define void @drop_zext_nneg(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[P1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -474,7 +474,7 @@ define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input
 ; CHECK-LABEL: define void @preserve_vector_exact_no_addr(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -520,7 +520,7 @@ define void @preserve_exact_no_addr(ptr %output) local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @preserve_exact_no_addr(
 ; CHECK-SAME: ptr [[OUTPUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -613,7 +613,7 @@ define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
 ; CHECK-LABEL: define void @pr70590_recipe_without_underlying_instr(
 ; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -699,7 +699,7 @@ define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst
 ; CHECK-LABEL: define void @recipe_without_underlying_instr_lanes_used(
 ; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[AUX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -792,7 +792,7 @@ define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr read
 ; CHECK-LABEL: define void @Bgep_inbounds_unconditionally_due_to_store(
 ; CHECK-SAME: ptr noalias [[B:%.*]], ptr readonly [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

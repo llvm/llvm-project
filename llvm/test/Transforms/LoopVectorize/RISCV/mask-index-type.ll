@@ -11,7 +11,7 @@ target triple = "riscv64"
 define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-LABEL: @test(
 ; VLENUNK-NEXT:  entry:
-; VLENUNK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VLENUNK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VLENUNK:       vector.ph:
 ; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i64 0
 ; VLENUNK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -45,7 +45,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK:       scalar.ph:
 ; VLENUNK-NEXT:    br label [[FOR_BODY:%.*]]
 ; VLENUNK:       for.body:
-; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; VLENUNK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 512
 ; VLENUNK-NEXT:    br i1 [[ICMP]], label [[DO_LOAD:%.*]], label [[LATCH]]
 ; VLENUNK:       do_load:
@@ -59,7 +59,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; VLENUNK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; VLENUNK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VLENUNK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; VLENUNK:       for.end:
 ; VLENUNK-NEXT:    ret void
 ;

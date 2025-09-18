@@ -9,7 +9,7 @@ define void @ld_div2_urem3_1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_urem3_1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -83,7 +83,7 @@ define void @ld_div2_urem3_2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_urem3_2
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -158,7 +158,7 @@ define void @ld_div4(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div4
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -231,7 +231,7 @@ define void @ld_div8_urem3(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div8_urem3
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

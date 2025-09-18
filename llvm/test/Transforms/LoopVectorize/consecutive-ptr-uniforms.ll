@@ -1601,8 +1601,8 @@ for.end:
 define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(ptr %ary) {
 ; CHECK-LABEL: define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(
 ; CHECK-SAME: ptr [[ARY:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1616,12 +1616,11 @@ define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_st
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10240
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10240, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 10240, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[CUR_PTR:%.*]] = getelementptr inbounds ptr, ptr [[ARY]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[CUR_PTR]], ptr [[CUR_PTR]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
@@ -1632,8 +1631,8 @@ define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_st
 ;
 ; INTER-LABEL: define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_store(
 ; INTER-SAME: ptr [[ARY:%.*]]) {
-; INTER-NEXT:  [[ENTRY:.*]]:
-; INTER-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; INTER-NEXT:  [[ENTRY:.*:]]
+; INTER-NEXT:    br label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTER:       [[VECTOR_BODY]]:
@@ -1647,12 +1646,11 @@ define void @pr61396_pointer_used_as_both_stored_value_and_pointer_operand_by_st
 ; INTER-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10240
 ; INTER-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; INTER:       [[MIDDLE_BLOCK]]:
-; INTER-NEXT:    br label %[[SCALAR_PH]]
+; INTER-NEXT:    br label %[[SCALAR_PH:.*]]
 ; INTER:       [[SCALAR_PH]]:
-; INTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10240, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; INTER-NEXT:    br label %[[LOOP:.*]]
 ; INTER:       [[LOOP]]:
-; INTER-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTER-NEXT:    [[IV:%.*]] = phi i64 [ 10240, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; INTER-NEXT:    [[CUR_PTR:%.*]] = getelementptr inbounds ptr, ptr [[ARY]], i64 [[IV]]
 ; INTER-NEXT:    store ptr [[CUR_PTR]], ptr [[CUR_PTR]], align 8
 ; INTER-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1

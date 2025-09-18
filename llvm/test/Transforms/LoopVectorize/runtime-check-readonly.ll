@@ -7,7 +7,7 @@ define void @add_ints(ptr nocapture %A, ptr nocapture %B, ptr nocapture %C) {
 ; CHECK-LABEL: define void @add_ints(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr captures(none) [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
@@ -17,7 +17,7 @@ define void @add_ints(ptr nocapture %A, ptr nocapture %B, ptr nocapture %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[C3]]
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], [[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ;
 entry:

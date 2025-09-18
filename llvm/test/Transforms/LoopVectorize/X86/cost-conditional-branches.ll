@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @test_replicate_call_chain(float %x, ptr noalias %A, ptr noalias %B, ptr align 4 noalias %C, ptr align 4 noalias %D, ptr noalias %E) #0 {
 ; CHECK-LABEL: @test_replicate_call_chain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -97,14 +97,12 @@ define void @test_replicate_call_chain(float %x, ptr noalias %A, ptr noalias %B,
 ; CHECK-NEXT:    [[TMP75:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP75]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 4, [[MIDDLE_BLOCK]] ], [ 100, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[DEC_IV_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 96, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[DEC_IV:%.*]] = phi i64 [ 4, [[SCALAR_PH]] ], [ [[DEC_IV_NEXT:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[IV_INC:%.*]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_A:%.*]] = load float, ptr [[GEP_A]], align 4
@@ -756,7 +754,7 @@ exit:
 define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK-LABEL: @sdiv_by_zero(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -843,12 +841,11 @@ define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 16, [[MIDDLE_BLOCK]] ], [ 0, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 16, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i32 [[L]], 0

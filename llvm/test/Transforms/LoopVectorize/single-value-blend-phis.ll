@@ -9,7 +9,7 @@
 define void @single_incoming_phi_no_blend_mask(i64 %a, i64 %b) {
 ; CHECK-LABEL: @single_incoming_phi_no_blend_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -33,7 +33,7 @@ define void @single_incoming_phi_no_blend_mask(i64 %a, i64 %b) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    br label [[LOOP_COND:%.*]]
 ; CHECK:       loop.cond:
@@ -50,7 +50,7 @@ define void @single_incoming_phi_no_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    store i16 [[RES]], ptr [[DST_PTR]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 31
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -89,7 +89,7 @@ exit:
 define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-LABEL: @single_incoming_phi_with_blend_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -110,13 +110,13 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
 ; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_COND:%.*]], label [[LOOP_LATCH]]
@@ -134,7 +134,7 @@ define void @single_incoming_phi_with_blend_mask(i64 %a, i64 %b) {
 ; CHECK-NEXT:    store i16 [[RES]], ptr [[DST_PTR]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 31
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -172,7 +172,7 @@ exit:
 define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-LABEL: @multiple_incoming_phi_with_blend_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -199,13 +199,13 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <2 x i16> [[VEC_IND1]], splat (i16 2)
 ; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add <2 x i16> [[VEC_IND3]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[IV_TRUNC_2:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
@@ -220,7 +220,7 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    store i16 [[LV]], ptr [[DST_PTR]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 31
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -256,7 +256,7 @@ exit:
 define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-LABEL: @single_incoming_needs_predication(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -295,13 +295,13 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp ugt i64 [[IV]], [[A]]
 ; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_COND:%.*]], label [[LOOP_LATCH]]
@@ -319,7 +319,7 @@ define void @single_incoming_needs_predication(i64 %a, i64 %b) {
 ; CHECK-NEXT:    store i16 [[RES]], ptr [[DST_PTR]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP439:%.*]] = icmp ult i64 [[IV]], 63
-; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP439]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -358,7 +358,7 @@ exit:
 define void @duplicated_incoming_blocks_blend(i32 %x, ptr %ptr) {
 ; CHECK-LABEL: @duplicated_incoming_blocks_blend(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -369,13 +369,13 @@ define void @duplicated_incoming_blocks_blend(i32 %x, ptr %ptr) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[ADD_I:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[ADD_I:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i32 [[IV]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -384,7 +384,7 @@ define void @duplicated_incoming_blocks_blend(i32 %x, ptr %ptr) {
 ; CHECK-NEXT:    store i32 [[P]], ptr [[GEP_PTR]], align 4
 ; CHECK-NEXT:    [[ADD_I]] = add nsw i32 [[P]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD_I]], 1000
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

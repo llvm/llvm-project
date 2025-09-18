@@ -501,7 +501,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -558,7 +558,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -574,14 +574,14 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; CHECK-NEXT:    store i8 [[REDUCE_ADD_0_NARROW]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV_0]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ;
 ; MAX-BW-LABEL: define void @test(
 ; MAX-BW-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
 ; MAX-BW-NEXT:  [[ENTRY:.*:]]
-; MAX-BW-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; MAX-BW-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MAX-BW:       [[VECTOR_PH]]:
 ; MAX-BW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAX-BW:       [[VECTOR_BODY]]:
@@ -678,7 +678,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    br i1 [[TMP68]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; MAX-BW:       [[MIDDLE_BLOCK]]:
 ; MAX-BW-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
-; MAX-BW:       [[SCALAR_PH]]:
+; MAX-BW:       [[SCALAR_PH:.*]]:
 ; MAX-BW-NEXT:    br label %[[FOR_BODY:.*]]
 ; MAX-BW:       [[FOR_BODY]]:
 ; MAX-BW-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -694,7 +694,7 @@ define void @test(ptr %A, ptr noalias %B) #0 {
 ; MAX-BW-NEXT:    store i8 [[REDUCE_ADD_0_NARROW]], ptr [[OUT]], align 1
 ; MAX-BW-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV_0]], 2
 ; MAX-BW-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], 1024
-; MAX-BW-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]], !llvm.loop [[LOOP11:![0-9]+]]
+; MAX-BW-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
 ; MAX-BW:       [[FOR_COND_CLEANUP]]:
 ; MAX-BW-NEXT:    ret void
 ;
@@ -748,7 +748,6 @@ attributes #0 = { "target-cpu"="core-avx2" "target-features"="+avx,+avx2,+sse,+s
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META6]], [[META7]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META7]], [[META6]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META7]]}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META7]], [[META6]]}
 ;.
 ; MAX-BW: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
 ; MAX-BW: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
@@ -760,5 +759,4 @@ attributes #0 = { "target-cpu"="core-avx2" "target-features"="+avx,+avx2,+sse,+s
 ; MAX-BW: [[LOOP8]] = distinct !{[[LOOP8]], [[META6]], [[META7]]}
 ; MAX-BW: [[LOOP9]] = distinct !{[[LOOP9]], [[META7]], [[META6]]}
 ; MAX-BW: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META7]]}
-; MAX-BW: [[LOOP11]] = distinct !{[[LOOP11]], [[META7]], [[META6]]}
 ;.

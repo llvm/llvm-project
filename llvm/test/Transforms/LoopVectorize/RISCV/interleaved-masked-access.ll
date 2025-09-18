@@ -55,7 +55,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-LABEL: define void @masked_strided_factor2
 ; PREDICATED_DATA-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PREDICATED_DATA-NEXT:  entry:
-; PREDICATED_DATA-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_DATA-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_DATA:       vector.ph:
 ; PREDICATED_DATA-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_DATA-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -101,7 +101,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-LABEL: define void @masked_strided_factor2
 ; PREDICATED_DATA-WITH-EVL-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PREDICATED_DATA-WITH-EVL-NEXT:  entry:
-; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_DATA-WITH-EVL:       vector.ph:
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
@@ -228,7 +228,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-LABEL: define void @masked_strided_factor4
 ; PREDICATED_DATA-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0]] {
 ; PREDICATED_DATA-NEXT:  entry:
-; PREDICATED_DATA-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_DATA-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_DATA:       vector.ph:
 ; PREDICATED_DATA-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_DATA-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -278,7 +278,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-LABEL: define void @masked_strided_factor4
 ; PREDICATED_DATA-WITH-EVL-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0]] {
 ; PREDICATED_DATA-WITH-EVL-NEXT:  entry:
-; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; PREDICATED_DATA-WITH-EVL:       vector.ph:
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0

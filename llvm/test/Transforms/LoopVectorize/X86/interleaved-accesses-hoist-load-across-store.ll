@@ -11,7 +11,7 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-LABEL: define void @pr63602_1
 ; CHECK-SAME: (ptr [[ARR:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -58,14 +58,12 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 49, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ 52, [[MIDDLE_BLOCK]] ], [ 4, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 49, [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ 52, [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i64 [[IV_1]], 3
 ; CHECK-NEXT:    [[IV_1_PLUS_4:%.*]] = add nuw nsw i64 [[IV_1]], 4
 ; CHECK-NEXT:    [[GEP_IV_1_PLUS_4:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IV_1_PLUS_4]]
@@ -122,7 +120,7 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-LABEL: define void @pr63602_2
 ; CHECK-SAME: (ptr [[ARR:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -192,14 +190,12 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    [[TMP49:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP49]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 49, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 52, [[MIDDLE_BLOCK]] ], [ 4, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 49, [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ 52, [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i64 [[IV_1]], 3
 ; CHECK-NEXT:    [[IV_1_PLUS_4:%.*]] = add nuw nsw i64 [[IV_1]], 4
 ; CHECK-NEXT:    [[GEP_IV_1_PLUS_4:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IV_1_PLUS_4]]

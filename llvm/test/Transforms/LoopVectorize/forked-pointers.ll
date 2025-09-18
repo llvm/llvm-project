@@ -20,7 +20,7 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[BASE1:%.*]] = freeze ptr [[BASE3:%.*]]
 ; CHECK-NEXT:    [[BASE2:%.*]] = freeze ptr [[BASE4:%.*]]
 ; CHECK-NEXT:    [[DEST:%.*]] = freeze ptr [[DEST2:%.*]]
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoint ptr [[DEST]] to i64
 ; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoint ptr [[PREDS:%.*]] to i64
@@ -34,7 +34,7 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DEST1]], [[BASE15]]
 ; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[BASE2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer

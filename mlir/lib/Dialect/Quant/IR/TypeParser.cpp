@@ -410,7 +410,8 @@ static Type parseUniformType(DialectAsmParser &parser) {
     return parser.getChecked<UniformQuantizedPerAxisType>(
         typeFlags, storageType, expressedType, scales, zeroPoints,
         quantizedDimensions[0], storageTypeMin, storageTypeMax);
-  } else if (isSubChannel) {
+  }
+  if (isSubChannel) {
     SmallVector<APFloat> apFloatScales =
         llvm::to_vector(llvm::map_range(scales, [&](double scale) -> APFloat {
           APFloat apFloatScale(scale);

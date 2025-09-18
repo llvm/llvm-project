@@ -7,7 +7,7 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-LABEL: define i32 @test_icmp_constant_op_zext(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -20,12 +20,11 @@ define i32 @test_icmp_constant_op_zext(ptr %dst) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 997, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 7304878031173690989, 0
 ; CHECK-NEXT:    [[C_EXT:%.*]] = zext i1 [[C]] to i64
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 7304878031173690989, [[C_EXT]]
@@ -63,7 +62,7 @@ define i32 @test_icmp_and_op_zext(ptr %dst, i64 %a) {
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A]], 7304878031173690989
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[AND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -82,12 +81,11 @@ define i32 @test_icmp_and_op_zext(ptr %dst, i64 %a) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 997, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 997, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[AND]], 0
 ; CHECK-NEXT:    [[C_EXT:%.*]] = zext i1 [[C]] to i64
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[AND]], [[C_EXT]]
@@ -124,7 +122,7 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK-LABEL: define void @ext_cmp(
 ; CHECK-SAME: ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -139,7 +137,7 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i16, ptr [[SRC_1]], i64 [[IV]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i16, ptr [[GEP_SRC_1]], align 2
 ; CHECK-NEXT:    [[I3:%.*]] = sext i16 [[I2]] to i32
@@ -154,7 +152,7 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK-NEXT:    store i16 [[I8]], ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -190,5 +188,4 @@ exit:
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
 ;.

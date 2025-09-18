@@ -10,11 +10,11 @@
 define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_smax(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -25,7 +25,7 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = sub i64 [[A1]], [[C3]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP26]], [[TMP25]]
 ; IF-EVL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -47,10 +47,9 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
@@ -149,11 +148,11 @@ exit:
 define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_smin(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -164,7 +163,7 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = sub i64 [[A1]], [[C3]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP26]], [[TMP25]]
 ; IF-EVL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -186,10 +185,9 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
@@ -288,11 +286,11 @@ exit:
 define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_umax(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -303,7 +301,7 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = sub i64 [[A1]], [[C3]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP26]], [[TMP25]]
 ; IF-EVL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -325,10 +323,9 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
@@ -427,11 +424,11 @@ exit:
 define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_umin(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[C3:%.*]] = ptrtoint ptr [[C]] to i64
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -442,7 +439,7 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = sub i64 [[A1]], [[C3]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP26]], [[TMP25]]
 ; IF-EVL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -464,10 +461,9 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
@@ -567,17 +563,17 @@ exit:
 define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_ctlz(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP21]], [[TMP20]]
-; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -597,10 +593,9 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP18]], i1 true)
@@ -686,17 +681,17 @@ exit:
 define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_cttz(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP6]]
-; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -716,10 +711,9 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[TMP22]], i1 true)
@@ -805,17 +799,17 @@ exit:
 define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_lrint(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
-; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -837,10 +831,9 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = load float, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[CONV2:%.*]] = fpext float [[TMP20]] to double
@@ -934,17 +927,17 @@ exit:
 define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_llrint(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP24]], [[TMP23]]
-; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -966,10 +959,9 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = load float, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[CONV2:%.*]] = fpext float [[TMP20]] to double
@@ -1063,17 +1055,17 @@ exit:
 define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-LABEL: define void @vp_abs(
 ; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; IF-EVL-NEXT:  [[ENTRY:.*]]:
+; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i64
 ; IF-EVL-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
-; IF-EVL-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP5]], 4
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = sub i64 [[A1]], [[B2]]
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP21]], [[TMP20]]
-; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IF-EVL-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
 ; IF-EVL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IF-EVL:       [[VECTOR_BODY]]:
@@ -1093,10 +1085,9 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br label %[[EXIT:.*]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; IF-EVL-NEXT:    br label %[[LOOP:.*]]
 ; IF-EVL:       [[LOOP]]:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; IF-EVL-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[GEP]], align 4
 ; IF-EVL-NEXT:    [[COND:%.*]] = tail call i32 @llvm.abs.i32(i32 [[TMP18]], i1 true)

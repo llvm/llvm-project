@@ -8,7 +8,7 @@ define void @ld_div1_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div1_step1_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -49,7 +49,7 @@ define void @ld_div2_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_step1_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -91,7 +91,7 @@ define void @ld_div3_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div3_step1_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -139,7 +139,7 @@ define void @ld_div1_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div1_step2_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -194,7 +194,7 @@ define void @ld_div2_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_step2_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -241,7 +241,7 @@ define void @ld_div3_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div3_step2_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -296,7 +296,7 @@ define void @ld_div1_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div1_step3_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -326,7 +326,7 @@ define void @ld_div1_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -351,7 +351,7 @@ define void @ld_div2_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_step3_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -381,7 +381,7 @@ define void @ld_div2_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -406,7 +406,7 @@ define void @ld_div3_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div3_step3_start0_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -428,7 +428,7 @@ define void @ld_div3_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -453,7 +453,7 @@ define void @ld_div1_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div1_step1_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -469,7 +469,7 @@ define void @ld_div1_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -494,7 +494,7 @@ define void @ld_div2_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_step1_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -518,7 +518,7 @@ define void @ld_div2_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -543,7 +543,7 @@ define void @ld_div3_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div3_step1_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -567,7 +567,7 @@ define void @ld_div3_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -592,7 +592,7 @@ define void @ld_div1_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div1_step2_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -623,7 +623,7 @@ define void @ld_div1_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -648,7 +648,7 @@ define void @ld_div2_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_step2_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -671,7 +671,7 @@ define void @ld_div2_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -696,7 +696,7 @@ define void @ld_div3_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div3_step2_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -727,7 +727,7 @@ define void @ld_div3_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -752,7 +752,7 @@ define void @ld_div1_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div1_step3_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -783,7 +783,7 @@ define void @ld_div1_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -808,7 +808,7 @@ define void @ld_div2_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_step3_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -839,7 +839,7 @@ define void @ld_div2_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -864,7 +864,7 @@ define void @ld_div3_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div3_step3_start1_ind1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -887,7 +887,7 @@ define void @ld_div3_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -911,7 +911,7 @@ define void @test_step_is_not_invariant(ptr %A) {
 ; CHECK-LABEL: define void @test_step_is_not_invariant
 ; CHECK-SAME: (ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
