@@ -376,6 +376,60 @@ func.func @omp_loop_nest_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32,
   return
 }
 
+// CHECK-LABEL: omp_loop_nest_pretty_multiple_collapse
+func.func @omp_loop_nest_pretty_multiple_collapse(%lb1 : i32, %ub1 : i32, %step1 : i32,
+    %lb2 : i32, %ub2 : i32, %step2 : i32, %data1 : memref<?xi32>) -> () {
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest (%{{.*}}, %{{.*}}) : i32 = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) collapse(2)
+    omp.loop_nest (%iv1, %iv2) : i32 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) {
+      %1 = "test.payload"(%iv1) : (i32) -> (index)
+      %2 = "test.payload"(%iv2) : (i32) -> (index)
+      memref.store %iv1, %data1[%1] : memref<?xi32>
+      memref.store %iv2, %data1[%2] : memref<?xi32>
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: omp_loop_nest_pretty_multiple_tiles
+func.func @omp_loop_nest_pretty_multiple_tiles(%lb1 : i32, %ub1 : i32, %step1 : i32,
+    %lb2 : i32, %ub2 : i32, %step2 : i32, %data1 : memref<?xi32>) -> () {
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest (%{{.*}}, %{{.*}}) : i32 = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) tiles(5, 10)
+    omp.loop_nest (%iv1, %iv2) : i32 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) tiles(5, 10) {
+      %1 = "test.payload"(%iv1) : (i32) -> (index)
+      %2 = "test.payload"(%iv2) : (i32) -> (index)
+      memref.store %iv1, %data1[%1] : memref<?xi32>
+      memref.store %iv2, %data1[%2] : memref<?xi32>
+      omp.yield
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: omp_loop_nest_pretty_multiple_collapse_tiles
+func.func @omp_loop_nest_pretty_multiple_collapse_tiles(%lb1 : i32, %ub1 : i32, %step1 : i32,
+    %lb2 : i32, %ub2 : i32, %step2 : i32, %data1 : memref<?xi32>) -> () {
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest (%{{.*}}, %{{.*}}) : i32 = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}}) collapse(2) tiles(5, 10)
+    omp.loop_nest (%iv1, %iv2) : i32 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) collapse(2) tiles(5, 10) {
+      %1 = "test.payload"(%iv1) : (i32) -> (index)
+      %2 = "test.payload"(%iv2) : (i32) -> (index)
+      memref.store %iv1, %data1[%1] : memref<?xi32>
+      memref.store %iv2, %data1[%2] : memref<?xi32>
+      omp.yield
+    }
+  }
+
+  return
+}
+
 // CHECK-LABEL: omp_wsloop
 func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memref<i32>, %linear_var : i32, %chunk_var : i32) -> () {
 
@@ -3206,6 +3260,10 @@ func.func @omp_workshare_loop_wrapper_attrs(%idx : index) {
   return
 }
 
+func.func @omp_init_allocator(%custom_allocator : i64) -> i64 {
+    return %custom_allocator : i64
+}
+
 // CHECK-LABEL: func.func @omp_allocate_dir(
 // CHECK-SAME: %[[ARG0:.*]]: memref<i32>,
 // CHECK-SAME: %[[ARG1:.*]]: memref<i32>) {
@@ -3224,16 +3282,29 @@ func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
   omp.allocate_dir (%arg0 : memref<i32>) align(2)
 
   // Test with one data var and allocator clause
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(omp_pteam_mem_alloc)
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_pteam_mem_alloc)
+  // CHECK: %[[VAL_1:.*]] = arith.constant 1 : i64
+  %omp_default_mem_alloc = arith.constant 1 : i64
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_1:.*]])
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(%omp_default_mem_alloc)
 
   // Test with one data var, align clause and allocator clause
-  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) align(2) allocator(omp_thread_mem_alloc)
-  omp.allocate_dir (%arg0 : memref<i32>) align(2) allocator(omp_thread_mem_alloc)
+  // CHECK: %[[VAL_2:.*]] = arith.constant 7 : i64
+  %omp_pteam_mem_alloc = arith.constant 7 : i64
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)  align(4) allocator(%[[VAL_2:.*]])
+  omp.allocate_dir (%arg0 : memref<i32>)  align(4) allocator(%omp_pteam_mem_alloc)
 
   // Test with two data vars, align clause and allocator clause
-  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(2) allocator(omp_cgroup_mem_alloc)
-  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(2) allocator(omp_cgroup_mem_alloc)
+  // CHECK: %[[VAL_3:.*]] = arith.constant 6 : i64
+  %omp_cgroup_mem_alloc = arith.constant 6 : i64
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(8) allocator(%[[VAL_3:.*]])
+  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(8) allocator(%omp_cgroup_mem_alloc)
+
+  // Test with one data var and user defined allocator clause
+  // CHECK: %[[VAL_4:.*]] = arith.constant 9 : i64
+  %custom_allocator = arith.constant 9 : i64
+  %custom_mem_alloc = func.call @omp_init_allocator(%custom_allocator) : (i64) -> (i64)
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(%[[VAL_5:.*]])
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(%custom_mem_alloc)
 
   return
 }

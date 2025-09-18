@@ -1029,8 +1029,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
         template <typename T>
         void foo(typename A<T>::template [[B]]<int>);
       )cpp";
-  EXPECT_DECLS("DependentTemplateSpecializationTypeLoc",
-               "template <typename> struct B");
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", "template <typename> struct B");
 
   // Dependent name with recursive definition. We don't expect a
   // result, but we shouldn't get into a stack overflow either.

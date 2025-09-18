@@ -730,8 +730,8 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
   if (!e->getType()->isAnyComplexType())
     return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
 
-  cgm.errorNYI(e->getSourceRange(), "evaluateExprAsBool: complex type");
-  return createDummyValue(getLoc(loc), boolTy);
+  return emitComplexToScalarConversion(emitComplexExpr(e), e->getType(), boolTy,
+                                       loc);
 }
 
 LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
@@ -1376,6 +1376,30 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);
 }
 
+LValue
+CIRGenFunction::getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e) {
+  assert(OpaqueValueMapping::shouldBindAsLValue(e));
+
+  auto it = opaqueLValues.find(e);
+  if (it != opaqueLValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "LValue for a nonunique OVE hasn't been emitted");
+  return emitLValue(e->getSourceExpr());
+}
+
+RValue
+CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
+  assert(!OpaqueValueMapping::shouldBindAsLValue(e));
+
+  auto it = opaqueRValues.find(e);
+  if (it != opaqueRValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
+  return emitAnyExpr(e->getSourceExpr());
+}
+
 LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
   if (e->isFileScope()) {
     cgm.errorNYI(e->getSourceRange(), "emitCompoundLiteralLValue: FileScope");
@@ -1986,8 +2010,16 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
 
   // Elide the constructor if we're constructing from a temporary
   if (getLangOpts().ElideConstructors && e->isElidable()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: elidable constructor");
+    // FIXME: This only handles the simplest case, where the source object is
+    //        passed directly as the first argument to the constructor. This
+    //        should also handle stepping through implicit casts and conversion
+    //        sequences which involve two steps, with a conversion operator
+    //        follwed by a converting constructor.
+    const Expr *srcObj = e->getArg(0);
+    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
+    emitAggExpr(srcObj, dest);
     return;
   }
 

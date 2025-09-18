@@ -1834,19 +1834,6 @@ bool CursorVisitor::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   return VisitNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
 
-bool CursorVisitor::VisitDependentTemplateSpecializationTypeLoc(
-    DependentTemplateSpecializationTypeLoc TL) {
-  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
-    return true;
-
-  // Visit the template arguments.
-  for (unsigned I = 0, N = TL.getNumArgs(); I != N; ++I)
-    if (VisitTemplateArgumentLoc(TL.getArgLoc(I)))
-      return true;
-
-  return false;
-}
-
 bool CursorVisitor::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   return Visit(TL.getPatternLoc());
 }
@@ -2154,8 +2141,8 @@ public:
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
   void VisitOMPParallelDirective(const OMPParallelDirective *D);
   void VisitOMPSimdDirective(const OMPSimdDirective *D);
-  void
-  VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
+  void VisitOMPCanonicalLoopNestTransformationDirective(
+      const OMPCanonicalLoopNestTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
   void VisitOMPStripeDirective(const OMPStripeDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
@@ -3304,30 +3291,30 @@ void EnqueueVisitor::VisitOMPSimdDirective(const OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
-void EnqueueVisitor::VisitOMPLoopTransformationDirective(
-    const OMPLoopTransformationDirective *D) {
+void EnqueueVisitor::VisitOMPCanonicalLoopNestTransformationDirective(
+    const OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPStripeDirective(const OMPStripeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPForDirective(const OMPForDirective *D) {
@@ -4193,13 +4180,14 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
   FileSystemOptions FileSystemOpts;
   HeaderSearchOptions HSOpts;
 
+  auto VFS = llvm::vfs::getRealFileSystem();
+
   auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          *DiagOpts);
+      CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, DiagOpts, Diags, FileSystemOpts, HSOpts,
+      ASTUnit::LoadEverything, VFS, DiagOpts, Diags, FileSystemOpts, HSOpts,
       /*LangOpts=*/nullptr, CXXIdx->getOnlyLocalDecls(), CaptureDiagsKind::All,
       /*AllowASTWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
@@ -7226,6 +7214,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::CXXDeductionGuide:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPGroupPrivate:
   case Decl::OMPAllocate:
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:

@@ -37,7 +37,6 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
     def async_cancel(self, requestId: int) -> int:
         return self.send_async_req(command="cancel", arguments={"requestId": requestId})
 
-    @skipIfWindows
     def test_pending_request(self):
         """
         Tests cancelling a pending request.

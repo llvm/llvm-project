@@ -9,7 +9,7 @@ define void @ld_lshr0_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr0_step1_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -30,7 +30,7 @@ define void @ld_lshr0_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-LABEL: define void @ld_lshr0_step1_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -71,7 +71,7 @@ define void @ld_lshr1_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr1_step1_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -94,7 +94,7 @@ define void @ld_lshr1_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-LABEL: define void @ld_lshr1_step1_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -151,7 +151,7 @@ define void @ld_lshr2_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr2_step1_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -174,7 +174,7 @@ define void @ld_lshr2_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-LABEL: define void @ld_lshr2_step1_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -216,7 +216,7 @@ define void @ld_lshr0_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr0_step2_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -252,7 +252,7 @@ define void @ld_lshr0_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-LABEL: define void @ld_lshr0_step2_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -323,7 +323,7 @@ define void @ld_lshr1_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr1_step2_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -351,7 +351,7 @@ define void @ld_lshr1_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-LABEL: define void @ld_lshr1_step2_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -406,7 +406,7 @@ define void @ld_lshr0_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr0_step3_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -436,13 +436,13 @@ define void @ld_lshr0_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF2-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VF2:       middle.block:
-; VF2-NEXT:    br label [[SCALAR_PH]]
+; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
 ;
 ; VF4-LABEL: define void @ld_lshr0_step3_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -488,7 +488,7 @@ define void @ld_lshr0_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF4-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VF4:       middle.block:
-; VF4-NEXT:    br label [[SCALAR_PH]]
+; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:
 ;
 entry:
@@ -513,7 +513,7 @@ define void @ld_lshr1_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr1_step3_start0_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -543,13 +543,13 @@ define void @ld_lshr1_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF2-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VF2:       middle.block:
-; VF2-NEXT:    br label [[SCALAR_PH]]
+; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
 ;
 ; VF4-LABEL: define void @ld_lshr1_step3_start0_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -595,7 +595,7 @@ define void @ld_lshr1_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF4-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VF4:       middle.block:
-; VF4-NEXT:    br label [[SCALAR_PH]]
+; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:
 ;
 entry:
@@ -621,7 +621,7 @@ define void @ld_lshr1_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr1_step1_start1_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -645,13 +645,13 @@ define void @ld_lshr1_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
 ; VF2-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF2:       middle.block:
-; VF2-NEXT:    br label [[SCALAR_PH]]
+; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
 ;
 ; VF4-LABEL: define void @ld_lshr1_step1_start1_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -683,7 +683,7 @@ define void @ld_lshr1_step1_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
 ; VF4-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF4:       middle.block:
-; VF4-NEXT:    br label [[SCALAR_PH]]
+; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:
 ;
 entry:
@@ -708,7 +708,7 @@ define void @ld_lshr1_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr1_step2_start1_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -731,13 +731,13 @@ define void @ld_lshr1_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 498
 ; VF2-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF2:       middle.block:
-; VF2-NEXT:    br label [[SCALAR_PH]]
+; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
 ;
 ; VF4-LABEL: define void @ld_lshr1_step2_start1_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -768,7 +768,7 @@ define void @ld_lshr1_step2_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 496
 ; VF4-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF4:       middle.block:
-; VF4-NEXT:    br label [[SCALAR_PH]]
+; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:
 ;
 entry:
@@ -793,7 +793,7 @@ define void @ld_lshr1_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr1_step3_start1_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -824,13 +824,13 @@ define void @ld_lshr1_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; VF2:       middle.block:
-; VF2-NEXT:    br label [[SCALAR_PH]]
+; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
 ;
 ; VF4-LABEL: define void @ld_lshr1_step3_start1_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -877,7 +877,7 @@ define void @ld_lshr1_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF4-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; VF4:       middle.block:
-; VF4-NEXT:    br label [[SCALAR_PH]]
+; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:
 ;
 entry:
@@ -902,7 +902,7 @@ define void @ld_lshr2_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_lshr2_step3_start1_ind1
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
-; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2:       vector.ph:
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
@@ -933,13 +933,13 @@ define void @ld_lshr2_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; VF2:       middle.block:
-; VF2-NEXT:    br label [[SCALAR_PH]]
+; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
 ;
 ; VF4-LABEL: define void @ld_lshr2_step3_start1_ind1
 ; VF4-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF4-NEXT:  entry:
-; VF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF4:       vector.ph:
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
@@ -986,7 +986,7 @@ define void @ld_lshr2_step3_start1_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
 ; VF4-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; VF4:       middle.block:
-; VF4-NEXT:    br label [[SCALAR_PH]]
+; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:
 ;
 entry:

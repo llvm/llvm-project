@@ -185,6 +185,14 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
+    cir::CosOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CosOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -598,6 +606,14 @@ mlir::LogicalResult CIRToLLVMACosOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMASinOpLowering::matchAndRewrite(
+    cir::ASinOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ASinOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -637,6 +653,51 @@ mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
       op, cond, mlir::LLVM::AssumeSeparateStorageTag{}, adaptor.getPtr1(),
       adaptor.getPtr2());
+  return mlir::success();
+}
+
+static mlir::LLVM::AtomicOrdering
+getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
+  if (!memorder)
+    return mlir::LLVM::AtomicOrdering::not_atomic;
+  switch (*memorder) {
+  case cir::MemOrder::Relaxed:
+    return mlir::LLVM::AtomicOrdering::monotonic;
+  case cir::MemOrder::Consume:
+  case cir::MemOrder::Acquire:
+    return mlir::LLVM::AtomicOrdering::acquire;
+  case cir::MemOrder::Release:
+    return mlir::LLVM::AtomicOrdering::release;
+  case cir::MemOrder::AcquireRelease:
+    return mlir::LLVM::AtomicOrdering::acq_rel;
+  case cir::MemOrder::SequentiallyConsistent:
+    return mlir::LLVM::AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("unknown memory order");
+}
+
+mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
+    cir::AtomicCmpXchg op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value expected = adaptor.getExpected();
+  mlir::Value desired = adaptor.getDesired();
+
+  auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
+      rewriter, op.getLoc(), adaptor.getPtr(), expected, desired,
+      getLLVMMemOrder(adaptor.getSuccOrder()),
+      getLLVMMemOrder(adaptor.getFailOrder()));
+  assert(!cir::MissingFeatures::atomicScope());
+  cmpxchg.setAlignment(adaptor.getAlignment());
+  cmpxchg.setWeak(adaptor.getWeak());
+  cmpxchg.setVolatile_(adaptor.getIsVolatile());
+
+  // Check result and apply stores accordingly.
+  auto old = mlir::LLVM::ExtractValueOp::create(rewriter, op.getLoc(),
+                                                cmpxchg.getResult(), 0);
+  auto cmp = mlir::LLVM::ExtractValueOp::create(rewriter, op.getLoc(),
+                                                cmpxchg.getResult(), 1);
+
+  rewriter.replaceOp(op, {old, cmp});
   return mlir::success();
 }
 
@@ -1050,12 +1111,23 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
+    cir::ATanOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ATanOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(!cir::MissingFeatures::opAllocaDynAllocSize());
-  mlir::Value size = rewriter.create<mlir::LLVM::ConstantOp>(
-      op.getLoc(), typeConverter->convertType(rewriter.getIndexType()), 1);
+  mlir::Value size =
+      op.isDynamic()
+          ? adaptor.getDynAllocSize()
+          : rewriter.create<mlir::LLVM::ConstantOp>(
+                op.getLoc(),
+                typeConverter->convertType(rewriter.getIndexType()), 1);
   mlir::Type elementTy =
       convertTypeForMemory(*getTypeConverter(), dataLayout, op.getAllocaType());
   mlir::Type resultTy =
@@ -1202,26 +1274,6 @@ mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-static mlir::LLVM::AtomicOrdering
-getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
-  if (!memorder)
-    return mlir::LLVM::AtomicOrdering::not_atomic;
-  switch (*memorder) {
-  case cir::MemOrder::Relaxed:
-    return mlir::LLVM::AtomicOrdering::monotonic;
-  case cir::MemOrder::Consume:
-  case cir::MemOrder::Acquire:
-    return mlir::LLVM::AtomicOrdering::acquire;
-  case cir::MemOrder::Release:
-    return mlir::LLVM::AtomicOrdering::release;
-  case cir::MemOrder::AcquireRelease:
-    return mlir::LLVM::AtomicOrdering::acq_rel;
-  case cir::MemOrder::SequentiallyConsistent:
-    return mlir::LLVM::AtomicOrdering::seq_cst;
-  }
-  llvm_unreachable("unknown memory order");
-}
-
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1355,8 +1407,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     } else {
       const mlir::Value initVal =
           lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
-      rewriter.replaceAllUsesWith(op, initVal);
-      rewriter.eraseOp(op);
+      rewriter.replaceOp(op, initVal);
       return mlir::success();
     }
   } else if (const auto recordAttr =
@@ -2412,83 +2463,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
-  patterns.add<CIRToLLVMReturnOpLowering>(patterns.getContext());
-  // This could currently be merged with the group below, but it will get more
-  // arguments later, so we'll keep it separate for now.
-  patterns.add<CIRToLLVMAllocaOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMLoadOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMStoreOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMCastOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMPtrStrideOpLowering>(converter, patterns.getContext(),
-                                             dl);
-  patterns.add<CIRToLLVMInlineAsmOpLowering>(converter, patterns.getContext(),
-                                             dl);
   patterns.add<
-      // clang-format off
-               CIRToLLVMACosOpLowering,
-               CIRToLLVMAssumeOpLowering,
-               CIRToLLVMAssumeAlignedOpLowering,
-               CIRToLLVMAssumeSepStorageOpLowering,
-               CIRToLLVMBaseClassAddrOpLowering,
-               CIRToLLVMBinOpLowering,
-               CIRToLLVMBitClrsbOpLowering,
-               CIRToLLVMBitClzOpLowering,
-               CIRToLLVMBitCtzOpLowering,
-               CIRToLLVMBitFfsOpLowering,
-               CIRToLLVMBitParityOpLowering,
-               CIRToLLVMBitPopcountOpLowering,
-               CIRToLLVMBitReverseOpLowering,
-               CIRToLLVMBrCondOpLowering,
-               CIRToLLVMBrOpLowering,
-               CIRToLLVMByteSwapOpLowering,
-               CIRToLLVMCallOpLowering,
-               CIRToLLVMCmpOpLowering,
-               CIRToLLVMComplexAddOpLowering,
-               CIRToLLVMComplexCreateOpLowering,
-               CIRToLLVMComplexImagOpLowering,
-               CIRToLLVMComplexImagPtrOpLowering,
-               CIRToLLVMComplexRealOpLowering,
-               CIRToLLVMComplexRealPtrOpLowering,
-               CIRToLLVMComplexSubOpLowering,
-               CIRToLLVMCopyOpLowering,
-               CIRToLLVMConstantOpLowering,
-               CIRToLLVMExpectOpLowering,
-               CIRToLLVMFAbsOpLowering,
-               CIRToLLVMFrameAddrOpLowering,
-               CIRToLLVMFuncOpLowering,
-               CIRToLLVMGetBitfieldOpLowering,
-               CIRToLLVMGetGlobalOpLowering,
-               CIRToLLVMGetMemberOpLowering,
-               CIRToLLVMReturnAddrOpLowering,
-               CIRToLLVMRotateOpLowering,
-               CIRToLLVMSelectOpLowering,
-               CIRToLLVMSetBitfieldOpLowering,
-               CIRToLLVMShiftOpLowering,
-               CIRToLLVMStackRestoreOpLowering,
-               CIRToLLVMStackSaveOpLowering,
-               CIRToLLVMSwitchFlatOpLowering,
-               CIRToLLVMThrowOpLowering,
-               CIRToLLVMTrapOpLowering,
-               CIRToLLVMUnaryOpLowering,
-               CIRToLLVMUnreachableOpLowering,
-               CIRToLLVMVAArgOpLowering,
-               CIRToLLVMVAEndOpLowering,
-               CIRToLLVMVAStartOpLowering,
-               CIRToLLVMVecCmpOpLowering,
-               CIRToLLVMVecCreateOpLowering,
-               CIRToLLVMVecExtractOpLowering,
-               CIRToLLVMVecInsertOpLowering,
-               CIRToLLVMVecShuffleDynamicOpLowering,
-               CIRToLLVMVecShuffleOpLowering,
-               CIRToLLVMVecSplatOpLowering,
-               CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMVTableAddrPointOpLowering,
-               CIRToLLVMVTableGetVPtrOpLowering,
-               CIRToLLVMVTableGetVirtualFnAddrOpLowering,
-               CIRToLLVMVTTAddrPointOpLowering
-      // clang-format on
-      >(converter, patterns.getContext());
+#define GET_LLVM_LOWERING_PATTERNS_LIST
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_LLVM_LOWERING_PATTERNS_LIST
+      >(converter, patterns.getContext(), dl);
 
   processCIRAttrs(module);
 
@@ -2653,8 +2632,7 @@ mlir::LogicalResult CIRToLLVMVTableGetVPtrOpLowering::matchAndRewrite(
   // pointer to the vptr type. Since the LLVM dialect uses opaque pointers
   // we can just replace uses of this operation with the original pointer.
   mlir::Value srcVal = adaptor.getSrc();
-  rewriter.replaceAllUsesWith(op, srcVal);
-  rewriter.eraseOp(op);
+  rewriter.replaceOp(op, srcVal);
   return mlir::success();
 }
 
