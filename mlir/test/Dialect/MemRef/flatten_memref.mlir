@@ -194,6 +194,19 @@ func.func @mask_load_vector_from_memref_dynamic(%input: memref<3x7xi2>, %row: in
 
 // -----
 
+func.func @flatten_subview_static(%arg0: memref<3x4xf32, strided<[4, 1], offset: 0>>) -> memref<2x2xf32, strided<[4, 1], offset: 1>> {
+  %sub = memref.subview %arg0[0, 1] [2, 2] [1, 1]
+      : memref<3x4xf32, strided<[4, 1], offset: 0>> to memref<2x2xf32, strided<[4, 1], offset: 1>>
+  return %sub : memref<2x2xf32, strided<[4, 1], offset: 1>>
+}
+// CHECK-LABEL: func @flatten_subview_static
+// CHECK: %[[C8:.*]] = arith.constant 8 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[FLAT:.*]] = memref.reinterpret_cast %arg0 to offset: [0], sizes: [12], strides: [1]
+// CHECK: %[[SUB:.*]] = memref.subview %[[FLAT]][%[[C1]]] [%[[C8]]] [%[[C1]]]
+// CHECK: %[[CAST:.*]] = memref.reinterpret_cast %[[SUB]] to offset: [1], sizes: [2, 2], strides: [4, 1]
+// CHECK: return %[[CAST]]
+
 func.func @collapse_shape_static(%arg0: memref<2x3x4xf32>) -> memref<6x4xf32> {
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]]
       : memref<2x3x4xf32> into memref<6x4xf32>
