@@ -2961,10 +2961,10 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
 
   const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned DstLen = VecT->getNumElements();
-  PrimType DstElemT = *S.getContext().classify(VecT->getElementType());
+  const PrimType &DstElemT = *S.getContext().classify(VecT->getElementType());
 
-  APSInt U = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(4)));
-  APSInt Imm = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(3)));
+  APSInt U = popToAPSInt(S, Call->getArg(4));
+  APSInt Imm = popToAPSInt(S, Call->getArg(3));
   const Pointer &C = S.Stk.pop<Pointer>();
   const Pointer &B = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
