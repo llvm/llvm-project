@@ -1,3 +1,7 @@
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  set(additional_libs bsd)
+endif()
+
 add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
@@ -9,6 +13,9 @@ add_llvm_component_library(LLVMCAS
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CAS
+
+  LINK_LIBS
+  ${additional_libs}
 
   LINK_COMPONENTS
   Support
