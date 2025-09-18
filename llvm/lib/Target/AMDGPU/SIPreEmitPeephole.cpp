@@ -48,7 +48,7 @@ private:
                              const MachineBasicBlock &To) const;
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
   // Check if the machine instruction being processed is a supported packed
-  // instruction
+  // instruction.
   bool isUnpackingSupportedInstr(MachineInstr &MI) const;
   // Creates a list of packed instructions following an MFMA that are suitable
   // for unpacking.
@@ -60,23 +60,23 @@ private:
   // ==>
   // v_fma_f32 v0, v1, v3, v3
   // v_fma_f32 v1, v0, v2, v2
-  // here, we have overwritten v0 before we use it. This function checks if
-  // unpacking can lead to such a situation
+  // Here, we have overwritten v0 before we use it. This function checks if
+  // unpacking can lead to such a situation.
   bool canUnpackingIntroduceDependencies(const MachineInstr &MI);
   // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
   // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
   // this transformation.
   void performF32Unpacking(MachineInstr &I);
-  // Select corresponding unpacked instruction from packed instruction as I
+  // Select corresponding unpacked instruction
   uint16_t mapToUnpackedOpcode(MachineInstr &I);
   // Creates the unpacked instruction to be inserted. Adds source modifiers to
   // the unpacked instructions based on the source modifiers in the packed
-  // instruction
+  // instruction.
   MachineInstrBuilder createUnpackedMI(MachineInstr &I, uint16_t UnpackedOpcode,
                                        bool IsHiBits);
-  // process operands/source modifiers from packed instructions and insert the
-  // appropriate source modifers and operands into the unpacked instructions
-  void addOperandAndMods(MachineInstrBuilder NewMI, unsigned SrcMods,
+  // Process operands/source modifiers from packed instructions and insert the
+  // appropriate source modifers and operands into the unpacked instructions.
+  void addOperandAndMods(MachineInstrBuilder &NewMI, unsigned SrcMods,
                          bool IsHiBits, const MachineOperand &SrcMO);
 
 public:
@@ -455,7 +455,7 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
 }
 
 // If support is extended to new operations, add tests in
-// llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir
+// llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir.
 bool SIPreEmitPeephole::isUnpackingSupportedInstr(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
@@ -481,48 +481,47 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
   // Such scenarios can arise due to specific combinations of op_sel and
   // op_sel_hi modifiers.
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
-  int Src0ModifiersIdx =
-      AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src0_modifiers);
-  int Src1ModifiersIdx =
-      AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src1_modifiers);
-  unsigned Src0Mods = MI.getOperand(Src0ModifiersIdx).getImm();
-  unsigned Src1Mods = MI.getOperand(Src1ModifiersIdx).getImm();
+  unsigned Src0Mods =
+      TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
+  unsigned Src1Mods =
+      TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
 
-  if (TII->getNamedOperand(MI, AMDGPU::OpName::src0)->isReg()) {
-    Register SrcReg0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
+  const MachineOperand *Src0MO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+  if (Src0MO->isReg()) {
+    Register SrcReg0 = Src0MO->getReg();
     Register HiSrc0Reg = (Src0Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg0, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg0, AMDGPU::sub0);
     // Check if the register selected by op_sel_hi is the same as the first
-    // register in the destination register pair
-    if (UnpackedDstReg == HiSrc0Reg ||
-        TRI->regsOverlap(UnpackedDstReg, HiSrc0Reg))
+    // register in the destination register pair.
+    if (TRI->regsOverlap(UnpackedDstReg, HiSrc0Reg))
       return true;
   }
 
-  if (TII->getNamedOperand(MI, AMDGPU::OpName::src1)->isReg()) {
-    Register SrcReg1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
+  const MachineOperand *Src1MO = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+  if (Src1MO->isReg()) {
+    Register SrcReg1 = Src1MO->getReg();
     Register HiSrc1Reg = (Src1Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg1, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg1, AMDGPU::sub0);
-    if (UnpackedDstReg == HiSrc1Reg ||
-        TRI->regsOverlap(UnpackedDstReg, HiSrc1Reg))
+    if (TRI->regsOverlap(UnpackedDstReg, HiSrc1Reg))
       return true;
   }
 
-  // Applicable for packed instructions with 3 source operands, such as V_PK_FMA
+  // Applicable for packed instructions with 3 source operands, such as
+  // V_PK_FMA.
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
-    int Src2ModifiersIdx =
-        AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src2_modifiers);
-    unsigned Src2Mods = MI.getOperand(Src2ModifiersIdx).getImm();
-    if (TII->getNamedOperand(MI, AMDGPU::OpName::src2)->isReg()) {
+    unsigned Src2Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm();
+    const MachineOperand *Src2MO =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+    if (Src2MO->isReg()) {
       Register SrcReg2 =
           TII->getNamedOperand(MI, AMDGPU::OpName::src2)->getReg();
       Register HiSrc2Reg = (Src2Mods & SISrcMods::OP_SEL_1)
                                ? TRI->getSubReg(SrcReg2, AMDGPU::sub1)
                                : TRI->getSubReg(SrcReg2, AMDGPU::sub0);
-      if (UnpackedDstReg == HiSrc2Reg ||
-          TRI->regsOverlap(UnpackedDstReg, HiSrc2Reg))
+      if (TRI->regsOverlap(UnpackedDstReg, HiSrc2Reg))
         return true;
     }
   }
@@ -533,7 +532,7 @@ uint16_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   unsigned Opcode = I.getOpcode();
   // Use 64 bit encoding to allow use of VOP3 instructions.
   // VOP3 e64 instructions allow source modifiers
-  // e32 instructions don't allow source modifiers
+  // e32 instructions don't allow source modifiers.
   switch (Opcode) {
   case AMDGPU::V_PK_ADD_F32:
     return AMDGPU::V_ADD_F32_e64;
@@ -547,7 +546,7 @@ uint16_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   llvm_unreachable("Fully covered switch");
 }
 
-void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder NewMI,
+void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
                                           unsigned SrcMods, bool IsHiBits,
                                           const MachineOperand &SrcMO) {
   unsigned NewSrcMods = 0;
@@ -555,13 +554,13 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder NewMI,
   unsigned OpSelModifier = IsHiBits ? SISrcMods::OP_SEL_1 : SISrcMods::OP_SEL_0;
   // Packed instructions (VOP3P) do not support ABS. Hence, no checks are done
   // for ABS modifiers.
-  //  If NEG or NEG_HI is true, we need to negate the corresponding 32 bit
-  //  lane.
-  //  NEG_HI shares the same bit position with ABS. But packed instructions do
-  //  not support ABS. Therefore, NEG_HI must be translated to NEG source
-  //  modifier for the higher 32 bits. Unpacked VOP3 instructions support
-  //  ABS, but do not support NEG_HI. Therefore we need to explicitly add the
-  //  NEG modifier if present in the packed instruction
+  // If NEG or NEG_HI is true, we need to negate the corresponding 32 bit
+  // lane.
+  // NEG_HI shares the same bit position with ABS. But packed instructions do
+  // not support ABS. Therefore, NEG_HI must be translated to NEG source
+  // modifier for the higher 32 bits. Unpacked VOP3 instructions support
+  // ABS, but do not support NEG_HI. Therefore we need to explicitly add the
+  // NEG modifier if present in the packed instruction.
   if (SrcMods & NegModifier)
     NewSrcMods |= SISrcMods::NEG;
   // Src modifiers. Only negative modifiers are added if needed. Unpacked
@@ -572,7 +571,7 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder NewMI,
     NewMI.addImm(SrcMO.getImm());
     return;
   }
-  // If op_sel == 0, select register 0 of reg:sub0_sub1
+  // If op_sel == 0, select register 0 of reg:sub0_sub1.
   Register UnpackedSrcReg = (SrcMods & OpSelModifier)
                                 ? TRI->getSubReg(SrcMO.getReg(), AMDGPU::sub1)
                                 : TRI->getSubReg(SrcMO.getReg(), AMDGPU::sub0);
@@ -609,8 +608,8 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
   auto E = BB->end();
   int TotalCyclesBetweenCandidates = 0;
   auto SchedModel = TII->getSchedModel();
-  SetVector<Register> RegsOverlappedByMFMADef;
-  RegsOverlappedByMFMADef.insert(BeginMI.getOperand(0).getReg());
+  Register MFMADef = BeginMI.getOperand(0).getReg();
+
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
     if (Instr.isMetaInstruction())
@@ -618,6 +617,9 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (Instr.isTerminator())
       return;
     if (TII->isNeverCoissue(Instr) && !isUnpackingSupportedInstr(Instr))
+      return;
+    if (SIInstrInfo::modifiesModeRegister(Instr) &&
+        Instr.modifiesRegister(AMDGPU::EXEC, TRI))
       return;
     const MCSchedClassDesc *InstrSchedClassDesc =
         SchedModel.resolveSchedClass(&Instr);
@@ -633,14 +635,8 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // read/write registers.
     for (const MachineOperand &InstrMO : Instr.operands()) {
       if (InstrMO.isReg()) {
-        for (unsigned i = 0; i < RegsOverlappedByMFMADef.size(); ++i) {
-          if (TRI->regsOverlap(RegsOverlappedByMFMADef[i], InstrMO.getReg())) {
-            if (isUnpackingSupportedInstr(Instr))
-              return;
-            RegsOverlappedByMFMADef.insert(Instr.getOperand(0).getReg());
-            break;
-          }
-        }
+        if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
+          return;
       }
     }
     if (isUnpackingSupportedInstr(Instr)) {
@@ -649,14 +645,15 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
         return;
       // If it is a packed instruction, we should subtract it's latency from the
       // overall latency calculation here, because the packed instruction will
-      // be removed and replaced by 2 unpacked instructions
+      // be removed and replaced by 2 unpacked instructions.
       TotalCyclesBetweenCandidates -=
           SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
       // We're adding 2 to account for the extra latency added by unpacking into
       // 2 instructions. At the time of writing, the considered unpacked
       // instructions have latency of 1.
-      // TODO: improve latency handling of possible inserted instructions
+      // TODO: improve latency handling of possible inserted instructions.
       TotalCyclesBetweenCandidates += 2;
+      // Subtract 1 to account for MFMA issue latency.
       if (!(TotalCyclesBetweenCandidates >= NumMFMACycles - 1))
         InstrsToUnpack.insert(&Instr);
     }
@@ -711,15 +708,11 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   Register UnpackedDstReg = IsHiBits ? TRI->getSubReg(DstReg, AMDGPU::sub1)
                                      : TRI->getSubReg(DstReg, AMDGPU::sub0);
 
-  int ClampIdx = AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::clamp);
-  int64_t ClampVal = I.getOperand(ClampIdx).getImm();
-  int Src0ModifiersIdx =
-      AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src0_modifiers);
-  int Src1ModifiersIdx =
-      AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src1_modifiers);
-
-  unsigned Src0Mods = I.getOperand(Src0ModifiersIdx).getImm();
-  unsigned Src1Mods = I.getOperand(Src1ModifiersIdx).getImm();
+  int64_t ClampVal = TII->getNamedOperand(I, AMDGPU::OpName::clamp)->getImm();
+  unsigned Src0Mods =
+      TII->getNamedOperand(I, AMDGPU::OpName::src0_modifiers)->getImm();
+  unsigned Src1Mods =
+      TII->getNamedOperand(I, AMDGPU::OpName::src1_modifiers)->getImm();
 
   MachineInstrBuilder NewMI = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
   NewMI.addDef(UnpackedDstReg); // vdst
@@ -729,9 +722,8 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
     const MachineOperand *SrcMO3 =
         TII->getNamedOperand(I, AMDGPU::OpName::src2);
-    int Src2ModifiersIdx =
-        AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src2_modifiers);
-    unsigned Src2Mods = I.getOperand(Src2ModifiersIdx).getImm();
+    unsigned Src2Mods =
+        TII->getNamedOperand(I, AMDGPU::OpName::src2_modifiers)->getImm();
     addOperandAndMods(NewMI, Src2Mods, IsHiBits, *SrcMO3);
   }
   NewMI.addImm(ClampVal); // clamp
@@ -785,7 +777,6 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
     // and limit the distance to 20 instructions for compile time purposes.
     // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
     // may be bundled with the instructions they modify.
-    //
     for (auto &MI : make_early_inc_range(MBB.instrs())) {
       if (Count == Threshold)
         SetGPRMI = nullptr;
@@ -808,7 +799,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
     }
   }
 
-  // TODO: fold this into previous block, if possible. Evaluate and handle any
+  // TODO: Fold this into previous block, if possible. Evaluate and handle any
   // side effects.
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the compiler
@@ -827,9 +818,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
     }
     if (!InstrsToUnpack.empty()) {
       for (MachineInstr *MI : InstrsToUnpack) {
-        if (!SIInstrInfo::modifiesModeRegister(*MI) &&
-            !MI->modifiesRegister(AMDGPU::EXEC, TRI))
-          performF32Unpacking(*MI);
+        performF32Unpacking(*MI);
       }
     }
   }
