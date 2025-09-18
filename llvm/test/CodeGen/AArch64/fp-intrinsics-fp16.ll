@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=aarch64 -global-isel=true -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 ; RUN: llc -mtriple=aarch64 -global-isel=true -global-isel-abort=2 -mattr=+fullfp16 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Check that constrained fp intrinsics are correctly lowered.
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for add_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sub_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_f16
@@ -80,6 +78,8 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_une_f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptrunc_f16_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fpext_f32_f16
+
+; Check that constrained fp intrinsics are correctly lowered.
 
 ; Half-precision intrinsics
 

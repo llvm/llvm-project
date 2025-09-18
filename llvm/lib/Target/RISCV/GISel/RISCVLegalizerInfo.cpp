@@ -151,7 +151,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO})
+  getActionDefinitionsBuilder({G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
       .minScalar(0, sXLen)
       .lower();
 
@@ -572,7 +572,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64, s128});
+      .customFor(!ST.is64Bit(), {s32})
+      .customFor(ST.is64Bit(), {s32, s64})
+      .lowerFor({s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -1358,7 +1360,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  // TODO: G_FCONSTANT
+  case TargetOpcode::G_FCONSTANT: {
+    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
+
+    // Convert G_FCONSTANT to G_CONSTANT.
+    Register DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
