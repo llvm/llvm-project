@@ -95,6 +95,7 @@ emptyAndDetachBlock(BasicBlock *BB,
 void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
                             SmallVectorImpl<DominatorTree::UpdateType> *Updates,
                             bool KeepOneInputPHIs) {
+  SmallPtrSet<BasicBlock *, 4> UniqueEHRetBlocksToDelete;
   for (auto *BB : BBs) {
     auto NonFirstPhiIt = BB->getFirstNonPHIIt();
     if (NonFirstPhiIt != BB->end()) {
@@ -106,7 +107,8 @@ void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
       // first block, the we would have possible cleanupret and catchret
       // instructions with poison arguments, which wouldn't be valid.
       if (isa<FuncletPadInst>(I)) {
-        SmallPtrSet<BasicBlock *, 4> UniqueEHRetBlocksToDelete;
+        UniqueEHRetBlocksToDelete.clear();
+
         for (User *User : I.users()) {
           Instruction *ReturnInstr = dyn_cast<Instruction>(User);
           // If we have a cleanupret or catchret block, replace it with just an
@@ -118,11 +120,13 @@ void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
             UniqueEHRetBlocksToDelete.insert(ReturnInstrBB);
           }
         }
-        for (BasicBlock *EHRetBB :
-             make_early_inc_range(UniqueEHRetBlocksToDelete))
+
+        for (BasicBlock *EHRetBB : UniqueEHRetBlocksToDelete)
           emptyAndDetachBlock(EHRetBB, Updates, KeepOneInputPHIs);
       }
     }
+
+    UniqueEHRetBlocksToDelete.clear();
 
     // Detaching and emptying the current basic block.
     emptyAndDetachBlock(BB, Updates, KeepOneInputPHIs);
