@@ -593,19 +593,19 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
 // Note that "real" Flexible Array Members are `IncompleteArrayType`.
 // For them, this function returns `std::nullopt`.
 static std::optional<std::pair<QualType, nonloc::ConcreteInt>>
-getArrayTypeInfo(SValBuilder &svb, ArraySubscriptExpr const *expr) {
-  auto const *arrayBaseExpr = expr->getBase()->IgnoreParenImpCasts();
-  auto const arrayQualType = arrayBaseExpr->getType().getCanonicalType();
-  if (arrayQualType.isNull() || !arrayQualType->isConstantArrayType()) {
+getArrayTypeInfo(SValBuilder &SVB, ArraySubscriptExpr const *E) {
+  Expr const *ArrayBaseExpr = E->getBase()->IgnoreParenImpCasts();
+  QualType const ArrayQualType = ArrayBaseExpr->getType().getCanonicalType();
+  if (ArrayQualType.isNull() || !ArrayQualType->isConstantArrayType())
     return std::nullopt;
-  }
-  auto *constArrayType =
-      dyn_cast<ConstantArrayType>(arrayQualType->getAsArrayTypeUnsafe());
-  if (!constArrayType) {
+
+  auto *ConstArrayType =
+      dyn_cast<ConstantArrayType>(ArrayQualType->getAsArrayTypeUnsafe());
+  if (!ConstArrayType)
     return std::nullopt;
-  }
+
   return std::make_pair(
-      constArrayType->getElementType(),
+      ConstArrayType->getElementType(),
       // Note that an array size is technically unsigned, but
       // `compareValueToThreshold` (via `getSimplifiedOffsets`)
       // will do some arithmetics that could overflow and cause FN. For instance
@@ -617,17 +617,16 @@ getArrayTypeInfo(SValBuilder &svb, ArraySubscriptExpr const *expr) {
       // and if 20 is unsigned, that will overflow to the biggest possible array
       // which is always trivially true. We obviously do not want that, so we
       // need to treat the size as signed.
-      svb.makeIntVal(llvm::APSInt{constArrayType->getSize(), false}));
+      SVB.makeIntVal(llvm::APSInt{ConstArrayType->getSize(), false}));
 }
 
 static Messages getNegativeIndexMessage(StringRef Name,
                                         nonloc::ConcreteInt ArraySize,
                                         NonLoc Index) {
-  auto const ArraySizeVal = ArraySize.getValue()->getZExtValue();
+  uint64_t const ArraySizeVal = ArraySize.getValue()->getZExtValue();
   std::string const IndexStr = [&]() -> std::string {
-    if (auto ConcreteIndex = getConcreteValue(Index);
-        ConcreteIndex.has_value()) {
-      return formatv(" {0}", ConcreteIndex);
+    if (std::optional<int64_t> ConcreteIndex = getConcreteValue(Index)) {
+      return formatv(" {0}", *ConcreteIndex);
     }
     return "";
   }();
@@ -637,11 +636,11 @@ static Messages getNegativeIndexMessage(StringRef Name,
                   Name, ArraySizeVal, IndexStr)};
 }
 
-static std::string truncateWithEllipsis(StringRef str, size_t maxLength) {
-  if (str.size() <= maxLength)
-    return str.str();
+static std::string truncateWithEllipsis(StringRef Str, size_t MaxLength) {
+  if (Str.size() <= MaxLength)
+    return Str.str();
 
-  return (str.substr(0, maxLength - 3) + "...").str();
+  return (Str.substr(0, MaxLength - 3) + "...").str();
 }
 
 static Messages getOOBIndexMessage(StringRef Name, NonLoc Index,
@@ -662,7 +661,8 @@ static Messages getOOBIndexMessage(StringRef Name, NonLoc Index,
     Out << "an overflowing index";
   }
 
-  const auto ElemTypeStr = truncateWithEllipsis(ElemType.getAsString(), 20);
+  std::string const ElemTypeStr =
+      truncateWithEllipsis(ElemType.getAsString(), 20);
 
   Out << ", while it holds only ";
   if (ExtentN != 1)
@@ -705,7 +705,7 @@ static bool isFakeFlexibleArrays(const ArraySubscriptExpr *E) {
     return CAT && CAT->getSize().getZExtValue() <= 1;
   };
 
-  if (auto const *Field = getFieldDecl(E)) {
+  if (FieldDecl const *Field = getFieldDecl(E)) {
     if (!maybeConstArrayPlaceholder(Field->getType()))
       return false;
 
@@ -717,8 +717,8 @@ static bool isFakeFlexibleArrays(const ArraySubscriptExpr *E) {
 }
 
 // Generate a representation of `Expr` suitable for diagnosis.
-SmallString<128> ExprReprForDiagnosis(ArraySubscriptExpr const *E,
-                                      CheckerContext &C) {
+static std::string ExprReprForDiagnosis(ArraySubscriptExpr const *E,
+                                        CheckerContext &C) {
   SmallString<128> Buf;
   llvm::raw_svector_ostream Out(Buf);
 
@@ -740,7 +740,7 @@ SmallString<128> ExprReprForDiagnosis(ArraySubscriptExpr const *E,
     Out << '\'';
   }
 
-  return Buf;
+  return std::string(Buf);
 }
 
 class StateIndexUpdateReporter {
@@ -800,15 +800,16 @@ auto ArrayBoundChecker::performCheckArrayTypeIndex(const ArraySubscriptExpr *E,
   auto State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
 
-  auto const ArrayInfo = getArrayTypeInfo(SVB, E);
-  auto const Index =
+  std::optional<std::pair<QualType, nonloc::ConcreteInt>> const ArrayInfo =
+      getArrayTypeInfo(SVB, E);
+  std::optional<NonLoc> const Index =
       SVB.simplifySVal(State, C.getSVal(E->getIdx())).getAs<NonLoc>();
   if (!ArrayInfo || !Index)
     return ConstantArrayIndexResult::Unknown;
 
   auto const &[ArrayType, ArraySize] = *ArrayInfo;
 
-  auto const ExprAsStr = ExprReprForDiagnosis(E, C);
+  std::string const ExprAsStr = ExprReprForDiagnosis(E, C);
   bool const IsFakeFAM = isFakeFlexibleArrays(E);
 
   StateIndexUpdateReporter SUR(ExprAsStr, ArrayType, *Index, ArraySize);
