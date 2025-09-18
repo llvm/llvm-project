@@ -50,7 +50,7 @@ bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
 }
 
 bool InstrumentManager::canCustomize(
-    const llvm::SmallVector<Instrument *> &IVec) const {
+    const ArrayRef<Instrument *> IVec) const {
   for (const auto I : IVec) {
     if (I->getDesc() == LatencyInstrument::DESC_NAME) {
       auto LatInst = static_cast<LatencyInstrument *>(I);
@@ -60,13 +60,13 @@ bool InstrumentManager::canCustomize(
   return false;
 }
 
-void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
+void InstrumentManager::customize(const ArrayRef<Instrument *> IVec,
                                   InstrDesc &ID) const {
   for (const auto I : IVec) {
     if (I->getDesc() == LatencyInstrument::DESC_NAME) {
       auto LatInst = static_cast<LatencyInstrument *>(I);
       if (LatInst->hasValue()) {
-        auto Latency = LatInst->getLatency();
+        unsigned Latency = LatInst->getLatency();
         // TODO Allow to customize a subset of ID.Writes
         for (auto &W : ID.Writes)
           W.Latency = Latency;
@@ -76,8 +76,8 @@ void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
   }
 }
 
-UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
-                                                     llvm::StringRef Data) {
+UniqueInstrument InstrumentManager::createInstrument(StringRef Desc,
+                                                     StringRef Data) {
   if (EnableInstruments) {
     if (Desc == LatencyInstrument::DESC_NAME)
       return std::make_unique<LatencyInstrument>(Data);

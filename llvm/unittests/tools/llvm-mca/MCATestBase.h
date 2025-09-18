@@ -78,7 +78,7 @@ protected:
   runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
                  ArrayRef<mca::View *> Views = {},
                  const mca::PipelineOptions *PO = nullptr,
-                 SmallVector<std::pair<StringRef, StringRef>> Descs = {});
+                 ArrayRef<std::pair<StringRef, StringRef>> Descs = {});
 };
 
 } // end namespace mca

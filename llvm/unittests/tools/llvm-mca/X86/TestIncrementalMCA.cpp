@@ -246,7 +246,7 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
   MCIs.push_back(InstructionToAdd);
   SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
   auto LatStr = std::to_string(ExplicitLatency);
-  InstrDescs.push_back(std::make_pair(StringRef("LATENCY"), StringRef(LatStr)));
+  InstrDescs.push_back(std::make_pair("LATENCY", LatStr));
 
   // Run the baseline.
   json::Object BaselineResult;

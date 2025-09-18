@@ -60,7 +60,7 @@ void MCATestBase::SetUp() {
 Error MCATestBase::runBaselineMCA(
     json::Object &Result, ArrayRef<MCInst> Insts, ArrayRef<mca::View *> Views,
     const mca::PipelineOptions *PO,
-    SmallVector<std::pair<StringRef, StringRef>> Descs) {
+    ArrayRef<std::pair<StringRef, StringRef>> Descs) {
   mca::Context MCA(*MRI, *STI);
 
   // Enable instruments when descriptions are provided

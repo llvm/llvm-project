@@ -138,21 +138,19 @@ class LatencyInstrument : public Instrument {
   std::optional<unsigned> Latency;
 
 public:
-  static const llvm::StringRef DESC_NAME;
+  static const StringRef DESC_NAME;
   LatencyInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
     // Skip spaces and tabs.
-    unsigned Position = Data.find_first_not_of(" \t");
-    if (Position >= Data.size())
-      // We reached the end of the comment. Bail out.
+    Data = Data.trim();
+    if (Data.empty()) // Empty description. Bail out.
       return;
-    Data = Data.drop_front(Position);
     unsigned L = 0;
     if (!Data.getAsInteger(10, L))
       Latency = L;
   }
 
   bool hasValue() const { return bool(Latency); }
-  unsigned getLatency() { return *Latency; }
+  unsigned getLatency() const { return *Latency; }
 };
 
 using UniqueInstrument = std::unique_ptr<Instrument>;
@@ -200,10 +198,10 @@ public:
                                    const SmallVector<Instrument *> &IVec) const;
 
   // Return true if instruments can modify instruction description
-  virtual bool canCustomize(const SmallVector<Instrument *> &IVec) const;
+  virtual bool canCustomize(const ArrayRef<Instrument *> IVec) const;
 
   // Customize instruction description
-  virtual void customize(const SmallVector<Instrument *> &IVec,
+  virtual void customize(const ArrayRef<Instrument *> IVec,
                          llvm::mca::InstrDesc &Desc) const;
 };
 
