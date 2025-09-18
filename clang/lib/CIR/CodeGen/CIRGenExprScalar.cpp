@@ -880,7 +880,7 @@ public:
     if (ty.UseExcessPrecision(cgf.getContext())) {
       if (ty->getAs<VectorType>()) {
         assert(!cir::MissingFeatures::vectorType());
-        cgf.cgm.errorNYI("promotion to vector type");
+        cgf.cgm.errorNYI("getPromotionType: promotion to vector type");
         return QualType();
       }
       return cgf.getContext().FloatTy;
@@ -1095,8 +1095,20 @@ public:
 
   mlir::Value VisitBinLOr(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
-      assert(!cir::MissingFeatures::vectorType());
-      return {};
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      auto vecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+      mlir::Value zeroValue = builder.getNullValue(vecTy.getElementType(), loc);
+      SmallVector<mlir::Value, 16> elements(vecTy.getSize(), zeroValue);
+      auto zeroVec = cir::VecCreateOp::create(builder, loc, vecTy, elements);
+
+      mlir::Value lhs = Visit(e->getLHS());
+      mlir::Value rhs = Visit(e->getRHS());
+
+      auto cmpOpKind = cir::CmpOpKind::ne;
+      lhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, lhs, zeroVec);
+      rhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, rhs, zeroVec);
+      mlir::Value vecOr = builder.createOr(loc, lhs, rhs);
+      return builder.createIntCast(vecOr, vecTy);
     }
 
     assert(!cir::MissingFeatures::instrumentation());
