@@ -241,8 +241,8 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
   SmallVector<MCInst> MCIs;
   MCInst InstructionToAdd = MCInstBuilder(X86::XOR64rr)
                                 .addReg(X86::RAX)
-                                .addReg(X86::RAX)
-                                .addReg(X86::RAX);
+                                .addReg(X86::RBX)
+                                .addReg(X86::RCX);
   MCIs.push_back(InstructionToAdd);
   SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
   auto LatStr = std::to_string(ExplicitLatency);
