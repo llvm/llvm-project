@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_INLINE_STRLEN_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_INLINE_STRLEN_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/common.h"
 
@@ -32,14 +33,14 @@ string_length(const char *src) {
       __builtin_align_down(src, alignment));
 
   cpp::simd<char> chars = cpp::load_aligned<cpp::simd<char>>(aligned);
-  cpp::simd_mask<char> mask = cpp::simd_cast<bool>(chars == null_byte);
+  cpp::simd_mask<char> mask = chars == null_byte;
   size_t offset = src - reinterpret_cast<const char *>(aligned);
   if (cpp::any_of(shift_mask(mask, offset)))
     return cpp::find_first_set(shift_mask(mask, offset));
 
   for (;;) {
     cpp::simd<char> chars = cpp::load_aligned<cpp::simd<char>>(++aligned);
-    cpp::simd_mask<char> mask = cpp::simd_cast<bool>(chars == null_byte);
+    cpp::simd_mask<char> mask = chars == null_byte;
     if (cpp::any_of(mask))
       return (reinterpret_cast<const char *>(aligned) - src) +
              cpp::find_first_set(mask);

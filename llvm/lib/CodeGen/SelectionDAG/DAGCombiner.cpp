@@ -10001,13 +10001,16 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
-  // fold (not (neg x)) -> (add X, -1)
-  // FIXME: This can be generalized to (not (sub Y, X)) -> (add X, ~Y) if
-  // Y is a constant or the subtract has a single use.
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::SUB &&
-      isNullConstant(N0.getOperand(0))) {
-    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(1),
-                       DAG.getAllOnesConstant(DL, VT));
+  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant
+  if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1)) {
+    SDValue Y = N0.getOperand(0);
+    SDValue X = N0.getOperand(1);
+
+    if (auto *YConst = dyn_cast<ConstantSDNode>(Y)) {
+      APInt NotYValue = ~YConst->getAPIntValue();
+      SDValue NotY = DAG.getConstant(NotYValue, DL, VT);
+      return DAG.getNode(ISD::ADD, DL, VT, X, NotY, N->getFlags());
+    }
   }
 
   // fold (not (add X, -1)) -> (neg X)
@@ -10088,6 +10091,55 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
   if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
     return Combined;
+
+  // fold (xor (smin(x, C), C)) -> select (x < C), xor(x, C), 0
+  // fold (xor (smax(x, C), C)) -> select (x > C), xor(x, C), 0
+  // fold (xor (umin(x, C), C)) -> select (x < C), xor(x, C), 0
+  // fold (xor (umax(x, C), C)) -> select (x > C), xor(x, C), 0
+  SDValue Op0;
+  if (sd_match(N0, m_OneUse(m_AnyOf(m_SMin(m_Value(Op0), m_Specific(N1)),
+                                    m_SMax(m_Value(Op0), m_Specific(N1)),
+                                    m_UMin(m_Value(Op0), m_Specific(N1)),
+                                    m_UMax(m_Value(Op0), m_Specific(N1)))))) {
+
+    if (isa<ConstantSDNode>(N1) ||
+        ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
+      // For vectors, only optimize when the constant is zero or all-ones to
+      // avoid generating more instructions
+      if (VT.isVector()) {
+        ConstantSDNode *N1C = isConstOrConstSplat(N1);
+        if (!N1C || (!N1C->isZero() && !N1C->isAllOnes()))
+          return SDValue();
+      }
+
+      // Avoid the fold if the minmax operation is legal and select is expensive
+      if (TLI.isOperationLegal(N0.getOpcode(), VT) &&
+          TLI.isPredictableSelectExpensive())
+        return SDValue();
+
+      EVT CCVT = getSetCCResultType(VT);
+      ISD::CondCode CC;
+      switch (N0.getOpcode()) {
+      case ISD::SMIN:
+        CC = ISD::SETLT;
+        break;
+      case ISD::SMAX:
+        CC = ISD::SETGT;
+        break;
+      case ISD::UMIN:
+        CC = ISD::SETULT;
+        break;
+      case ISD::UMAX:
+        CC = ISD::SETUGT;
+        break;
+      }
+      SDValue FN1 = DAG.getFreeze(N1);
+      SDValue Cmp = DAG.getSetCC(DL, CCVT, Op0, FN1, CC);
+      SDValue XorXC = DAG.getNode(ISD::XOR, DL, VT, Op0, FN1);
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      return DAG.getSelect(DL, VT, Cmp, XorXC, Zero);
+    }
+  }
 
   return SDValue();
 }
@@ -16317,7 +16369,15 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       if (VT.isScalarInteger() || TLI.isOperationLegal(N0.getOpcode(), VT)) {
         SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
         SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
-        return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+        SDNodeFlags Flags;
+        // Propagate nuw for sub.
+        if (N0->getOpcode() == ISD::SUB && N0->getFlags().hasNoUnsignedWrap() &&
+            DAG.MaskedValueIsZero(
+                N0->getOperand(0),
+                APInt::getBitsSetFrom(SrcVT.getScalarSizeInBits(),
+                                      VT.getScalarSizeInBits())))
+          Flags.setNoUnsignedWrap(true);
+        return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR, Flags);
       }
     }
     break;
@@ -16832,6 +16892,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   bool AllowMultipleMaybePoisonOperands =
       N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
       N0.getOpcode() == ISD::BUILD_VECTOR ||
+      N0.getOpcode() == ISD::INSERT_SUBVECTOR ||
       N0.getOpcode() == ISD::BUILD_PAIR ||
       N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
       N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
@@ -19356,13 +19417,13 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   // MachineBasicBlock CFG, which is awkward.
 
   // fold a brcond with a setcc condition into a BR_CC node if BR_CC is legal
-  // on the target.
+  // on the target, also copy fast math flags.
   if (N1.getOpcode() == ISD::SETCC &&
       TLI.isOperationLegalOrCustom(ISD::BR_CC,
                                    N1.getOperand(0).getValueType())) {
-    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other,
-                       Chain, N1.getOperand(2),
-                       N1.getOperand(0), N1.getOperand(1), N2);
+    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other, Chain,
+                       N1.getOperand(2), N1.getOperand(0), N1.getOperand(1), N2,
+                       N1->getFlags());
   }
 
   if (N1.hasOneUse()) {
@@ -23302,6 +23363,13 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   if (InVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       InVec == InVal.getOperand(0) && EltNo == InVal.getOperand(1))
     return InVec;
+
+  // Remove insert of UNDEF/POISON elements.
+  if (InVal.isUndef()) {
+    if (InVal.getOpcode() == ISD::POISON || InVec.getOpcode() == ISD::UNDEF)
+      return InVec;
+    return DAG.getFreeze(InVec);
+  }
 
   if (!IndexC) {
     // If this is variable insert to undef vector, it might be better to splat:
@@ -27792,18 +27860,34 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   SDValue N2 = N->getOperand(2);
   uint64_t InsIdx = N->getConstantOperandVal(2);
 
-  // If inserting an UNDEF, just return the original vector.
-  if (N1.isUndef())
-    return N0;
+  // Remove insert of UNDEF/POISON.
+  if (N1.isUndef()) {
+    if (N1.getOpcode() == ISD::POISON || N0.getOpcode() == ISD::UNDEF)
+      return N0;
+    return DAG.getFreeze(N0);
+  }
 
-  // If this is an insert of an extracted vector into an undef vector, we can
-  // just use the input to the extract if the types match, and can simplify
+  // If this is an insert of an extracted vector into an undef/poison vector, we
+  // can just use the input to the extract if the types match, and can simplify
   // in some cases even if they don't.
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(1) == N2) {
+    EVT N1VT = N1.getValueType();
     EVT SrcVT = N1.getOperand(0).getValueType();
-    if (SrcVT == VT)
-      return N1.getOperand(0);
+    if (SrcVT == VT) {
+      // Need to ensure that result isn't more poisonous if skipping both the
+      // extract+insert.
+      if (N0.getOpcode() == ISD::POISON)
+        return N1.getOperand(0);
+      if (VT.isFixedLengthVector() && N1VT.isFixedLengthVector()) {
+        unsigned SubVecNumElts = N1VT.getVectorNumElements();
+        APInt EltMask = APInt::getBitsSet(VT.getVectorNumElements(), InsIdx,
+                                          InsIdx + SubVecNumElts);
+        if (DAG.isGuaranteedNotToBePoison(N1.getOperand(0), ~EltMask))
+          return N1.getOperand(0);
+      } else if (DAG.isGuaranteedNotToBePoison(N1.getOperand(0)))
+        return N1.getOperand(0);
+    }
     // TODO: To remove the zero check, need to adjust the offset to
     // a multiple of the new src type.
     if (isNullConstant(N2)) {

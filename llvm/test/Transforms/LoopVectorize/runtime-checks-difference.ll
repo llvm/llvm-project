@@ -390,7 +390,7 @@ define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, pt
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[OFF]], -8
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
@@ -411,7 +411,7 @@ define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, pt
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[SRC2]]
 ; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP9]], 32
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], [[SCALAR_PH:label %.*]], [[VECTOR_PH:label %.*]]
 ;
 entry:
   br label %loop

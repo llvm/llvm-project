@@ -3227,27 +3227,6 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       KnownUndef.setAllBits();
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
     }
-    SDValue ScalarSrc = Op.getOperand(0);
-    if (ScalarSrc.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      SDValue Src = ScalarSrc.getOperand(0);
-      SDValue Idx = ScalarSrc.getOperand(1);
-      EVT SrcVT = Src.getValueType();
-
-      ElementCount SrcEltCnt = SrcVT.getVectorElementCount();
-
-      if (SrcEltCnt.isScalable())
-        return false;
-
-      unsigned NumSrcElts = SrcEltCnt.getFixedValue();
-      if (isNullConstant(Idx)) {
-        APInt SrcDemandedElts = APInt::getOneBitSet(NumSrcElts, 0);
-        APInt SrcUndef = KnownUndef.zextOrTrunc(NumSrcElts);
-        APInt SrcZero = KnownZero.zextOrTrunc(NumSrcElts);
-        if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
-                                       TLO, Depth + 1))
-          return true;
-      }
-    }
     KnownUndef.setHighBits(NumElts - 1);
     break;
   }
@@ -3439,8 +3418,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // Demand any elements from the subvector and the remainder from the src its
-    // inserted into.
+    // Demand any elements from the subvector and the remainder from the src it
+    // is inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
     uint64_t Idx = Op.getConstantOperandVal(2);
@@ -3448,6 +3427,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
     APInt DemandedSrcElts = DemandedElts;
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+
+    // If none of the sub operand elements are demanded, bypass the insert.
+    if (!DemandedSubElts)
+      return TLO.CombineTo(Op, Src);
 
     APInt SubUndef, SubZero;
     if (SimplifyDemandedVectorElts(Sub, DemandedSubElts, SubUndef, SubZero, TLO,

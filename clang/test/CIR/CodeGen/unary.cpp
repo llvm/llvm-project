@@ -556,3 +556,69 @@ void test_logical_not() {
 // OGCG:   %[[D_NOT:.*]] = xor i1 %[[D_BOOL]], true
 // OGCG:   %[[D_CAST:.*]] = zext i1 %[[D_NOT]] to i8
 // OGCG:   store i8 %[[D_CAST]], ptr %[[B_ADDR]], align 1
+
+void f16NestedUPlus() {
+  _Float16 a;
+  _Float16 b = +(+a);
+}
+
+// CHECK: cir.func{{.*}} @_Z14f16NestedUPlusv()
+// CHECK:  %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
+// CHECK:  %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CHECK:  %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
+// CHECK:  %[[A_F32:.*]] = cir.cast(floating, %[[TMP_A]] : !cir.f16), !cir.float
+// CHECK:  %[[A_PLUS:.*]] = cir.unary(plus, %[[A_F32]]) : !cir.float, !cir.float
+// CHECK:  %[[RESULT_F32:.*]] = cir.unary(plus, %[[A_PLUS]]) : !cir.float, !cir.float
+// CHECK:  %[[RESULT:.*]] = cir.cast(floating, %[[RESULT_F32]] : !cir.float), !cir.f16
+// CHECK:  cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
+
+// LLVM: define{{.*}} void @_Z14f16NestedUPlusv()
+// LLVM:  %[[A_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:  %[[B_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:  %[[TMP_A:.*]] = load half, ptr %[[A_ADDR]], align 2
+// LLVM:  %[[RESULT_F32:.*]] = fpext half %[[TMP_A]] to float
+// LLVM:  %[[RESULT:.*]] = fptrunc float %[[RESULT_F32]] to half
+// LLVM:  store half %[[RESULT]], ptr %[[B_ADDR]], align 2
+
+// OGCG: define{{.*}} void @_Z14f16NestedUPlusv()
+// OGCG:  %[[A_ADDR:.*]] = alloca half, align 2
+// OGCG:  %[[B_ADDR:.*]] = alloca half, align 2
+// OGCG:  %[[TMP_A:.*]] = load half, ptr %[[A_ADDR]], align 2
+// OGCG:  %[[RESULT_F32:.*]] = fpext half %[[TMP_A]] to float
+// OGCG:  %[[RESULT:.*]] = fptrunc float %[[RESULT_F32]] to half
+// OGCG:  store half %[[RESULT]], ptr %[[B_ADDR]], align 2
+
+void f16NestedUMinus() {
+  _Float16 a;
+  _Float16 b = -(-a);
+}
+
+// CHECK: cir.func{{.*}} @_Z15f16NestedUMinusv()
+// CHECK:  %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
+// CHECK:  %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CHECK:  %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
+// CHECK:  %[[A_F32:.*]] = cir.cast(floating, %[[TMP_A]] : !cir.f16), !cir.float
+// CHECK:  %[[A_MINUS:.*]] = cir.unary(minus, %[[A_F32]]) : !cir.float, !cir.float
+// CHECK:  %[[RESULT_F32:.*]] = cir.unary(minus, %[[A_MINUS]]) : !cir.float, !cir.float
+// CHECK:  %[[RESULT:.*]] = cir.cast(floating, %[[RESULT_F32]] : !cir.float), !cir.f16
+// CHECK:  cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
+
+// LLVM: define{{.*}} void @_Z15f16NestedUMinusv()
+// LLVM:  %[[A_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:  %[[B_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:  %[[TMP_A:.*]] = load half, ptr %[[A_ADDR]], align 2
+// LLVM:  %[[A_F32:.*]] = fpext half %[[TMP_A]] to float
+// LLVM:  %[[A_MINUS:.*]] = fneg float %[[A_F32]]
+// LLVM:  %[[RESULT_F32:.*]] = fneg float %[[A_MINUS]]
+// LLVM:  %[[RESULT:.*]] = fptrunc float %[[RESULT_F32]] to half
+// LLVM:  store half %[[RESULT]], ptr %[[B_ADDR]], align 2
+
+// OGCG: define{{.*}} void @_Z15f16NestedUMinusv()
+// OGCG:  %[[A_ADDR:.*]] = alloca half, align 2
+// OGCG:  %[[B_ADDR:.*]] = alloca half, align 2
+// OGCG:  %[[TMP_A:.*]] = load half, ptr %[[A_ADDR]], align 2
+// OGCG:  %[[A_F32:.*]] = fpext half %[[TMP_A]] to float
+// OGCG:  %[[A_MINUS:.*]] = fneg float %[[A_F32]]
+// OGCG:  %[[RESULT_F32:.*]] = fneg float %[[A_MINUS]]
+// OGCG:  %[[RESULT:.*]] = fptrunc float %[[RESULT_F32]] to half
+// OGCG:  store half %[[RESULT]], ptr %[[B_ADDR]], align 2
