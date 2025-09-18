@@ -520,37 +520,6 @@ static bool dominatesMergePoint(
   return true;
 }
 
-/// Extract ConstantInt from value, looking through IntToPtr
-/// and PointerNullValue. Return NULL if value is not a constant int.
-static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
-  // Normal constant int.
-  ConstantInt *CI = dyn_cast<ConstantInt>(V);
-  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy() ||
-      DL.isNonIntegralPointerType(V->getType()))
-    return CI;
-
-  // This is some kind of pointer constant. Turn it into a pointer-sized
-  // ConstantInt if possible.
-  IntegerType *PtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
-
-  // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
-  if (isa<ConstantPointerNull>(V))
-    return ConstantInt::get(PtrTy, 0);
-
-  // IntToPtr const int.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == Instruction::IntToPtr)
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
-        // The constant is very likely to have the right type already.
-        if (CI->getType() == PtrTy)
-          return CI;
-        else
-          return cast<ConstantInt>(
-              ConstantFoldIntegerCast(CI, PtrTy, /*isSigned=*/false, DL));
-      }
-  return nullptr;
-}
-
 namespace {
 
 /// Given a chain of or (||) or and (&&) comparison of a value against a
@@ -641,7 +610,7 @@ private:
     ICmpInst *ICI;
     ConstantInt *C;
     if (!((ICI = dyn_cast<ICmpInst>(I)) &&
-          (C = getConstantInt(I->getOperand(1), DL)))) {
+          match(I->getOperand(1), m_ConstantInt(C)))) {
       return false;
     }
 
@@ -858,7 +827,7 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
   } else if (BranchInst *BI = dyn_cast<BranchInst>(TI))
     if (BI->isConditional() && BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
-        if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
+        if (ICI->isEquality() && match(ICI->getOperand(1), m_ConstantInt()))
           CV = ICI->getOperand(0);
       } else if (auto *Trunc = dyn_cast<TruncInst>(BI->getCondition())) {
         if (Trunc->hasNoUnsignedWrap())
@@ -895,7 +864,7 @@ BasicBlock *SimplifyCFGOpt::getValueEqualityComparisonCases(
   ConstantInt *C;
   if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
     Pred = ICI->getPredicate();
-    C = getConstantInt(ICI->getOperand(1), DL);
+    match(ICI->getOperand(1), m_ConstantInt(C));
   } else {
     Pred = ICmpInst::ICMP_NE;
     auto *Trunc = cast<TruncInst>(Cond);
