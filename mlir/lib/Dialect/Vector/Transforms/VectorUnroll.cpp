@@ -931,7 +931,8 @@ private:
 /// %v   = vector.insert %v1, %1 [1] : vector<3xf32> into vector<2x3xf32>
 /// ```
 ///
-/// When applied exhaustively, this will produce a sequence of 1-d from_elements
+/// When this pattern is applied until a fixed-point is reached,
+/// this will produce a sequence of 1-d from_elements
 /// ops.
 struct UnrollFromElements : OpRewritePattern<vector::FromElementsOp> {
   UnrollFromElements(MLIRContext *context,
