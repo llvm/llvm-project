@@ -11,6 +11,11 @@
 // RUN:                    -verify %s
 //
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection \
+// RUN:                    -fstrict-flex-arrays=2 -DSTRICT_FLEX=2 \
+// RUN:                    -DWARN_FLEXIBLE_ARRAY -analyzer-config security.ArrayBound:EnableFakeFlexibleArrayWarn=true \
+// RUN:                    -verify %s
+//
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection \
 // RUN:                    -fstrict-flex-arrays=3 -DSTRICT_FLEX=3 \
 // RUN:                    -verify %s
 
@@ -39,6 +44,9 @@ int use_fam0(struct FAM0 *ptr) {
 #if STRICT_FLEX > 2
   // expected-warning@-2 {{Out of bound access to memory after the end of the field 'args'}}
 #else
+#ifdef WARN_FLEXIBLE_ARRAY
+  // expected-warning@-5 {{Potential out of bound access to the field 'args', which may be a 'flexible array member'}}
+#endif
   clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 #endif
   return x;
@@ -86,9 +94,10 @@ int use_not_fam(struct NotFAM *ptr) {
 // Pattern used in GCC
 union FlexibleArrayUnion {
   int args[1];
-  struct {int x, y, z;};
+  struct {
+    int x, y, z;
+  };
 };
-
 
 int use_union(union FlexibleArrayUnion *p) {
   int x = p->args[2];
