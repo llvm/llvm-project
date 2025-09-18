@@ -1,6 +1,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
 ; RUN: llc -data-sections=false -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck -check-prefix=NODATA %s
 
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck -check-prefix=OBJ %s
+
+; RUN: llc -data-sections=false -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck -check-prefix=OBJ-NODATA %s
+
 @a = global i32 1
 @b = global i32 2
 @c = global i32 3, section "custom_section_c"
@@ -40,3 +46,32 @@
 ; NODATA:      .csect custom_section_f[RW]
 ; NODATA:      .ref b
 ; NODATA:      .globl f
+
+; OBJ: Disassembly of section .text:
+
+; OBJ:   e[RO]:
+; OBJ:     R_REF {{.*}} b[RW]
+; OBJ:     R_REF {{.*}} c
+
+; OBJ: Disassembly of section .data:
+; OBJ:   a[RW]:
+; OBJ:   b[RW]:
+; OBJ:   c:
+; OBJ:   d[RW]:
+; OBJ:     R_REF {{.*}} a[RW]
+; OBJ:   f:
+; OBJ:     R_REF {{.*}} b[RW]
+
+; OBJ-NODATA: Disassembly of section .text:
+; OBJ-NODATA:   e:
+; OBJ-NODATA:     R_REF {{.*}} b
+; OBJ-NODATA:     R_REF {{.*}} c
+
+; OBJ-NODATA: Disassembly of section .data:
+; OBJ-NODATA:   a:
+; OBJ-NODATA:     R_REF {{.*}} a
+; OBJ-NODATA:   b:
+; OBJ-NODATA:   d:
+; OBJ-NODATA:   c:
+; OBJ-NODATA:   f:
+; OBJ-NODATA:     R_REF {{.*}} b
