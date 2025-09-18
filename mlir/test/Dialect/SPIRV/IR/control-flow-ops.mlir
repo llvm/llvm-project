@@ -281,7 +281,7 @@ spirv.module Logical GLSL450 {
       function_control = #spirv.function_control<None>,
       message = "2nd parent",
       sym_name = "foo"
-      // This is invalid MLIR because function_type is missing from spirv.func
+      // This is invalid MLIR because function_type is missing from spirv.func.
     }> ({
     ^bb0(%arg0: f32):
       "spirv.ReturnValue"(%arg0) : (f32) -> ()
