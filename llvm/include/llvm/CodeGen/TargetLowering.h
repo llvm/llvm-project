@@ -480,7 +480,7 @@ public:
     return true;
   }
 
-  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
+  /// Return true if the @llvm.vector.partial.reduce.* intrinsic
   /// should be expanded using generic code in SelectionDAGBuilder.
   virtual bool
   shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {

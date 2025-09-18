@@ -537,6 +537,23 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
+                                                                      - Workgroup
+                                                                        Clusters
+
+     ``gfx1251``                 ``amdgcn``   APU                     - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+                                                                      - Globally
+                                                                        Accessible
+                                                                        Scratch
+                                                                      - Workgroup
+                                                                        Clusters
 
      =========== =============== ============ ===== ================= =============== =============== ======================
 
@@ -767,9 +784,6 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
-
-     cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
-                                                  If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
 
      =============== ============================ ==================================================
 
@@ -1098,6 +1112,22 @@ is conservatively correct for OpenCL.
                              - ``wavefront`` and executed by a thread in the
                                same wavefront.
 
+     ``cluster``             Synchronizes with, and participates in modification
+                             and seq_cst total orderings with, other operations
+                             (except image operations) for all address spaces
+                             (except private, or generic that accesses private)
+                             provided the other operation's sync scope is:
+
+                             - ``system``, ``agent`` or ``cluster`` and
+                               executed by a thread on the same cluster.
+                             - ``workgroup`` and executed by a thread in the
+                               same work-group.
+                             - ``wavefront`` and executed by a thread in the
+                               same wavefront.
+
+                             On targets that do not support workgroup cluster
+                             launch mode, this behaves like ``agent`` scope instead.
+
      ``workgroup``           Synchronizes with, and participates in modification
                              and seq_cst total orderings with, other operations
                              (except image operations) for all address spaces
@@ -1129,6 +1159,9 @@ is conservatively correct for OpenCL.
                              operations within the same address space.
 
      ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                             operations within the same address space.
+
+     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
                              operations within the same address space.
 
      ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
@@ -1437,7 +1470,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return corresponds
                                                    to the swapped element of the first argument.
 
-
   llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
                                                    Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
@@ -1458,6 +1490,25 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
+  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx1250, ignored on earlier targets.
+                                                   First argument is flat, global, or constant address space pointer.
+                                                   Any other address space is not supported.
+                                                   On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   Second argument is rw and currently ignored. Can be 0 or 1.
+                                                   Third argument is locality, 0-3. Translates to memory scope:
+
+                                                   * 0 - SCOPE_SYS
+                                                   * 1 - SCOPE_DEV
+                                                   * 2 - SCOPE_SE
+                                                   * 3 - SCOPE_SE
+
+                                                   Note that SCOPE_CU is not generated and not safe on an invalid address.
+                                                   Fourth argument is cache type:
+
+                                                   * 0 - Instruction cache, currently ignored and no code is generated.
+                                                   * 1 - Data cache.
+
+                                                   Instruction cache prefetches are unsafe on invalid address.
   ==============================================   ==========================================================
 
 .. TODO::
@@ -1636,6 +1687,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-workgroup-id-z"                       The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.workgroup.id.z intrinsic.
 
+     "amdgpu-no-cluster-id-x"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.x intrinsic.
+
+     "amdgpu-no-cluster-id-y"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.y intrinsic.
+
+     "amdgpu-no-cluster-id-z"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.z intrinsic.
+
      "amdgpu-no-dispatch-ptr"                         The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.ptr intrinsic.
 
@@ -1775,6 +1835,13 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       prefixed with "_dvgpr$" with the value of the function symbol,
                                                       offset by one less than the number of dynamic VGPR blocks required
                                                       by the function encoded in bits 5..3.
+
+     "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
+                                                      cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
+                                                      but the dimensions cannot be determined at compile time. Any other value explicitly
+                                                      specifies the cluster dimensions.
+
+                                                      This is only relevant on targets with cluster support.
 
      ================================================ ==========================================================
 
@@ -2315,6 +2382,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x057      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ========================================== ========== =============================
 
@@ -2896,12 +2964,9 @@ mapping.
    1088-1129      SGPR64-SGPR105    32       Scalar General Purpose Registers.
    1130-1535      *Reserved*                 *Reserved for future Scalar
                                              General Purpose Registers.*
-   1536-1791      VGPR0-VGPR255     32*32    Vector General Purpose Registers
+   1536-2047      VGPR0-VGPR511     32*32    Vector General Purpose Registers
                                              when executing in wavefront 32
                                              mode.
-   1792-2047      *Reserved*                 *Reserved for future Vector
-                                             General Purpose Registers when
-                                             executing in wavefront 32 mode.*
    2048-2303      AGPR0-AGPR255     32*32    Vector Accumulation Registers
                                              when executing in wavefront 32
                                              mode.
@@ -2920,6 +2985,9 @@ mapping.
    3328-3583      *Reserved*                 *Reserved for future Vector
                                              Accumulation Registers when
                                              executing in wavefront 64 mode.*
+   3584-4095      VGPR512-VGPR1023  32*32    Second Block of Vector General
+                                             Purpose Registers When executing
+                                             in wavefront 32 mode
    ============== ================= ======== ==================================
 
 The vector registers are represented as the full size for the wavefront. They
@@ -4787,7 +4855,24 @@ Code object V5 metadata is the same as
 
      ====================== ============== ========= ================================
 
-..
+.. _amdgpu-amdhsa-code-object-metadata-v6:
+
+Code Object V6 Metadata
++++++++++++++++++++++++
+
+Code object V6 metadata is the same as
+:ref:`amdgpu-amdhsa-code-object-metadata-v5` with the changes defined in table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6`.
+
+    .. table:: AMDHSA Code Object V6 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6
+
+     ============================= ============= ========== =======================================
+     String Key                    Value Type     Required? Description
+     ============================= ============= ========== =======================================
+     ".cluster_dims"               sequence of              The dimension of the cluster.
+                                   3 integers
+     ============================= ============= ========== =======================================
 
 Kernel Dispatch
 ~~~~~~~~~~~~~~~
@@ -5114,9 +5199,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     455     1 bit   USES_CU_STORES                  GFX12.5: Whether the ``cu-stores`` target attribute is enabled.
-                                                     If 0, then all stores are ``SCOPE_SE`` or higher.
-     457:456 2 bits                                  Reserved, must be 0.
+     457:455 3 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
@@ -18253,8 +18336,6 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
-                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_uses_cu_stores``                               0                   GFX12.5      Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
