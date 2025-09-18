@@ -595,6 +595,8 @@ private:
         return Style.BraceWrapping.AfterClass;
       case TT_UnionLBrace:
         return Style.BraceWrapping.AfterUnion;
+      default:
+        return false;
       };
     };
 
@@ -602,6 +604,8 @@ private:
     if (Line->Last->isOneOf(TT_StructLBrace, TT_ClassLBrace, TT_UnionLBrace)) {
       auto TryMergeShortRecord = [&] {
         switch (Style.AllowShortRecordOnASingleLine) {
+        case FormatStyle::SRS_Never:
+          return false;
         case FormatStyle::SRS_EmptyIfAttached:
         case FormatStyle::SRS_Empty:
           return NextLine->First->is(tok::r_brace);
@@ -643,7 +647,7 @@ private:
       const bool IsEmptyBlock =
           Line->Last->is(tok::l_brace) && NextLine->First->is(tok::r_brace);
 
-      if (IsEmptyBlock && !Style.BraceWrapping.SplitEmptyRecord ||
+      if ((IsEmptyBlock && !Style.BraceWrapping.SplitEmptyRecord) ||
           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always) {
         return tryMergeSimpleBlock(I, E, Limit);
       }
