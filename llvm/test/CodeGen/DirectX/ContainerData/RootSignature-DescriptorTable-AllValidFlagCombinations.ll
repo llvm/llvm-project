@@ -13,7 +13,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !2 = !{ ptr @main, !3, i32 2 } ; function, root signature
 !3 = !{ !5, !21 } ; list of root signature elements
 !5 = !{ !"DescriptorTable", i32 0, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20 }
-!21 = !{ !"DescriptorTable", i32 0,!6, !8, !9 }
+!21 = !{ !"DescriptorTable", i32 0, !6, !8, !9 }
 
 ; typedef enum D3D12_DESCRIPTOR_RANGE_FLAGS {
 ;   NONE = 0,
