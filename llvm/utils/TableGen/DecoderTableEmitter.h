@@ -49,9 +49,18 @@ struct DecoderTableInfo {
 class DecoderTableEmitter {
   DecoderTableInfo &TableInfo;
   formatted_raw_ostream OS;
+
+  /// The number of positions occupied by the index in the output. Used to
+  /// right-align indices and left-align the text that follows them.
   unsigned IndexWidth;
+
+  /// The current position in the output stream. After the table is emitted,
+  /// this is its size.
   unsigned CurrentIndex;
-  unsigned CommentIndex;
+
+  /// The index of the first byte of the table row. Used as a label in the
+  /// comment following the row.
+  unsigned LineStartIndex;
 
 public:
   DecoderTableEmitter(DecoderTableInfo &TableInfo, raw_ostream &OS)

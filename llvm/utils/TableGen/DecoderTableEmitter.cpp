@@ -132,7 +132,7 @@ unsigned DecoderTableEmitter::computeTableSize(const DecoderTreeNode *Root,
 }
 
 void DecoderTableEmitter::emitStartLine() {
-  CommentIndex = CurrentIndex;
+  LineStartIndex = CurrentIndex;
   OS.indent(2);
 }
 
@@ -165,7 +165,7 @@ raw_ostream &DecoderTableEmitter::emitComment(indent Indent) {
   if (OS.getColumn() > CommentColumn)
     OS << '\n';
   OS.PadToColumn(CommentColumn);
-  OS << "// " << format_decimal(CommentIndex, IndexWidth) << ": " << Indent;
+  OS << "// " << format_decimal(LineStartIndex, IndexWidth) << ": " << Indent;
   return OS;
 }
 
