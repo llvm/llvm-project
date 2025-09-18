@@ -239,11 +239,9 @@ struct Recipe_match {
   }
 
   bool match(const VPRecipeBase *R) const {
-    if (std::tuple_size<Ops_t>::value == 0) {
-      assert(Opcode == VPInstruction::BuildVector &&
-             "can only match BuildVector with empty ops");
+    if (std::tuple_size_v<Ops_t> == 0) {
       auto *VPI = dyn_cast<VPInstruction>(R);
-      return VPI && VPI->getOpcode() == VPInstruction::BuildVector;
+      return VPI && VPI->getOpcode() == Opcode;
     }
 
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
