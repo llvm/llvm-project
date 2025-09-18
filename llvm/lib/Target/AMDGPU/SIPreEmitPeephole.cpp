@@ -471,8 +471,7 @@ bool SIPreEmitPeephole::isUnpackingSupportedInstr(MachineInstr &MI) const {
   llvm_unreachable("Fully covered switch");
 }
 
-bool SIPreEmitPeephole::canUnpackingClobberRegister(
-    const MachineInstr &MI) {
+bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
   // Only the first register in the register pair needs to be checked due to the
@@ -662,7 +661,8 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   MachineOperand DstOp = I.getOperand(0);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
-  assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() && "Unsupported Opcode");
+  assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() &&
+         "Unsupported Opcode");
 
   MachineInstrBuilder Op0LOp1L =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
