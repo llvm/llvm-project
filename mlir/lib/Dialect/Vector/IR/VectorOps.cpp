@@ -397,7 +397,7 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
 }
 
 /// Converts an IntegerAttr to have the specified type if needed.
-/// This handles cases where integer constant attributes have a different type 
+/// This handles cases where integer constant attributes have a different type
 /// than the target element type.
 static IntegerAttr convertIntegerAttr(IntegerAttr intAttr, Type expectedType) {
   if (intAttr.getType() == expectedType)
@@ -2462,9 +2462,9 @@ static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
 static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
                                                ArrayRef<Attribute> elements) {
   // Check for null or poison attributes before any processing.
-  if (llvm::any_of(elements, [](Attribute attr) { 
-    return !attr || isa<ub::PoisonAttrInterface>(attr); 
-  }))
+  if (llvm::any_of(elements, [](Attribute attr) {
+        return !attr || isa<ub::PoisonAttrInterface>(attr);
+      }))
     return {};
 
   // DenseElementsAttr only supports int/index/float/complex types.
@@ -2473,13 +2473,16 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
     return {};
 
-  // Convert integer attributes to the target type if needed, leave others unchanged.
-  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) -> Attribute {
-    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-      return convertIntegerAttr(intAttr, destEltType);
-    }
-    return attr; // Non-integer attributes (FloatAttr, etc.) returned unchanged
-  });
+  // Convert integer attributes to the target type if needed, leave others
+  // unchanged.
+  auto convertedElements =
+      llvm::map_to_vector(elements, [&](Attribute attr) -> Attribute {
+        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+          return convertIntegerAttr(intAttr, destEltType);
+        }
+        return attr; // Non-integer attributes (FloatAttr, etc.) returned
+                     // unchanged
+      });
 
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
