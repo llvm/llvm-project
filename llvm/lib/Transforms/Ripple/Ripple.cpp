@@ -13,7 +13,10 @@
 #include "llvm/Transforms/Ripple/Ripple.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -584,9 +587,23 @@ BitVector TensorShapeAny<SizeTy>::requiredSplat(
 
 template <typename SizeTy>
 void TensorShapeAny<SizeTy>::print(raw_ostream &O) const {
+  if (isScalar()) {
+    O << "Scalar";
+    return;
+  }
+
   O << "Tensor";
+  // Print a canonical tensor shape (all the trailing 1s are removed)
+  size_t OmittedOnes = 0;
   for (auto &len : make_range(shape.begin(), shape.end())) {
-    O << "[" << len << "]";
+    if (len > 1) {
+      for (auto _ : llvm::seq(size_t(0), OmittedOnes)) {
+        O << "[1]";
+      }
+      OmittedOnes = 0;
+      O << "[" << len << "]";
+    } else
+      OmittedOnes++;
   }
 }
 
@@ -1525,6 +1542,8 @@ PreservedAnalyses Ripple::run() {
     return abortDiagnosticAndRippleCleanup(
         ProcessingStatus::SemanticsCheckFailure);
   }
+
+  emitRippleRemarks();
 
   LLVM_DEBUG(dbgs() << "Function before vector instruction generation:\n";
              F.print(dbgs()));
@@ -3154,36 +3173,25 @@ void Ripple::genVectorInstructions() {
 
     // Create a vector type with the target shape and broadcast the Call
     // arguments to match the shape
-    unsigned FirstArgIdx = std::distance(Call->op_begin(), Call->arg_begin());
+    auto [ArgumentShapes, ReturnType] =
+        promotedIntrinsicArgShapesAndReturnTy(*Call, ToShape, VectorIntrId);
 
-    auto BcastedArgs = tensorizedOperandsAndBroadcast(
-        Call, ToShape, FirstArgIdx, FirstArgIdx + Call->arg_size());
-    irBuilder.SetInsertPoint(Call);
-
-    // Get the Declaration of the intrinsic to verify all types of arguments
-    SmallVector<Type *> BcastedArgsTypes;
-    BcastedArgsTypes.reserve(Call->arg_size());
-    llvm::transform(BcastedArgs, std::back_inserter(BcastedArgsTypes),
-                    [](Value *V) { return V->getType(); });
-    FunctionType *FTy =
-        Intrinsic::getType(Call->getContext(), VectorIntrId, BcastedArgsTypes);
-
-    // Check each arguments is overloaded type or not
-    SmallVector<Value *, 8> BcastedArgsChecked;
-    BcastedArgsChecked.reserve(FTy->getNumParams());
-    for (unsigned Idx = 0; Idx < FTy->getNumParams(); ++Idx) {
-      if (FTy->getParamType(Idx) == BcastedArgs[Idx]->getType()) {
-        BcastedArgsChecked.push_back(BcastedArgs[Idx]);
+    SmallVector<Value *> BcastedArgs;
+    BcastedArgs.reserve(Call->arg_size());
+    for (size_t ArgNo = 0; ArgNo < Call->arg_size(); ++ArgNo) {
+      if (ArgumentShapes[ArgNo]->isVector()) {
+        auto ReplacementAndBcast =
+            getTensorUseAndBcast(Call->getArgOperandUse(ArgNo), ToShape);
+        BcastedArgs.push_back(ReplacementAndBcast);
       } else {
-        auto *Val = Call->getOperand(Idx);
-        assert(FTy->getParamType(Idx) == Val->getType());
-        BcastedArgsChecked.push_back(Val);
+        BcastedArgs.push_back(Call->getArgOperand(ArgNo));
       }
     }
 
+    irBuilder.SetInsertPoint(Call);
     // Create a vectorized Intrinsic with arguments that should be vectorized
     CallInst *VecCall = irBuilder.CreateIntrinsic(
-        FTy->getReturnType(), VectorIntrId, BcastedArgsChecked,
+        ReturnType, VectorIntrId, BcastedArgs,
         isa<FPMathOperator>(Call) ? Call : nullptr, vectorizedName(Call));
 
     setReplacementFor(Call, VecCall, ToShape);
@@ -6926,9 +6934,9 @@ Error Ripple::checkRippleStore(const StoreInst *Store) const {
     std::string ErrMsg;
     llvm::raw_string_ostream RSO(ErrMsg);
     RSO << "ripple does not allow implicit broadcasting of a store address "
-           "to the value address; the value has "
-        << ValueShape << " and the address has " << PtrShape
-        << ". Hint: use ripple_id() for the address computation or use a "
+           "to the value address; the value has shape '"
+        << ValueShape << "' and the address has shape '" << PtrShape
+        << "'. Hint: use ripple_id() for the address computation or use a "
            "reduction "
            "operation";
     RSO.flush();
@@ -9160,6 +9168,287 @@ bool Ripple::rippleVectorizeCall(const CallInst &CI) const {
                  [](auto &Use) { return Use->getType()->isVectorTy(); }) &&
          any_of(CI.args(),
                 [&](auto &Use) { return getRippleShape(Use).isVector(); });
+}
+
+void Ripple::emitRippleRemarks() {
+  if (!ORE.enabled())
+    return;
+
+  auto sortDILocationByFileLineColumn = [](const DILocation *a,
+                                           const DILocation *b) -> bool {
+    if (!a || !b)
+      return a < b;
+
+    StringRef fileA = a->getFilename();
+    StringRef fileB = b->getFilename();
+    if (fileA != fileB)
+      return fileA < fileB;
+    if (a->getLine() != b->getLine())
+      return a->getLine() < b->getLine();
+    return a->getColumn() < b->getColumn();
+  };
+
+  MapVector<DILocation *, Instruction *> UniqueLastDILocation;
+  for (auto &I : instructions(F)) {
+    DILocation *DIL = I.getDebugLoc();
+    bool VectorCall =
+        isa<CallInst>(I) && rippleVectorizeCall(cast<CallInst>(I));
+    if (DIL && DIL->getLine() > 0 &&
+        (getRippleShape(&I).isVector() || VectorCall)) {
+      auto [KeyValPair, Inserted] = UniqueLastDILocation.try_emplace(DIL, &I);
+      // Keep CallInst because this information is more important than any
+      // implicit cast that may occur at this position
+      if (!isa<CallInst>(KeyValPair->second))
+        KeyValPair->second = &I;
+    }
+  }
+  // Sort them so that we emit the remarks in a file > line > column order
+  auto UniqDILocs(UniqueLastDILocation.takeVector());
+  llvm::sort(
+      UniqDILocs,
+      [sortDILocationByFileLineColumn](auto &PairA, auto &PairB) -> bool {
+        return sortDILocationByFileLineColumn(PairA.first, PairB.first);
+      });
+
+  auto PrintProtoShape =
+      [&](
+          DiagnosticInfoIROptimization &R, const TensorShape &ReturnShape,
+          const SmallVectorImpl<const TensorShape *> &ArgShapes,
+          std::function<bool(size_t)> IsBroadcast = [](size_t) {
+            return false;
+          }) {
+        std::string RetShapeStr;
+        {
+          raw_string_ostream RSOS(RetShapeStr);
+          RSOS << ReturnShape;
+        }
+        R << "(";
+        for (unsigned ArgIdx = 0, E = ArgShapes.size(); ArgIdx < E; ++ArgIdx) {
+          if (ArgIdx > 0)
+            R << ", ";
+          if (IsBroadcast(ArgIdx) && *ArgShapes[ArgIdx] != ReturnShape) {
+            std::string ArgShapeStr;
+            {
+              raw_string_ostream ArgS(ArgShapeStr);
+              ArgS << *ArgShapes[ArgIdx];
+            }
+            R << ArgShapeStr << "->" << RetShapeStr;
+          } else if (ArgShapes[ArgIdx]->isVector()) {
+            std::string ArgShapeStr;
+            {
+              raw_string_ostream ArgS(ArgShapeStr);
+              ArgS << *ArgShapes[ArgIdx];
+            }
+            R << ArgShapeStr;
+          } else {
+            R << "unchanged";
+          }
+        }
+        R << ") -> ";
+        if (ReturnShape.isVector())
+          R << RetShapeStr;
+        else
+          R << "unchanged";
+      };
+  if (isPendingRippleSpecialization(F)) {
+    ORE.emit([&] {
+      SmallVector<const TensorShape *> SpecializationArgShapes;
+      transform(
+          llvm::make_range(F.arg_begin(), F.arg_begin() + F.arg_size() / 2),
+          std::back_inserter(SpecializationArgShapes),
+          [&](const Argument &A) { return &getRippleShape(&A); });
+      const TensorShape *ReturnShape = nullptr;
+      for (const auto &I : instructions(F))
+        if (auto *Return = dyn_cast<ReturnInst>(&I)) {
+          ReturnShape = &getRippleShape(Return);
+          break;
+        }
+
+      OptimizationRemark R(DEBUG_TYPE, "IFConvert", &F);
+      R << "function '" << getOriginalName(F.getName())
+        << "' specialized for tensor operands {shape: ";
+      PrintProtoShape(R, *ReturnShape, SpecializationArgShapes);
+      R << "}";
+      return R;
+    });
+  }
+  for (auto &P : UniqDILocs) {
+    Instruction *I = P.second;
+    if (isa<BranchInst>(I) || isa<SwitchInst>(I)) {
+      auto BranchShape = getRippleShape(I);
+      std::string MaskShapeStr;
+      {
+        raw_string_ostream RSOS(MaskShapeStr);
+        RSOS << BranchShape;
+      }
+      ORE.emit([&] {
+        OptimizationRemark R(DEBUG_TYPE, "IFConvert", I);
+        R << "branch if-converted to predicated vector form; control flow "
+             "flattened using mask from vectorized condition {mask-shape: "
+          << MaskShapeStr << "}";
+        return R;
+      });
+    } else if (auto *CallI = dyn_cast<CallInst>(I)) {
+      auto CallRetShape = getRippleShape(CallI);
+      std::string RetShapeStr;
+      {
+        raw_string_ostream RSOS(RetShapeStr);
+        RSOS << CallRetShape;
+      }
+      bool IsMaskedCall = MaskedCalls.contains(CallI);
+      if (isRippleIntrinsics(CallI)) {
+        ORE.emit([&] {
+          OptimizationRemark R(DEBUG_TYPE, "VectorPromotion", I);
+          SmallVector<const TensorShape *> ArgShapes;
+          ArgShapes.reserve(CallI->arg_size());
+          transform(CallI->args(), std::back_inserter(ArgShapes),
+                    [&](auto &Use) { return &getRippleShape(Use); });
+
+          R << "call to ripple API '" << CallI->getCalledOperand()->getName()
+            << "' {shape: ";
+          PrintProtoShape(R, getRippleShape(CallI), ArgShapes);
+          R << "}";
+          return R;
+        });
+      } else if (auto *ExternFun =
+                     findExternalRippleFunctionFor(CallI, IsMaskedCall)) {
+        auto ExternFunRetShape = ExternFun->returnTensorShape(CallI, *this);
+        // This is checked during the shape propagation phase, in
+        // inferShapeFromOperands, CallInst case
+        if (!ExternFunRetShape)
+          report_fatal_error("Broadcast failure during remark generation");
+        ORE.emit([&] {
+          OptimizationRemark R(DEBUG_TYPE, "ExternalCallDispatch", I);
+          SmallVector<const TensorShape *> ArgShapes;
+          ArgShapes.reserve(CallI->arg_size());
+          transform(CallI->args(), std::back_inserter(ArgShapes),
+                    [&](auto &Use) { return &getRippleShape(Use); });
+          std::function<bool(size_t)> isBroadcastable = [](size_t) {
+            return false;
+          };
+          if (!ExternFun->isElementWiseFunction()) {
+          } else {
+            const ArrayRef<TensorShape> ExternArgOpShapes =
+                ExternFun->argOperandShapes();
+            isBroadcastable = [ExternArgOpShapes](size_t ArgIdx) -> bool {
+              return ExternArgOpShapes[ArgIdx].isVector();
+            };
+          }
+          R << "dispatched call '" << CallI->getCalledOperand()->getName()
+            << "' to external ripple function '"
+            << ExternFun->getFunction()->getName() << "' {shape: ";
+          PrintProtoShape(R, ExternFunRetShape.get(), ArgShapes,
+                          isBroadcastable);
+          R << "}";
+          return R;
+        });
+      } else if (Intrinsic::ID VectorIntrId =
+                     getVectorIntrinsicIDForCall(CallI, &targetLibraryInfo);
+                 CallRetShape.isVector() &&
+                 VectorIntrId != Intrinsic::not_intrinsic) {
+        ORE.emit([&] {
+          auto [ArgumentShapes, RetTy] = promotedIntrinsicArgShapesAndReturnTy(
+              *CallI, CallRetShape, VectorIntrId);
+          OptimizationRemark R(DEBUG_TYPE, "IntrinsicCallPromotion", I);
+          R << "scalar call promoted to vector form '"
+            << CallI->getCalledOperand()->getName() << "' {shape: ";
+          PrintProtoShape(R, CallRetShape, ArgumentShapes);
+          R << "}";
+          return R;
+        });
+      } else {
+        auto [SpecializedFunction, ReturnShape] =
+            getRippleSpecializationFor(*CallI);
+        if (SpecializedFunction) {
+          // Use temporary since capture of structure binding is >= c++20
+          const TensorShape &RetS = ReturnShape;
+          ORE.emit([&] {
+            OptimizationRemark R(DEBUG_TYPE, "SpecializationCallPromotion", I);
+            SmallVector<const TensorShape *> ArgShapes;
+            ArgShapes.reserve(CallI->arg_size());
+            transform(CallI->args(), std::back_inserter(ArgShapes),
+                      [&](auto &Use) { return &getRippleShape(Use); });
+
+            R << "specialized call to '" << CallI->getCalledOperand()->getName()
+              << "'; ";
+            for (size_t ArgIdx = 0; ArgIdx < CallI->arg_size(); ++ArgIdx) {
+              if (ArgIdx)
+                R << ", ";
+              R << "arg" << std::to_string(ArgIdx)
+                << (ArgShapes[ArgIdx]->isVector() ? " promoted" : " unchanged");
+            }
+            R << " {shape: ";
+            PrintProtoShape(R, RetS, ArgShapes);
+            R << "}";
+            return R;
+          });
+        } else
+          ORE.emit([&] {
+            OptimizationRemarkMissed R(DEBUG_TYPE, "CallScalarDemotion", I);
+            SmallVector<const TensorShape *> ArgShapes;
+            ArgShapes.reserve(CallI->arg_size());
+            transform(CallI->args(), std::back_inserter(ArgShapes),
+                      [&](auto &Use) { return &getRippleShape(Use); });
+            R << "call not vectorized: no suitable vector implementation found "
+                 "for '"
+              << CallI->getCalledOperand()->getName()
+              << "'; falling back to scalar loop {shape: ";
+            PrintProtoShape(R, CallRetShape, ArgShapes);
+            R << "}";
+            return R;
+          });
+      }
+    } else {
+      ORE.emit([&] {
+        OptimizationRemark R(DEBUG_TYPE, "VectorPromotion", I);
+        SmallVector<const TensorShape *> OperandShapes;
+        OperandShapes.reserve(I->getNumOperands());
+        transform(I->operands(), std::back_inserter(OperandShapes),
+                  [&](auto &Use) { return &getRippleShape(Use); });
+
+        R << "instruction promoted to tensor {shape: ";
+        auto VOps = vectorizableOperands(I);
+        size_t FirstBcastArg = std::distance(I->op_begin(), VOps.begin());
+        size_t LastBcastArg =
+            FirstBcastArg + std::distance(VOps.begin(), VOps.end());
+        auto isBroadcastable = [FirstBcastArg, LastBcastArg](size_t ArgIdx) {
+          return ArgIdx >= FirstBcastArg && ArgIdx < LastBcastArg;
+        };
+        PrintProtoShape(R, getRippleShape(I), OperandShapes, isBroadcastable);
+        R << "}";
+        return R;
+      });
+    }
+  }
+}
+
+std::pair<SmallVector<const TensorShape *>, Type *>
+Ripple::promotedIntrinsicArgShapesAndReturnTy(
+    const CallInst &CI, const TensorShape &ToShape,
+    Intrinsic::ID VectorIntrId) const {
+  SmallVector<Type *> BcastedArgTypes;
+  BcastedArgTypes.reserve(CI.arg_size());
+  transform(CI.args(), std::back_inserter(BcastedArgTypes),
+            [&ToShape](auto &Arg) -> Type * {
+              Type *ArgTy = Arg->getType();
+              if (ArgTy->isVectorTy())
+                return ArgTy;
+              Type *ScalTy = ArgTy->getScalarType();
+              return VectorType::get(ScalTy, ToShape.flatShape(),
+                                     /*Scalable*/ false);
+            });
+  FunctionType *FTy =
+      Intrinsic::getType(CI.getContext(), VectorIntrId, BcastedArgTypes);
+  SmallVector<const TensorShape *> ArgShapes;
+  ArgShapes.reserve(CI.arg_size());
+  for (size_t ArgIdx = 0; ArgIdx < CI.arg_size(); ++ArgIdx) {
+    if (!CI.getArgOperand(ArgIdx)->getType()->isVectorTy() &&
+        FTy->getParamType(ArgIdx) == BcastedArgTypes[ArgIdx])
+      ArgShapes.push_back(&ToShape);
+    else
+      ArgShapes.push_back(&ShapeIgnoredByRipple);
+  }
+  return std::make_pair(std::move(ArgShapes), FTy->getReturnType());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -29,6 +29,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -590,7 +591,7 @@ class Ripple;
 class NDLoadStoreFactory {
 public:
   NDLoadStoreFactory(IRBuilder<> &IrBuilder, Module &Mod, Ripple &MyRipple)
-      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple) {};
+      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple){};
 
   /// @brief Generates a n-d load of a data set described by AddressSeries
   /// @param AddressSeries represents the sequence of addresses to be loaded
@@ -943,7 +944,8 @@ public:
         ScalarShape(TensorShape(tensorRank())),
         NdLoadStoreFac(irBuilder, *F.getParent(), *this), PS(PS),
         SpecializationsPending(SpecializationsPending),
-        SpecializationsAvailable(SpecializationsAvailable) {
+        SpecializationsAvailable(SpecializationsAvailable),
+        ORE(AM.getResult<OptimizationRemarkEmitterAnalysis>(F)) {
     // Set the types
     for (const auto &pair : dimensionTypes) {
       idTypes.insert(pair);
@@ -1273,6 +1275,9 @@ private:
   /// @brief The pending and available specialization sets
   DenseSet<AssertingVH<Function>> &SpecializationsPending,
       &SpecializationsAvailable;
+
+  // Emit Ripple optimization remarks
+  OptimizationRemarkEmitterAnalysis::Result &ORE;
 
   /// @brief Combines two states for a binary operator
   static CSState combineStatesBinaryOp(CSState S, CSState S2);
@@ -1921,6 +1926,15 @@ private:
   /// with vector shapes and no argument with regular (LLVM) vector type
   /// arguments.
   bool rippleVectorizeCall(const CallInst &CI) const;
+
+  /// @brief Emit optimization remarks for the Ripple pass
+  void emitRippleRemarks();
+
+  /// @brief Returns the tensor shapes of the intrinsic arguments and the
+  /// intrinsic return type
+  std::pair<SmallVector<const TensorShape *>, Type *>
+  promotedIntrinsicArgShapesAndReturnTy(const CallInst &CI, const TensorShape &TShape,
+                                Intrinsic::ID VectorIntrId) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Ripple::CSState &State) {
