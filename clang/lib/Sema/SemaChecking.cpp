@@ -3773,15 +3773,19 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         const LangOptions &LO = getLangOpts();
         unsigned VL = LO.VScaleMin * 128;
         unsigned SVL = LO.VScaleStreamingMin * 128;
-
-        bool IsVLError = CallerFnType != SemaARM::ArmStreamingCompatible &&
-                         (VL && SVL && VL != SVL);
+        bool IsVLMismatch = VL && SVL && VL != SVL;
 
         auto EmitDiag = [&](bool IsArg) {
-          if (IsVLError)
-            Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
-                << IsArg << VL << SVL;
-          else
+          if (IsVLMismatch) {
+            if (CallerFnType == SemaARM::ArmStreamingCompatible)
+              // Emit warning for streaming-compatible callers
+              Diag(Loc, diag::warn_sme_streaming_compatible_vl_mismatch)
+                  << IsArg << IsCalleeStreaming << SVL << VL;
+            else
+              // Emit error otherwise
+              Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
+                  << IsArg << SVL << VL;
+          } else
             Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
                 << IsArg;
         };
