@@ -119,10 +119,7 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX942-GISEL:       ; %bb.0:
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX942-GISEL-NEXT:    s_nop 1
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
+; GFX942-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
 ; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 12, v0
 ; GFX942-GISEL-NEXT:    s_nop 1
 ; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc

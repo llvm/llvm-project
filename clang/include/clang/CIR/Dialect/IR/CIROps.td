@@ -78,7 +78,15 @@ class LLVMLoweringInfo {
 }
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
-    Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
+    Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo {
+  // Should we generate an LLVM lowering pattern for this op?
+  bit hasLLVMLowering = true;
+  // Is the LLVM lowering pattern for this operation recursive?
+  bit isLLVMLoweringRecursive = false;
+  // Extra class declarations to be included in the generated LLVM lowering
+  // pattern.
+  code extraLLVMLoweringPatternDecl = "";
+}
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -218,6 +226,10 @@ def CIR_CastOp : CIR_Op<"cast", [
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::Type convertTy(mlir::Type ty) const;
+  }];
 }
 
 
@@ -297,6 +309,8 @@ def CIR_ConstantOp : CIR_Op<"const", [
   }];
 
   let hasFolder = 1;
+
+  let isLLVMLoweringRecursive = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -613,6 +627,8 @@ def CIR_IfOp : CIR_Op<"if", [
       CArg<"BuilderCallbackRef", "buildTerminatedBody">:$thenBuilder,
       CArg<"BuilderCallbackRef", "nullptr">:$elseBuilder)>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -659,6 +675,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
   let arguments = (ins CIR_BoolType:$condition);
   let assemblyFormat = " `(` $condition `)` attr-dict ";
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,6 +743,8 @@ def CIR_YieldOp : CIR_Op<"yield", [
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
   ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -741,6 +760,7 @@ def CIR_BreakOp : CIR_Op<"break", [Terminator]> {
   }];
   let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -756,6 +776,7 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
   }];
   let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -814,6 +835,8 @@ def CIR_ScopeOp : CIR_Op<"scope", [
     // Scopes without yielding values.
     OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$scopeBuilder)>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -860,6 +883,8 @@ def CIR_CaseOp : CIR_Op<"case", [
                    "CaseOpKind":$kind,
                    "mlir::OpBuilder::InsertPoint &":$insertPoint)>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_SwitchOp : CIR_Op<"switch", [
@@ -1025,6 +1050,8 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     // This is an expensive and need to be used with caution.
     bool isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases);
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1170,6 +1197,8 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
   }];
   let arguments = (ins StrAttr:$label);
   let assemblyFormat = [{ $label attr-dict }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1185,6 +1214,8 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let arguments = (ins StrAttr:$label);
   let assemblyFormat = [{ $label attr-dict }];
   let hasVerifier = 1;
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1349,6 +1380,8 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
     }
     ```
   }];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
@@ -1375,6 +1408,8 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
     }
     ```
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1442,6 +1477,8 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
       return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
     }
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1480,6 +1517,8 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   let assemblyFormat = [{
     `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
   }];
+
+  let isLLVMLoweringRecursive = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1550,6 +1589,10 @@ def CIR_BinOp : CIR_Op<"binop", [
   }];
 
   let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1687,6 +1730,8 @@ def CIR_TernaryOp : CIR_Op<"ternary", [
       `false` $falseRegion
     `)` `:` functional-type(operands, results) attr-dict
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1790,6 +1835,20 @@ def CIR_GlobalOp : CIR_Op<"global", [
     "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
 
   let hasVerifier = 1;
+
+  let isLLVMLoweringRecursive = true;
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::LogicalResult matchAndRewriteRegionInitializedGlobal(
+      cir::GlobalOp op, mlir::Attribute init,
+      mlir::ConversionPatternRewriter &rewriter) const;
+
+    void setupRegionInitializedLLVMGlobalOp(
+        cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+
+    mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+    mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
+                                      mlir::OpBuilder &builder) const;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2340,6 +2399,19 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
+
+    void lowerFuncAttributes(
+        cir::FuncOp func, bool filterArgAndResAttrs,
+        mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
+
+    mlir::LogicalResult
+    matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
+                         OpAdaptor adaptor,
+                         mlir::ConversionPatternRewriter &rewriter) const;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2761,6 +2833,8 @@ class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
         regionBuilder($_builder, $_state.location);
     }]>
   ];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
@@ -3380,6 +3454,8 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
   let assemblyFormat = [{
     $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
   }];
+
+  let hasLLVMLowering = false;
 }
 
 def CIR_ComplexDivOp : CIR_Op<"complex.div", [
@@ -3422,6 +3498,8 @@ def CIR_ComplexDivOp : CIR_Op<"complex.div", [
   let assemblyFormat = [{
     $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
   }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
