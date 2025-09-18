@@ -457,9 +457,9 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
 // If support is extended to new operations, add tests in
 // llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir.
 bool SIPreEmitPeephole::isUnpackingSupportedInstr(MachineInstr &MI) const {
-  unsigned Opcode = MI.getOpcode();
   if (!TII->isNeverCoissue(MI))
     return false;
+  unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
   case AMDGPU::V_PK_ADD_F32:
   case AMDGPU::V_PK_MUL_F32:
@@ -516,8 +516,7 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(
     const MachineOperand *Src2MO =
         TII->getNamedOperand(MI, AMDGPU::OpName::src2);
     if (Src2MO && Src2MO->isReg()) {
-      Register SrcReg2 =
-          TII->getNamedOperand(MI, AMDGPU::OpName::src2)->getReg();
+      Register SrcReg2 = Src2MO->getReg();
       unsigned Src2Mods =
           TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm();
       Register HiSrc2Reg = (Src2Mods & SISrcMods::OP_SEL_1)
@@ -628,7 +627,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
         SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
     TotalCyclesBetweenCandidates += Latency;
 
-    if (TotalCyclesBetweenCandidates > NumMFMACycles - 1)
+    if (TotalCyclesBetweenCandidates >= NumMFMACycles - 1)
       return;
     // Identify register dependencies between those used by the MFMA
     // instruction and the following packed instructions. Also checks for
@@ -663,8 +662,7 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   MachineOperand DstOp = I.getOperand(0);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
-  if (UnpackedOpcode == std::numeric_limits<uint16_t>::max())
-    return;
+  assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() && "Unsupported Opcode");
 
   MachineInstrBuilder Op0LOp1L =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
