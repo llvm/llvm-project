@@ -49,8 +49,7 @@ bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
   return EnableInstruments && Type == LatencyInstrument::DESC_NAME;
 }
 
-bool InstrumentManager::canCustomize(
-    const ArrayRef<Instrument *> IVec) const {
+bool InstrumentManager::canCustomize(const ArrayRef<Instrument *> IVec) const {
   for (const auto I : IVec) {
     if (I->getDesc() == LatencyInstrument::DESC_NAME) {
       auto LatInst = static_cast<LatencyInstrument *>(I);
