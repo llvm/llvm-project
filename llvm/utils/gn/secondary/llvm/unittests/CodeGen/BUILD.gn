@@ -42,6 +42,7 @@ unittest("CodeGenTests") {
     "ScalableVectorMVTsTest.cpp",
     "SchedBoundary.cpp",
     "SelectionDAGAddressAnalysisTest.cpp",
+    "SelectionDAGNodeConstructionTest.cpp",
     "SelectionDAGPatternMatchTest.cpp",
     "TargetOptionsTest.cpp",
     "TestAsmPrinter.cpp",

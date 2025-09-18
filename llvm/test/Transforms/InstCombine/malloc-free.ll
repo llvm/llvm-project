@@ -97,8 +97,8 @@ define i1 @foo() {
   ret i1 %z
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 declare i64 @llvm.objectsize.i64(ptr, i1)
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
@@ -109,8 +109,6 @@ define void @test3(ptr %src) {
 ; CHECK-NEXT:    ret void
 ;
   %a = call noalias ptr @malloc(i32 10)
-  call void @llvm.lifetime.start.p0(i64 10, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 10, ptr %a)
   %size = call i64 @llvm.objectsize.i64(ptr %a, i1 true)
   store i8 42, ptr %a
   call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %src, i32 32, i1 false)

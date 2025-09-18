@@ -53,7 +53,7 @@ public:
 
     Compiler->createSema(getTranslationUnitKind(), CompletionConsumer);
     SemaSource->setCompilerInstance(Compiler);
-    Compiler->getSema().addExternalSource(SemaSource.get());
+    Compiler->getSema().addExternalSource(SemaSource);
 
     clang::ParseAST(Compiler->getSema(), Compiler->getFrontendOpts().ShowStats,
                     Compiler->getFrontendOpts().SkipFunctionBodies);
@@ -94,8 +94,7 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Create the compiler's actual diagnostics engine. We want to drop all
   // diagnostics here.
-  Compiler.createDiagnostics(Files->getVirtualFileSystem(),
-                             new clang::IgnoringDiagConsumer,
+  Compiler.createDiagnostics(new clang::IgnoringDiagConsumer,
                              /*ShouldOwnClient=*/true);
   Compiler.createSourceManager(*Files);
 

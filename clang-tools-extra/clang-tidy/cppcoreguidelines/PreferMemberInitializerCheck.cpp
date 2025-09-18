@@ -1,4 +1,4 @@
-//===--- PreferMemberInitializerCheck.cpp - clang-tidy -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -191,6 +191,9 @@ void PreferMemberInitializerCheck::check(
     if (!AssignmentToMember)
       continue;
     const FieldDecl *Field = AssignmentToMember->Field;
+    // Skip if the field is inherited from a base class.
+    if (Field->getParent() != Class)
+      continue;
     const Expr *InitValue = AssignmentToMember->Init;
     updateAssignmentLevel(Field, InitValue, Ctor, AssignedFields);
     if (!canAdvanceAssignment(AssignedFields[Field]))

@@ -107,6 +107,8 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
       if (!BarAddr)
         llvm_unreachable("named barrier should have an assigned address");
       Entry.first->second = BarAddr.value();
+      unsigned BarCnt = DL.getTypeAllocSize(GV.getValueType()) / 16;
+      recordNumNamedBarriers(BarAddr.value(), BarCnt);
       return BarAddr.value();
     }
 

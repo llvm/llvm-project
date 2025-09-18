@@ -281,32 +281,45 @@ func.func @to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
 
 // -----
 
-// CHECK-LABEL: @from_elements_0d
+// CHECK-LABEL: @from_elements_0d_f32
 //  CHECK-SAME: %[[ARG0:.+]]: f32
 //       CHECK:   %[[RETVAL:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[RETVAL]]
-func.func @from_elements_0d(%arg0 : f32) -> vector<f32> {
+func.func @from_elements_0d_f32(%arg0 : f32) -> vector<f32> {
   %0 = vector.from_elements %arg0 : vector<f32>
   return %0: vector<f32>
 }
 
-// CHECK-LABEL: @from_elements_1x
+// CHECK-LABEL: @from_elements_1xf32
 //  CHECK-SAME: %[[ARG0:.+]]: f32
 //       CHECK:   %[[RETVAL:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[RETVAL]]
-func.func @from_elements_1x(%arg0 : f32) -> vector<1xf32> {
+func.func @from_elements_1xf32(%arg0 : f32) -> vector<1xf32> {
   %0 = vector.from_elements %arg0 : vector<1xf32>
   return %0: vector<1xf32>
 }
 
-// CHECK-LABEL: @from_elements_3x
+// CHECK-LABEL: @from_elements_3xf32
 //  CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32
 //       CHECK:   %[[RETVAL:.+]] = spirv.CompositeConstruct %[[ARG0]], %[[ARG1]], %[[ARG2]] : (f32, f32, f32) -> vector<3xf32>
 //       CHECK:   return %[[RETVAL]]
-func.func @from_elements_3x(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> vector<3xf32> {
+func.func @from_elements_3xf32(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> vector<3xf32> {
   %0 = vector.from_elements %arg0, %arg1, %arg2 : vector<3xf32>
   return %0: vector<3xf32>
 }
+
+func.func @from_elements_3xi8(%arg0 : i8, %arg1 : i8, %arg2 : i8) -> vector<3xi8> {
+  %0 = vector.from_elements %arg0, %arg1, %arg2 : vector<3xi8>
+  return %0: vector<3xi8>
+}
+// CHECK-LABEL: @from_elements_3xi8
+//  CHECK-SAME: %[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8, %[[ARG2:.+]]: i8
+//   CHECK-DAG:   %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : i8 to i32
+//   CHECK-DAG:   %[[CAST1:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : i8 to i32
+//   CHECK-DAG:   %[[CAST2:.*]] = builtin.unrealized_conversion_cast %[[ARG2]] : i8 to i32
+//       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[CAST0]], %[[CAST1]], %[[CAST2]] : (i32, i32, i32) -> vector<3xi32>
+//       CHECK:   %[[RETVAL:.*]] = builtin.unrealized_conversion_cast %[[VAL]] : vector<3xi32> to vector<3xi8>
+//       CHECK:   return %[[RETVAL]]
 
 // -----
 
@@ -400,67 +413,6 @@ func.func @insert_dynamic_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32>
 
 // -----
 
-// CHECK-LABEL: @extract_element
-//  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[ID:.*]]: i32
-//       CHECK:   spirv.VectorExtractDynamic %[[V]][%[[ID]]] : vector<4xf32>, i32
-func.func @extract_element(%arg0 : vector<4xf32>, %id : i32) -> f32 {
-  %0 = vector.extractelement %arg0[%id : i32] : vector<4xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_cst
-//  CHECK-SAME: %[[V:.*]]: vector<4xf32>
-//       CHECK:   spirv.CompositeExtract %[[V]][1 : i32] : vector<4xf32>
-func.func @extract_element_cst(%arg0 : vector<4xf32>) -> f32 {
-  %idx = arith.constant 1 : i32
-  %0 = vector.extractelement %arg0[%idx : i32] : vector<4xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_index
-func.func @extract_element_index(%arg0 : vector<4xf32>, %id : index) -> f32 {
-  // CHECK: spirv.VectorExtractDynamic
-  %0 = vector.extractelement %arg0[%id : index] : vector<4xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_size5_vector
-func.func @extract_element_size5_vector(%arg0 : vector<5xf32>, %id : i32) -> f32 {
-  // CHECK: vector.extractelement
-  %0 = vector.extractelement %arg0[%id : i32] : vector<5xf32>
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_size1_vector
-//  CHECK-SAME: (%[[S:.+]]: f32
-func.func @extract_element_size1_vector(%arg0 : f32, %i: index) -> f32 {
-  %bcast = vector.broadcast %arg0 : f32 to vector<1xf32>
-  %0 = vector.extractelement %bcast[%i : index] : vector<1xf32>
-  // CHECK: return %[[S]]
-  return %0: f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_element_0d_vector
-//  CHECK-SAME: (%[[S:.+]]: f32)
-func.func @extract_element_0d_vector(%arg0 : f32) -> f32 {
-  %bcast = vector.broadcast %arg0 : f32 to vector<f32>
-  %0 = vector.extractelement %bcast[] : vector<f32>
-  // CHECK: return %[[S]]
-  return %0: f32
-}
-
-// -----
-
 // CHECK-LABEL: @extract_strided_slice
 //  CHECK-SAME: %[[ARG:.+]]: vector<4xf32>
 //       CHECK:   spirv.VectorShuffle [1 : i32, 2 : i32] %[[ARG]], %[[ARG]] : vector<4xf32>, vector<4xf32> -> vector<2xf32>
@@ -469,67 +421,6 @@ func.func @extract_strided_slice(%arg0: vector<4xf32>) -> (vector<2xf32>, vector
   %0 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
   %1 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [1], strides = [1]} : vector<4xf32> to vector<1xf32>
   return %0, %1 : vector<2xf32>, vector<1xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element
-//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[ID:.*]]: i32
-//       CHECK:   spirv.VectorInsertDynamic %[[VAL]], %[[V]][%[[ID]]] : vector<4xf32>, i32
-func.func @insert_element(%val: f32, %arg0 : vector<4xf32>, %id : i32) -> vector<4xf32> {
-  %0 = vector.insertelement %val, %arg0[%id : i32] : vector<4xf32>
-  return %0: vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_cst
-//  CHECK-SAME: %[[VAL:.*]]: f32, %[[V:.*]]: vector<4xf32>
-//       CHECK:   spirv.CompositeInsert %[[VAL]], %[[V]][2 : i32] : f32 into vector<4xf32>
-func.func @insert_element_cst(%val: f32, %arg0 : vector<4xf32>) -> vector<4xf32> {
-  %idx = arith.constant 2 : i32
-  %0 = vector.insertelement %val, %arg0[%idx : i32] : vector<4xf32>
-  return %0: vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_index
-func.func @insert_element_index(%val: f32, %arg0 : vector<4xf32>, %id : index) -> vector<4xf32> {
-  // CHECK: spirv.VectorInsertDynamic
-  %0 = vector.insertelement %val, %arg0[%id : index] : vector<4xf32>
-  return %0: vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_size5_vector
-func.func @insert_element_size5_vector(%val: f32, %arg0 : vector<5xf32>, %id : i32) -> vector<5xf32> {
-  // CHECK: vector.insertelement
-  %0 = vector.insertelement %val, %arg0[%id : i32] : vector<5xf32>
-  return %0 : vector<5xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_size1_vector
-//  CHECK-SAME: (%[[S:[a-z0-9]+]]: f32
-func.func @insert_element_size1_vector(%scalar: f32, %vector : vector<1xf32>, %i: index) -> vector<1xf32> {
-  %0 = vector.insertelement %scalar, %vector[%i : index] : vector<1xf32>
-  // CHECK: %[[V:.+]] = builtin.unrealized_conversion_cast %arg0 : f32 to vector<1xf32>
-  // CHECK: return %[[V]]
-  return %0: vector<1xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @insert_element_0d_vector
-//  CHECK-SAME: (%[[S:[a-z0-9]+]]: f32
-func.func @insert_element_0d_vector(%scalar: f32, %vector : vector<f32>) -> vector<f32> {
-  %0 = vector.insertelement %scalar, %vector[] : vector<f32>
-  // CHECK: %[[V:.+]] = builtin.unrealized_conversion_cast %arg0 : f32 to vector<f32>
-  // CHECK: return %[[V]]
-  return %0: vector<f32>
 }
 
 // -----
@@ -579,7 +470,7 @@ func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf
 //       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat(%f : f32) -> vector<4xf32> {
-  %splat = vector.splat %f : vector<4xf32>
+  %splat = vector.broadcast %f : f32 to vector<4xf32>
   return %splat : vector<4xf32>
 }
 
@@ -590,7 +481,7 @@ func.func @splat(%f : f32) -> vector<4xf32> {
 //       CHECK:   %[[VAL:.+]] = builtin.unrealized_conversion_cast %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
-  %splat = vector.splat %f : vector<1xf32>
+  %splat = vector.broadcast %f : f32 to vector<1xf32>
   return %splat : vector<1xf32>
 }
 
@@ -967,6 +858,22 @@ func.func @reduction_minui(%v : vector<3xi32>, %s: i32) -> i32 {
 
 // -----
 
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [BFloat16DotProductKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>> } {
+
+// CHECK-LABEL: func @reduction_bf16_addf_mulf
+//  CHECK-SAME:  (%[[ARG0:.+]]: vector<4xbf16>, %[[ARG1:.+]]: vector<4xbf16>)
+//  CHECK:       %[[DOT:.+]] = spirv.Dot %[[ARG0]], %[[ARG1]] : vector<4xbf16> -> bf16
+//  CHECK:       return %[[DOT]] : bf16
+func.func @reduction_bf16_addf_mulf(%arg0: vector<4xbf16>, %arg1: vector<4xbf16>) -> bf16 {
+  %mul = arith.mulf %arg0, %arg1 : vector<4xbf16>
+  %red = vector.reduction <add>, %mul : vector<4xbf16> into bf16
+  return %red : bf16
+}
+
+} // end module
+
+// -----
+
 // CHECK-LABEL: @shape_cast_same_type
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<2xf32>)
 //       CHECK:   return %[[ARG0]]
@@ -1059,6 +966,14 @@ func.func @vector_load_single_elem(%arg0 : memref<4xf32, #spirv.storage_class<St
   return %0: vector<1xf32>
 }
 
+// CHECK-LABEL: @vector_load_aligned
+func.func @vector_load_aligned(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  // CHECK: spirv.Load
+  // CHECK-SAME: ["Aligned", 8]
+  %0 = vector.load %arg0[%idx] { alignment = 8 } : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}
 
 // CHECK-LABEL: @vector_load_2d
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<4x4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
@@ -1099,6 +1014,15 @@ func.func @vector_load_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageBu
 func.func @vector_store(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
   %idx = arith.constant 0 : index
   vector.store %arg1, %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @vector_store_aligned
+func.func @vector_store_aligned(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
+  %idx = arith.constant 0 : index
+  // CHECK: spirv.Store
+  // CHECK-SAME: ["Aligned", 8]
+  vector.store %arg1, %arg0[%idx] { alignment = 8 } : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return
 }
 
@@ -1145,3 +1069,15 @@ func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageB
 }
 
 } // end module
+
+// -----
+
+// Ensure the case without module attributes not crash.
+
+// CHECK-LABEL: @vector_load
+//       CHECK:   vector.load
+func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}

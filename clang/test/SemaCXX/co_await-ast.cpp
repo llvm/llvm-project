@@ -48,9 +48,9 @@ awaitable foo() {
 // CHECK:   | `-ExprWithCleanups {{.*}} 'void'
 // CHECK:   |   `-CoawaitExpr {{.*}} 'void'
 // CHECK:   |     |-CXXTemporaryObjectExpr {{.*}} 'executor' 'void (){{.*}} noexcept' zeroing
-// CHECK:   |     |-MaterializeTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |     | `-CXXBindTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' (CXXTemporary {{.*}})
-// CHECK:   |     |   `-CXXMemberCallExpr {{.*}} 'result_t':'awaitable_frame::result_t'
+// CHECK:   |     |-MaterializeTemporaryExpr {{.*}} 'result_t' lvalue
+// CHECK:   |     | `-CXXBindTemporaryExpr {{.*}} 'result_t' (CXXTemporary {{.*}})
+// CHECK:   |     |   `-CXXMemberCallExpr {{.*}} 'result_t'
 // CHECK:   |     |     |-MemberExpr {{.*}} '<bound member function type>' .await_transform {{.*}}
 // CHECK:   |     |     | `-DeclRefExpr {{.*}} 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame' lvalue Var {{.*}} '__promise' 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame'
 // CHECK:   |     |     `-CXXTemporaryObjectExpr {{.*}} 'executor' 'void (){{.*}} noexcept' zeroing
@@ -58,27 +58,27 @@ awaitable foo() {
 // CHECK:   |     | `-CXXMemberCallExpr {{.*}} 'bool'
 // CHECK:   |     |   `-MemberExpr {{.*}} '<bound member function type>' .await_ready {{.*}}
 // CHECK:   |     |     `-ImplicitCastExpr {{.*}} 'const awaitable_frame::result_t' lvalue <NoOp>
-// CHECK:   |     |       `-OpaqueValueExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |     |         `-MaterializeTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |     |           `-CXXBindTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' (CXXTemporary {{.*}})
-// CHECK:   |     |             `-CXXMemberCallExpr {{.*}} 'result_t':'awaitable_frame::result_t'
+// CHECK:   |     |       `-OpaqueValueExpr {{.*}} 'result_t' lvalue
+// CHECK:   |     |         `-MaterializeTemporaryExpr {{.*}} 'result_t' lvalue
+// CHECK:   |     |           `-CXXBindTemporaryExpr {{.*}} 'result_t' (CXXTemporary {{.*}})
+// CHECK:   |     |             `-CXXMemberCallExpr {{.*}} 'result_t'
 // CHECK:   |     |               |-MemberExpr {{.*}} '<bound member function type>' .await_transform {{.*}}
 // CHECK:   |     |               | `-DeclRefExpr {{.*}} 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame' lvalue Var {{.*}} '__promise' 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame'
 // CHECK:   |     |               `-CXXTemporaryObjectExpr {{.*}} 'executor' 'void (){{.*}} noexcept' zeroing
 // CHECK:   |     |-ExprWithCleanups {{.*}} 'void'
 // CHECK:   |     | `-CXXMemberCallExpr {{.*}} 'void'
 // CHECK:   |     |   |-MemberExpr {{.*}} '<bound member function type>' .await_suspend {{.*}}
-// CHECK:   |     |   | `-OpaqueValueExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |     |   |   `-MaterializeTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |     |   |     `-CXXBindTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' (CXXTemporary {{.*}})
-// CHECK:   |     |   |       `-CXXMemberCallExpr {{.*}} 'result_t':'awaitable_frame::result_t'
+// CHECK:   |     |   | `-OpaqueValueExpr {{.*}} 'result_t' lvalue
+// CHECK:   |     |   |   `-MaterializeTemporaryExpr {{.*}} 'result_t' lvalue
+// CHECK:   |     |   |     `-CXXBindTemporaryExpr {{.*}} 'result_t' (CXXTemporary {{.*}})
+// CHECK:   |     |   |       `-CXXMemberCallExpr {{.*}} 'result_t'
 // CHECK:   |     |   |         |-MemberExpr {{.*}} '<bound member function type>' .await_transform {{.*}}
 // CHECK:   |     |   |         | `-DeclRefExpr {{.*}} 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame' lvalue Var {{.*}} '__promise' 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame'
 // CHECK:   |     |   |         `-CXXTemporaryObjectExpr {{.*}} 'executor' 'void (){{.*}} noexcept' zeroing
 // CHECK:   |     |   `-ImplicitCastExpr {{.*}} 'std::coroutine_handle<void>' <ConstructorConversion>
 // CHECK:   |     |     `-CXXConstructExpr {{.*}} 'std::coroutine_handle<void>' 'void (coroutine_handle<awaitable_frame> &&){{.*}} noexcept'
-// CHECK:   |     |       `-MaterializeTemporaryExpr {{.*}} 'coroutine_handle<awaitable_frame>':'std::coroutine_handle<awaitable_frame>' xvalue
-// CHECK:   |     |         `-CallExpr {{.*}} 'coroutine_handle<awaitable_frame>':'std::coroutine_handle<awaitable_frame>'
+// CHECK:   |     |       `-MaterializeTemporaryExpr {{.*}} 'coroutine_handle<awaitable_frame>' xvalue
+// CHECK:   |     |         `-CallExpr {{.*}} 'coroutine_handle<awaitable_frame>'
 // CHECK:   |     |           |-ImplicitCastExpr {{.*}} 'coroutine_handle<awaitable_frame> (*)(void *) noexcept' <FunctionToPointerDecay>
 // CHECK:   |     |           | `-DeclRefExpr {{.*}} 'coroutine_handle<awaitable_frame> (void *) noexcept' lvalue CXXMethod {{.*}} 'from_address' 'coroutine_handle<awaitable_frame> (void *) noexcept'
 // CHECK:   |     |           `-CallExpr {{.*}} 'void *'
@@ -87,10 +87,10 @@ awaitable foo() {
 // CHECK:   |     `-CXXMemberCallExpr {{.*}} 'void'
 // CHECK:   |       `-MemberExpr {{.*}} '<bound member function type>' .await_resume {{.*}}
 // CHECK:   |         `-ImplicitCastExpr {{.*}} 'const awaitable_frame::result_t' lvalue <NoOp>
-// CHECK:   |           `-OpaqueValueExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |             `-MaterializeTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' lvalue
-// CHECK:   |               `-CXXBindTemporaryExpr {{.*}} 'result_t':'awaitable_frame::result_t' (CXXTemporary {{.*}})
-// CHECK:   |                 `-CXXMemberCallExpr {{.*}} 'result_t':'awaitable_frame::result_t'
+// CHECK:   |           `-OpaqueValueExpr {{.*}} 'result_t' lvalue
+// CHECK:   |             `-MaterializeTemporaryExpr {{.*}} 'result_t' lvalue
+// CHECK:   |               `-CXXBindTemporaryExpr {{.*}} 'result_t' (CXXTemporary {{.*}})
+// CHECK:   |                 `-CXXMemberCallExpr {{.*}} 'result_t'
 // CHECK:   |                   |-MemberExpr {{.*}} '<bound member function type>' .await_transform {{.*}}
 // CHECK:   |                   | `-DeclRefExpr {{.*}} 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame' lvalue Var {{.*}} '__promise' 'std::coroutine_traits<awaitable>::promise_type':'awaitable_frame'
 // CHECK:   |                   `-CXXTemporaryObjectExpr {{.*}} <col:12, col:21> 'executor' 'void (){{.*}} noexcept' zeroing

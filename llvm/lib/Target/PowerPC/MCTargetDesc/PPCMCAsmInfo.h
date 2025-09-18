@@ -33,8 +33,6 @@ public:
 };
 
 class PPCXCOFFMCAsmInfo : public MCAsmInfoXCOFF {
-  void anchor() override;
-
 public:
   explicit PPCXCOFFMCAsmInfo(bool is64Bit, const Triple &);
   void printSpecifierExpr(raw_ostream &OS,

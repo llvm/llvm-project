@@ -7,6 +7,6 @@ add_object_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.OSUtil.osutil
-    libc.hdr.types.jmp_buf
+    libc.hdr.types.sigjmp_buf
     libc.hdr.types.sigset_t
 )

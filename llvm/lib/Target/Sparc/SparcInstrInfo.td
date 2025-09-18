@@ -60,6 +60,10 @@ def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
 def HasOSA2011 : Predicate<"Subtarget->isOSA2011()">,
                 AssemblerPredicate<(all_of FeatureOSA2011)>;
 
+// HasCrypto - This is true when the target processor has cryptographic extensions.
+def HasCrypto : Predicate<"Subtarget->isCrypto()">,
+                AssemblerPredicate<(all_of FeatureCrypto)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
@@ -1781,22 +1785,22 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
 // as inline assembler-supported instructions.
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
   def SMACrr :  F3_1<2, 0b111111,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "smac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def SMACri :  F3_2<2, 0b111111,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "smac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 
   def UMACrr :  F3_1<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "umac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def UMACri :  F3_2<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "umac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 }
@@ -2011,4 +2015,5 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"
 include "SparcInstrUAOSA.td"
+include "SparcInstrCrypto.td"
 include "SparcInstrAliases.td"

@@ -798,12 +798,12 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; RV64SFBSIFIVEU74-LABEL: sextw_removal_ccor:
 ; RV64SFBSIFIVEU74:       # %bb.0: # %bb
 ; RV64SFBSIFIVEU74-NEXT:    addi sp, sp, -32
-; RV64SFBSIFIVEU74-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64SFBSIFIVEU74-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    mv s0, a3
+; RV64SFBSIFIVEU74-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    andi a0, a0, 1
 ; RV64SFBSIFIVEU74-NEXT:    mv s1, a2
+; RV64SFBSIFIVEU74-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    beqz a0, .LBB15_4
 ; RV64SFBSIFIVEU74-NEXT:  # %bb.3: # %bb
 ; RV64SFBSIFIVEU74-NEXT:    or s0, a3, a1
@@ -824,11 +824,11 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; RV64SFBANDESAX45-LABEL: sextw_removal_ccor:
 ; RV64SFBANDESAX45:       # %bb.0: # %bb
 ; RV64SFBANDESAX45-NEXT:    addi sp, sp, -32
-; RV64SFBANDESAX45-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64SFBANDESAX45-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    mv s0, a3
+; RV64SFBANDESAX45-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    mv s1, a2
+; RV64SFBANDESAX45-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    nds.bbc a0, 0, .LBB15_2
 ; RV64SFBANDESAX45-NEXT:  # %bb.1:
 ; RV64SFBANDESAX45-NEXT:    or s0, s0, a1
@@ -848,12 +848,12 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; ZICOND-LABEL: sextw_removal_ccor:
 ; ZICOND:       # %bb.0: # %bb
 ; ZICOND-NEXT:    addi sp, sp, -32
-; ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; ZICOND-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    mv s0, a3
+; ZICOND-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    andi a0, a0, 1
 ; ZICOND-NEXT:    mv s1, a2
+; ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    beqz a0, .LBB15_4
 ; ZICOND-NEXT:  # %bb.3: # %bb
 ; ZICOND-NEXT:    or s0, a3, a1
@@ -874,12 +874,12 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; RV32SFB-LABEL: sextw_removal_ccor:
 ; RV32SFB:       # %bb.0: # %bb
 ; RV32SFB-NEXT:    addi sp, sp, -16
-; RV32SFB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32SFB-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    mv s0, a3
+; RV32SFB-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    andi a0, a0, 1
 ; RV32SFB-NEXT:    mv s1, a2
+; RV32SFB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    beqz a0, .LBB15_4
 ; RV32SFB-NEXT:  # %bb.3: # %bb
 ; RV32SFB-NEXT:    or s0, a3, a1
@@ -941,11 +941,11 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; RV64SFBSIFIVEU74-LABEL: sextw_removal_ccaddw:
 ; RV64SFBSIFIVEU74:       # %bb.0: # %bb
 ; RV64SFBSIFIVEU74-NEXT:    addi sp, sp, -32
-; RV64SFBSIFIVEU74-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64SFBSIFIVEU74-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    mv s1, a1
 ; RV64SFBSIFIVEU74-NEXT:    andi a0, a0, 1
+; RV64SFBSIFIVEU74-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64SFBSIFIVEU74-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    mv s0, a2
 ; RV64SFBSIFIVEU74-NEXT:    beqz a0, .LBB16_4
 ; RV64SFBSIFIVEU74-NEXT:  # %bb.3: # %bb
@@ -967,11 +967,11 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; RV64SFBANDESAX45-LABEL: sextw_removal_ccaddw:
 ; RV64SFBANDESAX45:       # %bb.0: # %bb
 ; RV64SFBANDESAX45-NEXT:    addi sp, sp, -32
-; RV64SFBANDESAX45-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64SFBANDESAX45-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    mv s0, a2
+; RV64SFBANDESAX45-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    mv s1, a1
+; RV64SFBANDESAX45-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBANDESAX45-NEXT:    nds.bbc a0, 0, .LBB16_2
 ; RV64SFBANDESAX45-NEXT:  # %bb.1:
 ; RV64SFBANDESAX45-NEXT:    addw s1, s1, a3
@@ -991,11 +991,11 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; ZICOND-LABEL: sextw_removal_ccaddw:
 ; ZICOND:       # %bb.0: # %bb
 ; ZICOND-NEXT:    addi sp, sp, -32
-; ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; ZICOND-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    mv s1, a1
 ; ZICOND-NEXT:    andi a0, a0, 1
+; ZICOND-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    mv s0, a2
 ; ZICOND-NEXT:    beqz a0, .LBB16_4
 ; ZICOND-NEXT:  # %bb.3: # %bb
@@ -1017,11 +1017,11 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; RV32SFB-LABEL: sextw_removal_ccaddw:
 ; RV32SFB:       # %bb.0: # %bb
 ; RV32SFB-NEXT:    addi sp, sp, -16
-; RV32SFB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32SFB-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    mv s1, a1
 ; RV32SFB-NEXT:    andi a0, a0, 1
+; RV32SFB-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32SFB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    mv s0, a2
 ; RV32SFB-NEXT:    beqz a0, .LBB16_4
 ; RV32SFB-NEXT:  # %bb.3: # %bb
@@ -2075,14 +2075,14 @@ define i64 @abs_i64(i64 %x) {
 ; RV32SFB-LABEL: abs_i64:
 ; RV32SFB:       # %bb.0:
 ; RV32SFB-NEXT:    snez a2, a0
-; RV32SFB-NEXT:    add a2, a2, a1
+; RV32SFB-NEXT:    neg a3, a1
 ; RV32SFB-NEXT:    bgez a1, .LBB35_2
 ; RV32SFB-NEXT:  # %bb.1:
 ; RV32SFB-NEXT:    neg a0, a0
 ; RV32SFB-NEXT:  .LBB35_2:
 ; RV32SFB-NEXT:    bgez a1, .LBB35_4
 ; RV32SFB-NEXT:  # %bb.3:
-; RV32SFB-NEXT:    neg a1, a2
+; RV32SFB-NEXT:    sub a1, a3, a2
 ; RV32SFB-NEXT:  .LBB35_4:
 ; RV32SFB-NEXT:    ret
   %a = call i64 @llvm.abs.i64(i64 %x, i1 false)

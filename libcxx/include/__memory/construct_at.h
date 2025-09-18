@@ -33,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* __location, _Args&&... __args) {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* _LIBCPP_DIAGNOSE_NULLPTR __location, _Args&&... __args) {
   _LIBCPP_ASSERT_NON_NULL(__location != nullptr, "null pointer given to construct_at");
   return ::new (static_cast<void*>(__location)) _Tp(std::forward<_Args>(__args)...);
 }
@@ -73,13 +73,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_at(_Tp* __loc) {
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Tp, enable_if_t<!is_array_v<_Tp>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* __loc) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy_at(_Tp* _LIBCPP_DIAGNOSE_NULLPTR __loc) {
   std::__destroy_at(__loc);
 }
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Tp, enable_if_t<is_array_v<_Tp>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr void destroy_at(_Tp* __loc) {
+_LIBCPP_HIDE_FROM_ABI constexpr void destroy_at(_Tp* _LIBCPP_DIAGNOSE_NULLPTR __loc) {
   std::__destroy_at(__loc);
 }
 #  endif

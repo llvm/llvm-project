@@ -93,7 +93,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -2147483649
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP6]], i8 0, i64 24, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[ARGS]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], -2147483649
 ; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
@@ -165,7 +165,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD]], %[[VAARG_END]] ]
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr nonnull [[ARGS]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[ARGS]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
@@ -186,7 +186,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; ORIGIN-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], -4
 ; ORIGIN-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; ORIGIN-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP7]], i8 0, i64 24, i1 false)
-; ORIGIN-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[ARGS]])
+; ORIGIN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; ORIGIN-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; ORIGIN-NEXT:    [[TMP11:%.*]] = and i64 [[TMP23]], -2147483649
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
@@ -266,7 +266,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; ORIGIN:       [[FOR_END]]:
 ; ORIGIN-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD]], %[[VAARG_END]] ]
 ; ORIGIN-NEXT:    call void @llvm.va_end.p0(ptr nonnull [[ARGS]])
-; ORIGIN-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[ARGS]])
+; ORIGIN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARGS]])
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; ORIGIN-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
 ; ORIGIN-NEXT:    ret i32 [[SUM_0_LCSSA]]
@@ -288,7 +288,7 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; ORIGIN2-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], -4
 ; ORIGIN2-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; ORIGIN2-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP7]], i8 0, i64 24, i1 false)
-; ORIGIN2-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[ARGS]])
+; ORIGIN2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; ORIGIN2-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; ORIGIN2-NEXT:    [[TMP11:%.*]] = and i64 [[TMP23]], -2147483649
 ; ORIGIN2-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
@@ -368,14 +368,14 @@ define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 ; ORIGIN2:       [[FOR_END]]:
 ; ORIGIN2-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD]], %[[VAARG_END]] ]
 ; ORIGIN2-NEXT:    call void @llvm.va_end.p0(ptr nonnull [[ARGS]])
-; ORIGIN2-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[ARGS]])
+; ORIGIN2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARGS]])
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; ORIGIN2-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
 ; ORIGIN2-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
   %args = alloca [1 x %struct.__va_list_tag], align 16
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %args) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %args) #2
   call void @llvm.va_start(ptr nonnull %args)
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.end
@@ -419,13 +419,13 @@ vaarg.end:                                        ; preds = %vaarg.in_mem, %vaar
 for.end:                                          ; preds = %vaarg.end, %entry
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add, %vaarg.end ]
   call void @llvm.va_end(ptr nonnull %args)
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %args) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %args) #2
   ret i32 %sum.0.lcssa
 }
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind
 declare void @llvm.va_start(ptr) #2
@@ -434,7 +434,7 @@ declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 declare dso_local i80 @sum_i80(i32, ...) local_unnamed_addr
 

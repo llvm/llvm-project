@@ -102,6 +102,12 @@ class TestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test()
+
     def do_test_recursive_unique_ptr(self):
         # Tests that LLDB can handle when we have a loop in the unique_ptr
         # reference chain and that it correctly handles the different options
@@ -154,4 +160,9 @@ class TestCase(TestBase):
     @add_test_categories(["libc++"])
     def test_recursive_unique_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_recursive_unique_ptr()
+
+    @add_test_categories(["msvcstl"])
+    def test_recursive_unique_ptr_msvcstl(self):
+        self.build()
         self.do_test_recursive_unique_ptr()

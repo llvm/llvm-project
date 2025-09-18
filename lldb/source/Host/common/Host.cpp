@@ -82,10 +82,11 @@ int __pthread_fchdir(int fildes);
 using namespace lldb;
 using namespace lldb_private;
 
-#if !defined(__APPLE__)
-// The system log is currently only meaningful on Darwin, where this means
-// os_log. The meaning of a "system log" isn't as clear on other platforms, and
-// therefore we don't providate a default implementation. Vendors are free to
+#if !defined(__APPLE__) && !defined(_WIN32)
+// The system log is currently only meaningful on Darwin and Windows.
+// On Darwin, this means os_log. On Windows this means Events Viewer.
+// The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free
 // to implement this function if they have a use for it.
 void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif

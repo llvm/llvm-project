@@ -433,6 +433,10 @@ public:
   LLVM_ABI BasicBlock::iterator
   findInsertPointAfter(Instruction *I, Instruction *MustDominate) const;
 
+  /// Remove inserted instructions that are dead, e.g. due to InstSimplifyFolder
+  /// simplifications. \p Root is assumed to be used and won't be removed.
+  void eraseDeadInstructions(Value *Root);
+
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
@@ -530,6 +534,7 @@ private:
 
   bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
+  Value *tryToReuseLCSSAPhi(const SCEVAddRecExpr *S);
   Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
                                      const Loop *L, Type *&TruncTy,

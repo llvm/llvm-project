@@ -506,6 +506,8 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

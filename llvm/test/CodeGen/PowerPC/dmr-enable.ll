@@ -367,6 +367,69 @@ entry:
   ret void
 }
 
+define void @tbuild(ptr %p1, ptr %p2, ptr %res1, ptr %res2, ptr %v) {
+; CHECK-LABEL: tbuild:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxv v3, 0(r7)
+; CHECK-NEXT:    vmr v2, v3
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp34, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxvp vsp34, 96(r6)
+; CHECK-NEXT:    stxvp vsp36, 64(r6)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp34, 32(r6)
+; CHECK-NEXT:    stxvp vsp36, 0(r6)
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-NEXT:    lxvp vsp36, 32(r3)
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-NEXT:    lxvp vsp34, 64(r3)
+; CHECK-NEXT:    lxvp vsp36, 96(r3)
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-NEXT:    stxvp vsp34, 96(r5)
+; CHECK-NEXT:    stxvp vsp36, 64(r5)
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-NEXT:    stxvp vsp34, 32(r5)
+; CHECK-NEXT:    stxvp vsp36, 0(r5)
+; CHECK-NEXT:    blr
+;
+; CHECK-BE-LABEL: tbuild:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    lxv v3, 0(r7)
+; CHECK-BE-NEXT:    vmr v2, v3
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp34, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp36, 96(r6)
+; CHECK-BE-NEXT:    stxvp vsp34, 64(r6)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp36, 32(r6)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r6)
+; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
+; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
+; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
+; CHECK-BE-NEXT:    stxvp vsp36, 96(r5)
+; CHECK-BE-NEXT:    stxvp vsp34, 64(r5)
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-NEXT:    stxvp vsp36, 32(r5)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r5)
+; CHECK-BE-NEXT:    blr
+entry:
+  %0 = load <16 x i8>, ptr %v, align 16
+  %1 = tail call <1024 x i1> @llvm.ppc.mma.build.dmr(<16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0)
+  store <1024 x i1> %1, ptr %res2, align 128
+  %2 = load <1024 x i1>, ptr %p1, align 128
+  tail call void @llvm.ppc.mma.disassemble.dmr(ptr %res1, <1024 x i1> %2)
+  ret void
+}
+
+declare <1024 x i1> @llvm.ppc.mma.build.dmr(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
+declare void @llvm.ppc.mma.disassemble.dmr(ptr, <1024 x i1>)
 declare <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
 declare <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1>)
 declare <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1>, <1024 x i1>)

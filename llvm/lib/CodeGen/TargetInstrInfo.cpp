@@ -58,16 +58,15 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass*
+const TargetRegisterClass *
 TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo *TRI,
-                             const MachineFunction &MF) const {
+                             const TargetRegisterInfo *TRI) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
   short RegClass = MCID.operands()[OpNum].RegClass;
   if (MCID.operands()[OpNum].isLookupPtrRegClass())
-    return TRI->getPointerRegClass(MF, RegClass);
+    return TRI->getPointerRegClass(RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
   if (RegClass < 0)
@@ -214,6 +213,24 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
       Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
   bool Reg2IsRenamable =
       Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
+
+  // For a case like this:
+  //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
+  // we need to update the implicit-def after commuting to result in:
+  //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
+  SmallVector<unsigned> UpdateImplicitDefIdx;
+  if (HasDef && MI.hasImplicitDef()) {
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      Register ImplReg = MO.getReg();
+      if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
+          (ImplReg.isPhysical() && Reg0.isPhysical() &&
+           TRI->isSubRegisterEq(ImplReg, Reg0)))
+        UpdateImplicitDefIdx.push_back(OpNo + MI.getNumExplicitOperands());
+    }
+  }
+
   // If destination is tied to either of the commuted source register, then
   // it must be updated.
   if (HasDef && Reg0 == Reg1 &&
@@ -238,15 +255,10 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   }
 
   if (HasDef) {
-    // Use `substituteRegister` so that for a case like this:
-    //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
-    // the implicit-def is also updated, to result in:
-    //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
-    const TargetRegisterInfo &TRI =
-        *MI.getMF()->getSubtarget().getRegisterInfo();
-    Register FromReg = CommutedMI->getOperand(0).getReg();
-    CommutedMI->substituteRegister(FromReg, Reg0, /*SubRegIdx=*/0, TRI);
+    CommutedMI->getOperand(0).setReg(Reg0);
     CommutedMI->getOperand(0).setSubReg(SubReg0);
+    for (unsigned Idx : UpdateImplicitDefIdx)
+      CommutedMI->getOperand(Idx).setReg(Reg0);
   }
   CommutedMI->getOperand(Idx2).setReg(Reg1);
   CommutedMI->getOperand(Idx1).setReg(Reg2);
@@ -779,12 +791,18 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
 
   const MachineOperand &MO = MI.getOperand(1 - Ops[0]);
   MachineBasicBlock::iterator Pos = MI;
-
-  if (Flags == MachineMemOperand::MOStore)
-    storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI,
-                        Register());
-  else
+  if (Flags == MachineMemOperand::MOStore) {
+    if (MO.isUndef()) {
+      // If this is an undef copy, we do not need to bother we inserting spill
+      // code.
+      BuildMI(*MBB, Pos, MI.getDebugLoc(), get(TargetOpcode::KILL)).add(MO);
+    } else {
+      storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI,
+                          Register());
+    }
+  } else
     loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI, Register());
+
   return &*--Pos;
 }
 
@@ -974,10 +992,10 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
     MI = MRI.getUniqueVRegDef(MO.getReg());
   // And it needs to be in the trace (otherwise, it won't have a depth).
   if (!MI || MI->getParent() != &MBB ||
-      ((unsigned)MI->getOpcode() != CombineOpc && CombineOpc != 0))
+      (MI->getOpcode() != CombineOpc && CombineOpc != 0))
     return false;
   // Must only used by the user we combine with.
-  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(MO.getReg()))
     return false;
 
   return true;
@@ -1387,7 +1405,7 @@ void TargetInstrInfo::reassociateOps(
                               const MCInstrDesc &MCID, Register DestReg) {
     return MachineInstrBuilder(
                MF, MF.CreateMachineInstr(MCID, MIMD.getDL(), /*NoImpl=*/true))
-        .setPCSections(MIMD.getPCSections())
+        .copyMIMetadata(MIMD)
         .addReg(DestReg, RegState::Define);
   };
 
@@ -1437,11 +1455,13 @@ void TargetInstrInfo::reassociateOps(
   MIB1->clearFlag(MachineInstr::MIFlag::NoSWrap);
   MIB1->clearFlag(MachineInstr::MIFlag::NoUWrap);
   MIB1->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB1->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   MIB2->setFlags(IntersectedFlags);
   MIB2->clearFlag(MachineInstr::MIFlag::NoSWrap);
   MIB2->clearFlag(MachineInstr::MIFlag::NoUWrap);
   MIB2->clearFlag(MachineInstr::MIFlag::IsExact);
+  MIB2->clearFlag(MachineInstr::MIFlag::Disjoint);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
 

@@ -70,8 +70,8 @@ Error RemarkLinker::link(StringRef Buffer, Format RemarkFormat) {
   Expected<std::unique_ptr<RemarkParser>> MaybeParser =
       createRemarkParserFromMeta(
           RemarkFormat, Buffer,
-          PrependPath ? std::optional<StringRef>(StringRef(*PrependPath))
-                      : std::optional<StringRef>());
+          PrependPath ? std::make_optional<StringRef>(*PrependPath)
+                      : std::nullopt);
   if (!MaybeParser)
     return MaybeParser.takeError();
 

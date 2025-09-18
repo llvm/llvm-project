@@ -134,12 +134,17 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
-  } else if (Args.hasArg(options::OPT_g_Flag)) {
+  } else if (Args.hasArg(options::OPT_g_Group)) {
     DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
+  if (getDwarfNArg(Args)) {
+    const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
+    CmdArgs.push_back(
+        Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
+  }
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
@@ -150,6 +155,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
+                    options::OPT_fno_experimental_loop_fusion);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -178,6 +186,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+  if (Args.hasArg(clang::driver::options::OPT_fcoarray))
+    CmdArgs.push_back("-fcoarray");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -447,6 +457,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   // Add the target features.
   switch (TC.getArch()) {
   default:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
   case llvm::Triple::aarch64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -531,7 +542,14 @@ void Flang::addTargetOptions(const ArgList &Args,
   }
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
+                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
+                   options::OPT_fatomic_ignore_denormal_mode,
+                   options::OPT_fno_atomic_ignore_denormal_mode,
+                   options::OPT_fatomic_fine_grained_memory,
+                   options::OPT_fno_atomic_fine_grained_memory,
+                   options::OPT_fatomic_remote_memory,
+                   options::OPT_fno_atomic_remote_memory,
+                   options::OPT_munsafe_fp_atomics});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -936,6 +954,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -951,6 +971,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << A->getValue();
       break;
     }
+  } else {
+    Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                    options::OPT_fno_openmp_simd);
   }
 
   // Pass the path to compiler resource files.

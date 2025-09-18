@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -218,7 +219,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
          OM.map("linesStartAt1", IRA.linesStartAt1) &&
          OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.map("pathFormat", IRA.pathFormat) &&
+         OM.mapOptional("pathFormat", IRA.pathFormat) &&
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
@@ -302,7 +303,8 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
          O.mapOptional("runInTerminal", LRA.console) &&
-         O.mapOptional("console", LRA.console) && parseEnv(Params, LRA.env, P);
+         O.mapOptional("console", LRA.console) &&
+         O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
@@ -328,6 +330,17 @@ json::Value toJSON(const ContinueResponseBody &CRB) {
   return std::move(Body);
 }
 
+bool fromJSON(const json::Value &Params, CompletionsArguments &CA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("text", CA.text) && O.map("column", CA.column) &&
+         O.mapOptional("frameId", CA.frameId) && O.mapOptional("line", CA.line);
+}
+
+json::Value toJSON(const CompletionsResponseBody &CRB) {
+  return json::Object{{"targets", CRB.targets}};
+}
+
 bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -338,26 +351,24 @@ bool fromJSON(const json::Value &Params, SetVariableArguments &SVA,
 
 json::Value toJSON(const SetVariableResponseBody &SVR) {
   json::Object Body{{"value", SVR.value}};
-  if (SVR.type.has_value())
+
+  if (!SVR.type.empty())
     Body.insert({"type", SVR.type});
-
-  if (SVR.variablesReference.has_value())
+  if (SVR.variablesReference)
     Body.insert({"variablesReference", SVR.variablesReference});
-
-  if (SVR.namedVariables.has_value())
+  if (SVR.namedVariables)
     Body.insert({"namedVariables", SVR.namedVariables});
-
-  if (SVR.indexedVariables.has_value())
+  if (SVR.indexedVariables)
     Body.insert({"indexedVariables", SVR.indexedVariables});
-
-  if (SVR.memoryReference.has_value())
-    Body.insert({"memoryReference", SVR.memoryReference});
-
-  if (SVR.valueLocationReference.has_value())
+  if (SVR.memoryReference != LLDB_INVALID_ADDRESS)
+    Body.insert(
+        {"memoryReference", EncodeMemoryReference(SVR.memoryReference)});
+  if (SVR.valueLocationReference)
     Body.insert({"valueLocationReference", SVR.valueLocationReference});
 
   return json::Value(std::move(Body));
 }
+
 bool fromJSON(const json::Value &Params, ScopesArguments &SCA, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("frameId", SCA.frameId);
@@ -498,7 +509,9 @@ json::Value toJSON(const ThreadsResponseBody &TR) {
 bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("memoryReference", DA.memoryReference) &&
+  return O &&
+         DecodeMemoryReference(Params, "memoryReference", DA.memoryReference, P,
+                               /*required=*/true) &&
          O.mapOptional("offset", DA.offset) &&
          O.mapOptional("instructionOffset", DA.instructionOffset) &&
          O.map("instructionCount", DA.instructionCount) &&
@@ -512,29 +525,14 @@ json::Value toJSON(const DisassembleResponseBody &DRB) {
 bool fromJSON(const json::Value &Params, ReadMemoryArguments &RMA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-
-  const json::Object *rma_obj = Params.getAsObject();
-  constexpr llvm::StringRef ref_key = "memoryReference";
-  const std::optional<llvm::StringRef> memory_ref = rma_obj->getString(ref_key);
-  if (!memory_ref) {
-    P.field(ref_key).report("missing value");
-    return false;
-  }
-
-  const std::optional<lldb::addr_t> addr_opt =
-      DecodeMemoryReference(*memory_ref);
-  if (!addr_opt) {
-    P.field(ref_key).report("Malformed memory reference");
-    return false;
-  }
-
-  RMA.memoryReference = *addr_opt;
-
-  return O && O.map("count", RMA.count) && O.mapOptional("offset", RMA.offset);
+  return O &&
+         DecodeMemoryReference(Params, "memoryReference", RMA.memoryReference,
+                               P, /*required=*/true) &&
+         O.map("count", RMA.count) && O.mapOptional("offset", RMA.offset);
 }
 
 json::Value toJSON(const ReadMemoryResponseBody &RMR) {
-  json::Object result{{"address", RMR.address}};
+  json::Object result{{"address", EncodeMemoryReference(RMR.address)}};
 
   if (RMR.unreadableBytes != 0)
     result.insert({"unreadableBytes", RMR.unreadableBytes});
@@ -597,24 +595,10 @@ bool fromJSON(const json::Value &Params, WriteMemoryArguments &WMA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
 
-  const json::Object *wma_obj = Params.getAsObject();
-  constexpr llvm::StringRef ref_key = "memoryReference";
-  const std::optional<llvm::StringRef> memory_ref = wma_obj->getString(ref_key);
-  if (!memory_ref) {
-    P.field(ref_key).report("missing value");
-    return false;
-  }
-
-  const std::optional<lldb::addr_t> addr_opt =
-      DecodeMemoryReference(*memory_ref);
-  if (!addr_opt) {
-    P.field(ref_key).report("Malformed memory reference");
-    return false;
-  }
-
-  WMA.memoryReference = *addr_opt;
-
-  return O && O.mapOptional("allowPartial", WMA.allowPartial) &&
+  return O &&
+         DecodeMemoryReference(Params, "memoryReference", WMA.memoryReference,
+                               P, /*required=*/true) &&
+         O.mapOptional("allowPartial", WMA.allowPartial) &&
          O.mapOptional("offset", WMA.offset) && O.map("data", WMA.data);
 }
 
@@ -623,6 +607,21 @@ json::Value toJSON(const WriteMemoryResponseBody &WMR) {
 
   if (WMR.bytesWritten != 0)
     result.insert({"bytesWritten", WMR.bytesWritten});
+  return result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ModuleSymbolsArguments &Args,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.map("moduleName", Args.moduleName) &&
+         O.mapOptional("startIndex", Args.startIndex) &&
+         O.mapOptional("count", Args.count);
+}
+
+llvm::json::Value toJSON(const ModuleSymbolsResponseBody &DGMSR) {
+  json::Object result;
+  result.insert({"symbols", DGMSR.symbols});
   return result;
 }
 

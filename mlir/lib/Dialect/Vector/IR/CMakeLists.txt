@@ -26,6 +26,7 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
   MLIRTensorDialect
+  MLIRUBDialect
   MLIRValueBoundsOpInterface
   MLIRVectorInterfaces
   )

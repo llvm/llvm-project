@@ -9,6 +9,9 @@ void __attribute__((target_clones("default", "mtune=sifive-u74"))) mtune() {}
 // expected-warning@+1 {{version list contains duplicate entries}}
 void __attribute__((target_clones("default", "arch=+c", "arch=+c"))) dupVersion() {}
 
+// expected-warning@+1 {{version list contains duplicate entries}}
+void __attribute__((target_clones(" default", "default "))) dupDefault() {}
+
 // expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default", ""))) emptyVersion() {}
 

@@ -22,6 +22,7 @@ class MCSection;
 
 /// MCExpr that represents the epilog unwind code in an unwind table.
 class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
+  const MCSymbol *Function;
   const MCSymbol *FunctionEnd;
   const MCSymbol *UnwindV2Start;
   const MCSymbol *EpilogEnd;
@@ -31,7 +32,7 @@ class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
   MCUnwindV2EpilogTargetExpr(const WinEH::FrameInfo &FrameInfo,
                              const WinEH::FrameInfo::Epilog &Epilog,
                              uint8_t EpilogSize_)
-      : FunctionEnd(FrameInfo.FuncletOrFuncEnd),
+      : Function(FrameInfo.Function), FunctionEnd(FrameInfo.FuncletOrFuncEnd),
         UnwindV2Start(Epilog.UnwindV2Start), EpilogEnd(Epilog.End),
         EpilogSize(EpilogSize_), Loc(Epilog.Loc) {}
 
@@ -253,13 +254,15 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
         OS->getAssembler(), LastEpilog.End, LastEpilog.UnwindV2Start);
     if (!MaybeSize) {
       context.reportError(LastEpilog.Loc,
-                          "Failed to evaluate epilog size for Unwind v2");
+                          "Failed to evaluate epilog size for Unwind v2 in " +
+                              info->Function->getName());
       return;
     }
     assert(*MaybeSize >= 0);
     if (*MaybeSize >= (int64_t)UINT8_MAX) {
       context.reportError(LastEpilog.Loc,
-                          "Epilog size is too large for Unwind v2");
+                          "Epilog size is too large for Unwind v2 in " +
+                              info->Function->getName());
       return;
     }
     EpilogSize = *MaybeSize + 1;
@@ -282,7 +285,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     // Too many epilogs to handle.
     if ((size_t)numCodes + numEpilogCodes > UINT8_MAX) {
       context.reportError(info->FunctionLoc,
-                          "Too many unwind codes with Unwind v2 enabled");
+                          "Too many unwind codes with Unwind v2 enabled in " +
+                              info->Function->getName());
       return;
     }
 
@@ -318,15 +322,16 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Emit the epilog instructions.
   if (EnableUnwindV2) {
-    MCDataFragment *DF = OS->getOrCreateDataFragment();
+    // Ensure the fixups and appended content apply to the same fragment.
+    OS->ensureHeadroom(info->EpilogMap.size() * 2);
 
     bool IsLast = true;
     for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
       if (IsLast) {
         IsLast = false;
         uint8_t Flags = LastEpilogIsAtEnd ? 0x01 : 0;
-        streamer.emitInt8(EpilogSize);
-        streamer.emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
+        OS->emitInt8(EpilogSize);
+        OS->emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
 
         if (LastEpilogIsAtEnd)
           continue;
@@ -337,9 +342,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
       // layout has been completed.
       auto *MCE = MCUnwindV2EpilogTargetExpr::create(*info, Epilog.second,
                                                      EpilogSize, context);
-      MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_2);
-      DF->addFixup(Fixup);
-      DF->appendContents(2, 0);
+      OS->addFixup(MCE, FK_Data_2);
+      OS->appendContents(2, 0);
     }
   }
   if (AddPaddingEpilogCode)
@@ -383,14 +387,16 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   auto Offset = GetOptionalAbsDifference(*Asm, FunctionEnd, UnwindV2Start);
   if (!Offset) {
     Asm->getContext().reportError(
-        Loc, "Failed to evaluate epilog offset for Unwind v2");
+        Loc, "Failed to evaluate epilog offset for Unwind v2 in " +
+                 Function->getName());
     return false;
   }
   assert(*Offset > 0);
   constexpr uint16_t MaxEpilogOffset = 0x0fff;
   if (*Offset > MaxEpilogOffset) {
-    Asm->getContext().reportError(Loc,
-                                  "Epilog offset is too large for Unwind v2");
+    Asm->getContext().reportError(
+        Loc,
+        "Epilog offset is too large for Unwind v2 in " + Function->getName());
     return false;
   }
 
@@ -398,8 +404,8 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   auto Size = GetOptionalAbsDifference(*Asm, EpilogEnd, UnwindV2Start);
   if (Size != (EpilogSize - 1)) {
     Asm->getContext().reportError(
-        Loc,
-        "Size of this epilog does not match size of last epilog in function");
+        Loc, "Size of this epilog does not match size of last epilog in " +
+                 Function->getName());
     return false;
   }
 

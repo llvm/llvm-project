@@ -123,3 +123,43 @@ qc.e.addai x2, 48
 # CHECK-NOALIAS: c.andi s1, -1
 # CHECK-ENC: encoding: [0xfd,0x98]
 qc.e.andai x9, 4294967295
+
+# CHECK-ALIAS: addi t0, t2, 400
+# CHECK-NOALIAS: addi t0, t2, 400
+# CHECK-ENC: encoding: [0x93,0x82,0x03,0x19]
+qc.e.addi x5, x7, 400
+
+# CHECK-ALIAS: andi t0, t2, 750
+# CHECK-NOALIAS: andi t0, t2, 750
+# CHECK-ENC: encoding: [0x93,0xf2,0xe3,0x2e]
+qc.e.andi x5, x7, 750
+
+# CHECK-ALIAS: ori t0, t2, 854
+# CHECK-NOALIAS: ori t0, t2, 854
+# CHECK-ENC: encoding: [0x93,0xe2,0x63,0x35]
+qc.e.ori x5, x7, 854
+
+# CHECK-ALIAS: xori t0, t2, -200
+# CHECK-NOALIAS: xori t0, t2, -200
+# CHECK-ENC: encoding: [0x93,0xc2,0x83,0xf3]
+qc.e.xori x5, x7, -200
+
+# CHECK-ALIAS: addi t2, t2, 400
+# CHECK-NOALIAS: addi t2, t2, 400
+# CHECK-ENC: encoding: [0x93,0x83,0x03,0x19]
+qc.e.addai x7, 400
+
+# CHECK-ALIAS: andi t2, t2, 750
+# CHECK-NOALIAS: andi t2, t2, 750
+# CHECK-ENC: encoding: [0x93,0xf3,0xe3,0x2e]
+qc.e.andai x7, 750
+
+# CHECK-ALIAS: ori t2, t2, 854
+# CHECK-NOALIAS: ori t2, t2, 854
+# CHECK-ENC: encoding: [0x93,0xe3,0x63,0x35]
+qc.e.orai x7, 854
+
+# CHECK-ALIAS: xori t2, t2, -200
+# CHECK-NOALIAS: xori t2, t2, -200
+# CHECK-ENC: encoding: [0x93,0xc3,0x83,0xf3]
+qc.e.xorai x7, -200

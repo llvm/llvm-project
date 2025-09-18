@@ -6,27 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains Offload API definitions related to loading and launching
-// kernels
+// This file contains Offload API definitions related to kernels
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olGetKernel";
-    let desc = "Get a kernel from the function identified by `KernelName` in the given program.";
-    let details = [
-        "Symbol handles are owned by the program and do not need to be manually destroyed."
-    ];
-    let params = [
-        Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
-        Param<"const char*", "KernelName", "name of the kernel entry point in the program", PARAM_IN>,
-        Param<"ol_symbol_handle_t*", "Kernel", "output pointer for the fetched kernel", PARAM_OUT>
-    ];
-    let returns = [];
-}
-
-def : Struct {
-    let name = "ol_kernel_launch_size_args_t";
+def ol_kernel_launch_size_args_t : Struct {
     let desc = "Size-related arguments for a kernel launch.";
     let members = [
         StructMember<"size_t", "Dimensions", "Number of work dimensions">,
@@ -36,8 +20,7 @@ def : Struct {
     ];
 }
 
-def : Function {
-    let name = "olLaunchKernel";
+def olLaunchKernel : Function {
     let desc = "Enqueue a kernel launch with the specified size and parameters.";
     let details = [
         "If a queue is not specified, kernel execution happens synchronously",
@@ -50,12 +33,27 @@ def : Function {
         Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN_OPTIONAL>,
         Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
-        Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
     let returns = [
-        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>,
         Return<"OL_ERRC_INVALID_ARGUMENT", ["`ArgumentsSize > 0 && ArgumentsData == NULL`"]>,
         Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
         Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
+    ];
+}
+
+def olCalculateOptimalOccupancy : Function {
+    let desc = "Given dynamic memory size, query the device for a workgroup size that will result in optimal occupancy.";
+    let details = [
+        "For most devices, this will be the largest workgroup size that will result in all work items fitting on the device at once.",
+    ];
+    let params = [
+        Param<"ol_device_handle_t", "Device", "device intended to run the kernel", PARAM_IN>,
+        Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
+        Param<"size_t", "SharedMemory", "dynamic shared memory required per work item in bytes", PARAM_IN>,
+        Param<"size_t*", "GroupSize", "optimal block size", PARAM_OUT>
+    ];
+    let returns = [
+        Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
+        Return<"OL_ERRC_UNSUPPORTED", ["The backend cannot provide this information"]>,
     ];
 }

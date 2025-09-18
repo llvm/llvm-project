@@ -20,23 +20,17 @@ StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
 HwMode::HwMode(const Record *R) {
   Name = R->getName();
-  Features = R->getValueAsString("Features").str();
-
-  SmallString<128> PredicateCheck;
-  raw_svector_ostream OS(PredicateCheck);
-  ListSeparator LS(" && ");
-  for (const Record *Pred : R->getValueAsListOfDefs("Predicates")) {
-    StringRef CondString = Pred->getValueAsString("CondString");
-    if (CondString.empty())
-      continue;
-    OS << LS << '(' << CondString << ')';
-  }
-
-  Predicates = std::string(PredicateCheck);
+  Predicates = R->getValueAsListOfDefs("Predicates");
 }
 
 LLVM_DUMP_METHOD
-void HwMode::dump() const { dbgs() << Name << ": " << Features << '\n'; }
+void HwMode::dump() const {
+  dbgs() << Name << ": ";
+  ListSeparator LS;
+  for (const Record *R : Predicates)
+    dbgs() << LS << R->getName();
+  dbgs() << '\n';
+}
 
 HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
   std::vector<const Record *> Modes = R->getValueAsListOfDefs("Modes");

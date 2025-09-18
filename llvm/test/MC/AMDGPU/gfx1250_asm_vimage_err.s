@@ -23,3 +23,63 @@ tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] r128
 
 tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] th:TH_LOAD_NT_HT scope:SCOPE_DEV
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid th value for store instructions
+
+tensor_load_to_lds null, s[4:11]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_load_to_lds null, s[4:11]
+// GFX1250-ERR:                    ^
+
+tensor_load_to_lds s[0:3], null
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_load_to_lds s[0:3], null
+// GFX1250-ERR:                            ^
+
+tensor_load_to_lds null, s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_load_to_lds null, s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR:                    ^
+
+tensor_load_to_lds s[0:3], null, s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_load_to_lds s[0:3], null, s[12:15], s[16:19]
+// GFX1250-ERR:                            ^
+
+tensor_load_to_lds s[0:3], s[4:11], null, s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_load_to_lds s[0:3], s[4:11], null, s[16:19]
+// GFX1250-ERR:                                     ^
+
+tensor_load_to_lds s[0:3], s[4:11], s[12:15], null
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_load_to_lds s[0:3], s[4:11], s[12:15], null
+// GFX1250-ERR:                                               ^
+
+tensor_store_from_lds null, s[4:11]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_store_from_lds null, s[4:11]
+// GFX1250-ERR:                       ^
+
+tensor_store_from_lds s[0:3], null
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_store_from_lds s[0:3], null
+// GFX1250-ERR:                               ^
+
+tensor_store_from_lds null, s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_store_from_lds null, s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR:                       ^
+
+tensor_store_from_lds s[0:3], null, s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_store_from_lds s[0:3], null, s[12:15], s[16:19]
+// GFX1250-ERR:                               ^
+
+tensor_store_from_lds s[0:3], s[4:11], null, s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_store_from_lds s[0:3], s[4:11], null, s[16:19]
+// GFX1250-ERR:                                        ^
+
+tensor_store_from_lds s[0:3], s[4:11], s[12:15], null
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: tensor_store_from_lds s[0:3], s[4:11], s[12:15], null
+// GFX1250-ERR:                                                  ^

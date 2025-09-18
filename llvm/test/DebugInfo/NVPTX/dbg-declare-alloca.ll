@@ -6,16 +6,12 @@
 ; CHECK: .visible .func use_dbg_declare()
 ; CHECK: .local .align 8 .b8 __local_depot0[8];
 ; CHECK: mov.b64 %SPL, __local_depot0;
-; CHECK: add.u64 %rd1, %SP, 0;
 ; CHECK: .loc 1 5 3                   // t.c:5:3
 ; CHECK: { // callseq 0, 0
 ; CHECK: .param .b64 param0;
+; CHECK: add.u64 %rd1, %SP, 0;
 ; CHECK: st.param.b64 [param0], %rd1;
-; CHECK: call.uni
-; CHECK: escape_foo,
-; CHECK: (
-; CHECK: param0
-; CHECK: );
+; CHECK: call.uni escape_foo, (param0);
 ; CHECK: } // callseq 0
 ; CHECK: .loc 1 6 1                   // t.c:6:1
 ; CHECK: ret;

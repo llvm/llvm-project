@@ -152,9 +152,30 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
     cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
 }
 
+void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  cgm->handleCXXStaticMemberVarInstantiation(D);
+}
+
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
   if (diags.hasErrorOccurred())
     return;
 
   cgm->emitTentativeDefinition(d);
+}
+
+void CIRGenerator::HandleVTable(CXXRecordDecl *rd) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  cgm->emitVTable(rd);
 }

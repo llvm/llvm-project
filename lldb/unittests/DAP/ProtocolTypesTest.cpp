@@ -108,8 +108,9 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.id = 42;
   breakpoint.verified = true;
   breakpoint.message = "Breakpoint set successfully";
-  breakpoint.source = Source{"test.cpp", "/path/to/test.cpp", 123,
-                             Source::eSourcePresentationHintNormal};
+  breakpoint.source =
+      Source{"test.cpp", "/path/to/test.cpp", 123,
+             Source::eSourcePresentationHintNormal, std::nullopt};
   breakpoint.line = 10;
   breakpoint.column = 5;
   breakpoint.endLine = 15;
@@ -567,8 +568,9 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
   instruction.instructionBytes = "0F 1F 00";
   instruction.instruction = "mov eax, ebx";
   instruction.symbol = "main";
-  instruction.location = Source{"test.cpp", "/path/to/test.cpp", 123,
-                                Source::eSourcePresentationHintNormal};
+  instruction.location =
+      Source{"test.cpp", "/path/to/test.cpp", 123,
+             Source::eSourcePresentationHintNormal, std::nullopt};
   instruction.line = 10;
   instruction.column = 5;
   instruction.endLine = 15;
@@ -605,15 +607,17 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
       parse<DisassembledInstruction>(R"({"address":1})",
                                      "disassemblyInstruction"),
       FailedWithMessage("expected string at disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(R"({"address":"-1"})",
-                                                      "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
-  EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(
-                           R"({"address":"0xfffffffffffffffffffffffffff"})",
-                           "disassemblyInstruction"),
-                       FailedWithMessage("expected string encoded uint64_t at "
-                                         "disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(R"({"address":"-1"})",
+                                     "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
+  EXPECT_THAT_EXPECTED(
+      parse<DisassembledInstruction>(
+          R"({"address":"0xfffffffffffffffffffffffffff"})",
+          "disassemblyInstruction"),
+      FailedWithMessage(
+          "malformed memory reference at disassemblyInstruction.address"));
 }
 
 TEST(ProtocolTypesTest, Thread) {
@@ -780,7 +784,7 @@ TEST(ProtocolTypesTest, ReadMemoryArguments) {
 
 TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   ReadMemoryResponseBody response;
-  response.address = "0xdeadbeef";
+  response.address = 0xdeadbeef;
   const std::string data_str = "hello world!";
   std::transform(data_str.begin(), data_str.end(),
                  std::back_inserter(response.data),
@@ -788,7 +792,7 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   response.unreadableBytes = 1;
 
   Expected<Value> expected = json::parse(
-      R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
+      R"({ "address": "0xDEADBEEF", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }
@@ -999,4 +1003,101 @@ TEST(ProtocolTypesTest, VariablesResponseBody) {
     })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, CompletionItem) {
+  CompletionItem item;
+  item.label = "label";
+  item.text = "text";
+  item.sortText = "sortText";
+  item.detail = "detail";
+  item.type = eCompletionItemTypeConstructor;
+  item.start = 1;
+  item.length = 3;
+  item.selectionStart = 4;
+  item.selectionLength = 8;
+
+  const StringRef json = R"({
+  "detail": "detail",
+  "label": "label",
+  "length": 3,
+  "selectionLength": 8,
+  "selectionStart": 4,
+  "sortText": "sortText",
+  "start": 1,
+  "text": "text",
+  "type": "constructor"
+})";
+
+  EXPECT_EQ(pp(Value(item)), json);
+  EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(item)));
+}
+
+TEST(ProtocolTypesTest, CompletionsArguments) {
+  llvm::Expected<CompletionsArguments> expected =
+      parse<CompletionsArguments>(R"({
+    "column": 8,
+    "frameId": 7,
+    "line": 9,
+    "text": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->frameId, 7u);
+  EXPECT_EQ(expected->text, "abc");
+  EXPECT_EQ(expected->column, 8);
+  EXPECT_EQ(expected->line, 9);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({})"),
+                       FailedWithMessage("missing value at (root).text"));
+  EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({"text":"abc"})"),
+                       FailedWithMessage("missing value at (root).column"));
+}
+
+TEST(ProtocolTypesTest, CompletionsResponseBody) {
+  CompletionItem item;
+  item.label = "label";
+  item.text = "text";
+  item.detail = "detail";
+  CompletionsResponseBody response{{item}};
+
+  Expected<json::Value> expected = json::parse(R"({
+      "targets": [
+        {
+          "detail": "detail",
+          "label": "label",
+          "text": "text"
+        }
+      ]
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, InvalidatedEventBody) {
+  InvalidatedEventBody body;
+  body.areas = {InvalidatedEventBody::eAreaStacks,
+                InvalidatedEventBody::eAreaThreads};
+  body.stackFrameId = 1;
+  StringRef json = R"({
+  "areas": [
+    "stacks",
+    "threads"
+  ],
+  "stackFrameId": 1
+})";
+  EXPECT_EQ(json, pp(body));
+}
+
+TEST(ProtocolTypesTest, MemoryEventBody) {
+  MemoryEventBody body;
+  body.memoryReference = 12345;
+  body.offset = 0;
+  body.count = 4;
+  StringRef json = R"({
+  "count": 4,
+  "memoryReference": "0x3039",
+  "offset": 0
+})";
+  EXPECT_EQ(json, pp(body));
 }
