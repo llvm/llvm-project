@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DynamicAPInt.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 #include <optional>
@@ -152,6 +153,13 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerRelation &other);
 
+  /// Finds an equality that equates the specified variable to a constant.
+  /// Returns the position of the equality row. If 'symbolic' is set to true,
+  /// symbols are also treated like a constant, i.e., an affine function of the
+  /// symbols is also treated like a constant. Returns -1 if such an equality
+  /// could not be found.
+  int findEqualityToConstant(unsigned pos, bool symbolic = false) const;
+
   /// Return the intersection of the two relations.
   /// If there are locals, they will be merged.
   IntegerRelation intersect(IntegerRelation other) const;
@@ -259,6 +267,13 @@ public:
   /// Return the index at Which the specified kind of vars ends.
   unsigned getVarKindEnd(VarKind kind) const {
     return space.getVarKindEnd(kind);
+  }
+
+  /// Return an interator over the variables of the specified kind
+  /// starting at the relevant offset. The return type is auto in
+  /// keeping with the convention for iterators.
+  auto iterVarKind(VarKind kind) {
+    return llvm::seq(getVarKindOffset(kind), getVarKindEnd(kind));
   }
 
   /// Get the number of elements of the specified kind in the range
@@ -464,10 +479,28 @@ public:
   /// respect to a positive constant `divisor`. Two constraints are added to the
   /// system to capture equivalence with the floordiv:
   /// q = dividend floordiv c    <=>   c*q <= dividend <= c*q + c - 1.
-  void addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
-                        const DynamicAPInt &divisor);
-  void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
-    addLocalFloorDiv(getDynamicAPIntVec(dividend), DynamicAPInt(divisor));
+  /// Returns the column position of the new local variable.
+  unsigned addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
+                            const DynamicAPInt &divisor);
+  unsigned addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
+    return addLocalFloorDiv(getDynamicAPIntVec(dividend),
+                            DynamicAPInt(divisor));
+  }
+
+  /// Adds a new local variable as the modulus of an affine function of other
+  /// variables, the coefficients of which are provided in `exprs`. The modulus
+  /// is with respect to a positive constant `modulus`. The function returns the
+  /// absolute index of the new local variable representing the result of the
+  /// modulus operation. Two new local variables are added to the system, one
+  /// representing the floor div with respect to the modulus and one
+  /// representing the mod. Three constraints are added to the system to capture
+  /// the equivalance. The first two are required to compute the result of the
+  /// floor division `q`, and the third computes the equality relation:
+  /// result =  exprs - modulus * q.
+  unsigned addLocalModulo(ArrayRef<DynamicAPInt> exprs,
+                          const DynamicAPInt &modulus);
+  unsigned addLocalModulo(ArrayRef<int64_t> exprs, int64_t modulus) {
+    return addLocalModulo(getDynamicAPIntVec(exprs), DynamicAPInt(modulus));
   }
 
   /// Projects out (aka eliminates) `num` variables starting at position
@@ -700,6 +733,19 @@ public:
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
 
+  /// Let the relation `this` be R1, and the relation `rel` be R2. Requires
+  /// R1 and R2 to have the same domain.
+  ///
+  /// Let R3 be the rangeProduct of R1 and R2. Then x R3 (y, z) iff
+  /// (x R1 y and x R2 z).
+  ///
+  /// Example:
+  ///
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  IntegerRelation rangeProduct(const IntegerRelation &rel);
+
   /// Given a relation `other: (A -> B)`, this operation merges the symbol and
   /// local variables and then takes the composition of `other` on `this: (B ->
   /// C)`. The resulting relation represents tuples of the form: `A -> C`.
@@ -737,6 +783,12 @@ public:
 
   /// Same as findSymbolicIntegerLexMin but produces lexmax instead of lexmin
   SymbolicLexOpt findSymbolicIntegerLexMax() const;
+
+  /// Finds a constraint with a non-zero coefficient at `colIdx` in equality
+  /// (isEq=true) or inequality (isEq=false) constraints. Returns the position
+  /// of the row if it was found or none otherwise.
+  std::optional<unsigned> findConstraintWithNonZeroAt(unsigned colIdx,
+                                                      bool isEq) const;
 
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
@@ -820,12 +872,6 @@ protected:
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
 
-  /// Searches for a constraint with a non-zero coefficient at `colIdx` in
-  /// equality (isEq=true) or inequality (isEq=false) constraints.
-  /// Returns true and sets row found in search in `rowIdx`, false otherwise.
-  bool findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
-                                   unsigned *rowIdx) const;
-
   /// Returns true if the pos^th column is all zero for both inequalities and
   /// equalities.
   bool isColZero(unsigned pos) const;
@@ -877,6 +923,11 @@ protected:
   IntMatrix inequalities;
 };
 
+inline raw_ostream &operator<<(raw_ostream &os, const IntegerRelation &rel) {
+  rel.print(os);
+  return os;
+}
+
 /// An IntegerPolyhedron represents the set of points from a PresburgerSpace
 /// that satisfy a list of affine constraints. Affine constraints can be
 /// inequalities or equalities in the form:
@@ -917,7 +968,7 @@ public:
   /// Constructs a relation with the specified number of dimensions and symbols
   /// and adds the given inequalities.
   explicit IntegerPolyhedron(const PresburgerSpace &space,
-                             IntMatrix inequalities)
+                             const IntMatrix &inequalities)
       : IntegerPolyhedron(space) {
     for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
       addInequality(inequalities.getRow(i));
@@ -927,7 +978,7 @@ public:
   /// and adds the given inequalities, after normalizing row-wise to integer
   /// values.
   explicit IntegerPolyhedron(const PresburgerSpace &space,
-                             FracMatrix inequalities)
+                             const FracMatrix &inequalities)
       : IntegerPolyhedron(space) {
     IntMatrix ineqsNormalized = inequalities.normalizeRows();
     for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)

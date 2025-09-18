@@ -187,3 +187,6 @@
 #ifndef HWCAP2_LRCPC3
 #define HWCAP2_LRCPC3 (1UL << 46)
 #endif
+#ifndef HWCAP2_CSSC
+#define HWCAP2_CSSC (1UL << 34)
+#endif

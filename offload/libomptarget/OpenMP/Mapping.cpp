@@ -141,48 +141,45 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
   if (HDTTMap->empty())
     return LR;
 
+  // HDTTMap is std::set, ordered by HstPtrBegin.
+  // Upper is the first element whose HstPtrBegin > HP.
   auto Upper = HDTTMap->upper_bound(HP);
 
   if (Size == 0) {
-    // specification v5.1 Pointer Initialization for Device Data Environments
-    // upper_bound satisfies
-    //   std::prev(upper)->HDTT.HstPtrBegin <= hp < upper->HDTT.HstPtrBegin
+    // HP satisfies
+    //   std::prev(Upper)->HDTT.HstPtrBegin <= HP < Upper->HDTT.HstPtrBegin
     if (Upper != HDTTMap->begin()) {
       LR.TPR.setEntry(std::prev(Upper)->HDTT, OwnedTPR);
-      // the left side of extended address range is satisfied.
-      // hp >= LR.TPR.getEntry()->HstPtrBegin || hp >=
-      // LR.TPR.getEntry()->HstPtrBase
-      LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd ||
-                             HP < LR.TPR.getEntry()->HstPtrBase;
+      // We know that HP >= LR.TPR.getEntry()->HstPtrBegin
+      LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd;
     }
 
     if (!LR.Flags.IsContained && Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // the right side of extended address range is satisfied.
-      // hp < LR.TPR.getEntry()->HstPtrEnd || hp < LR.TPR.getEntry()->HstPtrBase
+      // This is a special case: HP is not really contained in the mapped
+      // address range, but it's contained in the extended address range,
+      // which suffices to get the mapping of the base pointer.
+      // We know that HP < LR.TPR.getEntry()->HstPtrBegin
       LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBase;
     }
   } else {
-    // check the left bin
     if (Upper != HDTTMap->begin()) {
       LR.TPR.setEntry(std::prev(Upper)->HDTT, OwnedTPR);
-      // Is it contained?
-      LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBegin &&
-                             HP < LR.TPR.getEntry()->HstPtrEnd &&
+      // We know that HP >= LR.TPR.getEntry()->HstPtrBegin
+      LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd &&
                              (HP + Size) <= LR.TPR.getEntry()->HstPtrEnd;
-      // Does it extend beyond the mapped region?
+      // Does it extend beyond the mapped address range?
       LR.Flags.ExtendsAfter = HP < LR.TPR.getEntry()->HstPtrEnd &&
                               (HP + Size) > LR.TPR.getEntry()->HstPtrEnd;
     }
 
-    // check the right bin
     if (!(LR.Flags.IsContained || LR.Flags.ExtendsAfter) &&
         Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // Does it extend into an already mapped region?
-      LR.Flags.ExtendsBefore = HP < LR.TPR.getEntry()->HstPtrBegin &&
-                               (HP + Size) > LR.TPR.getEntry()->HstPtrBegin;
-      // Does it extend beyond the mapped region?
+      // Does it extend into an already mapped address range?
+      // We know that HP < LR.TPR.getEntry()->HstPtrBegin
+      LR.Flags.ExtendsBefore = (HP + Size) > LR.TPR.getEntry()->HstPtrBegin;
+      // Does it extend beyond the mapped address range?
       LR.Flags.ExtendsAfter = HP < LR.TPR.getEntry()->HstPtrEnd &&
                               (HP + Size) > LR.TPR.getEntry()->HstPtrEnd;
     }
@@ -329,6 +326,28 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   // data transfer.
   if (LR.TPR.TargetPointer && !LR.TPR.Flags.IsHostPointer && HasFlagTo &&
       (LR.TPR.Flags.IsNewEntry || HasFlagAlways) && Size != 0) {
+
+    // If we have something like:
+    //   #pragma omp target map(to: s.myarr[0:10]) map(to: s.myarr[0:10])
+    // then we see two "new" mappings of the struct member s.myarr here --
+    // and both have the "IsNewEntry" flag set, so trigger the copy to device
+    // below.  But, the shadow pointer is only initialised on the target for
+    // the first copy, and the second copy clobbers it.  So, this condition
+    // avoids the (second) copy here if we have already set shadow pointer info.
+    auto FailOnPtrFound = [HstPtrBegin, Size](ShadowPtrInfoTy &SP) {
+      if (SP.HstPtrAddr >= HstPtrBegin &&
+          SP.HstPtrAddr < (void *)((char *)HstPtrBegin + Size))
+        return OFFLOAD_FAIL;
+      return OFFLOAD_SUCCESS;
+    };
+    if (LR.TPR.getEntry()->foreachShadowPointerInfo(FailOnPtrFound) ==
+        OFFLOAD_FAIL) {
+      DP("Multiple new mappings of %" PRId64 " bytes detected (hst:" DPxMOD
+         ") -> (tgt:" DPxMOD ")\n",
+         Size, DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
+      return std::move(LR.TPR);
+    }
+
     DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n", Size,
        DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
 

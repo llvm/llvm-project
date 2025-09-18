@@ -324,12 +324,14 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
         auto thread_info =
             m_threads_stepping_with_breakpoint.find(thread->GetID());
         if (thread_info != m_threads_stepping_with_breakpoint.end() &&
-            thread_info->second == regctx.GetPC()) {
+            llvm::is_contained(thread_info->second, regctx.GetPC())) {
           thread->SetStoppedByTrace();
-          Status brkpt_error = RemoveBreakpoint(thread_info->second);
-          if (brkpt_error.Fail())
-            LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                     thread_info->first, brkpt_error);
+          for (auto &&bp_addr : thread_info->second) {
+            Status brkpt_error = RemoveBreakpoint(bp_addr);
+            if (brkpt_error.Fail())
+              LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
+                       thread_info->first, brkpt_error);
+          }
           m_threads_stepping_with_breakpoint.erase(thread_info);
         } else
           thread->SetStoppedByBreakpoint();

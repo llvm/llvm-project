@@ -36,8 +36,8 @@ TEST(LlvmLibcSysUioReadvTest, SmokeTest) {
   iov[1].iov_base = buf1;
   iov[1].iov_len = 2;
   ASSERT_THAT(LIBC_NAMESPACE::readv(fd, iov, 2),
-              returns(EQ(3)).with_errno(EQ(0)));
+              returns(EQ(ssize_t(3))).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::unlink(filename),
-              returns(EQ(0)).with_errno(EQ(0)));
+              returns(EQ(ssize_t(0))).with_errno(EQ(0)));
 }

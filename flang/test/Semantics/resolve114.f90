@@ -34,9 +34,9 @@ end module m2
 subroutine s2a
   use m1
   use m2
-  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(sin), pointer :: p1 => sin
-  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(iabs), pointer :: p2 => iabs
   procedure(ext1), pointer :: p3 => ext1
   procedure(ext2), pointer :: p4 => ext2
@@ -46,9 +46,9 @@ subroutine s2b
   use m1, only: x1 => sin, x2 => iabs, x3 => ext1, x4 => ext2
   use m2, only: x1 => sin, x2 => iabs, x3 => ext1, x4 => ext2
   use m1, only: iface1 => sin, iface2 => iabs, iface3 => ext1, iface4 => ext2
-  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(iface1), pointer :: p1 => x1
-  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(iface2), pointer :: p2 => x2
   procedure(iface3), pointer :: p3 => x3
   procedure(iface4), pointer :: p4 => x4
@@ -60,9 +60,9 @@ module m3
 end module
 subroutine s3
   use m3
-  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(sin), pointer :: p1 => sin
-  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(iabs), pointer :: p2 => iabs
   procedure(ext1), pointer :: p3 => ext1
   procedure(ext2), pointer :: p4 => ext2
@@ -75,9 +75,9 @@ end module
 subroutine s4
   use m4
   use m1, only: iface1 => sin, iface2 => iabs, iface3 => ext1, iface4 => ext2
-  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(iface1), pointer :: p1 => x1
-  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   procedure(iface2), pointer :: p2 => x2
   procedure(iface3), pointer :: p3 => x3
   procedure(iface4), pointer :: p4 => x4
@@ -87,10 +87,10 @@ subroutine s5
   use m1, only: x1 => sin, x2 => iabs, x3 => ext1, x4 => ext2
   use m2, only: x1 => tan, x2 => idim, x3 => ext2, x4 => ext1
   use m1, only: iface1 => sin, iface2 => iabs, iface3 => ext1, iface4 => ext2
-  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p1' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   !ERROR: Reference to 'x1' is ambiguous
   procedure(iface1), pointer :: p1 => x1
-  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface
+  !PORTABILITY: Procedure pointer 'p2' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
   !ERROR: Reference to 'x2' is ambiguous
   procedure(iface2), pointer :: p2 => x2
   !ERROR: Reference to 'x3' is ambiguous

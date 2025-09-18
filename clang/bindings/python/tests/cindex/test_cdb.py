@@ -10,7 +10,7 @@ import unittest
 import sys
 from pathlib import Path
 
-kInputsDir = os.path.join(os.path.dirname(__file__), "INPUTS")
+INPUTS_DIR = os.path.join(os.path.dirname(__file__), "INPUTS")
 
 
 @unittest.skipIf(sys.platform == "win32", "TODO: Fix these tests on Windows")
@@ -21,36 +21,39 @@ class TestCDB(unittest.TestCase):
 
         # clang_CompilationDatabase_fromDirectory calls fprintf(stderr, ...)
         # Suppress its output.
-        stderr = os.dup(2)
-        with open(os.devnull, "wb") as null:
-            os.dup2(null.fileno(), 2)
-        with self.assertRaises(CompilationDatabaseError) as cm:
-            CompilationDatabase.fromDirectory(path)
-        os.dup2(stderr, 2)
-        os.close(stderr)
+        try:
+            stderr = os.dup(2)
+            with open(os.devnull, "wb") as null:
+                os.dup2(null.fileno(), 2)
+            with self.assertRaises(CompilationDatabaseError) as cm:
+                CompilationDatabase.fromDirectory(path)
+        # Ensures that stderr is reset even if the above code crashes
+        finally:
+            os.dup2(stderr, 2)
+            os.close(stderr)
 
         e = cm.exception
         self.assertEqual(e.cdb_error, CompilationDatabaseError.ERROR_CANNOTLOADDATABASE)
 
     def test_create(self):
         """Check we can load a compilation database"""
-        CompilationDatabase.fromDirectory(kInputsDir)
+        CompilationDatabase.fromDirectory(INPUTS_DIR)
 
     def test_lookup_succeed(self):
         """Check we get some results if the file exists in the db"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         cmds = cdb.getCompileCommands("/home/john.doe/MyProject/project.cpp")
         self.assertNotEqual(len(cmds), 0)
 
     def test_lookup_succeed_pathlike(self):
         """Same as test_lookup_succeed, but with PathLikes"""
-        cdb = CompilationDatabase.fromDirectory(Path(kInputsDir))
+        cdb = CompilationDatabase.fromDirectory(Path(INPUTS_DIR))
         cmds = cdb.getCompileCommands(Path("/home/john.doe/MyProject/project.cpp"))
         self.assertNotEqual(len(cmds), 0)
 
     def test_all_compilecommand(self):
         """Check we get all results from the db"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         cmds = cdb.getAllCompileCommands()
         self.assertEqual(len(cmds), 3)
         expected = [
@@ -100,7 +103,7 @@ class TestCDB(unittest.TestCase):
 
     def test_1_compilecommand(self):
         """Check file with single compile command"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         file = "/home/john.doe/MyProject/project.cpp"
         cmds = cdb.getCompileCommands(file)
         self.assertEqual(len(cmds), 1)
@@ -119,7 +122,7 @@ class TestCDB(unittest.TestCase):
 
     def test_2_compilecommand(self):
         """Check file with 2 compile commands"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         cmds = cdb.getCompileCommands("/home/john.doe/MyProject/project2.cpp")
         self.assertEqual(len(cmds), 2)
         expected = [
@@ -154,7 +157,7 @@ class TestCDB(unittest.TestCase):
 
     def test_compilecommand_iterator_stops(self):
         """Check that iterator stops after the correct number of elements"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         count = 0
         for cmd in cdb.getCompileCommands("/home/john.doe/MyProject/project2.cpp"):
             count += 1
@@ -162,7 +165,7 @@ class TestCDB(unittest.TestCase):
 
     def test_compilationDB_references(self):
         """Ensure CompilationsCommands are independent of the database"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         cmds = cdb.getCompileCommands("/home/john.doe/MyProject/project.cpp")
         del cdb
         gc.collect()
@@ -170,7 +173,7 @@ class TestCDB(unittest.TestCase):
 
     def test_compilationCommands_references(self):
         """Ensure CompilationsCommand keeps a reference to CompilationCommands"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
+        cdb = CompilationDatabase.fromDirectory(INPUTS_DIR)
         cmds = cdb.getCompileCommands("/home/john.doe/MyProject/project.cpp")
         del cdb
         cmd0 = cmds[0]

@@ -2,8 +2,6 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,TUNIT
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 ; Fix for PR33641. ArgumentPromotion removed the argument to bar but left the call to
 ; dbg.value which still used the removed argument.

@@ -24,9 +24,9 @@
 ; NO-WARNING-NOT:  warning: triple-implied ABI conflicts with provided target-abi 'lp64d', using target-abi
 
 ;; Check that ILP32-on-LA64 and LP64-on-LA32 combinations are handled properly.
-; RUN: llc --mtriple=loongarch64 --target-abi=ilp32d --mattr=+d < %s 2>&1 \
+; RUN: llc --mtriple=loongarch64-linux-gnu --target-abi=ilp32d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=LP64D,32ON64
-; RUN: llc --mtriple=loongarch32 --target-abi=lp64d --mattr=+d < %s 2>&1 \
+; RUN: llc --mtriple=loongarch32-linux-gnu --target-abi=lp64d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=ILP32D,64ON32
 
 ; 32ON64: warning: 32-bit ABIs are not supported for 64-bit targets, ignoring and using triple-implied ABI
@@ -49,12 +49,6 @@
 
 ; LP64D-LP64F-NOF: warning: both target-abi and the triple-implied ABI are invalid, ignoring and using feature-implied ABI
 
-;; Check that triple-implied ABI are invalid, use feature-implied ABI
-; RUN: llc --mtriple=loongarch64 --mattr=-f < %s 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64D-NONE-NOF
-
-; LP64D-NONE-NOF: warning: the triple-implied ABI is invalid, ignoring and using feature-implied ABI
-
 define float @f(float %a) {
 ; ILP32D-LABEL: f:
 ; ILP32D:       # %bb.0:
@@ -71,7 +65,8 @@ define float @f(float %a) {
 ; LP64D-NEXT:    ret
 ;
 ; LP64S-LP64F-NOF-LABEL: f:
-; LP64S-LP64F-NOF:    bl %plt(__addsf3)
+; LP64S-LP64F-NOF:    pcaddu18i $ra, %call36(__addsf3)
+; LP64S-LP64F-NOF-NEXT:    jirl $ra, $ra, 0
 ;
 ; LP64S-LP64D-NOD-LABEL: f:
 ; LP64S-LP64D-NOD:       # %bb.0:
@@ -84,10 +79,12 @@ define float @f(float %a) {
 ; LP64S-LP64D-NOD-NEXT:    ret
 ;
 ; LP64D-LP64F-NOF-LABEL: f:
-; LP64D-LP64F-NOF:    bl %plt(__addsf3)
+; LP64D-LP64F-NOF:    pcaddu18i $ra, %call36(__addsf3)
+; LP64D-LP64F-NOF-NEXT:    jirl $ra, $ra, 0
 ;
 ; LP64D-NONE-NOF-LABEL: f:
-; LP64D-NONE-NOF:    bl %plt(__addsf3)
+; LP64D-NONE-NOF:    pcaddu18i $ra, %call36(__addsf3)
+; LP64D-NONE-NOF-NEXT:    jirl $ra, $ra, 0
   %1 = fadd float %a, 1.0
   ret float %1
 }
@@ -109,7 +106,8 @@ define double @g(double %a) {
 ; LP64D-NEXT:    ret
 ;
 ; LP64S-LABEL: g:
-; LP64S:         bl %plt(__adddf3)
+; LP64S:    pcaddu18i $ra, %call36(__adddf3)
+; LP64S-NEXT:    jirl $ra, $ra, 0
   %1 = fadd double %a, 1.0
   ret double %1
 }

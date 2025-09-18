@@ -17,9 +17,13 @@ _fred:
         ldr	w2, [x3, _data_ext@gotpageoff]
         adrp    x0, L_.str@PAGE
 
+        adrp    x3, L1@PAGE - 5
+        add	x3, x3, L1@pageoff - (4+1)
+
 	.data
 _data:
         .quad _foo
+L1:
         .quad _foo + 4
         .quad _foo - _bar
         .quad _foo - _bar + 4
@@ -36,6 +40,34 @@ L_.str:
 
 ; CHECK:     Relocations [
 ; CHECK-NEXT:  Section __text {
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Offset: 0x2C
+; CHECK-NEXT:       PCRel: 0
+; CHECK-NEXT:       Length: 2
+; CHECK-NEXT:       Type: ARM64_RELOC_ADDEND (10)
+; CHECK-NEXT:       Section: __cstring (3)
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Offset: 0x2C
+; CHECK-NEXT:       PCRel: 0
+; CHECK-NEXT:       Length: 2
+; CHECK-NEXT:       Type: ARM64_RELOC_PAGEOFF12 (4)
+; CHECK-NEXT:       Symbol: _data (2)
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Offset: 0x28
+; CHECK-NEXT:       PCRel: 0
+; CHECK-NEXT:       Length: 2
+; CHECK-NEXT:       Type: ARM64_RELOC_ADDEND (10)
+; CHECK-NEXT:       Section: __cstring (3)
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Relocation {
+; CHECK-NEXT:       Offset: 0x28
+; CHECK-NEXT:       PCRel: 1
+; CHECK-NEXT:       Length: 2
+; CHECK-NEXT:       Type: ARM64_RELOC_PAGE21 (3)
+; CHECK-NEXT:       Symbol: _data (2)
+; CHECK-NEXT:     }
 ; CHECK-NEXT:    Relocation {
 ; CHECK-NEXT:       Offset: 0x24
 ; CHECK-NEXT:       PCRel: 1

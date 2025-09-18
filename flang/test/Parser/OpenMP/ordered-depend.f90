@@ -27,12 +27,12 @@ end
 
 !PARSE-TREE-LABEL: ProgramUnit -> SubroutineSubprogram
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: | OmpLoopDirective -> llvm::omp::Directive = do
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Ordered -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 ![...]
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
-!PARSE-TREE: | OmpSimpleStandaloneDirective -> llvm::omp::Directive = ordered
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = ordered
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Depend -> OmpDependClause -> OmpDoacross -> Source
 
 subroutine f01(x)
@@ -61,12 +61,12 @@ end
 
 !PARSE-TREE-LABEL: ProgramUnit -> SubroutineSubprogram
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: | OmpLoopDirective -> llvm::omp::Directive = do
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Ordered -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 ![...]
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct
-!PARSE-TREE: | OmpSimpleStandaloneDirective -> llvm::omp::Directive = ordered
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = ordered
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Depend -> OmpDependClause -> OmpDoacross -> Sink -> OmpIterationVector -> OmpIteration
 !PARSE-TREE: | | Name = 'i'
 !PARSE-TREE: | | OmpIterationOffset

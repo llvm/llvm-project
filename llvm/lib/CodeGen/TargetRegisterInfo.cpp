@@ -161,7 +161,7 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
 Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register::virtReg2Index(Unit);
+      OS << '%' << Register(Unit).virtRegIndex();
     } else {
       OS << printRegUnit(Unit, TRI);
     }
@@ -412,25 +412,21 @@ getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
   return BestRC;
 }
 
-/// Check if the registers defined by the pair (RegisterClass, SubReg)
-/// share the same register file.
-static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
-                                  const TargetRegisterClass *DefRC,
-                                  unsigned DefSubReg,
-                                  const TargetRegisterClass *SrcRC,
-                                  unsigned SrcSubReg) {
+const TargetRegisterClass *TargetRegisterInfo::findCommonRegClass(
+    const TargetRegisterClass *DefRC, unsigned DefSubReg,
+    const TargetRegisterClass *SrcRC, unsigned SrcSubReg) const {
   // Same register class.
   //
   // When processing uncoalescable copies / bitcasts, it is possible we reach
   // here with the same register class, but mismatched subregister indices.
   if (DefRC == SrcRC && DefSubReg == SrcSubReg)
-    return true;
+    return DefRC;
 
   // Both operands are sub registers. Check if they share a register class.
   unsigned SrcIdx, DefIdx;
   if (SrcSubReg && DefSubReg) {
-    return TRI.getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg,
-                                      SrcIdx, DefIdx) != nullptr;
+    return getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg, SrcIdx,
+                                  DefIdx);
   }
 
   // At most one of the register is a sub register, make it Src to avoid
@@ -442,18 +438,15 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
 
   // One of the register is a sub register, check if we can get a superclass.
   if (SrcSubReg)
-    return TRI.getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg) != nullptr;
+    return getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg);
 
   // Plain copy.
-  return TRI.getCommonSubClass(DefRC, SrcRC) != nullptr;
+  return getCommonSubClass(DefRC, SrcRC);
 }
 
-bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                              unsigned DefSubReg,
-                                              const TargetRegisterClass *SrcRC,
-                                              unsigned SrcSubReg) const {
-  // If this source does not incur a cross register bank copy, use it.
-  return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
+float TargetRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return 1.0;
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
@@ -498,7 +491,7 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys);
+    Hints.push_back(Phys.id());
   }
   return false;
 }

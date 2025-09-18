@@ -12,28 +12,43 @@
 
 #include "src/math/cos.h"
 #include "utils/MPFRWrapper/mpfr_inc.h"
+#include <cstdint>
+#include <cstring>
+#include <iostream>
 #include <math.h>
 
-extern "C" int LLVMFuzzerTestOneInput(const double x) {
-  // remove NaN and inf as preconditions
-  if (isnan(x))
-    return 0;
-  if (isinf(x))
-    return 0;
-  // signed zeros already tested in unit tests
-  if (signbit(x) && x == 0.0)
-    return 0;
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   mpfr_t input;
   mpfr_init2(input, 53);
-  mpfr_set_d(input, x, MPFR_RNDN);
-  int output = mpfr_cos(input, input, MPFR_RNDN);
-  mpfr_subnormalize(input, output, MPFR_RNDN);
-  double to_compare = mpfr_get_d(input, MPFR_RNDN);
+  for (size_t i = 0; i < size / sizeof(double); ++i) {
+    double x;
+    std::memcpy(&x, data, sizeof(double));
+    data += sizeof(double);
 
-  double result = LIBC_NAMESPACE::cos(x);
+    // remove NaN and inf as preconditions
+    if (isnan(x))
+      continue;
+    if (isinf(x))
+      continue;
 
-  if (result != to_compare)
-    __builtin_trap();
+    // signed zeros already tested in unit tests
+    if (signbit(x) && x == 0.0)
+      continue;
+
+    mpfr_set_d(input, x, MPFR_RNDN);
+    int output = mpfr_cos(input, input, MPFR_RNDN);
+    mpfr_subnormalize(input, output, MPFR_RNDN);
+    double to_compare = mpfr_get_d(input, MPFR_RNDN);
+
+    double result = LIBC_NAMESPACE::cos(x);
+
+    if (result != to_compare) {
+      std::cout << std::hexfloat << "Failing input: " << x << std::endl;
+      std::cout << std::hexfloat << "Failing output: " << result << std::endl;
+      std::cout << std::hexfloat << "Expected: " << to_compare << std::endl;
+      __builtin_trap();
+    }
+  }
 
   mpfr_clear(input);
   return 0;

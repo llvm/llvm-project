@@ -109,7 +109,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 57
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[BUF_SROA_0_HWASAN:%.*]] = inttoptr i64 [[TMP9]] to ptr
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[BUF_SROA_0]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BUF_SROA_0]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP5]] to i8
 ; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[BUF_SROA_0]], i8 [[TMP10]], i64 16)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[BUF_SROA_0_HWASAN]] to i64
@@ -117,7 +117,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; CHECK-NEXT:    store volatile i8 0, ptr [[BUF_SROA_0_HWASAN]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[BUF_SROA_0]], i8 [[TMP12]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[BUF_SROA_0]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BUF_SROA_0]])
 ; CHECK-NEXT:    ret i32 0
 ;
 ; INLINE-LABEL: define i32 @test_simple
@@ -150,7 +150,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP16]], 57
 ; INLINE-NEXT:    [[TMP20:%.*]] = or i64 [[TMP18]], [[TMP19]]
 ; INLINE-NEXT:    [[BUF_SROA_0_HWASAN:%.*]] = inttoptr i64 [[TMP20]] to ptr
-; INLINE-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[BUF_SROA_0]])
+; INLINE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BUF_SROA_0]])
 ; INLINE-NEXT:    [[TMP21:%.*]] = trunc i64 [[TMP16]] to i8
 ; INLINE-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[BUF_SROA_0]] to i64
 ; INLINE-NEXT:    [[TMP23:%.*]] = and i64 [[TMP22]], -9079256848778919937
@@ -197,19 +197,19 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP54:%.*]] = lshr i64 [[TMP53]], 4
 ; INLINE-NEXT:    [[TMP55:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP54]]
 ; INLINE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP55]], i8 [[TMP51]], i64 1, i1 false)
-; INLINE-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[BUF_SROA_0]])
+; INLINE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BUF_SROA_0]])
 ; INLINE-NEXT:    ret i32 0
 ;
 entry:
   %buf.sroa.0 = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf.sroa.0)
   store volatile i8 0, ptr %buf.sroa.0, align 4
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %buf.sroa.0)
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf.sroa.0)
   ret i32 0
 }
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)

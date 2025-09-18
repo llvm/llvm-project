@@ -21,7 +21,7 @@
 # RUN: ld.lld -shared wrap.o def.so -o wrap.so
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 start.s -o start.o
-# RUN: ld.lld --no-allow-shlib-undefined start.o wrap.so ref.so -o /dev/null 2>&1 | count 0
+# RUN: ld.lld --no-allow-shlib-undefined start.o wrap.so ref.so 2>&1 | count 0
 
 #--- start.s
 .globl _start

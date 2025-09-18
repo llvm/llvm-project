@@ -41,6 +41,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -605,7 +606,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
   // Use a map to unique and a vector to guarantee deterministic ordering.
   llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
-  llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
   llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
   if (ExitBlock) {
@@ -632,29 +632,19 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
           U.set(Poison);
         }
 
-        // RemoveDIs: do the same as below for DbgVariableRecords.
-        if (Block->IsNewDbgInfoFormat) {
-          for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
-                   filterDbgVars(I.getDbgRecordRange()))) {
-            DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
-                              DVR.getDebugLoc().get());
-            if (!DeadDebugSet.insert(Key).second)
-              continue;
-            // Unlinks the DVR from it's container, for later insertion.
-            DVR.removeFromParent();
-            DeadDbgVariableRecords.push_back(&DVR);
-          }
-        }
-
-        // For one of each variable encountered, preserve a debug intrinsic (set
+        // For one of each variable encountered, preserve a debug record (set
         // to Poison) and transfer it to the loop exit. This terminates any
         // variable locations that were set during the loop.
-        auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
-        if (!DVI)
-          continue;
-        if (!DeadDebugSet.insert(DebugVariable(DVI)).second)
-          continue;
-        DeadDebugInst.push_back(DVI);
+        for (DbgVariableRecord &DVR :
+             llvm::make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
+          DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                            DVR.getDebugLoc().get());
+          if (!DeadDebugSet.insert(Key).second)
+            continue;
+          // Unlinks the DVR from it's container, for later insertion.
+          DVR.removeFromParent();
+          DeadDbgVariableRecords.push_back(&DVR);
+        }
       }
 
     // After the loop has been deleted all the values defined and modified
@@ -669,9 +659,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     assert(InsertDbgValueBefore != ExitBlock->end() &&
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
-
-    for (auto *DVI : DeadDebugInst)
-      DVI->moveBefore(*ExitBlock, InsertDbgValueBefore);
 
     // Due to the "head" bit in BasicBlock::iterator, we're going to insert
     // each DbgVariableRecord right at the start of the block, wheras dbg.values
@@ -700,8 +687,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
 
-    SmallPtrSet<BasicBlock *, 8> blocks;
-    blocks.insert(L->block_begin(), L->block_end());
+    SmallPtrSet<BasicBlock *, 8> blocks(llvm::from_range, L->blocks());
     for (BasicBlock *BB : blocks)
       LI->removeBlock(BB);
 
@@ -818,68 +804,157 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
   return LatchBR;
 }
 
-/// Return the estimated trip count for any exiting branch which dominates
-/// the loop latch.
-static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
-                                                     Loop *L,
-                                                     uint64_t &OrigExitWeight) {
+struct DbgLoop {
+  const Loop *L;
+  explicit DbgLoop(const Loop *L) : L(L) {}
+};
+
+#ifndef NDEBUG
+static inline raw_ostream &operator<<(raw_ostream &OS, DbgLoop D) {
+  OS << "function ";
+  D.L->getHeader()->getParent()->printAsOperand(OS, /*PrintType=*/false);
+  return OS << " " << *D.L;
+}
+#endif // NDEBUG
+
+static std::optional<unsigned> estimateLoopTripCount(Loop *L) {
+  // Currently we take the estimate exit count only from the loop latch,
+  // ignoring other exiting blocks.  This can overestimate the trip count
+  // if we exit through another exit, but can never underestimate it.
+  // TODO: incorporate information from other exits
+  BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
+  if (!ExitingBranch) {
+    LLVM_DEBUG(dbgs() << "estimateLoopTripCount: Failed to find exiting "
+                      << "latch branch of required form in " << DbgLoop(L)
+                      << "\n");
+    return std::nullopt;
+  }
+
   // To estimate the number of times the loop body was executed, we want to
   // know the number of times the backedge was taken, vs. the number of times
   // we exited the loop.
   uint64_t LoopWeight, ExitWeight;
-  if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
+  if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight)) {
+    LLVM_DEBUG(dbgs() << "estimateLoopTripCount: Failed to extract branch "
+                      << "weights for " << DbgLoop(L) << "\n");
     return std::nullopt;
+  }
 
   if (L->contains(ExitingBranch->getSuccessor(1)))
     std::swap(LoopWeight, ExitWeight);
 
-  if (!ExitWeight)
+  if (!ExitWeight) {
     // Don't have a way to return predicated infinite
+    LLVM_DEBUG(dbgs() << "estimateLoopTripCount: Failed because of zero exit "
+                      << "probability for " << DbgLoop(L) << "\n");
     return std::nullopt;
-
-  OrigExitWeight = ExitWeight;
+  }
 
   // Estimated exit count is a ratio of the loop weight by the weight of the
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
+
+  // When ExitCount + 1 would wrap in unsigned, saturate at UINT_MAX.
+  if (ExitCount >= std::numeric_limits<unsigned>::max())
+    return std::numeric_limits<unsigned>::max();
+
   // Estimated trip count is one plus estimated exit count.
-  return ExitCount + 1;
+  uint64_t TC = ExitCount + 1;
+  LLVM_DEBUG(dbgs() << "estimateLoopTripCount: Estimated trip count of " << TC
+                    << " for " << DbgLoop(L) << "\n");
+  return TC;
 }
 
 std::optional<unsigned>
 llvm::getLoopEstimatedTripCount(Loop *L,
                                 unsigned *EstimatedLoopInvocationWeight) {
-  // Currently we take the estimate exit count only from the loop latch,
-  // ignoring other exiting blocks.  This can overestimate the trip count
-  // if we exit through another exit, but can never underestimate it.
-  // TODO: incorporate information from other exits
-  if (BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L)) {
-    uint64_t ExitWeight;
-    if (std::optional<uint64_t> EstTripCount =
-            getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
-      if (EstimatedLoopInvocationWeight)
-        *EstimatedLoopInvocationWeight = ExitWeight;
-      return *EstTripCount;
-    }
+  // If EstimatedLoopInvocationWeight, we do not support this loop if
+  // getExpectedExitLoopLatchBranch returns nullptr.
+  //
+  // FIXME: Also, this is a stop-gap solution for nested loops.  It avoids
+  // mistaking LLVMLoopEstimatedTripCount metadata to be for an outer loop when
+  // it was created for an inner loop.  The problem is that loop metadata is
+  // attached to the branch instruction in the loop latch block, but that can be
+  // shared by the loops.  A solution is to attach loop metadata to loop headers
+  // instead, but that would be a large change to LLVM.
+  //
+  // Until that happens, we work around the problem as follows.
+  // getExpectedExitLoopLatchBranch (which also guards
+  // setLoopEstimatedTripCount) returns nullptr for a loop unless the loop has
+  // one latch and that latch has exactly two successors one of which is an exit
+  // from the loop.  If the latch is shared by nested loops, then that condition
+  // might hold for the inner loop but cannot hold for the outer loop:
+  // - Because the latch is shared, it must have at least two successors: the
+  //   inner loop header and the outer loop header, which is also an exit for
+  //   the inner loop.  That satisifies the condition for the inner loop.
+  // - To satsify the condition for the outer loop, the latch must have a third
+  //   successor that is an exit for the outer loop.  But that violates the
+  //   condition for both loops.
+  BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L);
+  if (!ExitingBranch)
+    return std::nullopt;
+
+  // If requested, either compute *EstimatedLoopInvocationWeight or return
+  // nullopt if cannot.
+  //
+  // TODO: Eventually, once all passes have migrated away from setting branch
+  // weights to indicate estimated trip counts, this function will drop the
+  // EstimatedLoopInvocationWeight parameter.
+  if (EstimatedLoopInvocationWeight) {
+    uint64_t LoopWeight = 0, ExitWeight = 0; // Inits expected to be unused.
+    if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
+      return std::nullopt;
+    if (L->contains(ExitingBranch->getSuccessor(1)))
+      std::swap(LoopWeight, ExitWeight);
+    if (!ExitWeight)
+      return std::nullopt;
+    *EstimatedLoopInvocationWeight = ExitWeight;
   }
-  return std::nullopt;
+
+  // Return the estimated trip count from metadata unless the metadata is
+  // missing or has no value.
+  if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
+    LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
+                      << LLVMLoopEstimatedTripCount << " metadata has trip "
+                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
+    return TC;
+  }
+
+  // Estimate the trip count from latch branch weights.
+  return estimateLoopTripCount(L);
 }
 
-bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
-                                     unsigned EstimatedloopInvocationWeight) {
-  // At the moment, we currently support changing the estimate trip count of
-  // the latch branch only.  We could extend this API to manipulate estimated
-  // trip counts for any exit.
+bool llvm::setLoopEstimatedTripCount(
+    Loop *L, unsigned EstimatedTripCount,
+    std::optional<unsigned> EstimatedloopInvocationWeight) {
+  // If EstimatedLoopInvocationWeight, we do not support this loop if
+  // getExpectedExitLoopLatchBranch returns nullptr.
+  //
+  // FIXME: See comments in getLoopEstimatedTripCount for why this is required
+  // here regardless of EstimatedLoopInvocationWeight.
   BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
+
+  // Set the metadata.
+  addStringMetadataToLoop(L, LLVMLoopEstimatedTripCount, EstimatedTripCount);
+
+  // At the moment, we currently support changing the estimated trip count in
+  // the latch branch's branch weights only.  We could extend this API to
+  // manipulate estimated trip counts for any exit.
+  //
+  // TODO: Eventually, once all passes have migrated away from setting branch
+  // weights to indicate estimated trip counts, we will not set branch weights
+  // here at all.
+  if (!EstimatedloopInvocationWeight)
+    return true;
 
   // Calculate taken and exit weights.
   unsigned LatchExitWeight = 0;
   unsigned BackedgeTakenWeight = 0;
 
-  if (EstimatedTripCount > 0) {
-    LatchExitWeight = EstimatedloopInvocationWeight;
+  if (EstimatedTripCount != 0) {
+    LatchExitWeight = *EstimatedloopInvocationWeight;
     BackedgeTakenWeight = (EstimatedTripCount - 1) * LatchExitWeight;
   }
 
@@ -923,6 +998,8 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   switch (RK) {
   default:
     llvm_unreachable("Unexpected recurrence kind");
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
     return Intrinsic::vector_reduce_add;
   case RecurKind::Mul:
@@ -947,16 +1024,38 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::UMin:
     return Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::vector_reduce_fmin;
   case RecurKind::FMaximum:
     return Intrinsic::vector_reduce_fmaximum;
   case RecurKind::FMinimum:
     return Intrinsic::vector_reduce_fminimum;
+  case RecurKind::FMaximumNum:
+    return Intrinsic::vector_reduce_fmax;
+  case RecurKind::FMinimumNum:
+    return Intrinsic::vector_reduce_fmin;
   }
 }
 
+Intrinsic::ID llvm::getMinMaxReductionIntrinsicID(Intrinsic::ID IID) {
+  switch (IID) {
+  default:
+    llvm_unreachable("Unexpected intrinsic id");
+  case Intrinsic::umin:
+    return Intrinsic::vector_reduce_umin;
+  case Intrinsic::umax:
+    return Intrinsic::vector_reduce_umax;
+  case Intrinsic::smin:
+    return Intrinsic::vector_reduce_smin;
+  case Intrinsic::smax:
+    return Intrinsic::vector_reduce_smax;
+  }
+}
+
+// This is the inverse to getReductionForBinop
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -984,6 +1083,25 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   default:
     llvm_unreachable("Unexpected ID");
   }
+}
+
+// This is the inverse to getArithmeticReductionInstruction
+Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
+  switch (Opc) {
+  default:
+    break;
+  case Instruction::Add:
+    return Intrinsic::vector_reduce_add;
+  case Instruction::Mul:
+    return Intrinsic::vector_reduce_mul;
+  case Instruction::And:
+    return Intrinsic::vector_reduce_and;
+  case Instruction::Or:
+    return Intrinsic::vector_reduce_or;
+  case Instruction::Xor:
+    return Intrinsic::vector_reduce_xor;
+  }
+  return Intrinsic::not_intrinsic;
 }
 
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
@@ -1022,13 +1140,19 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
   case RecurKind::SMax:
     return Intrinsic::smax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::minnum;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::maxnum;
   case RecurKind::FMinimum:
     return Intrinsic::minimum;
   case RecurKind::FMaximum:
     return Intrinsic::maximum;
+  case RecurKind::FMinimumNum:
+    return Intrinsic::minimumnum;
+  case RecurKind::FMaximumNum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1077,8 +1201,9 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
-      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum)) {
-    // TODO: Add float minnum/maxnum support when FMF nnan is set.
+      (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
+       RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
+       RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
                                    "rdx.minmax");
@@ -1151,7 +1276,7 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
     SmallVector<int, 32> ShuffleMask(VF);
     for (unsigned stride = 1; stride < VF; stride <<= 1) {
       // Initialise the mask with undef.
-      std::fill(ShuffleMask.begin(), ShuffleMask.end(), -1);
+      llvm::fill(ShuffleMask, -1);
       for (unsigned j = 0; j < VF; j += stride << 1) {
         ShuffleMask[j] = j + stride;
       }
@@ -1174,12 +1299,7 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
-                                  const RecurrenceDescriptor &Desc,
-                                  PHINode *OrigPhi) {
-  assert(
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
-      "Unexpected reduction kind");
-  Value *InitVal = Desc.getRecurrenceStartValue();
+                                  Value *InitVal, PHINode *OrigPhi) {
   Value *NewVal = nullptr;
 
   // First use the original phi to determine the new value we're trying to
@@ -1209,20 +1329,19 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       const RecurrenceDescriptor &Desc) {
-  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
-  Value *StartVal = Desc.getRecurrenceStartValue();
-  Value *Sentinel = Desc.getSentinelValue();
+                                       RecurKind RdxKind, Value *Start,
+                                       Value *Sentinel) {
+  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
+  bool IsMaxRdx = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RdxKind);
   Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? Builder.CreateIntMaxReduce(Src, true)
+                      ? (IsMaxRdx ? Builder.CreateIntMaxReduce(Src, IsSigned)
+                                  : Builder.CreateIntMinReduce(Src, IsSigned))
                       : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
   Value *Cmp =
       Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, StartVal, "rdx.select");
+  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
@@ -1283,6 +1402,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                  Builder.getFastMathFlags());
   };
   switch (RdxKind) {
+  case RecurKind::AddChainWithSubs:
+  case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::And:
@@ -1294,8 +1415,12 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::UMin:
   case RecurKind::FMax:
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
+  case RecurKind::FMaxNum:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
+  case RecurKind::FMinimumNum:
+  case RecurKind::FMaximumNum:
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
@@ -1307,42 +1432,24 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
-Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
-                                   const RecurrenceDescriptor &Desc) {
-  RecurKind Kind = Desc.getRecurrenceKind();
+Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
+                                   RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "AnyOf reduction is not supported.");
+         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  Type *SrcEltTy = SrcTy->getElementType();
-  Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
-  Value *Ops[] = {Iden, Src};
-  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+  auto VPID = VPIntrinsic::getForIntrinsic(Id);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
+  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
+  Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
+  Value *Ops[] = {Iden, Src, Mask, EVL};
+  return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }
 
-Value *llvm::createReduction(IRBuilderBase &B,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi) {
-  // TODO: Support in-order reductions based on the recurrence descriptor.
-  // All ops in the reduction inherit fast-math-flags from the recurrence
-  // descriptor.
-  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
-  B.setFastMathFlags(Desc.getFastMathFlags());
-
-  RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfReduction(B, Src, Desc, OrigPhi);
-  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-    return createFindLastIVReduction(B, Src, Desc);
-
-  return createSimpleReduction(B, Src, RK);
-}
-
-Value *llvm::createOrderedReduction(IRBuilderBase &B,
-                                    const RecurrenceDescriptor &Desc,
+Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
                                     Value *Src, Value *Start) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -1350,19 +1457,21 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   return B.CreateFAddReduce(Start, Src);
 }
 
-Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
-                                    const RecurrenceDescriptor &Desc,
-                                    Value *Src, Value *Start) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+Value *llvm::createOrderedReduction(IRBuilderBase &Builder, RecurKind Kind,
+                                    Value *Src, Value *Start, Value *Mask,
+                                    Value *EVL) {
+  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  Value *Ops[] = {Start, Src};
-  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
+  auto VPID = VPIntrinsic::getForIntrinsic(Id);
+  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
+         "No VPIntrinsic for this reduction");
+  auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
+  Value *Ops[] = {Start, Src, Mask, EVL};
+  return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
@@ -1816,10 +1925,11 @@ void llvm::appendLoopsToWorklist(RangeT &&Loops,
   appendReversedLoopsToWorklist(reverse(Loops), Worklist);
 }
 
-template void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+template LLVM_EXPORT_TEMPLATE void
+llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
     ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
 
-template void
+template LLVM_EXPORT_TEMPLATE void
 llvm::appendLoopsToWorklist<Loop &>(Loop &L,
                                     SmallPriorityWorklist<Loop *, 4> &Worklist);
 
@@ -2006,6 +2116,7 @@ Value *llvm::addRuntimeChecks(
     MemoryRuntimeCheck = IsConflict;
   }
 
+  Exp.eraseDeadInstructions(MemoryRuntimeCheck);
   return MemoryRuntimeCheck;
 }
 
@@ -2026,7 +2137,7 @@ Value *llvm::addDiffRuntimeChecks(
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
-    auto *VFTimesUFTimesSize =
+    auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
     Value *Diff =
@@ -2034,13 +2145,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
@@ -2051,6 +2162,7 @@ Value *llvm::addDiffRuntimeChecks(
     MemoryRuntimeCheck = IsConflict;
   }
 
+  Expander.eraseDeadInstructions(MemoryRuntimeCheck);
   return MemoryRuntimeCheck;
 }
 

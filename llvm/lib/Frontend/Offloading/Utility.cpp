@@ -41,7 +41,7 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
                                           Constant *Addr, StringRef Name,
                                           uint64_t Size, uint32_t Flags,
                                           uint64_t Data, Constant *AuxAddr) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
   Type *PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
@@ -87,7 +87,7 @@ void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
                                      uint64_t Size, uint32_t Flags,
                                      uint64_t Data, Constant *AuxAddr,
                                      StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
@@ -110,7 +110,7 @@ void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
 
 std::pair<GlobalVariable *, GlobalVariable *>
 offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));

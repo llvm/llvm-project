@@ -21,23 +21,21 @@ let SVETargetGuard = InvalidMode in {
 // Loads
 
 multiclass ZALoad<string n_suffix, string t, string i_prefix, list<ImmCheck> ch> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _H : MInst<"svld1_hor_" # n_suffix, "vimPQ", t,
-                          [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
-                          MemEltTyDefault, i_prefix # "_horiz", ch>;
+  def NAME # _H : MInst<"svld1_hor_" # n_suffix, "vimPQ", t,
+                        [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
+                        MemEltTyDefault, i_prefix # "_horiz", ch>;
 
-    def NAME # _H_VNUM : MInst<"svld1_hor_vnum_" # n_suffix, "vimPQl", t,
-                               [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
-                               MemEltTyDefault, i_prefix # "_horiz", ch>;
+  def NAME # _H_VNUM : MInst<"svld1_hor_vnum_" # n_suffix, "vimPQl", t,
+                             [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
+                             MemEltTyDefault, i_prefix # "_horiz", ch>;
 
-    def NAME # _V : MInst<"svld1_ver_" # n_suffix, "vimPQ", t,
-                          [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
-                          MemEltTyDefault, i_prefix # "_vert", ch>;
+  def NAME # _V : MInst<"svld1_ver_" # n_suffix, "vimPQ", t,
+                        [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
+                        MemEltTyDefault, i_prefix # "_vert", ch>;
 
-    def NAME # _V_VNUM : MInst<"svld1_ver_vnum_" # n_suffix, "vimPQl", t,
-                               [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
-                               MemEltTyDefault, i_prefix # "_vert", ch>;
-  }
+  def NAME # _V_VNUM : MInst<"svld1_ver_vnum_" # n_suffix, "vimPQl", t,
+                             [IsLoad, IsOverloadNone, IsStreaming, IsInOutZA],
+                             MemEltTyDefault, i_prefix # "_vert", ch>;
 }
 
 defm SVLD1_ZA8 : ZALoad<"za8", "c", "aarch64_sme_ld1b", [ImmCheck<0, ImmCheck0_0>]>;
@@ -46,7 +44,6 @@ defm SVLD1_ZA32 : ZALoad<"za32", "i", "aarch64_sme_ld1w", [ImmCheck<0, ImmCheck0
 defm SVLD1_ZA64 : ZALoad<"za64", "l", "aarch64_sme_ld1d", [ImmCheck<0, ImmCheck0_7>]>;
 defm SVLD1_ZA128 : ZALoad<"za128", "q", "aarch64_sme_ld1q", [ImmCheck<0, ImmCheck0_15>]>;
 
-let SMETargetGuard = "sme" in {
 def SVLDR_VNUM_ZA : MInst<"svldr_vnum_za", "vmQl", "",
                           [IsOverloadNone, IsStreamingCompatible, IsInOutZA],
                           MemEltTyDefault, "aarch64_sme_ldr">;
@@ -54,29 +51,26 @@ def SVLDR_VNUM_ZA : MInst<"svldr_vnum_za", "vmQl", "",
 def SVLDR_ZA : MInst<"svldr_za", "vmQ", "",
                           [IsOverloadNone, IsStreamingCompatible, IsInOutZA],
                           MemEltTyDefault, "aarch64_sme_ldr", []>;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Stores
 
 multiclass ZAStore<string n_suffix, string t, string i_prefix, list<ImmCheck> ch> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _H : MInst<"svst1_hor_" # n_suffix, "vimP%", t,
-                          [IsStore, IsOverloadNone, IsStreaming, IsInZA],
-                          MemEltTyDefault, i_prefix # "_horiz", ch>;
+  def NAME # _H : MInst<"svst1_hor_" # n_suffix, "vimP%", t,
+                        [IsStore, IsOverloadNone, IsStreaming, IsInZA],
+                        MemEltTyDefault, i_prefix # "_horiz", ch>;
 
-    def NAME # _H_VNUM : MInst<"svst1_hor_vnum_" # n_suffix, "vimP%l", t,
-                               [IsStore, IsOverloadNone, IsStreaming, IsInZA],
-                               MemEltTyDefault, i_prefix # "_horiz", ch>;
+  def NAME # _H_VNUM : MInst<"svst1_hor_vnum_" # n_suffix, "vimP%l", t,
+                             [IsStore, IsOverloadNone, IsStreaming, IsInZA],
+                             MemEltTyDefault, i_prefix # "_horiz", ch>;
 
-    def NAME # _V : MInst<"svst1_ver_" # n_suffix, "vimP%", t,
-                          [IsStore, IsOverloadNone, IsStreaming, IsInZA],
-                          MemEltTyDefault, i_prefix # "_vert", ch>;
+  def NAME # _V : MInst<"svst1_ver_" # n_suffix, "vimP%", t,
+                        [IsStore, IsOverloadNone, IsStreaming, IsInZA],
+                        MemEltTyDefault, i_prefix # "_vert", ch>;
 
-    def NAME # _V_VNUM : MInst<"svst1_ver_vnum_" # n_suffix, "vimP%l", t,
-                               [IsStore, IsOverloadNone, IsStreaming, IsInZA],
-                               MemEltTyDefault, i_prefix # "_vert", ch>;
-  }
+  def NAME # _V_VNUM : MInst<"svst1_ver_vnum_" # n_suffix, "vimP%l", t,
+                             [IsStore, IsOverloadNone, IsStreaming, IsInZA],
+                             MemEltTyDefault, i_prefix # "_vert", ch>;
 }
 
 defm SVST1_ZA8 : ZAStore<"za8", "c", "aarch64_sme_st1b", [ImmCheck<0, ImmCheck0_0>]>;
@@ -85,7 +79,6 @@ defm SVST1_ZA32 : ZAStore<"za32", "i", "aarch64_sme_st1w", [ImmCheck<0, ImmCheck
 defm SVST1_ZA64 : ZAStore<"za64", "l", "aarch64_sme_st1d", [ImmCheck<0, ImmCheck0_7>]>;
 defm SVST1_ZA128 : ZAStore<"za128", "q", "aarch64_sme_st1q", [ImmCheck<0, ImmCheck0_15>]>;
 
-let SMETargetGuard = "sme" in {
 def SVSTR_VNUM_ZA : MInst<"svstr_vnum_za", "vm%l", "",
                           [IsOverloadNone, IsStreamingCompatible, IsInZA],
                           MemEltTyDefault, "aarch64_sme_str">;
@@ -93,21 +86,18 @@ def SVSTR_VNUM_ZA : MInst<"svstr_vnum_za", "vm%l", "",
 def SVSTR_ZA : MInst<"svstr_za", "vm%", "",
                       [IsOverloadNone, IsStreamingCompatible, IsInZA],
                       MemEltTyDefault, "aarch64_sme_str", []>;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Read horizontal/vertical ZA slices
 
 multiclass ZARead<string n_suffix, string t, string i_prefix, list<ImmCheck> ch> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _H : SInst<"svread_hor_" # n_suffix # "[_{d}]", "ddPim", t,
-                          MergeOp1, i_prefix # "_horiz",
-                          [IsReadZA, IsStreaming, IsInZA], ch>;
+  def NAME # _H : SInst<"svread_hor_" # n_suffix # "[_{d}]", "ddPim", t,
+                        MergeOp1, i_prefix # "_horiz",
+                        [IsReadZA, IsStreaming, IsInZA], ch>;
 
-    def NAME # _V : SInst<"svread_ver_" # n_suffix # "[_{d}]", "ddPim", t,
-                          MergeOp1, i_prefix # "_vert",
-                          [IsReadZA, IsStreaming, IsInZA], ch>;
-  }
+  def NAME # _V : SInst<"svread_ver_" # n_suffix # "[_{d}]", "ddPim", t,
+                        MergeOp1, i_prefix # "_vert",
+                        [IsReadZA, IsStreaming, IsInZA], ch>;
 }
 
 defm SVREAD_ZA8 : ZARead<"za8", "cUcm", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_0>]>;
@@ -120,15 +110,13 @@ defm SVREAD_ZA128 : ZARead<"za128", "csilUcUsUiUlmhbfd", "aarch64_sme_readq", [I
 // Write horizontal/vertical ZA slices
 
 multiclass ZAWrite<string n_suffix, string t, string i_prefix, list<ImmCheck> ch> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _H : SInst<"svwrite_hor_" # n_suffix # "[_{d}]", "vimPd", t,
-                          MergeOp1, i_prefix # "_horiz",
-                          [IsWriteZA, IsStreaming, IsInOutZA], ch>;
+  def NAME # _H : SInst<"svwrite_hor_" # n_suffix # "[_{d}]", "vimPd", t,
+                        MergeOp1, i_prefix # "_horiz",
+                        [IsWriteZA, IsStreaming, IsInOutZA], ch>;
 
-    def NAME # _V : SInst<"svwrite_ver_" # n_suffix # "[_{d}]", "vimPd", t,
-                          MergeOp1, i_prefix # "_vert",
-                          [IsWriteZA, IsStreaming, IsInOutZA], ch>;
-  }
+  def NAME # _V : SInst<"svwrite_ver_" # n_suffix # "[_{d}]", "vimPd", t,
+                        MergeOp1, i_prefix # "_vert",
+                        [IsWriteZA, IsStreaming, IsInOutZA], ch>;
 }
 
 defm SVWRITE_ZA8 : ZAWrite<"za8", "cUcm", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
@@ -140,13 +128,11 @@ defm SVWRITE_ZA128 : ZAWrite<"za128", "csilUcUsUiUlmhbfd", "aarch64_sme_writeq",
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Zero
 
-let SMETargetGuard = "sme" in {
-  def SVZERO_MASK_ZA : SInst<"svzero_mask_za", "vi", "", MergeNone, "aarch64_sme_zero",
-                             [IsOverloadNone, IsStreamingCompatible, IsInOutZA],
-                             [ImmCheck<0, ImmCheck0_255>]>;
-  def SVZERO_ZA      : SInst<"svzero_za", "vv", "", MergeNone, "aarch64_sme_zero",
-                             [IsOverloadNone, IsStreamingCompatible, IsOutZA]>;
-}
+def SVZERO_MASK_ZA : SInst<"svzero_mask_za", "vi", "", MergeNone, "aarch64_sme_zero",
+                           [IsOverloadNone, IsStreamingCompatible, IsInOutZA],
+                           [ImmCheck<0, ImmCheck0_255>]>;
+def SVZERO_ZA      : SInst<"svzero_za", "vv", "", MergeNone, "aarch64_sme_zero",
+                           [IsOverloadNone, IsStreamingCompatible, IsOutZA]>;
 
 let SMETargetGuard = "sme2p1" in {
   def SVZERO_ZA64_VG1x2 : SInst<"svzero_za64_vg1x2", "vm", "", MergeNone, "aarch64_sme_zero_za64_vg1x2",
@@ -170,28 +156,18 @@ let SMETargetGuard = "sme2p1" in {
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Counting elements in a streaming vector
 
-multiclass ZACount<string n_suffix> {
-  let SMETargetGuard = "sme" in {
-    def NAME : SInst<"sv" # n_suffix, "nv", "", MergeNone,
-                      "aarch64_sme_" # n_suffix,
-                      [IsOverloadNone, IsStreamingCompatible]>;
-  }
-}
-
-defm SVCNTSB : ZACount<"cntsb">;
-defm SVCNTSH : ZACount<"cntsh">;
-defm SVCNTSW : ZACount<"cntsw">;
-defm SVCNTSD : ZACount<"cntsd">;
+def SVCNTSB : SInst<"svcntsb", "nv", "", MergeNone, "", [IsOverloadNone, IsStreamingCompatible]>;
+def SVCNTSH : SInst<"svcntsh", "nv", "", MergeNone, "", [IsOverloadNone, IsStreamingCompatible]>;
+def SVCNTSW : SInst<"svcntsw", "nv", "", MergeNone, "", [IsOverloadNone, IsStreamingCompatible]>;
+def SVCNTSD : SInst<"svcntsd", "nv", "", MergeNone, "aarch64_sme_cntsd", [IsOverloadNone, IsStreamingCompatible]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SME - ADDHA/ADDVA
 
 multiclass ZAAdd<string n_suffix> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _ZA32: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPd", "iUi", MergeOp1,
-                      "aarch64_sme_" # n_suffix, [IsStreaming, IsInOutZA],
-                      [ImmCheck<0, ImmCheck0_3>]>;
-  }
+  def NAME # _ZA32: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPd", "iUi", MergeOp1,
+                    "aarch64_sme_" # n_suffix, [IsStreaming, IsInOutZA],
+                    [ImmCheck<0, ImmCheck0_3>]>;
 
   let SMETargetGuard = "sme-i16i64" in {
     def NAME # _ZA64: SInst<"sv" # n_suffix # "_za64[_{d}]", "viPPd", "lUl", MergeOp1,
@@ -207,13 +183,11 @@ defm SVADDVA : ZAAdd<"addva">;
 // SME - SMOPA, SMOPS, UMOPA, UMOPS
 
 multiclass ZAIntOuterProd<string n_suffix1, string n_suffix2> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _ZA32_B: SInst<"sv" # n_suffix2 # "_za32[_{d}]",
-                              "viPPdd", !cond(!eq(n_suffix1, "s") : "", true: "U") # "c",
-                              MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
-                              [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
-  }
+  def NAME # _ZA32_B: SInst<"sv" # n_suffix2 # "_za32[_{d}]",
+                            "viPPdd", !cond(!eq(n_suffix1, "s") : "", true: "U") # "c",
+                            MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
 
   let SMETargetGuard = "sme-i16i64" in {
     def NAME # _ZA64_H: SInst<"sv" # n_suffix2 # "_za64[_{d}]",
@@ -233,14 +207,12 @@ defm SVUMOPS : ZAIntOuterProd<"u", "mops">;
 // SME - SUMOPA, SUMOPS, USMOPA, USMOPS
 
 multiclass ZAIntOuterProdMixedSigns<string n_suffix1, string n_suffix2> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _ZA32_B: SInst<"sv" # n_suffix1 # n_suffix2 # "_za32[_{d}]",
-                              "viPPd" # !cond(!eq(n_suffix1, "su") : "u", true: "x"),
-                              !cond(!eq(n_suffix1, "su") : "", true: "U") # "c",
-                              MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
-                              [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
-  }
+  def NAME # _ZA32_B: SInst<"sv" # n_suffix1 # n_suffix2 # "_za32[_{d}]",
+                            "viPPd" # !cond(!eq(n_suffix1, "su") : "u", true: "x"),
+                            !cond(!eq(n_suffix1, "su") : "", true: "U") # "c",
+                            MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
 
   let SMETargetGuard = "sme-i16i64" in {
     def NAME # _ZA64_H: SInst<"sv" # n_suffix1 # n_suffix2 # "_za64[_{d}]",
@@ -261,22 +233,20 @@ defm SVUSMOPS : ZAIntOuterProdMixedSigns<"us", "mops">;
 // SME - FMOPA, FMOPS
 
 multiclass ZAFPOuterProd<string n_suffix> {
-  let SMETargetGuard = "sme" in {
-    def NAME # _ZA32_B: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "h",
-                              MergeOp1, "aarch64_sme_" # n_suffix # "_wide",
-                              [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
+  def NAME # _ZA32_B: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "h",
+                            MergeOp1, "aarch64_sme_" # n_suffix # "_wide",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
 
-    def NAME # _ZA32_H: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "b",
-                              MergeOp1, "aarch64_sme_" # n_suffix # "_wide",
-                              [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
+  def NAME # _ZA32_H: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "b",
+                            MergeOp1, "aarch64_sme_" # n_suffix # "_wide",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
 
-    def NAME # _ZA32_S: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "f",
-                              MergeOp1, "aarch64_sme_" # n_suffix,
-                              [IsStreaming, IsInOutZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
-  }
+  def NAME # _ZA32_S: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "f",
+                            MergeOp1, "aarch64_sme_" # n_suffix,
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
 
   let SMETargetGuard = "sme-f64f64" in {
     def NAME # _ZA64_D: SInst<"sv" # n_suffix # "_za64[_{d}]", "viPPdd", "d",
@@ -288,6 +258,132 @@ multiclass ZAFPOuterProd<string n_suffix> {
 
 defm SVMOPA : ZAFPOuterProd<"mopa">;
 defm SVMOPS : ZAFPOuterProd<"mops">;
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2 - FMOP4A, FMOP4S, BFMOP4A, BFMOP4S
+
+multiclass MOP4<string mode, string za, string t, string i, list<ImmCheck> checks> {
+  def _1x1 : Inst<"svmop4" # mode # "[_1x1]" # za # "[_{d}_{d}]", "vidd", t, MergeNone, i # "_1x1", [IsInOutZA, IsStreaming], checks>;
+  def _1x2 : Inst<"svmop4" # mode # "[_1x2]" # za # "[_{d}_{d}]", "vid2", t, MergeNone, i # "_1x2", [IsInOutZA, IsStreaming], checks>;
+  def _2x1 : Inst<"svmop4" # mode # "[_2x1]" # za # "[_{d}_{d}]", "vi2d", t, MergeNone, i # "_2x1", [IsInOutZA, IsStreaming], checks>;
+  def _2x2 : Inst<"svmop4" # mode # "[_2x2]" # za # "[_{d}_{d}]", "vi22", t, MergeNone, i # "_2x2", [IsInOutZA, IsStreaming], checks>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4" in {
+  defm SVFMOP4A_HtoS  : MOP4<"a", "_za32", "hb", "aarch64_sme_mop4a_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVFMOP4S_HtoS  : MOP4<"s", "_za32", "hb", "aarch64_sme_mop4s_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVFMOP4A_S     : MOP4<"a", "_za32", "f", "aarch64_sme_mop4a", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVFMOP4S_S     : MOP4<"s", "_za32", "f", "aarch64_sme_mop4s", [ImmCheck<0, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-f64f64" in {
+  defm SVFMOP4A_D : MOP4<"a", "_za64", "d", "aarch64_sme_mop4a", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVFMOP4S_D : MOP4<"s", "_za64", "d", "aarch64_sme_mop4s", [ImmCheck<0, ImmCheck0_7>]>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-f16f16" in {
+  defm SVFMOP4A_H : MOP4<"a", "_za16", "h", "aarch64_sme_mop4a", [ImmCheck<0, ImmCheck0_1>]>;
+  defm SVFMOP4S_H : MOP4<"s", "_za16", "h", "aarch64_sme_mop4s", [ImmCheck<0, ImmCheck0_1>]>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-b16b16" in {
+  defm SVBMOP4A_H : MOP4<"a", "_za16", "b", "aarch64_sme_mop4a", [ImmCheck<0, ImmCheck0_1>]>;
+  defm SVBMOP4S_H : MOP4<"s", "_za16", "b", "aarch64_sme_mop4s", [ImmCheck<0, ImmCheck0_1>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2 - FP8 FMOP4A, FMOP4S
+
+multiclass MOP4_FP8<string za, list<ImmCheck> checks> {
+  def _1x1 : Inst<"svmop4a" # "[_1x1]" # za # "[_{d}_{d}]", "vidd>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_1x1", [IsInOutZA, IsStreaming], checks>;
+  def _1x2 : Inst<"svmop4a" # "[_1x2]" # za # "[_{d}_{d}]", "vid2>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_1x2", [IsInOutZA, IsStreaming], checks>;
+  def _2x1 : Inst<"svmop4a" # "[_2x1]" # za # "[_{d}_{d}]", "vi2d>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_2x1", [IsInOutZA, IsStreaming], checks>;
+  def _2x2 : Inst<"svmop4a" # "[_2x2]" # za # "[_{d}_{d}]", "vi22>", "m", MergeNone, "aarch64_sme_fp8_fmop4a" # za # "_2x2", [IsInOutZA, IsStreaming], checks>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-f8f32" in {
+  defm SVMOP4A_FP8_ZA32 : MOP4_FP8<"_za32", [ImmCheck<0, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-f8f16" in {
+  defm SVMOP4A_FP8_ZA16 : MOP4_FP8<"_za16", [ImmCheck<0, ImmCheck0_1>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2 - SMOP4A, SMOP4S, UMOP4A, UMOP4S
+
+let SMETargetGuard = "sme2,sme-mop4" in {
+  defm SVSMOP4A_H  : MOP4<"a", "_za32", "cs", "aarch64_sme_smop4a_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVSMOP4S_H  : MOP4<"s", "_za32", "cs", "aarch64_sme_smop4s_wide", [ImmCheck<0, ImmCheck0_3>]>;
+
+  defm SVUMOP4A_H  : MOP4<"a", "_za32", "UcUs", "aarch64_sme_umop4a_wide", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUMOP4S_H  : MOP4<"s", "_za32", "UcUs", "aarch64_sme_umop4s_wide", [ImmCheck<0, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-i16i64" in {
+  defm SVSMOP4A_HtoD  : MOP4<"a", "_za64", "s", "aarch64_sme_smop4a_za64_wide", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSMOP4S_HtoD  : MOP4<"s", "_za64", "s", "aarch64_sme_smop4s_za64_wide", [ImmCheck<0, ImmCheck0_7>]>;
+
+  defm SVUMOP4A_HtoD  : MOP4<"a", "_za64", "Us", "aarch64_sme_umop4a_za64_wide", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUMOP4S_HtoD  : MOP4<"s", "_za64", "Us", "aarch64_sme_umop4s_za64_wide", [ImmCheck<0, ImmCheck0_7>]>;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2 - SUMOP4A, SUMOP4S, USMOP4A, USMOP4S
+
+multiclass SUMOP4<string mode, string za, string t, string i, list<ImmCheck> checks> {
+  def _1x1 : SInst<"svmop4" # mode # "[_1x1]" # za # "[_{d}_{3}]",
+                              "vidu", t, MergeNone, "aarch64_sme_sumop4" # mode # i # "_wide_1x1",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _1x2 : SInst<"svmop4" # mode # "[_1x2]" # za # "[_{d}_{3}]",
+                              "vid2.u", t, MergeNone, "aarch64_sme_sumop4" # mode # i # "_wide_1x2",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _2x1 : SInst<"svmop4" # mode # "[_2x1]" # za # "[_{d}_{3}]",
+                              "vi2u", t, MergeNone, "aarch64_sme_sumop4" # mode # i # "_wide_2x1",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _2x2 : SInst<"svmop4" # mode # "[_2x2]" # za # "[_{d}_{3}]",
+                              "vi2.x2.u", t, MergeNone, "aarch64_sme_sumop4" # mode # i # "_wide_2x2",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+}
+
+multiclass USMOP4<string mode, string za, string t, string i, list<ImmCheck> checks> {
+  def _1x1 : SInst<"svmop4" # mode # "[_1x1]" # za # "[_{d}_{3}]",
+                              "vidx", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_1x1",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _1x2 : SInst<"svmop4" # mode # "[_1x2]" # za # "[_{d}_{3}]",
+                              "vid2.x", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_1x2",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _2x1 : SInst<"svmop4" # mode # "[_2x1]" # za # "[_{d}_{3}]",
+                              "vi2x", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_2x1",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+  def _2x2 : SInst<"svmop4" # mode # "[_2x2]" # za # "[_{d}_{3}]",
+                              "vi2.u2.x", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_2x2",
+                              [IsStreaming, IsInOutZA],
+                              checks>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4" in {
+  defm SVSUMOP4A_S : SUMOP4<"a", "_za32", "c", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVSUMOP4S_S : SUMOP4<"s", "_za32", "c", "", [ImmCheck<0, ImmCheck0_3>]>;
+
+  defm SVUSMOP4A_S : USMOP4<"a", "_za32", "Uc", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUSMOP4S_S : USMOP4<"s", "_za32", "Uc", "", [ImmCheck<0, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-mop4,sme-i16i64" in {
+  defm SVSUMOP4A_D : SUMOP4<"a", "_za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSUMOP4S_D : SUMOP4<"s", "_za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+
+  defm SVUSMOP4A_D : USMOP4<"a", "_za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUSMOP4S_D : USMOP4<"s", "_za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // SME2 - ADD, SUB
@@ -798,6 +894,33 @@ let SMETargetGuard = "sme-f16f16" in {
                             [ImmCheck<0, ImmCheck0_1>]>;
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2 - TMOP, SUTMOP, USTMOP
+
+let SMETargetGuard = "sme2,sme-tmop" in {
+  def SVTMOPA_ZA32   : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "hbf",  MergeNone, "aarch64_sme_ftmopa_za32",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVSTMOPA_ZA32  : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "cs",   MergeNone, "aarch64_sme_stmopa_za32",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVUTMOPA_ZA32  : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "UcUs", MergeNone, "aarch64_sme_utmopa_za32",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVSUTMOPA_ZA32 : Inst<"svtmopa_lane_za32[_{d}_{3}]", "vi2u[i", "c",    MergeNone, "aarch64_sme_sutmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVUSTMOPA_ZA32 : Inst<"svtmopa_lane_za32[_{d}_{3}]", "vi2x[i", "Uc",   MergeNone, "aarch64_sme_ustmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-tmop,sme-f16f16" in {
+  def SVTMOPA_F16 : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2d[i", "h", MergeNone, "aarch64_sme_ftmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-tmop,sme-b16b16" in {
+  def SVTMOPA_BF16 : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2d[i", "b", MergeNone, "aarch64_sme_ftmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-tmop,sme-f8f16" in {
+  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_ftmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+}
+
+let SMETargetGuard = "sme2,sme-tmop,sme-f8f32" in {
+  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_ftmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+}
 
 multiclass ZAReadz<string n_suffix, string vg_num, string t, string i_prefix, list<ImmCheck> ch> {
   let SMETargetGuard = "sme2p1" in {

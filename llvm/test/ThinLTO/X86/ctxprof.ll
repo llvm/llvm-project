@@ -52,10 +52,10 @@
 ; RUN: opt -module-summary -passes=assign-guid,ctx-instr-gen %t/m1.ll -o %t/m1-instr.bc
 ; RUN: opt -module-summary -passes=assign-guid,ctx-instr-gen %t/m2.ll -o %t/m2-instr.bc
 ;
-; RUN: echo '[ \
-; RUN:        {"Guid": 6019442868614718803, "Counters": [1], "Callsites": [[{"Guid": 15593096274670919754, "Counters": [1]}]]}, \
-; RUN:        {"Guid": 15593096274670919754, "Counters": [1], "Callsites": [[{"Guid": 6019442868614718803, "Counters": [1]}]]} \
-; RUN:  ]' > %t_exp/ctxprof.yaml
+; RUN: echo '{"Contexts": [ \
+; RUN:        {"Guid": 6019442868614718803, "TotalRootEntryCount": 5, "Counters": [1], "Callsites": [[{"Guid": 15593096274670919754, "Counters": [1]}]]}, \
+; RUN:        {"Guid": 15593096274670919754, "TotalRootEntryCount": 2, "Counters": [1], "Callsites": [[{"Guid": 6019442868614718803, "Counters": [1]}]]} \
+; RUN:  ]}' > %t_exp/ctxprof.yaml
 ; RUN: llvm-ctxprof-util fromYAML --input %t_exp/ctxprof.yaml --output %t_exp/ctxprof.bitstream
 ; RUN: llvm-lto2 run %t/m1-instr.bc %t/m2-instr.bc \
 ; RUN:  -o %t_exp/result.o -save-temps \

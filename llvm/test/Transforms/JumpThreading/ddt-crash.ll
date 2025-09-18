@@ -131,20 +131,16 @@ define void @spam(ptr %arg, i1 %arg2) {
 ; CHECK:       bb31:
 ; CHECK-NEXT:    [[TMP32:%.*]] = phi i8 [ [[TMP32]], [[BB31]] ], [ [[TMP32_PR]], [[BB30]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i8 [[TMP32]], 0
-; CHECK-NEXT:    br i1 [[TMP33]], label [[BB31]], label [[BB37]]
+; CHECK-NEXT:    br i1 [[TMP33]], label [[BB31]], label [[BB41_THREAD]]
 ; CHECK:       bb37:
-; CHECK-NEXT:    [[TMP36:%.*]] = phi i1 [ false, [[BB23]] ], [ true, [[BB31]] ]
+; CHECK-NEXT:    [[TMP36:%.*]] = phi i1 [ false, [[BB23]] ]
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq ptr [[TMP15]], null
-; CHECK-NEXT:    br i1 [[TMP38]], label [[BB39:%.*]], label [[BB41:%.*]]
-; CHECK:       bb39:
-; CHECK-NEXT:    [[TMP364:%.*]] = phi i1 [ [[TMP36]], [[BB37]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = load ptr, ptr @global, align 8
-; CHECK-NEXT:    br i1 [[TMP364]], label [[BB41_THREAD]], label [[BB41_THREAD]]
+; CHECK-NEXT:    br i1 [[TMP38]], label [[BB41:%.*]], label [[BB41_THREAD]]
 ; CHECK:       bb41:
-; CHECK-NEXT:    [[TMP363:%.*]] = phi i1 [ [[TMP36]], [[BB37]] ]
-; CHECK-NEXT:    br i1 [[TMP363]], label [[BB41_THREAD]], label [[BB41_THREAD]]
-; CHECK:       bb41.thread:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ undef, [[BB41]] ], [ undef, [[BB39]] ], [ undef, [[BB39]] ], [ undef, [[BB41]] ], [ undef, [[BB27]] ], [ undef, [[BB25]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = load ptr, ptr @global, align 8
+; CHECK-NEXT:    br label [[BB41_THREAD]]
+; CHECK:       bb41.thread11:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ undef, [[BB41]] ], [ undef, [[BB25]] ], [ undef, [[BB31]] ], [ undef, [[BB27]] ], [ undef, [[BB37]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

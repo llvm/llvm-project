@@ -5,6 +5,7 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,BE
 ; RUN: opt < %s -passes=instcombine -S -data-layout="e-p:64:64:64-p1:32:32:32-p2:64:64:64-p3:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128-n8:16:32:64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,LE
 
+declare void @use_i8(i8)
 declare void @use_i32(i32)
 declare void @use_v2i32(<2 x i32>)
 
@@ -149,7 +150,7 @@ lpad:
 
 define ptr @test13(i64 %A) {
 ; ALL-LABEL: @test13(
-; ALL-NEXT:    [[C:%.*]] = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 [[A:%.*]]
+; ALL-NEXT:    [[C:%.*]] = getelementptr i8, ptr @inbuf, i64 [[A:%.*]]
 ; ALL-NEXT:    ret ptr [[C]]
 ;
   %c = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 %A
@@ -2039,6 +2040,120 @@ define <2 x i8> @trunc_lshr_zext_uses1(<2 x i8> %A) {
   %C = lshr <2 x i32> %B, <i32 6, i32 6>
   %D = trunc <2 x i32> %C to <2 x i8>
   ret <2 x i8> %D
+}
+
+define i8 @trunc_lshr_ext_halfWidth(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth(
+; ALL-NEXT:    [[ADD:%.*]] = add i16 [[A:%.*]], [[B:%.*]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i16 [[ADD]], [[SHIFTAMT:%.*]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i16 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_rhsOutofRange_neg(i16 %a, i16 %b, i16 range(i16 0, 10) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_rhsOutofRange_neg(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_rhsNoRange_neg(i16 %a, i16 %b, i16 %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_rhsNoRange_neg(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_twouse_neg1(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_twouse_neg1(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    call void @use_i32(i32 [[ADD]])
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  call void @use_i32(i32 %add)
+  %shr = lshr i32 %add, %zext_shiftAmt
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+define i8 @trunc_lshr_ext_halfWidth_twouse_neg2(i16 %a, i16 %b, i16 range(i16 0, 8) %shiftAmt) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_twouse_neg2(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext i16 [[A:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext i16 [[B:%.*]] to i32
+; ALL-NEXT:    [[ZEXT_SHIFTAMT:%.*]] = zext nneg i16 [[SHIFTAMT:%.*]] to i32
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], [[ZEXT_SHIFTAMT]]
+; ALL-NEXT:    call void @use_i32(i32 [[SHR]])
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i8
+; ALL-NEXT:    ret i8 [[TRUNC]]
+;
+  %zext_a = zext i16 %a to i32
+  %zext_b = zext i16 %b to i32
+  %zext_shiftAmt = zext i16 %shiftAmt to i32
+  %add = add nuw nsw i32 %zext_a, %zext_b
+  %shr = lshr i32 %add, %zext_shiftAmt
+  call void @use_i32(i32 %shr)
+  %trunc = trunc i32 %shr to i8
+  ret i8 %trunc
+}
+
+; The narrowing transform only happens for integer types.
+define <2 x i8> @trunc_lshr_ext_halfWidth_vector_neg(<2 x i16> %a, <2 x i16> %b) {
+; ALL-LABEL: @trunc_lshr_ext_halfWidth_vector_neg(
+; ALL-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
+; ALL-NEXT:    [[ZEXT_B:%.*]] = zext <2 x i16> [[B:%.*]] to <2 x i32>
+; ALL-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i32> [[ZEXT_A]], [[ZEXT_B]]
+; ALL-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ADD]], splat (i32 6)
+; ALL-NEXT:    [[TRUNC:%.*]] = trunc <2 x i32> [[SHR]] to <2 x i8>
+; ALL-NEXT:    ret <2 x i8> [[TRUNC]]
+;
+  %zext_a = zext <2 x i16> %a to <2 x i32>
+  %zext_b = zext <2 x i16> %b to <2 x i32>
+  %add = add nuw nsw <2 x i32> %zext_a, %zext_b
+  %shr = lshr <2 x i32> %add, <i32 6, i32 6>
+  %trunc = trunc <2 x i32> %shr to <2 x i8>
+  ret <2 x i8> %trunc
 }
 
 ; The following four tests sext + lshr + trunc patterns.

@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sinhf.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/math/generic/explogxf.h"
+#include "src/__support/math/sinhfcoshf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,11 +25,13 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   if (LIBC_UNLIKELY(x_abs >= 0x42b4'0000U || x_abs <= 0x3da0'0000U)) {
     // |x| <= 0.078125
     if (x_abs <= 0x3da0'0000U) {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       // |x| = 0.0005589424981735646724700927734375
       if (LIBC_UNLIKELY(x_abs == 0x3a12'85ffU)) {
         if (fputil::fenv_is_round_to_nearest())
           return x;
       }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
       // |x| <= 2^-26
       if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
@@ -70,7 +73,8 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.
-  return static_cast<float>(exp_pm_eval</*is_sinh*/ true>(x));
+  return static_cast<float>(
+      math::sinhfcoshf_internal::exp_pm_eval</*is_sinh*/ true>(x));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

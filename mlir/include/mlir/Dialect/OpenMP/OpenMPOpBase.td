@@ -204,4 +204,15 @@ class OpenMP_Op<string mnemonic, list<Trait> traits = [],
   let regions = !if(singleRegion, (region AnyRegion:$region), (region));
 }
 
+
+// Base class for OpenMP loop transformations (that either consume or generate
+// loops)
+//
+// Doesn't actually create a C++ base class (only defines default values for
+// tablegen classes that derive from this). Use LoopTransformationInterface
+// instead for common operations.
+class OpenMPTransform_Op<string mnemonic, list<Trait> traits = []> :
+      OpenMP_Op<mnemonic, !listconcat([DeclareOpInterfaceMethods<LoopTransformationInterface>], traits)  > {
+}
+
 #endif  // OPENMP_OP_BASE

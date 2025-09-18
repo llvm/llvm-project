@@ -1,4 +1,4 @@
-//===--- RedundantStrcatCallsCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 
 namespace clang::tidy::abseil {
 
-/// Flags redundant calls to absl::StrCat when the result is being passed to 
-///	another call of absl::StrCat/absl::StrAppend. Also suggests a fix to 
+/// Flags redundant calls to absl::StrCat when the result is being passed to
+///	another call of absl::StrCat/absl::StrAppend. Also suggests a fix to
 ///	collapse the calls.
 /// Example:
 ///   StrCat(1, StrCat(2, 3))  ==>  StrCat(1, 2, 3)

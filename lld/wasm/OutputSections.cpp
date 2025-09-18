@@ -16,7 +16,6 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/Parallel.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -101,7 +100,8 @@ void DataSection::finalizeContents() {
   });
 #ifndef NDEBUG
   unsigned activeCount = llvm::count_if(segments, [](OutputSegment *segment) {
-    return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
+    return segment->requiredInBinary() &&
+           (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
   });
 #endif
 
@@ -123,7 +123,7 @@ void DataSection::finalizeContents() {
     if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
       if (ctx.isPic && ctx.arg.extendedConst) {
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
-        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+        writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(),
                      "literal (global index)");
         if (segment->startVA) {
           writePtrConst(os, segment->startVA, is64, "offset");
@@ -136,7 +136,7 @@ void DataSection::finalizeContents() {
         if (ctx.isPic) {
           assert(segment->startVA == 0);
           initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-          initExpr.Inst.Value.Global = WasmSym::memoryBase->getGlobalIndex();
+          initExpr.Inst.Value.Global = ctx.sym.memoryBase->getGlobalIndex();
         } else {
           initExpr = intConst(segment->startVA, is64);
         }
@@ -273,7 +273,7 @@ void CustomSection::writeTo(uint8_t *buf) {
 uint32_t CustomSection::getNumRelocations() const {
   uint32_t count = 0;
   for (const InputChunk *inputSect : inputSections)
-    count += inputSect->getNumRelocations();
+    count += inputSect->getNumLiveRelocations();
   return count;
 }
 

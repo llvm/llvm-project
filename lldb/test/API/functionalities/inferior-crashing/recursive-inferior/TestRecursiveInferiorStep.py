@@ -98,7 +98,7 @@ class CrashingRecursiveInferiorStepTestCase(TestBase):
         self.expect("next", substrs=["Process", expected_state])
 
         if expected_state == "exited":
-            self.expect("thread list", error=True, substrs=["Process must be launched"])
+            self.expect("thread list", error=True, substrs=["process must be launched"])
         else:
             self.check_stop_reason()
 

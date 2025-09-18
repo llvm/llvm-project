@@ -22,12 +22,19 @@
 /// although the same shall be possible with other register classes and
 /// instructions if necessary.
 ///
+/// This pass also adds register allocation hints to COPY.
+/// The hints will be post-processed by SIRegisterInfo::getRegAllocationHints.
+/// When using True16, we often see COPY moving a 16-bit value between a VGPR_32
+/// and a VGPR_16. If we use the VGPR_16 that corresponds to the lo16 bits of
+/// the VGPR_32, the COPY can be completely eliminated.
+///
 //===----------------------------------------------------------------------===//
 
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -251,6 +258,39 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       continue;
 
     Changed |= processReg(Reg);
+  }
+
+  if (!ST.useRealTrue16Insts())
+    return Changed;
+
+  // Add RA hints to improve True16 COPY elimination.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.getOpcode() != AMDGPU::COPY)
+        continue;
+      Register Dst = MI.getOperand(0).getReg();
+      Register Src = MI.getOperand(1).getReg();
+      if (Dst.isVirtual() &&
+          MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
+          Src.isPhysical() &&
+          TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
+        MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
+      if (Src.isVirtual() &&
+          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
+          Dst.isPhysical() &&
+          TRI->getRegClassForReg(*MRI, Dst) == &AMDGPU::VGPR_32RegClass)
+        MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
+      if (!Dst.isVirtual() || !Src.isVirtual())
+        continue;
+      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
+          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
+        MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
+        MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+      }
+      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
+          MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
+        MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+    }
   }
 
   return Changed;

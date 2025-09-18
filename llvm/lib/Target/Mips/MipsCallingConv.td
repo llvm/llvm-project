@@ -20,25 +20,15 @@ class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 /// Match if the original argument (before lowering) was a float.
 /// For example, this is true for i32's that were lowered from soft-float.
-class CCIfOrigArgWasFloat<CCAction A>
-    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
-           A>;
+class CCIfOrigArgWasFloat<CCAction A> : CCIf<"OrigTy->isFloatingPointTy()", A>;
 
 /// Match if the original argument (before lowering) was a 128-bit float (i.e.
 /// long double).
-class CCIfOrigArgWasF128<CCAction A>
-    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)", A>;
+class CCIfOrigArgWasF128<CCAction A> : CCIf<"OrigTy->isFP128Ty()", A>;
 
-/// Match if this specific argument is a vararg.
-/// This is slightly different fro CCIfIsVarArg which matches if any argument is
-/// a vararg.
-class CCIfArgIsVarArg<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
-
-/// Match if the return was a floating point vector.
+/// Match if the return was not a floating point vector.
 class CCIfOrigArgWasNotVectorFloat<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)"
-                "->WasOriginalRetVectorFloat(ValNo)", A>;
+    : CCIf<"!OrigTy->isVectorTy() || !OrigTy->isFPOrFPVectorTy()", A>;
 
 /// Match if the special calling conv is the specified value.
 class CCIfSpecialCallingConv<string CC, CCAction A>
@@ -267,15 +257,8 @@ def CC_Mips_FastCC : CallingConv<[
 
   // Integer arguments are passed in integer registers. All scratch registers,
   // except for AT, V0 and T9, are available to be used as argument registers.
-  CCIfType<[i32], CCIfSubtargetNot<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>>,
-
-  // In NaCl, T6, T7 and T8 are reserved and not available as argument
-  // registers for fastcc.  T6 contains the mask for sandboxing control flow
-  // (indirect jumps and calls).  T7 contains the mask for sandboxing memory
-  // accesses (loads and stores).  T8 contains the thread pointer.
-  CCIfType<[i32], CCIfSubtarget<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, V1]>>>,
+  CCIfType<[i32],
+      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>,
 
   // f32 arguments are passed in single-precision floating pointer registers.
   CCIfType<[f32], CCIfSubtarget<"useOddSPReg()",
@@ -339,7 +322,7 @@ def CC_Mips_FixedArg : CallingConv<[
 
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
-  CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCIfSubtarget<"isABI_O32()", CCIfSubtargetNot<"isGP64bit()", CCDelegateTo<CC_MipsO32_FP>>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 
@@ -351,7 +334,7 @@ def CC_Mips_VarArg : CallingConv<[
 ]>;
 
 def CC_Mips : CallingConv<[
-  CCIfVarArg<CCIfArgIsVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
+  CCIfVarArg<CCIfArgVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
   CCDelegateTo<CC_Mips_FixedArg>
 ]>;
 

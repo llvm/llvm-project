@@ -244,9 +244,9 @@ define zeroext i1 @f11(ptr %ptr0) {
 ; CHECK-NEXT:    a %r11, 56(%r2)
 ; CHECK-NEXT:    lhi %r1, 100
 ; CHECK-NEXT:    a %r1, 64(%r2)
-; CHECK-NEXT:    st %r1, 160(%r15) # 4-byte Folded Spill
+; CHECK-NEXT:    st %r1, 160(%r15) # 4-byte Spill
 ; CHECK-NEXT:    a %r0, 72(%r2)
-; CHECK-NEXT:    st %r0, 164(%r15) # 4-byte Folded Spill
+; CHECK-NEXT:    st %r0, 164(%r15) # 4-byte Spill
 ; CHECK-NEXT:    st %r12, 0(%r2)
 ; CHECK-NEXT:    st %r13, 8(%r2)
 ; CHECK-NEXT:    st %r6, 16(%r2)

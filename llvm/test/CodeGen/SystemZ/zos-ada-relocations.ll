@@ -55,7 +55,9 @@ entry:
 
 declare signext i32 @callout(i32 signext)
 
-; CHECK:     .section    ".ada"
+; CHECK: stdin#C CSECT
+; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdin#S)
+; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 ; CHECK:  .set L#DoFunc@indirect0, DoFunc
 ; CHECK:      .indirect_symbol   L#DoFunc@indirect0
 ; CHECK:  .quad V(L#DoFunc@indirect0)          * Offset 0 pointer to function descriptor DoFunc

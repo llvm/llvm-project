@@ -20,13 +20,13 @@
 ## Check that without '--skip-line-zero', line zero is displayed for a line-table entry which has no source correspondence.
 # RUN: llvm-symbolizer --obj=%t.o -f=none 0x16d4 | FileCheck --strict-whitespace --match-full-lines --check-prefix=DISABLE %s
 
-# DISABLE:??:0:0
+# DISABLE:main.c:0:0
 
 ## Check that the '--skip-line-zero' does not cross sequence boundaries.
 ## If it fails to find in the current sequence then line zero is returned for the queried address.
 # RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero 0x16c0 | FileCheck --strict-whitespace --match-full-lines --check-prefix=FAIL-ACROSS-SEQ %s
 
-# FAIL-ACROSS-SEQ:??:0:0
+# FAIL-ACROSS-SEQ:main.c:0:0
 
 ## Check that with '--skip-line-zero', the last non-zero line in the current sequence is displayed.
 # RUN: llvm-symbolizer --obj=%t.o -f=none --skip-line-zero 0x1717 | FileCheck --strict-whitespace --match-full-lines --check-prefix=WITHIN-SEQ %s

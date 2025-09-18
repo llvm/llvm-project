@@ -665,7 +665,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
                  CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
              CaptureAttr && isa<CXXConstructorDecl>(CanonCallee) &&
              llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
-               return ArgIdx == LifetimeCaptureByAttr::THIS;
+               return ArgIdx == LifetimeCaptureByAttr::This;
              }))
       // `lifetime_capture_by(this)` in a class constructor has the same
       // semantics as `lifetimebound`:
@@ -1239,11 +1239,12 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     }
     // Check the return type, e.g.
     //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    //   GSLOwner* func(cosnt Foo& foo [[clang::lifetimebound]])
     //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
     if (FD &&
-        ((FD->getReturnType()->isReferenceType() &&
+        ((FD->getReturnType()->isPointerOrReferenceType() &&
           isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
-         isPointerLikeType(FD->getReturnType())))
+         isGLSPointerType(FD->getReturnType())))
       return Report;
 
     return Abandon;
@@ -1339,12 +1340,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         return false;
       }
 
-      if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
-        SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
-            << DiagRange;
-        return false;
-      }
-
       switch (shouldLifetimeExtendThroughPath(Path)) {
       case PathLifetimeKind::Extend:
         // Update the storage duration of the materialized temporary.
@@ -1355,6 +1350,20 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         return true;
 
       case PathLifetimeKind::NoExtend:
+        if (SemaRef.getLangOpts().CPlusPlus23 && InitEntity) {
+          if (const VarDecl *VD =
+                  dyn_cast_if_present<VarDecl>(InitEntity->getDecl());
+              VD && VD->isCXXForRangeImplicitVar()) {
+            return false;
+          }
+        }
+
+        if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
+          SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
+              << DiagRange;
+          return false;
+        }
+
         // If the path goes through the initialization of a variable or field,
         // it can't possibly reach a temporary created in this full-expression.
         // We will have already diagnosed any problems with the initializer.

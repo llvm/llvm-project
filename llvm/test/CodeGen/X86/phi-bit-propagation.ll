@@ -34,9 +34,9 @@ return:                                           ; preds = %for.body, %for.cond
 }
 
 ; This test case caused an assertion failure; see PR9324.
-define void @func_37() noreturn nounwind ssp {
+define void @func_37(i1 %arg) noreturn nounwind ssp {
 entry:
-  br i1 undef, label %lbl_919, label %entry.for.inc_crit_edge
+  br i1 %arg, label %lbl_919, label %entry.for.inc_crit_edge
 
 entry.for.inc_crit_edge:                          ; preds = %entry
   br label %for.inc
@@ -46,7 +46,7 @@ lbl_919:                                          ; preds = %for.cond7.preheader
 
 for.cond7.preheader:                              ; preds = %for.inc, %lbl_919
   %storemerge.ph = phi i8 [ 0, %lbl_919 ], [ %add, %for.inc ]
-  br i1 undef, label %for.inc, label %lbl_919
+  br i1 %arg, label %for.inc, label %lbl_919
 
 for.inc:                                          ; preds = %for.cond7.preheader, %entry.for.inc_crit_edge
   %add = add i8 undef, 1

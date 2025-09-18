@@ -171,6 +171,24 @@ ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   DIALECT_NAME transform
   EXTENSION_NAME transform_pdl_extension)
 
+declare_mlir_dialect_extension_python_bindings(
+ADD_TO_PARENT MLIRPythonSources.Dialects
+ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/TransformDebugExtensionOps.td
+  SOURCES
+    dialects/transform/debug.py
+  DIALECT_NAME transform
+  EXTENSION_NAME transform_debug_extension)
+
+declare_mlir_dialect_extension_python_bindings(
+ADD_TO_PARENT MLIRPythonSources.Dialects
+ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/TransformTuneExtensionOps.td
+  SOURCES
+    dialects/transform/tune.py
+  DIALECT_NAME transform
+  EXTENSION_NAME transform_tune_extension)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -356,7 +374,7 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/EmitC.td
-  SOURCES 
+  SOURCES
     dialects/emitc.py
   DIALECT_NAME emitc)
 
@@ -404,6 +422,15 @@ declare_mlir_dialect_python_bindings(
 )
 
 declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SMTOps.td
+  GEN_ENUM_BINDINGS
+  SOURCES
+    dialects/smt.py
+  DIALECT_NAME smt)
+
+declare_mlir_dialect_python_bindings(
     ADD_TO_PARENT MLIRPythonSources.Dialects
     ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
     TD_FILE dialects/SPIRVOps.td
@@ -424,6 +451,14 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TosaOps.td
   SOURCES dialects/tosa.py
   DIALECT_NAME tosa
+)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/UBOps.td
+  SOURCES dialects/ub.py
+  DIALECT_NAME ub
 )
 
 declare_mlir_dialect_python_bindings(
@@ -664,6 +699,23 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
     MLIRCAPILinalg
 )
 
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
+  MODULE_NAME _mlirDialectsSMT
+  ADD_TO_PARENT MLIRPythonSources.Dialects.smt
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
+  SOURCES
+    DialectSMT.cpp
+    # Headers must be included explicitly so they are installed.
+    NanobindUtils.h
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPISMT
+    MLIRCAPIExportSMTLIB
+)
+
 declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
   MODULE_NAME _mlirSparseTensorPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.sparse_tensor
@@ -764,7 +816,7 @@ endif()
 
 add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
-  INSTALL_DESTINATION python_packages/mlir_core/mlir/_mlir_libs
+  INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
   OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir/_mlir_libs"
   RELATIVE_INSTALL_ROOT "../../../.."
   DECLARED_HEADERS
@@ -795,7 +847,7 @@ endif()
 
 add_mlir_python_modules(MLIRPythonModules
   ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir"
-  INSTALL_PREFIX "python_packages/mlir_core/mlir"
+  INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
   DECLARED_SOURCES
     MLIRPythonSources
     MLIRPythonExtension.RegisterEverything
@@ -803,4 +855,3 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-

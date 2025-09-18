@@ -132,6 +132,11 @@ bool DataFileCache::SetCachedData(llvm::StringRef key,
       if (file_or_err) {
         llvm::CachedFileStream *cfs = file_or_err->get();
         cfs->OS->write((const char *)data.data(), data.size());
+        if (llvm::Error err = cfs->commit()) {
+          Log *log = GetLog(LLDBLog::Modules);
+          LLDB_LOG_ERROR(log, std::move(err),
+                         "failed to commit to the cache for key: {0}");
+        }
         return true;
       } else {
         Log *log = GetLog(LLDBLog::Modules);

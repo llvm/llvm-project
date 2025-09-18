@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_CONSTANTS_H
 #define LLVM_LIBC_SRC_TIME_TIME_CONSTANTS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string_view.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_constants {
@@ -48,6 +48,7 @@ constexpr int HOURS_PER_DAY = 24;
 constexpr int DAYS_PER_WEEK = 7;
 constexpr int WEEKS_PER_YEAR = 52;
 constexpr int MONTHS_PER_YEAR = 12;
+constexpr int MAX_DAYS_PER_MONTH = 31;
 constexpr int DAYS_PER_NON_LEAP_YEAR = 365;
 constexpr int DAYS_PER_LEAP_YEAR = 366;
 

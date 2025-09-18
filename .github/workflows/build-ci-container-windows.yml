@@ -11,8 +11,6 @@ on:
       - .github/workflows/build-ci-container-windows.yml
       - '.github/workflows/containers/github-action-ci-windows/**'
   pull_request:
-    branches:
-      - main
     paths:
       - .github/workflows/build-ci-container-windows.yml
       - '.github/workflows/containers/github-action-ci-windows/**'
@@ -20,21 +18,21 @@ on:
 jobs:
   build-ci-container-windows:
     if: github.repository_owner == 'llvm'
-    runs-on: windows-2019
+    runs-on: windows-2022
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
       container-filename: ${{ steps.vars.outputs.container-filename }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: .github/workflows/containers/github-action-ci-windows
       - name: Write Variables
         id: vars
         run: |
           $tag = [int64](Get-Date -UFormat %s)
-          $container_name="ghcr.io/$env:GITHUB_REPOSITORY_OWNER/ci-windows-2019"
+          $container_name="ghcr.io/$env:GITHUB_REPOSITORY_OWNER/ci-windows-2022"
           echo "container-name=${container_name}" >> $env:GITHUB_OUTPUT
           echo "container-name-tag=${container_name}:${tag}" >> $env:GITHUB_OUTPUT
           echo "container-filename=ci-windows-${tag}.tar" >> $env:GITHUB_OUTPUT
@@ -46,7 +44,7 @@ jobs:
         run: |
           docker save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
       - name: Upload container image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: container
           path: ${{ steps.vars.outputs.container-filename }}
@@ -58,12 +56,12 @@ jobs:
       - build-ci-container-windows
     permissions:
       packages: write
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Download container
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: container
       - name: Push Container

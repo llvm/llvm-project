@@ -800,13 +800,13 @@ define void @shift_i32_by_32(ptr %src1, ptr %src2, ptr %dst) {
 ; CHECK-LABEL: shift_i32_by_32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl $-1, 4(%eax)
-; CHECK-NEXT:    movl $-1, (%eax)
+; CHECK-NEXT:    movl $0, 4(%eax)
+; CHECK-NEXT:    movl $0, (%eax)
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: shift_i32_by_32:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movq $-1, (%rdx)
+; CHECK64-NEXT:    movq $0, (%rdx)
 ; CHECK64-NEXT:    retq
 entry:
   %load1 = load i8, ptr %src1, align 1

@@ -1,0 +1,91 @@
+## Test heatmap with pre-aggregated profile
+
+RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
+## Non-BOLTed input binary
+RUN: llvm-bolt-heatmap %t.exe -o %t --pa -p %p/Inputs/blarge_new.preagg.txt \
+# Heatmaps for 64B, 128B, 1K buckets
+RUN:   --block-size=64,128,1K --line-size 64 \
+RUN:   2>&1 | FileCheck --check-prefix CHECK-HEATMAP %s
+RUN: FileCheck %s --check-prefix CHECK-SEC-HOT --input-file %t-section-hotness.csv
+RUN: FileCheck %s --check-prefix CHECK-HM-64 --input-file %t
+RUN: FileCheck %s --check-prefix CHECK-HM-128 --input-file %t-128
+RUN: FileCheck %s --check-prefix CHECK-HM-1024 --input-file %t-1024
+
+## BOLTed input binary
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
+RUN:   --reorder-functions=cdsort --enable-bat --dyno-stats --skip-funcs=main
+# Heatmaps for 64B, 4K, 16K, 1M buckets
+RUN: llvm-bolt-heatmap %t.out -o %t2 --pa -p %p/Inputs/blarge_new_bat.preagg.txt \
+RUN:   --block-size=64,4KB,16kb,1MiB 2>&1 | FileCheck --check-prefix CHECK-HEATMAP-BAT %s
+RUN: FileCheck %s --check-prefix CHECK-SEC-HOT-BAT --input-file %t2-section-hotness.csv
+RUN: llvm-nm -n %t.out | FileCheck %s --check-prefix=CHECK-HOT-SYMS
+RUN: FileCheck %s --check-prefix CHECK-BAT-HM-64 --input-file %t2
+# Identical hottest range for 4K, 16K, 1M heatmaps
+RUN: FileCheck %s --check-prefix CHECK-BAT-HM-4K --input-file %t2-4096
+RUN: FileCheck %s --check-prefix CHECK-BAT-HM-4K --input-file %t2-16384
+RUN: FileCheck %s --check-prefix CHECK-BAT-HM-4K --input-file %t2-1048576
+
+# No zoomed-out heatmaps
+RUN: llvm-bolt-heatmap %t.out -o %t3 --pa -p %p/Inputs/blarge_new_bat.preagg.txt \
+RUN:   --block-size=1024 | FileCheck --check-prefix CHECK-HEATMAP-BAT-1K %s
+CHECK-HEATMAP-BAT-1K: HEATMAP: dumping heatmap with bucket size 1024
+CHECK-HEATMAP-BAT-1K-NOT: HEATMAP: dumping heatmap with bucket size
+
+CHECK-HEATMAP: PERF2BOLT: read 81 aggregated LBR entries
+CHECK-HEATMAP: HEATMAP: invalid traces: 1
+CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 64
+CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 128
+CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 1024
+CHECK-HEATMAP-NOT: HEATMAP: dumping heatmap with bucket size
+
+CHECK-SEC-HOT: Section Name, Begin Address, End Address, Percentage Hotness, Utilization Pct, Partition Score
+CHECK-SEC-HOT-NEXT: .init, 0x401000, 0x40101b, 16.8545, 100.0000, 0.1685
+CHECK-SEC-HOT-NEXT: .plt, 0x401020, 0x4010b0, 4.7583, 66.6667, 0.0317
+CHECK-SEC-HOT-NEXT: .text, 0x4010b0, 0x401c25, 78.3872, 85.1064, 0.6671
+CHECK-SEC-HOT-NEXT: .fini, 0x401c28, 0x401c35, 0.0000, 0.0000, 0.0000
+
+# Only check x scales – can't check colors, and FileCheck doesn't strip color
+# codes by default.
+CHECK-HM-64: (299, 937]
+CHECK-HM-64-NEXT:   0
+CHECK-HM-64-NEXT:   0
+CHECK-HM-64-NEXT:   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+CHECK-HM-64-NEXT:   048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c
+CHECK-HM-64-NEXT:   0
+
+CHECK-HM-128: (299, 937]
+CHECK-HM-128-NEXT:  0
+CHECK-HM-128-NEXT:  0                               1
+CHECK-HM-128-NEXT:  0 1 2 3 4 5 6 7 8 9 a b c d e f 0 1 2 3 4 5 6 7 8 9 a b c d e f
+CHECK-HM-128-NEXT:  0808080808080808080808080808080808080808080808080808080808080808
+CHECK-HM-128-NEXT:  0
+
+CHECK-HM-1024: (483, 1663]
+CHECK-HM-1024-NEXT: 0
+CHECK-HM-1024-NEXT: 0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+CHECK-HM-1024-NEXT: 048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c
+CHECK-HM-1024-NEXT: 0
+CHECK-HM-1024-NEXT: 0
+
+CHECK-BAT-HM-64: (349, 1126]
+CHECK-BAT-HM-4K: (605, 2182]
+
+CHECK-HEATMAP-BAT: PERF2BOLT: read 79 aggregated LBR entries
+CHECK-HEATMAP-BAT: HEATMAP: invalid traces: 2
+CHECK-HEATMAP-BAT: HEATMAP: dumping heatmap with bucket size 64
+CHECK-HEATMAP-BAT: HEATMAP: dumping heatmap with bucket size 4096
+CHECK-HEATMAP-BAT: HEATMAP: dumping heatmap with bucket size 16384
+CHECK-HEATMAP-BAT: HEATMAP: dumping heatmap with bucket size 1048576
+CHECK-HEATMAP-BAT-NOT: HEATMAP: dumping heatmap with bucket size
+
+CHECK-SEC-HOT-BAT: Section Name, Begin Address, End Address, Percentage Hotness, Utilization Pct, Partition Score
+CHECK-SEC-HOT-BAT-NEXT: .init, 0x401000, 0x40101b, 17.2888, 100.0000, 0.1729
+CHECK-SEC-HOT-BAT-NEXT: .plt, 0x401020, 0x4010b0, 5.6132, 66.6667, 0.0374
+CHECK-SEC-HOT-BAT-NEXT: .bolt.org.text, 0x4010b0, 0x401c25, 38.3385, 51.0638, 0.1958
+CHECK-SEC-HOT-BAT-NEXT: .fini, 0x401c28, 0x401c35, 0.0000, 0.0000, 0.0000
+CHECK-SEC-HOT-BAT-NEXT: .text, 0x800000, 0x8002cc, 38.7595, 91.6667, 0.3553
+CHECK-SEC-HOT-BAT-NEXT: .text.cold, 0x800300, 0x800415, 0.0000, 0.0000, 0.0000
+CHECK-SEC-HOT-BAT-NEXT: [hot text], 0x800000, 0x8002cc, 38.7595, 91.6667, 0.3553
+CHECK-HOT-SYMS: 800000 W __hot_start
+CHECK-HOT-SYMS: 8002cc W __hot_end

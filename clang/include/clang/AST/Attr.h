@@ -38,6 +38,7 @@ class ASTContext;
 class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
+class OpenACCClause;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -228,6 +229,40 @@ public:
   static bool classof(const Attr *A) {
     return A->getKind() >= attr::FirstHLSLAnnotationAttr &&
            A->getKind() <= attr::LastHLSLAnnotationAttr;
+  }
+};
+
+class HLSLSemanticAttr : public HLSLAnnotationAttr {
+  unsigned SemanticIndex = 0;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SemanticIndexable : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SemanticExplicitIndex : 1;
+
+protected:
+  HLSLSemanticAttr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
+                   attr::Kind AK, bool IsLateParsed,
+                   bool InheritEvenIfAlreadyPresent, bool SemanticIndexable)
+      : HLSLAnnotationAttr(Context, CommonInfo, AK, IsLateParsed,
+                           InheritEvenIfAlreadyPresent) {
+    this->SemanticIndexable = SemanticIndexable;
+    this->SemanticExplicitIndex = false;
+  }
+
+public:
+  bool isSemanticIndexable() const { return SemanticIndexable; }
+
+  void setSemanticIndex(unsigned SemanticIndex) {
+    this->SemanticIndex = SemanticIndex;
+    this->SemanticExplicitIndex = true;
+  }
+
+  unsigned getSemanticIndex() const { return SemanticIndex; }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Attr *A) {
+    return A->getKind() >= attr::FirstHLSLSemanticAttr &&
+           A->getKind() <= attr::LastHLSLSemanticAttr;
   }
 };
 

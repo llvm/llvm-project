@@ -432,7 +432,7 @@ def NotEqualOp : Complex_Op<"neq",
 def PowOp : ComplexArithmeticOp<"pow"> {
   let summary = "complex power function";
   let description = [{
-    The `sqrt` operation takes a complex number raises it to the given complex
+    The `pow` operation takes a complex number raises it to the given complex
     exponent.
 
     Example:

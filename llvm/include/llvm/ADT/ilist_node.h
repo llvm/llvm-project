@@ -18,6 +18,8 @@
 #include "llvm/ADT/ilist_node_base.h"
 #include "llvm/ADT/ilist_node_options.h"
 
+#include <type_traits>
+
 namespace llvm {
 
 namespace ilist_detail {
@@ -50,14 +52,10 @@ template <class OptionsT> class ilist_sentinel;
 
 // Selector for which iterator type to pick given the iterator-bits node option.
 template <bool use_iterator_bits, typename Opts, bool arg1, bool arg2>
-class ilist_select_iterator_type {
-public:
-  using type = ilist_iterator<Opts, arg1, arg2>;
-};
-template <typename Opts, bool arg1, bool arg2>
-class ilist_select_iterator_type<true, Opts, arg1, arg2> {
-public:
-  using type = ilist_iterator_w_bits<Opts, arg1, arg2>;
+struct ilist_select_iterator_type {
+  using type = std::conditional_t<use_iterator_bits,
+                                  ilist_iterator_w_bits<Opts, arg1, arg2>,
+                                  ilist_iterator<Opts, arg1, arg2>>;
 };
 
 /// Implementation for an ilist node.
@@ -147,9 +145,13 @@ public:
   ///
   /// This requires sentinel tracking to be explicitly enabled.  Use the
   /// ilist_sentinel_tracking<true> option to get this API.
-  bool isSentinel() const {
-    static_assert(OptionsT::is_sentinel_tracking_explicit,
-                  "Use ilist_sentinel_tracking<true> to enable isSentinel()");
+  ///
+  /// Rather than using static_assert to enforce the API is not called when
+  /// configured with is_sentinel_tracking_explicit=false, the method is
+  /// conditionally provided using std::enable_if.  This way, clients of
+  /// ilist_node_impl can be fully instantiated for DLLExport on Windows.
+  template <typename T = OptionsT>
+  std::enable_if_t<T::is_sentinel_tracking_explicit, bool> isSentinel() const {
     return node_base_type::isSentinel();
   }
 };

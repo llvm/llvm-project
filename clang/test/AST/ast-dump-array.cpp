@@ -14,7 +14,7 @@ void testArrayInitExpr()
     auto l = [a]{
     };
     // CHECK: |-ArrayInitLoopExpr 0x{{[^ ]*}} <col:15> 'int[10]'
-    // CHECK: |     `-ArrayInitIndexExpr 0x{{[^ ]*}} <<invalid sloc>> 'unsigned long'
+    // CHECK: |     `-ArrayInitIndexExpr 0x{{[^ ]*}} <<invalid sloc>> '__size_t':'unsigned long'
 }
 
 template<typename T, int Size>
@@ -22,9 +22,9 @@ class array {
   T data[Size];
 
   using array_T_size = T[Size];
-  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'T[Size]' dependent   <col:25, col:30>
+  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'T[Size]' dependent
   using const_array_T_size = const T[Size];
-  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'const T[Size]' dependent   <col:37, col:42>
+  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'const T[Size]' dependent
 };
 
 struct V {};

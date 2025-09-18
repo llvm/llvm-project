@@ -130,9 +130,9 @@ def : Pat<(TF_LeakyReluOp:$old_value, $arg, F32Attr:$a),
 ```c++
 static Value createTFLLeakyRelu(PatternRewriter &rewriter, Operation *op,
                                 Value operand, Attribute attr) {
-  return rewriter.create<mlir::TFL::LeakyReluOp>(
+  return mlir::TFL::LeakyReluOp::create(rewriter,
       op->getLoc(), operands[0].getType(), /*arg=*/operands[0],
-      /*alpha=*/attrs[0].cast<FloatAttr>());
+      /*alpha=*/cast<FloatAttr>(attrs[0]));
 }
 ```
 
@@ -194,10 +194,10 @@ LogicalResult circt::MulOp::canonicalize(MulOp op, PatternRewriter &rewriter) {
   // mul(x, c) -> shl(x, log2(c)), where c is a power of two.
   if (inputs.size() == 2 && matchPattern(inputs.back(), m_RConstant(value)) &&
       value.isPowerOf2()) {
-    auto shift = rewriter.create<rtl::ConstantOp>(op.getLoc(), op.getType(),
+    auto shift = rtl::ConstantOp::create(rewriter, op.getLoc(), op.getType(),
                                                   value.exactLogBase2());
     auto shlOp =
-        rewriter.create<comb::ShlOp>(op.getLoc(), inputs[0], shift);
+        comb::ShlOp::create(rewriter, op.getLoc(), inputs[0], shift);
     rewriter.replaceOpWithNewOp<MulOp>(op, op.getType(),
                                        ArrayRef<Value>(shlOp));
     return success();
@@ -216,25 +216,6 @@ In case ODS patterns and `matchAndRewrite`-style functions are not sufficient
 you can also specify rewrites as a general set of `RewritePattern`s:
 
 ```c++
-/// Multi-step rewrite using "match" and "rewrite". This allows for separating
-/// the concerns of matching and rewriting.
-struct ConvertTFLeakyRelu : public RewritePattern {
-  ConvertTFLeakyRelu(MLIRContext *context)
-      : RewritePattern("tf.LeakyRelu", 1, context) {}
-
-  LogicalResult match(Operation *op) const override {
-    return success();
-  }
-
-  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
-        op, op->getResult(0).getType(), op->getOperand(0),
-        /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
-  }
-};
-
-/// Single-step rewrite with "matchAndRewrite". This allows for performing the
-/// rewrite immediately upon a successful match.
 struct ConvertTFLeakyRelu : public RewritePattern {
   ConvertTFLeakyRelu(MLIRContext *context)
       : RewritePattern("tf.LeakyRelu", 1, context) {}

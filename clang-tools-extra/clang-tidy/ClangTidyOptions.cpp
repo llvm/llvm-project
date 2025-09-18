@@ -1,4 +1,4 @@
-//===--- ClangTidyOptions.cpp - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,9 +11,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -72,7 +70,8 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(std::string(KeyValue.getKey()), KeyValue.getValue().Value);
+      Options.emplace_back(std::string(KeyValue.getKey()),
+                           KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -100,6 +99,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     for (auto &Option : SortedOptions) {
       bool UseDefault = false;
       void *SaveInfo = nullptr;
+      // Requires 'llvm::yaml::IO' to accept 'StringRef'
+      // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
       IO.preflightKey(Option.first.data(), true, false, UseDefault, SaveInfo);
       IO.scalarString(Option.second, needsQuotes(Option.second));
       IO.postflightKey(SaveInfo);
@@ -117,6 +118,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
       for (StringRef Key : IO.keys()) {
+        // Requires 'llvm::yaml::IO' to accept 'StringRef'
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         IO.mapRequired(Key.data(), Val[Key].Value);
       }
       IO.endMapping();
@@ -194,8 +197,8 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
   Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
-  Options.HeaderFilterRegex = std::nullopt;
-  Options.ExcludeHeaderFilterRegex = std::nullopt;
+  Options.HeaderFilterRegex = "";
+  Options.ExcludeHeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;

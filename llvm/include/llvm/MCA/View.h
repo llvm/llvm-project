@@ -17,13 +17,14 @@
 
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MCA/HWEventListener.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace mca {
 
-class View : public HWEventListener {
+class LLVM_ABI View : public HWEventListener {
 public:
   virtual ~View() = default;
 

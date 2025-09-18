@@ -7,4 +7,4 @@ void f__o__o(void);
 void f_________oo(void);
 void __foo(void);
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: declaration uses identifier '__foo', which is a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}void foo(void);{{$}}
+// CHECK-FIXES: void foo(void);

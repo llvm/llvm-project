@@ -4,7 +4,14 @@
 define <4 x i32> @hadd_select_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: hadd_select_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3,3,3,3]
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [9,9,9,9]
+; CHECK-NEXT:    vpmaxud %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %and1 = and <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
@@ -73,7 +80,15 @@ entry:
 define <4 x i32> @hsub_select_shl_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: hsub_select_shl_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; CHECK-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vphsubd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm1
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [9,9,9,9]
+; CHECK-NEXT:    vpmaxud %xmm2, %xmm1, %xmm2
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %or1 = or <4 x i32> %x, <i32 65535, i32 65535, i32 65535, i32 65535>
   %or2 = or <4 x i32> %y, <i32 65535, i32 65535, i32 65535, i32 65535>

@@ -20,15 +20,20 @@ class Predicate; // Forward def
 // Register file description - These classes are used to fill in the target
 // description classes.
 
-class HwMode<string FS, list<Predicate> Ps> {
-  // A string representing subtarget features that turn on this HW mode.
-  // For example, "+feat1,-feat2" will indicate that the mode is active
-  // when "feat1" is enabled and "feat2" is disabled at the same time.
-  // Any other features are not checked.
-  // When multiple modes are used, they should be mutually exclusive,
-  // otherwise the results are unpredictable.
-  string Features = FS;
+// Code that will be inserted at the start of the generated
+// `*GenSubtargetInfo::getHwModeSet()` method. It is expected to define
+// variables used in Predicate::CondString. If this class is never instantiated,
+// the default
+//
+//   [[maybe_unused]] const auto *Subtarget =
+//        static_cast<const <TargetName>Subtarget *>(this);
+//
+// will be inserted, where <TargetName> is the name of the Target record.
+class HwModePredicateProlog<code c> {
+  code Code = c;
+}
 
+class HwMode<list<Predicate> Ps> {
   // A list of predicates that turn on this HW mode.
   list<Predicate> Predicates = Ps;
 }
@@ -36,7 +41,7 @@ class HwMode<string FS, list<Predicate> Ps> {
 // A special mode recognized by tablegen. This mode is considered active
 // when no other mode is active. For targets that do not use specific hw
 // modes, this is the only mode.
-def DefaultMode : HwMode<"", []>;
+def DefaultMode : HwMode<[]>;
 
 // A class used to associate objects with HW modes. It is only intended to
 // be used as a base class, where the derived class should contain a member
@@ -250,6 +255,7 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 class DAGOperand {
   string OperandNamespace = "MCOI";
   string DecoderMethod = "";
+  bit hasCompleteDecoder = true;
 }
 
 // RegisterClass - Now that all of the registers are defined, and aliases
@@ -314,7 +320,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to use in a given machine function. The code will be inserted in a
   // function like this:
   //
-  //   static inline unsigned f(const MachineFunction &MF) { ... }
+  //   static inline unsigned f(const MachineFunction &MF, bool Rev) { ... }
   //
   // The function should return 0 to select the default order defined by
   // MemberList, 1 to select the first AltOrders entry and so on.
@@ -538,11 +544,11 @@ include "llvm/Target/TargetInstrPredicate.td"
 include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
-  // Size of encoded instruction.
+  // Size of encoded instruction in bytes.
   int Size;
 
-  // The "namespace" in which this instruction exists, on targets like ARM
-  // which multiple ISA namespaces exist.
+  // The "namespace" in which this instruction exists (on targets like ARM
+  // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
   // List of predicates which will be turned into isel matching code.
@@ -733,10 +739,6 @@ class Instruction : InstructionEncoding {
   /// - The LLVM IR specification: Section `Output constraints` in the
   ///   discussion of inline assembly constraint strings.
   string Constraints = "";
-
-  /// DisableEncoding - List of operand names (e.g. "$op1,$op2") that should not
-  /// be encoded into the output machineinstr.
-  string DisableEncoding = "";
 
   string PostEncoderMethod = "";
 
@@ -1003,7 +1005,6 @@ class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
   string PrintMethod = "printOperand";
   string EncoderMethod = "";
-  bit hasCompleteDecoder = true;
   string OperandType = "OPERAND_UNKNOWN";
   dag MIOperandInfo = (ops);
 
@@ -1414,9 +1415,9 @@ def PREALLOCATED_ARG : StandardPseudoInstruction {
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
-  // no side effects.
+  // no side effects. Symbol operand is expected to be a label.
   let OutOperandList = (outs);
-  let InOperandList = (ins ptr_rc:$symbol, i32imm:$id);
+  let InOperandList = (ins unknown:$symbol, i32imm:$id);
   let hasSideEffects = false;
   let hasCtrlDep = true;
 }

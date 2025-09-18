@@ -62,9 +62,24 @@ add_macro_header(
 )
 
 add_macro_header(
+  cfloat128_macros
+  HDR
+    cfloat128-macros.h
+)
+
+add_macro_header(
+  cfloat16_macros
+  HDR
+    cfloat16-macros.h
+)
+
+add_macro_header(
   complex_macros
   HDR
     complex-macros.h
+  DEPENDS
+    .cfloat128_macros
+    .cfloat16_macros
 )
 
 add_macro_header(
@@ -328,6 +343,8 @@ add_macro_header(
   pthread_macros
   HDR
     pthread-macros.h
+  DEPENDS
+    .null_macro
 )
 
 add_macro_header(
@@ -335,3 +352,16 @@ add_macro_header(
   HDR
     poll-macros.h
 )
+
+add_macro_header(
+  EFIAPI_macros
+  HDR
+    EFIAPI-macros.h
+)
+
+add_macro_header(
+  sysexits_macros
+  HDR
+    sysexits-macros.h
+)
+

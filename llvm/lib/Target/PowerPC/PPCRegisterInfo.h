@@ -58,6 +58,11 @@ class PPCRegisterInfo : public PPCGenRegisterInfo {
   DenseMap<unsigned, unsigned> ImmToIdxMap;
   const PPCTargetMachine &TM;
 
+  void spillRegPair(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
+                    DebugLoc DL, const TargetInstrInfo &TII,
+                    unsigned FrameIndex, bool IsLittleEndian, bool IsKilled,
+                    Register Reg, int Offset) const;
+
 public:
   PPCRegisterInfo(const PPCTargetMachine &TM);
 
@@ -74,7 +79,10 @@ public:
   /// getPointerRegClass - Return the register class to use to hold pointers.
   /// This is used for addressing modes.
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
+
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
@@ -148,6 +156,11 @@ public:
   void lowerQuadwordRestore(MachineBasicBlock::iterator II,
                             unsigned FrameIndex) const;
 
+  void lowerDMRSpilling(MachineBasicBlock::iterator II,
+                        unsigned FrameIndex) const;
+  void lowerDMRRestore(MachineBasicBlock::iterator II,
+                       unsigned FrameIndex) const;
+
   static void emitAccCopyInfo(MachineBasicBlock &MBB, MCRegister DestReg,
                               MCRegister SrcReg);
 
@@ -175,6 +188,10 @@ public:
 
   bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const override {
     return Reg == PPC::LR || Reg == PPC::LR8;
+  }
+
+  bool isVirtualFrameRegister(MCRegister Reg) const override {
+    return Reg == PPC::FP || Reg == PPC::FP8;
   }
 };
 

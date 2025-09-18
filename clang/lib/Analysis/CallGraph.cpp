@@ -21,7 +21,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -224,10 +223,7 @@ void CallGraph::print(raw_ostream &OS) const {
   // We are going to print the graph in reverse post order, partially, to make
   // sure the output is deterministic.
   llvm::ReversePostOrderTraversal<const CallGraph *> RPOT(this);
-  for (llvm::ReversePostOrderTraversal<const CallGraph *>::rpo_iterator
-         I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
-    const CallGraphNode *N = *I;
-
+  for (const CallGraphNode *N : RPOT) {
     OS << "  Function: ";
     if (N == Root)
       OS << "< root >";

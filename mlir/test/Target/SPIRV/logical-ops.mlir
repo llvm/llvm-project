@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage], []> {
   spirv.func @iequal_scalar(%arg0: i32, %arg1: i32)  "None" {
     // CHECK: {{.*}} = spirv.IEqual {{.*}}, {{.*}} : i32
     %0 = spirv.IEqual %arg0, %arg1 : i32
@@ -84,13 +89,15 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %15 = spirv.IsNan %arg0 : f32
     // CHECK: spirv.IsInf
     %16 = spirv.IsInf %arg1 : f32
+    // CHECK: spirv.IsFinite
+    %17 = spirv.IsFinite %arg0 : f32
     spirv.Return
   }
 }
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
   spirv.SpecConstant @condition_scalar = true
   spirv.func @select() -> () "None" {
     %0 = spirv.Constant 4.0 : f32
@@ -105,6 +112,29 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %7 = spirv.Constant dense<[true, true, true, true]> : vector<4xi1>
     // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : vector<4xi1>, vector<4xf32>
     %8 = spirv.Select %7, %4, %5 : vector<4xi1>, vector<4xf32>
+    spirv.Return
+  }
+}
+
+// -----
+
+// Test select works with bf16 scalar and vectors.
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage, BFloat16TypeKHR], [SPV_KHR_bfloat16]> {
+  spirv.SpecConstant @condition_scalar = true
+  spirv.func @select_bf16() -> () "None" {
+    %0 = spirv.Constant 4.0 : bf16
+    %1 = spirv.Constant 5.0 : bf16
+    %2 = spirv.mlir.referenceof @condition_scalar : i1
+    // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : i1, bf16
+    %3 = spirv.Select %2, %0, %1 : i1, bf16
+    %4 = spirv.Constant dense<[2.0, 3.0, 4.0, 5.0]> : vector<4xbf16>
+    %5 = spirv.Constant dense<[6.0, 7.0, 8.0, 9.0]> : vector<4xbf16>
+    // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : i1, vector<4xbf16>
+    %6 = spirv.Select %2, %4, %5 : i1, vector<4xbf16>
+    %7 = spirv.Constant dense<[true, true, true, true]> : vector<4xi1>
+    // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : vector<4xi1>, vector<4xbf16>
+    %8 = spirv.Select %7, %4, %5 : vector<4xi1>, vector<4xbf16>
     spirv.Return
   }
 }

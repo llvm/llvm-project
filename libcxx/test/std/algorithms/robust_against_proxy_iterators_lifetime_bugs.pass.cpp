@@ -735,12 +735,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test(simple_in, [&](I b, I e) { (void) std::shuffle(b, e, rand_gen()); });
   // TODO: unique
   test(simple_in, [&](I b, I e) { (void) std::partition(b, e, is_neg); });
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
+    test(simple_in, [&](I b, I e) { (void)std::stable_partition(b, e, is_neg); });
+  }
   if (!TEST_IS_CONSTANT_EVALUATED)
-    test(simple_in, [&](I b, I e) { (void) std::stable_partition(b, e, is_neg); });
-  if (!TEST_IS_CONSTANT_EVALUATED)
-    test(sort_test_in, [&](I b, I e) { (void) std::sort(b, e); });
-  if (!TEST_IS_CONSTANT_EVALUATED)
-    test(sort_test_in, [&](I b, I e) { (void) std::stable_sort(b, e); });
+    test(sort_test_in, [&](I b, I e) { (void)std::sort(b, e); });
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
+    test(sort_test_in, [&](I b, I e) { (void)std::stable_sort(b, e); });
+  }
   // TODO: partial_sort
   // TODO: nth_element
   // TODO: inplace_merge

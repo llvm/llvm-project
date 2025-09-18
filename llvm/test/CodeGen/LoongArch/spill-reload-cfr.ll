@@ -18,7 +18,7 @@ define i1 @load_store_fcc_reg(float %a, i1 %c) {
 ; LA32-NEXT:    .cfi_offset 56, -16
 ; LA32-NEXT:    move $fp, $a0
 ; LA32-NEXT:    fmov.s $fs0, $fa0
-; LA32-NEXT:    bl %plt(foo)
+; LA32-NEXT:    bl foo
 ; LA32-NEXT:    movgr2fr.w $fa0, $zero
 ; LA32-NEXT:    fcmp.cult.s $fcc0, $fa0, $fs0
 ; LA32-NEXT:    bcnez $fcc0, .LBB0_2
@@ -47,7 +47,8 @@ define i1 @load_store_fcc_reg(float %a, i1 %c) {
 ; LA64-NEXT:    .cfi_offset 56, -24
 ; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    fmov.s $fs0, $fa0
-; LA64-NEXT:    bl %plt(foo)
+; LA64-NEXT:    pcaddu18i $ra, %call36(foo)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    movgr2fr.w $fa0, $zero
 ; LA64-NEXT:    fcmp.cult.s $fcc0, $fa0, $fs0
 ; LA64-NEXT:    bcnez $fcc0, .LBB0_2

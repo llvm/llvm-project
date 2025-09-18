@@ -1,4 +1,4 @@
-//===--- ProBoundsPointerArithmeticCheck.h - clang-tidy----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,10 +21,16 @@ namespace clang::tidy::cppcoreguidelines {
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic.html
 class ProBoundsPointerArithmeticCheck : public ClangTidyCheck {
 public:
-  ProBoundsPointerArithmeticCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  ProBoundsPointerArithmeticCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const bool AllowIncrementDecrementOperators;
 };
 
 } // namespace clang::tidy::cppcoreguidelines

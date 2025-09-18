@@ -21,12 +21,13 @@ using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
 static orc::shared::CWrapperFunctionResult
-llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
+llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
+                                           size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
                           SPSExecutorAddrRange, SPSExecutorAddrRange);
 
   return WrapperFunction<SPSSig>::handle(
-             Data, Size,
+             ArgData, ArgSize,
              [](std::vector<ExecutorAddrRange> CodeRanges, ExecutorAddr DSOBase,
                 ExecutorAddrRange DWARFRange,
                 ExecutorAddrRange CompactUnwindRange) {
@@ -37,11 +38,12 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
 }
 
 static orc::shared::CWrapperFunctionResult
-llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *Data, uint64_t Size) {
+llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *ArgData,
+                                             size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>);
 
   return WrapperFunction<SPSSig>::handle(
-             Data, Size,
+             ArgData, ArgSize,
              [](std::vector<ExecutorAddrRange> CodeRanges) {
                return UnwindInfoManager::deregisterSections(CodeRanges);
              })
@@ -59,10 +61,12 @@ static int (*RemoveFindDynamicUnwindSections)(void *) = nullptr;
 
 UnwindInfoManager::~UnwindInfoManager() {
   if (int Err = RemoveFindDynamicUnwindSections((void *)&findSections)) {
+    (void)Err; // Silence unused variable warning in release builds.
     LLVM_DEBUG({
       dbgs() << "Failed call to " << RemoveFnName << ": error = " << Err
              << "\n";
     });
+    (void)Err;
   }
 }
 
@@ -85,6 +89,7 @@ bool UnwindInfoManager::TryEnable() {
   Instance.reset(new UnwindInfoManager());
 
   if (auto Err = AddFn((void *)&findSections)) {
+    (void)Err; // Silence unused variable warning in release builds.
     LLVM_DEBUG({
       dbgs() << "Failed call to " << AddFnName << ": error = " << Err << "\n";
     });

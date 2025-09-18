@@ -44,7 +44,7 @@ this shouldn't be necessary.
 
   $> clang openmp.c -fopenmp --offload-arch=gfx90a -Xoffload-linker -lc
   $> clang cuda.cu --offload-arch=sm_80 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
-  $> clang hip.hip --offload-arch=gfx940 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
+  $> clang hip.hip --offload-arch=gfx942 --offload-new-driver -fgpu-rdc -Xoffload-linker -lc
 
 This will automatically link in the needed function definitions if they were
 required by the user's application. Normally using the ``-fgpu-rdc`` option

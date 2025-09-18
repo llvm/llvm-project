@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64PERFECTSHUFFLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace llvm {
 
@@ -6721,6 +6722,47 @@ inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
   }
 
   return true;
+}
+
+/// isDUPQMask - matches a splat of equivalent lanes within segments of a given
+///              number of elements.
+inline std::optional<unsigned> isDUPQMask(ArrayRef<int> Mask, unsigned Segments,
+                                          unsigned SegmentSize) {
+  unsigned Lane = unsigned(Mask[0]);
+
+  // Make sure there's no size changes.
+  if (SegmentSize * Segments != Mask.size())
+    return std::nullopt;
+
+  // Check the first index corresponds to one of the lanes in the first segment.
+  if (Lane >= SegmentSize)
+    return std::nullopt;
+
+  // Check that all lanes match the first, adjusted for segment.
+  // Undef/poison lanes (<0) are also accepted.
+  if (all_of(enumerate(Mask), [&](auto P) {
+        const unsigned SegmentIndex = P.index() / SegmentSize;
+        return P.value() < 0 ||
+               unsigned(P.value()) == Lane + SegmentIndex * SegmentSize;
+      }))
+    return Lane;
+
+  return std::nullopt;
+}
+
+/// isDUPFirstSegmentMask - matches a splat of the first 128b segment.
+inline bool isDUPFirstSegmentMask(ArrayRef<int> Mask, unsigned Segments,
+                                  unsigned SegmentSize) {
+  // Make sure there's no size changes.
+  if (SegmentSize * Segments != Mask.size())
+    return false;
+
+  // Check that all lanes refer to the equivalent lane in the first segment.
+  // Undef/poison lanes (<0) are also accepted.
+  return all_of(enumerate(Mask), [&](auto P) {
+    const unsigned IndexWithinSegment = P.index() % SegmentSize;
+    return P.value() < 0 || unsigned(P.value()) == IndexWithinSegment;
+  });
 }
 
 } // namespace llvm

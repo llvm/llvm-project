@@ -117,8 +117,7 @@ contains
 ! CHECK-LABEL: func.func @_QMstorage_size_testPpolymorphic_value(
 ! CHECK-SAME: %[[T:.*]]: !fir.ref<!fir.type<_QMstorage_size_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>}>> {fir.bindc_name = "t"}) -> i32 {
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "size", uniq_name = "_QMstorage_size_testFpolymorphic_valueEsize"}
-! CHECK: %[[FIELD_P:.*]] = fir.field_index p, !fir.type<_QMstorage_size_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>}>
-! CHECK: %[[COORD_P:.*]] = fir.coordinate_of %[[T]], %[[FIELD_P]] : (!fir.ref<!fir.type<_QMstorage_size_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>}>>, !fir.field) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>>
+! CHECK: %[[COORD_P:.*]] = fir.coordinate_of %[[T]], p : (!fir.ref<!fir.type<_QMstorage_size_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>}>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>>
 ! CHECK: %[[LOAD_COORD_P:.*]] = fir.load %[[COORD_P]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[LOAD_COORD_P]], %[[C0]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMstorage_size_testTp1{a:i32}>>>>, index) -> (index, index, index)

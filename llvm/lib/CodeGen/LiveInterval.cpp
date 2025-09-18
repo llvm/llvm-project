@@ -869,14 +869,14 @@ void LiveInterval::clearSubRanges() {
 /// For each VNI in \p SR, check whether or not that value defines part
 /// of the mask describe by \p LaneMask and if not, remove that value
 /// from \p SR.
-static void stripValuesNotDefiningMask(unsigned Reg, LiveInterval::SubRange &SR,
+static void stripValuesNotDefiningMask(Register Reg, LiveInterval::SubRange &SR,
                                        LaneBitmask LaneMask,
                                        const SlotIndexes &Indexes,
                                        const TargetRegisterInfo &TRI,
                                        unsigned ComposeSubRegIdx) {
   // Phys reg should not be tracked at subreg level.
   // Same for noreg (Reg == 0).
-  if (!Register::isVirtualRegister(Reg) || !Reg)
+  if (!Reg || !Reg.isVirtual())
     return;
   // Remove the values that don't define those lanes.
   SmallVector<VNInfo *, 8> ToBeRemoved;
@@ -1162,8 +1162,8 @@ void LiveRangeUpdater::print(raw_ostream &OS) const {
   for (const auto &S : make_range(LR->begin(), WriteI))
     OS << ' ' << S;
   OS << "\n  Spills:";
-  for (unsigned I = 0, E = Spills.size(); I != E; ++I)
-    OS << ' ' << Spills[I];
+  for (const LiveRange::Segment &Spill : Spills)
+    OS << ' ' << Spill;
   OS << "\n  Area 2:";
   for (const auto &S : make_range(ReadI, LR->end()))
     OS << ' ' << S;

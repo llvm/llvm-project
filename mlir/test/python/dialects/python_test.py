@@ -1,7 +1,9 @@
 # RUN: %PYTHON %s pybind11 | FileCheck %s
 # RUN: %PYTHON %s nanobind | FileCheck %s
-
+import inspect
 import sys
+from typing import Union
+
 from mlir.ir import *
 import mlir.dialects.func as func
 import mlir.dialects.python_test as test
@@ -283,6 +285,10 @@ def resultTypesDefinedByTraits():
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
+
+            # CHECK: i32 i64
+            print(inferred.single.type, inferred.doubled.type)
+
             same = test.SameOperandAndResultTypeOp([inferred.results[0]])
             # CHECK-COUNT-2: i32
             print(same.one.type)
@@ -308,6 +314,16 @@ def resultTypesDefinedByTraits():
             print(implied.flt.type)
             # CHECK: index
             print(implied.index.type)
+
+            # provide the result types to avoid inferring them
+            f64 = F64Type.get()
+            no_imply = test.InferResultsImpliedOp(results=[f64, f64, f64])
+            # CHECK-COUNT-3: f64
+            print(no_imply.integer.type, no_imply.flt.type, no_imply.index.type)
+
+            no_infer = test.InferResultsOp(results=[F32Type.get(), IndexType.get()])
+            # CHECK: f32 index
+            print(no_infer.single.type, no_infer.doubled.type)
 
 
 # CHECK-LABEL: TEST: testOptionalOperandOp
@@ -361,7 +377,9 @@ def testCustomAttribute():
         try:
             TestAttr(42)
         except TypeError as e:
-            assert "Expected an MLIR object" in str(e)
+            assert "Expected an MLIR object (got 42)" in str(e)
+        except ValueError as e:
+            assert "Cannot cast attribute to TestAttr (from 42)" in str(e)
         else:
             raise
 
@@ -406,7 +424,9 @@ def testCustomType():
         try:
             TestType(42)
         except TypeError as e:
-            assert "Expected an MLIR object" in str(e)
+            assert "Expected an MLIR object (got 42)" in str(e)
+        except ValueError as e:
+            assert "Cannot cast type to TestType (from 42)" in str(e)
         else:
             raise
 
@@ -577,6 +597,17 @@ def testInferTypeOpInterface():
             # CHECK: f32
             print(two_operands.result.type)
 
+            assert (
+                inspect.signature(
+                    test.infer_results_variadic_inputs_op
+                ).return_annotation
+                is OpResult
+            )
+            assert isinstance(
+                test.infer_results_variadic_inputs_op(single=zero, doubled=zero),
+                OpResult,
+            )
+
 
 # CHECK-LABEL: TEST: testVariadicOperandAccess
 @run
@@ -604,6 +635,15 @@ def testVariadicOperandAccess():
             # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
             print(values(variadic_operands.variadic2))
 
+            assert (
+                inspect.signature(test.same_variadic_operand).return_annotation
+                is test.SameVariadicOperandSizeOp
+            )
+            assert isinstance(
+                test.same_variadic_operand([zero, one], two, [three, four]),
+                test.SameVariadicOperandSizeOp,
+            )
+
 
 # CHECK-LABEL: TEST: testVariadicResultAccess
 @run
@@ -624,6 +664,15 @@ def testVariadicResultAccess():
             print(types(op.variadic1))
             # CHECK: [IntegerType(i3), IntegerType(i4)]
             print(types(op.variadic2))
+
+            assert (
+                inspect.signature(test.same_variadic_result_vfv).return_annotation
+                is Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
+            )
+            assert isinstance(
+                test.same_variadic_result_vfv([i[0], i[1]], i[2], [i[3], i[4]]),
+                OpResultList,
+            )
 
             #  Test Variadic-Variadic-Variadic
             op = test.SameVariadicResultSizeOpVVV(
@@ -696,3 +745,12 @@ def testVariadicResultAccess():
             print(types(op.variadic2))
             # CHECK: i4
             print(op.non_variadic3.type)
+
+            assert (
+                inspect.signature(test.results_variadic).return_annotation
+                is Union[OpResult, OpResultList, test.ResultsVariadicOp]
+            )
+            assert isinstance(
+                test.results_variadic([i[0]]),
+                OpResult,
+            )
