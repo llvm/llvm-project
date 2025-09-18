@@ -19,77 +19,27 @@
 
 using namespace clang;
 using namespace clang::CodeGen;
-using llvm::hlsl::CBufferRowSizeInBytes;
 
-static unsigned getSizeForCBufferElement(const llvm::DataLayout &DL,
-                                         llvm::Type *Ty) {
-  // TODO: This is a hack, and it doesn't work for structs containing vectors.
-  // We need to get the DataLayout rules correct instead and simply use
-  // `getTypeSizeInBits(Ty) / 8` here.
-  switch (Ty->getTypeID()) {
-  case llvm::Type::ArrayTyID: {
-    llvm::ArrayType *ATy = cast<llvm::ArrayType>(Ty);
-    return ATy->getNumElements() *
-           getSizeForCBufferElement(DL, ATy->getElementType());
-  }
-  case llvm::Type::FixedVectorTyID: {
-    llvm::FixedVectorType *VTy = cast<llvm::FixedVectorType>(Ty);
-    return VTy->getNumElements() *
-           getSizeForCBufferElement(DL, VTy->getElementType());
-  }
-  default:
-    return DL.getTypeSizeInBits(Ty) / 8;
-  }
-}
+static const CharUnits CBufferRowSize =
+    CharUnits::fromQuantity(llvm::hlsl::CBufferRowSizeInBytes);
 
-static llvm::Type *createCBufArrayType(llvm::LLVMContext &Context,
-                                       const llvm::DataLayout &DL,
-                                       llvm::Type *EltTy, unsigned ArrayCount) {
-  unsigned EltSize = getSizeForCBufferElement(DL, EltTy);
-  unsigned Padding = llvm::alignTo(EltSize, 16) - EltSize;
-  // If we don't have any padding between elements then we just need the array
-  // itself.
-  if (ArrayCount < 2 || !Padding)
-    return llvm::ArrayType::get(EltTy, ArrayCount);
-
-  auto *PaddingTy =
-      llvm::ArrayType::get(llvm::Type::getInt8Ty(Context), Padding);
-  auto *PaddedEltTy =
-      llvm::StructType::get(Context, {EltTy, PaddingTy}, /*isPacked=*/true);
-  return llvm::StructType::get(
-      Context, {llvm::ArrayType::get(PaddedEltTy, ArrayCount - 1), EltTy},
-      /*IsPacked=*/true);
+static llvm::Type *getPadding(CodeGenModule &CGM, CharUnits NumBytes) {
+  llvm::LLVMContext &Context = CGM.getLLVMContext();
+  // TODO: Target padding type
+  return llvm::ArrayType::get(llvm::Type::getInt8Ty(Context),
+                              NumBytes.getQuantity());
 }
 
 namespace clang {
 namespace CodeGen {
 
-// Creates a layout type for given struct or class with HLSL constant buffer
-// layout taking into account PackOffsets, if provided.
-// Previously created layout types are cached by CGHLSLRuntime.
-//
-// The function iterates over all fields of the record type (including base
-// classes) and calls layoutField to converts each field to its corresponding
-// LLVM type and to calculate its HLSL constant buffer layout. Any embedded
-// structs (or arrays of structs) are converted to layout types as well.
-//
-// When PackOffsets are specified the elements will be placed based on the
-// user-specified offsets. Not all elements must have a packoffset/register(c#)
-// annotation though. For those that don't, the PackOffsets array will contain
-// -1 value instead. These elements must be placed at the end of the layout
-// after all of the elements with specific offset.
-llvm::StructType *HLSLBufferLayoutBuilder::createLayoutType(
+llvm::StructType *HLSLBufferLayoutBuilder::layOutStruct(
     const RecordType *RT, const llvm::SmallVector<int32_t> *PackOffsets) {
 
   // check if we already have the layout type for this struct
+  // TODO: Do we need to check for matching PackOffsets?
   if (llvm::StructType *Ty = CGM.getHLSLRuntime().getHLSLBufferLayoutType(RT))
     return Ty;
-
-  SmallVector<std::pair<unsigned, llvm::Type *>> Layout;
-  unsigned Index = 0; // packoffset index
-  unsigned EndOffset = 0;
-
-  SmallVector<std::pair<const FieldDecl *, unsigned>> DelayLayoutFields;
 
   // iterate over all fields of the record, including fields on base classes
   llvm::SmallVector<CXXRecordDecl *> RecordDecls;
@@ -101,56 +51,56 @@ llvm::StructType *HLSLBufferLayoutBuilder::createLayoutType(
     RecordDecls.push_back(D->bases_begin()->getType()->castAsCXXRecordDecl());
   }
 
-  unsigned FieldOffset;
-  llvm::Type *FieldType;
+  SmallVector<llvm::Type *> Layout;
+  SmallVector<const FieldDecl *> DelayLayoutFields;
+  CharUnits CurrentOffset = CharUnits::Zero();
+  auto LayOutField = [&](QualType FieldType) {
+    llvm::Type *LayoutType = layOutType(FieldType);
 
+    const llvm::DataLayout &DL = CGM.getDataLayout();
+    CharUnits Size =
+        CharUnits::fromQuantity(DL.getTypeSizeInBits(LayoutType) / 8);
+    CharUnits Align = CharUnits::fromQuantity(DL.getABITypeAlign(LayoutType));
+
+    if (LayoutType->isAggregateType() ||
+        (CurrentOffset % CBufferRowSize) + Size > CBufferRowSize)
+      Align = Align.alignTo(CBufferRowSize);
+
+    CharUnits NextOffset = CurrentOffset.alignTo(Align);
+    if (NextOffset > CurrentOffset) {
+      Layout.emplace_back(getPadding(CGM, NextOffset - CurrentOffset));
+      CurrentOffset = NextOffset;
+    }
+    Layout.emplace_back(LayoutType);
+    CurrentOffset += Size;
+  };
+
+  unsigned PackOffsetIndex = 0;
   while (!RecordDecls.empty()) {
     const CXXRecordDecl *RD = RecordDecls.pop_back_val();
 
     for (const auto *FD : RD->fields()) {
-      assert((!PackOffsets || Index < PackOffsets->size()) &&
+      assert((!PackOffsets || PackOffsetIndex < PackOffsets->size()) &&
              "number of elements in layout struct does not match number of "
              "packoffset annotations");
 
       // No PackOffset info at all, or have a valid packoffset/register(c#)
       // annotations value -> layout the field.
-      const int PO = PackOffsets ? (*PackOffsets)[Index++] : -1;
-      if (!PackOffsets || PO != -1) {
-        layoutField(FD, EndOffset, FieldOffset, FieldType, PO);
-        Layout.emplace_back(FieldOffset, FieldType);
+      const int PO = PackOffsets ? (*PackOffsets)[PackOffsetIndex++] : -1;
+      if (PO != -1) {
+        LayOutField(FD->getType());
         continue;
       }
       // Have PackOffset info, but there is no packoffset/register(cX)
       // annotation on this field. Delay the layout until after all of the
       // other elements with packoffsets/register(cX) are processed.
-      DelayLayoutFields.emplace_back(FD, Layout.size());
-      // reserve space for this field in the layout vector and elements list
-      Layout.emplace_back(UINT_MAX, nullptr);
+      DelayLayoutFields.emplace_back(FD);
     }
   }
 
   // process delayed layouts
-  for (auto I : DelayLayoutFields) {
-    const FieldDecl *FD = I.first;
-    assert(Layout[I.second] == std::pair(UINT_MAX, nullptr));
-
-    layoutField(FD, EndOffset, FieldOffset, FieldType);
-    Layout[I.second] = {FieldOffset, FieldType};
-  }
-
-  // TODO: Just do this as we go above...
-  // Work out padding so we can create a packed struct for the entire layout.
-  SmallVector<llvm::Type *> PaddedElements;
-  unsigned CurOffset = 0;
-  const llvm::DataLayout &DL = CGM.getDataLayout();
-  llvm::Type *PaddingType = llvm::Type::getInt8Ty(CGM.getLLVMContext());
-  for (const auto &[Offset, Element] : Layout) {
-    assert(Offset >= CurOffset && "Layout out of order?");
-    if (unsigned Padding = Offset - CurOffset)
-      PaddedElements.push_back(llvm::ArrayType::get(PaddingType, Padding));
-    PaddedElements.push_back(Element);
-    CurOffset = Offset + getSizeForCBufferElement(DL, Element);
-  }
+  for (const FieldDecl *FD : DelayLayoutFields)
+    LayOutField(FD->getType());
 
   // Create the layout struct type; anonymous structs have empty name but
   // non-empty qualified name
@@ -158,96 +108,41 @@ llvm::StructType *HLSLBufferLayoutBuilder::createLayoutType(
   std::string Name =
       Decl->getName().empty() ? "anon" : Decl->getQualifiedNameAsString();
 
-  llvm::StructType *NewTy = llvm::StructType::create(PaddedElements, Name,
+  llvm::StructType *NewTy = llvm::StructType::create(Layout, Name,
                                                      /*isPacked=*/true);
   CGM.getHLSLRuntime().addHLSLBufferLayoutType(RT, NewTy);
   return NewTy;
 }
 
-// The function converts a single field of HLSL Buffer to its corresponding
-// LLVM type and calculates it's layout. Any embedded structs (or
-// arrays of structs) are converted to target layout types as well.
-// The converted type is set to the FieldType parameter, the element
-// offset is set to the FieldOffset parameter. The EndOffset (=size of the
-// buffer) is also updated accordingly to the offset just after the placed
-// element, unless the incoming EndOffset already larger (may happen in case
-// of unsorted packoffset annotations).
-// Returns true if the conversion was successful.
-// The packoffset parameter contains the field's layout offset provided by the
-// user or -1 if there was no packoffset (or register(cX)) annotation.
-void HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
-                                          unsigned &EndOffset,
-                                          unsigned &FieldOffset,
-                                          llvm::Type *&FieldLayoutTy,
-                                          int Packoffset) {
-  unsigned NextRowOffset = llvm::alignTo(EndOffset, CBufferRowSizeInBytes);
-  unsigned FieldSize;
+llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
+  llvm::Type *EltTy = layOutType(AT->getElementType());
+  uint64_t Count = AT->getZExtSize();
 
-  QualType FieldTy = FD->getType();
+  CharUnits EltSize =
+      CharUnits::fromQuantity(CGM.getDataLayout().getTypeSizeInBits(EltTy) / 8);
+  CharUnits Padding = EltSize.alignTo(CBufferRowSize) - EltSize;
 
-  if (FieldTy->isConstantArrayType()) {
-    // Unwrap array to find the element type and get combined array size.
-    QualType Ty = FieldTy;
-    unsigned ArrayCount = 1;
-    while (Ty->isConstantArrayType()) {
-      auto *ArrayTy = CGM.getContext().getAsConstantArrayType(Ty);
-      ArrayCount *= ArrayTy->getSExtSize();
-      Ty = ArrayTy->getElementType();
-    }
+  // If we don't have any padding between elements then we just need the array
+  // itself.
+  if (Count < 2 || Padding.isZero())
+    return llvm::ArrayType::get(EltTy, Count);
 
-    llvm::Type *NewTy;
-    if (Ty->isStructureOrClassType()) {
-      NewTy = createLayoutType(Ty->getAsCanonical<RecordType>());
-    } else
-      NewTy = CGM.getTypes().ConvertTypeForMem(Ty);
+  llvm::LLVMContext &Context = CGM.getLLVMContext();
+  auto *PaddedEltTy = llvm::StructType::get(
+      Context, {EltTy, getPadding(CGM, Padding)}, /*isPacked=*/true);
+  return llvm::StructType::get(
+      Context, {llvm::ArrayType::get(PaddedEltTy, Count - 1), EltTy},
+      /*IsPacked=*/true);
+}
 
-    FieldLayoutTy = createCBufArrayType(CGM.getLLVMContext(),
-                                        CGM.getDataLayout(), NewTy, ArrayCount);
-    FieldOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
-    FieldSize = CGM.getDataLayout().getTypeSizeInBits(FieldLayoutTy) / 8;
+llvm::Type *HLSLBufferLayoutBuilder::layOutType(QualType Ty) {
+  if (const auto *AT = CGM.getContext().getAsConstantArrayType(Ty))
+    return layOutArray(AT);
 
-  } else if (FieldTy->isStructureOrClassType()) {
-    // Create a layout type for the structure
-    FieldLayoutTy = createLayoutType(
-        cast<RecordType>(FieldTy->getAsCanonical<RecordType>()));
-    FieldOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
-    FieldSize = CGM.getDataLayout().getTypeSizeInBits(FieldLayoutTy) / 8;
+  if (Ty->isStructureOrClassType())
+    return layOutStruct(Ty->getAsCanonical<RecordType>());
 
-  } else {
-    // scalar or vector - find element size and alignment
-    unsigned Align = 0;
-    FieldLayoutTy = CGM.getTypes().ConvertTypeForMem(FieldTy);
-    if (FieldLayoutTy->isVectorTy()) {
-      // align vectors by sub element size
-      const auto *FVT = cast<llvm::FixedVectorType>(FieldLayoutTy);
-      unsigned SubElemSize = FVT->getElementType()->getScalarSizeInBits() / 8;
-      FieldSize = FVT->getNumElements() * SubElemSize;
-      Align = SubElemSize;
-    } else {
-      assert(FieldLayoutTy->isIntegerTy() ||
-             FieldLayoutTy->isFloatingPointTy());
-      FieldSize = FieldLayoutTy->getScalarSizeInBits() / 8;
-      Align = FieldSize;
-    }
-
-    // calculate or get element offset for the vector or scalar
-    if (Packoffset != -1) {
-      FieldOffset = Packoffset;
-    } else {
-      FieldOffset = llvm::alignTo(EndOffset, Align);
-      // if the element does not fit, move it to the next row
-      if (FieldOffset + FieldSize > NextRowOffset)
-        FieldOffset = NextRowOffset;
-    }
-  }
-
-  // Update end offset of the layout; do not update it if the EndOffset
-  // is already bigger than the new value (which may happen with unordered
-  // packoffset annotations)
-  unsigned NewEndOffset = FieldOffset + FieldSize;
-  EndOffset = std::max<unsigned>(EndOffset, NewEndOffset);
-
-  return;
+  return CGM.getTypes().ConvertTypeForMem(Ty);
 }
 
 } // namespace CodeGen

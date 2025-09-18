@@ -500,7 +500,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return nullptr;
 
     llvm::StructType *BufferLayoutTy =
-        HLSLBufferLayoutBuilder(CGM).createLayoutType(
+        HLSLBufferLayoutBuilder(CGM).layOutStruct(
             ContainedTy->getAsCanonical<RecordType>(), Packoffsets);
     uint32_t StorageClass = /* Uniform storage class */ 2;
     return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {BufferLayoutTy},
