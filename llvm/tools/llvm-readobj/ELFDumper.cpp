@@ -22,8 +22,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -5442,7 +5442,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "number of direct callsites");
     // Read direct call sites and populate FuncCGInfo.
-    for (uint64_t I = 0; I < NumDirectCallees; ++I) {      
+    for (uint64_t I = 0; I < NumDirectCallees; ++I) {
       typename ELFT::uint Callee =
           Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
       if (CGSectionErr)
@@ -5528,8 +5528,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
     auto FuncDirCallSites = El.second.DirectCallees;
     if (!FuncDirCallSites.empty()) {
       OS << "\n" << format("%lx", CallerPc);
-      for (typename ELFT::uint Callee :
-           FuncDirCallSites) {
+      for (typename ELFT::uint Callee : FuncDirCallSites) {
         OS << " " << format("%lx", Callee);
       }
     }
