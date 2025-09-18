@@ -1525,10 +1525,9 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[OUTER_HEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
-; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INNER_IV_NEXT:%.*]], [[INNER]] ]
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INNER_IV_NEXT:%.*]], [[INNER]] ]
 ; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds double, ptr [[C]], i32 [[INNER_IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8
 ; CHECK-NEXT:    store double [[L]], ptr [[GEP_C]], align 8
