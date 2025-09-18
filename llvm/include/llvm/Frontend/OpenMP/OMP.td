@@ -353,6 +353,7 @@ def OMPC_Novariants : Clause<[Spelling<"novariants">]> {
 }
 def OMPC_NoWait : Clause<[Spelling<"nowait">]> {
   let clangClass = "OMPNowaitClause";
+  let isValueOptional = true;
 }
 def OMP_NUMTASKS_Strict : EnumVal<"strict", 1, 1> {}
 def OMP_NUMTASKS_Unknown : EnumVal<"unknown", 2, 0> { let isDefault = 1; }
@@ -711,6 +712,7 @@ def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_CancellationConstructType>,
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NoWait, 60>,
   ];
   let association = AS_None;
   let category = CA_Executable;

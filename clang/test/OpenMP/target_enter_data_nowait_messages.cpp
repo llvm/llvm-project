@@ -13,15 +13,23 @@ int main(int argc, char **argv) {
   {}
   #pragma omp target enter nowait data map(to: i) // expected-error {{expected an OpenMP directive}}
   {}
-  #pragma omp target enter data nowait() map(to: i) // expected-warning {{extra tokens at the end of '#pragma omp target enter data' are ignored}} expected-error {{expected at least one 'map' clause for '#pragma omp target enter data'}}
+  #pragma omp target enter data nowait() map(to: i) // expected-error {{expected expression}}
   {}
-  #pragma omp target enter data map(to: i) nowait( // expected-warning {{extra tokens at the end of '#pragma omp target enter data' are ignored}}
+  #pragma omp target enter data map(to: i) nowait( // expected-error {{expected expression}} //  expected-error {{expected ')'}} // expected-note {{to match this '('}}
   {}
   #pragma omp target enter data map(to: i) nowait (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target enter data' are ignored}}
   {}
   #pragma omp target enter data map(to: i) nowait device (-10u)
   {}
-  #pragma omp target enter data map(to: i) nowait (3.14) device (-10u) // expected-warning {{extra tokens at the end of '#pragma omp target enter data' are ignored}}
+  #pragma omp target enter data map(to: i) nowait (3.14) device (-10u)
+  {}
+  #pragma omp target enter data map(to: i) nowait (argc>> i)
+  {}
+  #pragma omp target enter data map(to: i) nowait (argv[1] = 2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  {}
+  #pragma omp target enter data map(to: i) nowait (argc > 0 ? argv[1] : argv[2])
+  {}
+  #pragma omp target enter data map(to: i) nowait (S1) // expected-error {{use of undeclared identifier 'S1'}}
   {}
   #pragma omp target enter data map(to: i) nowait nowait // expected-error {{directive '#pragma omp target enter data' cannot contain more than one 'nowait' clause}}
   {}
