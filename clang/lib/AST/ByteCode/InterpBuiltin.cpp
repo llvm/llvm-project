@@ -3580,8 +3580,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &F, const APSInt &T, const APSInt &C) {
           return ((APInt)C).isNegative() ? T : F;
         });
-  case X86::BI__builtin_ia32_ptestz128:
-  case X86::BI__builtin_ia32_ptestz256:
+  // case X86::BI__builtin_ia32_ptestz128:
+  // case X86::BI__builtin_ia32_ptestz256:
 
   // case X86::BI__builtin_ia32_ptestc128:
   // case X86::BI__builtin_ia32_ptestc256:

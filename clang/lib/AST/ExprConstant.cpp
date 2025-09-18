@@ -12025,8 +12025,58 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case X86::BI__builtin_ia32_ptestz128:
-  case X86::BI__builtin_ia32_ptestz256:
+  case X86::BI__builtin_ia32_ptestz128: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    bool Flag = true;
+    for (unsigned I = 0; I < SourceLen; ++I) {
+      const APInt &A = SourceLHS.getVectorElt(I).getInt();
+      const APInt &B = SourceRHS.getVectorElt(I).getInt();
+      if ((A & B) != 0) {
+        Flag = false;
+        break;
+      }
+    }
+
+    QualType ResultType = E->getType();
+    unsigned BitWidth = Info.Ctx.getIntWidth(ResultType);
+    bool ResultSigned = ResultType->isUnsignedIntegerOrEnumerationType();
+    APSInt Result(APInt(BitWidth, Flag), ResultSigned);
+    return Success(APValue(Result), E);
+
+    // auto *DestTy = E->getType()->castAs<VectorType>();
+    // QualType DestEltTy = DestTy->getElementType();
+    // bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    // const unsigned SourceLen = SourceLHS.getVectorLength();
+    // SmallVector<APValue, 4> ResultElements;
+    // ResultElements.reserve(SourceLen);
+    
+    // unsigned BitWidth = SourceLHS.getVectorElt(0).getInt().getBitWidth();
+
+    // auto PopulateResultElements = [&](bool Flag) {
+    //   for (unsigned I = 0; I < SourceLen - 1; ++I) {
+    //     ResultElements.emplace_back(APSInt(APInt::getZero(BitWidth), DestUnsigned));
+    //   }
+    //   ResultElements.emplace_back(APSInt(APInt(BitWidth, Flag), DestUnsigned));
+    // };
+
+    // for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+    //   const APInt &A = SourceLHS.getVectorElt(EltNum).getInt();
+    //   const APInt &B = SourceRHS.getVectorElt(EltNum).getInt();
+    //   if ((A & B) != 0) {
+    //     PopulateResultElements(false);
+    //     return Success(APValue(ResultElements.data(), SourceLen), E);
+    //   }
+    // }
+    // PopulateResultElements(true);
+    // return Success(APValue(ResultElements.data(), SourceLen), E);
+  }
+
+  // case clang::X86::BI__builtin_ia32_ptestz256:
 
   // case X86::BI__builtin_ia32_ptestc128:
   // case X86::BI__builtin_ia32_ptestc256:
