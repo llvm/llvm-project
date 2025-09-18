@@ -740,25 +740,36 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         "Global is external, but doesn't have external or weak linkage!", &GV);
 
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
-    if (const MDNode *Associated =
-            GO->getMetadata(LLVMContext::MD_associated)) {
-      Check(Associated->getNumOperands() == 1,
-            "associated metadata must have one operand", &GV, Associated);
-      const Metadata *Op = Associated->getOperand(0).get();
-      Check(Op, "associated metadata must have a global value", GO, Associated);
+    if (GO->hasMetadata(LLVMContext::MD_associated)) {
+      SmallVector<MDNode *, 1> MDs;
+      GO->getMetadata(LLVMContext::MD_associated, MDs);
 
-      const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
-      Check(VM, "associated metadata must be ValueAsMetadata", GO, Associated);
-      if (VM) {
-        Check(isa<PointerType>(VM->getValue()->getType()),
-              "associated value must be pointer typed", GV, Associated);
+      if (TT.isOSBinFormatELF())
+        Check(MDs.size() == 1, "only a single associated metadata is supported",
+              &GV);
 
-        const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
-        Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
-              "associated metadata must point to a GlobalObject", GO, Stripped);
-        Check(Stripped != GO,
-              "global values should not associate to themselves", GO,
+      for (const MDNode *Associated : MDs) {
+        Check(Associated->getNumOperands() == 1,
+              "associated metadata must have one operand", &GV, Associated);
+        const Metadata *Op = Associated->getOperand(0).get();
+        Check(Op, "associated metadata must have a global value", GO,
               Associated);
+
+        const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+        Check(VM, "associated metadata must be ValueAsMetadata", GO,
+              Associated);
+        if (VM) {
+          Check(isa<PointerType>(VM->getValue()->getType()),
+                "associated value must be pointer typed", GV, Associated);
+
+          const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
+          Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
+                "associated metadata must point to a GlobalObject", GO,
+                Stripped);
+          Check(Stripped != GO,
+                "global values should not associate to themselves", GO,
+                Associated);
+        }
       }
     }
 
