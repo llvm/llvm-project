@@ -361,16 +361,10 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   if (log) {
     UnwindLogMsg("pc = 0x%" PRIx64, pc);
     addr_t reg_val;
-    if (ReadGPRValue(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FP, reg_val)) {
-      if (abi_sp)
-        reg_val = abi_sp->FixDataAddress(reg_val);
+    if (ReadGPRValue(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FP, reg_val))
       UnwindLogMsg("fp = 0x%" PRIx64, reg_val);
-    }
-    if (ReadGPRValue(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP, reg_val)) {
-      if (abi_sp)
-        reg_val = abi_sp->FixDataAddress(reg_val);
+    if (ReadGPRValue(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP, reg_val))
       UnwindLogMsg("sp = 0x%" PRIx64, reg_val);
-    }
   }
 
   // A pc of 0x0 means it's the end of the stack crawl unless we're above a trap
@@ -2026,30 +2020,31 @@ bool RegisterContextUnwind::ReadFrameAddress(
   switch (fa.GetValueType()) {
   case UnwindPlan::Row::FAValue::isRegisterDereferenced: {
     UnwindLogMsg("CFA value via dereferencing reg");
-    RegisterNumber cfa_reg(m_thread, row_register_kind,
-                           fa.GetRegisterNumber());
-    if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
+    RegisterNumber regnum_to_deref(m_thread, row_register_kind,
+                                   fa.GetRegisterNumber());
+    addr_t reg_to_deref_contents;
+    if (ReadGPRValue(regnum_to_deref, reg_to_deref_contents)) {
       const RegisterInfo *reg_info =
-          GetRegisterInfoAtIndex(cfa_reg.GetAsKind(eRegisterKindLLDB));
+          GetRegisterInfoAtIndex(regnum_to_deref.GetAsKind(eRegisterKindLLDB));
       RegisterValue reg_value;
       if (reg_info) {
-        if (abi_sp)
-          cfa_reg_contents = abi_sp->FixDataAddress(cfa_reg_contents);
         Status error = ReadRegisterValueFromMemory(
-            reg_info, cfa_reg_contents, reg_info->byte_size, reg_value);
+            reg_info, reg_to_deref_contents, reg_info->byte_size, reg_value);
         if (error.Success()) {
           address = reg_value.GetAsUInt64();
           UnwindLogMsg(
               "CFA value via dereferencing reg %s (%d): reg has val 0x%" PRIx64
               ", CFA value is 0x%" PRIx64,
-              cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
-              cfa_reg_contents, address);
+              regnum_to_deref.GetName(),
+              regnum_to_deref.GetAsKind(eRegisterKindLLDB),
+              reg_to_deref_contents, address);
           return true;
         } else {
           UnwindLogMsg("Tried to deref reg %s (%d) [0x%" PRIx64
                        "] but memory read failed.",
-                       cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
-                       cfa_reg_contents);
+                       regnum_to_deref.GetName(),
+                       regnum_to_deref.GetAsKind(eRegisterKindLLDB),
+                       reg_to_deref_contents);
         }
       }
     }
