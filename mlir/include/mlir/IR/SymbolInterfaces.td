@@ -210,7 +210,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
     This interface describes an operation that may use a `Symbol`. This
     interface allows for users of symbols to hook into verification and other
     symbol related utilities that are either costly or otherwise disallowed
-    within a traditional operation.
+    within an operation.
   }];
   let cppNamespace = "::mlir";
 
@@ -227,7 +227,8 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
     This interface describes an attribute that may use a `Symbol`. This
     interface allows for users of symbols to hook into verification and other
     symbol related utilities that are either costly or otherwise disallowed
-    within an operation.
+    within an operation (e.g., recreating symbol users per op verified rather
+    than per symbol table, or querying symbols usage of sibblings).
   }];
   let cppNamespace = "::mlir";
 
