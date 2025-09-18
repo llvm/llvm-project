@@ -18,7 +18,7 @@
 # GNU-NEXT: 6 9
 # GNU-EMPTY:
 # GNU-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
-# GNU-NEXT: 0 5 5
+# GNU-NEXT: 0 5
 
 # LLVM: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
 # LLVM: callgraph_info {
@@ -34,7 +34,6 @@
 # LLVM-NEXT:      caller: 0x0
 # LLVM-NEXT:      call_sites [
 # LLVM-NEXT:        {
-# LLVM-NEXT:          call_site: 0x5
 # LLVM-NEXT:          callee: 0x5
 # LLVM-NEXT:        }
 # LLVM-NEXT:      ]
@@ -70,7 +69,6 @@
 # JSON-NEXT:          "caller": 0,
 # JSON-NEXT:          "call_sites": [
 # JSON-NEXT:            {
-# JSON-NEXT:              "call_site": 5,
 # JSON-NEXT:              "callee": 5
 # JSON-NEXT:            }
 # JSON-NEXT:          ]
@@ -122,8 +120,7 @@ qux:                  #< qux is at 11 (b).
 .quad	0       #< foo()'s entry address.
 .quad	0       #< Function kind: not an indirect target.
 .quad	0       #< Count of indirect call sites that follow: 0.
-.quad   1       #< Count of direct call sites that follow: 1>
-.quad   5       #< Direct callsite call to foo>
+.quad   1       #< Count of direct callees that follow: 1>
 .quad   5       #< Direct callee foo's address>
 
 .quad	0       #< Format version number.

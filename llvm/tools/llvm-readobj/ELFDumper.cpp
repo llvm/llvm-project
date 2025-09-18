@@ -23,6 +23,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -203,14 +204,8 @@ enum class FunctionKind : uint64_t {
 // Per-function call graph information.
 template <typename AddrType> struct FunctionCallgraphInfoImpl {
   FunctionKind Kind;
-  struct DirectCallSite {
-    AddrType CallSite;
-    AddrType Callee;
-    DirectCallSite(AddrType CallSite, AddrType Callee)
-        : CallSite(CallSite), Callee(Callee) {}
-  };
-  SmallVector<DirectCallSite> DirectCallSites;
-  SmallVector<AddrType> IndirectCallSites;
+  SmallSet<AddrType, 4> DirectCallees;
+  SmallVector<AddrType> IndirectCallsites;
 };
 
 namespace {
@@ -5422,12 +5417,12 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     CGInfo.Kind = Kind;
 
     // Read number of indirect call sites for this function.
-    uint64_t NumIndirectCallSites = Data.getU64(&Offset, &CGSectionErr);
+    uint64_t NumIndirectCallsites = Data.getU64(&Offset, &CGSectionErr);
     if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "number of indirect callsites");
 
-    for (unsigned long I = 0; I < NumIndirectCallSites; I++) {
+    for (unsigned long I = 0; I < NumIndirectCallsites; I++) {
       uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
       if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
@@ -5438,27 +5433,22 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "indirect callsite PC");
       TypeIdToIndirCallSites[TypeId].push_back(CallSitePc);
-      CGInfo.IndirectCallSites.push_back(CallSitePc);
+      CGInfo.IndirectCallsites.push_back(CallSitePc);
     }
 
     // Read number of direct call sites for this function.
-    uint64_t NumDirectCallSites = Data.getU64(&Offset, &CGSectionErr);
+    uint64_t NumDirectCallees = Data.getU64(&Offset, &CGSectionErr);
     if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "number of direct callsites");
     // Read direct call sites and populate FuncCGInfo.
-    for (uint64_t I = 0; I < NumDirectCallSites; ++I) {
-      typename ELFT::uint CallSite =
-          Data.getUnsigned(&Offset, sizeof(CallSite), &CGSectionErr);
-      if (CGSectionErr)
-        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
-                            "direct callsite PC");
+    for (uint64_t I = 0; I < NumDirectCallees; ++I) {      
       typename ELFT::uint Callee =
           Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
       if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
-                            "indirect callee PC");
-      CGInfo.DirectCallSites.emplace_back(CallSite, Callee);
+                            "direct callee PC");
+      CGInfo.DirectCallees.insert(Callee);
     }
     FuncCGInfo[FuncAddr] = CGInfo;
   }
@@ -5522,7 +5512,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   OS << "\n\nINDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])";
   for (const auto &El : this->FuncCGInfo) {
     auto CallerPc = El.first;
-    auto FuncIndirCallSites = El.second.IndirectCallSites;
+    auto FuncIndirCallSites = El.second.IndirectCallsites;
     if (!FuncIndirCallSites.empty()) {
       OS << "\n" << format("%lx", CallerPc);
       for (auto IndirCallSitePc : FuncIndirCallSites)
@@ -5530,21 +5520,17 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
     }
   }
 
-  using FunctionCallgraphInfo =
-      ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
-
   // Print function entry to direct call site and target function entry
   // addresses mapping from disasm.
   OS << "\n\nDIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])";
   for (const auto &El : this->FuncCGInfo) {
     auto CallerPc = El.first;
-    auto FuncDirCallSites = El.second.DirectCallSites;
+    auto FuncDirCallSites = El.second.DirectCallees;
     if (!FuncDirCallSites.empty()) {
       OS << "\n" << format("%lx", CallerPc);
-      for (typename FunctionCallgraphInfo::DirectCallSite &DCS :
+      for (typename ELFT::uint Callee :
            FuncDirCallSites) {
-        OS << " " << format("%lx", DCS.CallSite) << " "
-           << format("%lx", DCS.Callee);
+        OS << " " << format("%lx", Callee);
       }
     }
   }
@@ -8425,15 +8411,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   {
     ListScope DCT(this->W, "direct_call_sites");
     for (auto const &F : this->FuncCGInfo) {
-      if (F.second.DirectCallSites.empty())
+      if (F.second.DirectCallees.empty())
         continue;
       DictScope D(this->W);
       this->W.printHex("caller", F.first);
       ListScope CT(this->W, "call_sites");
-      for (auto const &CS : F.second.DirectCallSites) {
+      for (auto const &CS : F.second.DirectCallees) {
         DictScope D(this->W);
-        this->W.printHex("call_site", CS.CallSite);
-        this->W.printHex("callee", CS.Callee);
+        this->W.printHex("callee", CS);
       }
     }
   }
@@ -8441,11 +8426,11 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   {
     ListScope ICT(this->W, "indirect_call_sites");
     for (auto const &F : this->FuncCGInfo) {
-      if (F.second.IndirectCallSites.empty())
+      if (F.second.IndirectCallsites.empty())
         continue;
       DictScope D(this->W);
       this->W.printHex("caller", F.first);
-      this->W.printHexList("call_sites", F.second.IndirectCallSites);
+      this->W.printHexList("call_sites", F.second.IndirectCallsites);
     }
   }
 

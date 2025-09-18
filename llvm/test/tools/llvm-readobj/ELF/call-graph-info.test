@@ -1,6 +1,6 @@
 ## Tests how --call-graph-info prints the call graph information.
 # RUN: yaml2obj --docnum=1 %s -o %t
-# llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
 
@@ -42,75 +42,72 @@
 #   }
 
 # CHECK: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
-# CHECK-NEXT: f85c699bb8ef20a2 17a0 17b0
-# CHECK-NEXT: 308e4b8159bc8654 17c0
-# CHECK-NEXT: a9494def81a01dc 17d0
+# CHECK-NEXT: 3ecbeef531f74424 1790 17a0
+# CHECK-NEXT: 308e4b8159bc8654 17b0
+# CHECK-NEXT: fa6809609a76afca 17c0
 # CHECK-EMPTY:
 # CHECK-NEXT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
-# CHECK-NEXT: f85c699bb8ef20a2 17ed 17fb
-# CHECK-NEXT: 308e4b8159bc8654 1810
+# CHECK-NEXT: 3ecbeef531f74424 17df 17ef
+# CHECK-NEXT: 308e4b8159bc8654 1804
 # CHECK-EMPTY:
 # CHECK-NEXT: INDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])
-# CHECK-NEXT: 17d0 17ed 17fb 1810
+# CHECK-NEXT: 17c0 17df 17ef 1804
 # CHECK-EMPTY:
 # CHECK-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
-# CHECK-NEXT: 17d0 1815 17a0 181a 17b0 1823 17c0
+# CHECK-NEXT: 17c0 1790 17a0 17b0
 
 # LLVM: callgraph_info {
 # LLVM-NEXT:   indirect_target_types [
 # LLVM-NEXT:     {
+# LLVM-NEXT:       function_address: 0x1790
+# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
+# LLVM-NEXT:     }
+# LLVM-NEXT:     {
 # LLVM-NEXT:       function_address: 0x17A0
-# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
 # LLVM-NEXT:     }
 # LLVM-NEXT:     {
 # LLVM-NEXT:       function_address: 0x17B0
-# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
-# LLVM-NEXT:     }
-# LLVM-NEXT:     {
-# LLVM-NEXT:       function_address: 0x17C0
 # LLVM-NEXT:       type_id: 0x308E4B8159BC8654
 # LLVM-NEXT:     }
 # LLVM-NEXT:     {
-# LLVM-NEXT:       function_address: 0x17D0
-# LLVM-NEXT:       type_id: 0xA9494DEF81A01DC
+# LLVM-NEXT:       function_address: 0x17C0
+# LLVM-NEXT:       type_id: 0xFA6809609A76AFCA
 # LLVM-NEXT:     }
 # LLVM-NEXT:   ]
 # LLVM-NEXT:   direct_call_sites [
 # LLVM-NEXT:     {
-# LLVM-NEXT:       caller: 0x17D0
+# LLVM-NEXT:       caller: 0x17C0
 # LLVM-NEXT:       call_sites [
 # LLVM-NEXT:         {
-# LLVM-NEXT:           call_site: 0x1815
+# LLVM-NEXT:           callee: 0x1790
+# LLVM-NEXT:         }
+# LLVM-NEXT:         {
 # LLVM-NEXT:           callee: 0x17A0
 # LLVM-NEXT:         }
 # LLVM-NEXT:         {
-# LLVM-NEXT:           call_site: 0x181A
 # LLVM-NEXT:           callee: 0x17B0
-# LLVM-NEXT:         }
-# LLVM-NEXT:         {
-# LLVM-NEXT:           call_site: 0x1823
-# LLVM-NEXT:           callee: 0x17C0
 # LLVM-NEXT:         }
 # LLVM-NEXT:       ]
 # LLVM-NEXT:     }
 # LLVM-NEXT:   ]
 # LLVM-NEXT:   indirect_call_sites [
 # LLVM-NEXT:     {
-# LLVM-NEXT:       caller: 0x17D0
-# LLVM-NEXT:       call_sites: [0x17ED, 0x17FB, 0x1810]
+# LLVM-NEXT:       caller: 0x17C0
+# LLVM-NEXT:       call_sites: [0x17DF, 0x17EF, 0x1804]
 # LLVM-NEXT:     }
 # LLVM-NEXT:   ]
 # LLVM-NEXT:   indirect_call_types [
 # LLVM-NEXT:     {
-# LLVM-NEXT:       call_site: 0x17ED
-# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:       call_site: 0x17DF
+# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
 # LLVM-NEXT:     }
 # LLVM-NEXT:     {
-# LLVM-NEXT:       call_site: 0x17FB
-# LLVM-NEXT:       type_id: 0xF85C699BB8EF20A2
+# LLVM-NEXT:       call_site: 0x17EF
+# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
 # LLVM-NEXT:     }
 # LLVM-NEXT:     {
-# LLVM-NEXT:       call_site: 0x1810
+# LLVM-NEXT:       call_site: 0x1804
 # LLVM-NEXT:       type_id: 0x308E4B8159BC8654
 # LLVM-NEXT:     }
 # LLVM-NEXT:   ]
@@ -119,62 +116,59 @@
 #JSON:  "callgraph_info": {
 #JSON-NEXT:      "indirect_target_types": [
 #JSON-NEXT:        {
+#JSON-NEXT:          "function_address": 6032,
+#JSON-NEXT:          "type_id": 4524972987496481828
+#JSON-NEXT:        },
+#JSON-NEXT:        {
 #JSON-NEXT:          "function_address": 6048,
-#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:          "type_id": 4524972987496481828
 #JSON-NEXT:        },
 #JSON-NEXT:        {
 #JSON-NEXT:          "function_address": 6064,
-#JSON-NEXT:          "type_id": 17896295136807035042
-#JSON-NEXT:        },
-#JSON-NEXT:        {
-#JSON-NEXT:          "function_address": 6080,
 #JSON-NEXT:          "type_id": 3498816979441845844
 #JSON-NEXT:        },
 #JSON-NEXT:        {
-#JSON-NEXT:          "function_address": 6096,
-#JSON-NEXT:          "type_id": 762397922298560988
+#JSON-NEXT:          "function_address": 6080,
+#JSON-NEXT:          "type_id": 18043682217572872138
 #JSON-NEXT:        }
 #JSON-NEXT:      ],
 #JSON-NEXT:      "direct_call_sites": [
 #JSON-NEXT:        {
-#JSON-NEXT:          "caller": 6096,
+#JSON-NEXT:          "caller": 6080,
 #JSON-NEXT:          "call_sites": [
 #JSON-NEXT:            {
-#JSON-NEXT:              "call_site": 6165,
+#JSON-NEXT:              "callee": 6032
+#JSON-NEXT:            },
+#JSON-NEXT:            {
 #JSON-NEXT:              "callee": 6048
 #JSON-NEXT:            },
 #JSON-NEXT:            {
-#JSON-NEXT:              "call_site": 6170,
 #JSON-NEXT:              "callee": 6064
-#JSON-NEXT:            },
-#JSON-NEXT:            {
-#JSON-NEXT:              "call_site": 6179,
-#JSON-NEXT:              "callee": 6080
 #JSON-NEXT:            }
 #JSON-NEXT:          ]
 #JSON-NEXT:        }
 #JSON-NEXT:      ],
 #JSON-NEXT:      "indirect_call_sites": [
 #JSON-NEXT:        {
-#JSON-NEXT:          "caller": 6096,
+#JSON-NEXT:          "caller": 6080,
 #JSON-NEXT:          "call_sites": [
-#JSON-NEXT:            6125,
-#JSON-NEXT:            6139,
-#JSON-NEXT:            6160
+#JSON-NEXT:            6111,
+#JSON-NEXT:            6127,
+#JSON-NEXT:            6148
 #JSON-NEXT:          ]
 #JSON-NEXT:        }
 #JSON-NEXT:      ],
 #JSON-NEXT:      "indirect_call_types": [
 #JSON-NEXT:        {
-#JSON-NEXT:          "call_site": 6125,
-#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:          "call_site": 6111,
+#JSON-NEXT:          "type_id": 4524972987496481828
 #JSON-NEXT:        },
 #JSON-NEXT:        {
-#JSON-NEXT:          "call_site": 6139,
-#JSON-NEXT:          "type_id": 17896295136807035042
+#JSON-NEXT:          "call_site": 6127,
+#JSON-NEXT:          "type_id": 4524972987496481828
 #JSON-NEXT:        },
 #JSON-NEXT:        {
-#JSON-NEXT:          "call_site": 6160,
+#JSON-NEXT:          "call_site": 6148,
 #JSON-NEXT:          "type_id": 3498816979441845844
 #JSON-NEXT:        }
 #JSON-NEXT:      ]
@@ -187,7 +181,77 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_DYN
   Machine:         EM_X86_64
-  Entry:           0x16E0
+  Entry:           0x16D0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x2A8
+    Offset:          0x2A8
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .eh_frame
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .plt
+    VAddr:           0x16D0
+    Align:           0x1000
+    Offset:          0x6D0
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .relro_padding
+    VAddr:           0x2890
+    Align:           0x1000
+    Offset:          0x890
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .bss
+    VAddr:           0x3A68
+    Align:           0x1000
+    Offset:          0xA68
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x28A0
+    Align:           0x8
+    Offset:          0x8A0
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .relro_padding
+    VAddr:           0x2890
+    Offset:          0x890
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x584
+    Align:           0x4
+    Offset:          0x584
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+    Offset:          0x0
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.ABI-tag
+    LastSec:         .note.gnu.build-id
+    VAddr:           0x2C4
+    Align:           0x4
+    Offset:          0x2C4
 Sections:
   - Name:            .interp
     Type:            SHT_PROGBITS
@@ -211,7 +275,7 @@ Sections:
     AddressAlign:    0x4
     Notes:
       - Name:            GNU
-        Desc:            3E3D197EC968B0AD7D4A3809E7355CA3BE816929
+        Desc:            EB389D8FA0BAAB684147C8107EEA8143CBF335AC
         Type:            NT_PRPSINFO
   - Name:            .dynsym
     Type:            SHT_DYNSYM
@@ -264,86 +328,86 @@ Sections:
   - Name:            .rela.dyn
     Type:            SHT_RELA
     Flags:           [ SHF_ALLOC ]
-    Address:         0x480
+    Address:         0x478
     Link:            .dynsym
     AddressAlign:    0x8
     Relocations:
       - Offset:          0x2890
         Type:            R_X86_64_RELATIVE
-        Addend:          5904
+        Addend:          5888
       - Offset:          0x2898
         Type:            R_X86_64_RELATIVE
-        Addend:          5968
-      - Offset:          0x3A80
+        Addend:          5952
+      - Offset:          0x3A70
         Type:            R_X86_64_RELATIVE
-        Addend:          14976
-      - Offset:          0x2A50
+        Addend:          14960
+      - Offset:          0x2A40
         Symbol:          __libc_start_main
         Type:            R_X86_64_GLOB_DAT
-      - Offset:          0x2A58
+      - Offset:          0x2A48
         Symbol:          __gmon_start__
         Type:            R_X86_64_GLOB_DAT
-      - Offset:          0x2A60
+      - Offset:          0x2A50
         Symbol:          __register_frame_info
         Type:            R_X86_64_GLOB_DAT
-      - Offset:          0x2A68
+      - Offset:          0x2A58
         Symbol:          __cxa_finalize
         Type:            R_X86_64_GLOB_DAT
-      - Offset:          0x2A70
+      - Offset:          0x2A60
         Symbol:          __deregister_frame_info
         Type:            R_X86_64_GLOB_DAT
   - Name:            .rela.plt
     Type:            SHT_RELA
     Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
-    Address:         0x540
+    Address:         0x538
     Link:            .dynsym
     AddressAlign:    0x8
     Info:            .got.plt
     Relocations:
-      - Offset:          0x3AA0
+      - Offset:          0x3A90
         Symbol:          __register_frame_info
         Type:            R_X86_64_JUMP_SLOT
-      - Offset:          0x3AA8
+      - Offset:          0x3A98
         Symbol:          __cxa_finalize
         Type:            R_X86_64_JUMP_SLOT
-      - Offset:          0x3AB0
+      - Offset:          0x3AA0
         Symbol:          __deregister_frame_info
         Type:            R_X86_64_JUMP_SLOT
   - Name:            .rodata
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_MERGE ]
-    Address:         0x588
+    Address:         0x580
     AddressAlign:    0x4
     EntSize:         0x4
     Content:         '01000200'
   - Name:            .eh_frame_hdr
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
-    Address:         0x58C
+    Address:         0x584
     AddressAlign:    0x4
-    Content:         011B033B4000000007000000541100005C0000008411000088000000C4110000A800000014120000C800000024120000E800000034120000080100004412000028010000
+    Content:         011B033B40000000070000004C1100005C0000007C11000088000000BC110000A80000000C120000C80000001C120000E80000002C120000080100003C12000028010000
   - Name:            .eh_frame
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
-    Address:         0x5D0
+    Address:         0x5C8
     AddressAlign:    0x8
-    Content:         1400000000000000017A5200017810011B0C070890010710100000001C000000F010000022000000000000001400000000000000017A5200017810011B0C0708900100001C0000001C000000F41000003800000000410E108602430D06730C07080000001C0000003C000000141100004A00000000410E108602430D0602450C070800001C0000005C000000441100000600000000410E108602430D06410C07080000001C0000007C000000341100000600000000410E108602430D06410C07080000001C0000009C000000241100000E00000000410E108602430D06490C07080000001C000000BC000000141100005B00000000410E108602430D0602560C0708000000000000
+    Content:         1400000000000000017A5200017810011B0C070890010710100000001C000000E810000022000000000000001400000000000000017A5200017810011B0C0708900100001C0000001C000000EC1000003800000000410E108602430D06730C07080000001C0000003C0000000C1100004A00000000410E108602430D0602450C070800001C0000005C0000003C1100000600000000410E108602430D06410C07080000001C0000007C0000002C1100000600000000410E108602430D06410C07080000001C0000009C0000001C1100000E00000000410E108602430D06490C07080000001C000000BC0000000C1100005F00000000410E108602430D06025A0C0708000000000000
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address:         0x16E0
+    Address:         0x16D0
     AddressAlign:    0x10
-    Content:         31ED4989D15E4889E24883E4F050544531C031C9488D3DD5000000FF154F130000F4CCCCCCCCCCCCCCCCCCCCCCCCCCCC554889E5F6059D230000017402EB27C6059223000001488B05331300004883F8007413488D3DC2EEFFFF488D357F230000E81A0100005DC30F1F840000000000554889E5F605A5230000017402EB39C6059A23000001488B05FB1200004883F800740C488B3D06230000E8F1000000488B05EA1200004883F800740C488D3D69EEFFFFE8E80000005DC3CCCCCCCCCCCC554889E55DC3662E0F1F840000000000554889E55DC3662E0F1F840000000000554889E54088F88845FF31C05DC36690554889E54883EC30C745FC00000000488D05BAFFFFFF488945F0FF55F0488D05BCFFFFFF488945E8FF55E8488D05BEFFFFFF488945D8488B45D80FBE7DE7FFD0E88BFFFFFFE896FFFFFF0FBE7DE7E89DFFFFFF31C04883C4305DC3CC
+    Content:         31ED4989D15E4889E24883E4F050544531C031C9488D3DD5000000FF154F130000F4CCCCCCCCCCCCCCCCCCCCCCCCCCCC554889E5F6059D230000017402EB27C6059223000001488B05331300004883F8007413488D3DCAEEFFFF488D357F230000E82A0100005DC30F1F840000000000554889E5F605A5230000017402EB39C6059A23000001488B05FB1200004883F800740C488B3D06230000E801010000488B05EA1200004883F800740C488D3D71EEFFFFE8F80000005DC3CCCCCCCCCCCC554889E55DC3662E0F1F840000000000554889E55DC3662E0F1F840000000000554889E54088F88845FF31C05DC36690554889E54883EC30C745FC00000000488D05BAFFFFFF488945F0B000FF55F0488D05BAFFFFFF488945E8B000FF55E8488D05BAFFFFFF488945D8488B45D80FBE7DE7FFD0E887FFFFFFE892FFFFFF0FBE7DE7E899FFFFFF31C04883C4305DC3CC
   - Name:            .init
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address:         0x182C
+    Address:         0x1820
     AddressAlign:    0x4
-    Content:         4883EC08488B05211200004885C07402FFD04883C408C3
+    Content:         4883EC08488B051D1200004885C07402FFD04883C408C3
   - Name:            .fini
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address:         0x1844
+    Address:         0x1838
     AddressAlign:    0x4
     Content:         4883EC084883C408C3
   - Name:            .plt
@@ -351,7 +415,7 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x1850
     AddressAlign:    0x10
-    Content:         FF353A220000FF253C2200000F1F4000FF253A2200006800000000E9E0FFFFFFFF25322200006801000000E9D0FFFFFFFF252A2200006802000000E9C0FFFFFF
+    Content:         FF352A220000FF252C2200000F1F4000FF252A2200006800000000E9E0FFFFFFFF25222200006801000000E9D0FFFFFFFF251A2200006802000000E9C0FFFFFF
   - Name:            .init_array
     Type:            SHT_INIT_ARRAY
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
@@ -372,15 +436,13 @@ Sections:
     AddressAlign:    0x8
     Entries:
       - Tag:             DT_NEEDED
-        Value:           0x80
-      - Tag:             DT_NEEDED
         Value:           0x5F
       - Tag:             DT_FLAGS_1
         Value:           0x8000000
       - Tag:             DT_DEBUG
         Value:           0x0
       - Tag:             DT_RELA
-        Value:           0x480
+        Value:           0x478
       - Tag:             DT_RELASZ
         Value:           0xC0
       - Tag:             DT_RELAENT
@@ -388,11 +450,11 @@ Sections:
       - Tag:             DT_RELACOUNT
         Value:           0x3
       - Tag:             DT_JMPREL
-        Value:           0x540
+        Value:           0x538
       - Tag:             DT_PLTRELSZ
         Value:           0x48
       - Tag:             DT_PLTGOT
-        Value:           0x3A88
+        Value:           0x3A78
       - Tag:             DT_PLTREL
         Value:           0x7
       - Tag:             DT_SYMTAB
@@ -402,7 +464,7 @@ Sections:
       - Tag:             DT_STRTAB
         Value:           0x3F4
       - Tag:             DT_STRSZ
-        Value:           0x8A
+        Value:           0x80
       - Tag:             DT_GNU_HASH
         Value:           0x3D8
       - Tag:             DT_INIT_ARRAY
@@ -414,9 +476,9 @@ Sections:
       - Tag:             DT_FINI_ARRAYSZ
         Value:           0x8
       - Tag:             DT_INIT
-        Value:           0x182C
+        Value:           0x1820
       - Tag:             DT_FINI
-        Value:           0x1844
+        Value:           0x1838
       - Tag:             DT_VERSYM
         Value:           0x398
       - Tag:             DT_VERNEED
@@ -428,31 +490,31 @@ Sections:
   - Name:            .got
     Type:            SHT_PROGBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x2A50
+    Address:         0x2A40
     AddressAlign:    0x8
     Content:         '00000000000000000000000000000000000000000000000000000000000000000000000000000000'
   - Name:            .relro_padding
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x2A78
+    Address:         0x2A68
     AddressAlign:    0x1
-    Size:            0x588
+    Size:            0x598
   - Name:            .data
     Type:            SHT_PROGBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x3A78
+    Address:         0x3A68
     AddressAlign:    0x8
     Content:         '00000000000000000000000000000000'
   - Name:            .got.plt
     Type:            SHT_PROGBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x3A88
+    Address:         0x3A78
     AddressAlign:    0x8
     Content:         A02800000000000000000000000000000000000000000000661800000000000076180000000000008618000000000000
   - Name:            .bss
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
-    Address:         0x3AB8
+    Address:         0x3AA8
     AddressAlign:    0x8
     Size:            0x49
   - Name:            .comment
@@ -460,13 +522,13 @@ Sections:
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
     AddressAlign:    0x1
     EntSize:         0x1
-    Content:         004675636873696120636C616E672076657273696F6E2032322E302E306769742028676974406769746875622E636F6D3A6C6C766D2F6C6C766D2D70726F6A6563742E676974206135343965373363616436303333366438653963303632326165376164383661613635656634636529004C696E6B65723A2046756368736961204C4C442032322E302E302028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E676974203239343432666166656337373437633632356135653466393937303861633532323139373662663729004675636873696120636C616E672076657273696F6E2032322E302E3067697420282F7573722F6C6F63616C2F676F6F676C652F686F6D652F7072616268756B722F6C6C766D2F6C6C766D2D70726F6A6563742F636C616E67203335383463366161636163363239633531633464316538653038323538633063323466336131363529004675636873696120636C616E672076657273696F6E2032322E302E306769742028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E67697420323934343266616665633737343763363235613565346639393730386163353232313937366266372900
+    Content:         004C696E6B65723A2046756368736961204C4C442032322E302E302028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E676974206530383561356338333634363166323964373366373339333433343437656439643533386265633129004675636873696120636C616E672076657273696F6E2032322E302E306769742028676974406769746875622E636F6D3A5072616268756B2F6C6C766D2D70726F6A6563742E67697420653038356135633833363436316632396437336637333933343334343765643964353338626563312900
   - Name:            .callgraph
     Type:            SHT_PROGBITS
     Flags:           [ SHF_LINK_ORDER ]
     Link:            .text
     AddressAlign:    0x1
-    Content:         0000000000000000A0170000000000000200000000000000A220EFB89B695CF8000000000000000000000000000000000000000000000000B0170000000000000200000000000000A220EFB89B695CF8000000000000000000000000000000000000000000000000C01700000000000002000000000000005486BC59814B8E30000000000000000000000000000000000000000000000000D0170000000000000200000000000000DC011AF8DE94940A0300000000000000A220EFB89B695CF8ED17000000000000A220EFB89B695CF8FB170000000000005486BC59814B8E30101800000000000003000000000000001518000000000000A0170000000000001A18000000000000B0170000000000002318000000000000C017000000000000
+    Content:         0000000000000000901700000000000002000000000000002444F731F5EECB3E000000000000000000000000000000000000000000000000A01700000000000002000000000000002444F731F5EECB3E000000000000000000000000000000000000000000000000B01700000000000002000000000000005486BC59814B8E30000000000000000000000000000000000000000000000000C0170000000000000200000000000000CAAF769A600968FA03000000000000002444F731F5EECB3EDF170000000000002444F731F5EECB3EEF170000000000005486BC59814B8E30041800000000000003000000000000009017000000000000A017000000000000B017000000000000
 Symbols:
   - Name:            __abi_tag
     Type:            STT_OBJECT
@@ -479,31 +541,31 @@ Symbols:
   - Name:            __do_init
     Type:            STT_FUNC
     Section:         .text
-    Value:           0x1710
+    Value:           0x1700
     Size:            0x38
   - Name:            __do_init.__initialized
     Type:            STT_OBJECT
     Section:         .bss
-    Value:           0x3AB8
+    Value:           0x3AA8
     Size:            0x1
   - Name:            __EH_FRAME_LIST__
     Type:            STT_OBJECT
     Section:         .eh_frame
-    Value:           0x5FC
+    Value:           0x5F4
   - Name:            __do_init.__object
     Type:            STT_OBJECT
     Section:         .bss
-    Value:           0x3AC0
+    Value:           0x3AB0
     Size:            0x40
   - Name:            __do_fini
     Type:            STT_FUNC
     Section:         .text
-    Value:           0x1750
+    Value:           0x1740
     Size:            0x4A
   - Name:            __do_fini.__finalized
     Type:            STT_OBJECT
     Section:         .bss
-    Value:           0x3B00
+    Value:           0x3AF0
     Size:            0x1
   - Name:            __init
     Type:            STT_OBJECT
@@ -518,10 +580,10 @@ Symbols:
   - Name:            __dso_handle
     Type:            STT_OBJECT
     Section:         .data
-    Value:           0x3A80
+    Value:           0x3A70
     Size:            0x8
     Other:           [ STV_HIDDEN ]
-  - Name:            call_graph_info.cpp
+  - Name:            test.c
     Type:            STT_FILE
     Index:           SHN_ABS
   - Name:            crtend.c
@@ -530,12 +592,12 @@ Symbols:
   - Name:            __EH_FRAME_LIST_END__
     Type:            STT_OBJECT
     Section:         .eh_frame
-    Value:           0x5D0
+    Value:           0x5C8
     Size:            0x4
     Other:           [ STV_HIDDEN ]
   - Name:            _GLOBAL_OFFSET_TABLE_
     Section:         .got.plt
-    Value:           0x3A88
+    Value:           0x3A78
     Other:           [ STV_HIDDEN ]
   - Name:            _DYNAMIC
     Section:         .dynamic
@@ -544,34 +606,34 @@ Symbols:
   - Name:            _init
     Type:            STT_FUNC
     Section:         .init
-    Value:           0x182C
+    Value:           0x1820
     Other:           [ STV_HIDDEN ]
   - Name:            _fini
     Type:            STT_FUNC
     Section:         .fini
-    Value:           0x1844
+    Value:           0x1838
     Other:           [ STV_HIDDEN ]
   - Name:            _start
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
-    Value:           0x16E0
+    Value:           0x16D0
     Size:            0x22
   - Name:            main
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
-    Value:           0x17D0
-    Size:            0x5B
+    Value:           0x17C0
+    Size:            0x5F
   - Name:            data_start
     Section:         .data
     Binding:         STB_WEAK
-    Value:           0x3A78
+    Value:           0x3A68
   - Name:            _IO_stdin_used
     Type:            STT_OBJECT
     Section:         .rodata
     Binding:         STB_GLOBAL
-    Value:           0x588
+    Value:           0x580
     Size:            0x4
   - Name:            __libc_start_main
     Type:            STT_FUNC
@@ -579,7 +641,7 @@ Symbols:
   - Name:            __data_start
     Section:         .data
     Binding:         STB_GLOBAL
-    Value:           0x3A78
+    Value:           0x3A68
   - Name:            __gmon_start__
     Binding:         STB_WEAK
   - Name:            __register_frame_info
@@ -589,23 +651,23 @@ Symbols:
     Binding:         STB_WEAK
   - Name:            __deregister_frame_info
     Binding:         STB_WEAK
-  - Name:            _Z3foov
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1790
+    Size:            0x6
+  - Name:            bar
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
     Value:           0x17A0
     Size:            0x6
-  - Name:            _Z3barv
+  - Name:            baz
     Type:            STT_FUNC
     Section:         .text
     Binding:         STB_GLOBAL
     Value:           0x17B0
-    Size:            0x6
-  - Name:            _Z3bazc
-    Type:            STT_FUNC
-    Section:         .text
-    Binding:         STB_GLOBAL
-    Value:           0x17C0
     Size:            0xE
 DynamicSymbols:
   - Name:            __libc_start_main
