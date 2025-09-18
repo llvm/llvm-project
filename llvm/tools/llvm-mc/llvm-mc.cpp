@@ -467,7 +467,7 @@ int main(int argc, char **argv) {
     MCPU = std::string(llvm::sys::getHostCPUName());
 
     llvm::StringMap<bool> TargetFeatures = llvm::sys::getHostCPUFeatures();
-    for (auto const& [FeatureName, IsSupported] : TargetFeatures)
+    for (auto const &[FeatureName, IsSupported] : TargetFeatures)
       Features.AddFeature(FeatureName, IsSupported);
   }
 
