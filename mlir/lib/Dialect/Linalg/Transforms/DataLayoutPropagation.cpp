@@ -221,9 +221,10 @@ static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
 ///    inner_dims_pos = [0]
 ///    inner_tiles = [8]
 ///    into %init : tensor<?xf32> -> tensor<?x8xf32>
-static std::tuple<Value, AffineMap>
+static FailureOr<std::tuple<Value, AffineMap>>
 getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
-                               GenericOp genericOp, OpOperand *opOperand) {
+                               GenericOp genericOp, OpOperand *opOperand,
+                               bool poisonPaddingOk) {
   int64_t numOrigLoops = genericOp.getNumLoops();
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
   int64_t numLoops = numOrigLoops + numInnerLoops;
@@ -287,12 +288,24 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   // The operand does not have dimensions that relates to pack op.
   if (innerDimsPos.empty() && outerDimsPerm.empty())
     return std::make_tuple(opOperand->get(), indexingMap);
-
+  auto inputType = cast<RankedTensorType>(opOperand->get().getType());
+  auto maybeIntInnerTileSizes = getConstantIntValues(innerTileSizes);
+  if (!maybeIntInnerTileSizes.has_value()) {
+    return failure();
+  }
+  if (!poisonPaddingOk &&
+      linalg::PackOp::requirePaddingValueStrict(
+          inputType.getShape(), innerDimsPos,
+          linalg::PackOp::inferPackedType(inputType, *maybeIntInnerTileSizes,
+                                          innerDimsPos, outerDimsPerm)
+              .getShape(),
+          outerDimsPerm, innerTileSizes))
+    return failure();
   auto empty = linalg::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
   auto poison = ub::PoisonOp::create(
       b, loc, getElementTypeOrSelf(opOperand->get().getType()));
-  auto packedOperand =
+  Value packedOperand =
       linalg::PackOp::create(b, loc, opOperand->get(), empty, innerDimsPos,
                              innerTileSizes, poison, outerDimsPerm);
   return std::make_tuple(packedOperand, indexingMap);
@@ -304,10 +317,10 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
 /// around it. Implicitly this will only work when a packInfo can be obtained.
 /// This make sure that we are only using this function on parallel permuted
 /// dimensions.
-static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                               Value dest, AffineMap packedOutIndexingMap,
-                               const PackInfo &packInfo,
-                               bool isFoldableUnpackPack) {
+static FailureOr<GenericOp>
+packGenericOp(RewriterBase &rewriter, GenericOp genericOp, Value dest,
+              AffineMap packedOutIndexingMap, const PackInfo &packInfo,
+              bool isFoldableUnpackPack, bool poisonPaddingOk) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
   SmallVector<Value> inputOperandsFromUnpackedSource;
@@ -318,8 +331,13 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
            llvm::equal(packOp.getMixedTiles(), unPackOp.getMixedTiles());
   };
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
-    auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
-        rewriter, loc, packInfo, genericOp, inputOperand);
+    auto mayBepackedOperandAndIndexing = getOrCreatePackedViewOfOperand(
+        rewriter, loc, packInfo, genericOp, inputOperand, poisonPaddingOk);
+    if (failed(mayBepackedOperandAndIndexing)) {
+      return failure();
+    }
+    auto packedOperand = std::get<0>(*mayBepackedOperandAndIndexing);
+    auto packedIndexingMap = std::get<1>(*mayBepackedOperandAndIndexing);
     auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>();
     auto packOp = packedOperand.getDefiningOp<linalg::PackOp>();
     if (packOp && unpackOp && hasEquivalentTiles(packOp, unpackOp)) {
@@ -410,7 +428,8 @@ static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
 ///     } -> tensor<?x?x8x2xf32>
 static FailureOr<GenericOp>
 bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
-                               const ControlPropagationFn &controlFn) {
+                               const ControlPropagationFn &controlFn,
+                               bool poisonPaddingOk) {
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
   if (!genericOp)
     return failure();
@@ -473,9 +492,14 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   }
 
   // Rebuild the indexing map for the corresponding init operand.
-  auto [packedOutOperand, packedOutIndexingMap] =
+  auto mayBepackedOperandAndIndexing =
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
-                                     genericOp, opOperand);
+                                     genericOp, opOperand, poisonPaddingOk);
+  if (failed(mayBepackedOperandAndIndexing)) {
+    return failure();
+  }
+  auto packedOutOperand = std::get<0>(*mayBepackedOperandAndIndexing);
+  auto packedOutIndexingMap = std::get<1>(*mayBepackedOperandAndIndexing);
 
   // Forward the new tensor.empty as a destination if it is one of the following
   // situations:
@@ -491,7 +515,8 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   // pack(unpack) isn't naively foldable because the unpack op can be from
   // an arbitrary domain so we need to keep both.
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
-                       *packInfo, /*isFoldableUnpackPack=*/false);
+                       *packInfo, /*isFoldableUnpackPack=*/false,
+                       poisonPaddingOk);
 }
 
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
@@ -499,13 +524,15 @@ struct BubbleUpPackOpThroughGenericOpPattern
     : public OpRewritePattern<linalg::PackOp> {
 public:
   BubbleUpPackOpThroughGenericOpPattern(MLIRContext *context,
-                                        ControlPropagationFn fun)
-      : OpRewritePattern<linalg::PackOp>(context), controlFn(std::move(fun)) {}
+                                        ControlPropagationFn fun,
+                                        bool poisonPaddingOk)
+      : OpRewritePattern<linalg::PackOp>(context), controlFn(std::move(fun)),
+        poisonPaddingOk(std::move(poisonPaddingOk)) {}
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    auto genericOp =
-        bubbleUpPackOpThroughGenericOp(rewriter, packOp, controlFn);
+    auto genericOp = bubbleUpPackOpThroughGenericOp(rewriter, packOp, controlFn,
+                                                    poisonPaddingOk);
     if (failed(genericOp))
       return failure();
     rewriter.replaceOp(packOp, genericOp->getResults());
@@ -514,6 +541,7 @@ public:
 
 private:
   ControlPropagationFn controlFn;
+  bool poisonPaddingOk;
 };
 
 /// Propagate a linalg.pack operation up through a tensor.pad. The idea is to
@@ -1083,7 +1111,8 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
 ///
 static FailureOr<std::tuple<GenericOp, Value>>
 pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                                 ControlPropagationFn controlFn) {
+                                 ControlPropagationFn controlFn,
+                                 bool poisonPaddingOk) {
   if (genericOp.getNumResults() != 1)
     return failure();
 
@@ -1110,9 +1139,14 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
     return failure();
 
   // Rebuild the indexing map for the corresponding init operand.
-  auto [packedOutOperand, packedOutIndexingMap] =
-      getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
-                                     genericOp, genericOp.getDpsInitOperand(0));
+  auto mayBepackedOperandAndIndexing = getOrCreatePackedViewOfOperand(
+      rewriter, genericOp.getLoc(), *packInfo, genericOp,
+      genericOp.getDpsInitOperand(0), poisonPaddingOk);
+  if (failed(mayBepackedOperandAndIndexing)) {
+    return failure();
+  }
+  auto packedOutOperand = std::get<0>(*mayBepackedOperandAndIndexing);
+  auto packedOutIndexingMap = std::get<1>(*mayBepackedOperandAndIndexing);
   auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
 
   // Forward the new tensor.empty as a destination if it is one of the following
@@ -1132,9 +1166,12 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   // pack(unpack) is foldable in this case. This is because in pushing down the
   // unpack, by default we will populate an additional pack op after the unpack.
   // This guarantees them to be foldable.
-  GenericOp newGenericOp =
+  auto maybeGenericOp =
       packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo,
-                    /*isFoldableUnpackPack=*/true);
+                    /*isFoldableUnpackPack=*/true, poisonPaddingOk);
+  if (failed(maybeGenericOp))
+    return failure();
+  GenericOp newGenericOp = *maybeGenericOp;
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 
@@ -1160,13 +1197,15 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 struct PushDownUnPackOpThroughGenericOp : public OpRewritePattern<GenericOp> {
 public:
   PushDownUnPackOpThroughGenericOp(MLIRContext *context,
-                                   ControlPropagationFn fun)
-      : OpRewritePattern<GenericOp>(context), controlFn(std::move(fun)) {}
+                                   ControlPropagationFn fun,
+                                   bool poisonPaddingOk)
+      : OpRewritePattern<GenericOp>(context), controlFn(std::move(fun)),
+        poisonPaddingOk(std::move(poisonPaddingOk)) {}
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    auto genericAndRepl =
-        pushDownUnPackOpThroughGenericOp(rewriter, genericOp, controlFn);
+    auto genericAndRepl = pushDownUnPackOpThroughGenericOp(
+        rewriter, genericOp, controlFn, poisonPaddingOk);
     if (failed(genericAndRepl))
       return failure();
     rewriter.replaceOp(genericOp, std::get<1>(*genericAndRepl));
@@ -1175,6 +1214,7 @@ public:
 
 private:
   ControlPropagationFn controlFn;
+  bool poisonPaddingOk;
 };
 
 /// Propagate a linalg.unpack operation through a tensor.pad. The idea is to
@@ -1525,12 +1565,14 @@ private:
 
 void mlir::linalg::populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
-    const ControlPropagationFn &controlPackUnPackPropagation) {
-  patterns
-      .insert<BubbleUpPackOpThroughGenericOpPattern, BubbleUpPackThroughPadOp,
-              BubbleUpPackOpThroughReshapeOp, PushDownUnPackOpThroughGenericOp,
-              PushDownUnPackThroughPadOp, PushDownUnPackOpThroughReshapeOp>(
-          patterns.getContext(), controlPackUnPackPropagation);
+    const ControlPropagationFn &controlPackUnPackPropagation,
+    bool PoisonPaddingOk) {
+  patterns.insert<BubbleUpPackThroughPadOp, BubbleUpPackOpThroughReshapeOp,
+                  PushDownUnPackThroughPadOp, PushDownUnPackOpThroughReshapeOp>(
+      patterns.getContext(), controlPackUnPackPropagation);
+  patterns.insert<BubbleUpPackOpThroughGenericOpPattern,
+                  PushDownUnPackOpThroughGenericOp>(
+      patterns.getContext(), controlPackUnPackPropagation, PoisonPaddingOk);
 }
 
 void mlir::linalg::populateExtractSliceSinkingPatterns(
