@@ -358,17 +358,15 @@ WorkdistributeDoLower(omp::WorkdistributeOp workdistribute,
 
 // Check if the enclosed type in fir.ref is fir.box and fir.box encloses array
 static bool isEnclosedTypeRefToBoxArray(Type type) {
-  // Step 1: Check if it's a reference type
+  // Check if it's a reference type
   if (auto refType = dyn_cast<fir::ReferenceType>(type)) {
-    // Step 2: Get the referenced type (should be fir.box)
+    // Get the referenced type (should be fir.box)
     auto referencedType = refType.getEleTy();
-
-    // Step 3: Check if referenced type is a box
+    // Check if referenced type is a box
     if (auto boxType = dyn_cast<fir::BoxType>(referencedType)) {
-      // Step 4: Get the boxed type and check if it's an array
+      // Get the boxed type and check if it's an array
       auto boxedType = boxType.getEleTy();
-
-      // Step 5: Check if boxed type is a sequence (array)
+      // Check if boxed type is a sequence (array)
       return isa<fir::SequenceType>(boxedType);
     }
   }
@@ -377,11 +375,11 @@ static bool isEnclosedTypeRefToBoxArray(Type type) {
 
 // Check if the enclosed type in fir.box is scalar (not array)
 static bool isEnclosedTypeBoxScalar(Type type) {
-  // Step 1: Check if it's a box type
+  // Check if it's a box type
   if (auto boxType = dyn_cast<fir::BoxType>(type)) {
-    // Step 2: Get the boxed type
+    // Get the boxed type
     auto boxedType = boxType.getEleTy();
-    // Step 3: Check if boxed type is NOT a sequence (array)
+    // Check if boxed type is NOT a sequence (array)
     return !isa<fir::SequenceType>(boxedType);
   }
   return false;
@@ -743,7 +741,7 @@ static Type getPtrTypeForOmp(Type ty) {
   if (isPtr(ty))
     return LLVM::LLVMPointerType::get(ty.getContext());
   else
-    return fir::LLVMPointerType::get(ty);
+    return fir::ReferenceType::get(ty);
 }
 
 // allocateTempOmpVar allocates a temporary variable for OpenMP mapping
@@ -806,6 +804,8 @@ static bool usedOutsideSplit(Value v, Operation *split) {
 
 // isRecomputableAfterFission checks if an operation can be recomputed
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
+  // If the op has side effects, it cannot be recomputed.
+  // We consider fir.declare as having no side effects.
   if (isa<fir::DeclareOp>(op))
     return true;
 
@@ -1161,7 +1161,7 @@ static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
   mlir::Value destBase = genDescriptorGetBaseAddress(builder, loc, dest);
 
   // Get the total size in bytes of the data to be copied.
-  mlir::Value dataSize = genDescriptorGetDataSizeInBytes(builder, loc, src);
+  mlir::Value srcDataSize = genDescriptorGetDataSizeInBytes(builder, loc, src);
 
   // Retrieve the mapped device pointers for source and destination.
   // If no mapping exists, the original host pointer is used.
@@ -1171,9 +1171,10 @@ static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
       genOmpGetMappedPtrIfPresent(builder, loc, srcBase, device, module);
   Value zero = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
                                                 builder.getI64IntegerAttr(0));
+
   // Generate the call to omp_target_memcpy to perform the data copy on the
   // device.
-  genOmpTargetMemcpyCall(builder, loc, destPtr, srcPtr, dataSize, zero, zero,
+  genOmpTargetMemcpyCall(builder, loc, destPtr, srcPtr, srcDataSize, zero, zero,
                          device, module);
 }
 
