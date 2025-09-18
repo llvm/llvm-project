@@ -2914,6 +2914,48 @@ static bool interp__builtin_elementwise_triop(
   return true;
 }
 
+static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 3);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
+  uint64_t Index = ImmAPS.getZExtValue();
+
+  const Pointer &SubVec = S.Stk.pop<Pointer>();
+  if (!SubVec.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &BaseVec = S.Stk.pop<Pointer>();
+  if (!BaseVec.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned BaseElements = BaseVec.getNumElems();
+  unsigned SubElements = SubVec.getNumElems();
+
+  assert(SubElements != 0 && BaseElements != 0 &&
+         (BaseElements % SubElements) == 0);
+
+  unsigned NumLanes = BaseElements / SubElements;
+  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+  unsigned InsertPos = Lane * SubElements;
+
+  PrimType ElemPT = BaseVec.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemPT, {
+    for (unsigned I = 0; I != BaseElements; ++I)
+      Dst.elem<T>(I) = BaseVec.elem<T>(I);
+    for (unsigned I = 0; I != SubElements; ++I)
+      Dst.elem<T>(InsertPos + I) = SubVec.elem<T>(I);
+  });
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3571,6 +3613,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fshr:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256:
+    return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

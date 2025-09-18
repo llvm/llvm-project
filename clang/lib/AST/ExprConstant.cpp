@@ -12128,6 +12128,51 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256: {
+    APValue SourceDst, SourceSub;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceDst) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceSub))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    assert(SourceDst.isVector() && SourceSub.isVector());
+    unsigned DstLen = SourceDst.getVectorLength();
+    unsigned SubLen = SourceSub.getVectorLength();
+    assert(SubLen != 0 && DstLen != 0 && (DstLen % SubLen) == 0);
+    unsigned NumLanes = DstLen / SubLen;
+    unsigned LaneIdx = (Imm.getZExtValue() % NumLanes) * SubLen;
+
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    for (unsigned EltNum = 0; EltNum < DstLen; ++EltNum) {
+      if (EltNum >= LaneIdx && EltNum < LaneIdx + SubLen)
+        ResultElements.push_back(SourceSub.getVectorElt(EltNum - LaneIdx));
+      else
+        ResultElements.push_back(SourceDst.getVectorElt(EltNum));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
