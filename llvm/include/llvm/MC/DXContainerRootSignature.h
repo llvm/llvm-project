@@ -74,6 +74,7 @@ struct StaticSampler {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   dxbc::ShaderVisibility ShaderVisibility;
+  uint32_t Flags;
 };
 
 struct RootParametersContainer {
