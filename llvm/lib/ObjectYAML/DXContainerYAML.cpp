@@ -521,8 +521,8 @@ void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
   IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
-
-#define STATIC_SAMPLER_FLAG_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  IO.mapOptional(#Flag, S.Enum, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
