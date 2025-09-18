@@ -1713,8 +1713,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
         CGDI->addHeapAllocSiteMetadata(newCall, allocType, E->getExprLoc());
       }
       if (SanOpts.has(SanitizerKind::AllocToken)) {
-        // Set !alloc_token_hint metadata.
-        EmitAllocTokenHint(newCall, allocType);
+        // Set !alloc_token metadata.
+        EmitAllocToken(newCall, allocType);
       }
     }
 

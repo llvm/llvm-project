@@ -2374,11 +2374,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (const auto *Arg = Args.getLastArg(options::OPT_falloc_token_max_EQ)) {
     StringRef S = Arg->getValue();
     uint64_t Value = 0;
-    if (S.getAsInteger(0, Value)) {
+    if (S.getAsInteger(0, Value))
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
-    } else {
+    else
       Opts.AllocTokenMax = Value;
-    }
   }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
