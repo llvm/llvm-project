@@ -636,7 +636,10 @@ static Messages getNegativeIndexMessage(StringRef Name,
                   Name, ArraySizeVal, IndexStr)};
 }
 
-static std::string truncateWithEllipsis(StringRef Str, size_t MaxLength) {
+template <size_t MaxLength = 20>
+static std::string truncateWithEllipsis(StringRef Str) {
+  static_assert(MaxLength > 4, "MaxLength must be long enough to hold a single "
+                               "character plus the ellipsis");
   if (Str.size() <= MaxLength)
     return Str.str();
 
@@ -661,8 +664,7 @@ static Messages getOOBIndexMessage(StringRef Name, NonLoc Index,
     Out << "an overflowing index";
   }
 
-  std::string const ElemTypeStr =
-      truncateWithEllipsis(ElemType.getAsString(), 20);
+  std::string const ElemTypeStr = truncateWithEllipsis(ElemType.getAsString());
 
   Out << ", while it holds only ";
   if (ExtentN != 1)
