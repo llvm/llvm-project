@@ -279,6 +279,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_stdlib_macros",
+    hdrs = ["hdr/stdlib_macros.h"],
+    deps = [
+        ":hdr_stdlib_overlay",
+    ],
+)
+
+libc_support_library(
     name = "hdr_stdlib_overlay",
     hdrs = ["hdr/stdlib_overlay.h"],
 )
@@ -5063,6 +5071,41 @@ libc_function(
         ":__support_common",
         ":qsort_util",
         ":types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "rand_util",
+    srcs = ["src/stdlib/rand_util.cpp"],
+    hdrs = ["src/stdlib/rand_util.h"],
+    deps = [
+        ":__support_cpp_atomic",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "rand",
+    srcs = ["src/stdlib/rand.cpp"],
+    hdrs = ["src/stdlib/rand.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_threads_sleep",
+        ":hdr_stdlib_macros",
+        ":rand_util",
+    ],
+)
+
+libc_function(
+    name = "srand",
+    srcs = ["src/stdlib/srand.cpp"],
+    hdrs = ["src/stdlib/srand.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":rand_util",
     ],
 )
 
