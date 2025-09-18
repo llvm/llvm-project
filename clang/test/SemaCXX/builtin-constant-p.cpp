@@ -61,25 +61,14 @@ static_assert(bcp(int_to_ptr(123)));      // GCC rejects these due to not recogn
 static_assert(bcp_fold(int_to_ptr(123))); // the bcp conditional in 'int_to_ptr' ...
 static_assert(__builtin_constant_p((int*)123)); // ... but GCC accepts this
 
-// State mutations in the operand are not permitted.
-//
-// The rule GCC uses for this is not entirely understood, but seems to depend
-// in some way on what local state is mentioned in the operand of
-// __builtin_constant_p and where.
-//
-// We approximate GCC's rule by evaluating the operand in a speculative
-// evaluation context; only state created within the evaluation can be
-// modified.
+// State mutations in the operand are permitted.
 constexpr int mutate1() {
   int n = 1;
   int m = __builtin_constant_p(++n);
   return n * 10 + m;
 }
-static_assert(mutate1() == 10);
+static_assert(mutate1() == 21);
 
-// FIXME: GCC treats this as being non-constant because of the "n = 2", even
-// though evaluation in the context of the enclosing constant expression
-// succeeds without mutating any state.
 constexpr int mutate2() {
   int n = 1;
   int m = __builtin_constant_p(n ? n + 1 : n = 2);
@@ -107,8 +96,6 @@ constexpr int mutate4() {
 }
 static_assert(mutate4() == 11);
 
-// FIXME: GCC treats this as being non-constant because of something to do with
-// the 'n' in the argument to internal_mutation.
 constexpr int mutate5() {
   int n = 1;
   int m = __builtin_constant_p(n ? internal_mutation(n) : 0);
@@ -130,7 +117,7 @@ constexpr int mutate6(bool mutate) {
 // No mutation of state outside __builtin_constant_p: evaluates to true.
 static_assert(mutate6(false) == 11);
 // Mutation of state outside __builtin_constant_p: evaluates to false.
-static_assert(mutate6(true) == 10);
+static_assert(mutate6(true) == 21);
 
 // GCC strangely returns true for the address of a type_info object, despite it
 // not being a pointer to the start of a string literal.
@@ -151,6 +138,9 @@ namespace dtor_side_effect {
 }
 
 #if __cplusplus >= 202002L
+
+static_assert(__builtin_constant_p((delete new int, 0))); // expected-error {{failed}}
+
 namespace constexpr_dtor {
   struct A {
     int *p;

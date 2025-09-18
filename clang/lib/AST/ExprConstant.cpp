@@ -4566,13 +4566,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   //
   // FIXME: Not all local state is mutable. Allow local constant subobjects
   // to be read here (but take care with 'mutable' fields).
-  unsigned VisibleDepth = Depth;
-  if (llvm::isa_and_nonnull<ParmVarDecl>(
-          LVal.Base.dyn_cast<const ValueDecl *>()))
-    ++VisibleDepth;
   if ((Frame && Info.getLangOpts().CPlusPlus14 &&
-       Info.EvalStatus.HasSideEffects) ||
-      (isModification(AK) && VisibleDepth < Info.SpeculativeEvaluationDepth))
+       Info.EvalStatus.HasSideEffects))
     return CompleteObject();
 
   return CompleteObject(LVal.getLValueBase(), BaseVal, BaseType);
