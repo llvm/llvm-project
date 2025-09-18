@@ -116,8 +116,7 @@ llvm::StructType *HLSLBufferLayoutBuilder::createLayoutType(
       // annotations value -> layout the field.
       const int PO = PackOffsets ? (*PackOffsets)[Index++] : -1;
       if (!PackOffsets || PO != -1) {
-        if (!layoutField(FD, EndOffset, FieldOffset, FieldType, PO))
-          return nullptr;
+        layoutField(FD, EndOffset, FieldOffset, FieldType, PO);
         Layout.emplace_back(FieldOffset, FieldType);
         continue;
       }
@@ -135,8 +134,7 @@ llvm::StructType *HLSLBufferLayoutBuilder::createLayoutType(
     const FieldDecl *FD = I.first;
     assert(Layout[I.second] == std::pair(UINT_MAX, nullptr));
 
-    if (!layoutField(FD, EndOffset, FieldOffset, FieldType))
-      return nullptr;
+    layoutField(FD, EndOffset, FieldOffset, FieldType);
     Layout[I.second] = {FieldOffset, FieldType};
   }
 
@@ -177,7 +175,7 @@ llvm::StructType *HLSLBufferLayoutBuilder::createLayoutType(
 // Returns true if the conversion was successful.
 // The packoffset parameter contains the field's layout offset provided by the
 // user or -1 if there was no packoffset (or register(cX)) annotation.
-bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
+void HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
                                           unsigned &EndOffset,
                                           unsigned &FieldOffset,
                                           llvm::Type *&FieldLayoutTy,
@@ -200,8 +198,6 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     llvm::Type *NewTy;
     if (Ty->isStructureOrClassType()) {
       NewTy = createLayoutType(Ty->getAsCanonical<RecordType>());
-      if (!NewTy)
-        return false;
     } else
       NewTy = CGM.getTypes().ConvertTypeForMem(Ty);
 
@@ -214,8 +210,6 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // Create a layout type for the structure
     FieldLayoutTy = createLayoutType(
         cast<RecordType>(FieldTy->getAsCanonical<RecordType>()));
-    if (!FieldLayoutTy)
-      return false;
     FieldOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
     FieldSize = CGM.getDataLayout().getTypeSizeInBits(FieldLayoutTy) / 8;
 
@@ -253,7 +247,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
   unsigned NewEndOffset = FieldOffset + FieldSize;
   EndOffset = std::max<unsigned>(EndOffset, NewEndOffset);
 
-  return true;
+  return;
 }
 
 } // namespace CodeGen

@@ -35,7 +35,7 @@ public:
                    const llvm::SmallVector<int32_t> *Packoffsets = nullptr);
 
 private:
-  bool layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
+  void layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
                    unsigned &FieldOffset, llvm::Type *&FieldType,
                    int Packoffset = -1);
 };
