@@ -904,7 +904,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+        CI.getVirtualFileSystemPtr(), nullptr, ASTDiags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -971,9 +972,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
-        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
-        &CI.getLangOpts());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything,
+        CI.getVirtualFileSystemPtr(), nullptr, Diags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;
