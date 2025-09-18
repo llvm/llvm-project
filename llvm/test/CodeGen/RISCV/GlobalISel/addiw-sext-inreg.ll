@@ -6,7 +6,6 @@ define i32 @addiw_sext_inreg(i32 noundef signext %A) #0 {
 ; RV64I-LABEL: addiw_sext_inreg:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addiw a0, a0, 123
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 entry:
   %add = add nsw i32 123, %A
