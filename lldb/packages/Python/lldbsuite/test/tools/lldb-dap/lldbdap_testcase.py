@@ -5,12 +5,16 @@ import uuid
 
 import dap_server
 from dap_server import Source
+from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
 import base64
 
 
+# DAP tests as a whole have been flakey on the Windows on Arm bot. See:
+# https://github.com/llvm/llvm-project/issues/137660
+@skipIf(oslist=["windows"], archs=["aarch64"])
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.

@@ -227,6 +227,12 @@ public:
   /// Builds a new OpenMPThreadPrivateDecl and checks its correctness.
   OMPThreadPrivateDecl *CheckOMPThreadPrivateDecl(SourceLocation Loc,
                                                   ArrayRef<Expr *> VarList);
+  /// Called on well-formed '#pragma omp groupprivate'.
+  DeclGroupPtrTy ActOnOpenMPGroupPrivateDirective(SourceLocation Loc,
+                                                  ArrayRef<Expr *> VarList);
+  /// Builds a new OpenMPGroupPrivateDecl and checks its correctness.
+  OMPGroupPrivateDecl *CheckOMPGroupPrivateDecl(SourceLocation Loc,
+                                                ArrayRef<Expr *> VarList);
   /// Called on well-formed '#pragma omp allocate'.
   DeclGroupPtrTy ActOnOpenMPAllocateDirective(SourceLocation Loc,
                                               ArrayRef<Expr *> VarList,
