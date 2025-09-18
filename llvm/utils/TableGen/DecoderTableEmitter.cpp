@@ -178,17 +178,18 @@ void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
     return;
   }
 
+  ListSeparator LS("} else ");
   for (const DecoderTreeNode *Child : drop_end(N->children())) {
     emitOpcode("OPC_Scope");
     emitULEB128(computeNodeSize(Child));
 
-    emitComment(Indent) << "{\n";
+    emitComment(Indent) << LS << "try {\n";
     emitNode(Child, Indent + 1);
-    emitComment(Indent) << "}\n";
   }
 
   const DecoderTreeNode *Child = *std::prev(N->child_end());
-  emitComment(Indent) << "{\n";
+
+  emitComment(Indent) << LS << "try {\n";
   emitNode(Child, Indent + 1);
   emitComment(Indent) << "}\n";
 }
@@ -272,7 +273,7 @@ void DecoderTableEmitter::emitSoftFailNode(const SoftFailNode *N,
   emitULEB128(NegativeMask);
   TableInfo.HasSoftFail = true;
 
-  emitComment(Indent) << "check softfail";
+  emitComment(Indent) << "softfail";
   OS << " pos=" << format_hex(PositiveMask, 10);
   OS << " neg=" << format_hex(NegativeMask, 10) << '\n';
 }

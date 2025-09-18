@@ -34,11 +34,10 @@ def InstB : TestInstruction {
 
 // CHECK-LABEL: static const uint8_t DecoderTable512[20] = {
 // CHECK-NEXT:    OPC_CheckField, 250, 3, 4, 0, //  0: check Inst[509:506] == 0x0
-// CHECK-NEXT:    OPC_Scope, 9,                 //  5: {
+// CHECK-NEXT:    OPC_Scope, 9,                 //  5: try {
 // CHECK-NEXT:    OPC_CheckField, 248, 3, 2, 0, //  7:  check Inst[505:504] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0,  // 12:  decode to InstB using decoder 0
-// CHECK-NEXT:                                  // 12: }
-// CHECK-NEXT:                                  // 12: {
+// CHECK-NEXT:                                  // 12: } else try {
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1,  // 16:  decode to InstA using decoder 1
 // CHECK-NEXT:                                  // 16: }
 // CHECK-NEXT: };
