@@ -29,6 +29,19 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   return R && match(R, P);
 }
 
+template <typename Val, typename Pattern> struct VPMatchFunctor {
+  const Pattern &P;
+  VPMatchFunctor(const Pattern &P) : P(P) {}
+  bool operator()(Val *V) const { return match(V, P); }
+};
+
+/// A match functor that can be used as a UnaryPredicate in functional
+/// algorithms like all_of.
+template <typename Val = VPUser, typename Pattern>
+VPMatchFunctor<Val, Pattern> match_fn(const Pattern &P) {
+  return P;
+}
+
 template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
 };
