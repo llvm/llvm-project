@@ -5502,7 +5502,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
       OS << "\nFunction Type ID:: 0x" << format("%lx", CGInfo.FunctionTypeId);
     OS << "\nIndirect callee count:: " << CGInfo.IndirectCallsites.size();
     if (CGInfo.IndirectCallsites.size() > 0) {
-      OS << "\n{";      
+      OS << "\n{";
       for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {
         OS << "\n";
         OS.PadToColumn(2);
@@ -5510,7 +5510,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
         OS << "\n";
         OS.PadToColumn(2);
         OS << "calleeTypeId: 0x" << format("%lx", TypeId);
-      }      
+      }
       OS << "\n}";
     }
     OS << "\nDirect callee count:: " << CGInfo.DirectCallees.size();
@@ -5520,7 +5520,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
         OS << "\n";
         OS.PadToColumn(2);
         OS << "0x" << format("%lx", CalleePC);
-      }      
+      }
       OS << "\n}";
     }
     OS << "\n";
