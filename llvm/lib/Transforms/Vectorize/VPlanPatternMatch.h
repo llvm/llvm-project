@@ -199,8 +199,26 @@ struct apint_match {
   }
 };
 
-/// Match an APInt, capturing it if we match.
-inline apint_match m_APInt(const APInt *&C) { return C; }
+struct bind_const_intval_ty {
+  uint64_t &VR;
+
+  bind_const_intval_ty(uint64_t &V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    const APInt *ConstInt;
+    if (!apint_match(ConstInt).match(V))
+      return false;
+    if (auto C = ConstInt->tryZExtValue()) {
+      VR = *C;
+      return true;
+    }
+    return false;
+  }
+};
+
+/// Match a plain integer constant no wider than 64-bits, capturing it if we
+/// match.
+inline bind_const_intval_ty m_ConstantInt(uint64_t &C) { return C; }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
