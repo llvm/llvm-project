@@ -4570,7 +4570,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
     }
 
-
     // Adapt EVec's type into ContainerVT.
     if (EVecContainerVT.getVectorMinNumElements() <
         ContainerVT.getVectorMinNumElements())
