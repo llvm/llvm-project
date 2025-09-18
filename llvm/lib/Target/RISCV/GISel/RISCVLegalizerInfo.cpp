@@ -740,6 +740,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         } else if (MRI.getType(OldScalar).getSizeInBits() >
                    sXLen.getSizeInBits()) {
           // TODO: i64 in riscv32.
+          return false;
         }
       }
     }
