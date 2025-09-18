@@ -3184,9 +3184,6 @@ void llvm::copyMetadataForStore(StoreInst &Dest, const StoreInst &Source) {
       if (NewType->isPointerTy())
         Dest.setMetadata(ID, N);
       break;
-
-    case LLVMContext::MD_range:
-      break;
     }
   }
 }
