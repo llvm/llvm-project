@@ -12154,8 +12154,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateInteger(E->getArg(2), Imm, Info))
       return false;
 
-    if (!SourceDst.isVector() || !SourceSub.isVector())
-      return false;
     assert(SourceDst.isVector() && SourceSub.isVector());
     unsigned DstLen = SourceDst.getVectorLength();
     unsigned SubLen = SourceSub.getVectorLength();
