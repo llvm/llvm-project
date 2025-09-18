@@ -14,43 +14,6 @@
 
 using namespace llvm;
 
-void DecoderTableEmitter::analyzeNode(const DecoderTreeNode *Node) const {
-  switch (Node->getKind()) {
-  case DecoderTreeNode::CheckAny: {
-    const auto *N = static_cast<const CheckAnyNode *>(Node);
-    for (const DecoderTreeNode *Child : N->children())
-      analyzeNode(Child);
-    break;
-  }
-  case DecoderTreeNode::CheckAll: {
-    const auto *N = static_cast<const CheckAllNode *>(Node);
-    for (const DecoderTreeNode *Child : N->children())
-      analyzeNode(Child);
-    break;
-  }
-  case DecoderTreeNode::CheckField:
-    break;
-  case DecoderTreeNode::SwitchField: {
-    const auto *N = static_cast<const SwitchFieldNode *>(Node);
-    for (const DecoderTreeNode *Child : make_second_range(N->cases()))
-      analyzeNode(Child);
-    break;
-  }
-  case DecoderTreeNode::CheckPredicate: {
-    const auto *N = static_cast<const CheckPredicateNode *>(Node);
-    TableInfo.insertPredicate(N->getPredicateString());
-    break;
-  }
-  case DecoderTreeNode::SoftFail:
-    break;
-  case DecoderTreeNode::Decode: {
-    const auto *N = static_cast<const DecodeNode *>(Node);
-    TableInfo.insertDecoder(N->getDecoderString());
-    break;
-  }
-  }
-}
-
 unsigned
 DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   // To make the arithmetic below clearer.
@@ -102,8 +65,7 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   }
   case DecoderTreeNode::CheckPredicate: {
     const auto *N = static_cast<const CheckPredicateNode *>(Node);
-    unsigned PredicateIndex =
-        TableInfo.getPredicateIndex(N->getPredicateString());
+    unsigned PredicateIndex = N->getPredicateIndex();
     return OpcodeSize + getULEB128Size(PredicateIndex);
   }
   case DecoderTreeNode::SoftFail: {
@@ -114,7 +76,7 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   case DecoderTreeNode::Decode: {
     const auto *N = static_cast<const DecodeNode *>(Node);
     unsigned InstOpcode = N->getEncoding().getInstruction()->EnumVal;
-    unsigned DecoderIndex = TableInfo.getDecoderIndex(N->getDecoderString());
+    unsigned DecoderIndex = N->getDecoderIndex();
     return OpcodeSize + getULEB128Size(InstOpcode) +
            getULEB128Size(DecoderIndex);
   }
@@ -278,8 +240,7 @@ void DecoderTableEmitter::emitCheckFieldNode(const CheckFieldNode *N,
 
 void DecoderTableEmitter::emitCheckPredicateNode(const CheckPredicateNode *N,
                                                  indent Indent) {
-  unsigned PredicateIndex =
-      TableInfo.getPredicateIndex(N->getPredicateString());
+  unsigned PredicateIndex = N->getPredicateIndex();
 
   emitOpcode("OPC_CheckPredicate");
   emitULEB128(PredicateIndex);
@@ -306,7 +267,7 @@ void DecoderTableEmitter::emitSoftFailNode(const SoftFailNode *N,
 void DecoderTableEmitter::emitDecodeNode(const DecodeNode *N, indent Indent) {
   const InstructionEncoding &Encoding = N->getEncoding();
   unsigned InstOpcode = Encoding.getInstruction()->EnumVal;
-  unsigned DecoderIndex = TableInfo.getDecoderIndex(N->getDecoderString());
+  unsigned DecoderIndex = N->getDecoderIndex();
 
   emitOpcode("OPC_Decode");
   emitULEB128(InstOpcode);
@@ -339,8 +300,6 @@ void DecoderTableEmitter::emitNode(const DecoderTreeNode *N, indent Indent) {
 
 void DecoderTableEmitter::emitTable(StringRef TableName, unsigned BitWidth,
                                     const DecoderTreeNode *Root) {
-  analyzeNode(Root);
-
   unsigned TableSize = computeTableSize(Root, BitWidth);
   OS << "static const uint8_t " << TableName << "[" << TableSize << "] = {\n";
 

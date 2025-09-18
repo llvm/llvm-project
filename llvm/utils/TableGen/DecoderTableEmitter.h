@@ -10,40 +10,13 @@
 #define LLVM_UTILS_TABLEGEN_DECODERTABLEEMITTER_H
 
 #include "DecoderTree.h"
-#include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
 
-using PredicateSet = SetVector<CachedHashString>;
-using DecoderSet = SetVector<CachedHashString>;
-
 struct DecoderTableInfo {
-  PredicateSet Predicates;
-  DecoderSet Decoders;
-  bool HasCheckPredicate;
-  bool HasSoftFail;
-
-  void insertPredicate(StringRef Predicate) {
-    Predicates.insert(CachedHashString(Predicate));
-  }
-
-  void insertDecoder(StringRef Decoder) {
-    Decoders.insert(CachedHashString(Decoder));
-  }
-
-  unsigned getPredicateIndex(StringRef Predicate) const {
-    PredicateSet::const_iterator I = find(Predicates, Predicate);
-    assert(I != Predicates.end());
-    return std::distance(Predicates.begin(), I);
-  }
-
-  unsigned getDecoderIndex(StringRef Decoder) const {
-    DecoderSet::const_iterator I = find(Decoders, Decoder);
-    assert(I != Decoders.end());
-    return std::distance(Decoders.begin(), I);
-  }
+  bool HasCheckPredicate = false;
+  bool HasSoftFail = false;
 };
 
 class DecoderTableEmitter {
@@ -70,8 +43,6 @@ public:
                  const DecoderTreeNode *Root);
 
 private:
-  void analyzeNode(const DecoderTreeNode *Node) const;
-
   unsigned computeNodeSize(const DecoderTreeNode *Node) const;
   unsigned computeTableSize(const DecoderTreeNode *Root,
                             unsigned BitWidth) const;

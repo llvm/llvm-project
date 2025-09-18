@@ -1177,13 +1177,14 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 namespace {
 
 class DecoderTreeBuilder {
+  DecoderContext &Ctx;
   const CodeGenTarget &Target;
   ArrayRef<InstructionEncoding> Encodings;
 
 public:
-  DecoderTreeBuilder(const CodeGenTarget &Target,
+  DecoderTreeBuilder(DecoderContext &Ctx, const CodeGenTarget &Target,
                      ArrayRef<InstructionEncoding> Encodings)
-      : Target(Target), Encodings(Encodings) {}
+      : Ctx(Ctx), Target(Target), Encodings(Encodings) {}
 
   std::unique_ptr<DecoderTreeNode> buildTree(ArrayRef<unsigned> EncodingIDs);
 
@@ -1208,8 +1209,10 @@ DecoderTreeBuilder::convertSingleton(unsigned EncodingID,
   auto N = std::make_unique<CheckAllNode>();
 
   std::string Predicate = getPredicateString(Encoding, Target.getName());
-  if (!Predicate.empty())
-    N->addChild(std::make_unique<CheckPredicateNode>(std::move(Predicate)));
+  if (!Predicate.empty()) {
+    unsigned PredicateIndex = Ctx.getPredicateIndex(Predicate);
+    N->addChild(std::make_unique<CheckPredicateNode>(PredicateIndex));
+  }
 
   std::vector<EncodingIsland> Islands =
       getIslands(Encoding.getMandatoryBits(), FilterBits);
@@ -1227,8 +1230,8 @@ DecoderTreeBuilder::convertSingleton(unsigned EncodingID,
                                                NegativeMask.getZExtValue()));
   }
 
-  std::string DecoderString = getDecoderString(Encoding);
-  N->addChild(std::make_unique<DecodeNode>(Encoding, std::move(DecoderString)));
+  unsigned DecoderIndex = Ctx.getDecoderIndex(getDecoderString(Encoding));
+  N->addChild(std::make_unique<DecodeNode>(Encoding, DecoderIndex));
 
   return N;
 }
@@ -1508,16 +1511,13 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
     PrintFatalError(
         "Cannot specialize decoders for variable length instuctions");
 
-  DecoderTableInfo TableInfo{};
-  DecoderTreeBuilder TreeBuilder(Target, Encodings);
+  DecoderContext Ctx;
+  DecoderTreeBuilder TreeBuilder(Ctx, Target, Encodings);
+
+  DecoderTableInfo TableInfo;
   DecoderTableEmitter TableEmitter(TableInfo, OS);
 
   // Emit a table for each (namespace, hwmode, bitwidth) combination.
-  // Predicates and decoders are shared across the tables to provide more
-  // opportunities for uniqueness. If SpecializeDecodersPerBitwidth is enabled,
-  // decoders are shared across all tables for a given bitwidth, else they are
-  // shared across all tables. Predicates are always shared across all tables.
-  //
   // Entries in `EncMap` are already sorted by bitwidth. So bucketing per
   // bitwidth can be done on-the-fly as we iterate over the map.
   bool HasConflict = false;
@@ -1547,8 +1547,8 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
     // Each BitWidth get's its own decoders and decoder function if
     // SpecializeDecodersPerBitwidth is enabled.
     if (SpecializeDecodersPerBitwidth) {
-      emitDecoderFunction(OS, TableInfo.Decoders, BitWidth);
-      TableInfo.Decoders.clear();
+      emitDecoderFunction(OS, Ctx.Decoders, BitWidth);
+      Ctx.Decoders.clear();
     }
   }
 
@@ -1558,11 +1558,11 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   // Emit the decoder function for the last bucket. This will also emit the
   // single decoder function if SpecializeDecodersPerBitwidth = false.
   if (!SpecializeDecodersPerBitwidth)
-    emitDecoderFunction(OS, TableInfo.Decoders, 0);
+    emitDecoderFunction(OS, Ctx.Decoders, 0);
 
   // Emit the predicate function.
   if (TableInfo.HasCheckPredicate)
-    emitPredicateFunction(OS, TableInfo.Predicates);
+    emitPredicateFunction(OS, Ctx.Predicates);
 
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS, IsVarLenInst, TableInfo);

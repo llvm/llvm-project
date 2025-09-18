@@ -9,7 +9,9 @@
 #ifndef LLVM_UTILS_TABLEGEN_DECODERTREE_H
 #define LLVM_UTILS_TABLEGEN_DECODERTREE_H
 
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <map>
@@ -18,6 +20,31 @@
 namespace llvm {
 
 class InstructionEncoding;
+
+using PredicateSet = SetVector<CachedHashString>;
+using DecoderSet = SetVector<CachedHashString>;
+
+/// Context shared across decoder trees.
+/// Predicates and decoders are shared across decoder trees to provide more
+/// opportunities for uniqueness. If SpecializeDecodersPerBitwidth is enabled,
+/// decoders are shared across all trees for a given bitwidth, else they are
+/// shared across all trees. Predicates are always shared across all trees.
+struct DecoderContext {
+  PredicateSet Predicates;
+  DecoderSet Decoders;
+
+  unsigned getPredicateIndex(StringRef Predicate) {
+    Predicates.insert(CachedHashString(Predicate));
+    PredicateSet::const_iterator I = find(Predicates, Predicate);
+    return std::distance(Predicates.begin(), I);
+  }
+
+  unsigned getDecoderIndex(StringRef Decoder) {
+    Decoders.insert(CachedHashString(Decoder));
+    DecoderSet::const_iterator I = find(Decoders, Decoder);
+    return std::distance(Decoders.begin(), I);
+  }
+};
 
 class DecoderTreeNode {
 public:
@@ -140,14 +167,13 @@ public:
 };
 
 class CheckPredicateNode : public DecoderTreeNode {
-  std::string PredicateString;
+  unsigned PredicateIndex;
 
 public:
-  explicit CheckPredicateNode(std::string PredicateString)
-      : DecoderTreeNode(CheckPredicate),
-        PredicateString(std::move(PredicateString)) {}
+  explicit CheckPredicateNode(unsigned PredicateIndex)
+      : DecoderTreeNode(CheckPredicate), PredicateIndex(PredicateIndex) {}
 
-  StringRef getPredicateString() const { return PredicateString; }
+  unsigned getPredicateIndex() const { return PredicateIndex; }
 };
 
 class SoftFailNode : public DecoderTreeNode {
@@ -164,16 +190,16 @@ public:
 
 class DecodeNode : public DecoderTreeNode {
   const InstructionEncoding &Encoding;
-  std::string DecoderString;
+  unsigned DecoderIndex;
 
 public:
-  DecodeNode(const InstructionEncoding &Encoding, std::string DecoderString)
+  DecodeNode(const InstructionEncoding &Encoding, unsigned DecoderIndex)
       : DecoderTreeNode(Decode), Encoding(Encoding),
-        DecoderString(std::move(DecoderString)) {}
+        DecoderIndex(DecoderIndex) {}
 
   const InstructionEncoding &getEncoding() const { return Encoding; }
 
-  StringRef getDecoderString() const { return DecoderString; }
+  unsigned getDecoderIndex() const { return DecoderIndex; }
 };
 
 } // namespace llvm
