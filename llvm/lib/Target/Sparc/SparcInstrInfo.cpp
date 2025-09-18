@@ -38,7 +38,7 @@ static cl::opt<unsigned>
 void SparcInstrInfo::anchor() {}
 
 SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
-    : SparcGenInstrInfo(ST, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(),
+    : SparcGenInstrInfo(ST, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(ST),
       Subtarget(ST) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct

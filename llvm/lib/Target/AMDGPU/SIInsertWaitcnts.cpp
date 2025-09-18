@@ -845,6 +845,15 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
     assert(Size % 16 == 0);
     Result.second = Result.first + (Size / 16);
+
+    if (Size == 16 && Context->ST->hasD16Writes32BitVgpr()) {
+      // Regardless of which lo16/hi16 is used, consider the full 32-bit
+      // register used.
+      if (AMDGPU::isHi16Reg(MCReg, *TRI))
+        Result.first -= 1;
+      else
+        Result.second += 1;
+    }
   } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && RegIdx < SQ_MAX_PGM_SGPRS) {
     // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
     // sources like SRC_PRIVATE_BASE.
@@ -1941,13 +1950,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = FIRST_LDS_VGPR;
-        // Only objects with alias scope info were added to LDSDMAScopes array.
-        // In the absense of the scope info we will not be able to disambiguate
-        // aliasing here. There is no need to try searching for a corresponding
-        // store slot. This is conservatively correct because in that case we
-        // will produce a wait using the first (general) LDS DMA wait slot which
-        // will wait on all of them anyway.
-        if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
+        if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
             if (MI.mayAlias(AA, *LDSDMAStores[I], true))

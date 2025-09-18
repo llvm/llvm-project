@@ -629,6 +629,12 @@ Interpreter::Visit(const FloatLiteralNode *node) {
                                                   "result");
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BooleanLiteralNode *node) {
+  bool value = node->GetValue();
+  return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
+}
+
 llvm::Expected<CompilerType> Interpreter::VerifyCStyleCastType(
     lldb::ValueObjectSP &operand, CompilerType &op_type,
     CompilerType target_type, CastPromoKind &promo_kind,

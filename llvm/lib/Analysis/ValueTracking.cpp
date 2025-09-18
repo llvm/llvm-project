@@ -250,9 +250,8 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
 }
 
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
-  return !I->user_empty() && all_of(I->users(), [](const User *U) {
-    return match(U, m_ICmp(m_Value(), m_Zero()));
-  });
+  return !I->user_empty() &&
+         all_of(I->users(), match_fn(m_ICmp(m_Value(), m_Zero())));
 }
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
@@ -5070,6 +5069,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                      KnownRHS.isKnownNeverPosZero()) &&
                     (KnownLHS.isKnownNeverPosZero() ||
                      KnownRHS.isKnownNeverNegZero()))) {
+          // Don't take sign bit from NaN operands.
+          if (!KnownLHS.isKnownNeverNaN())
+            KnownLHS.SignBit = std::nullopt;
+          if (!KnownRHS.isKnownNeverNaN())
+            KnownRHS.SignBit = std::nullopt;
           if ((IID == Intrinsic::maximum || IID == Intrinsic::maximumnum ||
                IID == Intrinsic::maxnum) &&
               (KnownLHS.SignBit == false || KnownRHS.SignBit == false))

@@ -158,6 +158,7 @@ private:
   ASTNodeUP ParseNumericLiteral();
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
+  ASTNodeUP ParseBooleanLiteral();
 
   ASTNodeUP ParseCastExpression();
   std::optional<CompilerType> ParseTypeId(bool must_be_type_id = false);

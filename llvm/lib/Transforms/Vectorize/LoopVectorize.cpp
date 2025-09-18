@@ -393,6 +393,10 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> ConsiderRegPressure(
+    "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
+    cl::desc("Discard VFs if their register pressure is too high."));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -3693,6 +3697,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 bool LoopVectorizationCostModel::shouldConsiderRegPressureForVF(
     ElementCount VF) {
+  if (ConsiderRegPressure.getNumOccurrences())
+    return ConsiderRegPressure;
+
+  // TODO: We should eventually consider register pressure for all targets. The
+  // TTI hook is temporary whilst target-specific issues are being fixed.
+  if (TTI.shouldConsiderVectorizationRegPressure())
+    return true;
+
   if (!useMaxBandwidth(VF.isScalable()
                            ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector))
@@ -4308,16 +4320,10 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   if (TTI.getMaxInterleaveFactor(VF) <= 1)
     return false;
 
-  // TODO: PR #108190 introduced a discrepancy between fixed-width and scalable
-  // VFs when deciding profitability.
-  // See related "TODO: extend to support scalable VFs." in
-  // selectEpilogueVectorizationFactor.
-  unsigned Multiplier = VF.isFixed() ? IC : 1;
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
                                 ? EpilogueVectorizationMinVF
                                 : TTI.getEpilogueVectorizationMinVF();
-  return estimateElementCount(VF * Multiplier, VScaleForTuning) >=
-         MinVFThreshold;
+  return estimateElementCount(VF * IC, VScaleForTuning) >= MinVFThreshold;
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
@@ -9545,7 +9551,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   auto ResumePhiIter =
       find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
-                                                           m_SpecificInt(0)));
+                                                           m_ZeroInt()));
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {

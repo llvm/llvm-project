@@ -67,8 +67,7 @@ struct DirectiveNameScope {
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
-    auto &dir{std::get<OmpLoopDirective>(x.t)};
-    return MakeName(dir.source, dir.v);
+    return x.DirName();
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {
@@ -155,6 +154,8 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
 }
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
+const BlockConstruct *GetFortranBlockConstruct(
+    const ExecutionPartConstruct &epc);
 
 } // namespace Fortran::parser::omp
 
