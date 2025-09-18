@@ -341,9 +341,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                                   Changes[i - 1].Tok->is(tok::string_literal);
     bool SkipMatchCheck = InsideNestedScope || ContinuedStringLiteral;
 
-    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck) {
+    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck)
       Shift = 0;
-    }
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
