@@ -106,6 +106,26 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
       /*methodName=*/"getIteratingParent",
       /*args=*/(ins)
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Promotes this parallel combining op out of its enclosing parallel loop
+        and returns the values that should replace the destinations updated by
+        this op.
+      }],
+      /*retTy=*/"::mlir::FailureOr<::llvm::SmallVector<::mlir::Value>>",
+      /*methodName=*/"promoteInParallelLoop",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if this op can be promoted out of its enclosing parallel
+        loop.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"canPromoteInParallelLoop",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/[{ return true; }]
+    >,
   ];
 }
 

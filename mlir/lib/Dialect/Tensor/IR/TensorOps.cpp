@@ -3947,6 +3947,21 @@ Operation *ParallelInsertSliceOp::getIteratingParent() {
   return nullptr;
 }
 
+FailureOr<SmallVector<Value>>
+ParallelInsertSliceOp::promoteInParallelLoop(RewriterBase &rewriter) {
+  Value dst = getDest();
+  Value src = getSource();
+  if (!isa<TensorType>(src.getType()))
+    return rewriter.notifyMatchFailure(getOperation(),
+                                       "expected tensor source");
+
+  Value inserted = tensor::InsertSliceOp::create(
+      rewriter, getLoc(), dst.getType(), src, dst, getOffsets(), getSizes(),
+      getStrides(), getStaticOffsets(), getStaticSizes(), getStaticStrides());
+
+  return SmallVector<Value>{inserted};
+}
+
 //===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
