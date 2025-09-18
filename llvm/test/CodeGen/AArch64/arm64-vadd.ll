@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:         warning: Instruction selection used fallback path for saddlp1d
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uaddlp1d
+; CHECK-GI:       warning: Instruction selection used fallback path for saddlp1d
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uaddlp1d
 
 define <8 x i8> @addhn8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: addhn8b:

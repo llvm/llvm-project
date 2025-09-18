@@ -344,8 +344,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, true, true]} : tensor<32x8x16xf32>, vector<32x8x16xf32>
 // CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 // CHECK:           %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [1, 3, 0, 4, 2] : vector<32x4x2x1x16xf32> to vector<4x1x32x16x2xf32>
-// CHECK:           %[[VAL_7:.*]] = tensor.empty() : tensor<4x1x32x16x2xf32>
-// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_7]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<4x1x32x16x2xf32>, tensor<4x1x32x16x2xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<4x1x32x16x2xf32>, tensor<4x1x32x16x2xf32>
 // CHECK:           return %[[VAL_8]] : tensor<4x1x32x16x2xf32>
 
 // -----
@@ -364,8 +363,7 @@ func.func @test_vectorize_padded_pack(%arg0: tensor<32x7x15xf32>, %arg1: tensor<
 // CHECK:           %[[VAL_4:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]]], %[[VAL_2]] {in_bounds = [true, false, false]} : tensor<32x7x15xf32>, vector<32x8x16xf32>
 // CHECK:           %[[VAL_5:.*]] = vector.shape_cast %[[VAL_4]] : vector<32x8x16xf32> to vector<32x4x2x1x16xf32>
 // CHECK:           %[[VAL_6:.*]] = vector.transpose %[[VAL_5]], [0, 1, 3, 4, 2] : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
-// CHECK:           %[[VAL_7:.*]] = tensor.empty() : tensor<32x4x1x16x2xf32>
-// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_7]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_write %[[VAL_6]], %[[VAL_1]]{{\[}}%[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]], %[[VAL_3]]] {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
 // CHECK:           return %[[VAL_8]] : tensor<32x4x1x16x2xf32>
 
 module attributes {transform.with_named_sequence} {
