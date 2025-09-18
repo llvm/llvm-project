@@ -105,6 +105,16 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
+std::optional<parser::CharBlock> GetObjectSource(
+    const parser::OmpObject &object) {
+  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+    return name->source;
+  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+    return GetLastName(*desg).source;
+  }
+  return std::nullopt;
+}
+
 const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
     if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
@@ -114,14 +124,12 @@ const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument) {
   return nullptr;
 }
 
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
-    return name->source;
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
-    return GetLastName(*desg).source;
+const parser::OmpObject *GetArgumentObject(
+    const parser::OmpArgument &argument) {
+  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
+    return std::get_if<parser::OmpObject>(&locator->u);
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 bool IsCommonBlock(const Symbol &sym) {
