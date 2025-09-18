@@ -40,6 +40,14 @@ private:
   void addPreprocessingOptions(const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Extract LTO options from the driver arguments and add them to
+  /// the command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void addLTOOptions(const llvm::opt::ArgList &Args,
+                     llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Extract PIC options from the driver arguments and add them to
   /// the command arguments.
   ///
