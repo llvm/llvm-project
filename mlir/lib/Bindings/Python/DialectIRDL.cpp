@@ -13,7 +13,6 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace llvm;
 using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
