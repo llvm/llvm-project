@@ -1384,12 +1384,11 @@ public:
       return false;
 
     const Expr *IndexExpr = OpCall->getArg(1);
-    llvm::APSInt IndexValue;
+    clang::Expr::EvalResult Eval;
 
     // Allow [0]
-    if (IndexExpr->EvaluateAsInt(IndexValue, Ctx) && IndexValue.isZero()) {
+    if (IndexExpr->EvaluateAsInt(Eval, Ctx) && Eval.Val.getInt().isZero())
       return false;
-    }
 
     Result.addNode(AccessorTag, DynTypedNode::create(*OpCall));
     return true;
