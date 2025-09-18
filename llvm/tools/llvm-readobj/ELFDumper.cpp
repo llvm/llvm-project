@@ -466,7 +466,7 @@ protected:
 
   // Callgraph - Main data structure to maintain per function callgraph
   // information.
-  MapVector<typename ELFT::uint, FunctionCallgraphInfo> FuncCGInfo;
+  MapVector<typename ELFT::uint, FunctionCallgraphInfo> FuncCGInfos;
 
   // // Callgraph - 64 bit type id mapped to entry PC addresses of functions
   // which
@@ -5381,7 +5381,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       reportError(std::move(CGSectionErr),
                   "While reading call graph info function entry PC");
 
-    if (FuncCGInfo.find(FuncAddr) != FuncCGInfo.end()) {
+    if (FuncCGInfos.find(FuncAddr) != FuncCGInfos.end()) {
       Error DuplicatePcErr =
           createError("for function PC: 0x" + Twine::utohexstr(FuncAddr));
       reportError(std::move(DuplicatePcErr), "Duplicate call graph entry");
@@ -5444,7 +5444,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "number of direct callsites");
-    // Read direct call sites and populate FuncCGInfo.
+    // Read direct call sites and populate FuncCGInfos.
     for (uint64_t I = 0; I < NumDirectCallees; ++I) {
       typename ELFT::uint Callee =
           Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
@@ -5453,7 +5453,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                             "direct callee PC");
       CGInfo.DirectCallees.insert(Callee);
     }
-    FuncCGInfo[FuncAddr] = CGInfo;
+    FuncCGInfos[FuncAddr] = CGInfo;
   }
 
   if (NotListedCount)
@@ -5464,7 +5464,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                         std::to_string(UnknownCount) + " indirect targets.");
 
   // Sort function info by function PC.
-  llvm::sort(FuncCGInfo,
+  llvm::sort(FuncCGInfos,
              [](const auto &A, const auto &B) { return A.first < B.first; });
   return true;
 }
@@ -5486,32 +5486,41 @@ static StringRef GetFuntionKindString(FunctionKind Kind) {
 template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   if (!this->processCallGraphSection())
     return;
+  if (this->FuncCGInfos.size() == 0)
+    return;
   using FunctionCallgraphInfo =
       ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
-  for (const auto &El : this->FuncCGInfo) {
+  OS << "Call graph information:: \n";
+  for (const auto &El : this->FuncCGInfos) {
     typename ELFT::uint FuncEntryPc = El.first;
     FunctionCallgraphInfo CGInfo = El.second;
-    OS << "Function PC:: "
+    OS << "\nFunction PC:: 0x"
        << format("%lx", FuncEntryPc); // TODO: Print function name
     OS << "\nFormatVersionNumber:: " << CGInfo.FormatVersionNumber;
     OS << "\nFunction Kind:: " << GetFuntionKindString(CGInfo.Kind);
     if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
-      OS << "\nFunction Type ID:: " << CGInfo.FunctionTypeId;
+      OS << "\nFunction Type ID:: 0x" << format("%lx", CGInfo.FunctionTypeId);
     OS << "\nIndirect callee count:: " << CGInfo.IndirectCallsites.size();
     if (CGInfo.IndirectCallsites.size() > 0) {
-      OS << "\n{";
+      OS << "\n{";      
       for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {
-        OS << "\ncallsite: " << format("%lx", IndirCallSitePc);
-        OS << "\ncalleeTypeId: " << format("%lx", TypeId);
-      }
+        OS << "\n";
+        OS.PadToColumn(2);
+        OS << "callsite: 0x" << format("%lx", IndirCallSitePc);
+        OS << "\n";
+        OS.PadToColumn(2);
+        OS << "calleeTypeId: 0x" << format("%lx", TypeId);
+      }      
       OS << "\n}";
     }
     OS << "\nDirect callee count:: " << CGInfo.DirectCallees.size();
     if (CGInfo.DirectCallees.size() > 0) {
       OS << "\n{";
       for (auto CalleePC : CGInfo.DirectCallees) {
-        OS << "\n" << format("%lx", CalleePC);
-      }
+        OS << "\n";
+        OS.PadToColumn(2);
+        OS << "0x" << format("%lx", CalleePC);
+      }      
       OS << "\n}";
     }
     OS << "\n";
@@ -8357,7 +8366,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
   using FunctionCallgraphInfo =
       ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
-  for (const auto &El : this->FuncCGInfo) {
+  for (const auto &El : this->FuncCGInfos) {
     typename ELFT::uint FuncEntryPc = El.first;
     FunctionCallgraphInfo CGInfo = El.second;
     std::string FuncPCStr = std::to_string(FuncEntryPc);
