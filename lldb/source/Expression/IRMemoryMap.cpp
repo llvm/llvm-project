@@ -647,7 +647,7 @@ void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
   if (it == m_allocations.end() ||
       it->second.m_policy != AllocationPolicy::eAllocationPolicyHostOnly)
     if (auto process_sp = GetProcessWP().lock())
-      pointer = process_sp->FixAnyAddress(pointer);
+      pointer = process_sp->FixAnyAddressPreservingAuthentication(pointer);
 
   Scalar scalar(pointer);
 

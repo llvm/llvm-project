@@ -1464,6 +1464,11 @@ public:
   /// platforms where there is a difference (only Arm Thumb at this time).
   lldb::addr_t FixAnyAddress(lldb::addr_t pc);
 
+  /// Strip pointer metadata except for the bits necessary to authenticate a
+  /// memory access. This is useful, for example, if `address` requires
+  /// authentication and it is going to be consumed in JITed code.
+  lldb::addr_t FixAnyAddressPreservingAuthentication(lldb::addr_t address);
+
   /// Get the Modification ID of the process.
   ///
   /// \return

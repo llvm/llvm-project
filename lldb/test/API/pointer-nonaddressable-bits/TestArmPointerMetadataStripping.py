@@ -41,8 +41,15 @@ class TestArmPointerMetadataStripping(TestBase):
         symbols_file = self.create_symbols_file()
         self.runCmd(f"target module add {symbols_file}")
 
+        # The address of myglobal_json is: 0x1200AAAAAAAB1014
         # The high order bits should be stripped.
-        self.expect_expr("get_high_bits(&myglobal_json)", result_value="0")
+        # On Darwin platforms, the lower nibble of the most significant byte is preserved.
+        if platform.system() == "Darwin":
+            expected_value = str(0x200000000000000)
+        else:
+            expected_value = "0"
+
+        self.expect_expr("get_high_bits(&myglobal_json)", result_value=expected_value)
 
         # Mark all bits as used for addresses and ensure bits are no longer stripped.
         self.runCmd("settings set target.process.virtual-addressable-bits 64")
