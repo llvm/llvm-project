@@ -996,7 +996,14 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Create the pass manager.
   llvm::ModulePassManager mpm;
-  if (opts.PrepareForFullLTO)
+  if (opts.PrepareForFatLTO) {
+    // The module summary should be emitted by default for regular LTO
+    // except for ld64 targets.
+    bool emitSummary = opts.PrepareForThinLTO || opts.PrepareForFullLTO ||
+                       triple.getVendor() != llvm::Triple::Apple;
+    mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
+                                        emitSummary);
+  } else if (opts.PrepareForFullLTO)
     mpm = pb.buildLTOPreLinkDefaultPipeline(level);
   else if (opts.PrepareForThinLTO)
     mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
