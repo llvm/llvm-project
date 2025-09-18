@@ -3349,7 +3349,7 @@ public:
                              SanitizerHandler Handler);
 
   /// Emit additional metadata used by the AllocToken instrumentation.
-  void EmitAllocTokenHint(llvm::CallBase *CB, QualType AllocType);
+  void EmitAllocToken(llvm::CallBase *CB, QualType AllocType);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);

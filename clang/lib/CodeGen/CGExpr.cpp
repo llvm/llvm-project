@@ -1272,8 +1272,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
-void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
-                                         QualType AllocType) {
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   assert(SanOpts.has(SanitizerKind::AllocToken) &&
          "Only needed with -fsanitize=alloc-token");
 
@@ -1285,7 +1284,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
 
   // Format: !{<type-name>}
   auto *MDN = llvm::MDNode::get(CGM.getLLVMContext(), {TypeMDS});
-  CB->setMetadata(llvm::LLVMContext::MD_alloc_token_hint, MDN);
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::

@@ -69,27 +69,19 @@ enum class TokenMode : unsigned {
 
   /// Token ID based on allocated type hash.
   TypeHash = 2,
-
-  // Mode count - keep last
-  ModeCount
 };
 
 //===--- Command-line options ---------------------------------------------===//
 
-struct ModeParser : public cl::parser<unsigned> {
-  ModeParser(cl::Option &O) : cl::parser<unsigned>(O) {}
-  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
-    if (cl::parser<unsigned>::parse(O, ArgName, Arg, Value))
-      return true;
-    if (Value >= static_cast<unsigned>(TokenMode::ModeCount))
-      return O.error("'" + Arg + "' value invalid");
-    return false;
-  }
-};
-
-cl::opt<unsigned, false, ModeParser>
-    ClMode("alloc-token-mode", cl::desc("Token assignment mode"), cl::Hidden,
-           cl::init(static_cast<unsigned>(TokenMode::TypeHash)));
+cl::opt<TokenMode>
+    ClMode("alloc-token-mode", cl::Hidden, cl::desc("Token assignment mode"),
+           cl::init(TokenMode::TypeHash),
+           cl::values(clEnumValN(TokenMode::Increment, "increment",
+                                 "Incrementally increasing token ID"),
+                      clEnumValN(TokenMode::Random, "random",
+                                 "Statically-assigned random token ID"),
+                      clEnumValN(TokenMode::TypeHash, "typehash",
+                                 "Token ID based on allocated type hash")));
 
 cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
@@ -106,7 +98,7 @@ cl::opt<bool>
 
 // Instrument libcalls only by default - compatible allocators only need to take
 // care of providing standard allocation functions. With extended coverage, also
-// instrument non-libcall allocation function calls with !alloc_token_hint
+// instrument non-libcall allocation function calls with !alloc_token
 // metadata.
 cl::opt<bool>
     ClExtended("alloc-token-extended",
@@ -140,14 +132,14 @@ STATISTIC(NumAllocations, "Allocations found");
 
 //===----------------------------------------------------------------------===//
 
-/// Returns the !alloc_token_hint metadata if available.
+/// Returns the !alloc_token metadata if available.
 ///
 /// Expected format is: !{<type-name>}
-MDNode *getAllocTokenHintMetadata(const CallBase &CB) {
-  MDNode *Ret = CB.getMetadata(LLVMContext::MD_alloc_token_hint);
+MDNode *getAllocTokenMetadata(const CallBase &CB) {
+  MDNode *Ret = CB.getMetadata(LLVMContext::MD_alloc_token);
   if (!Ret)
     return nullptr;
-  assert(Ret->getNumOperands() == 1 && "bad !alloc_token_hint");
+  assert(Ret->getNumOperands() == 1 && "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
   return Ret;
 }
@@ -198,7 +190,7 @@ public:
   using ModeBase::ModeBase;
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
-    if (MDNode *N = getAllocTokenHintMetadata(CB)) {
+    if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
       return boundedToken(xxHash64(S->getString()));
     }
@@ -212,7 +204,7 @@ public:
       ore::NV FuncNV("Function", CB.getParent()->getParent());
       const Function *Callee = CB.getCalledFunction();
       ore::NV CalleeNV("Callee", Callee ? Callee->getName() : "<unknown>");
-      return OptimizationRemark(DEBUG_TYPE, "NoAllocTokenHint", &CB)
+      return OptimizationRemark(DEBUG_TYPE, "NoAllocToken", &CB)
              << "Call to '" << CalleeNV << "' in '" << FuncNV
              << "' without source-level type token";
     });
@@ -235,7 +227,7 @@ public:
       : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         Mode(IncrementMode(*Options.MaxTokens)) {
-    switch (static_cast<TokenMode>(ClMode.getValue())) {
+    switch (ClMode.getValue()) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
@@ -243,9 +235,6 @@ public:
       break;
     case TokenMode::TypeHash:
       Mode.emplace<TypeHashMode>(*Options.MaxTokens);
-      break;
-    case TokenMode::ModeCount:
-      llvm_unreachable("");
       break;
     }
   }
@@ -255,10 +244,11 @@ public:
 private:
   /// Returns true for !isAllocationFn() functions that are also eligible for
   /// instrumentation.
-  bool isInstrumentableLibFunc(LibFunc Func) const;
+  static bool isInstrumentableLibFunc(LibFunc Func, const Value *V,
+                                      const TargetLibraryInfo *TLI);
 
   /// Returns true for isAllocationFn() functions that we should ignore.
-  bool ignoreInstrumentableLibFunc(LibFunc Func) const;
+  static bool ignoreInstrumentableLibFunc(LibFunc Func);
 
   /// Replace a call/invoke with a call/invoke to the allocation function
   /// with token ID.
@@ -277,6 +267,7 @@ private:
 
   const AllocTokenOptions Options;
   Module &Mod;
+  IntegerType *IntPtrTy = Mod.getDataLayout().getIntPtrType(Mod.getContext());
   FunctionAnalysisManager &FAM;
   // Cache for replacement functions.
   DenseMap<std::pair<LibFunc, uint64_t>, FunctionCallee> TokenAllocFunctions;
@@ -316,28 +307,29 @@ bool AllocToken::instrumentFunction(Function &F) {
     if (TLI.getLibFunc(*Callee, Func)) {
       if (ignoreInstrumentableLibFunc(Func))
         continue;
-      if (isInstrumentableLibFunc(Func) || isAllocationFn(CB, &TLI))
+      if (isInstrumentableLibFunc(Func, CB, &TLI))
         AllocCalls.emplace_back(CB, Func);
-    } else if (Options.Extended && getAllocTokenHintMetadata(*CB)) {
+    } else if (Options.Extended && getAllocTokenMetadata(*CB)) {
       AllocCalls.emplace_back(CB, NotLibFunc);
     }
   }
 
-  bool Modified = false;
+  if (AllocCalls.empty())
+    return false;
 
-  if (!AllocCalls.empty()) {
-    for (auto &[CB, Func] : AllocCalls) {
-      replaceAllocationCall(CB, Func, ORE, TLI);
-    }
-    NumAllocations += AllocCalls.size();
-    NumFunctionsInstrumented++;
-    Modified = true;
-  }
+  for (auto &[CB, Func] : AllocCalls)
+    replaceAllocationCall(CB, Func, ORE, TLI);
+  NumAllocations += AllocCalls.size();
+  NumFunctionsInstrumented++;
 
-  return Modified;
+  return true;
 }
 
-bool AllocToken::isInstrumentableLibFunc(LibFunc Func) const {
+bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const Value *V,
+                                         const TargetLibraryInfo *TLI) {
+  if (isAllocationFn(V, TLI))
+    return true;
+
   switch (Func) {
   case LibFunc_posix_memalign:
   case LibFunc_size_returning_new:
@@ -375,7 +367,7 @@ bool AllocToken::isInstrumentableLibFunc(LibFunc Func) const {
   }
 }
 
-bool AllocToken::ignoreInstrumentableLibFunc(LibFunc Func) const {
+bool AllocToken::ignoreInstrumentableLibFunc(LibFunc Func) {
   switch (Func) {
   case LibFunc_strdup:
   case LibFunc_dunder_strdup:
@@ -395,16 +387,17 @@ void AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
   FunctionCallee TokenAlloc = getTokenAllocFunction(*CB, TokenID, Func);
   if (!TokenAlloc)
     return;
+  if (Options.FastABI) {
+    assert(TokenAlloc.getFunctionType()->getNumParams() == CB->arg_size());
+    CB->setCalledFunction(TokenAlloc);
+    return;
+  }
 
   IRBuilder<> IRB(CB);
-
   // Original args.
   SmallVector<Value *, 4> NewArgs{CB->args()};
-  if (!Options.FastABI) {
-    // Add token ID.
-    NewArgs.push_back(
-        ConstantInt::get(Type::getInt64Ty(Mod.getContext()), TokenID));
-  }
+  // Add token ID.
+  NewArgs.push_back(ConstantInt::get(IntPtrTy, TokenID));
   assert(TokenAlloc.getFunctionType()->getNumParams() == NewArgs.size());
 
   // Preserve invoke vs call semantics for exception handling.
@@ -443,15 +436,13 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
   if (OldFTy->isVarArg())
     return FunctionCallee();
   // Copy params, and append token ID type.
-  LLVMContext &C = Mod.getContext();
   Type *RetTy = OldFTy->getReturnType();
   SmallVector<Type *, 4> NewParams{OldFTy->params()};
   std::string TokenAllocName = ClFuncPrefix;
-  if (Options.FastABI) {
+  if (Options.FastABI)
     TokenAllocName += utostr(TokenID) + "_";
-  } else {
-    NewParams.push_back(Type::getInt64Ty(C)); // token ID
-  }
+  else
+    NewParams.push_back(IntPtrTy); // token ID
   FunctionType *NewFTy = FunctionType::get(RetTy, NewParams, false);
   // Remove leading '_' - we add our own.
   StringRef No_ = Callee->getName().drop_while([](char C) { return C == '_'; });
@@ -480,5 +471,6 @@ PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
     Modified |= Pass.instrumentFunction(F);
   }
 
-  return Modified ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  return Modified ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+                  : PreservedAnalyses::all();
 }
