@@ -1,0 +1,6 @@
+# RUN: split-file %s %t
+# RUN: cp %S/1.in %t/out.txt
+# RUN: diff %t/test.txt %t/out.txt
+
+#--- test.txt
+FOO
