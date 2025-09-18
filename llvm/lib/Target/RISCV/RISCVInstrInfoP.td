@@ -1298,7 +1298,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNCLIPR_HS   : RVPNarrowingShift_rr<0b111, 0b01, "pnclipr.hs">;
   def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr">;
 
-  def PSLLI_DB     : RVPPairShiftB_ri<0b000,  "pslli.db">;
+  def PSLLI_DB     : RVPPairShiftB_ri<0b000, "pslli.db">;
   def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
   def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
 
