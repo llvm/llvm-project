@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-tidy/ClangTidyMain.cpp - Clang tidy tool -------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -717,7 +717,7 @@ int clangTidyMain(int argc, const char **argv) {
                            EnableModuleHeadersParsing);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
-                   FixNotes, EnableCheckProfile, ProfilePrefix);
+                   FixNotes, EnableCheckProfile, ProfilePrefix, Quiet);
   bool FoundErrors = llvm::any_of(Errors, [](const ClangTidyError &E) {
     return E.DiagLevel == ClangTidyError::Error;
   });

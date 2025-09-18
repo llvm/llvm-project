@@ -104,3 +104,15 @@ namespace CallScope {
                                                // expected-note {{member call on variable whose lifetime has ended}} \
                                                // ref-note {{member call on object outside its lifetime}}
 }
+
+namespace ExprDoubleDestroy {
+  template <typename T>
+  constexpr bool test() {
+    T{}.~T(); // both-note {{lifetime has already ended}}
+    return true;
+  }
+
+  struct S { int x; };
+  constexpr bool t = test<S>(); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to}}
+}

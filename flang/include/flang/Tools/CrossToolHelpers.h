@@ -108,6 +108,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
       InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
+    DwarfVersion = opts.DwarfVersion;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -123,8 +124,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
   bool NoInfsFPMath = false; ///< Set no-infs-fp-math attribute for functions.
   bool NoNaNsFPMath = false; ///< Set no-nans-fp-math attribute for functions.
-  bool ApproxFuncFPMath =
-      false; ///< Set approx-func-fp-math attribute for functions.
+  bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
@@ -144,6 +144,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::
           CX_Full; ///< Method for calculating complex number division
+  int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
 };
 
 struct OffloadModuleOpts {

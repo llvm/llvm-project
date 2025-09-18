@@ -147,13 +147,9 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   }
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(CI));
-  Clang->createDiagnostics(*VFS, &DiagsClient, false);
-
-  if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics(), VFS))
-    VFS = VFSWithRemapping;
-  Clang->createFileManager(VFS);
-
+  Clang->createVirtualFileSystem(VFS, &DiagsClient);
+  Clang->createDiagnostics(&DiagsClient, false);
+  Clang->createFileManager();
   if (!Clang->createTarget())
     return nullptr;
 

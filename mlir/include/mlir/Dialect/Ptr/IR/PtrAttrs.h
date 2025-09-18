@@ -19,10 +19,15 @@
 #include "llvm/Support/TypeSize.h"
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "mlir/Dialect/Ptr/IR/PtrEnums.h"
+
+namespace mlir {
+namespace ptr {
+class PtrType;
+} // namespace ptr
+} // namespace mlir
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.h.inc"
-
-#include "mlir/Dialect/Ptr/IR/PtrOpsEnums.h.inc"
 
 #endif // MLIR_DIALECT_PTR_IR_PTRATTRS_H

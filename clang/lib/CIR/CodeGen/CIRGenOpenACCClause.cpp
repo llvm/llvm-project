@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenACCRecipe.h"
 
 #include "clang/AST/ExprCXX.h"
 
@@ -354,106 +355,6 @@ class OpenACCClauseCIREmitter final
             llvm_unreachable("Not a data operation?");
           });
     }
-  }
-
-  template <typename RecipeTy>
-  RecipeTy getOrCreateRecipe(ASTContext &astCtx, const Expr *varRef,
-                             const VarDecl *varRecipe, DeclContext *dc,
-                             QualType baseType, mlir::Value mainOp) {
-    mlir::ModuleOp mod =
-        builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
-
-    std::string recipeName;
-    {
-      llvm::raw_string_ostream stream(recipeName);
-      if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
-        stream << "privatization_";
-      } else if constexpr (std::is_same_v<RecipeTy,
-                                          mlir::acc::FirstprivateRecipeOp>) {
-        stream << "firstprivatization_";
-
-      } else if constexpr (std::is_same_v<RecipeTy,
-                                          mlir::acc::ReductionRecipeOp>) {
-        stream << "reduction_";
-        // We don't have the reduction operation here well enough to know how to
-        // spell this correctly (+ == 'add', etc), so when we implement
-        // 'reduction' we have to do that here.
-        cgf.cgm.errorNYI(varRef->getSourceRange(),
-                         "OpeNACC reduction recipe creation");
-      } else {
-        static_assert(!sizeof(RecipeTy), "Unknown Recipe op kind");
-      }
-
-      MangleContext &mc = cgf.cgm.getCXXABI().getMangleContext();
-      mc.mangleCanonicalTypeName(baseType, stream);
-    }
-
-    if (auto recipe = mod.lookupSymbol<RecipeTy>(recipeName))
-      return recipe;
-
-    mlir::Location loc = cgf.cgm.getLoc(varRef->getBeginLoc());
-    mlir::Location locEnd = cgf.cgm.getLoc(varRef->getEndLoc());
-
-    mlir::OpBuilder modBuilder(mod.getBodyRegion());
-    auto recipe =
-        RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
-
-    CIRGenFunction::AutoVarEmission tempDeclEmission{
-        CIRGenFunction::AutoVarEmission::invalid()};
-
-    // Init section.
-    {
-      llvm::SmallVector<mlir::Type> argsTys{mainOp.getType()};
-      llvm::SmallVector<mlir::Location> argsLocs{loc};
-      builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                          argsTys, argsLocs);
-      builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-
-      if constexpr (!std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
-        // We have only implemented 'init' for private, so make this NYI until
-        // we have explicitly implemented everything.
-        cgf.cgm.errorNYI(varRef->getSourceRange(),
-                         "OpenACC non-private recipe init");
-      }
-
-      if (varRecipe) {
-        tempDeclEmission =
-            cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
-        cgf.emitAutoVarInit(tempDeclEmission);
-      }
-
-      mlir::acc::YieldOp::create(builder, locEnd);
-    }
-
-    // Copy section.
-    if constexpr (std::is_same_v<RecipeTy, mlir::acc::FirstprivateRecipeOp> ||
-                  std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
-      // TODO: OpenACC: 'private' doesn't emit this, but for the other two we
-      // have to figure out what 'copy' means here.
-      cgf.cgm.errorNYI(varRef->getSourceRange(),
-                       "OpenACC record type privatization copy section");
-    }
-
-    // Destroy section (doesn't currently exist).
-    if (varRecipe && varRecipe->needsDestruction(cgf.getContext())) {
-      llvm::SmallVector<mlir::Type> argsTys{mainOp.getType()};
-      llvm::SmallVector<mlir::Location> argsLocs{loc};
-      mlir::Block *block = builder.createBlock(&recipe.getDestroyRegion(),
-                                               recipe.getDestroyRegion().end(),
-                                               argsTys, argsLocs);
-      builder.setInsertionPointToEnd(&recipe.getDestroyRegion().back());
-
-      mlir::Type elementTy =
-          mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
-      Address addr{block->getArgument(0), elementTy,
-                   cgf.getContext().getDeclAlign(varRecipe)};
-      cgf.emitDestroy(addr, baseType,
-                      cgf.getDestroyer(QualType::DK_cxx_destructor));
-
-      mlir::acc::YieldOp::create(builder, locEnd);
-    }
-
-    return recipe;
   }
 
 public:
@@ -1087,10 +988,20 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
-              cgf.getContext(), varExpr, varRecipe,
-              Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
-              privateOp.getResult());
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     /*temporary=*/nullptr,
+                                     OpenACCReductionOperator::Invalid,
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType, privateOp.getResult());
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
           // probably need to change these here.
@@ -1103,6 +1014,96 @@ public:
       applyToLoopOp(clause);
     } else {
       llvm_unreachable("Unknown construct kind in VisitPrivateClause");
+    }
+  }
+
+  void VisitFirstPrivateClause(const OpenACCFirstPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
+                               mlir::acc::SerialOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto firstPrivateOp = mlir::acc::FirstprivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+
+        firstPrivateOp.setDataClause(mlir::acc::DataClause::acc_firstprivate);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
+                                                                    builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     varRecipe.InitFromTemporary,
+                                     OpenACCReductionOperator::Invalid,
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType,
+                                     firstPrivateOp.getResult());
+
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addFirstPrivatization(builder.getContext(), firstPrivateOp,
+                                          recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Unlike 'private', 'firstprivate' applies to the compute op, not the
+      // loop op.
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitFirstPrivateClause");
+    }
+  }
+
+  void VisitReductionClause(const OpenACCReductionClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+
+        auto reductionOp = mlir::acc::ReductionOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        reductionOp.setDataClause(mlir::acc::DataClause::acc_reduction);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     /*temporary=*/nullptr,
+                                     clause.getReductionOp(),
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType, reductionOp.getResult());
+
+          operation.addReduction(builder.getContext(), reductionOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitReductionClause");
     }
   }
 };

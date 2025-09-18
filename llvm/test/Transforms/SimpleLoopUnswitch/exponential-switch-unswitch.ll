@@ -61,19 +61,19 @@
 ; Somewhat relaxed restrictions on candidates:
 ; LOOP-RELAX-COUNT-5:     Loop at depth 1 containing:
 ; LOOP-RELAX-NOT: Loop at depth 1 containing:
-; LOOP-RELAX-COUNT-5:     Loop at depth 2 containing:
+; LOOP-RELAX-COUNT-32:     Loop at depth 2 containing:
 ; LOOP-RELAX-NOT: Loop at depth 2 containing:
 ;
 ; Even more relaxed restrictions on candidates and siblings.
-; LOOP-RELAX2-COUNT-5:     Loop at depth 1 containing:
+; LOOP-RELAX2-COUNT-11:     Loop at depth 1 containing:
 ; LOOP-RELAX2-NOT: Loop at depth 1 containing:
-; LOOP-RELAX2-COUNT-5:     Loop at depth 2 containing:
+; LOOP-RELAX2-COUNT-40:     Loop at depth 2 containing:
 ; LOOP-RELAX-NOT: Loop at depth 2 containing:
 ;
 ; Unswitched as much as it could (with multiplier disabled).
-; LOOP-MAX-COUNT-6:     Loop at depth 1 containing:
+; LOOP-MAX-COUNT-56:     Loop at depth 1 containing:
 ; LOOP-MAX-NOT: Loop at depth 1 containing:
-; LOOP-MAX-COUNT-11:     Loop at depth 2 containing:
+; LOOP-MAX-COUNT-111:     Loop at depth 2 containing:
 ; LOOP-MAX-NOT: Loop at depth 2 containing:
 
 define i32 @loop_switch(ptr %addr, i32 %c1, i32 %c2) {

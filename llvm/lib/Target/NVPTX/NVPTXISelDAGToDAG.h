@@ -90,6 +90,7 @@ private:
                                            bool IsIm2Col = false);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
+  void selectAtomicSwap128(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
@@ -111,6 +112,7 @@ private:
 
 public:
   static NVPTX::AddressSpace getAddrSpace(const MemSDNode *N);
+  static unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
 };
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {

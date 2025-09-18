@@ -377,15 +377,12 @@ bool llvm::MergeBlockSuccessorsIntoGivenBlocks(
 ///
 /// Possible improvements:
 /// - Check fully overlapping fragments and not only identical fragments.
-static bool
-DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
+static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
-    for (DbgVariableRecord &DR :
+    for (DbgVariableRecord &DVR :
          reverse(filterDbgVars(I.getDbgRecordRange()))) {
-      DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
-
       DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
                         DVR.getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
@@ -416,10 +413,6 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   return !ToBeRemoved.empty();
 }
 
-static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
-  return DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BB);
-}
-
 /// Remove redundant dbg.value instructions using a forward scan. This can
 /// remove a dbg.value instruction that is redundant due to indicating that a
 /// variable has the same value as already being indicated by an earlier
@@ -439,14 +432,14 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
 ///
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
-static bool
-DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
-  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
+static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
+  bool RemovedAny = false;
   SmallDenseMap<DebugVariable,
                 std::pair<SmallVector<Value *, 4>, DIExpression *>, 4>
       VariableMap;
   for (auto &I : *BB) {
-    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+    for (DbgVariableRecord &DVR :
+         make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
       if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
         continue;
       DebugVariable Key(DVR.getVariable(), std::nullopt,
@@ -472,55 +465,12 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       if (!IsDbgValueKind)
         continue;
       // Found an identical mapping. Remember the instruction for later removal.
-      ToBeRemoved.push_back(&DVR);
+      DVR.eraseFromParent();
+      RemovedAny = true;
     }
   }
 
-  for (auto *DVR : ToBeRemoved)
-    DVR->eraseFromParent();
-
-  return !ToBeRemoved.empty();
-}
-
-static bool
-DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
-  assert(BB->isEntryBlock() && "expected entry block");
-  SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
-  DenseSet<DebugVariable> SeenDefForAggregate;
-  // Returns the DebugVariable for DVI with no fragment info.
-  auto GetAggregateVariable = [](const DbgVariableRecord &DVR) {
-    return DebugVariable(DVR.getVariable(), std::nullopt,
-                         DVR.getDebugLoc().getInlinedAt());
-  };
-
-  // Remove undef dbg.assign intrinsics that are encountered before
-  // any non-undef intrinsics from the entry block.
-  for (auto &I : *BB) {
-    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-      if (!DVR.isDbgValue() && !DVR.isDbgAssign())
-        continue;
-      bool IsDbgValueKind =
-          (DVR.isDbgValue() || at::getAssignmentInsts(&DVR).empty());
-      DebugVariable Aggregate = GetAggregateVariable(DVR);
-      if (!SeenDefForAggregate.contains(Aggregate)) {
-        bool IsKill = DVR.isKillLocation() && IsDbgValueKind;
-        if (!IsKill) {
-          SeenDefForAggregate.insert(Aggregate);
-        } else if (DVR.isDbgAssign()) {
-          ToBeRemoved.push_back(&DVR);
-        }
-      }
-    }
-  }
-
-  for (DbgVariableRecord *DVR : ToBeRemoved)
-    DVR->eraseFromParent();
-
-  return !ToBeRemoved.empty();
-}
-
-static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
-  return DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BB);
+  return RemovedAny;
 }
 
 /// Remove redundant undef dbg.assign intrinsic from an entry block using a
@@ -543,7 +493,34 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
 /// Possible improvements:
 /// - Keep track of non-overlapping fragments.
 static bool removeUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
-  return DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BB);
+  assert(BB->isEntryBlock() && "expected entry block");
+  bool RemovedAny = false;
+  DenseSet<DebugVariableAggregate> SeenDefForAggregate;
+
+  // Remove undef dbg.assign intrinsics that are encountered before
+  // any non-undef intrinsics from the entry block.
+  for (auto &I : *BB) {
+    for (DbgVariableRecord &DVR :
+         make_early_inc_range(filterDbgVars(I.getDbgRecordRange()))) {
+      if (!DVR.isDbgValue() && !DVR.isDbgAssign())
+        continue;
+      bool IsDbgValueKind =
+          (DVR.isDbgValue() || at::getAssignmentInsts(&DVR).empty());
+
+      DebugVariableAggregate Aggregate(&DVR);
+      if (!SeenDefForAggregate.contains(Aggregate)) {
+        bool IsKill = DVR.isKillLocation() && IsDbgValueKind;
+        if (!IsKill) {
+          SeenDefForAggregate.insert(Aggregate);
+        } else if (DVR.isDbgAssign()) {
+          DVR.eraseFromParent();
+          RemovedAny = true;
+        }
+      }
+    }
+  }
+
+  return RemovedAny;
 }
 
 bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {

@@ -187,7 +187,6 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -415,10 +414,9 @@ class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
 }
 
 class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
-  bits<3> scale_sel;
+  bits<4> scale_sel;
 
-  let Inst{13-11} = scale_sel;
-  let Inst{14} = 0;
+  let Inst{14-11} = scale_sel;
 }
 
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
@@ -807,7 +805,6 @@ class VOP_SDWA8_Real <VOP_SDWA_Pseudo ps> :
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // Copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
@@ -817,7 +814,6 @@ class VOP_SDWA8_Real <VOP_SDWA_Pseudo ps> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let DecoderNamespace     = ps.DecoderNamespace;
   let Constraints          = ps.Constraints;
-  let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
@@ -841,7 +837,6 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AssemblerPredicate = HasSDWA9;
@@ -854,7 +849,6 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Constraints          = ps.Constraints;
-  let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
@@ -1037,7 +1031,6 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
-  let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
   let DecoderNamespace = "GFX8";
 }
 
@@ -1066,7 +1059,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // Copy relevant pseudo op flags
   let isConvergent         = ps.isConvergent;
@@ -1079,7 +1071,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let DecoderNamespace     = ps.DecoderNamespace;
   let Constraints          = ps.Constraints;
-  let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
@@ -1109,7 +1100,6 @@ class VOP_DPP_Base <string OpName, VOPProfile P,
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
-  let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
   let DecoderNamespace = "GFX8";
 }
 
@@ -1228,7 +1218,6 @@ class VOP_DPP8_Base<string OpName, VOPProfile P, dag InsDPP8 = P.InsDPP8, string
   let AssemblerPredicate = HasDPP8;
   let AsmVariantName = AMDGPUAsmVariants.DPP;
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
-  let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
 }
 
 class VOP_DPP8<string OpName, VOPProfile P> :

@@ -371,6 +371,45 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         //[[ foo
         /* bar */]]
       )cpp",
+      R"cpp(
+        //Ignore non-conditional directives
+        #define A 1
+
+        void func() {[[
+          int Variable = 100;
+
+          #ifdef FOO[[
+            Variable = 1;
+            #if 1[[
+                Variable = 4;
+            ]]#endif
+          ]]#else[[
+            Variable = 2;
+            //handle nested directives
+            #if 1[[
+              Variable = 3;
+            ]]#endif
+          ]]#endif
+
+
+          ]]}
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)
+            Variable = 1;
+        #
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)[[
+            Variable = 1;
+        ]]#elif 1[[
+            Variable = 2;
+        ]]#else
+            Variable = 3;
+        #
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);

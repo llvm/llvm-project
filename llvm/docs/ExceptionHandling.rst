@@ -31,7 +31,7 @@ algorithm.  Thus, the specification is said to add "zero-cost" to the normal
 execution of an application.
 
 A more complete description of the Itanium ABI exception handling runtime
-support of can be found at `Itanium C++ ABI: Exception Handling
+support can be found at `Itanium C++ ABI: Exception Handling
 <http://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html>`_. A description of the
 exception frame format can be found at `Exception Frames
 <http://refspecs.linuxfoundation.org/LSB_3.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html>`_,
@@ -145,7 +145,7 @@ exception. In those circumstances, the LLVM C++ front-end replaces the call with
 an ``invoke`` instruction. Unlike a call, the ``invoke`` has two potential
 continuation points:
 
-#. where to continue when the call succeeds as per normal, and
+#. where to continue when the call succeeds normally, and
 
 #. where to continue if the call raises an exception, either by a throw or the
    unwinding of a throw
@@ -280,7 +280,7 @@ Throw Filters
 -------------
 
 Prior to C++17, C++ allowed the specification of which exception types may be
-thrown from a function. To represent this, a top level landing pad may exist to
+thrown from a function. To represent this, a top-level landing pad may exist to
 filter out invalid types. To express this in LLVM code the :ref:`i_landingpad`
 will have a filter clause. The clause consists of an array of type infos.
 ``landingpad`` will return a negative value
@@ -437,7 +437,7 @@ exception handling frame that defines information common to all functions in the
 unit.
 
 The format of this call frame information (CFI) is often platform-dependent,
-however. ARM, for example, defines their own format. Apple has their own compact
+however. ARM, for example, defines its own format. Apple has its own compact
 unwind info format.  On Windows, another format is used for all architectures
 since 32-bit x86.  LLVM will emit whatever information is required by the
 target.
@@ -467,7 +467,7 @@ on Itanium C++ ABI platforms. The fundamental difference between the two models
 is that Itanium EH is designed around the idea of "successive unwinding," while
 Windows EH is not.
 
-Under Itanium, throwing an exception typically involves allocating thread local
+Under Itanium, throwing an exception typically involves allocating thread-local
 memory to hold the exception, and calling into the EH runtime. The runtime
 identifies frames with appropriate exception handling actions, and successively
 resets the register context of the current thread to the most recently active
@@ -482,7 +482,7 @@ release its memory, and resume normal control flow.
 The Windows EH model does not use these successive register context resets.
 Instead, the active exception is typically described by a frame on the stack.
 In the case of C++ exceptions, the exception object is allocated in stack memory
-and its address is passed to ``__CxxThrowException``. General purpose structured
+and its address is passed to ``__CxxThrowException``. General-purpose structured
 exceptions (SEH) are more analogous to Linux signals, and they are dispatched by
 userspace DLLs provided with Windows. Each frame on the stack has an assigned EH
 personality routine, which decides what actions to take to handle the exception.
@@ -504,7 +504,7 @@ The C++ personality also uses funclets to contain the code for catch blocks
 (i.e. all user code between the braces in ``catch (Type obj) { ... }``). The
 runtime must use funclets for catch bodies because the C++ exception object is
 allocated in a child stack frame of the function handling the exception. If the
-runtime rewound the stack back to frame of the catch, the memory holding the
+runtime rewound the stack back to the frame of the catch, the memory holding the
 exception would be overwritten quickly by subsequent function calls.  The use of
 funclets also allows ``__CxxFrameHandler3`` to implement rethrow without
 resorting to TLS. Instead, the runtime throws a special exception, and then uses
@@ -512,7 +512,7 @@ SEH (``__try / __except``) to resume execution with new information in the child
 frame.
 
 In other words, the successive unwinding approach is incompatible with Visual
-C++ exceptions and general purpose Windows exception handling. Because the C++
+C++ exceptions and general-purpose Windows exception handling. Because the C++
 exception object lives in stack memory, LLVM cannot provide a custom personality
 function that uses landingpads.  Similarly, SEH does not provide any mechanism
 to rethrow an exception or continue unwinding.  Therefore, LLVM must use the IR
@@ -780,8 +780,8 @@ structure, which funclet-based personalities may require.
 Exception Handling support on the target
 =================================================
 
-In order to support exception handling on particular target, there are a few
-items need to be implemented.
+In order to support exception handling on a particular target, there are a few
+items that need to be implemented.
 
 * CFI directives
 
@@ -791,7 +791,7 @@ items need to be implemented.
   to specify how to calculate the CFA (Canonical Frame Address) and how register
   is restored from the address pointed by the CFA with an offset. The assembler
   is instructed by CFI directives to build ``.eh_frame`` section, which is used
-  by th unwinder to unwind stack during exception handling.
+  by the unwinder to unwind the stack during exception handling.
 
 * ``getExceptionPointerRegister`` and ``getExceptionSelectorRegister``
 
@@ -807,13 +807,13 @@ items need to be implemented.
   which adjusts the stack by offset and then jumps to the handler. ``__builtin_eh_return``
   is used in GCC unwinder (`libgcc <https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html>`_),
   but not in LLVM unwinder (`libunwind <https://clang.llvm.org/docs/Toolchain.html#unwind-library>`_).
-  If you are on the top of ``libgcc`` and have particular requirement on your target,
+  If you are on the top of ``libgcc`` and have a particular requirement on your target,
   you have to handle ``EH_RETURN`` in ``TargetLowering``.
 
 If you don't leverage the existing runtime (``libstdc++`` and ``libgcc``),
-you have to take a look on `libc++ <https://libcxx.llvm.org/>`_ and
+you have to take a look at `libc++ <https://libcxx.llvm.org/>`_ and
 `libunwind <https://clang.llvm.org/docs/Toolchain.html#unwind-library>`_
-to see what have to be done there. For ``libunwind``, you have to do the following
+to see what has to be done there. For ``libunwind``, you have to do the following:
 
 * ``__libunwind_config.h``
 
@@ -821,11 +821,11 @@ to see what have to be done there. For ``libunwind``, you have to do the followi
 
 * ``include/libunwind.h``
 
-  Define enum for the target registers.
+  Define an enum for the target registers.
 
 * ``src/Registers.hpp``
 
-  Define ``Registers`` class for your target, implement setter and getter functions.
+  Define a ``Registers`` class for your target, implement setter and getter functions.
 
 * ``src/UnwindCursor.hpp``
 
@@ -834,8 +834,8 @@ to see what have to be done there. For ``libunwind``, you have to do the followi
 
 * ``src/UnwindRegistersRestore.S``
 
-  Write an assembly function to restore all your target registers from the memory.
+  Write an assembly function to restore all your target registers from memory.
 
 * ``src/UnwindRegistersSave.S``
 
-  Write an assembly function to save all your target registers on the memory.
+  Write an assembly function to save all your target registers to memory.

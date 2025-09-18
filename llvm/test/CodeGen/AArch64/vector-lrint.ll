@@ -28,7 +28,12 @@
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f64
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f64
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f64
-
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v1fp128
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2fp128
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4fp128
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8fp128
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16fp128
+;
 ; CHECK-i64-GI:       warning: Instruction selection used fallback path for lrint_v2f16
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f16
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f16
@@ -44,6 +49,11 @@
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f64
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f64
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f64
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2fp128
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4fp128
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8fp128
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16fp128
+
 
 define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f16:

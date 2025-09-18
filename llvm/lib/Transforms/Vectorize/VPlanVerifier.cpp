@@ -166,7 +166,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           return VerifyEVLUse(*R, 2);
         })
-        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
+              VPInterleaveEVLRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPInstructionWithType>(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
@@ -183,6 +184,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           case Instruction::ZExt:
           case Instruction::Mul:
           case Instruction::FMul:
+          case VPInstruction::Broadcast:
             // Opcodes above can only use EVL after wide inductions have been
             // expanded.
             if (!VerifyLate) {
@@ -196,11 +198,11 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           // EVLIVIncrement is only used by EVLIV & BranchOnCount.
           // Having more than two users is unexpected.
+          using namespace llvm::VPlanPatternMatch;
           if ((I->getNumUsers() != 1) &&
-              (I->getNumUsers() != 2 || none_of(I->users(), [&I](VPUser *U) {
-                 using namespace llvm::VPlanPatternMatch;
-                 return match(U, m_BranchOnCount(m_Specific(I), m_VPValue()));
-               }))) {
+              (I->getNumUsers() != 2 ||
+               none_of(I->users(), match_fn(m_BranchOnCount(m_Specific(I),
+                                                            m_VPValue()))))) {
             errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
@@ -411,7 +413,7 @@ bool VPlanVerifier::verifyRegion(const VPRegionBlock *Region) {
   const VPBlockBase *Exiting = Region->getExiting();
 
   // Entry and Exiting shouldn't have any predecessor/successor, respectively.
-  if (Entry->getNumPredecessors() != 0) {
+  if (Entry->hasPredecessors()) {
     errs() << "region entry block has predecessors\n";
     return false;
   }

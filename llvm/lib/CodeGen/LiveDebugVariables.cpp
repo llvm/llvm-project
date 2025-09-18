@@ -536,12 +536,6 @@ public:
 
 namespace llvm {
 
-/// Implementation of the LiveDebugVariables pass.
-
-LiveDebugVariables::LiveDebugVariables() = default;
-LiveDebugVariables::~LiveDebugVariables() = default;
-LiveDebugVariables::LiveDebugVariables(LiveDebugVariables &&) = default;
-
 class LiveDebugVariables::LDVImpl {
   LocMap::Allocator allocator;
   MachineFunction *MF = nullptr;
@@ -682,6 +676,12 @@ public:
 
   void print(raw_ostream&);
 };
+
+/// Implementation of the LiveDebugVariables pass.
+
+LiveDebugVariables::LiveDebugVariables() = default;
+LiveDebugVariables::~LiveDebugVariables() = default;
+LiveDebugVariables::LiveDebugVariables(LiveDebugVariables &&) = default;
 
 } // namespace llvm
 
@@ -1263,7 +1263,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
 
 void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
 
   for (const auto &UV : userValues) {
     UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);

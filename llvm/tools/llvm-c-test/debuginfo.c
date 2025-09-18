@@ -448,6 +448,7 @@ int llvm_add_globaldebuginfo(void) {
   assert(ME != NULL);
   assert(numEntries == 2);
 
+  LLVMDisposeValueMetadataEntries(ME);
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);
 
