@@ -14,12 +14,12 @@ class I : Instruction {
 // CHECK-LABEL: static const uint8_t DecoderTable128[32] = {
 // CHECK-NEXT:    OPC_SwitchField, 0, 64,      //  0: switch Inst[63:0] {
 // CHECK-NEXT:    1, 8,                        //  3: case 0x1: {
-// CHECK-NEXT:    OPC_CheckField, 127, 1, 1,   //  5:  check Inst[127:127] == 0x1
+// CHECK-NEXT:    OPC_CheckField, 127, 1, 1,   //  5:  check Inst[127] == 0x1
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, //  9:  decode to I2 using decoder 0
 // CHECK-NEXT:                                 //  9: }
 // CHECK-NEXT:    255, 255, 255, 255, 255, 255, 255, 255, 255, 1, 0,
 // CHECK-NEXT:                                 // 13: case 0xffffffffffffffff: {
-// CHECK-NEXT:    OPC_CheckField, 127, 1, 0,   // 24:  check Inst[127:127] == 0x0
+// CHECK-NEXT:    OPC_CheckField, 127, 1, 0,   // 24:  check Inst[127] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 28:  decode to I1 using decoder 0
 // CHECK-NEXT:                                 // 28: }
 // CHECK-NEXT:                                 // 28: } // switch Inst[63:0]

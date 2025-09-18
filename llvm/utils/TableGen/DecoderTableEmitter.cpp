@@ -160,7 +160,7 @@ void DecoderTableEmitter::emitULEB128(uint64_t Val) {
   emitByte(Val);
 }
 
-formatted_raw_ostream &DecoderTableEmitter::emitComment(indent Indent) {
+raw_ostream &DecoderTableEmitter::emitComment(indent Indent) {
   constexpr unsigned CommentColumn = 45;
   if (OS.getColumn() > CommentColumn)
     OS << '\n';
@@ -168,6 +168,23 @@ formatted_raw_ostream &DecoderTableEmitter::emitComment(indent Indent) {
   OS << "// " << format_decimal(CommentIndex, IndexWidth) << ": " << Indent;
   return OS;
 }
+
+namespace {
+
+/// Helper class for printing bit ranges.
+struct BitRange {
+  unsigned MSB, LSB;
+
+  friend raw_ostream &operator<<(raw_ostream &OS, BitRange R) {
+    if (R.MSB == R.LSB)
+      OS << '[' << R.LSB << ']';
+    else
+      OS << '[' << R.MSB << ':' << R.LSB << ']';
+    return OS;
+  }
+};
+
+} // namespace
 
 void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
                                            indent Indent) {
@@ -210,7 +227,7 @@ void DecoderTableEmitter::emitSwitchFieldNode(const SwitchFieldNode *N,
   emitULEB128(LSB);
   emitUInt8(Width);
 
-  emitComment(Indent) << "switch Inst[" << MSB << ':' << LSB << "] {\n";
+  emitComment(Indent) << "switch Inst" << BitRange{MSB, LSB} << " {\n";
 
   for (auto [Val, Child] : drop_end(N->cases())) {
     emitStartLine();
@@ -231,7 +248,7 @@ void DecoderTableEmitter::emitSwitchFieldNode(const SwitchFieldNode *N,
   emitNode(Child, Indent + 1);
   emitComment(Indent) << "}\n";
 
-  emitComment(Indent) << "} // switch Inst[" << MSB << ':' << LSB << "]\n";
+  emitComment(Indent) << "} // switch Inst" << BitRange{MSB, LSB} << "\n";
 }
 
 void DecoderTableEmitter::emitCheckFieldNode(const CheckFieldNode *N,
@@ -246,9 +263,8 @@ void DecoderTableEmitter::emitCheckFieldNode(const CheckFieldNode *N,
   emitUInt8(Width);
   emitULEB128(Val);
 
-  emitComment(Indent);
-  OS << "check Inst[" << MSB << ':' << LSB << "] == " << format_hex(Val, 0)
-     << '\n';
+  emitComment(Indent) << "check Inst" << BitRange{MSB, LSB}
+                      << " == " << format_hex(Val, 0) << '\n';
 }
 
 void DecoderTableEmitter::emitCheckPredicateNode(const CheckPredicateNode *N,

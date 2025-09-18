@@ -18,7 +18,7 @@ class I : Instruction {
 // 00000001 ________  I16_1
 // 00000010 ________  I16_2
 
-// CHECK: switch Inst[0:0]
+// CHECK: switch Inst[0]
 // CHECK: decode to I8_0
 // CHECK: decode to I8_1
 // CHECK: switch Inst[15:8]

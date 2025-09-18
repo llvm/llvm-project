@@ -31,7 +31,7 @@ def InstB : TestInstruction {
 }
 
 // CHECK-LABEL: static const uint8_t DecoderTable8[26] = {
-// CHECK-NEXT:    OPC_CheckField, 2, 1, 0,     //  0: check Inst[2:2] == 0x0
+// CHECK-NEXT:    OPC_CheckField, 2, 1, 0,     //  0: check Inst[2] == 0x0
 // CHECK-NEXT:    OPC_CheckField, 5, 3, 0,     //  4: check Inst[7:5] == 0x0
 // CHECK-NEXT:    OPC_Scope, 8,                //  8: try {
 // CHECK-NEXT:    OPC_CheckField, 0, 2, 3,     // 10:  check Inst[1:0] == 0x3

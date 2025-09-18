@@ -72,7 +72,7 @@ private:
   void emitByte(uint8_t Val);
   void emitUInt8(unsigned Val);
   void emitULEB128(uint64_t Val);
-  formatted_raw_ostream &emitComment(indent Indent);
+  raw_ostream &emitComment(indent Indent);
 
   void emitCheckAnyNode(const CheckAnyNode *N, indent Indent);
   void emitCheckAllNode(const CheckAllNode *N, indent Indent);
