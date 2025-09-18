@@ -1,4 +1,4 @@
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+! UNSUPPORTED: target={{.*}}-aix{{.*}}
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -dwarf-version=5 %s  \
 ! RUN:         -o - | FileCheck --check-prefix=CHECK-DWARF5 %s
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only -dwarf-version=5 \
