@@ -34,13 +34,13 @@ struct DecoderTableInfo {
   }
 
   unsigned getPredicateIndex(StringRef Predicate) const {
-    auto I = find(Predicates, Predicate);
+    PredicateSet::const_iterator I = find(Predicates, Predicate);
     assert(I != Predicates.end());
     return std::distance(Predicates.begin(), I);
   }
 
   unsigned getDecoderIndex(StringRef Decoder) const {
-    auto I = find(Decoders, Decoder);
+    DecoderSet::const_iterator I = find(Decoders, Decoder);
     assert(I != Decoders.end());
     return std::distance(Decoders.begin(), I);
   }
