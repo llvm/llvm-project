@@ -313,6 +313,10 @@ public:
   virtual bool hasFirstCondition() const = 0;
   virtual const PredicateMatcher &getFirstCondition() const = 0;
   virtual std::unique_ptr<PredicateMatcher> popFirstCondition() = 0;
+
+  /// Check recursively if the matcher records named operands for use in C++
+  /// predicates.
+  virtual bool recordsOperand() const = 0;
 };
 
 class GroupMatcher final : public Matcher {
@@ -373,6 +377,8 @@ public:
     return *Conditions.front();
   }
   bool hasFirstCondition() const override { return !Conditions.empty(); }
+
+  bool recordsOperand() const override;
 
 private:
   /// See if a candidate matcher could be added to this group solely by
@@ -438,6 +444,8 @@ public:
   }
 
   bool hasFirstCondition() const override { return false; }
+
+  bool recordsOperand() const override;
 
 private:
   /// See if the predicate type has a Switch-implementation for it.
@@ -669,6 +677,8 @@ public:
   void optimize() override;
   void emit(MatchTable &Table) override;
 
+  bool recordsOperand() const override;
+
   /// Compare the priority of this object and B.
   ///
   /// Returns true if this object is more important than B.
@@ -857,6 +867,8 @@ public:
     // implicitly depends on all other pattern constraints.
     return Kind == IPM_GenericPredicate;
   }
+
+  bool recordsOperand() const { return Kind == OPM_RecordNamedOperand; }
 
   virtual bool isIdentical(const PredicateMatcher &B) const {
     return B.getKind() == getKind() && InsnVarID == B.InsnVarID &&
@@ -1321,6 +1333,8 @@ public:
   /// one and adds a `RecordRegisterType` predicate to this matcher. If one has
   /// already been assigned, simply returns it.
   TempTypeIdx getTempTypeIdx(RuleMatcher &Rule);
+
+  bool recordsOperand() const;
 
   std::string getOperandExpr(unsigned InsnVarID) const;
 
@@ -1839,6 +1853,8 @@ public:
   void pop_front() { Operands.erase(Operands.begin()); }
 
   void optimize();
+
+  bool recordsOperand() const;
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
