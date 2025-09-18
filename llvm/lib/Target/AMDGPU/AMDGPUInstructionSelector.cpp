@@ -2007,13 +2007,13 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   unsigned IntrOpcode = Intr->BaseOpcode;
-  Register ResultDef;
-  if (MI.getNumExplicitDefs() > 0)
-    ResultDef = MI.getOperand(0).getReg();
 
-  if (MRI->use_nodbg_empty(ResultDef) && Intr->NoRetBaseOpcode != 0 &&
-      Intr->NoRetBaseOpcode != Intr->BaseOpcode)
-    IntrOpcode = Intr->NoRetBaseOpcode;
+  // For image atomic: use no-return opcode if result is unused.
+  if (Intr->NoRetBaseOpcode != 0 && Intr->NoRetBaseOpcode != Intr->BaseOpcode) {
+    Register ResultDef = MI.getOperand(0).getReg();
+    if (MRI->use_nodbg_empty(ResultDef))
+      IntrOpcode = Intr->NoRetBaseOpcode;
+  }
 
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);

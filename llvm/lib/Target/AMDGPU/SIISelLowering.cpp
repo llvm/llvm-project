@@ -9135,10 +9135,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
   unsigned IntrOpcode = Intr->BaseOpcode;
-  if (!Op.getNode()->hasAnyUseOfValue(0)) {
-    if (Intr->NoRetBaseOpcode != 0 && Intr->NoRetBaseOpcode != Intr->BaseOpcode)
-      IntrOpcode = Intr->NoRetBaseOpcode;
-  }
+  if (Intr->NoRetBaseOpcode != 0 && !Op.getNode()->hasAnyUseOfValue(0))
+    IntrOpcode = Intr->NoRetBaseOpcode;
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
@@ -9152,6 +9150,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     ResultTypes.clear();
     ResultTypes.push_back(MVT::Other);
   }
+
   bool IsD16 = false;
   bool IsG16 = false;
   bool IsA16 = false;
@@ -9526,12 +9525,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   }
 
   if (BaseOpcode->NoReturn) {
-    if (BaseOpcode->Atomic) {
-      SmallVector<SDValue, 2> RetVals;
-      RetVals.push_back(DAG.getPOISON(OrigResultTypes[0]));
-      RetVals.push_back(SDValue(NewNode, 0));
-      return DAG.getMergeValues(RetVals, DL);
-    }
+    if (BaseOpcode->Atomic)
+      return DAG.getMergeValues(
+          {DAG.getPOISON(OrigResultTypes[0]), SDValue(NewNode, 0)}, DL);
+
     return SDValue(NewNode, 0);
   }
 
