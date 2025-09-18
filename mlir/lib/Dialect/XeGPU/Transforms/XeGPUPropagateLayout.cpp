@@ -37,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 namespace mlir {
 namespace xegpu {
@@ -545,19 +546,54 @@ void LayoutInfoPropagation::visitShapeCastOp(
   }
   ArrayRef<int64_t> resultShape = shapeCast.getResultVectorType().getShape();
   ArrayRef<int64_t> sourceShape = shapeCast.getSourceVectorType().getShape();
-  auto findUnitDims = [](ArrayRef<int64_t> shape) {
-    SmallVector<int64_t> unitDims;
+
+  auto findNonUnitDims = [](ArrayRef<int64_t> shape) {
+    SmallVector<int64_t> nonUnitDims;
     for (int i = 0, e = shape.size(); i < e; ++i)
-      if (shape[i] == 1)
-        unitDims.push_back(i);
-    return unitDims;
+      if (shape[i] != 1)
+        nonUnitDims.push_back(i);
+    return nonUnitDims;
   };
-  SmallVector<int64_t> resultUnitDims = findUnitDims(resultShape);
-  SmallVector<int64_t> sourceUnitDims = findUnitDims(sourceShape);
-  // Remove first `sourceUnitDims.size()` unit dims from resultUnitDims.
-  auto sliceDims =
-      ArrayRef<int64_t>(resultUnitDims).drop_front(sourceUnitDims.size());
-  // Source layout is obtained by removing the slice dims from result layout.
+  SmallVector<int64_t> resultNonUnitDims = findNonUnitDims(resultShape);
+  SmallVector<int64_t> sourceNonUnitDims = findNonUnitDims(sourceShape);
+  // Source and result must have the same number of non-unit dimensions and
+  // thier values must match.
+  if (resultNonUnitDims.size() != sourceNonUnitDims.size()) {
+    shapeCast.emitWarning("Expecting source and result shapes to have same "
+                          "number of non-unit dimensions.");
+    return;
+  }
+  auto reesultNonUnitDimShapes = llvm::map_to_vector(
+      resultNonUnitDims, [&](int64_t idx) { return resultShape[idx]; });
+  auto sourceNonUnitDimShapes = llvm::map_to_vector(
+      sourceNonUnitDims, [&](int64_t idx) { return sourceShape[idx]; });
+  if (llvm::any_of(
+          llvm::zip(sourceNonUnitDimShapes, reesultNonUnitDimShapes),
+          [](auto pair) { return std::get<0>(pair) != std::get<1>(pair); })) {
+    shapeCast.emitWarning("Expecting non-unit dimensions of source and result "
+                          "shapes to match.");
+    return;
+  }
+  // Slice dims are unit dims that exist in the result shape but not in the
+  // source shape.
+  SmallVector<int64_t> sliceDims;
+  int64_t srcPrev, resPrev = 0;
+  // Add a dummy non unit dim at the end to handle trailing unit dims.
+  sourceNonUnitDims.push_back(sourceShape.size());
+  resultNonUnitDims.push_back(resultShape.size());
+  for (auto [s, r] : llvm::zip_equal(sourceNonUnitDims, resultNonUnitDims)) {
+    int unitDimDiff = (r - resPrev) - (s - srcPrev);
+    // Negative unitDimDiff means source shape has more unit dims in this range.
+    if (unitDimDiff < 0) {
+      shapeCast.emitWarning("Unsupported shape cast. Source shape has more "
+                            "unit dims in between two non-unit dims.");
+      return;
+    }
+    for (auto it : llvm::seq<int64_t>(0, unitDimDiff))
+      sliceDims.push_back(resPrev + it);
+    srcPrev = s + 1;
+    resPrev = r + 1;
+  }
   xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
       shapeCast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
       DenseI64ArrayAttr::get(shapeCast->getContext(), sliceDims));
