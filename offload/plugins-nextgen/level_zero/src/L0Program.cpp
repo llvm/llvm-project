@@ -362,7 +362,7 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
         case NT_INTEL_ONEOMP_OFFLOAD_VERSION:
           break;
         case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT:
-          if (!DescStrRef.getAsInteger(10, ImageCount)) {
+          if (DescStrRef.getAsInteger(10, ImageCount)) {
             DP("Warning: invalid NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT: '%s'\n",
                DescStrRef.str().c_str());
             ImageCount = 0;
@@ -427,7 +427,7 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
       }
 
       uint64_t Idx = 0;
-      if (!SectionNameRef.getAsInteger(10, Idx)) {
+      if (SectionNameRef.getAsInteger(10, Idx)) {
         DP("Warning: ignoring image section (invalid index '%s').\n",
            SectionNameRef.str().c_str());
         continue;
