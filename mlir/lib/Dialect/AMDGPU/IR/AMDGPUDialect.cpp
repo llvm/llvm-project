@@ -716,9 +716,9 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
             op, "no packing if # of scales less than four");
       }
 
-      // Find a linearized idx using the size and offsets of the extract op
-      SmallVector<int64_t> extractedPos(llvm::to_vector_of<int64_t>(
-          llvm::reverse(extractOp.getStaticPosition())));
+      // Find a linearized idx using the size and offsets of the extract op.
+      auto extractedPos = llvm::to_vector_of<int64_t>(
+          llvm::reverse(extractOp.getStaticPosition()));
       ArrayRef<int64_t> scaleSrcShape = scaleSrcType.getShape();
       int64_t scaleSrcRank = scaleSrcType.getRank();
       SmallVector<int64_t> extractSizes(scaleSrcRank, 1);
