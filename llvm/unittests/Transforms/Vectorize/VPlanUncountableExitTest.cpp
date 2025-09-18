@@ -51,8 +51,8 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
       Plan, [](PHINode *P) { return nullptr; }, *TLI);
   VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
 
-  SmallVector<VPRecipeBase *, 8> Recipes;
-  SmallVector<VPRecipeBase *, 2> GEPs;
+  SmallVector<VPRecipeBase *> Recipes;
+  SmallVector<VPRecipeBase *> GEPs;
 
   std::optional<VPValue *> UncountableCondition =
       vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
