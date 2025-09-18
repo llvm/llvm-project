@@ -715,9 +715,7 @@ public:
   /// EvaluateKnownConstInt - Call EvaluateAsRValue and return the folded
   /// integer. This must be called on an expression that constant folds to an
   /// integer.
-  llvm::APSInt EvaluateKnownConstInt(
-      const ASTContext &Ctx,
-      SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr) const;
+  llvm::APSInt EvaluateKnownConstInt(const ASTContext &Ctx) const;
 
   llvm::APSInt EvaluateKnownConstIntCheckOverflow(
       const ASTContext &Ctx,
