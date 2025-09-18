@@ -2306,6 +2306,7 @@ libc_support_library(
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":__support_macros_properties_types",
     ],
@@ -3833,7 +3834,19 @@ libc_math_function(name = "floorf128")
 
 libc_math_function(name = "floorf16")
 
-# TODO: Add fma, fmaf, fmal, fmaf128 functions.
+libc_math_function(
+    name = "fma",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
+
+libc_math_function(
+    name = "fmaf",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
 
 libc_math_function(
     name = "fmaf16",
@@ -6315,6 +6328,31 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "vasprintf_internal",
+    hdrs = ["src/stdio/printf_core/vasprintf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_macros_attributes",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
+        ":printf_main",
+        ":printf_writer",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "asprintf",
+    srcs = ["src/stdio/asprintf.cpp"],
+    hdrs = ["src/stdio/asprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
+    ],
+)
+
 libc_function(
     name = "sprintf",
     srcs = ["src/stdio/sprintf.cpp"],
@@ -6363,6 +6401,16 @@ libc_function(
         ":errno",
         ":types_FILE",
         ":vfprintf_internal",
+    ],
+)
+
+libc_function(
+    name = "vasprintf",
+    srcs = ["src/stdio/vasprintf.cpp"],
+    hdrs = ["src/stdio/vasprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
     ],
 )
 

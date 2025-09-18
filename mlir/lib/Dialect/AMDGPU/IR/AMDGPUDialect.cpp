@@ -610,15 +610,15 @@ LogicalResult TransposeLoadOp::verify() {
       transferType.getElementType().getIntOrFloatBitWidth();
 
   // ElementSize -> NumElements
-  const llvm::SmallDenseMap<size_t, size_t> KValidLoadSizeMap = {
+  const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
       {4, 16},
       {6, 16},
       {8, 8},
       {16, 4},
   };
 
-  auto validNumElems = KValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == KValidLoadSizeMap.end()) {
+  auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
+  if (validNumElems == kValidLoadSizeMap.end()) {
     return emitOpError("Unsupported element type size for transpose load: ")
            << elementTypeSize << " bits";
   }

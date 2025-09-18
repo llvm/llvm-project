@@ -3,6 +3,10 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for freeze_v2i8
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_uhadd
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_urhadd
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_shadd
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_srhadd
 
 %struct.T = type { i32, i32 }
 
