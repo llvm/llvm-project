@@ -507,9 +507,10 @@ Value *Vectorizer::insertCast(Value *Val, Type *DstTy) {
 
 std::optional<APInt> Vectorizer::computeLeaderDelta(Instruction *I1,
                                                     Instruction *I2) {
-  assert((isa<LoadInst>(I1) || isa<StoreInst>(I1)) &&
-         (isa<LoadInst>(I2) || isa<StoreInst>(I2)) &&
-         "computeLeaderDelta must be called with load or store instructions");
+  assert(((isa<LoadInst>(I1) && isa<LoadInst>(I2)) ||
+          (isa<StoreInst>(I1) && isa<StoreInst>(I2))) &&
+         "computeLeaderDelta must be called with two load or two store "
+         "instructions");
   Instruction *CtxInst = I1->comesBefore(I2) ? I2 : I1;
   const Value *Ptr1 = getLoadStorePointerOperand(I1);
   const Value *Ptr2 = getLoadStorePointerOperand(I2);
@@ -519,19 +520,15 @@ std::optional<APInt> Vectorizer::computeLeaderDelta(Instruction *I1,
 
 bool Vectorizer::chainsOverlapAfterRebase(const Chain &A, const Chain &B,
                                           const APInt &Delta) const {
-  for (const ChainElem &EB : B) {
-    APInt OffB = EB.OffsetFromLeader + Delta;
-    unsigned SizeB = DL.getTypeStoreSize(getLoadStoreType(EB.Inst));
-    ConstantRange BRange(OffB, OffB + SizeB);
-    for (const ChainElem &EA : A) {
-      APInt OffA = EA.OffsetFromLeader;
-      unsigned SizeA = DL.getTypeStoreSize(getLoadStoreType(EA.Inst));
-      ConstantRange ARange(OffA, OffA + SizeA);
-      if (!ARange.intersectWith(BRange).isEmptySet())
-        return true;
-    }
-  }
-  return false;
+  ConstantRange ARange(
+      A.front().OffsetFromLeader,
+      A.back().OffsetFromLeader +
+          DL.getTypeStoreSize(getLoadStoreType(A.back().Inst)));
+  ConstantRange BRange(
+      B.front().OffsetFromLeader + Delta,
+      B.back().OffsetFromLeader + Delta +
+          DL.getTypeStoreSize(getLoadStoreType(B.back().Inst)));
+  return !ARange.intersectWith(BRange).isEmptySet();
 }
 
 void Vectorizer::rebaseChain(Chain &C, const APInt &Delta) {

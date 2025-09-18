@@ -7,8 +7,8 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x8
 ; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x10
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0x3e21eeb6
-; CHECK-NEXT:    v_mov_b32_e32 v20, 0
+; CHECK-NEXT:    v_mov_b32_e32 v30, 0x9037ab78
+; CHECK-NEXT:    v_mov_b32_e32 v31, 0x3e21eeb6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[16:17], -1, 0
@@ -118,7 +118,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[10:11]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
 ; CHECK-NEXT:    s_mov_b64 s[22:23], 0
-; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[10:11]
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[20:21]
 ; CHECK-NEXT:    s_branch .LBB0_15
 ; CHECK-NEXT:  .LBB0_10: ; in Loop: Header=BB0_2 Depth=1
@@ -136,7 +136,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_cndmask_b32_e64 v22, v22, 0, s[16:17]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v16, 0, 1, s[8:9]
 ; CHECK-NEXT:    s_and_b64 s[8:9], exec, s[16:17]
-; CHECK-NEXT:    global_store_dwordx2 v20, v[16:17], s[12:13]
+; CHECK-NEXT:    v_mov_b32_e32 v17, v16
 ; CHECK-NEXT:    s_cselect_b32 s23, s23, 0
 ; CHECK-NEXT:    s_cselect_b32 s22, s22, 0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], -1
@@ -145,9 +145,11 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  .LBB0_13: ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[22:23], 0
-; CHECK-NEXT:  .LBB0_14: ; %Flow6
+; CHECK-NEXT:  .LBB0_14: ; %Flow8
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    v_mov_b64_e32 v[30:31], v[24:25]
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
+; CHECK-NEXT:    v_mov_b64_e32 v[16:17], 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:  .LBB0_15: ; %Flow6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[24:25], -1
@@ -156,7 +158,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  ; %bb.16: ; %._crit_edge2105.i.i.i2330
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[24:25], 0
-; CHECK-NEXT:    global_store_dwordx2 v20, v[20:21], s[12:13]
+; CHECK-NEXT:    global_store_dwordx2 v0, v[16:17], s[12:13]
 ; CHECK-NEXT:    s_branch .LBB0_1
 ; CHECK-NEXT:  .LBB0_17: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm

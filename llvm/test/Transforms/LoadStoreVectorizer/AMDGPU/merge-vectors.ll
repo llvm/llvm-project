@@ -149,8 +149,8 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @merge_load_i32_v2i64(ptr addrspace(1) nocapture %a) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @merge_load_i32_v2i64(
+define amdgpu_kernel void @no_merge_load_i32_v2i8(ptr addrspace(1) nocapture %a) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @no_merge_load_i32_v2i8(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[A]], i32 1
