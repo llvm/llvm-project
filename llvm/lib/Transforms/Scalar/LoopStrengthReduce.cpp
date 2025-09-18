@@ -1427,13 +1427,13 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
       const SCEV *Start;
-      const SCEVConstant *Step;
-      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step)))) {
+      const APInt *Step;
+      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step)))) {
         // If the step size matches the base offset, we could use pre-indexed
         // addressing.
         bool CanPreIndex = (AMK & TTI::AMK_PreIndexed) &&
                            F.BaseOffset.isFixed() &&
-                           Step->getAPInt() == F.BaseOffset.getFixedValue();
+                           *Step == F.BaseOffset.getFixedValue();
         bool CanPostIndex = (AMK & TTI::AMK_PostIndexed) &&
                             !isa<SCEVConstant>(Start) &&
                             SE->isLoopInvariant(Start, L);
