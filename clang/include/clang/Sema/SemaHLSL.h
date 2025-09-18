@@ -17,6 +17,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/SmallVector.h"
@@ -129,6 +130,7 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
+  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
@@ -159,6 +161,8 @@ public:
     RootSigOverrideIdent = DeclIdent;
   }
 
+  HLSLRootSignatureDecl *lookupRootSignatureOverrideDecl(DeclContext *DC) const;
+
   // Returns true if any RootSignatureElement is invalid and a diagnostic was
   // produced
   bool
@@ -168,15 +172,30 @@ public:
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_PositionAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
+
+  template <typename T>
+  T *createSemanticAttr(const ParsedAttr &AL,
+                        std::optional<unsigned> Location) {
+    T *Attr = ::new (getASTContext()) T(getASTContext(), AL);
+    if (Attr->isSemanticIndexable())
+      Attr->setSemanticIndex(Location ? *Location : 0);
+    else if (Location.has_value()) {
+      Diag(Attr->getLocation(), diag::err_hlsl_semantic_indexing_not_supported)
+          << Attr->getAttrName()->getName();
+      return nullptr;
+    }
+
+    return Attr;
+  }
+
+  void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                  std::optional<unsigned> Index);
+  void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
 
@@ -243,11 +262,6 @@ private:
 
   bool initGlobalResourceDecl(VarDecl *VD);
   bool initGlobalResourceArrayDecl(VarDecl *VD);
-  void createResourceRecordCtorArgs(const Type *ResourceTy, StringRef VarName,
-                                    HLSLResourceBindingAttr *RBA,
-                                    HLSLVkBindingAttr *VkBinding,
-                                    uint32_t ArrayIndex,
-                                    llvm::SmallVectorImpl<Expr *> &Args);
 };
 
 } // namespace clang

@@ -134,12 +134,17 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
-  } else if (Args.hasArg(options::OPT_g_Flag)) {
+  } else if (Args.hasArg(options::OPT_g_Group)) {
     DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
+  if (getDwarfNArg(Args)) {
+    const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
+    CmdArgs.push_back(
+        Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
+  }
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
@@ -150,6 +155,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
+                    options::OPT_fno_experimental_loop_fusion);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -180,6 +188,25 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
   if (Args.hasArg(clang::driver::options::OPT_fcoarray))
     CmdArgs.push_back("-fcoarray");
+}
+
+void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+  const ToolChain &TC = getToolChain();
+  const Driver &D = TC.getDriver();
+  DiagnosticsEngine &Diags = D.getDiags();
+  LTOKind LTOMode = D.getLTOMode();
+  // LTO mode is parsed by the Clang driver library.
+  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
+  if (LTOMode == LTOK_Full)
+    CmdArgs.push_back("-flto=full");
+  else if (LTOMode == LTOK_Thin) {
+    Diags.Report(
+        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                              "the option '-flto=thin' is a work in progress"));
+    CmdArgs.push_back("-flto=thin");
+  }
+  Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
+                            options::OPT_fno_fat_lto_objects});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -821,7 +848,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
-  DiagnosticsEngine &Diags = D.getDiags();
 
   // Invoke ourselves in -fc1 mode.
   CmdArgs.push_back("-fc1");
@@ -884,17 +910,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
-  // LTO mode is parsed by the Clang driver library.
-  LTOKind LTOMode = D.getLTOMode();
-  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
-  if (LTOMode == LTOK_Full)
-    CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
-    CmdArgs.push_back("-flto=thin");
-  }
+  addLTOOptions(Args, CmdArgs);
 
   // -fPIC and related options.
   addPicOptions(Args, CmdArgs);

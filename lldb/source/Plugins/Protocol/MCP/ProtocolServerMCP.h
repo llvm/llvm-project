@@ -12,13 +12,21 @@
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Server.h"
+#include "lldb/Protocol/MCP/Transport.h"
+#include <map>
+#include <memory>
 #include <thread>
+#include <tuple>
+#include <vector>
 
 namespace lldb_private::mcp {
 
 class ProtocolServerMCP : public ProtocolServer {
+  using ReadHandleUP = MainLoopBase::ReadHandleUP;
+  using TransportUP = std::unique_ptr<lldb_protocol::mcp::MCPTransport>;
+  using ServerUP = std::unique_ptr<lldb_protocol::mcp::Server>;
+
 public:
   ProtocolServerMCP();
   virtual ~ProtocolServerMCP() override;
@@ -48,15 +56,18 @@ private:
 
   bool m_running = false;
 
-  FileSpec m_mcp_registry_entry_path;
+  lldb_protocol::mcp::ServerInfoHandle m_server_info_handle;
   lldb_private::MainLoop m_loop;
   std::thread m_loop_thread;
   std::mutex m_mutex;
+  size_t m_client_count = 0;
 
   std::unique_ptr<Socket> m_listener;
 
-  std::vector<MainLoopBase::ReadHandleUP> m_listen_handlers;
-  std::vector<std::unique_ptr<lldb_protocol::mcp::Server>> m_instances;
+  std::vector<ReadHandleUP> m_listen_handlers;
+  std::map<lldb_protocol::mcp::MCPTransport *,
+           std::tuple<ServerUP, ReadHandleUP, TransportUP>>
+      m_instances;
 };
 } // namespace lldb_private::mcp
 

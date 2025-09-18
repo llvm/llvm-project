@@ -909,8 +909,6 @@ static llvm::Error Evaluate_DW_OP_deref(DWARFExpression::Stack &stack,
               " for DW_OP_deref",
               pointer_addr),
           error.takeError());
-    if (ABISP abi_sp = process->GetABI())
-      pointer_value = abi_sp->FixCodeAddress(pointer_value);
     stack.back().GetScalar() = pointer_value;
     stack.back().ClearContext();
   } break;
@@ -2195,7 +2193,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         // Note that we don't have to parse FDEs because this DWARF expression
         // is commonly evaluated with a valid stack frame.
         StackID id = frame->GetStackID();
-        addr_t cfa = id.GetCallFrameAddress();
+        addr_t cfa = id.GetCallFrameAddressWithMetadata();
         if (cfa != LLDB_INVALID_ADDRESS) {
           stack.push_back(Scalar(cfa));
           stack.back().SetValueType(Value::ValueType::LoadAddress);

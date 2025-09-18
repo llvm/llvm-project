@@ -273,6 +273,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
+#include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
@@ -1493,25 +1494,23 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
-Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Params) {
-  if (Params.empty())
+Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+  if (Param.empty())
     return CodeGenOptLevel::None;
 
-  StringRef Param;
-  std::tie(Param, Params) = Params.split(';');
-  if (!Params.empty())
-    return createStringError("too many expand-fp pass parameters");
+  // Parse a CodeGenOptLevel, e.g. "O1", "O2", "O3".
+  auto [Prefix, Digit] = Param.split('O');
 
-  auto [Name, Val] = Param.split('=');
-  if (Name != "opt-level")
+  uint8_t N;
+  if (!Prefix.empty() || Digit.getAsInteger(10, N))
     return createStringError("invalid expand-fp pass parameter '%s'",
                              Param.str().c_str());
-  int8_t N;
-  Val.getAsInteger(10, N);
+
   std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
   if (!Level.has_value())
-    return createStringError("invalid expand-fp opt-level value: %s",
-                             Val.str().c_str());
+    return createStringError(
+        "invalid optimization level for expand-fp pass: %s",
+        Digit.str().c_str());
 
   return *Level;
 }
@@ -2100,11 +2099,8 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       bool UseBFI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
         return Pipeline.Name.contains("simple-loop-unswitch");
       });
-      bool UseBPI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
-        return Pipeline.Name == "loop-predication";
-      });
       FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
-                                                  UseBFI, UseBPI));
+                                                  UseBFI));
       return Error::success();
     }
     if (Name == "machine-function") {
