@@ -1348,6 +1348,3 @@ define i8 @test_logical_commuted_and_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
   %select = select i1 %or.cond, i8 %a, i8 %b
   ret i8 %select
 }
-
-!0 = !{!"function_entry_count", i64 1000}
-!1 = !{!"branch_weights", i32 2, i32 3}
