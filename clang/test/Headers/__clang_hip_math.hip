@@ -8734,47 +8734,42 @@ extern "C" __device__ float test___powf(float x, float y) {
 }
 
 // DEFAULT-LABEL: define dso_local noundef float @test___saturatef(
-// DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[CMP_I:%.*]] = fcmp contract olt float [[X]], 0.000000e+00
-// DEFAULT-NEXT:    [[CMP1_I:%.*]] = fcmp contract ogt float [[X]], 1.000000e+00
-// DEFAULT-NEXT:    [[COND_I:%.*]] = select contract i1 [[CMP1_I]], float 1.000000e+00, float [[X]]
+// DEFAULT-NEXT:    [[COND_I:%.*]] = tail call contract float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
 // DEFAULT-NEXT:    [[COND5_I:%.*]] = select contract i1 [[CMP_I]], float 0.000000e+00, float [[COND_I]]
 // DEFAULT-NEXT:    ret float [[COND5_I]]
 //
 // FINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @test___saturatef(
-// FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[CMP_I:%.*]] = fcmp nnan ninf contract olt float [[X]], 0.000000e+00
-// FINITEONLY-NEXT:    [[CMP1_I:%.*]] = fcmp nnan ninf contract ogt float [[X]], 1.000000e+00
-// FINITEONLY-NEXT:    [[COND_I:%.*]] = select nnan ninf contract i1 [[CMP1_I]], float 1.000000e+00, float [[X]]
+// FINITEONLY-NEXT:    [[COND_I:%.*]] = tail call nnan ninf contract float @llvm.minnum.f32(float nofpclass(nan inf) [[X]], float 1.000000e+00)
 // FINITEONLY-NEXT:    [[COND5_I:%.*]] = select nnan ninf contract i1 [[CMP_I]], float 0.000000e+00, float [[COND_I]]
 // FINITEONLY-NEXT:    ret float [[COND5_I]]
 //
 // APPROX-LABEL: define dso_local noundef float @test___saturatef(
-// APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[CMP_I:%.*]] = fcmp contract olt float [[X]], 0.000000e+00
-// APPROX-NEXT:    [[CMP1_I:%.*]] = fcmp contract ogt float [[X]], 1.000000e+00
-// APPROX-NEXT:    [[COND_I:%.*]] = select contract i1 [[CMP1_I]], float 1.000000e+00, float [[X]]
+// APPROX-NEXT:    [[COND_I:%.*]] = tail call contract float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
 // APPROX-NEXT:    [[COND5_I:%.*]] = select contract i1 [[CMP_I]], float 0.000000e+00, float [[COND_I]]
 // APPROX-NEXT:    ret float [[COND5_I]]
 //
 // NCRDIV-LABEL: define dso_local noundef float @test___saturatef(
-// NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[CMP_I:%.*]] = fcmp contract olt float [[X]], 0.000000e+00
-// NCRDIV-NEXT:    [[CMP1_I:%.*]] = fcmp contract ogt float [[X]], 1.000000e+00
-// NCRDIV-NEXT:    [[COND_I:%.*]] = select contract i1 [[CMP1_I]], float 1.000000e+00, float [[X]]
+// NCRDIV-NEXT:    [[COND_I:%.*]] = tail call contract float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
 // NCRDIV-NEXT:    [[COND5_I:%.*]] = select contract i1 [[CMP_I]], float 0.000000e+00, float [[COND_I]]
 // NCRDIV-NEXT:    ret float [[COND5_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func noundef float @test___saturatef(
-// AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
+// AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR2:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[CMP_I:%.*]] = fcmp contract olt float [[X]], 0.000000e+00
-// AMDGCNSPIRV-NEXT:    [[CMP1_I:%.*]] = fcmp contract ogt float [[X]], 1.000000e+00
-// AMDGCNSPIRV-NEXT:    [[COND_I:%.*]] = select contract i1 [[CMP1_I]], float 1.000000e+00, float [[X]]
+// AMDGCNSPIRV-NEXT:    [[COND_I:%.*]] = tail call contract addrspace(4) float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
 // AMDGCNSPIRV-NEXT:    [[COND5_I:%.*]] = select contract i1 [[CMP_I]], float 0.000000e+00, float [[COND_I]]
 // AMDGCNSPIRV-NEXT:    ret float [[COND5_I]]
 //
