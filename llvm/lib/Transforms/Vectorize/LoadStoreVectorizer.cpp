@@ -119,29 +119,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "load-store-vectorizer"
 
-cl::opt<bool>
-    ExtendLoads("vect-extend-loads", cl::Hidden,
-                cl::desc("Load more elements if the target VF is higher "
-                         "than the chain length."),
-                cl::init(true));
-
-cl::opt<bool> ExtendStores(
-    "vect-extend-stores", cl::Hidden,
-    cl::desc("Store more elements if the target VF is higher "
-             "than the chain length and we have access to masked stores."),
-    cl::init(true));
-
-cl::opt<bool> FillLoadGaps(
-    "vect-fill-load-gaps", cl::Hidden,
-    cl::desc("Should Loads be introduced in gaps to enable vectorization."),
-    cl::init(true));
-
-cl::opt<bool>
-    FillStoreGaps("vect-fill-store-gaps", cl::Hidden,
-                  cl::desc("Should Stores be introduced in gaps to enable "
-                           "vectorization into masked stores."),
-                  cl::init(true));
-
 STATISTIC(NumVectorInstructions, "Number of vector accesses generated");
 STATISTIC(NumScalarsVectorized, "Number of scalar accesses vectorized");
 
@@ -689,9 +666,8 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   //   store for the target. If later on, we don't end up with a chain that
   //   could be vectorized into a legal masked store, the chains with extra
   //   elements will be filtered out in splitChainByAlignment.
-  bool TryFillGaps = isa<LoadInst>(C[0].Inst)
-                         ? (FillLoadGaps && TTI.isLegalToWidenLoads())
-                         : (FillStoreGaps && shouldAttemptMaskedStore(C));
+  bool TryFillGaps = isa<LoadInst>(C[0].Inst) ? TTI.isLegalToWidenLoads()
+                                              : shouldAttemptMaskedStore(C);
 
   unsigned ASPtrBits =
       DL.getIndexSizeInBits(getLoadStoreAddressSpace(C[0].Inst));
@@ -930,9 +906,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       }
 
       Chain ExtendingLoadsStores;
-      bool ExtendChain = IsLoadChain ? ExtendLoads : ExtendStores;
-      if (ExtendChain && NumVecElems < TargetVF && NumVecElems % 2 != 0 &&
-          VecElemBits >= 8) {
+      if (NumVecElems < TargetVF && NumVecElems % 2 != 0 && VecElemBits >= 8) {
         // TargetVF may be a lot higher than NumVecElems,
         // so only extend to the next power of 2.
         assert(VecElemBits % 8 == 0);
