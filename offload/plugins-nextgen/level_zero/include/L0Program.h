@@ -60,7 +60,6 @@ class L0ProgramTy : public DeviceImageTy {
                     const std::string &BuildOption, ze_module_format_t Format);
   /// Read file and return the size of the binary if successful.
   size_t readFile(const char *FileName, std::vector<uint8_t> &OutFile) const;
-  int32_t readSPVFile(const char *FileName, std::vector<uint8_t> &OutSPV) const;
   void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
                                         std::string &Options) const;
 

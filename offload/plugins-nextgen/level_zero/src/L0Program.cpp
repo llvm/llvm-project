@@ -187,44 +187,6 @@ size_t L0ProgramTy::readFile(const char *FileName,
   return FileSize;
 }
 
-/// Read SPV from file name
-int32_t L0ProgramTy::readSPVFile(const char *FileName,
-                                 std::vector<uint8_t> &OutSPV) const {
-  // Resolve full path using the location of the plugin
-  std::string FullPath;
-#ifdef _WIN32
-  char RTLPath[_MAX_PATH];
-  HMODULE RTLModule = nullptr;
-  if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                              GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                          (LPCSTR)&__tgt_target_data_begin_nowait,
-                          &RTLModule)) {
-    DP("Error: module creation failed -- cannot resolve full path\n");
-    return OFFLOAD_FAIL;
-  }
-  if (!GetModuleFileNameA(RTLModule, RTLPath, sizeof(RTLPath))) {
-    DP("Error: module creation failed -- cannot resolve full path\n");
-    return OFFLOAD_FAIL;
-  }
-  FullPath = RTLPath;
-#else  // _WIN32
-  Dl_info RTLInfo;
-  if (!dladdr((void *)&__tgt_target_data_begin_nowait, &RTLInfo)) {
-    DP("Error: module creation failed -- cannot resolve full path\n");
-    return OFFLOAD_FAIL;
-  }
-  FullPath = RTLInfo.dli_fname;
-#endif // _WIN32
-  const size_t PathSep = FullPath.find_last_of("/\\");
-  FullPath.replace(PathSep + 1, std::string::npos, FileName);
-  // Read from the full path
-  if (!readFile(FullPath.c_str(), OutSPV)) {
-    DP("Error: module creation failed -- cannot read %s\n", FullPath.c_str());
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
 void L0ProgramTy::replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
                                                    std::string &Options) const {
   // Options that need to be replaced with backend-specific options

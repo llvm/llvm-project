@@ -27,13 +27,6 @@
       DP(__VA_ARGS__);                                                         \
   } while (0)
 
-#define FATAL_ERROR(Msg)                                                       \
-  do {                                                                         \
-    fprintf(stderr, "%s --> ", DEBUG_PREFIX);                                  \
-    fprintf(stderr, "Error: %s failed (%s) -- exiting...\n", __func__, Msg);   \
-    exit(EXIT_FAILURE);                                                        \
-  } while (0)
-
 #define WARNING(...)                                                           \
   do {                                                                         \
     fprintf(stderr, "%s --> ", DEBUG_PREFIX);                                  \
