@@ -5490,27 +5490,27 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
     return;
   using FunctionCallgraphInfo =
       ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
-  
-  auto GetFunctionName = [&](typename ELFT::uint EntryPc){
+
+  auto GetFunctionName = [&](typename ELFT::uint EntryPc) {
     SmallVector<uint32_t> FuncSymIndexes =
         this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
     if (FuncSymIndexes.empty())
       return std::string("");
-    
+
     SmallVector<std::string> FuncSymNames;
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    return join(FuncSymNames, ", ");    
+    return join(FuncSymNames, ", ");
   };
-  
+
   OS << "Per-function call graph information:: \n";
   for (const auto &El : this->FuncCGInfos) {
     typename ELFT::uint FuncEntryPc = El.first;
     FunctionCallgraphInfo CGInfo = El.second;
-    std::string FuncSymNames = GetFunctionName(FuncEntryPc);    
+    std::string FuncSymNames = GetFunctionName(FuncEntryPc);
     if (!FuncSymNames.empty())
       OS << "\nFunction:: " << FuncSymNames;
-    OS << "\nFunction PC:: " << format("0x%lx", FuncEntryPc);    
+    OS << "\nFunction PC:: " << format("0x%lx", FuncEntryPc);
     OS << "\nFormatVersionNumber:: " << CGInfo.FormatVersionNumber;
     OS << "\nFunction Kind:: " << GetFuntionKindString(CGInfo.Kind);
     if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
@@ -5532,7 +5532,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
     if (CGInfo.DirectCallees.size() > 0) {
       OS << "\n{";
       for (auto CalleePC : CGInfo.DirectCallees) {
-        std::string FuncSymNames = GetFunctionName(CalleePC);    
+        std::string FuncSymNames = GetFunctionName(CalleePC);
         if (!FuncSymNames.empty()) {
           OS << "\n";
           OS.PadToColumn(2);
@@ -5540,7 +5540,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
         }
         OS << "\n";
         OS.PadToColumn(2);
-        OS << "CalleePC:: 0x" << format("%lx", CalleePC);        
+        OS << "CalleePC:: 0x" << format("%lx", CalleePC);
       }
       OS << "\n}";
     }
@@ -8386,35 +8386,35 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     return;
   using FunctionCallgraphInfo =
       ::FunctionCallgraphInfoImpl<typename ELFT::uint>;
-  
-  auto GetFunctionName = [&](typename ELFT::uint EntryPc){
+
+  auto GetFunctionName = [&](typename ELFT::uint EntryPc) {
     SmallVector<uint32_t> FuncSymIndexes =
         this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
     if (FuncSymIndexes.empty())
       return std::string("");
-    
+
     SmallVector<std::string> FuncSymNames;
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    return join(FuncSymNames, ", ");    
+    return join(FuncSymNames, ", ");
   };
 
   DictScope D(this->W, "callgraph_info");
 
   for (const auto &El : this->FuncCGInfos) {
     typename ELFT::uint FuncEntryPc = El.first;
-    FunctionCallgraphInfo CGInfo = El.second; 
+    FunctionCallgraphInfo CGInfo = El.second;
     std::string FuncPCStr;
     raw_string_ostream OS(FuncPCStr);
     OS << format("0x%lx", FuncEntryPc);
     DictScope FuncScope(this->W, OS.str());
-    std::string FuncSymName = GetFunctionName(FuncEntryPc);    
+    std::string FuncSymName = GetFunctionName(FuncEntryPc);
     if (!FuncSymName.empty())
-      this->W.printString("Name", FuncSymName);  
-    
+      this->W.printString("Name", FuncSymName);
+
     this->W.printNumber("FormatVersionNumber", CGInfo.FormatVersionNumber);
     this->W.printString("KindStr", GetFuntionKindString(CGInfo.Kind));
-    this->W.printNumber("Kind", (uint64_t)CGInfo.Kind);    
+    this->W.printNumber("Kind", (uint64_t)CGInfo.Kind);
     if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
       this->W.printHex("TypeId", CGInfo.FunctionTypeId);
     this->W.printNumber("NumIndirectCallSites",
@@ -8434,7 +8434,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         this->W.printHex("calleePC", CalleePC);
         std::string CalleeSymName = GetFunctionName(CalleePC);
         if (!CalleeSymName.empty())
-          this->W.printString("Name", CalleeSymName);  
+          this->W.printString("Name", CalleeSymName);
       }
     }
   }
