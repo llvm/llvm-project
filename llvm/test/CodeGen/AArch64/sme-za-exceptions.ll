@@ -56,12 +56,12 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-NEXT:    adrp x8, .L.str
 ; CHECK-NEXT:    add x8, x8, :lo12:.L.str
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: // EH_LABEL
 ; CHECK-NEXT:    adrp x1, :got:typeinfo_for_char_const_ptr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    ldr x1, [x1, :got_lo12:typeinfo_for_char_const_ptr]
 ; CHECK-NEXT:    bl __cxa_throw
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: // EH_LABEL
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
@@ -72,7 +72,7 @@ define void @za_with_raii(i1 %fail) "aarch64_inout_za" personality ptr @__gxx_pe
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:  // %bb.5: // %throw_fail
 ; CHECK-NEXT:  .LBB0_6: // %unwind_dtors
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: // EH_LABEL
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0

@@ -5057,14 +5057,12 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   // All-zero GEP is a no-op, unless it performs a vector splat.
-  if (Ptr->getType() == GEPTy &&
-      all_of(Indices, [](const auto *V) { return match(V, m_Zero()); }))
+  if (Ptr->getType() == GEPTy && all_of(Indices, match_fn(m_Zero())))
     return Ptr;
 
   // getelementptr poison, idx -> poison
   // getelementptr baseptr, poison -> poison
-  if (isa<PoisonValue>(Ptr) ||
-      any_of(Indices, [](const auto *V) { return isa<PoisonValue>(V); }))
+  if (isa<PoisonValue>(Ptr) || any_of(Indices, IsaPred<PoisonValue>))
     return PoisonValue::get(GEPTy);
 
   // getelementptr undef, idx -> undef
@@ -5121,8 +5119,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   if (!IsScalableVec && Q.DL.getTypeAllocSize(LastType) == 1 &&
-      all_of(Indices.drop_back(1),
-             [](Value *Idx) { return match(Idx, m_Zero()); })) {
+      all_of(Indices.drop_back(1), match_fn(m_Zero()))) {
     unsigned IdxWidth =
         Q.DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace());
     if (Q.DL.getTypeSizeInBits(Indices.back()->getType()) == IdxWidth) {
@@ -5152,8 +5149,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   // Check to see if this is constant foldable.
-  if (!isa<Constant>(Ptr) ||
-      !all_of(Indices, [](Value *V) { return isa<Constant>(V); }))
+  if (!isa<Constant>(Ptr) || !all_of(Indices, IsaPred<Constant>))
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
@@ -5691,7 +5687,7 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
                               RoundingMode Rounding) {
   // Poison is independent of anything else. It always propagates from an
   // operand to a math result.
-  if (any_of(Ops, [](Value *V) { return match(V, m_Poison()); }))
+  if (any_of(Ops, IsaPred<PoisonValue>))
     return PoisonValue::get(Ops[0]->getType());
 
   for (Value *V : Ops) {
@@ -7155,7 +7151,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 
   switch (I->getOpcode()) {
   default:
-    if (llvm::all_of(NewOps, [](Value *V) { return isa<Constant>(V); })) {
+    if (all_of(NewOps, IsaPred<Constant>)) {
       SmallVector<Constant *, 8> NewConstOps(NewOps.size());
       transform(NewOps, NewConstOps.begin(),
                 [](Value *V) { return cast<Constant>(V); });
