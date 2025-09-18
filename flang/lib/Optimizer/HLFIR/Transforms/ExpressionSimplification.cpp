@@ -9,20 +9,12 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "llvm/Support/DebugLog.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_EXPRESSIONSIMPLIFICATION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
-
-#define DEBUG_TYPE "expression-simplification"
-
-static void removeOp(mlir::Operation *op) {
-  op->dropAllReferences();
-  op->dropAllUses();
-  op->erase();
-}
 
 // Get the first user of `op`.
 // Note that we consider the first user to be the one on the lowest line of
@@ -51,77 +43,57 @@ static UserOp getLastUser(mlir::Operation *op) {
 
 namespace {
 
-// This class analyzes a trimmed character and removes the trim operation if
-// its result is not used elsewhere.
-class TrimRemover {
+// Trim operations can be erased in certain expressions, such as character
+// comparisons.
+// Since a character comparison appends spaces to the shorter character,
+// calls to trim() that are used only in the comparison can be eliminated.
+//
+// Example:
+// `trim(x) == trim(y)`
+// can be simplified to
+// `x == y`
+class EraseTrim : public mlir::OpRewritePattern<hlfir::CharTrimOp> {
 public:
-  TrimRemover(mlir::Value charVal) : charVal(charVal) {}
-  TrimRemover(const TrimRemover &) = delete;
+  using mlir::OpRewritePattern<hlfir::CharTrimOp>::OpRewritePattern;
 
-  bool charWasTrimmed();
-  void removeTrim();
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CharTrimOp trimOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    int trimUses = std::distance(trimOp->use_begin(), trimOp->use_end());
+    auto cmpCharOp = getFirstUser<hlfir::CmpCharOp>(trimOp);
+    auto destroyOp = getLastUser<hlfir::DestroyOp>(trimOp);
+    if (!cmpCharOp || !destroyOp || trimUses != 2)
+      return rewriter.notifyMatchFailure(
+          trimOp, "hlfir.char_trim is not used (only) by hlfir.cmpchar");
 
-private:
-  mlir::Value charVal;
-  hlfir::CharTrimOp trimOp;
-  hlfir::CmpCharOp cmpCharOp;
-  hlfir::DestroyOp destroyOp;
+    rewriter.eraseOp(destroyOp);
+    rewriter.replaceOp(trimOp, trimOp.getChr());
+    return mlir::success();
+  }
 };
 
-bool TrimRemover::charWasTrimmed() {
-  LDBG() << "charWasTrimmed: " << charVal;
-
-  trimOp = mlir::dyn_cast<hlfir::CharTrimOp>(charVal.getDefiningOp());
-  if (!trimOp)
-    return false;
-  int trimUses = std::distance(trimOp->use_begin(), trimOp->use_end());
-  cmpCharOp = getFirstUser<hlfir::CmpCharOp>(trimOp);
-  destroyOp = getLastUser<hlfir::DestroyOp>(trimOp);
-  return cmpCharOp && destroyOp && trimUses == 2;
-}
-
-void TrimRemover::removeTrim() {
-  LDBG() << "removeTrim: " << trimOp;
-
-  cmpCharOp->replaceUsesOfWith(trimOp.getResult(), trimOp.getChr());
-  removeOp(destroyOp);
-  removeOp(trimOp);
-}
-
-class ExpressionSimplification
+class ExpressionSimplificationPass
     : public hlfir::impl::ExpressionSimplificationBase<
-          ExpressionSimplification> {
+          ExpressionSimplificationPass> {
 public:
-  using ExpressionSimplificationBase<
-      ExpressionSimplification>::ExpressionSimplificationBase;
+  void runOnOperation() override {
+    mlir::MLIRContext *context = &getContext();
 
-  void runOnOperation() override;
+    mlir::GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks.
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
-private:
-  // Simplify character comparisons.
-  // Because character comparison appends spaces to the shorter character,
-  // calls to trim() that are used only in the comparison can be eliminated.
-  //
-  // Example:
-  // `trim(x) == trim(y)`
-  // can be simplified to
-  // `x == y`
-  void simplifyCmpChar(hlfir::CmpCharOp cmpChar);
+    mlir::RewritePatternSet patterns(context);
+    patterns.insert<EraseTrim>(context);
+
+    if (mlir::failed(mlir::applyPatternsGreedily(
+            getOperation(), std::move(patterns), config))) {
+      mlir::emitError(getOperation()->getLoc(),
+                      "failure in HLFIR expression simplification");
+      signalPassFailure();
+    }
+  }
 };
-
-void ExpressionSimplification::simplifyCmpChar(hlfir::CmpCharOp cmpChar) {
-  TrimRemover lhsTrimRem(cmpChar.getLchr());
-  TrimRemover rhsTrimRem(cmpChar.getRchr());
-
-  if (lhsTrimRem.charWasTrimmed())
-    lhsTrimRem.removeTrim();
-  if (rhsTrimRem.charWasTrimmed())
-    rhsTrimRem.removeTrim();
-}
-
-void ExpressionSimplification::runOnOperation() {
-  mlir::ModuleOp module = getOperation();
-  module.walk([&](hlfir::CmpCharOp cmpChar) { simplifyCmpChar(cmpChar); });
-}
 
 } // namespace

@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --expression-simplification | FileCheck %s
+// RUN: fir-opt %s --hlfir-expression-simplification | FileCheck %s
 
 // Test removal of trim() calls.
 

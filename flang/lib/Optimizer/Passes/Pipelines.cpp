@@ -243,7 +243,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   llvm::OptimizationLevel optLevel) {
   if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
-    pm.addPass(hlfir::createExpressionSimplification());
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createExpressionSimplification);
   }
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);

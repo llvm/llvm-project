@@ -61,8 +61,7 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                         "the hlfir.matmul.">];
 }
 
-def ExpressionSimplification
-    : Pass<"expression-simplification", "::mlir::ModuleOp"> {
+def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
   let summary = "Simplify Fortran expressions";
 }
 
