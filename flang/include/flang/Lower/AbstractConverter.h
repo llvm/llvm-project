@@ -108,6 +108,21 @@ public:
   /// added or replaced at the inner-most level of the local symbol map.
   virtual void bindSymbol(SymbolRef sym, const fir::ExtendedValue &exval) = 0;
 
+  /// Binds the symbol's physical storage to a storage descriptor,
+  /// which is the base address of the storage and the offset
+  /// within the storage, where the symbol begins.
+  /// The symbol binding will be added or replaced at the innermost level
+  /// of the local symbol map.
+  virtual void
+  bindSymbolStorage(SymbolRef sym,
+                    Fortran::lower::SymMap::StorageDesc storage) = 0;
+
+  /// Returns the storage descriptor previously bound to this symbol.
+  /// If there is no bound storage, the descriptor will contain
+  /// nullptr base address.
+  virtual Fortran::lower::SymMap::StorageDesc
+  getSymbolStorage(SymbolRef sym) = 0;
+
   /// Override lowering of expression with pre-lowered values.
   /// Associate mlir::Value to evaluate::Expr. All subsequent call to
   /// genExprXXX() will replace any occurrence of an overridden
