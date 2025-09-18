@@ -1,7 +1,7 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
 from mlir.ir import *
-from mlir.dialects import irdl
+from mlir.dialects.irdl import *
 import sys
 
 
@@ -16,20 +16,20 @@ def testIRDL():
     with Context() as ctx, Location.unknown():
         module = Module.create()
         with InsertionPoint(module.body):
-            dialect = irdl.DialectOp("irdl_test")
-            with InsertionPoint(dialect.body):
-                op = irdl.OperationOp("test_op")
+            irdl_test = dialect("irdl_test")
+            with InsertionPoint(irdl_test.body):
+                op = operation_("test_op")
                 with InsertionPoint(op.body):
-                    f32 = irdl.is_(TypeAttr.get(F32Type.get()))
-                    irdl.operands_([f32], ["input"], [irdl.Variadicity.single])
-                type1 = irdl.TypeOp("type1")
+                    f32 = is_(TypeAttr.get(F32Type.get()))
+                    operands_([f32], ["input"], [Variadicity.single])
+                type1 = type_("type1")
                 with InsertionPoint(type1.body):
-                    f32 = irdl.is_(TypeAttr.get(F32Type.get()))
-                    irdl.parameters([f32], ["val"])
-                attr1 = irdl.AttributeOp("attr1")
+                    f32 = is_(TypeAttr.get(F32Type.get()))
+                    parameters([f32], ["val"])
+                attr1 = attribute("attr1")
                 with InsertionPoint(attr1.body):
-                    test = irdl.is_(StringAttr.get("test"))
-                    irdl.parameters([test], ["val"])
+                    test = is_(StringAttr.get("test"))
+                    parameters([test], ["val"])
 
         # CHECK: module {
         # CHECK:   irdl.dialect @irdl_test {
@@ -50,7 +50,7 @@ def testIRDL():
         module.operation.verify()
         module.dump()
 
-        irdl.load_dialects(module)
+        load_dialects(module)
 
         m = Module.parse(
             """
