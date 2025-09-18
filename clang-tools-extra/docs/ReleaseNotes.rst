@@ -284,7 +284,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check to
-  improve the robustness of the member initializer detection.
+  enhance the robustness of the member initializer detection.
 
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
