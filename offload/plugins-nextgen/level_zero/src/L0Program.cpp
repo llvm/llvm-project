@@ -128,11 +128,8 @@ int32_t L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
 
   const bool BuildFailed = (RC != ZE_RESULT_SUCCESS);
 
-  if (BuildFailed) {
-    if (IsLibModule)
-      return OFFLOAD_SUCCESS;
+  if (BuildFailed)
     return OFFLOAD_FAIL;
-  }
 
   // Check if module link is required. We do not need this check for
   // library module

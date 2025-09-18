@@ -35,7 +35,6 @@ int32_t LevelZeroPluginTy::findDevices() {
     DP("Cannot find any drivers.\n");
     return 0;
   }
-  const bool ExplicitMode = getOptions().ExplicitRootDevices.size() > 0;
 
   // We expect multiple drivers on Windows to support different device types,
   // so we need to maintain multiple drivers and contexts in general.
@@ -93,13 +92,10 @@ int32_t LevelZeroPluginTy::findDevices() {
 
   llvm::SmallVector<DeviceInfoTy> DevicesToAdd;
 
-  // helper lambdas
-  auto addDevice = [ExplicitMode,
-                    &DevicesToAdd](auto &zeDevice, auto *Driver, int32_t RootId,
+  // helper lambda
+  auto addDevice = [&DevicesToAdd](auto &zeDevice, auto *Driver, int32_t RootId,
                                    int32_t SubId = -1, int32_t CCSId = -1) {
-    if (!ExplicitMode || getOptions().shouldAddDevice(RootId, SubId, CCSId)) {
-      DevicesToAdd.push_back({{zeDevice, RootId, SubId, CCSId}, Driver});
-    }
+    DevicesToAdd.push_back({{zeDevice, RootId, SubId, CCSId}, Driver});
   };
   for (size_t RootId = 0; RootId < RootDevices.size(); RootId++) {
     const auto zeDevice = RootDevices[RootId].zeDevice;

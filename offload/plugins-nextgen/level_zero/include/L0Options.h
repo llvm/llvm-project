@@ -113,13 +113,6 @@ struct L0OptionsTy {
   /// kernels (which poorly expose parallelism in the first place).
   double ThinThreadsThreshold = 0.1;
 
-  /// List of Root devices provided via option ONEAPI_DEVICE_SELECTOR
-  /// All the discard filter should be before the accept filter.
-  std::vector<std::tuple<bool, int32_t, int32_t, int32_t>> ExplicitRootDevices;
-
-  /// Is the given RootID, SubID, CcsID specified in ONEAPI_DEVICE_SELECTOR
-  bool shouldAddDevice(int32_t RootID, int32_t SubID, int32_t CCSID) const;
-
   // Compilation options for IGC
   // OpenCL 2.0 builtins (like atomic_load_explicit and etc.) are used by
   // runtime, so we have to explicitly specify the "-cl-std=CL2.0" compilation
