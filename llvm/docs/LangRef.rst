@@ -2428,7 +2428,7 @@ For example:
     attributed with ``sanitize_realtime``.
     This attribute is incompatible with the ``sanitize_realtime`` attribute.
 ``sanitize_alloc_token``
-    This attributes indicates that implicit allocation token instrumentation
+    This attribute indicates that implicit allocation token instrumentation
     is enabled for this function.
 ``speculative_load_hardening``
     This attribute indicates that
@@ -8392,6 +8392,13 @@ Example:
 The ``nofree`` metadata indicates the memory pointed by the pointer will not be
 freed after the attached instruction.
 
+'``alloc_token``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``alloc_token`` metadata may be attached to calls to memory allocation
+functions, and contains richer semantic information about the type of the
+allocation. This information is consumed by the ``alloc-token`` pass to
+instrument such calls with allocation token IDs.
 
 Module Flags Metadata
 =====================

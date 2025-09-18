@@ -31,25 +31,25 @@ int **test_malloc_ptr() {
 
 // CHECK-LABEL: @_Z12test_new_intv(
 int *test_new_int() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 0){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 0){{.*}} !alloc_token
   return new int;
 }
 
 // CHECK-LABEL: @_Z20test_new_ulong_arrayv(
 unsigned long *test_new_ulong_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 80, i64 0){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 80, i64 0){{.*}} !alloc_token
   return new unsigned long[10];
 }
 
 // CHECK-LABEL: @_Z12test_new_ptrv(
 int **test_new_ptr() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 8, i64 1){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 8, i64 1){{.*}} !alloc_token
   return new int*;
 }
 
 // CHECK-LABEL: @_Z18test_new_ptr_arrayv(
 int **test_new_ptr_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 80, i64 1){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 80, i64 1){{.*}} !alloc_token
   return new int*[10];
 }
 
@@ -108,13 +108,13 @@ ContainsPtr *test_operatornew_struct_array_with_ptr2() {
 
 // CHECK-LABEL: @_Z24test_new_struct_with_ptrv(
 ContainsPtr *test_new_struct_with_ptr() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 1){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 16, i64 1){{.*}} !alloc_token
   return new ContainsPtr;
 }
 
 // CHECK-LABEL: @_Z30test_new_struct_array_with_ptrv(
 ContainsPtr *test_new_struct_array_with_ptr() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 160, i64 1){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 160, i64 1){{.*}} !alloc_token
   return new ContainsPtr[10];
 }
 
@@ -127,13 +127,13 @@ public:
 
 // CHECK-LABEL: @_Z14test_new_classv(
 TestClass *test_new_class() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 64, i64 0){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 64, i64 0){{.*}} !alloc_token
   return new TestClass();
 }
 
 // CHECK-LABEL: @_Z20test_new_class_arrayv(
 TestClass *test_new_class_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 648, i64 0){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 648, i64 0){{.*}} !alloc_token
   return new TestClass[10];
 }
 
@@ -147,13 +147,13 @@ public:
 
 // CHECK-LABEL: @_Z22test_new_virtual_classv(
 VirtualTestClass *test_new_virtual_class() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 1){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 1){{.*}} !alloc_token
   return new VirtualTestClass();
 }
 
 // CHECK-LABEL: @_Z28test_new_virtual_class_arrayv(
 VirtualTestClass *test_new_virtual_class_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 1){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 1){{.*}} !alloc_token
   return new VirtualTestClass[10];
 }
 

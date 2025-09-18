@@ -1272,8 +1272,58 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
-void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
-                                         QualType AllocType) {
+static bool
+typeContainsPointer(QualType T,
+                    llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
+                    bool &IncompleteType) {
+  QualType CanonicalType = T.getCanonicalType();
+  if (CanonicalType->isPointerType())
+    return true; // base case
+
+  // Look through typedef chain to check for special types.
+  for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
+       CurrentT = TT->getDecl()->getUnderlyingType()) {
+    const IdentifierInfo *II = TT->getDecl()->getIdentifier();
+    if (!II)
+      continue;
+    // Special Case: Syntactically uintptr_t is not a pointer; semantically,
+    // however, very likely used as such. Therefore, classify uintptr_t as a
+    // pointer, too.
+    if (II->isStr("uintptr_t"))
+      return true;
+  }
+
+  // The type is an array; check the element type.
+  if (const ArrayType *AT = CanonicalType->getAsArrayTypeUnsafe())
+    return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
+  // The type is a struct, class, or union.
+  if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
+    if (!RD->isCompleteDefinition()) {
+      IncompleteType = true;
+      return false;
+    }
+    if (!VisitedRD.insert(RD).second)
+      return false; // already visited
+    // Check all fields.
+    for (const FieldDecl *Field : RD->fields()) {
+      if (typeContainsPointer(Field->getType(), VisitedRD, IncompleteType))
+        return true;
+    }
+    // For C++ classes, also check base classes.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Polymorphic types require a vptr.
+      if (CXXRD->isPolymorphic())
+        return true;
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (typeContainsPointer(Base.getType(), VisitedRD, IncompleteType))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   assert(SanOpts.has(SanitizerKind::AllocToken) &&
          "Only needed with -fsanitize=alloc-token");
 
@@ -1290,54 +1340,8 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
   // recursively check if a type contains a pointer type.
   llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
   bool IncompleteType = false;
-  auto TypeContainsPtr = [&](auto &&self, QualType T) -> bool {
-    QualType CanonicalType = T.getCanonicalType();
-    if (CanonicalType->isPointerType())
-      return true; // base case
-
-    // Look through typedef chain to check for special types.
-    for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
-         CurrentT = TT->getDecl()->getUnderlyingType()) {
-      const IdentifierInfo *II = TT->getDecl()->getIdentifier();
-      if (!II)
-        continue;
-      // Special Case: Syntactically uintptr_t is not a pointer; semantically,
-      // however, very likely used as such. Therefore, classify uintptr_t as a
-      // pointer, too.
-      if (II->isStr("uintptr_t"))
-        return true;
-    }
-
-    // The type is an array; check the element type.
-    if (const ArrayType *AT = CanonicalType->getAsArrayTypeUnsafe())
-      return self(self, AT->getElementType());
-    // The type is a struct, class, or union.
-    if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
-      if (!RD->isCompleteDefinition()) {
-        IncompleteType = true;
-        return false;
-      }
-      if (!VisitedRD.insert(RD).second)
-        return false; // already visited
-      // Check all fields.
-      for (const FieldDecl *Field : RD->fields()) {
-        if (self(self, Field->getType()))
-          return true;
-      }
-      // For C++ classes, also check base classes.
-      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-        // Polymorphic types require a vptr.
-        if (CXXRD->isPolymorphic())
-          return true;
-        for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
-          if (self(self, Base.getType()))
-            return true;
-        }
-      }
-    }
-    return false;
-  };
-  const bool ContainsPtr = TypeContainsPtr(TypeContainsPtr, AllocType);
+  const bool ContainsPtr =
+      typeContainsPointer(AllocType, VisitedRD, IncompleteType);
   if (!ContainsPtr && IncompleteType)
     return;
   auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
@@ -1346,7 +1350,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
   // Format: !{<type-name>, <contains-pointer>}
   auto *MDN =
       llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
-  CB->setMetadata(llvm::LLVMContext::MD_alloc_token_hint, MDN);
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::

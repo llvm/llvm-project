@@ -31,23 +31,23 @@ Token Assignment Mode
 
 The default mode to calculate tokens is:
 
-* *TypeHashPointerSplit* (mode=3): This mode assigns a token ID based on
-  the hash of the allocated type's name, where the top half ID-space is
-  reserved for types that contain pointers and the bottom half for types that
-  do not contain pointers.
+* ``typehashpointersplit``: This mode assigns a token ID based on the hash of
+  the allocated type's name, where the top half ID-space is reserved for types
+  that contain pointers and the bottom half for types that do not contain
+  pointers.
 
 Other token ID assignment modes are supported, but they may be subject to
 change or removal. These may (experimentally) be selected with ``-mllvm
 -alloc-token-mode=<mode>``:
 
-* *TypeHash* (mode=2): This mode assigns a token ID based on the hash of
-  the allocated type's name.
+* ``typehash``: This mode assigns a token ID based on the hash of the allocated
+  type's name.
 
-* *Random* (mode=1): This mode assigns a statically-determined random token ID
+* ``random``: This mode assigns a statically-determined random token ID to each
+  allocation site.
+
+* ``increment``: This mode assigns a simple, incrementally increasing token ID
   to each allocation site.
-
-* *Increment* (mode=0): This mode assigns a simple, incrementally increasing
-  token ID to each allocation site.
 
 Allocation Token Instrumentation
 ================================
@@ -74,7 +74,7 @@ In addition, it is typically recommended to configure the following:
 
 * ``-falloc-token-max=<N>``
     Configures the maximum number of tokens. No max by default (tokens bounded
-    by ``UINT64_MAX``).
+    by ``SIZE_MAX``).
 
     .. code-block:: console
 
@@ -85,21 +85,21 @@ Runtime Interface
 
 A compatible runtime must be provided that implements the token-enabled
 allocation functions. The instrumentation generates calls to functions that
-take a final ``uint64_t token_id`` argument.
+take a final ``size_t token_id`` argument.
 
 .. code-block:: c
 
     // C standard library functions
-    void *__alloc_token_malloc(size_t size, uint64_t token_id);
-    void *__alloc_token_calloc(size_t count, size_t size, uint64_t token_id);
-    void *__alloc_token_realloc(void *ptr, size_t size, uint64_t token_id);
+    void *__alloc_token_malloc(size_t size, size_t token_id);
+    void *__alloc_token_calloc(size_t count, size_t size, size_t token_id);
+    void *__alloc_token_realloc(void *ptr, size_t size, size_t token_id);
     // ...
 
     // C++ operators (mangled names)
-    // operator new(size_t, uint64_t)
-    void *__alloc_token_Znwm(size_t size, uint64_t token_id);
-    // operator new[](size_t, uint64_t)
-    void *__alloc_token_Znam(size_t size, uint64_t token_id);
+    // operator new(size_t, size_t)
+    void *__alloc_token_Znwm(size_t size, size_t token_id);
+    // operator new[](size_t, size_t)
+    void *__alloc_token_Znam(size_t size, size_t token_id);
     // ... other variants like nothrow, etc., are also instrumented.
 
 Fast ABI
