@@ -1,9 +1,8 @@
-;; Test if temporary labels are generated for each callsite.
+;; Test if temporary labels are generated for each indirect callsite.
 ;; Test if the .callgraph section contains the MD5 hash of callees' type (type id)
 ;; is correctly paired with its corresponding temporary label generated for indirect
 ;; call sites annotated with !callee_type metadata.
-;; Test if the .callgraph section contains direct callsite temporary labels paired
-;; correctly with the corresponding callee symbol.
+;; Test if the .callgraph section contains unique direct callees.
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
