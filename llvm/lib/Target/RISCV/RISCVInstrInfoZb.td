@@ -575,7 +575,7 @@ def : Pat<(XLenVT (and GPR:$r, BCLRIANDIMask:$i)),
 } // Predicates = [HasStdExtZbs]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
-// If the original code was setting, clearing, or inverting bit 31 or an i32,
+// If the original code was setting, clearing, or inverting bit 31 of an i32,
 // type legalization might have sign extended the constant so it doesn't have a
 // single 0 or 1 bit. If the upper 32 bits aren't used by later instructions we
 // can still use bseti/bclri.
