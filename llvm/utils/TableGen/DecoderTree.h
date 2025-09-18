@@ -189,15 +189,18 @@ public:
 };
 
 class DecodeNode : public DecoderTreeNode {
-  const InstructionEncoding &Encoding;
+  StringRef EncodingName;
+  unsigned InstOpcode;
   unsigned DecoderIndex;
 
 public:
-  DecodeNode(const InstructionEncoding &Encoding, unsigned DecoderIndex)
-      : DecoderTreeNode(Decode), Encoding(Encoding),
-        DecoderIndex(DecoderIndex) {}
+  DecodeNode(StringRef EncodingName, unsigned InstOpcode, unsigned DecoderIndex)
+      : DecoderTreeNode(Decode), EncodingName(EncodingName),
+        InstOpcode(InstOpcode), DecoderIndex(DecoderIndex) {}
 
-  const InstructionEncoding &getEncoding() const { return Encoding; }
+  StringRef getEncodingName() const { return EncodingName; }
+
+  unsigned getInstOpcode() const { return InstOpcode; }
 
   unsigned getDecoderIndex() const { return DecoderIndex; }
 };

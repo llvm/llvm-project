@@ -1231,7 +1231,8 @@ DecoderTreeBuilder::convertSingleton(unsigned EncodingID,
   }
 
   unsigned DecoderIndex = Ctx.getDecoderIndex(getDecoderString(Encoding));
-  N->addChild(std::make_unique<DecodeNode>(Encoding, DecoderIndex));
+  N->addChild(std::make_unique<DecodeNode>(
+      Encoding.getName(), Encoding.getInstruction()->EnumVal, DecoderIndex));
 
   return N;
 }

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DecoderTableEmitter.h"
-#include "Common/CodeGenInstruction.h"
-#include "Common/InstructionEncoding.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
 
@@ -77,10 +76,8 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   }
   case DecoderTreeNode::Decode: {
     const auto *N = static_cast<const DecodeNode *>(Node);
-    unsigned InstOpcode = N->getEncoding().getInstruction()->EnumVal;
-    unsigned DecoderIndex = N->getDecoderIndex();
-    return OpcodeSize + getULEB128Size(InstOpcode) +
-           getULEB128Size(DecoderIndex);
+    return OpcodeSize + getULEB128Size(N->getInstOpcode()) +
+           getULEB128Size(N->getDecoderIndex());
   }
   }
   llvm_unreachable("Unknown node kind");
@@ -267,15 +264,15 @@ void DecoderTableEmitter::emitSoftFailNode(const SoftFailNode *N,
 }
 
 void DecoderTableEmitter::emitDecodeNode(const DecodeNode *N, indent Indent) {
-  const InstructionEncoding &Encoding = N->getEncoding();
-  unsigned InstOpcode = Encoding.getInstruction()->EnumVal;
+  StringRef EncodingName = N->getEncodingName();
+  unsigned InstOpcode = N->getInstOpcode();
   unsigned DecoderIndex = N->getDecoderIndex();
 
   emitOpcode("OPC_Decode");
   emitULEB128(InstOpcode);
   emitULEB128(DecoderIndex);
 
-  emitComment(Indent) << "decode to " << Encoding.getName() << " using decoder "
+  emitComment(Indent) << "decode to " << EncodingName << " using decoder "
                       << DecoderIndex << '\n';
 }
 
