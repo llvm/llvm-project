@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 PreservedAnalyses
 DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
@@ -31,7 +32,7 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
 
     Value *Cond = Assume->getArgOperand(0);
     // Don't drop type tests, which have special semantics.
-    if (match(Cond, PatternMatch::m_Intrinsic<Intrinsic::type_test>()))
+    if (match(Cond, m_Intrinsic<Intrinsic::type_test>()))
       continue;
 
     SmallPtrSet<Value *, 8> Affected;
@@ -43,11 +44,13 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     // users may appear as a result of inlining and CSE, so we should only
     // make this assumption late in the optimization pipeline.
     // TODO: Handle dead cyclic usages.
-    if (!all_of(Affected, [](Value *V) { return V->hasOneUse(); }))
+    // TODO: Handle multiple dead assumes on the same value.
+    if (!all_of(Affected, match_fn(m_OneUse(m_Value()))))
       continue;
 
     Assume->eraseFromParent();
     RecursivelyDeleteTriviallyDeadInstructions(Cond);
+    Changed = true;
   }
 
   if (Changed) {

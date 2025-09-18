@@ -17,9 +17,8 @@
 
 namespace llvm {
 
-class DropUnnecessaryAssumesPass
+struct DropUnnecessaryAssumesPass
     : public PassInfoMixin<DropUnnecessaryAssumesPass> {
-public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
