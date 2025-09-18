@@ -130,9 +130,6 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
-  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D);
-  void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLAnnotationAttr *AnnotationAttr);
   void DiagnoseAttrStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
@@ -177,9 +174,9 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const ParsedAttr &AL,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI,
                         std::optional<unsigned> Location) {
-    T *Attr = ::new (getASTContext()) T(getASTContext(), AL);
+    T *Attr = ::new (getASTContext()) T(getASTContext(), ACI);
     if (Attr->isSemanticIndexable())
       Attr->setSemanticIndex(Location ? *Location : 0);
     else if (Location.has_value()) {
@@ -246,10 +243,24 @@ private:
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
+  struct SemanticInfo {
+    HLSLSemanticAttr *Semantic;
+    std::optional<uint32_t> Index;
+  };
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                const RecordType *RT);
+
+  void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
+                               const HLSLSemanticAttr *SemanticAttr);
+  HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic);
+  bool isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
+                               SemanticInfo &ActiveSemantic);
+  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D,
+                       SemanticInfo &ActiveSemantic);
+
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);

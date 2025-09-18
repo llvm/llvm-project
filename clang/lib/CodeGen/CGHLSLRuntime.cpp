@@ -566,17 +566,16 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
   return B.CreateLoad(Ty, GV);
 }
 
-llvm::Value *
-CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
-                                      const clang::DeclaratorDecl *Decl,
-                                      SemanticInfo &ActiveSemantic) {
-  if (isa<HLSLSV_GroupIndexAttr>(ActiveSemantic.Semantic)) {
+llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
+    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    Attr *Semantic, std::optional<unsigned> Index) {
+  if (isa<HLSLSV_GroupIndexAttr>(Semantic)) {
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
 
-  if (isa<HLSLSV_DispatchThreadIDAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_DispatchThreadIDAttr>(Semantic)) {
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -585,7 +584,7 @@ CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
     return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
 
-  if (isa<HLSLSV_GroupThreadIDAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_GroupThreadIDAttr>(Semantic)) {
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -594,7 +593,7 @@ CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
     return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
 
-  if (isa<HLSLSV_GroupIDAttr>(ActiveSemantic.Semantic)) {
+  if (isa<HLSLSV_GroupIDAttr>(Semantic)) {
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -603,8 +602,7 @@ CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
 
-  if (HLSLSV_PositionAttr *S =
-          dyn_cast<HLSLSV_PositionAttr>(ActiveSemantic.Semantic)) {
+  if (HLSLSV_PositionAttr *S = dyn_cast<HLSLSV_PositionAttr>(Semantic)) {
     if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel)
       return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                     S->getAttrName()->getName(),
@@ -616,28 +614,45 @@ CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
 
 llvm::Value *
 CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl,
-                                        SemanticInfo &ActiveSemantic) {
+                                        const clang::DeclaratorDecl *Decl) {
+  HLSLSemanticAttr *Semantic = Decl->getAttr<HLSLSemanticAttr>();
+  // Sema either attached a semantic to each field/param, or raised an error.
+  assert(Semantic);
 
-  if (!ActiveSemantic.Semantic) {
-    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
-    if (!ActiveSemantic.Semantic) {
-      CGM.getDiags().Report(Decl->getInnerLocStart(),
-                            diag::err_hlsl_semantic_missing);
-      return nullptr;
-    }
-    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  std::optional<unsigned> Index = std::nullopt;
+  if (Semantic->isSemanticIndexExplicit())
+    Index = Semantic->getSemanticIndex();
+  return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
+}
+
+llvm::Value *
+CGHLSLRuntime::handleStructSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl) {
+  const llvm::StructType *ST = cast<StructType>(Type);
+  const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
+
+  assert(std::distance(RD->field_begin(), RD->field_end()) ==
+         ST->getNumElements());
+
+  llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
+  auto FieldDecl = RD->field_begin();
+  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+    llvm::Value *ChildValue =
+        handleSemanticLoad(B, ST->getElementType(I), *FieldDecl);
+    assert(ChildValue);
+    Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
+    ++FieldDecl;
   }
 
-  return emitSystemSemanticLoad(B, Type, Decl, ActiveSemantic);
+  return Aggregate;
 }
 
 llvm::Value *
 CGHLSLRuntime::handleSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
-                                  const clang::DeclaratorDecl *Decl,
-                                  SemanticInfo &ActiveSemantic) {
-  assert(!Type->isStructTy());
-  return handleScalarSemanticLoad(B, Type, Decl, ActiveSemantic);
+                                  const clang::DeclaratorDecl *Decl) {
+  if (Type->isStructTy())
+    return handleStructSemanticLoad(B, Type, Decl);
+  return handleScalarSemanticLoad(B, Type, Decl);
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -684,8 +699,25 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     }
 
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
-    SemanticInfo ActiveSemantic = {nullptr, 0};
-    Args.push_back(handleSemanticLoad(B, Param.getType(), PD, ActiveSemantic));
+    llvm::Value *SemanticValue = nullptr;
+    if ([[maybe_unused]] HLSLParamModifierAttr *MA =
+            PD->getAttr<HLSLParamModifierAttr>()) {
+      llvm_unreachable("Not handled yet");
+    } else {
+      llvm::Type *ParamType =
+          Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
+      SemanticValue = handleSemanticLoad(B, ParamType, PD);
+      if (!SemanticValue)
+        return;
+      if (Param.hasByValAttr()) {
+        llvm::Value *Var = B.CreateAlloca(Param.getParamByValType());
+        B.CreateStore(SemanticValue, Var);
+        SemanticValue = Var;
+      }
+    }
+
+    assert(SemanticValue);
+    Args.push_back(SemanticValue);
   }
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
