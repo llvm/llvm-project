@@ -59,7 +59,10 @@ static bool replaceCBufferAccesses(Module &M) {
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
     Instruction *HandleDef = findHandleDef(Mapping.Handle);
-    // TODO: Issue error if HandleDef is nullptr.
+    if (!HandleDef) {
+      report_fatal_error("Could not find handle definition for cbuffer: " +
+                         Mapping.Handle->getName());
+    }
 
     // The handle definition should dominate all uses of the cbuffer members.
     // We'll insert our getpointer calls right after it.
