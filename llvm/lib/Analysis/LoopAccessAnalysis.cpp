@@ -2031,17 +2031,20 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
 /// Check the dependence for two accesses with the same stride \p Stride.
 /// \p Distance is the positive distance in bytes, and \p TypeByteSize is type
-/// size in bytes.
+/// size of the source and sink in bytes.
 ///
 /// \returns true if they are independent.
-static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
-                                          uint64_t TypeByteSize) {
+static bool
+areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
+                              std::pair<uint64_t, uint64_t> TypeByteSize) {
   assert(Stride > 1 && "The stride must be greater than 1");
-  assert(TypeByteSize > 0 && "The type size in byte must be non-zero");
+  assert(TypeByteSize.first > 0 && TypeByteSize.second > 0 &&
+         "The type size in byte must be non-zero");
   assert(Distance > 0 && "The distance must be non-zero");
 
-  // Skip if the distance is not multiple of type byte size.
-  if (Distance % TypeByteSize)
+  // Skip if the distance is not multiple of type byte size of either the source
+  // or the sink.
+  if (Distance % TypeByteSize.first || Distance % TypeByteSize.second)
     return false;
 
   // No dependence if the distance is not multiple of the stride.
@@ -2277,9 +2280,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Attempt to prove strided accesses independent.
   if (APDist) {
-    if (ConstDist && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(ConstDist, *CommonStride,
-                                      TypeByteSize.first)) {
+    if (ConstDist && CommonStride && CommonStride > 1 &&
+        areStridedAccessesIndependent(ConstDist, *CommonStride, TypeByteSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
