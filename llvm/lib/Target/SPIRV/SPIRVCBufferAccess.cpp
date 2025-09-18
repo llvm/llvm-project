@@ -1,5 +1,4 @@
-//===- SPIRVCBufferAccess.cpp - Translate CBuffer Loads
-//--------------------===//
+//===- SPIRVCBufferAccess.cpp - Translate CBuffer Loads ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass replaces all accesses to constant buffer global variables with
-// accesses to the proper SPIR-V resource. It's designed to run after the
-// DXIL preparation passes and before the main SPIR-V legalization passes.
+// accesses to the proper SPIR-V resource.
 //
 // The pass operates as follows:
 // 1. It finds all constant buffers by looking for the `!hlsl.cbs` metadata.
@@ -61,19 +59,7 @@ static bool replaceCBufferAccesses(Module &M) {
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
     Instruction *HandleDef = findHandleDef(Mapping.Handle);
-    if (!HandleDef) {
-      // If there's no handle definition, it might be because the cbuffer is
-      // unused. In this case, we can just clean up the globals.
-      if (Mapping.Handle->use_empty()) {
-        for (const auto &Member : Mapping.Members) {
-          if (Member.GV->use_empty()) {
-            Member.GV->eraseFromParent();
-          }
-        }
-        Mapping.Handle->eraseFromParent();
-      }
-      continue;
-    }
+    // TODO: Issue error if HandleDef is nullptr.
 
     // The handle definition should dominate all uses of the cbuffer members.
     // We'll insert our getpointer calls right after it.
@@ -95,28 +81,29 @@ static bool replaceCBufferAccesses(Module &M) {
       // ConstantExprs, which cannot be replaced with non-constants.
       SmallVector<User *, 4> Users(MemberGV->users());
       for (User *U : Users) {
-        if (auto *CE = dyn_cast<ConstantExpr>(U)) {
-          SmallVector<Instruction *, 4> Insts;
-          std::function<void(ConstantExpr *)> findInstructions =
-              [&](ConstantExpr *Const) {
-                for (User *ConstU : Const->users()) {
-                  if (auto *ConstCE = dyn_cast<ConstantExpr>(ConstU)) {
-                    findInstructions(ConstCE);
-                  } else if (auto *I = dyn_cast<Instruction>(ConstU)) {
-                    Insts.push_back(I);
-                  }
-                }
-              };
-          findInstructions(CE);
-
-          for (Instruction *I : Insts) {
-            Instruction *NewInst = CE->getAsInstruction();
-            NewInst->insertBefore(I->getIterator());
-            I->replaceUsesOfWith(CE, NewInst);
-            NewInst->replaceUsesOfWith(MemberGV, GetPointerCall);
-          }
-        } else {
+        auto *CE = dyn_cast<ConstantExpr>(U);
+        if (!CE) {
           U->replaceUsesOfWith(MemberGV, GetPointerCall);
+          continue;
+        }
+        SmallVector<Instruction *, 4> Insts;
+        std::function<void(ConstantExpr *)> findInstructions =
+            [&](ConstantExpr *Const) {
+              for (User *ConstU : Const->users()) {
+                if (auto *ConstCE = dyn_cast<ConstantExpr>(ConstU)) {
+                  findInstructions(ConstCE);
+                } else if (auto *I = dyn_cast<Instruction>(ConstU)) {
+                  Insts.push_back(I);
+                }
+              }
+            };
+        findInstructions(CE);
+
+        for (Instruction *I : Insts) {
+          Instruction *NewInst = CE->getAsInstruction();
+          NewInst->insertBefore(I->getIterator());
+          I->replaceUsesOfWith(CE, NewInst);
+          NewInst->replaceUsesOfWith(MemberGV, GetPointerCall);
         }
       }
     }
