@@ -1520,9 +1520,8 @@ static void foldIdenticalLiterals() {
   // We always create a cStringSection, regardless of whether dedupLiterals is
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
   // Either way, we must unconditionally finalize it here.
-  for (auto &[name, sec] : in.cStringSectionMap)
+  for (auto *sec : in.cStringSections)
     sec->finalizeContents();
-  in.objcMethnameSection->finalizeContents();
   in.wordLiteralSection->finalizeContents();
 }
 
