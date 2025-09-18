@@ -24184,10 +24184,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPUsesAllocatorClause(
       // OpenMP [2.12.5, target Construct]
       // Non-predefined allocators appearing in a uses_allocators clause must
       // have traits specified.
-      if (!IsPredefinedAllocator && !D.AllocatorTraits) {
-        Diag(D.Allocator->getExprLoc(),
-             diag::err_omp_nonpredefined_allocator_without_traits);
-        continue;
+      if (getLangOpts().OpenMP < 52) {
+        if (!IsPredefinedAllocator && !D.AllocatorTraits) {
+          Diag(D.Allocator->getExprLoc(),
+               diag::err_omp_nonpredefined_allocator_without_traits);
+          continue;
+        }
       }
       // No allocator traits - just convert it to rvalue.
       if (!D.AllocatorTraits)
