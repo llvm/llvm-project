@@ -621,7 +621,7 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
 
 Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                       size_t Size, void **AllocationOut) {
-  void *OldAlloc = nullptr;
+  SmallVector<void *> Rejects;
 
   // Repeat the allocation up to a certain amount of times. If it happens to
   // already be allocated (e.g. by a device from another vendor) throw it away
@@ -631,11 +631,6 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                                               convertOlToPluginAllocTy(Type));
     if (!NewAlloc)
       return NewAlloc.takeError();
-
-    if (OldAlloc)
-      if (auto Err = Device->Device->dataDelete(OldAlloc,
-                                                convertOlToPluginAllocTy(Type)))
-        return Err;
 
     void *NewEnd = &static_cast<char *>(*NewAlloc)[Size];
     auto &AllocBases = OffloadContext::get().AllocBases;
@@ -661,12 +656,17 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
             std::lower_bound(AllocBases.begin(), AllocBases.end(), *NewAlloc),
             *NewAlloc);
         *AllocationOut = *NewAlloc;
+
+        for (void *R : Rejects)
+          if (auto Err =
+                  Device->Device->dataDelete(R, convertOlToPluginAllocTy(Type)))
+            return Err;
         return Error::success();
       }
 
       // To avoid the next attempt allocating the same memory we just freed, we
-      // hold onto it until we complete the next allocation
-      OldAlloc = *NewAlloc;
+      // hold onto it until we complete the allocation
+      Rejects.push_back(*NewAlloc);
     }
   }
 
