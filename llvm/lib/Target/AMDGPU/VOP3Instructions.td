@@ -9,6 +9,10 @@
 def BITOP3_32 : ComplexPattern<i32, 4, "SelectBITOP3", [and, or, xor]>;
 def BITOP3_16 : ComplexPattern<i16, 4, "SelectBITOP3", [and, or, xor]>;
 
+// Matches PTRADD as a commutative operation.
+def ptradd_commutative : PatFrags<(ops node:$src0, node:$src1),
+  [(ptradd node:$src0, node:$src1), (ptradd node:$src1, node:$src0)]>;
+
 // Special case for v_div_fmas_{f32|f64}, since it seems to be the
 // only VOP instruction that implicitly reads VCC.
 let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod" in {
@@ -938,11 +942,17 @@ def : GCNPat<
  (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
  (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
 
-let SubtargetPredicate = HasLshlAddU64Inst in
+let SubtargetPredicate = HasLshlAddU64Inst in {
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
 >;
+
+def : GCNPat <
+  // (ptradd z, (shl x, y)) or (ptradd (shl x, y), z) -> ((x << y) + z)
+  (ThreeOpFrag<shl_0_to_4, ptradd_commutative> i64:$src0, i32:$src1, i64:$src2),
+  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)>;
+} // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
 def : ThreeOp_i32_Pats<add, smax, V_ADD_MAX_I32_e64>;
@@ -1019,19 +1029,24 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
 
 // Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
 // We need to separate this because otherwise OtherPredicates would be overriden.
-class IMAD32_Mul24_Pat<VOP3_Pseudo inst>: GCNPat <
-    (i64 (add (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat <
+    (i64 (AddOp (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
     (inst $src0, $src1, $src2, 0 /* clamp */)
     >;
+
+multiclass IMAD32_Mul24_Pats<VOP3_Pseudo inst> {
+  def : IMAD32_Mul24_Pats_Impl<inst, add>;
+  def : IMAD32_Mul24_Pats_Impl<inst, ptradd_commutative>;
+}
 
 // exclude pre-GFX9 where it was slow
 let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
   defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
-  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
+  defm : IMAD32_Mul24_Pats<V_MAD_U64_U32_e64>;
 }
 let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in {
   defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
-  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
+  defm : IMAD32_Mul24_Pats<V_MAD_U64_U32_gfx11_e64>;
 }
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
