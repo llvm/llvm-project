@@ -236,7 +236,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     InterfaceMethod<[{
         Compute the static trip count if possible.
       }],
-      /*retTy=*/"::std::optional<APInt>",
+      /*retTy=*/"::std::optional<::llvm::APInt>",
       /*methodName=*/"getStaticTripCount",
       /*args=*/(ins),
       /*methodBody=*/"",
