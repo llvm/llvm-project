@@ -27,6 +27,7 @@ void InitBuf(RWBuffer<int> buf) {
 // CHECK-NOT: _Init_thread_header
 // CHECK: init.check:
 // CHECK-NEXT: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding
+// CHECK-NEXT: call void @hlsl::RWBuffer<int>::RWBuffer(hlsl::RWBuffer<int> const&)(ptr {{.*}} @main()::mybuf, ptr {{.*}}) #
 // CHECK-NEXT: store i8 1, ptr @guard variable for main()::mybuf
 // CHECK-NOT: _Init_thread_footer
 
