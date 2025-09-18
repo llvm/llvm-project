@@ -176,6 +176,32 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
+struct apint_match {
+  const APInt *&Res;
+
+  apint_match(const APInt *&Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    if (!VPV->isLiveIn())
+      return false;
+    Value *V = VPV->getLiveInIRValue();
+    if (!V)
+      return false;
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI && V->getType()->isVectorTy())
+      if (const auto *C = dyn_cast<Constant>(V))
+        CI = dyn_cast_or_null<ConstantInt>(
+            C->getSplatValue(/*AllowPoison=*/false));
+    if (!CI)
+      return false;
+    Res = &CI->getValue();
+    return true;
+  }
+};
+
+/// Match an APInt, capturing it if we match.
+inline apint_match m_APInt(const APInt *&C) { return C; }
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;

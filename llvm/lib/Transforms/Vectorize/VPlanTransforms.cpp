@@ -1592,11 +1592,12 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
           m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
     assert(Index && "Expected index from ActiveLaneMask instruction");
 
-    auto *II = dyn_cast<VPInstruction>(Index);
-    if (II && II->getOpcode() == VPInstruction::CanonicalIVIncrementForPart) {
-      auto Part = cast<ConstantInt>(II->getOperand(1)->getLiveInIRValue());
+    const APInt *Part;
+    if (match(Index,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
+                  m_VPValue(), m_APInt(Part))))
       Phis[Part->getZExtValue()] = Phi;
-    } else
+    else
       // Anything other than a CanonicalIVIncrementForPart is part 0
       Phis[0] = Phi;
   }
