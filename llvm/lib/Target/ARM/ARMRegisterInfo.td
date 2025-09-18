@@ -186,9 +186,7 @@ def APSR       : ARMReg<15, "apsr">;
 def APSR_NZCV  : ARMReg<15, "apsr_nzcv">;
 def SPSR       : ARMReg<2,  "spsr">;
 def FPSCR      : ARMReg<3,  "fpscr">;
-def FPSCR_NZCV : ARMReg<3,  "fpscr_nzcv"> {
-  let Aliases = [FPSCR];
-}
+def FPSCR_NZCV : ARMReg<3,  "fpscr_nzcv">;
 def ITSTATE    : ARMReg<4, "itstate">;
 
 // Special Registers - only available in privileged mode.
