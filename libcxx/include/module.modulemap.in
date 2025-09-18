@@ -103,10 +103,7 @@ module std_core [system] {
       header "__type_traits/is_aggregate.h"
       export std_core.type_traits.integral_constant
     }
-    module is_allocator {
-      header "__type_traits/is_allocator.h"
-      export std_core.type_traits.integral_constant
-    }
+    module is_allocator { header "__type_traits/is_allocator.h" }
     module is_always_bitcastable {
       header "__type_traits/is_always_bitcastable.h"
       export std_core.type_traits.integral_constant
