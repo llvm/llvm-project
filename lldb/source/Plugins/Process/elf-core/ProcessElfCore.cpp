@@ -308,7 +308,13 @@ llvm::StringRef ProcessElfCore::GetMainExecutablePath() {
 }
 
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
-  return m_uuids[std::string(path)];
+  // Lookup the UUID for the given path in the map.
+  // Note that this could be called by multiple threads so make sure
+  // we access the map in a thread safe way (i.e. don't use operator[]).
+  auto it = m_uuids.find(std::string(path));
+  if (it != m_uuids.end())
+    return it->second;
+  return UUID();
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
