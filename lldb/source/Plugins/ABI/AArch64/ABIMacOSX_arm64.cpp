@@ -757,46 +757,37 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
-  ProcessSP process_sp = GetProcessSP();
-  if (!process_sp)
-    return pc;
+constexpr addr_t tbi_mask = 0xff80000000000000ULL;
+constexpr addr_t pac_sign_extension = 0x0080000000000000ULL;
 
-  addr_t mask = process_sp->GetCodeAddressMask();
-  addr_t tbi_mask = 0xff80000000000000ULL;
+static addr_t DoFixAddr(addr_t addr, bool is_code, ProcessSP process_sp) {
+  if (!process_sp)
+    return addr;
+
+  addr_t mask = is_code ? process_sp->GetCodeAddressMask()
+                        : process_sp->GetDataAddressMask();
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  if (pc & pac_sign_extension) {
-    addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
+  if (addr & pac_sign_extension) {
+    addr_t highmem_mask = is_code ? process_sp->GetHighmemCodeAddressMask()
+                                  : process_sp->GetHighmemCodeAddressMask();
     if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-      return pc | highmem_mask;
-    return pc | mask;
+      return addr | highmem_mask;
+    return addr | mask;
   }
 
-  return pc & (~mask);
+  return addr & (~mask);
 }
 
-addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
+addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
   ProcessSP process_sp = GetProcessSP();
-  if (!process_sp)
-    return pc;
+  return DoFixAddr(pc, true /*is_code*/, GetProcessSP());
+}
 
-  addr_t mask = process_sp->GetDataAddressMask();
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  if (mask == LLDB_INVALID_ADDRESS_MASK)
-    mask = tbi_mask;
-
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  if (pc & pac_sign_extension) {
-    addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-    if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-      return pc | highmem_mask;
-    return pc | mask;
-  }
-
-  return pc & (~mask);
+addr_t ABIMacOSX_arm64::FixDataAddress(addr_t addr) {
+  ProcessSP process_sp = GetProcessSP();
+  return DoFixAddr(addr, false /*is_code*/, GetProcessSP());
 }
 
 void ABIMacOSX_arm64::Initialize() {
