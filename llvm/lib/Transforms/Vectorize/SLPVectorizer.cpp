@@ -20804,12 +20804,45 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const EdgeInfo &EI) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
-  bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (isa<PHINode>(S.getMainOp()) ||
-      isVectorLikeInstWithConstOps(S.getMainOp()) ||
-      (!HasCopyables && doesNotNeedToSchedule(VL)) ||
-      all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))
+      isVectorLikeInstWithConstOps(S.getMainOp()))
     return nullptr;
+  bool HasCopyables = S.areInstructionsWithCopyableElements();
+  if (((!HasCopyables && doesNotNeedToSchedule(VL)) ||
+       all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))) {
+    // If all operands were replaced by copyables, the operands of this node
+    // might be not, so need to recalculate dependencies for schedule data,
+    // replaced by copyable schedule data.
+    SmallVector<ScheduleData *> ControlDependentMembers;
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || (HasCopyables && S.isCopyableElement(V)))
+        continue;
+      SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
+      for (const Use &U : I->operands()) {
+        unsigned &NumOps =
+            UserOpToNumOps.try_emplace(std::make_pair(I, U.get()), 0)
+                .first->getSecond();
+        ++NumOps;
+        if (auto *Op = dyn_cast<Instruction>(U.get());
+            Op && areAllOperandsReplacedByCopyableData(I, Op, *SLP, NumOps)) {
+          if (ScheduleData *OpSD = getScheduleData(Op);
+              OpSD && OpSD->hasValidDependencies()) {
+            OpSD->clearDirectDependencies();
+            if (RegionHasStackSave ||
+                !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+              ControlDependentMembers.push_back(OpSD);
+          }
+        }
+      }
+    }
+    if (!ControlDependentMembers.empty()) {
+      ScheduleBundle Invalid = ScheduleBundle::invalid();
+      calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
+                            ControlDependentMembers);
+    }
+    return nullptr;
+  }
 
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
