@@ -81,6 +81,7 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
                        IFuncConstructorName, M);
 
   for (GlobalIFunc &IFunc : M.ifuncs()) {
+    NumIFuncs++;
     LLVM_DEBUG(dbgs() << "doing ifunc " << IFunc.getName() << "\n");
     // @update_foo = internal global { ptr @foo, ptr @foo_resolver }, section
     // "ifunc_sec", align 8
@@ -109,15 +110,7 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
     GV->setMetadata(
         LLVMContext::MD_associated,
         MDNode::get(Ctx, ValueAsMetadata::get(IFuncConstructorDecl)));
-
-    MDNode *MD = GV->getMetadata(LLVMContext::MD_associated);
-    assert(MD);
-    LLVM_DEBUG(MD->dump());
-    MD = IFunc.getMetadata(LLVMContext::MD_associated);
-    assert(MD);
-    LLVM_DEBUG(MD->dump());
   }
-  LLVM_DEBUG(M.dump());
 
   return true;
 }

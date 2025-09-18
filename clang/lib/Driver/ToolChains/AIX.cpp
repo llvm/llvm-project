@@ -147,7 +147,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // PGO and ifunc support depends on the named sections linker feature.
-  if (Triple.getOSVersion() >= VersionTuple(7, 2))
+  if (ToolChain.getTriple().getOSVersion() >= VersionTuple(7, 2))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
   if (Arg *A =
