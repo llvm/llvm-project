@@ -4304,6 +4304,10 @@ def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
   HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
   HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+defm experimental_loop_fusion
+    : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
+                    "Enable the loop fusion pass",
+                    [ClangOption, FlangOption, FC1Option]>;
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
@@ -4802,7 +4806,7 @@ defm structor_decl_linkage_names
                           "declarations in DWARF."
                           "Implies -g.">,
                   BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
-                  DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach ``DW_AT_linkage_name``s to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With ``-gstructor-decl-linkage-names``, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name ``_ZN3FooC4Ev`` may have multiple definitions associated with it such as ``_ZN3FooC1Ev`` and ``_ZN3FooC2Ev``.
+                  DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach ``DW_AT_linkage_name`` to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With ``-gstructor-decl-linkage-names``, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name ``_ZN3FooC4Ev`` may have multiple definitions associated with it such as ``_ZN3FooC1Ev`` and ``_ZN3FooC2Ev``.
 
 Enabling this flag results in a better interactive debugging experience (both GDB and LLDB have support for understanding these "unified" linkage names). However, it comes with a significant increase in debug-info size (particularly the `.debug_str` section). As an escape hatch, users can disable this feature using ``-gno-structor-decl-linkage-names``.}]>;
 defm key_instructions : BoolGOption<"key-instructions",
