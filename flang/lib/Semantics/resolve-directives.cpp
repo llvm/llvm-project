@@ -3123,14 +3123,25 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
 
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  common::visit(common::visitors{
-                    [&](const parser::Designator &designator) {
-                      ResolveOmpDesignator(designator, ompFlag);
-                    },
-                    [&](const parser::Name &name) { // common block
-                      ResolveOmpCommonBlock(name, ompFlag);
-                    },
-                },
+  common::visit( //
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            ResolveOmpDesignator(designator, ompFlag);
+          },
+          [&](const parser::Name &name) { // common block
+            ResolveOmpCommonBlock(name, ompFlag);
+          },
+          [&](const parser::OmpObject::Invalid &invalid) {
+            switch (invalid.v) {
+            case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+              context_.Say(invalid.source,
+                  "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+              break;
+            default:
+              llvm_unreachable("Unexpected invalid object");
+            }
+          },
+      },
       ompObject.u);
 }
 

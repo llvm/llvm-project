@@ -269,7 +269,8 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
-  if (std::holds_alternative<parser::Name>(object.u)) {
+  if (std::holds_alternative<parser::Name>(object.u) ||
+      std::holds_alternative<parser::OmpObject::Invalid>(object.u)) {
     // Do not analyze common block names. The analyzer will flag an error
     // on those.
     return;
@@ -294,7 +295,12 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
   }
   evaluate::ExpressionAnalyzer ea{context_};
   auto restore{ea.AllowWholeAssumedSizeArray(true)};
-  common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
+  common::visit( //
+      common::visitors{
+          [&](auto &&s) { ea.Analyze(s); },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
 }
 
 void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
@@ -538,6 +544,7 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
             [&](const parser::Name &name) {
               CheckPredefinedAllocatorRestriction(source, name);
             },
+            [&](const parser::OmpObject::Invalid &invalid) {},
         },
         ompObject.u);
   }
@@ -1302,7 +1309,11 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
-    common::visit([&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
+    common::visit( //
+        common::visitors{
+            [&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
+            [&](const parser::OmpObject::Invalid &invalid) {},
+        },
         ompObject.u);
   }
 }
@@ -1434,8 +1445,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   // refer to the same depend object as the depobj argument of the construct.
   if (clause.Id() == llvm::omp::Clause::OMPC_destroy) {
     auto getObjSymbol{[&](const parser::OmpObject &obj) {
-      return common::visit(
-          [&](auto &&s) { return GetLastName(s).symbol; }, obj.u);
+      return common::visit( //
+          common::visitors{
+              [&](auto &&s) { return GetLastName(s).symbol; },
+              [&](const parser::OmpObject::Invalid &invalid) {
+                return static_cast<Symbol *>(nullptr);
+              },
+          },
+          obj.u);
     }};
     auto getArgSymbol{[&](const parser::OmpArgument &arg) {
       if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
@@ -1450,9 +1467,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
       const Symbol *constrSym{getArgSymbol(arguments.v.front())};
       const Symbol *clauseSym{getObjSymbol(destroy->v)};
-      assert(constrSym && "Unresolved depobj construct symbol");
-      assert(clauseSym && "Unresolved destroy symbol on depobj construct");
-      if (constrSym != clauseSym) {
+      if (constrSym && clauseSym && constrSym != clauseSym) {
         context_.Say(x.source,
             "The DESTROY clause must refer to the same object as the "
             "DEPOBJ construct"_err_en_US);
@@ -1690,6 +1705,7 @@ void OmpStructureChecker::CheckSymbolNames(
                     ContextDirectiveAsFortran());
               }
             },
+            [&](const parser::OmpObject::Invalid &invalid) {},
         },
         ompObject.u);
   }
@@ -2710,6 +2726,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                       }
                     }
                   },
+                  [&](const parser::OmpObject::Invalid &invalid) {},
               },
               ompObject.u);
         }
@@ -3417,6 +3434,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
             }
           },
           [&](const parser::Name &name) {},
+          [&](const parser::OmpObject::Invalid &invalid) {},
       },
       ompObject.u);
 }
@@ -4102,11 +4120,11 @@ void OmpStructureChecker::CheckStructureComponent(
   }};
 
   for (const auto &object : objects.v) {
-    common::visit(
-        common::visitors{
-            CheckComponent,
-            [&](const parser::Name &name) {},
-        },
+    common::visit(common::visitors{
+                      CheckComponent,
+                      [&](const parser::Name &name) {},
+                      [&](const parser::OmpObject::Invalid &invalid) {},
+                  },
         object.u);
   }
 }
