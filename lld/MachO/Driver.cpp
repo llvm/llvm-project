@@ -292,7 +292,7 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
 struct DeferredFile {
   StringRef path;
   bool isLazy;
-  MemoryBufferRef buffer;
+  std::optional<MemoryBufferRef> buffer;
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
@@ -346,8 +346,10 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   std::atomic_int numDeferedFilesAdvised = 0;
   auto t0 = high_resolution_clock::now();
 
-  auto preloadDeferredFile = [&](const DeferredFile &deferredFile) {
-    const StringRef &buff = deferredFile.buffer.getBuffer();
+  auto preloadDeferredFile = [&](DeferredFile &deferredFile) {
+    if (!deferredFile.buffer.has_value())
+      deferredFile.buffer = *readFile(deferredFile.path);
+    const StringRef &buff = (*deferredFile.buffer).getBuffer();
     if (buff.size() > largeArchive)
       return;
 
@@ -394,12 +396,9 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
 }
 
-static void multiThreadedPageIn(const DeferredFiles &deferred) {
+static void multiThreadedPageIn(DeferredFiles &deferred) {
   static SerialBackgroundQueue pageInQueue;
-  pageInQueue.queueWork([=]() {
-    DeferredFiles files = deferred;
-    multiThreadedPageInBackground(files);
-  });
+  pageInQueue.queueWork([&]() { multiThreadedPageInBackground(deferred); });
 }
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
@@ -574,13 +573,12 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 }
 
 static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
+  if (config->readWorkers)
+    return deferred.push_back({path, isLazy, std::nullopt});
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
-  if (config->readWorkers)
-    deferred.push_back({path, isLazy, *buffer});
-  else
-    processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
+  processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
@@ -1365,7 +1363,8 @@ static void createFiles(const InputArgList &args) {
   bool isLazy = false;
   // If we've processed an opening --start-lib, without a matching --end-lib
   bool inLib = false;
-  DeferredFiles deferredFiles;
+  static DeferredFiles deferredFiles;
+  deferredFiles.clear();
 
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
@@ -1444,9 +1443,13 @@ static void createFiles(const InputArgList &args) {
   if (config->readWorkers) {
     multiThreadedPageIn(deferredFiles);
 
-    DeferredFiles archiveContents;
+    static DeferredFiles archiveContents;
     std::vector<ArchiveFile *> archives;
+    archiveContents.clear();
+
     for (auto &file : deferredFiles) {
+      if (!file.buffer.has_value())
+        file.buffer = readFile(file.path);
       auto inputFile = processFile(file.buffer, &archiveContents, file.path,
                                    LoadType::CommandLine, file.isLazy);
       if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
