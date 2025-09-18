@@ -78,7 +78,7 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; FIXED-V-LABEL: define i32 @vqdot(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FIXED-V-NEXT:  entry:
-; FIXED-V-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-V:       vector.ph:
 ; FIXED-V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-V:       vector.body:
@@ -113,7 +113,7 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdot(
 ; FIXED-ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FIXED-ZVQDOTQ-NEXT:  entry:
-; FIXED-ZVQDOTQ-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-ZVQDOTQ:       vector.ph:
 ; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-ZVQDOTQ:       vector.body:
@@ -238,7 +238,7 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; FIXED-V-LABEL: define i32 @vqdotu(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-V-NEXT:  entry:
-; FIXED-V-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-V:       vector.ph:
 ; FIXED-V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-V:       vector.body:
@@ -273,7 +273,7 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdotu(
 ; FIXED-ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-ZVQDOTQ-NEXT:  entry:
-; FIXED-ZVQDOTQ-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-ZVQDOTQ:       vector.ph:
 ; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-ZVQDOTQ:       vector.body:
@@ -398,7 +398,7 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; FIXED-V-LABEL: define i32 @vqdotsu(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-V-NEXT:  entry:
-; FIXED-V-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-V:       vector.ph:
 ; FIXED-V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-V:       vector.body:
@@ -433,7 +433,7 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdotsu(
 ; FIXED-ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-ZVQDOTQ-NEXT:  entry:
-; FIXED-ZVQDOTQ-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-ZVQDOTQ:       vector.ph:
 ; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-ZVQDOTQ:       vector.body:
@@ -557,7 +557,7 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; FIXED-V-LABEL: define i32 @vqdotsu2(
 ; FIXED-V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-V-NEXT:  entry:
-; FIXED-V-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-V-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-V:       vector.ph:
 ; FIXED-V-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-V:       vector.body:
@@ -592,7 +592,7 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdotsu2(
 ; FIXED-ZVQDOTQ-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; FIXED-ZVQDOTQ-NEXT:  entry:
-; FIXED-ZVQDOTQ-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_PH:%.*]]
 ; FIXED-ZVQDOTQ:       vector.ph:
 ; FIXED-ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED-ZVQDOTQ:       vector.body:

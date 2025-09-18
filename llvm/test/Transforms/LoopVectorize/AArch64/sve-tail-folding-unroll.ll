@@ -8,7 +8,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-LABEL: @simple_memset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP61:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP62:%.*]] = mul nuw i64 [[TMP61]], 16
@@ -93,7 +93,7 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-LABEL: @cond_memset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16

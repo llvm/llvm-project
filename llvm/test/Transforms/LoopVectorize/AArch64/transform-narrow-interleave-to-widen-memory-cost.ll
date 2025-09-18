@@ -443,7 +443,7 @@ define void @test_interleave_after_narrowing(i32 %n, ptr %x, ptr noalias %y) {
 ; CHECK-LABEL: define void @test_interleave_after_narrowing(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[X:%.*]], ptr noalias [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -459,7 +459,7 @@ define void @test_interleave_after_narrowing(i32 %n, ptr %x, ptr noalias %y) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop

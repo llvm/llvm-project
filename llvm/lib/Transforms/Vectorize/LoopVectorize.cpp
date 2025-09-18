@@ -2347,12 +2347,15 @@ Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
 }
 
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
-/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
-/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
+/// VPBB are moved to the end of the newly created VPIRBasicBlock. All
+/// predecessors and successors of VPBB, if any, are rewired to the new
+/// VPIRBasicBlock. If \p VPBB may be unreachable, \p Plan must be passed.
 static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
-                                             BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
+                                             BasicBlock *IRBB,
+                                             VPlan *Plan = nullptr) {
+  if (!Plan)
+    Plan = VPBB->getPlan();
+  VPIRBasicBlock *IRVPBB = Plan->createVPIRBasicBlock(IRBB);
   auto IP = IRVPBB->begin();
   for (auto &R : make_early_inc_range(VPBB->phis()))
     R.moveBefore(*IRVPBB, IP);
@@ -7184,6 +7187,19 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::removeBranchOnConst(BestVPlan);
+  if (BestVPlan.getEntry()->getSingleSuccessor() ==
+      BestVPlan.getScalarPreheader()) {
+    // TODO: The vector loop would be dead, should not even try to vectorize.
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
+                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getHeader())
+             << "Created vector loop never executes due to insufficient trip "
+                "count.";
+    });
+    return DenseMap<const SCEV *, Value *>();
+  }
+
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -7226,7 +7242,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // middle block. The vector loop is created during VPlan execution.
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
-                        State.CFG.PrevBB->getSingleSuccessor());
+                        State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
@@ -7257,6 +7273,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   //
   //===------------------------------------------------===//
 
+  // Retrieve loop information before executing the plan, which may remove the
+  // original loop, if it becomes unreachable.
+  MDNode *LID = OrigLoop->getLoopID();
+  unsigned OrigLoopInvocationWeight = 0;
+  std::optional<unsigned> OrigAverageTripCount =
+      getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
+
   BestVPlan.execute(&State);
 
   // 2.6. Maintain Loop Hints
@@ -7270,7 +7293,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   updateLoopMetadataAndProfileInfo(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
-      HeaderVPBB, VectorizingEpilogue,
+      HeaderVPBB, BestVPlan, VectorizingEpilogue, LID, OrigAverageTripCount,
+      OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()),
       DisableRuntimeUnroll);
 
