@@ -8401,7 +8401,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
   ListScope CGI(W, "callgraph_info");
 
-  for (const auto &El : this->FuncCGInfos) {    
+  for (const auto &El : this->FuncCGInfos) {
     DictScope D(W, "Function");
     typename ELFT::uint FuncEntryPc = El.first;
     FunctionCallgraphInfo CGInfo = El.second;
@@ -8415,11 +8415,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     W.printNumber("Kind", (uint64_t)CGInfo.Kind);
     if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
       W.printHex("TypeId", CGInfo.FunctionTypeId);
-    W.printNumber("NumIndirectCallSites",
-                        CGInfo.IndirectCallsites.size());
+    W.printNumber("NumIndirectCallSites", CGInfo.IndirectCallsites.size());
     if (CGInfo.IndirectCallsites.size() > 0) {
       ListScope ICSs(W, "IndirectCallsites");
-      for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {        
+      for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {
         DictScope ICS(W, "IndirectCallsite");
         W.printHex("Address", IndirCallSitePc);
         W.printHex("TypeId", TypeId);
@@ -8428,14 +8427,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     W.printNumber("NumDirectCallSites", CGInfo.DirectCallees.size());
     if (CGInfo.DirectCallees.size() > 0) {
       ListScope DCs(W, "DirectCallees");
-      for (auto CalleePC : CGInfo.DirectCallees) {        
-        DictScope DCs(W, "DirectCallee");        
+      for (auto CalleePC : CGInfo.DirectCallees) {
+        DictScope DCs(W, "DirectCallee");
         W.printHex("Address", CalleePC);
         std::string CalleeSymName = GetFunctionName(CalleePC);
         if (!CalleeSymName.empty())
           W.printString("Name", CalleeSymName);
-      }      
-    }  
+      }
+    }
   }
 }
 
