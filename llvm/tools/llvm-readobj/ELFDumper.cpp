@@ -8428,11 +8428,11 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     if (CGInfo.DirectCallees.size() > 0) {
       ListScope DCs(W, "DirectCallees");
       for (auto CalleePC : CGInfo.DirectCallees) {
-        DictScope DCs(W, "DirectCallee");
-        W.printHex("Address", CalleePC);
+        DictScope DCs(W, "Entry");
         std::string CalleeSymName = GetFunctionName(CalleePC);
         if (!CalleeSymName.empty())
           W.printString("Name", CalleeSymName);
+        W.printHex("Address", CalleePC);
       }
     }
   }
