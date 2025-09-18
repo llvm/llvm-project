@@ -227,7 +227,7 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
     This interface describes an attribute that may use a `Symbol`. This
     interface allows for users of symbols to hook into verification and other
     symbol related utilities that are either costly or otherwise disallowed
-    within a traditional operation.
+    within an operation.
   }];
   let cppNamespace = "::mlir";
 
