@@ -827,7 +827,7 @@ public:
   /// assuming the result is still well-aligned. For example, converting a load
   /// i32 to a load i64, or vectorizing three continuous load i32s into a load
   /// <4 x i32>.
-  LLVM_ABI bool isLegalToWidenLoads() const;
+  LLVM_ABI bool isLegalToWidenLoads(LLVMContext &Context) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
