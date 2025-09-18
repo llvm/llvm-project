@@ -1499,6 +1499,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   invokeOptimizerEarlyEPCallbacks(MPM, Level, LTOPhase);
 
   FunctionPassManager OptimizePM;
+
+  // Only drop unnecessary assumes post-inline and post-link, as otherwise
+  // additional uses of the affected value may be introduced through inlining
+  // and CSE.
   if (!isLTOPreLink(LTOPhase))
     OptimizePM.addPass(DropUnnecessaryAssumesPass());
 
