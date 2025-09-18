@@ -483,15 +483,12 @@ exit:
 
 ; Same as the above, but here, the store size should not prevent
 ; ld->st forwarding.
-; TODO: Relax the HasSameSize check; this test should report a
-; forward dependence.
 define void @different_type_sizes_store_size_cannot_prevent_forwarding(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: 'different_type_sizes_store_size_cannot_prevent_forwarding'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store i32 0, ptr %gep.A, align 4 ->
 ; CHECK-NEXT:            %l = load i16, ptr %gep.A.1, align 2
 ; CHECK-EMPTY:
