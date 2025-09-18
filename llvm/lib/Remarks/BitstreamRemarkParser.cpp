@@ -411,9 +411,8 @@ Error BitstreamRemarkParser::processExternalFilePath() {
     return E;
 
   if (ContainerType != BitstreamRemarkContainerType::RemarksFile)
-    return error(
-        "Error while parsing external file's BLOCK_META: wrong container "
-        "type.");
+    return ParserHelper->MetaHelper.error(
+        "Wrong container type in external file.");
 
   return Error::success();
 }

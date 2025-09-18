@@ -1,0 +1,194 @@
+--- !Missed
+Pass:            inline
+Name:            NoDefinition
+DebugLoc:        { File: basic2.c, Line: 11, Column: 3 }
+Function:        unused1
+Args:
+  - Callee:          bar
+    DebugLoc:        { File: basic2.c, Line: 0, Column: 0 }
+  - String:          ' will not be inlined into '
+  - Caller:          unused1
+    DebugLoc:        { File: basic2.c, Line: 10, Column: 0 }
+  - String:          ' because its definition is unavailable'
+...
+--- !Missed
+Pass:            inline
+Name:            NoDefinition
+DebugLoc:        { File: basic2.c, Line: 20, Column: 10 }
+Function:        foo
+Args:
+  - Callee:          bar
+    DebugLoc:        { File: basic2.c, Line: 0, Column: 0 }
+  - String:          ' will not be inlined into '
+  - Caller:          foo
+    DebugLoc:        { File: basic2.c, Line: 19, Column: 0 }
+  - String:          ' because its definition is unavailable'
+...
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: basic2.c, Line: 20, Column: 25 }
+Function:        foo
+Args:
+  - String:          ''''
+  - Callee:          inc
+    DebugLoc:        { File: basic2.c, Line: 14, Column: 0 }
+  - String:          ''' inlined into '''
+  - Caller:          foo
+    DebugLoc:        { File: basic2.c, Line: 19, Column: 0 }
+  - String:          ''''
+  - String:          ' with '
+  - String:          '(cost='
+  - Cost:            '-15015'
+  - String:          ', threshold='
+  - Threshold:       '75'
+  - String:          ')'
+  - String:          ' at callsite '
+  - String:          foo
+  - String:          ':'
+  - Line:            '1'
+  - String:          ':'
+  - Column:          '25'
+  - String:          ';'
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: basic2.c, Line: 15, Column: 10 }
+Function:        foo
+Args:
+  - String:          'load of type '
+  - Type:            i32
+  - String:          ' not eliminated'
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     call
+    DebugLoc:        { File: basic2.c, Line: 20, Column: 10 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: basic2.c, Line: 20, Column: 36 }
+Function:        foo
+Args:
+  - String:          'load of type '
+  - Type:            i32
+  - String:          ' not eliminated'
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     call
+    DebugLoc:        { File: basic2.c, Line: 20, Column: 10 }
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: basic2.c, Line: 10, Column: 0 }
+Function:        unused1
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        unused1
+  - String:          ''''
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: basic2.c, Line: 19, Column: 0 }
+Function:        foo
+Args:
+  - NumStackBytes:   '16'
+  - String:          ' stack bytes in function '''
+  - Function:        foo
+  - String:          ''''
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: basic2.c, Line: 11, Column: 7 }
+Function:        unused1
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      entry
+  - String:          "\n"
+  - String:          ADRP
+  - String:          ': '
+  - INST_ADRP:       '1'
+  - String:          "\n"
+  - String:          LDRWui
+  - String:          ': '
+  - INST_LDRWui:     '1'
+  - String:          "\n"
+  - String:          TCRETURNdi
+  - String:          ': '
+  - INST_TCRETURNdi: '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: basic2.c, Line: 10, Column: 0 }
+Function:        unused1
+Args:
+  - NumInstructions: '3'
+  - String:          ' instructions in function'
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        foo
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      entry
+  - String:          "\n"
+  - String:          ADDWrs
+  - String:          ': '
+  - INST_ADDWrs:     '3'
+  - String:          "\n"
+  - String:          ADRP
+  - String:          ': '
+  - INST_ADRP:       '3'
+  - String:          "\n"
+  - String:          LDRWui
+  - String:          ': '
+  - INST_LDRWui:     '3'
+  - String:          "\n"
+  - String:          ADDWri
+  - String:          ': '
+  - INST_ADDWri:     '2'
+  - String:          "\n"
+  - String:          STRWui
+  - String:          ': '
+  - INST_STRWui:     '2'
+  - String:          "\n"
+  - String:          ADDXri
+  - String:          ': '
+  - INST_ADDXri:     '1'
+  - String:          "\n"
+  - String:          BL
+  - String:          ': '
+  - INST_BL:         '1'
+  - String:          "\n"
+  - String:          LDPXpost
+  - String:          ': '
+  - INST_LDPXpost:   '1'
+  - String:          "\n"
+  - String:          LDRXui
+  - String:          ': '
+  - INST_LDRXui:     '1'
+  - String:          "\n"
+  - String:          RET
+  - String:          ': '
+  - INST_RET:        '1'
+  - String:          "\n"
+  - String:          STPXpre
+  - String:          ': '
+  - INST_STPXpre:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: basic2.c, Line: 19, Column: 0 }
+Function:        foo
+Args:
+  - NumInstructions: '19'
+  - String:          ' instructions in function'
+...
