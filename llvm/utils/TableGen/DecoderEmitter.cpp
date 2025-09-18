@@ -167,10 +167,6 @@ public:
 
   const CodeGenTarget &getTarget() const { return Target; }
 
-  // Emit the decoder state machine table.
-  void emitTable(formatted_raw_ostream &OS, DecoderTableInfo &TableInfo,
-                 StringRef Namespace, unsigned HwModeID, unsigned BitWidth,
-                 const DecoderTreeNode *Tree) const;
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          ArrayRef<unsigned> InstrLen) const;
   void emitPredicateFunction(formatted_raw_ostream &OS,
@@ -1189,9 +1185,7 @@ public:
                      ArrayRef<InstructionEncoding> Encodings)
       : Target(Target), Encodings(Encodings) {}
 
-  std::unique_ptr<DecoderTreeNode> buildTree(const FilterChooser &FC) {
-    return convertFilterChooser(&FC);
-  }
+  std::unique_ptr<DecoderTreeNode> buildTree(ArrayRef<unsigned> EncodingIDs);
 
 private:
   std::unique_ptr<DecoderTreeNode>
@@ -1269,6 +1263,14 @@ DecoderTreeBuilder::convertFilterChooser(const FilterChooser *FC) {
   } while (FC);
 
   return N;
+}
+
+std::unique_ptr<DecoderTreeNode>
+DecoderTreeBuilder::buildTree(ArrayRef<unsigned> EncodingIDs) {
+  FilterChooser FC(Encodings, EncodingIDs);
+  if (FC.hasConflict())
+    return nullptr;
+  return convertFilterChooser(&FC);
 }
 
 /// Collects all HwModes referenced by the target for encoding purposes.
@@ -1438,22 +1440,6 @@ DecoderEmitter::DecoderEmitter(const RecordKeeper &RK)
   parseInstructionEncodings();
 }
 
-// Emit the decoder state machine table.
-void DecoderEmitter::emitTable(formatted_raw_ostream &OS,
-                               DecoderTableInfo &TableInfo, StringRef Namespace,
-                               unsigned HwModeID, unsigned BitWidth,
-                               const DecoderTreeNode *Tree) const {
-  SmallString<32> TableName("DecoderTable");
-  TableName.append(Namespace);
-  if (HwModeID != DefaultMode)
-    TableName.append({"_", Target.getHwModes().getModeName(HwModeID)});
-  TableName.append(utostr(BitWidth));
-
-  DecoderTableEmitter TableEmitter(TableInfo, OS);
-  TableEmitter.emitTable(TableName,
-                         SpecializeDecodersPerBitwidth ? BitWidth : 0, Tree);
-}
-
 // Emits disassembler code for instruction decoding.
 void DecoderEmitter::run(raw_ostream &o) const {
   formatted_raw_ostream OS(o);
@@ -1522,35 +1508,40 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
     PrintFatalError(
         "Cannot specialize decoders for variable length instuctions");
 
+  DecoderTableInfo TableInfo{};
+  DecoderTreeBuilder TreeBuilder(Target, Encodings);
+  DecoderTableEmitter TableEmitter(TableInfo, OS);
+
+  // Emit a table for each (namespace, hwmode, bitwidth) combination.
+  // Predicates and decoders are shared across the tables to provide more
+  // opportunities for uniqueness. If SpecializeDecodersPerBitwidth is enabled,
+  // decoders are shared across all tables for a given bitwidth, else they are
+  // shared across all tables. Predicates are always shared across all tables.
+  //
   // Entries in `EncMap` are already sorted by bitwidth. So bucketing per
   // bitwidth can be done on-the-fly as we iterate over the map.
-  DecoderTableInfo TableInfo{};
-
   bool HasConflict = false;
   for (const auto &[BitWidth, BWMap] : EncMap) {
     for (const auto &[Key, EncodingIDs] : BWMap) {
       auto [DecoderNamespace, HwModeID] = Key;
 
-      // Emit the decoder for this (namespace, hwmode, width) combination.
-      FilterChooser FC(Encodings, EncodingIDs);
-      HasConflict |= FC.hasConflict();
-      // Skip emitting table entries if a conflict has been detected.
-      if (HasConflict)
+      std::unique_ptr<DecoderTreeNode> Tree =
+          TreeBuilder.buildTree(EncodingIDs);
+
+      // Skip emitting the table if a conflict has been detected.
+      if (!Tree) {
+        HasConflict = true;
         continue;
+      }
 
-      DecoderTreeBuilder TreeBuilder(Target, Encodings);
-      std::unique_ptr<DecoderTreeNode> Tree = TreeBuilder.buildTree(FC);
+      // Form the table name.
+      SmallString<32> TableName({"DecoderTable", DecoderNamespace});
+      if (HwModeID != DefaultMode)
+        TableName.append({"_", Target.getHwModes().getModeName(HwModeID)});
+      TableName.append(utostr(BitWidth));
 
-      // The decode table is cleared for each top level decoder function. The
-      // predicates and decoders themselves, however, are shared across
-      // different decoders to give more opportunities for uniqueing.
-      //  - If `SpecializeDecodersPerBitwidth` is enabled, decoders are shared
-      //    across all decoder tables for a given bitwidth, else they are shared
-      //    across all decoder tables.
-      //  - predicates are shared across all decoder tables.
-      // Print the table to the output stream.
-      emitTable(OS, TableInfo, DecoderNamespace, HwModeID, BitWidth,
-                Tree.get());
+      TableEmitter.emitTable(
+          TableName, SpecializeDecodersPerBitwidth ? BitWidth : 0, Tree.get());
     }
 
     // Each BitWidth get's its own decoders and decoder function if
