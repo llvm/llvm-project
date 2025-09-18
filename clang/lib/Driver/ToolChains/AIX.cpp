@@ -147,9 +147,11 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bforceimprw");
   }
 
-  // ifunc support, which is ON by default, generates named sections.
-  CmdArgs.push_back("-bdbg:namedsects:ss");
-
+  // PGO and ifunc support depends on the named sections linker feature that is
+  // available on AIX 7.2 TL5 SP5 onwards.
+  if (ToolChain.getTriple().getOSMajorVersion() == 0 ||
+      ToolChain.getTriple().getOSVersion() >= VersionTuple(7, 2))
+    CmdArgs.push_back("-bdbg:namedsects:ss");
 
   if (Arg *A = Args.getLastArg(options::OPT_mxcoff_build_id_EQ)) {
     StringRef BuildId = A->getValue();
