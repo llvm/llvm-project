@@ -10,6 +10,7 @@
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -30,6 +31,9 @@ enum class ErrorCode : unsigned char {
   kUndeclaredIdentifier,
   kUnknown,
 };
+
+llvm::Expected<lldb::TypeSystemSP>
+DILGetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
@@ -55,6 +59,61 @@ public:
 
   std::string message() const override { return m_detail.rendered; }
 };
+/// TypeDeclaration builds information about the literal type definition as
+/// type is being parsed. It doesn't perform semantic analysis for non-basic
+/// types -- e.g. "char&&&" is a valid type declaration.
+/// NOTE: CV qualifiers are ignored.
+class TypeDeclaration {
+public:
+  enum class TypeSpecifier {
+    kBool,
+    kChar,
+    kDouble,
+    kFloat,
+    kInt,
+    kLong,
+    kLongDouble,
+    kLongLong,
+    kShort,
+    kUnknown,
+    kVoid,
+  };
+
+  enum class SignSpecifier {
+    kUnknown,
+    kSigned,
+    kUnsigned,
+  };
+
+  bool IsEmpty() const { return !m_is_builtin && !m_is_user_type; }
+
+  lldb::BasicType GetBasicType() const;
+
+public:
+  // Indicates user-defined typename (e.g. "MyClass", "MyTmpl<int>").
+  std::string m_user_typename;
+
+  // Basic type specifier ("void", "char", "intr", "float", "long long", etc.).
+  TypeSpecifier m_type_specifier = TypeSpecifier::kUnknown;
+
+  // Signedness specifier ("signed", "unsigned").
+  SignSpecifier m_sign_specifier = SignSpecifier::kUnknown;
+
+  // Does the type declaration includes "int" specifier?
+  // This is different than `type_specifier_` and is used to detect "int"
+  // duplication for types that can be combined with "int" specifier (e.g.
+  // "short int", "long int").
+  bool m_has_int_specifier = false;
+
+  // Indicates whether there was an error during parsing.
+  bool m_has_error = false;
+
+  // Indicates whether this declaration describes a builtin type.
+  bool m_is_builtin = false;
+
+  // Indicates whether this declaration describes a user type.
+  bool m_is_user_type = false;
+}; // class TypeDeclaration
 
 /// Pure recursive descent parser for C++ like expressions.
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
@@ -100,9 +159,21 @@ private:
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
 
+  ASTNodeUP ParseCastExpression();
+  std::optional<CompilerType> ParseTypeId(bool must_be_type_id = false);
+  void ParseTypeSpecifierSeq(TypeDeclaration *type_decl);
+  bool ParseTypeSpecifier(TypeDeclaration *type_decl);
+  std::string ParseTypeName();
+  CompilerType ResolveTypeDeclarators(CompilerType type,
+                                      const std::vector<Token> &ptr_operators);
+  bool IsSimpleTypeSpecifierKeyword(Token token) const;
+  bool HandleSimpleTypeSpecifier(TypeDeclaration *type_decl);
+
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void Expect(Token::Kind kind);
+
+  void ExpectOneOf(std::vector<Token::Kind> kinds_vec);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     if (m_error)
@@ -131,5 +202,67 @@ private:
 }; // class DILParser
 
 } // namespace lldb_private::dil
+
+namespace llvm {
+template <>
+struct format_provider<lldb_private::dil::TypeDeclaration::TypeSpecifier> {
+  static void format(const lldb_private::dil::TypeDeclaration::TypeSpecifier &t,
+                     raw_ostream &OS, llvm::StringRef Options) {
+    switch (t) {
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kVoid:
+      OS << "void";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kBool:
+      OS << "bool";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kChar:
+      OS << "char";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kInt:
+      OS << "int";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kFloat:
+      OS << "float";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kShort:
+      OS << "short";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kLong:
+      OS << "long";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kLongLong:
+      OS << "long long";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kDouble:
+      OS << "double";
+      break;
+    case lldb_private::dil::TypeDeclaration::TypeSpecifier::kLongDouble:
+      OS << "long double";
+      break;
+    default:
+      OS << "invalid type specifier";
+      break;
+    }
+  }
+};
+
+template <>
+struct format_provider<lldb_private::dil::TypeDeclaration::SignSpecifier> {
+  static void format(const lldb_private::dil::TypeDeclaration::SignSpecifier &t,
+                     raw_ostream &OS, llvm::StringRef Options) {
+    switch (t) {
+    case lldb_private::dil::TypeDeclaration::SignSpecifier::kSigned:
+      OS << "signed";
+      break;
+    case lldb_private::dil::TypeDeclaration::SignSpecifier::kUnsigned:
+      OS << "unsigned";
+      break;
+    default:
+      OS << "invalid sign specifier";
+      break;
+    }
+  }
+};
+} // namespace llvm
 
 #endif // LLDB_VALUEOBJECT_DILPARSER_H

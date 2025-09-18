@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILParser.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
@@ -40,6 +42,83 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
   m_detail.rendered = std::move(rendered_msg);
+}
+
+llvm::Expected<lldb::TypeSystemSP>
+DILGetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
+
+CompilerType
+ResolveTypeByName(const std::string &name,
+                  std::shared_ptr<ExecutionContextScope> ctx_scope) {
+  // Internally types don't have global scope qualifier in their names and
+  // LLDB doesn't support queries with it too.
+  llvm::StringRef name_ref(name);
+
+  if (name_ref.starts_with("::"))
+    name_ref = name_ref.drop_front(2);
+
+  std::vector<CompilerType> result_type_list;
+  lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
+  const char *type_name = name_ref.data();
+  if (type_name && type_name[0] && target_sp) {
+    ModuleList &images = target_sp->GetImages();
+    ConstString const_type_name(type_name);
+    TypeQuery query(type_name);
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types())
+      if (type_sp)
+        result_type_list.push_back(type_sp->GetFullCompilerType());
+
+    if (auto process_sp = target_sp->GetProcessSP()) {
+      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
+        if (auto *vendor = runtime->GetDeclVendor()) {
+          auto types = vendor->FindTypes(const_type_name, UINT32_MAX);
+          for (auto type : types)
+            result_type_list.push_back(type);
+        }
+      }
+    }
+
+    if (result_type_list.empty()) {
+      for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+        if (auto compiler_type =
+                type_system_sp->GetBuiltinTypeByName(const_type_name))
+          result_type_list.push_back(compiler_type);
+    }
+  }
+
+  // We've found multiple types, try finding the "correct" one.
+  CompilerType full_match;
+  std::vector<CompilerType> partial_matches;
+
+  for (uint32_t i = 0; i < result_type_list.size(); ++i) {
+    CompilerType type = result_type_list[i];
+    llvm::StringRef type_name_ref = type.GetTypeName().GetStringRef();
+    ;
+
+    if (type_name_ref == name_ref)
+      full_match = type;
+    else if (type_name_ref.ends_with(name_ref))
+      partial_matches.push_back(type);
+  }
+
+  // Full match is always correct.
+  if (full_match.IsValid())
+    return full_match;
+
+  // If we have partial matches, pick a "random" one.
+  if (partial_matches.size() > 0)
+    return partial_matches.back();
+
+  return {};
 }
 
 llvm::Expected<ASTNodeUP>
@@ -80,15 +159,64 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    unary_expression
+//    cast_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseCastExpression(); }
+
+// Parse a cast_expression.
+//
+// cast_expression:
+//   unary_expression
+//   "(" type_id ")" cast_expression
+
+ASTNodeUP DILParser::ParseCastExpression() {
+  // This can be a C-style cast, try parsing the contents as a type declaration.
+  if (CurToken().Is(Token::l_paren)) {
+    Token token = CurToken();
+    uint32_t loc = token.GetLocation();
+
+    // Enable lexer backtracking, so that we can rollback in case it's not
+    // actually a type declaration.
+
+    // Start tentative parsing (save token location/idx, for possible rollback).
+    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+
+    // Consume the token only after enabling the backtracking.
+    m_dil_lexer.Advance();
+
+    // Try parsing the type declaration. If the returned value is not valid,
+    // then we should rollback and try parsing the expression.
+    auto type_id = ParseTypeId();
+    if (type_id) {
+      // Successfully parsed the type declaration. Commit the backtracked
+      // tokens and parse the cast_expression.
+
+      if (!type_id.value().IsValid())
+        return std::make_unique<ErrorNode>();
+
+      Expect(Token::r_paren);
+      m_dil_lexer.Advance();
+      auto rhs = ParseCastExpression();
+
+      // return BuildCStyleCast(type_id.value(), std::move(rhs),
+      //                        token.GetLocation());
+      return std::make_unique<CStyleCastNode>(
+          loc, type_id.value(), std::move(rhs), CStyleCastKind::eNone);
+    }
+
+    // Failed to parse the contents of the parentheses as a type declaration.
+    // Rollback the lexer and try parsing it as unary_expression.
+    TentativeParsingRollback(save_token_idx);
+  }
+
+  return ParseUnaryExpression();
+}
 
 // Parse an unary_expression.
 //
 //  unary_expression:
 //    postfix_expression
-//    unary_operator expression
+//    unary_operator cast_expression
 //
 //  unary_operator:
 //    "&"
@@ -99,7 +227,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
-    auto rhs = ParseExpression();
+    auto rhs = ParseCastExpression();
     switch (token.GetKind()) {
     case Token::star:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,
@@ -271,6 +399,236 @@ std::string DILParser::ParseNestedNameSpecifier() {
   }
 }
 
+// Parse a type_id.
+//
+//  type_id:
+//    type_specifier_seq [abstract_declarator]
+std::optional<CompilerType> DILParser::ParseTypeId(bool must_be_type_id) {
+  uint32_t type_loc = CurToken().GetLocation();
+  TypeDeclaration type_decl;
+
+  // type_specifier_seq is required here, start with trying to parse it.
+  ParseTypeSpecifierSeq(&type_decl);
+
+  if (type_decl.IsEmpty()) {
+    // TODO: Should we bail out if `must_be_type_id` is set?
+    return {};
+  }
+
+  if (type_decl.m_has_error) {
+    if (type_decl.m_is_builtin) {
+      return {};
+    }
+
+    assert(type_decl.m_is_user_type && "type_decl must be a user type");
+    // Found something looking like a user type, but failed to parse it.
+    // Return invalid type if we expect to have a type here, otherwise nullopt.
+    if (must_be_type_id) {
+      return {};
+    }
+    return {};
+  }
+
+  // Try to resolve the base type.
+  CompilerType type;
+  if (type_decl.m_is_builtin) {
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        DILGetTypeSystemFromCU(m_ctx_scope);
+    if (!type_system)
+      return {};
+    // type = GetBasicType(m_ctx_scope, type_decl.GetBasicType());
+    // type = DILGetBasicType(*type_system, type_decl.GetBasicType());
+    type = (*type_system).get()->GetBasicTypeFromAST(type_decl.GetBasicType());
+    assert(type.IsValid() && "cannot resolve basic type");
+
+  } else {
+    assert(type_decl.m_is_user_type && "type_decl must be a user type");
+    type = ResolveTypeByName(type_decl.m_user_typename, m_ctx_scope);
+    if (!type.IsValid()) {
+      if (must_be_type_id) {
+        BailOut(
+            llvm::formatv("unknown type name '{0}'", type_decl.m_user_typename),
+            type_loc, CurToken().GetSpelling().length());
+        return {};
+      }
+      return {};
+    }
+
+    if (LookupIdentifier(type_decl.m_user_typename, m_ctx_scope,
+                         m_use_dynamic)) {
+      // Same-name identifiers should be preferred over typenames.
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
+      if (must_be_type_id) {
+        BailOut(llvm::formatv(
+                    "must use '{0}' tag to refer to type '{1}' in this scope",
+                    type.GetTypeTag(), type_decl.m_user_typename),
+                type_loc, CurToken().GetSpelling().length());
+        return {};
+      }
+      return {};
+    }
+
+    if (LookupGlobalIdentifier(type_decl.m_user_typename, m_ctx_scope,
+                               m_ctx_scope->CalculateTarget(), m_use_dynamic)) {
+      // Same-name identifiers should be preferred over typenames.
+      // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
+      if (must_be_type_id) {
+        BailOut(llvm::formatv(
+                    "must use '{0}' tag to refer to type '{1}' in this scope",
+                    type.GetTypeTag(), type_decl.m_user_typename),
+                type_loc, CurToken().GetSpelling().length());
+        return {};
+      }
+      return {};
+    }
+  }
+
+  //
+  //  abstract_declarator:
+  //    ptr_operator [abstract_declarator]
+  //
+  std::vector<Token> ptr_operators;
+  while (CurToken().IsOneOf({Token::star, Token::amp})) {
+    Token tok = CurToken();
+    ptr_operators.push_back(std::move(tok));
+    m_dil_lexer.Advance();
+  }
+  type = ResolveTypeDeclarators(type, ptr_operators);
+
+  return type;
+}
+
+// Parse a type_specifier_seq.
+//
+//  type_specifier_seq:
+//    type_specifier [type_specifier_seq]
+//
+void DILParser::ParseTypeSpecifierSeq(TypeDeclaration *type_decl) {
+  while (true) {
+    bool type_specifier = ParseTypeSpecifier(type_decl);
+    if (!type_specifier) {
+      break;
+    }
+  }
+}
+
+// Parse a type_specifier.
+//
+//  type_specifier:
+//    simple_type_specifier
+//    cv_qualifier
+//
+//  simple_type_specifier:
+//    ["::"] [nested_name_specifier] type_name
+//    "char"
+//    "bool"
+//    "integer"
+//    "float"
+//    "void"
+//
+// Returns TRUE if a type_specifier was successfully parsed at this location.
+//
+bool DILParser::ParseTypeSpecifier(TypeDeclaration *type_decl) {
+  if (IsSimpleTypeSpecifierKeyword(CurToken())) {
+    // User-defined typenames can't be combined with builtin keywords.
+    if (type_decl->m_is_user_type) {
+      BailOut("cannot combine with previous declaration specifier",
+              CurToken().GetLocation(), CurToken().GetSpelling().length());
+      type_decl->m_has_error = true;
+      return false;
+    }
+
+    // From now on this type declaration must describe a builtin type.
+    // TODO: Should this be allowed -- `unsigned myint`?
+    type_decl->m_is_builtin = true;
+
+    if (!HandleSimpleTypeSpecifier(type_decl)) {
+      type_decl->m_has_error = true;
+      return false;
+    }
+    m_dil_lexer.Advance();
+    return true;
+  }
+
+  // The type_specifier must be a user-defined type. Try parsing a
+  // simple_type_specifier.
+  {
+    // Try parsing optional global scope operator.
+    bool global_scope = false;
+    if (CurToken().Is(Token::coloncolon)) {
+      global_scope = true;
+      m_dil_lexer.Advance();
+    }
+
+    uint32_t loc = CurToken().GetLocation();
+
+    // Try parsing optional nested_name_specifier.
+    auto nested_name_specifier = ParseNestedNameSpecifier();
+
+    // Try parsing required type_name.
+    auto type_name = ParseTypeName();
+
+    // If there is a type_name, then this is indeed a simple_type_specifier.
+    // Global and qualified (namespace/class) scopes can be empty, since they're
+    // optional. In this case type_name is type we're looking for.
+    if (!type_name.empty()) {
+      // User-defined typenames can't be combined with builtin keywords.
+      if (type_decl->m_is_builtin) {
+        BailOut("cannot combine with previous declaration specifier", loc,
+                CurToken().GetSpelling().length());
+        type_decl->m_has_error = true;
+        return false;
+      }
+      // There should be only one user-defined typename.
+      if (type_decl->m_is_user_type) {
+        BailOut("two or more data types in declaration of 'type name'", loc,
+                CurToken().GetSpelling().length());
+        type_decl->m_has_error = true;
+        return false;
+      }
+
+      // Construct the fully qualified typename.
+      type_decl->m_is_user_type = true;
+      type_decl->m_user_typename =
+          llvm::formatv("{0}{1}{2}", global_scope ? "::" : "",
+                        nested_name_specifier, type_name);
+      return true;
+    }
+  }
+
+  // No type_specifier was found here.
+  return false;
+}
+
+// Parse a type_name.
+//
+//  type_name:
+//    class_name
+//    enum_name
+//    typedef_name
+//
+//  class_name
+//    identifier
+//
+//  enum_name
+//    identifier
+//
+//  typedef_name
+//    identifier
+//
+std::string DILParser::ParseTypeName() {
+  // Typename always starts with an identifier.
+  if (CurToken().IsNot(Token::identifier)) {
+    return "";
+  }
+
+  // Otherwise look for a class_name, enum_name or a typedef_name.
+  std::string identifier = CurToken().GetSpelling();
+  m_dil_lexer.Advance();
+
+  return identifier;
+}
+
 // Parse an id_expression.
 //
 //  id_expression:
@@ -334,6 +692,204 @@ std::string DILParser::ParseUnqualifiedId() {
   std::string identifier = CurToken().GetSpelling();
   m_dil_lexer.Advance();
   return identifier;
+}
+
+CompilerType
+DILParser::ResolveTypeDeclarators(CompilerType type,
+                                  const std::vector<Token> &ptr_operators) {
+  CompilerType bad_type;
+  // Resolve pointers/references.
+  for (Token tk : ptr_operators) {
+    uint32_t loc = tk.GetLocation();
+    if (tk.GetKind() == Token::star) {
+      // Pointers to reference types are forbidden.
+      if (type.IsReferenceType()) {
+        BailOut(llvm::formatv("'type name' declared as a pointer to a "
+                              "reference of type {0}",
+                              type.TypeDescription()),
+                loc, CurToken().GetSpelling().length());
+        return bad_type;
+      }
+      // Get pointer type for the base type: e.g. int* -> int**.
+      type = type.GetPointerType();
+
+    } else if (tk.GetKind() == Token::amp) {
+      // References to references are forbidden.
+      if (type.IsReferenceType()) {
+        BailOut("type name declared as a reference to a reference", loc,
+                CurToken().GetSpelling().length());
+        return bad_type;
+      }
+      // Get reference type for the base type: e.g. int -> int&.
+      type = type.GetLValueReferenceType();
+    }
+  }
+
+  return type;
+}
+
+bool DILParser::IsSimpleTypeSpecifierKeyword(Token token) const {
+  if (token.GetKind() != Token::identifier)
+    return false;
+  if (token.GetSpelling() == "bool" || token.GetSpelling() == "char" ||
+      token.GetSpelling() == "int" || token.GetSpelling() == "float" ||
+      token.GetSpelling() == "void" || token.GetSpelling() == "short" ||
+      token.GetSpelling() == "long" || token.GetSpelling() == "signed" ||
+      token.GetSpelling() == "unsigned" || token.GetSpelling() == "double")
+    return true;
+  return false;
+}
+
+bool DILParser::HandleSimpleTypeSpecifier(TypeDeclaration *type_decl) {
+  using TypeSpecifier = TypeDeclaration::TypeSpecifier;
+  using SignSpecifier = TypeDeclaration::SignSpecifier;
+
+  TypeSpecifier type_spec = type_decl->m_type_specifier;
+  uint32_t loc = CurToken().GetLocation();
+  std::string kind = CurToken().GetSpelling();
+
+  // switch (kind) {
+  if (kind == "int") {
+    // case Token::kw_int: {
+    //  "int" can have signedness and be combined with "short", "long" and
+    //  "long long" (but not with another "int").
+    if (type_decl->m_has_int_specifier) {
+      BailOut("cannot combine with previous 'int' declaration specifier", loc,
+              CurToken().GetSpelling().length());
+      return false;
+    }
+    if (type_spec == TypeSpecifier::kShort ||
+        type_spec == TypeSpecifier::kLong ||
+        type_spec == TypeSpecifier::kLongLong) {
+      type_decl->m_has_int_specifier = true;
+      return true;
+    } else if (type_spec == TypeSpecifier::kUnknown) {
+      type_decl->m_type_specifier = TypeSpecifier::kInt;
+      type_decl->m_has_int_specifier = true;
+      return true;
+    }
+    BailOut(llvm::formatv(
+                "cannot combine with previous '{0}' declaration specifier",
+                type_spec),
+            loc, CurToken().GetSpelling().length());
+    return false;
+  }
+
+  if (kind == "long") {
+    // "long" can have signedness and be combined with "int" or "long" to
+    // form "long long".
+    if (type_spec == TypeSpecifier::kUnknown ||
+        type_spec == TypeSpecifier::kInt) {
+      type_decl->m_type_specifier = TypeSpecifier::kLong;
+      return true;
+    } else if (type_spec == TypeSpecifier::kLong) {
+      type_decl->m_type_specifier = TypeSpecifier::kLongLong;
+      return true;
+    } else if (type_spec == TypeSpecifier::kDouble) {
+      type_decl->m_type_specifier = TypeSpecifier::kLongDouble;
+      return true;
+    }
+    BailOut(llvm::formatv(
+                "cannot combine with previous '{0}' declaration specifier",
+                type_spec),
+            loc, CurToken().GetSpelling().length());
+    return false;
+  }
+
+  if (kind == "short") {
+    // "short" can have signedness and be combined with "int".
+    if (type_spec == TypeSpecifier::kUnknown ||
+        type_spec == TypeSpecifier::kInt) {
+      type_decl->m_type_specifier = TypeSpecifier::kShort;
+      return true;
+    }
+    BailOut(llvm::formatv(
+                "cannot combine with previous '{0}' declaration specifier",
+                type_spec),
+            loc, CurToken().GetSpelling().length());
+    return false;
+  }
+
+  if (kind == "char") {
+    // "char" can have signedness, but it cannot be combined with any other
+    // type specifier.
+    if (type_spec == TypeSpecifier::kUnknown) {
+      type_decl->m_type_specifier = TypeSpecifier::kChar;
+      return true;
+    }
+    BailOut(llvm::formatv(
+                "cannot combine with previous '{0}' declaration specifier",
+                type_spec),
+            loc, CurToken().GetSpelling().length());
+    return false;
+  }
+
+  if (kind == "double") {
+    // "double" can be combined with "long" to form "long double", but it
+    // cannot be combined with signedness specifier.
+    if (type_decl->m_sign_specifier != SignSpecifier::kUnknown) {
+      BailOut("'double' cannot be signed or unsigned", loc,
+              CurToken().GetSpelling().length());
+      return false;
+    }
+    if (type_spec == TypeSpecifier::kUnknown) {
+      type_decl->m_type_specifier = TypeSpecifier::kDouble;
+      return true;
+    } else if (type_spec == TypeSpecifier::kLong) {
+      type_decl->m_type_specifier = TypeSpecifier::kLongDouble;
+      return true;
+    }
+    BailOut(llvm::formatv(
+                "cannot combine with previous '{0}' declaration specifier",
+                type_spec),
+            loc, CurToken().GetSpelling().length());
+    return false;
+  }
+
+  if (kind == "bool" || kind == "void" || kind == "float") {
+    // These types cannot have signedness or be combined with any other type
+    // specifiers.
+    if (type_decl->m_sign_specifier != SignSpecifier::kUnknown) {
+      BailOut(llvm::formatv("'{0}' cannot be signed or unsigned", kind), loc,
+              CurToken().GetSpelling().length());
+      return false;
+    }
+    if (type_spec != TypeSpecifier::kUnknown) {
+      BailOut(llvm::formatv(
+                  "cannot combine with previous '{0}' declaration specifier",
+                  type_spec),
+              loc, CurToken().GetSpelling().length());
+    }
+    if (kind == "bool")
+      type_decl->m_type_specifier = TypeSpecifier::kBool;
+    else if (kind == "void")
+      type_decl->m_type_specifier = TypeSpecifier::kVoid;
+    else if (kind == "float")
+      type_decl->m_type_specifier = TypeSpecifier::kFloat;
+    return true;
+  }
+
+  if (kind == "signed" || kind == "unsigned") {
+    // "signed" and "unsigned" cannot be combined with another signedness
+    // specifier.
+    if (type_spec == TypeSpecifier::kVoid ||
+        type_spec == TypeSpecifier::kBool ||
+        type_spec == TypeSpecifier::kFloat ||
+        type_spec == TypeSpecifier::kDouble ||
+        type_spec == TypeSpecifier::kLongDouble) {
+      BailOut(llvm::formatv("'{0}' cannot be signed or unsigned", type_spec),
+              loc, CurToken().GetSpelling().length());
+      return false;
+    }
+
+    type_decl->m_sign_specifier =
+        (kind == "signed") ? SignSpecifier::kSigned : SignSpecifier::kUnsigned;
+    return true;
+  }
+
+  BailOut(llvm::formatv("invalid simple type specifier kind"), loc,
+          CurToken().GetSpelling().length());
+  return false;
 }
 
 void DILParser::BailOut(const std::string &error, uint32_t loc,
@@ -442,6 +998,76 @@ void DILParser::Expect(Token::Kind kind) {
     BailOut(llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
             CurToken().GetLocation(), CurToken().GetSpelling().length());
   }
+}
+
+void DILParser::ExpectOneOf(std::vector<Token::Kind> kinds_vec) {
+  if (!CurToken().IsOneOf(kinds_vec)) {
+    BailOut(llvm::formatv("expected any of ({0}), got: {1}",
+                          llvm::iterator_range(kinds_vec), CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+  }
+}
+
+lldb::BasicType TypeDeclaration::GetBasicType() const {
+  if (!m_is_builtin)
+    return lldb::eBasicTypeInvalid;
+
+  if (m_sign_specifier == SignSpecifier::kSigned &&
+      m_type_specifier == TypeSpecifier::kChar) {
+    // "signed char" isn't the same as "char".
+    return lldb::eBasicTypeSignedChar;
+  }
+
+  if (m_sign_specifier == SignSpecifier::kUnsigned) {
+    switch (m_type_specifier) {
+    // "unsigned" is "unsigned int"
+    case TypeSpecifier::kUnknown:
+      return lldb::eBasicTypeUnsignedInt;
+    case TypeSpecifier::kChar:
+      return lldb::eBasicTypeUnsignedChar;
+    case TypeSpecifier::kShort:
+      return lldb::eBasicTypeUnsignedShort;
+    case TypeSpecifier::kInt:
+      return lldb::eBasicTypeUnsignedInt;
+    case TypeSpecifier::kLong:
+      return lldb::eBasicTypeUnsignedLong;
+    case TypeSpecifier::kLongLong:
+      return lldb::eBasicTypeUnsignedLongLong;
+    default:
+      // assert(false && "unknown unsigned basic type");
+      return lldb::eBasicTypeInvalid;
+    }
+  }
+
+  switch (m_type_specifier) {
+  case TypeSpecifier::kUnknown:
+    // "signed" is "signed int"
+    if (m_sign_specifier != SignSpecifier::kSigned)
+      return lldb::eBasicTypeInvalid;
+    return lldb::eBasicTypeInt;
+  case TypeSpecifier::kVoid:
+    return lldb::eBasicTypeVoid;
+  case TypeSpecifier::kBool:
+    return lldb::eBasicTypeBool;
+  case TypeSpecifier::kChar:
+    return lldb::eBasicTypeChar;
+  case TypeSpecifier::kShort:
+    return lldb::eBasicTypeShort;
+  case TypeSpecifier::kInt:
+    return lldb::eBasicTypeInt;
+  case TypeSpecifier::kLong:
+    return lldb::eBasicTypeLong;
+  case TypeSpecifier::kLongLong:
+    return lldb::eBasicTypeLongLong;
+  case TypeSpecifier::kFloat:
+    return lldb::eBasicTypeFloat;
+  case TypeSpecifier::kDouble:
+    return lldb::eBasicTypeDouble;
+  case TypeSpecifier::kLongDouble:
+    return lldb::eBasicTypeLongDouble;
+  }
+
+  return lldb::eBasicTypeInvalid;
 }
 
 } // namespace lldb_private::dil

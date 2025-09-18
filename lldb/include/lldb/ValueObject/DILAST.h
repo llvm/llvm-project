@@ -20,12 +20,28 @@ namespace lldb_private::dil {
 enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
+  eCStyleCastNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
   eIntegerLiteralNode,
   eMemberOfNode,
   eUnaryOpNode,
+};
+
+/// The C-Style casts allowed by DIL.
+enum class CStyleCastKind {
+  eEnumeration,
+  eNullptr,
+  eReference,
+  eNone,
+};
+
+/// Promotions for C-Style casts in DIL.
+enum class CastPromoKind {
+  eArithmetic,
+  ePointer,
+  eNone,
 };
 
 /// The Unary operators recognized by DIL.
@@ -226,6 +242,29 @@ private:
   llvm::APFloat m_value;
 };
 
+class CStyleCastNode : public ASTNode {
+public:
+  CStyleCastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
+                 CStyleCastKind kind)
+      : ASTNode(location, NodeKind::eCStyleCastNode), m_type(type),
+        m_operand(std::move(operand)), m_cast_kind(kind) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  CompilerType GetType() const { return m_type; }
+  ASTNode *GetOperand() const { return m_operand.get(); }
+  CStyleCastKind GetCastKind() const { return m_cast_kind; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eCStyleCastNode;
+  }
+
+private:
+  CompilerType m_type;
+  ASTNodeUP m_operand;
+  CStyleCastKind m_cast_kind;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -247,6 +286,8 @@ public:
   Visit(const IntegerLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const FloatLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const CStyleCastNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
