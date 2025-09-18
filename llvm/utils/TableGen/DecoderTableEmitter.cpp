@@ -204,6 +204,8 @@ void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
     emitNode(Child, Indent + 1);
   }
 
+  // Don't emit OPC_Scope for the last child so that we leave the current scope
+  // if it fails. Otherwise, we would need some kind of OPC_LeaveScope opcode.
   const DecoderTreeNode *Child = *std::prev(N->child_end());
 
   emitComment(Indent) << LS << "try {\n";
@@ -242,6 +244,10 @@ void DecoderTableEmitter::emitSwitchFieldNode(const SwitchFieldNode *N,
     emitComment(Indent) << "}\n";
   }
 
+  // Don't emit the size of the last child and instead emit a sentinel value,
+  // which tells the interpreter that this is the last case. The interpreter
+  // doesn't need to know its size because SwitchField node never falls through
+  // (we either successfully decode an instruction, or leave the current scope).
   auto [Val, Child] = *std::prev(N->case_end());
   emitStartLine();
   emitULEB128(Val);
