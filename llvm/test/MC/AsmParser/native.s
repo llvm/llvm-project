@@ -1,3 +1,4 @@
-# RUN: llvm-mc -filetype=obj -mcpu=native %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -filetype=obj -o %t -mcpu=native %s 2> %t.stderr
+# RUN: FileCheck --allow-empty %s < %t.stderr
 
-# CHECK-NOT: 'native' is not a recognized processor for this target (ignoring processor)
+# CHECK-NOT: {{.+}}
