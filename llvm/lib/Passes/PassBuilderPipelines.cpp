@@ -92,6 +92,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
+#include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -1498,6 +1499,13 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   invokeOptimizerEarlyEPCallbacks(MPM, Level, LTOPhase);
 
   FunctionPassManager OptimizePM;
+
+  // Only drop unnecessary assumes post-inline and post-link, as otherwise
+  // additional uses of the affected value may be introduced through inlining
+  // and CSE.
+  if (!isLTOPreLink(LTOPhase))
+    OptimizePM.addPass(DropUnnecessaryAssumesPass());
+
   // Scheduling LoopVersioningLICM when inlining is over, because after that
   // we may see more accurate aliasing. Reason to run this late is that too
   // early versioning may prevent further inlining due to increase of code

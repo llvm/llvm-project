@@ -621,19 +621,27 @@ public:
   }
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
-    return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
+    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+    mlir::Value result =
+        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus, promotionType);
+    if (result && !promotionType.isNull())
+      return emitUnPromotedValue(result, e->getType());
+    return result;
   }
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e) {
-    return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus);
+    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+    mlir::Value result =
+        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus, promotionType);
+    if (result && !promotionType.isNull())
+      return emitUnPromotedValue(result, e->getType());
+    return result;
   }
 
   mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
-                                   cir::UnaryOpKind kind) {
+                                   cir::UnaryOpKind kind,
+                                   QualType promotionType) {
     ignoreResultAssign = false;
-
-    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
-
     mlir::Value operand;
     if (!promotionType.isNull())
       operand = cgf.emitPromotedScalarExpr(e->getSubExpr(), promotionType);
@@ -645,10 +653,7 @@ public:
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    mlir::Value result = emitUnaryOp(e, kind, operand, nsw);
-    if (result && !promotionType.isNull())
-      return emitUnPromotedValue(result, e->getType());
-    return result;
+    return emitUnaryOp(e, kind, operand, nsw);
   }
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
@@ -667,8 +672,9 @@ public:
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
   mlir::Value VisitUnaryReal(const UnaryOperator *e);
-
   mlir::Value VisitUnaryImag(const UnaryOperator *e);
+  mlir::Value VisitRealImag(const UnaryOperator *e,
+                            QualType promotionType = QualType());
 
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
@@ -864,19 +870,22 @@ public:
   // TODO(cir): Candidate to be in a common AST helper between CIR and LLVM
   // codegen.
   QualType getPromotionType(QualType ty) {
-    if (ty->getAs<ComplexType>()) {
-      assert(!cir::MissingFeatures::complexType());
-      cgf.cgm.errorNYI("promotion to complex type");
-      return QualType();
+    const clang::ASTContext &ctx = cgf.getContext();
+    if (auto *complexTy = ty->getAs<ComplexType>()) {
+      QualType elementTy = complexTy->getElementType();
+      if (elementTy.UseExcessPrecision(ctx))
+        return ctx.getComplexType(ctx.FloatTy);
     }
+
     if (ty.UseExcessPrecision(cgf.getContext())) {
       if (ty->getAs<VectorType>()) {
         assert(!cir::MissingFeatures::vectorType());
-        cgf.cgm.errorNYI("promotion to vector type");
+        cgf.cgm.errorNYI("getPromotionType: promotion to vector type");
         return QualType();
       }
       return cgf.getContext().FloatTy;
     }
+
     return QualType();
   }
 
@@ -1086,8 +1095,20 @@ public:
 
   mlir::Value VisitBinLOr(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
-      assert(!cir::MissingFeatures::vectorType());
-      return {};
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      auto vecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+      mlir::Value zeroValue = builder.getNullValue(vecTy.getElementType(), loc);
+      SmallVector<mlir::Value, 16> elements(vecTy.getSize(), zeroValue);
+      auto zeroVec = cir::VecCreateOp::create(builder, loc, vecTy, elements);
+
+      mlir::Value lhs = Visit(e->getLHS());
+      mlir::Value rhs = Visit(e->getRHS());
+
+      auto cmpOpKind = cir::CmpOpKind::ne;
+      lhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, lhs, zeroVec);
+      rhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, rhs, zeroVec);
+      mlir::Value vecOr = builder.createOr(loc, lhs, rhs);
+      return builder.createIntCast(vecOr, vecTy);
     }
 
     assert(!cir::MissingFeatures::instrumentation());
@@ -1239,9 +1260,23 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
     default:
       break;
     }
-  } else if (isa<UnaryOperator>(e)) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "unary operators");
-    return {};
+  } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
+    switch (uo->getOpcode()) {
+    case UO_Imag:
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter::emitPromoted unary imag");
+      return {};
+    case UO_Real:
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter::emitPromoted unary real");
+      return {};
+    case UO_Minus:
+      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
+    case UO_Plus:
+      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Plus, promotionType);
+    default:
+      break;
+    }
   }
   mlir::Value result = Visit(const_cast<Expr *>(e));
   if (result) {
@@ -2057,28 +2092,27 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
-  // TODO(cir): handle scalar promotion.
-  Expr *op = e->getSubExpr();
-  if (op->getType()->isAnyComplexType()) {
-    // If it's an l-value, load through the appropriate subobject l-value.
-    // Note that we have to ask `e` because `op` might be an l-value that
-    // this won't work for, e.g. an Obj-C property.
-    if (e->isGLValue()) {
-      mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      mlir::Value complex = cgf.emitComplexExpr(op);
-      return cgf.builder.createComplexReal(loc, complex);
-    }
-
-    // Otherwise, calculate and project.
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "VisitUnaryReal calculate and project");
-  }
-
-  return Visit(op);
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitRealImag(e, promotionTy);
+  if (result && !promotionTy.isNull())
+    result = emitUnPromotedValue(result, e->getType());
+  return result;
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
-  // TODO(cir): handle scalar promotion.
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitRealImag(e, promotionTy);
+  if (result && !promotionTy.isNull())
+    result = emitUnPromotedValue(result, e->getType());
+  return result;
+}
+
+mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
+                                             QualType promotionTy) {
+  assert(e->getOpcode() == clang::UO_Real ||
+         e->getOpcode() == clang::UO_Imag &&
+             "Invalid UnaryOp kind for ComplexType Real or Imag");
+
   Expr *op = e->getSubExpr();
   if (op->getType()->isAnyComplexType()) {
     // If it's an l-value, load through the appropriate subobject l-value.
@@ -2087,15 +2121,26 @@ mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
     if (e->isGLValue()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       mlir::Value complex = cgf.emitComplexExpr(op);
-      return cgf.builder.createComplexImag(loc, complex);
+      if (!promotionTy.isNull()) {
+        complex = cgf.emitPromotedValue(complex, promotionTy);
+      }
+
+      return e->getOpcode() == clang::UO_Real
+                 ? builder.createComplexReal(loc, complex)
+                 : builder.createComplexImag(loc, complex);
     }
 
     // Otherwise, calculate and project.
     cgf.cgm.errorNYI(e->getSourceRange(),
-                     "VisitUnaryImag calculate and project");
+                     "VisitRealImag calculate and project");
+    return {};
   }
 
-  return Visit(op);
+  // __real or __imag on a scalar returns zero. Emit the subexpr to ensure side
+  // effects are evaluated, but not the actual value.
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "VisitRealImag __real or __imag on a scalar");
+  return {};
 }
 
 /// Return the size or alignment of the type of argument of the sizeof
