@@ -188,6 +188,7 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
+                               vfs::FileSystem *VFS = nullptr,
                                bool LongOptionsUseDoubleDash = false);
 
   void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
@@ -1401,8 +1402,9 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return true;
 }
 
-ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T)
-    : Saver(A), Tokenizer(T), FS(vfs::getRealFileSystem().get()) {}
+ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                                   vfs::FileSystem *FS)
+    : Saver(A), Tokenizer(T), FS(FS ? FS : vfs::getRealFileSystem().get()) {}
 
 bool ExpansionContext::findConfigFile(StringRef FileName,
                                       SmallVectorImpl<char> &FilePath) {
@@ -1461,7 +1463,7 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 const char *EnvVar,
+                                 vfs::FileSystem *VFS, const char *EnvVar,
                                  bool LongOptionsUseDoubleDash) {
   initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
@@ -1482,8 +1484,8 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return GlobalParser->ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
-                                               Errs, LongOptionsUseDoubleDash);
+  return GlobalParser->ParseCommandLineOptions(
+      NewArgc, &NewArgv[0], Overview, Errs, VFS, LongOptionsUseDoubleDash);
 }
 
 /// Reset all options at least once, so that we can parse different options.
@@ -1503,17 +1505,17 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   }
 }
 
-bool CommandLineParser::ParseCommandLineOptions(int argc,
-                                                const char *const *argv,
-                                                StringRef Overview,
-                                                raw_ostream *Errs,
-                                                bool LongOptionsUseDoubleDash) {
+bool CommandLineParser::ParseCommandLineOptions(
+    int argc, const char *const *argv, StringRef Overview, raw_ostream *Errs,
+    vfs::FileSystem *VFS, bool LongOptionsUseDoubleDash) {
   assert(hasOptions() && "No options specified!");
 
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
   if (!Errs)
     Errs = &errs();
+  if (!VFS)
+    VFS = vfs::getRealFileSystem().get();
   bool ErrorParsing = false;
 
   // Expand response files.
@@ -1524,7 +1526,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 #else
   auto Tokenize = cl::TokenizeGNUCommandLine;
 #endif
-  ExpansionContext ECtx(A, Tokenize);
+  ExpansionContext ECtx(A, Tokenize, VFS);
   if (Error Err = ECtx.expandResponseFiles(newArgv)) {
     *Errs << toString(std::move(Err)) << '\n';
     return false;

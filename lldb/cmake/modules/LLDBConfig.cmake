@@ -187,6 +187,10 @@ if (LLDB_ENABLE_PYTHON)
   endif()
   option(LLDB_ENABLE_PYTHON_LIMITED_API "Force LLDB to only use the Python Limited API (requires SWIG 4.2 or later)"
     ${default_enable_python_limited_api})
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
 endif()
 
 if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)

@@ -244,7 +244,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr,
+                                      /*VFS=*/&Clang->getVirtualFileSystem());
   }
 
 #if CLANG_ENABLE_STATIC_ANALYZER
