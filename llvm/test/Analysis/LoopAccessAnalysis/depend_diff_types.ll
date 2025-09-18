@@ -280,13 +280,8 @@ exit:
 define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_independent'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
-; CHECK-NEXT:            store i32 1, ptr %gep.4.iv, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
