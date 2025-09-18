@@ -792,6 +792,15 @@ addr_t ABIMacOSX_arm64::FixDataAddress(addr_t addr) {
   return DoFixAddr(addr, false /*is_code*/, GetProcessSP());
 }
 
+addr_t ABIMacOSX_arm64::FixAnyAddressPreservingAuthentication(addr_t addr) {
+  // Save the old MTE tag and restore it later.
+  constexpr addr_t mte_mask = 0x0f00000000000000ULL;
+  addr_t old_mte_tag = addr & mte_mask;
+
+  addr_t fixed_addr = FixDataAddress(addr);
+  return old_mte_tag | (fixed_addr & (~mte_mask));
+}
+
 void ABIMacOSX_arm64::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), pluginDesc,
                                 CreateInstance);

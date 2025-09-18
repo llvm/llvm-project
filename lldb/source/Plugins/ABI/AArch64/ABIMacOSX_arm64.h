@@ -59,6 +59,7 @@ public:
 
   lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
   lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
+  lldb::addr_t FixAnyAddressPreservingAuthentication(lldb::addr_t pc) override;
 
   // Static Functions
 
