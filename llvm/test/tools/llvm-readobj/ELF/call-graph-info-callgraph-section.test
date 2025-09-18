@@ -1,94 +1,139 @@
 ## Tests --call-graph-info prints information from call graph section.
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --match-full-lines --check-prefix=GNU
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --match-full-lines
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
 
-# GNU: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
-# GNU-EMPTY:
-# GNU-NEXT: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
-# GNU-NEXT: UNKNOWN 6
-# GNU-NEXT: 20 a
-# GNU-EMPTY:
-# GNU-NEXT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
-# GNU-NEXT: 10 9
-# GNU-EMPTY:
-# GNU-NEXT: INDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])
-# GNU-NEXT: 6 9
-# GNU-EMPTY:
-# GNU-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
-# GNU-NEXT: 0 5
+# CHECK: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
+# CHECK-NEXT: Per-function call graph information:: 
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: foo
+# CHECK-NEXT: Function PC:: 0x0
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: NOT_INDIRECT
+# CHECK-NEXT: Indirect callee count:: 0
+# CHECK-NEXT: Direct callee count:: 1
+# CHECK-NEXT: {
+# CHECK-NEXT:   CalleePC:: 0x5
+# CHECK-NEXT: }
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: bar
+# CHECK-NEXT: Function PC:: 0x6
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: UNKNOWN_TID
+# CHECK-NEXT: Indirect callee count:: 1
+# CHECK-NEXT: {
+# CHECK-NEXT:   callsite: 0x9
+# CHECK-NEXT:   calleeTypeId: 0x10
+# CHECK-NEXT: }
+# CHECK-NEXT: Direct callee count:: 0
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: baz
+# CHECK-NEXT: Function PC:: 0xa
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: KNOWN_TID
+# CHECK-NEXT: Function Type ID:: 0x20
+# CHECK-NEXT: Indirect callee count:: 0
+# CHECK-NEXT: Direct callee count:: 0
+
 
 # LLVM: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
-# LLVM: callgraph_info {
-# LLVM-NEXT:  unknown_target_types: [0x6]
-# LLVM-NEXT:  indirect_target_types [
-# LLVM-NEXT:    {
-# LLVM-NEXT:     function_address: 0xA
-# LLVM-NEXT:      type_id: 0x20
-# LLVM-NEXT:    }
-# LLVM-NEXT:  ]
-# LLVM-NEXT:  direct_call_sites [
-# LLVM-NEXT:    {
-# LLVM-NEXT:      caller: 0x0
-# LLVM-NEXT:      call_sites [
-# LLVM-NEXT:        {
-# LLVM-NEXT:          callee: 0x5
-# LLVM-NEXT:        }
-# LLVM-NEXT:      ]
-# LLVM-NEXT:    }
-# LLVM-NEXT:  ]
-# LLVM-NEXT:  indirect_call_sites [
-# LLVM-NEXT:    {
-# LLVM-NEXT:      caller: 0x6
-# LLVM-NEXT:      call_sites: [0x9]
-# LLVM-NEXT:    }
-# LLVM-NEXT:  ]
-# LLVM-NEXT:  indirect_call_types [
-# LLVM-NEXT:    {
-# LLVM-NEXT:      call_site: 0x9
-# LLVM-NEXT:      type_id: 0x10
-# LLVM-NEXT:    }
-# LLVM-NEXT:  ]
-# LLVM-NEXT: }
+# LLVM: callgraph_info [
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: foo
+# LLVM-NEXT:     Address: 0x0
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: NOT_INDIRECT
+# LLVM-NEXT:     Kind: 0
+# LLVM-NEXT:     NumIndirectCallSites: 0
+# LLVM-NEXT:     NumDirectCallSites: 1
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Address: 0x5
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: bar
+# LLVM-NEXT:     Address: 0x6
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: UNKNOWN_TID
+# LLVM-NEXT:     Kind: 1
+# LLVM-NEXT:     NumIndirectCallSites: 1
+# LLVM-NEXT:     IndirectCallsites [
+# LLVM-NEXT:       IndirectCallsite {
+# LLVM-NEXT:         Address: 0x9
+# LLVM-NEXT:         TypeId: 0x10
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumDirectCallSites: 0
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: baz
+# LLVM-NEXT:     Address: 0xA
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: KNOWN_TID
+# LLVM-NEXT:     Kind: 2
+# LLVM-NEXT:     TypeId: 0x20
+# LLVM-NEXT:     NumIndirectCallSites: 0
+# LLVM-NEXT:     NumDirectCallSites: 0
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
 
 # JSON: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
-# JSON: "callgraph_info": {
-# JSON-NEXT:      "unknown_target_types": [
-# JSON-NEXT:        6
-# JSON-NEXT:      ],
-# JSON-NEXT:      "indirect_target_types": [
-# JSON-NEXT:        {
-# JSON-NEXT:          "function_address": 10,
-# JSON-NEXT:          "type_id": 32
-# JSON-NEXT:        }
-# JSON-NEXT:      ],
-# JSON-NEXT:      "direct_call_sites": [
-# JSON-NEXT:        {
-# JSON-NEXT:          "caller": 0,
-# JSON-NEXT:          "call_sites": [
-# JSON-NEXT:            {
-# JSON-NEXT:              "callee": 5
-# JSON-NEXT:            }
-# JSON-NEXT:          ]
-# JSON-NEXT:        }
-# JSON-NEXT:      ],
-# JSON-NEXT:      "indirect_call_sites": [
-# JSON-NEXT:        {
-# JSON-NEXT:          "caller": 6,
-# JSON-NEXT:          "call_sites": [
-# JSON-NEXT:            9
-# JSON-NEXT:          ]
-# JSON-NEXT:        }
-# JSON-NEXT:      ],
-# JSON-NEXT:      "indirect_call_types": [
-# JSON-NEXT:        {
-# JSON-NEXT:          "call_site": 9,
-# JSON-NEXT:          "type_id": 16
-# JSON-NEXT:        }
-# JSON-NEXT:      ]
-# JSON-NEXT:    }
+# JSON:     "callgraph_info": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "foo",
+# JSON-NEXT:           "Address": 0,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "NOT_INDIRECT",
+# JSON-NEXT:           "Kind": 0,
+# JSON-NEXT:           "NumIndirectCallSites": 0,
+# JSON-NEXT:           "NumDirectCallSites": 1,
+# JSON-NEXT:           "DirectCallees": [
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Address": 5
+# JSON-NEXT:               }
+# JSON-NEXT:             }
+# JSON-NEXT:           ]
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "bar",
+# JSON-NEXT:           "Address": 6,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "UNKNOWN_TID",
+# JSON-NEXT:           "Kind": 1,
+# JSON-NEXT:           "NumIndirectCallSites": 1,
+# JSON-NEXT:           "IndirectCallsites": [
+# JSON-NEXT:             {
+# JSON-NEXT:               "IndirectCallsite": {
+# JSON-NEXT:                 "Address": 9,
+# JSON-NEXT:                 "TypeId": 16
+# JSON-NEXT:               }
+# JSON-NEXT:             }
+# JSON-NEXT:           ],
+# JSON-NEXT:           "NumDirectCallSites": 0
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "baz",
+# JSON-NEXT:           "Address": 10,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "KNOWN_TID",
+# JSON-NEXT:           "Kind": 2,
+# JSON-NEXT:           "TypeId": 32,
+# JSON-NEXT:           "NumIndirectCallSites": 0,
+# JSON-NEXT:           "NumDirectCallSites": 0
+# JSON-NEXT:         }
+# JSON-NEXT:       }
+# JSON-NEXT:     ]
+
 
 .text
 

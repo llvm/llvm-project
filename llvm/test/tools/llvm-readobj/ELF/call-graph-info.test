@@ -41,139 +41,219 @@
 #     return 0;
 #   }
 
-# CHECK: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
-# CHECK-NEXT: 3ecbeef531f74424 1790 17a0
-# CHECK-NEXT: 308e4b8159bc8654 17b0
-# CHECK-NEXT: fa6809609a76afca 17c0
-# CHECK-EMPTY:
-# CHECK-NEXT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
-# CHECK-NEXT: 3ecbeef531f74424 17df 17ef
-# CHECK-NEXT: 308e4b8159bc8654 1804
-# CHECK-EMPTY:
-# CHECK-NEXT: INDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])
-# CHECK-NEXT: 17c0 17df 17ef 1804
-# CHECK-EMPTY:
-# CHECK-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
-# CHECK-NEXT: 17c0 1790 17a0 17b0
+# CHECK: Per-function call graph information:: 
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: foo
+# CHECK-NEXT: Function PC:: 0x1790
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: KNOWN_TID
+# CHECK-NEXT: Function Type ID:: 0x3ecbeef531f74424
+# CHECK-NEXT: Indirect callee count:: 0
+# CHECK-NEXT: Direct callee count:: 0
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: bar
+# CHECK-NEXT: Function PC:: 0x17a0
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: KNOWN_TID
+# CHECK-NEXT: Function Type ID:: 0x3ecbeef531f74424
+# CHECK-NEXT: Indirect callee count:: 0
+# CHECK-NEXT: Direct callee count:: 0
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: baz
+# CHECK-NEXT: Function PC:: 0x17b0
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: KNOWN_TID
+# CHECK-NEXT: Function Type ID:: 0x308e4b8159bc8654
+# CHECK-NEXT: Indirect callee count:: 0
+# CHECK-NEXT: Direct callee count:: 0
+# CHECK-EMPTY: 
+# CHECK-NEXT: Function:: main
+# CHECK-NEXT: Function PC:: 0x17c0
+# CHECK-NEXT: FormatVersionNumber:: 0
+# CHECK-NEXT: Function Kind:: KNOWN_TID
+# CHECK-NEXT: Function Type ID:: 0xfa6809609a76afca
+# CHECK-NEXT: Indirect callee count:: 3
+# CHECK-NEXT: {
+# CHECK-NEXT:   callsite: 0x17ef
+# CHECK-NEXT:   calleeTypeId: 0x3ecbeef531f74424
+# CHECK-NEXT:   callsite: 0x17df
+# CHECK-NEXT:   calleeTypeId: 0x3ecbeef531f74424
+# CHECK-NEXT:   callsite: 0x1804
+# CHECK-NEXT:   calleeTypeId: 0x308e4b8159bc8654
+# CHECK-NEXT: }
+# CHECK-NEXT: Direct callee count:: 3
+# CHECK-NEXT: {
+# CHECK-NEXT:   Callee:: foo
+# CHECK-NEXT:   CalleePC:: 0x1790
+# CHECK-NEXT:   Callee:: bar
+# CHECK-NEXT:   CalleePC:: 0x17a0
+# CHECK-NEXT:   Callee:: baz
+# CHECK-NEXT:   CalleePC:: 0x17b0
+# CHECK-NEXT: }
 
-# LLVM: callgraph_info {
-# LLVM-NEXT:   indirect_target_types [
-# LLVM-NEXT:     {
-# LLVM-NEXT:       function_address: 0x1790
-# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
-# LLVM-NEXT:     }
-# LLVM-NEXT:     {
-# LLVM-NEXT:       function_address: 0x17A0
-# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
-# LLVM-NEXT:     }
-# LLVM-NEXT:     {
-# LLVM-NEXT:       function_address: 0x17B0
-# LLVM-NEXT:       type_id: 0x308E4B8159BC8654
-# LLVM-NEXT:     }
-# LLVM-NEXT:     {
-# LLVM-NEXT:       function_address: 0x17C0
-# LLVM-NEXT:       type_id: 0xFA6809609A76AFCA
-# LLVM-NEXT:     }
-# LLVM-NEXT:   ]
-# LLVM-NEXT:   direct_call_sites [
-# LLVM-NEXT:     {
-# LLVM-NEXT:       caller: 0x17C0
-# LLVM-NEXT:       call_sites [
-# LLVM-NEXT:         {
-# LLVM-NEXT:           callee: 0x1790
-# LLVM-NEXT:         }
-# LLVM-NEXT:         {
-# LLVM-NEXT:           callee: 0x17A0
-# LLVM-NEXT:         }
-# LLVM-NEXT:         {
-# LLVM-NEXT:           callee: 0x17B0
-# LLVM-NEXT:         }
-# LLVM-NEXT:       ]
-# LLVM-NEXT:     }
-# LLVM-NEXT:   ]
-# LLVM-NEXT:   indirect_call_sites [
-# LLVM-NEXT:     {
-# LLVM-NEXT:       caller: 0x17C0
-# LLVM-NEXT:       call_sites: [0x17DF, 0x17EF, 0x1804]
-# LLVM-NEXT:     }
-# LLVM-NEXT:   ]
-# LLVM-NEXT:   indirect_call_types [
-# LLVM-NEXT:     {
-# LLVM-NEXT:       call_site: 0x17DF
-# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
-# LLVM-NEXT:     }
-# LLVM-NEXT:     {
-# LLVM-NEXT:       call_site: 0x17EF
-# LLVM-NEXT:       type_id: 0x3ECBEEF531F74424
-# LLVM-NEXT:     }
-# LLVM-NEXT:     {
-# LLVM-NEXT:       call_site: 0x1804
-# LLVM-NEXT:       type_id: 0x308E4B8159BC8654
-# LLVM-NEXT:     }
-# LLVM-NEXT:   ]
-# LLVM-NEXT: }
 
-#JSON:  "callgraph_info": {
-#JSON-NEXT:      "indirect_target_types": [
-#JSON-NEXT:        {
-#JSON-NEXT:          "function_address": 6032,
-#JSON-NEXT:          "type_id": 4524972987496481828
-#JSON-NEXT:        },
-#JSON-NEXT:        {
-#JSON-NEXT:          "function_address": 6048,
-#JSON-NEXT:          "type_id": 4524972987496481828
-#JSON-NEXT:        },
-#JSON-NEXT:        {
-#JSON-NEXT:          "function_address": 6064,
-#JSON-NEXT:          "type_id": 3498816979441845844
-#JSON-NEXT:        },
-#JSON-NEXT:        {
-#JSON-NEXT:          "function_address": 6080,
-#JSON-NEXT:          "type_id": 18043682217572872138
-#JSON-NEXT:        }
-#JSON-NEXT:      ],
-#JSON-NEXT:      "direct_call_sites": [
-#JSON-NEXT:        {
-#JSON-NEXT:          "caller": 6080,
-#JSON-NEXT:          "call_sites": [
-#JSON-NEXT:            {
-#JSON-NEXT:              "callee": 6032
-#JSON-NEXT:            },
-#JSON-NEXT:            {
-#JSON-NEXT:              "callee": 6048
-#JSON-NEXT:            },
-#JSON-NEXT:            {
-#JSON-NEXT:              "callee": 6064
-#JSON-NEXT:            }
-#JSON-NEXT:          ]
-#JSON-NEXT:        }
-#JSON-NEXT:      ],
-#JSON-NEXT:      "indirect_call_sites": [
-#JSON-NEXT:        {
-#JSON-NEXT:          "caller": 6080,
-#JSON-NEXT:          "call_sites": [
-#JSON-NEXT:            6111,
-#JSON-NEXT:            6127,
-#JSON-NEXT:            6148
-#JSON-NEXT:          ]
-#JSON-NEXT:        }
-#JSON-NEXT:      ],
-#JSON-NEXT:      "indirect_call_types": [
-#JSON-NEXT:        {
-#JSON-NEXT:          "call_site": 6111,
-#JSON-NEXT:          "type_id": 4524972987496481828
-#JSON-NEXT:        },
-#JSON-NEXT:        {
-#JSON-NEXT:          "call_site": 6127,
-#JSON-NEXT:          "type_id": 4524972987496481828
-#JSON-NEXT:        },
-#JSON-NEXT:        {
-#JSON-NEXT:          "call_site": 6148,
-#JSON-NEXT:          "type_id": 3498816979441845844
-#JSON-NEXT:        }
-#JSON-NEXT:      ]
-#JSON-NEXT:    }
-#JSON-NEXT:  }
+# LLVM: callgraph_info [
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: foo
+# LLVM-NEXT:     Address: 0x1790
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: KNOWN_TID
+# LLVM-NEXT:     Kind: 2
+# LLVM-NEXT:     TypeId: 0x3ECBEEF531F74424
+# LLVM-NEXT:     NumIndirectCallSites: 0
+# LLVM-NEXT:     NumDirectCallSites: 0
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: bar
+# LLVM-NEXT:     Address: 0x17A0
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: KNOWN_TID
+# LLVM-NEXT:     Kind: 2
+# LLVM-NEXT:     TypeId: 0x3ECBEEF531F74424
+# LLVM-NEXT:     NumIndirectCallSites: 0
+# LLVM-NEXT:     NumDirectCallSites: 0
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: baz
+# LLVM-NEXT:     Address: 0x17B0
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: KNOWN_TID
+# LLVM-NEXT:     Kind: 2
+# LLVM-NEXT:     TypeId: 0x308E4B8159BC8654
+# LLVM-NEXT:     NumIndirectCallSites: 0
+# LLVM-NEXT:     NumDirectCallSites: 0
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Function {
+# LLVM-NEXT:     Name: main
+# LLVM-NEXT:     Address: 0x17C0
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     KindStr: KNOWN_TID
+# LLVM-NEXT:     Kind: 2
+# LLVM-NEXT:     TypeId: 0xFA6809609A76AFCA
+# LLVM-NEXT:     NumIndirectCallSites: 3
+# LLVM-NEXT:     IndirectCallsites [
+# LLVM-NEXT:       IndirectCallsite {
+# LLVM-NEXT:         Address: 0x17EF
+# LLVM-NEXT:         TypeId: 0x3ECBEEF531F74424
+# LLVM-NEXT:       }
+# LLVM-NEXT:       IndirectCallsite {
+# LLVM-NEXT:         Address: 0x17DF
+# LLVM-NEXT:         TypeId: 0x3ECBEEF531F74424
+# LLVM-NEXT:       }
+# LLVM-NEXT:       IndirectCallsite {
+# LLVM-NEXT:         Address: 0x1804
+# LLVM-NEXT:         TypeId: 0x308E4B8159BC8654
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumDirectCallSites: 3
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Name: foo
+# LLVM-NEXT:         Address: 0x1790
+# LLVM-NEXT:       }
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Name: bar
+# LLVM-NEXT:         Address: 0x17A0
+# LLVM-NEXT:       }
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Name: baz
+# LLVM-NEXT:         Address: 0x17B0
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+
+# JSON:     "callgraph_info": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "foo",
+# JSON-NEXT:           "Address": 6032,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "KNOWN_TID",
+# JSON-NEXT:           "Kind": 2,
+# JSON-NEXT:           "TypeId": 4524972987496481828,
+# JSON-NEXT:           "NumIndirectCallSites": 0,
+# JSON-NEXT:           "NumDirectCallSites": 0
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "bar",
+# JSON-NEXT:           "Address": 6048,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "KNOWN_TID",
+# JSON-NEXT:           "Kind": 2,
+# JSON-NEXT:           "TypeId": 4524972987496481828,
+# JSON-NEXT:           "NumIndirectCallSites": 0,
+# JSON-NEXT:           "NumDirectCallSites": 0
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "baz",
+# JSON-NEXT:           "Address": 6064,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "KNOWN_TID",
+# JSON-NEXT:           "Kind": 2,
+# JSON-NEXT:           "TypeId": 3498816979441845844,
+# JSON-NEXT:           "NumIndirectCallSites": 0,
+# JSON-NEXT:           "NumDirectCallSites": 0
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Function": {
+# JSON-NEXT:           "Name": "main",
+# JSON-NEXT:           "Address": 6080,
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "KindStr": "KNOWN_TID",
+# JSON-NEXT:           "Kind": 2,
+# JSON-NEXT:           "TypeId": 18043682217572872138,
+# JSON-NEXT:           "NumIndirectCallSites": 3,
+# JSON-NEXT:           "IndirectCallsites": [
+# JSON-NEXT:             {
+# JSON-NEXT:               "IndirectCallsite": {
+# JSON-NEXT:                 "Address": 6127,
+# JSON-NEXT:                 "TypeId": 4524972987496481828
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "IndirectCallsite": {
+# JSON-NEXT:                 "Address": 6111,
+# JSON-NEXT:                 "TypeId": 4524972987496481828
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "IndirectCallsite": {
+# JSON-NEXT:                 "Address": 6148,
+# JSON-NEXT:                 "TypeId": 3498816979441845844
+# JSON-NEXT:               }
+# JSON-NEXT:             }
+# JSON-NEXT:           ],
+# JSON-NEXT:           "NumDirectCallSites": 3,
+# JSON-NEXT:           "DirectCallees": [
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Name": "foo",
+# JSON-NEXT:                 "Address": 6032
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Name": "bar",
+# JSON-NEXT:                 "Address": 6048
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Name": "baz",
+# JSON-NEXT:                 "Address": 6064
+# JSON-NEXT:               }
+# JSON-NEXT:             }
+# JSON-NEXT:           ]
+# JSON-NEXT:         }
+# JSON-NEXT:       }
+# JSON-NEXT:     ]
 
 --- !ELF
 FileHeader:
