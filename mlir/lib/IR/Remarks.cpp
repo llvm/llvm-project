@@ -70,7 +70,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
-  StringRef categoryName = getFullCategoryName();
+  StringRef categoryName = getCombinedCategoryName();
   StringRef name = remarkName;
 
   os << '[' << type << "] ";
@@ -140,7 +140,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.RemarkType = getRemarkType();
   r.RemarkName = getRemarkName();
   // MLIR does not use passes; instead, it has categories and sub-categories.
-  r.PassName = getFullCategoryName();
+  r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
   for (const Remark::Arg &arg : getArgs()) {
@@ -238,7 +238,7 @@ void RemarkEngine::reportImpl(const Remark &remark) {
 void RemarkEngine::report(const Remark &remark) {
   // Postponed remarks are deferred to the end of pipeline.
   if (remark.isPostponed()) {
-    postponedRemarks.push_back(remark);
+    postponedRemarks.insert(remark);
     return;
   }
 
