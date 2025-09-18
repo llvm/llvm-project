@@ -33,6 +33,14 @@ using SCFTileSizeComputationFunction =
 
 /// Options to use to control tiling.
 struct SCFTilingOptions {
+  /// Specify which loop construct to use for tile and fuse.
+  enum class LoopType { ForOp, ForallOp};
+  LoopType loopType = LoopType::ForOp;
+  SCFTilingOptions &setLoopType(LoopType type) {
+    loopType = type;
+    return *this;
+  }
+
   /// Computation function that returns the tile sizes to use for each loop.
   /// Returning a tile size of zero implies no tiling for that loop. If the
   /// size of the returned vector is smaller than the number of loops, the inner
@@ -49,6 +57,17 @@ struct SCFTilingOptions {
   /// function that computes tile sizes at the point they are needed. Allows
   /// proper interaction with folding.
   SCFTilingOptions &setTileSizes(ArrayRef<OpFoldResult> tileSizes);
+
+  /// The interchange vector to reorder the tiled loops.
+  SmallVector<int64_t> interchangeVector = {};
+  SCFTilingOptions &setInterchange(ArrayRef<int64_t> interchange) {
+    interchangeVector = llvm::to_vector(interchange);
+    return *this;
+  }
+
+  //-------------------------------------------------------------------------//
+  // Options related to tiling using `scf.forall`.
+  //-------------------------------------------------------------------------//
 
   /// Computation function that returns the number of threads to use for
   /// each loop. Returning a num threads of zero implies no tiling for that
@@ -69,21 +88,6 @@ struct SCFTilingOptions {
   /// Convenience function to set the `numThreadsComputationFunction` to a
   /// function that computes num threads at the point they are needed.
   SCFTilingOptions &setNumThreads(ArrayRef<OpFoldResult> numThreads);
-
-  /// The interchange vector to reorder the tiled loops.
-  SmallVector<int64_t> interchangeVector = {};
-  SCFTilingOptions &setInterchange(ArrayRef<int64_t> interchange) {
-    interchangeVector = llvm::to_vector(interchange);
-    return *this;
-  }
-
-  /// Specify which loop construct to use for tile and fuse.
-  enum class LoopType { ForOp, ForallOp };
-  LoopType loopType = LoopType::ForOp;
-  SCFTilingOptions &setLoopType(LoopType type) {
-    loopType = type;
-    return *this;
-  }
 
   /// Specify mapping of loops to devices. This is only respected when the loop
   /// constructs support such a mapping (like `scf.forall`). Will be ignored
