@@ -648,7 +648,7 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
   LogicalResult matchAndRewrite(ScaledMFMAOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto setOpsel = [&](unsigned idx, int64_t val) {
+    auto setOpsel = [&op](unsigned idx, int64_t val) {
       switch (idx) {
       case 3:
         op.setScalesIdxA(val);
@@ -684,8 +684,8 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
         return rewriter.notifyMatchFailure(op,
                                            "defining op not a vector.insert");
       }
-      // if the extracted value is not a single scalar, then it has been packed.
-      if (dyn_cast<VectorType>(insertOp.getValueToStore().getType())) {
+      // If the extracted value is not a single scalar, then it has been packed.
+      if (isa<VectorType>(insertOp.getValueToStore().getType())) {
         return rewriter.notifyMatchFailure(
             op, "scaled mfma operand already packed");
       }
@@ -717,12 +717,12 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       }
 
       // Find a linearized idx using the size and offsets of the extract op
+      SmallVector<int64_t> extractedPos(llvm::to_vector_of<int64_t>(
+          llvm::reverse(extractOp.getStaticPosition())));
       ArrayRef<int64_t> scaleSrcShape = scaleSrcType.getShape();
       int64_t scaleSrcRank = scaleSrcType.getRank();
-      SmallVector<int64_t> extractedPos(extractOp.getStaticPosition());
       SmallVector<int64_t> extractSizes(scaleSrcRank, 1);
-      std::reverse(extractedPos.begin(), extractedPos.end());
-      for (int64_t i = 1; i < scaleSrcRank; i++) {
+      for (int64_t i = 1; i < scaleSrcRank; ++i) {
         extractSizes[i] = extractSizes[i - 1] * scaleSrcShape[scaleSrcRank - i];
       }
       int64_t idx = linearize(extractedPos, extractSizes);
@@ -749,10 +749,10 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       auto newSrcType = VectorType::get(SmallVector<int64_t>({numElements}),
                                         scaleSrcElemType);
       Value newScaleSrc =
-          rewriter.create<vector::ShapeCastOp>(loc, newSrcType, scaleSrc);
-      auto extract = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, newScaleSrc, ArrayRef<int64_t>{offset}, ArrayRef<int64_t>{size},
-          ArrayRef<int64_t>{1});
+          vector::ShapeCastOp::create(rewriter, loc, newSrcType, scaleSrc);
+      auto extract = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, newScaleSrc, ArrayRef<int64_t>{offset},
+          ArrayRef<int64_t>{size}, ArrayRef<int64_t>{1});
       rewriter.modifyOpInPlace(op, [&] {
         op->setOperand(opIdx, extract);
         setOpsel(opIdx, opsel);
