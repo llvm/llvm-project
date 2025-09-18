@@ -60,6 +60,47 @@ namespace clang {
   class ValueDecl;
   class WarnUnusedResultAttr;
 
+  /// EvalStatus is a struct with detailed info about an evaluation in progress.
+  struct EvalStatus {
+    /// Whether the evaluated expression has side effects.
+    /// For example, (f() && 0) can be folded, but it still has side effects.
+    bool HasSideEffects = false;
+
+    /// Whether the evaluation hit undefined behavior.
+    /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
+    /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
+    bool HasUndefinedBehavior = false;
+
+    bool HasFFDiagnostic = false;
+    bool HasCCEDiagnostic = false;
+
+    /// Diag - If this is non-null, it will be filled in with a stack of notes
+    /// indicating why evaluation failed (or why it failed to produce a constant
+    /// expression).
+    /// If the expression is unfoldable, the notes will indicate why it's not
+    /// foldable. If the expression is foldable, but not a constant expression,
+    /// the notes will describes why it isn't a constant expression. If the
+    /// expression *is* a constant expression, no notes will be produced.
+    ///
+    /// FIXME: this causes significant performance concerns and should be
+    /// refactored at some point. Not all evaluations of the constant
+    /// expression interpreter will display the given diagnostics, this means
+    /// those kinds of uses are paying the expense of generating a diagnostic
+    /// (which may include expensive operations like converting APValue objects
+    /// to a string representation).
+    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
+
+    EvalStatus() = default;
+
+    /// Return true if the evaluated expression has
+    /// side effects.
+    bool hasSideEffects() const { return HasSideEffects; }
+
+    bool hasAnyDiagnostic() const {
+      return HasFFDiagnostic || HasCCEDiagnostic;
+    }
+  };
+
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
 
@@ -605,42 +646,6 @@ public:
   /// expression is a member pointer constant.
   const ValueDecl *getAsBuiltinConstantDeclRef(const ASTContext &Context) const;
 
-  /// EvalStatus is a struct with detailed info about an evaluation in progress.
-  struct EvalStatus {
-    /// Whether the evaluated expression has side effects.
-    /// For example, (f() && 0) can be folded, but it still has side effects.
-    bool HasSideEffects = false;
-
-    /// Whether the evaluation hit undefined behavior.
-    /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
-    /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
-    bool HasUndefinedBehavior = false;
-
-    /// Diag - If this is non-null, it will be filled in with a stack of notes
-    /// indicating why evaluation failed (or why it failed to produce a constant
-    /// expression).
-    /// If the expression is unfoldable, the notes will indicate why it's not
-    /// foldable. If the expression is foldable, but not a constant expression,
-    /// the notes will describes why it isn't a constant expression. If the
-    /// expression *is* a constant expression, no notes will be produced.
-    ///
-    /// FIXME: this causes significant performance concerns and should be
-    /// refactored at some point. Not all evaluations of the constant
-    /// expression interpreter will display the given diagnostics, this means
-    /// those kinds of uses are paying the expense of generating a diagnostic
-    /// (which may include expensive operations like converting APValue objects
-    /// to a string representation).
-    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
-
-    EvalStatus() = default;
-
-    /// Return true if the evaluated expression has
-    /// side effects.
-    bool hasSideEffects() const {
-      return HasSideEffects;
-    }
-  };
-
   /// EvalResult is a struct with detailed info about an evaluated expression.
   struct EvalResult : EvalStatus {
     /// Val - This is the value the expression can be folded to.
@@ -735,8 +740,7 @@ public:
   /// can be folded to a constant, and produces any relevant notes. In C++11,
   /// notes will be produced if the expression is not a constant expression.
   bool EvaluateAsInitializer(APValue &Result, const ASTContext &Ctx,
-                             const VarDecl *VD,
-                             SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                             const VarDecl *VD, EvalStatus &Status,
                              bool IsConstantInitializer) const;
 
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context

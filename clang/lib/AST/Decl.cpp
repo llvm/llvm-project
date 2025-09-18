@@ -2573,11 +2573,11 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
 }
 
 APValue *VarDecl::evaluateValue() const {
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  return evaluateValueImpl(Notes, hasConstantInitialization());
+  EvalStatus ES;
+  return evaluateValueImpl(ES, hasConstantInitialization());
 }
 
-APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+APValue *VarDecl::evaluateValueImpl(EvalStatus &EStatus,
                                     bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
@@ -2598,7 +2598,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   Eval->IsEvaluating = true;
 
   ASTContext &Ctx = getASTContext();
-  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
+  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, EStatus,
                                             IsConstantInitialization);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
@@ -2608,7 +2608,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   if (IsConstantInitialization &&
       (Ctx.getLangOpts().CPlusPlus ||
        (isConstexpr() && Ctx.getLangOpts().C23)) &&
-      !Notes.empty())
+      EStatus.hasAnyDiagnostic())
     Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
@@ -2662,7 +2662,7 @@ bool VarDecl::hasConstantInitialization() const {
 }
 
 bool VarDecl::checkForConstantInitialization(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+    SmallVectorImpl<PartialDiagnosticAt> *Notes) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   // If we ask for the value before we know whether we have a constant
   // initializer, we can compute the wrong value (for example, due to
@@ -2676,8 +2676,10 @@ bool VarDecl::checkForConstantInitialization(
   assert(!getInit()->isValueDependent());
 
   // Evaluate the initializer to check whether it's a constant expression.
+  EvalStatus EStatus;
+  EStatus.Diag = Notes;
   Eval->HasConstantInitialization =
-      evaluateValueImpl(Notes, true) && Notes.empty();
+      evaluateValueImpl(EStatus, true) && !EStatus.hasAnyDiagnostic();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.

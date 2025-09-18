@@ -61,6 +61,7 @@ class CompoundStmt;
 class DependentFunctionTemplateSpecializationInfo;
 class EnumDecl;
 class Expr;
+struct EvalStatus;
 class FunctionTemplateDecl;
 class FunctionTemplateSpecializationInfo;
 class FunctionTypeLoc;
@@ -1412,7 +1413,7 @@ public:
   APValue *evaluateValue() const;
 
 private:
-  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+  APValue *evaluateValueImpl(EvalStatus &EStatus,
                              bool IsConstantInitialization) const;
 
 public:
@@ -1446,7 +1447,7 @@ public:
   /// constant initializer. Should only be called once, after completing the
   /// definition of the variable.
   bool checkForConstantInitialization(
-      SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+      SmallVectorImpl<PartialDiagnosticAt> *Notes) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;

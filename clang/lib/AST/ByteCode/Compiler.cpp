@@ -6985,8 +6985,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       // here -- we will create a global variable in any case, and that
       // will have the state of initializer evaluation attached.
       APValue V;
-      SmallVector<PartialDiagnosticAt> Notes;
-      (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
+      EvalStatus EStatus;
+      (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, EStatus,
                                         true);
       return this->visitDeclRef(D, E);
     }

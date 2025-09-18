@@ -798,7 +798,7 @@ namespace {
     ASTContext &Ctx;
 
     /// EvalStatus - Contains information about the evaluation.
-    Expr::EvalStatus &EvalStatus;
+    struct EvalStatus &EvalStatus;
 
     /// CurrentCall - The top of the constexpr call stack.
     CallStackFrame *CurrentCall;
@@ -926,7 +926,7 @@ namespace {
     /// fold (not just why it's not strictly a constant expression)?
     bool HasFoldFailureDiagnostic;
 
-    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
+    EvalInfo(const ASTContext &C, struct EvalStatus &S, EvaluationMode Mode)
         : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
@@ -1107,7 +1107,7 @@ namespace {
       HasFoldFailureDiagnostic = Flag;
     }
 
-    Expr::EvalStatus &getEvalStatus() const override { return EvalStatus; }
+    struct EvalStatus &getEvalStatus() const override { return EvalStatus; }
 
     // If we have a prior diagnostic, it will be noting that the expression
     // isn't a constant expression. This diagnostic is more important,
@@ -1281,7 +1281,7 @@ namespace {
   /// a speculative evaluation.
   class SpeculativeEvaluationRAII {
     EvalInfo *Info = nullptr;
-    Expr::EvalStatus OldStatus;
+    EvalStatus OldStatus;
     unsigned OldSpeculativeEvaluationDepth = 0;
 
     void moveFromAndCancel(SpeculativeEvaluationRAII &&Other) {
@@ -17516,7 +17516,7 @@ static bool FastEvaluateAsRValue(const Expr *Exp, APValue &Result,
   return false;
 }
 
-static bool hasUnacceptableSideEffect(Expr::EvalStatus &Result,
+static bool hasUnacceptableSideEffect(EvalStatus &Result,
                                       Expr::SideEffectsKind SEK) {
   return (SEK < Expr::SE_AllowSideEffects && Result.HasSideEffects) ||
          (SEK < Expr::SE_AllowUndefinedBehavior && Result.HasUndefinedBehavior);
@@ -17668,7 +17668,7 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
 
 static bool EvaluateDestruction(const ASTContext &Ctx, APValue::LValueBase Base,
                                 APValue DestroyedValue, QualType Type,
-                                SourceLocation Loc, Expr::EvalStatus &EStatus,
+                                SourceLocation Loc, EvalStatus &EStatus,
                                 bool IsConstantDestruction) {
   EvalInfo Info(Ctx, EStatus,
                 IsConstantDestruction ? EvaluationMode::ConstantExpression
@@ -17758,9 +17758,9 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
 }
 
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
-                                 const VarDecl *VD,
-                                 SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                 const VarDecl *VD, EvalStatus &Status,
                                  bool IsConstantInitialization) const {
+
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   assert(VD && "Need a valid VarDecl");
@@ -17772,10 +17772,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
     return Name;
   });
 
-  Expr::EvalStatus EStatus;
-  EStatus.Diag = &Notes;
-
-  EvalInfo Info(Ctx, EStatus,
+  EvalInfo Info(Ctx, Status,
                 (IsConstantInitialization &&
                  (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
                     ? EvaluationMode::ConstantExpression
@@ -17810,7 +17807,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
       FullExpressionRAII Scope(Info);
       if (!EvaluateInPlace(Value, Info, LVal, this,
                            /*AllowNonLiteralTypes=*/true) ||
-          EStatus.HasSideEffects)
+          Status.HasSideEffects)
         return false;
     }
 
@@ -17829,7 +17826,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
-  Expr::EvalStatus EStatus;
+  EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
   // Only treat the destruction as constant destruction if we formally have
@@ -17966,7 +17963,7 @@ static ICEDiag Worst(ICEDiag A, ICEDiag B) { return A.Kind >= B.Kind ? A : B; }
 
 static ICEDiag CheckEvalInICE(const Expr* E, const ASTContext &Ctx) {
   Expr::EvalResult EVResult;
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
 
   Info.InConstantContext = true;
@@ -18450,7 +18447,7 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
   // required to treat the expression as an ICE, so we produce the folded
   // value.
   EvalResult ExprResult;
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 
@@ -18484,9 +18481,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   }
 
   // Build evaluation settings.
-  Expr::EvalStatus Status;
-  SmallVector<PartialDiagnosticAt, 8> Diags;
-  Status.Diag = &Diags;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
 
   bool IsConstExpr =
@@ -18495,7 +18490,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
       // call us on arbitrary full-expressions should generally not care.
       Info.discardCleanups() && !Status.HasSideEffects;
 
-  return IsConstExpr && Diags.empty();
+  return IsConstExpr && !Status.hasAnyDiagnostic();
 }
 
 bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
@@ -18513,7 +18508,7 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
     return Name;
   });
 
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
 
@@ -18587,7 +18582,7 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
     return Name;
   });
 
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   Status.Diag = &Diags;
 
   EvalInfo Info(FD->getASTContext(), Status,
@@ -18637,7 +18632,7 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   assert(!E->isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   Status.Diag = &Diags;
 
   EvalInfo Info(FD->getASTContext(), Status,
@@ -18664,7 +18659,7 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
   if (!getType()->isPointerType())
     return false;
 
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }
@@ -18722,7 +18717,7 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
 }
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   uint64_t Result;
   std::string StringResult;
@@ -18805,7 +18800,7 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
 }
 
 bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
-  Expr::EvalStatus Status;
+  EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
   if (Info.EnableNewConstInterp)

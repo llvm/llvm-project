@@ -88,7 +88,7 @@ public:
   virtual bool hasActiveDiagnostic() = 0;
   virtual void setActiveDiagnostic(bool Flag) = 0;
   virtual void setFoldFailureDiagnostic(bool Flag) = 0;
-  virtual Expr::EvalStatus &getEvalStatus() const = 0;
+  virtual EvalStatus &getEvalStatus() const = 0;
   virtual ASTContext &getASTContext() const = 0;
   virtual bool hasPriorDiagnostic() = 0;
   virtual unsigned getCallStackDepth() = 0;

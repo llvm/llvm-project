@@ -64,9 +64,7 @@ public:
   const Frame *getBottomFrame() const override { return &BottomFrame; }
 
   // Access objects from the walker context.
-  Expr::EvalStatus &getEvalStatus() const override {
-    return Parent.getEvalStatus();
-  }
+  EvalStatus &getEvalStatus() const override { return Parent.getEvalStatus(); }
   ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
   const LangOptions &getLangOpts() const {
     return Ctx.getASTContext().getLangOpts();
