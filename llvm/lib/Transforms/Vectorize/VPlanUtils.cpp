@@ -156,7 +156,7 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   // iteration.
   //
   // Currently, the address of the load is restricted to a GEP with 2 operands
-  // and a loop invariant base address. This constraint may be relaxed later.
+  // and a live-in base address. This constraint may be relaxed later.
   //
   // VPlan ' for UF>=1' {
   // Live-in vp<%0> = VF
