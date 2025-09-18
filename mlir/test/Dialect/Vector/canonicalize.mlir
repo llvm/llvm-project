@@ -3411,6 +3411,28 @@ func.func @negative_from_elements_poison_constant_mix() -> vector<2xf32> {
   return %1 : vector<2xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @from_elements_float8_to_i8_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<1xi8>
+func.func @from_elements_float8_to_i8_conversion() -> vector<1xi8> {
+  %cst = llvm.mlir.constant(0.0 : f8E4M3FN) : i8
+  %v = vector.from_elements %cst : vector<1xi8>
+  return %v : vector<1xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_i1_to_i8_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<1xi8>
+func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
+  %cst = llvm.mlir.constant(0: i1) : i8
+  %v = vector.from_elements %cst : vector<1xi8>
+  return %v : vector<1xi8>
+}
+
 // +---------------------------------------------------------------------------
 // End of  Tests for foldFromElementsToConstant
 // +---------------------------------------------------------------------------
