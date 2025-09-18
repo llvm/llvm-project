@@ -98,38 +98,17 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
-; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CALL1_I_I]], i64 [[CALL2_I_I]], i64 0
-; CHECK-NEXT:    switch i64 [[COND_I_I]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:      i64 11, label [[IF_END_I:%.*]]
-; CHECK-NEXT:      i64 13, label [[TEST2_FN2_EXIT12:%.*]]
-; CHECK-NEXT:      i64 17, label [[IF_END_I31:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I_I:%.*]] = trunc i32 [[CALL8_I_I]] to i8
-; CHECK-NEXT:    [[CALL1_I1_I:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I]])
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CALL1_I1_I]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    [[COND38:%.*]] = icmp eq i64 [[CALL2_I_I]], 13
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CALL1_I_I]], i1 [[COND38]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label [[TEST2_FN2_EXIT12:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       test2_fn2.exit12:
 ; CHECK-NEXT:    [[CALL8_I_I8:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I_I9:%.*]] = trunc i32 [[CALL8_I_I8]] to i8
-; CHECK-NEXT:    [[CALL1_I1_I10:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I9]])
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[CALL1_I1_I10]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    [[CMP4_I11:%.*]] = icmp eq i32 [[CALL8_I_I8]], 0
 ; CHECK-NEXT:    br i1 [[CMP4_I11]], label [[TEST2_FN2_EXIT24:%.*]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       test2_fn2.exit24:
 ; CHECK-NEXT:    store i8 0, ptr [[THIS]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       if.end.i31:
-; CHECK-NEXT:    [[CALL8_I_I32:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I_I33:%.*]] = trunc i32 [[CALL8_I_I32]] to i8
-; CHECK-NEXT:    [[CALL1_I1_I34:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I_I33]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[CALL1_I1_I34]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
@@ -163,10 +142,6 @@ define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CALL8_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()
-; CHECK-NEXT:    [[TRUNC_I:%.*]] = trunc i32 [[CALL8_I]] to i8
-; CHECK-NEXT:    [[CALL1_I1:%.*]] = tail call i1 @test2_fn4(i8 [[TRUNC_I]])
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CALL1_I1]], true
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[CALL8_I]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
@@ -210,7 +185,7 @@ cond.end:                                         ; preds = %cond.true, %entry
 
 define i1 @test2_fn4(i8 %bf.load) {
 ; CHECK-LABEL: define i1 @test2_fn4(
-; CHECK-SAME: i8 [[BF_LOAD:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: i8 [[BF_LOAD:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i8 [[BF_LOAD]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
@@ -232,7 +207,7 @@ entry:
 
 define internal i32 @test2_fn6() {
 ; CHECK-LABEL: define internal fastcc noundef i32 @test2_fn6(
-; CHECK-SAME: ) unnamed_addr #[[ATTR5]] {
+; CHECK-SAME: ) unnamed_addr #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 0
 ;

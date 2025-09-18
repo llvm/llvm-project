@@ -119,6 +119,7 @@ public:
     eServerPacketType_qRegisterInfo,
     eServerPacketType_qShlibInfoAddr,
     eServerPacketType_qStepPacketSupported,
+    eServerPacketType_qStructuredDataPlugins,
     eServerPacketType_qSupported,
     eServerPacketType_qSyncThreadStateSupported,
     eServerPacketType_qThreadExtraInfo,

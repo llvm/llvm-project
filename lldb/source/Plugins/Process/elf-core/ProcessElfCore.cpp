@@ -952,7 +952,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
-      m_executable_name = prpsinfo.pr_fname;
+      m_executable_name = thread_data.name;
       break;
     }
     case ELF::NT_SIGINFO: {

@@ -409,6 +409,14 @@ public:
                                    "Not implemented");
   }
 
+  /// Get the list of structured data plugins supported by this process. They
+  /// must match the `type` field used by the corresponding
+  /// StructuredDataPlugins in the client.
+  ///
+  /// \return
+  ///     A vector of structured data plugin names.
+  virtual std::vector<std::string> GetStructuredDataPlugins() { return {}; };
+
 protected:
   struct SoftwareBreakpoint {
     uint32_t ref_count;
