@@ -13,6 +13,7 @@
 #include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/CAS/TreePath.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
@@ -27,31 +28,6 @@ void ThreadSafeFileSystem::anchor() {}
 void CachingOnDiskFileSystem::anchor() {}
 
 namespace {
-
-// On Windows, prepend a dummy root backslash to tree paths internally
-// (\C:\foo) and distinguish them from normal file paths (C:\foo) that
-// come from and return to clients and are passed to sys::fs
-// functions. This is so that we can have a single root and CAS ID
-// representing the root of the filesystem (that may otherwise spread
-// across multiple trees / drives) and the path handling to be more
-// uniform with the Posix systems. These convert paths between them.
-// TODO: Reassess this way of handling multiple roots for Windows later.
-static std::string getTreePath(StringRef FilePath, sys::path::Style PathStyle) {
-  if (sys::path::is_style_windows(PathStyle)) {
-    assert(FilePath[0] != '\\');
-    std::string TreePath = "\\" + std::string(FilePath);
-    return TreePath;
-  }
-  return FilePath.str();
-}
-
-static StringRef getFilePath(StringRef TreePath, sys::path::Style PathStyle) {
-  if (sys::path::is_style_windows(PathStyle)) {
-    assert(TreePath[0] == '\\');
-    return TreePath.drop_front(1);
-  }
-  return TreePath;
-}
 
 class CachingOnDiskFileSystemImpl final : public CachingOnDiskFileSystem {
   struct WorkingDirectoryType {
@@ -343,7 +319,8 @@ CachingOnDiskFileSystemImpl::makeSymlink(DirectoryEntry &Parent,
   PathStorage TreePathStorage(TreePath);
   SmallString<128> Target;
   if (auto Err = readLink(
-          getFilePath(TreePathStorage.Path, Cache->getPathStyle()), Target))
+          llvm::cas::getFilePath(TreePathStorage.Path, Cache->getPathStyle()),
+          Target))
     return std::move(Err);
   return makeSymlinkTo(Parent, TreePathStorage.Path, Target);
 }
@@ -369,7 +346,7 @@ static bool is_executable(StringRef TreePath, sys::fs::file_status Status,
   // This isn't the most reliable way but does better than just
   // checking owner_exe because most owned files have all_all
   // permission regardless of they are executable files.
-  StringRef FilePath = getFilePath(TreePath, PathStyle);
+  StringRef FilePath = llvm::cas::getFilePath(TreePath, PathStyle);
   return (Status.permissions() & sys::fs::perms::owner_exe) &&
       (FilePath.ends_with_insensitive(".exe") ||
        sys::fs::exists(FilePath + ".exe"));
@@ -401,7 +378,8 @@ CachingOnDiskFileSystemImpl::makeEntry(
     std::optional<sys::fs::file_status> KnownStatus) {
   assert(Parent.isDirectory() && "Expected a directory");
   PathStorage TreePathStorage(TreePath);
-  StringRef FilePath = getFilePath(TreePathStorage.Path, Cache->getPathStyle());
+  StringRef FilePath = llvm::cas::getFilePath(TreePathStorage.Path,
+      Cache->getPathStyle());
 
   // lstat is extremely slow...
   sys::fs::file_status Status;
@@ -472,7 +450,7 @@ CachingOnDiskFileSystemImpl::getRealPath(const Twine &Path,
           getDirectoryEntry(Path, /*FollowSymlinks=*/true).moveInto(Entry))
     return errorToErrorCode(std::move(E));
 
-  StringRef RealFilePath = getFilePath(Entry->getTreePath(),
+  StringRef RealFilePath = llvm::cas::getFilePath(Entry->getTreePath(),
       Cache->getPathStyle());
   Output.resize(RealFilePath.size());
   llvm::copy(RealFilePath, Output.begin());
@@ -529,11 +507,12 @@ CachingOnDiskFileSystemImpl::getDirectoryIterator(const Twine &Path) {
   // Walk the directory on-disk to discover entries.
   std::error_code EC;
   SmallVector<std::string> TreePaths;
-  StringRef EntryFilePath = getFilePath(Entry->getTreePath(),
+  StringRef EntryFilePath = llvm::cas::getFilePath(Entry->getTreePath(),
       Cache->getPathStyle());
   for (sys::fs::directory_iterator I(EntryFilePath, EC), E;
        !EC && I != E; I.increment(EC)) {
-    TreePaths.emplace_back(getTreePath(I->path(), Cache->getPathStyle()));
+    TreePaths.emplace_back(llvm::cas::getTreePath(I->path(),
+        Cache->getPathStyle()));
   }
   if (EC)
     return EC;
@@ -569,8 +548,8 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
   SmallString<256> ExpectedRealTreePath;
   ExpectedRealTreePath = From.getTreePath();
   sys::path::append(ExpectedRealTreePath, RemainingStorage.Path);
-  SmallString<256> ExpectedRealPath = getFilePath(ExpectedRealTreePath.str(),
-                                                  Cache->getPathStyle());
+  SmallString<256> ExpectedRealPath = llvm::cas::getFilePath(
+      ExpectedRealTreePath.str(), Cache->getPathStyle());
 
   // Most paths don't exist. Start with a stat. Profiling says this is faster
   // on Darwin when running clang-scan-deps (looks like allocation traffic in
@@ -592,7 +571,7 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
       /* expand_tilde */false))
     return errorCodeToError(EC);
 
-  SmallString<256> RealTreePath = StringRef(getTreePath(RealPath,
+  SmallString<256> RealTreePath = StringRef(llvm::cas::getTreePath(RealPath,
       Cache->getPathStyle()));
   FileSystemCache::LookupPathState State(Cache->getPathStyle(),
       Cache->getRoot(get_separator(Cache->getPathStyle())), RealTreePath);
@@ -807,7 +786,7 @@ DiscoveryInstanceImpl::requestDirectoryEntry(DirectoryEntry &Parent,
   assert(Parent.isDirectory() && "Expected a directory");
   SmallString<256> Path(Parent.getTreePath());
   sys::path::append(Path, Name);
-  StringRef FilePath = getFilePath(Path.str(), FS.getPathStyle());
+  StringRef FilePath = llvm::cas::getFilePath(Path.str(), FS.getPathStyle());
 
   // lstat is extremely slow...
   sys::fs::file_status Status;
@@ -836,7 +815,7 @@ DiscoveryInstanceImpl::requestDirectoryEntry(DirectoryEntry &Parent,
     if (Name.equals_insensitive(NextName) || !isASCII(Name)) {
       // Might be a case-insensitive match, check if it's the same entity.
       // FIXME: put this unique id in the cache.
-      StringRef NextFilePath = getFilePath(Next->getTreePath(),
+      StringRef NextFilePath = llvm::cas::getFilePath(Next->getTreePath(),
           FS.getPathStyle());
       sys::fs::file_status StatNext;
       if (std::error_code EC =

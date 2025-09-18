@@ -416,7 +416,7 @@ TEST(TreePathPrefixMapperTest, construct) {
 
 TEST(TreePathPrefixMapperTest, add) {
   auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
-  TreePathPrefixMapper PM(FS);
+  TreePathPrefixMapper PM(FS, sys::path::Style::posix);
 
   // Non-canonical paths create two map entries: one for the canonical and one
   // for the non-canonical path.
@@ -440,7 +440,7 @@ TEST(TreePathPrefixMapperTest, add) {
 
 TEST(TreePathPrefixMapperTest, addRange) {
   auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
-  TreePathPrefixMapper PM(FS);
+  TreePathPrefixMapper PM(FS, sys::path::Style::posix);
 
   MappedPrefix MissingMapping[] = {
       {"missing", "/new"},
@@ -465,7 +465,7 @@ TEST(TreePathPrefixMapperTest, addRange) {
 
 TEST(TreePathPrefixMapperTest, addInverseRange) {
   auto FS = makeIntrusiveRefCnt<GetDirectoryEntryFileSystem>();
-  TreePathPrefixMapper PM(FS);
+  TreePathPrefixMapper PM(FS, sys::path::Style::posix);
 
   MappedPrefix MissingMapping[] = {
       {"/new", "missing"},

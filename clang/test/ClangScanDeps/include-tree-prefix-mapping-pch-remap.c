@@ -1,11 +1,11 @@
 // REQUIRES: ondisk_cas
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: sed -e "s|DIR|%t|g" %t/cdb.json.template > %t/cdb.json
+// RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -format experimental-include-tree-full -cas-path %t/cas \
-// RUN:   -prefix-map=%t=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc > %t/deps.json
+// RUN:   -prefix-map=%t=%/root^src -prefix-map-sdk=%/root^sdk -prefix-map-toolchain=%/root^tc > %t/deps.json
 
 //--- cdb.json.template
 [{

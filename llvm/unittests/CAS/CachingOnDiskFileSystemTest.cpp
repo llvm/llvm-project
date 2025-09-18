@@ -402,6 +402,15 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
 
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
+
     // Check that all the files are found.
     EXPECT_EQ(Files.size(), TreeNode->size());
     for (const auto &F : Files)
@@ -451,6 +460,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     ASSERT_EQ(TreeNode->size(), 2u);
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[3].path())));
@@ -472,6 +489,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     ASSERT_EQ(TreeNode->size(), 2u);
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[0].path())));
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[1].path())));
@@ -534,6 +559,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
     auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
     ASSERT_TRUE(Node0);
@@ -558,6 +591,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
     auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
     ASSERT_TRUE(Node0);
@@ -582,6 +623,14 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
     std::optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
+#ifdef _WIN32
+    ASSERT_NE(TreeNode, std::nullopt);
+    EXPECT_EQ(TreeNode->size(), 1u);
+    auto DriveNode = TreeNode->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    ASSERT_THAT_ERROR(Schema.load(DriveNode->getRef()).moveInto(TreeNode),
+                      Succeeded());
+#endif
     auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
     auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
     ASSERT_TRUE(Node0);
@@ -684,6 +733,15 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     AccessAllFiles();
     auto Tree = CreateTreeFromNewAccesses();
+#ifdef _WIN32
+    ASSERT_NE(Tree, std::nullopt);
+    EXPECT_EQ(Tree->size(), 1u);
+    auto DriveNode = Tree->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    auto DriveDir = Schema.load(DriveNode->getRef());
+    ASSERT_THAT_EXPECTED(DriveDir, Succeeded());
+    Tree = *DriveDir;
+#endif
     ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d1"));
@@ -702,6 +760,15 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
+#ifdef _WIN32
+    ASSERT_NE(Tree, std::nullopt);
+    EXPECT_EQ(Tree->size(), 1u);
+    auto DriveNode = Tree->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    auto DriveDir = Schema.load(DriveNode->getRef());
+    ASSERT_THAT_EXPECTED(DriveDir, Succeeded());
+    Tree = *DriveDir;
+#endif
     ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d1"));
@@ -720,6 +787,15 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
     EXPECT_EQ(FS->excludeFromTracking(D1Sub.path()), std::error_code());
     EXPECT_EQ(FS->excludeFromTracking(D2.path()), std::error_code());
     auto Tree = CreateTreeFromNewAccesses();
+#ifdef _WIN32
+    ASSERT_NE(Tree, std::nullopt);
+    EXPECT_EQ(Tree->size(), 1u);
+    auto DriveNode = Tree->lookup(sys::path::root_name(TestDirectory.path()));
+    ASSERT_TRUE(DriveNode);
+    auto DriveDir = Schema.load(DriveNode->getRef());
+    ASSERT_THAT_EXPECTED(DriveDir, Succeeded());
+    Tree = *DriveDir;
+#endif
     ASSERT_NE(Tree, std::nullopt);
     EXPECT_EQ(Tree->size(), 1u);
     EXPECT_FALSE(Tree->lookup("d2"));

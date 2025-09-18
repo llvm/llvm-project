@@ -1,5 +1,6 @@
 import itertools
 import os
+import pathlib
 import platform
 import re
 import subprocess
@@ -750,6 +751,17 @@ class LLVMConfig(object):
                     "%clangxx",
                     command=self.config.clang,
                     extra_args=["--driver-mode=g++"] + additional_flags,
+                ),
+                # A clang path with natural casing on Windows. Same as
+                # %/clang on non-Windows.
+                ToolSubst(
+                    "%/ncclang",
+                    command = (
+                        str(pathlib.Path(self.config.clang).resolve(strict=False)).replace("\\", "/")
+                        if platform.system() == "Windows"
+                        else self.config.clang.replace("\\", "/")
+                    ),
+                    extra_args=additional_flags
                 ),
             ]
             self.add_tool_substitutions(tool_substitutions)

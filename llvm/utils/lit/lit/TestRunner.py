@@ -1495,6 +1495,17 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         ]
     )
 
+    substitutions.extend(
+        [
+            # The filesystem root and their tree path forms for
+            # Windows for CAS prefix mapping. The t suffix stands for
+            # tree path. Those with suffixes need to use {} because
+            # lit macro names cannot be a prefix of another macro.
+            ("%/root", os.environ.get('SystemDrive') + "/" if kIsWindows else "/"),
+            ("%{/roott}", "/" + os.environ.get('SystemDrive') + "/" if kIsWindows else "/"),
+        ]
+    )
+
     return substitutions
 
 

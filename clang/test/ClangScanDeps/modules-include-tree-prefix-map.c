@@ -4,12 +4,13 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t/dir1
 // RUN: cp -r %t/dir1 %t/dir2
-// RUN: sed -e "s|DIR|%/t/dir1|g" -e "s|CLANG|%clang|g" %t/dir1/cdb.json.template > %t/cdb1.json
-// RUN: sed -e "s|DIR|%/t/dir2|g" -e "s|CLANG|%clang|g" %t/dir1/cdb.json.template > %t/cdb2.json
+// RUN: sed -e "s|DIR|%/t/dir1|g" -e "s|CLANG|%/ncclang|g" %t/dir1/cdb.json.template > %t/cdb1.json
+// RUN: sed -e "s|DIR|%/t/dir2|g" -e "s|CLANG|%/ncclang|g" %t/dir1/cdb.json.template > %t/cdb2.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb1.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/dir1/outputs \
-// RUN:   -prefix-map=%t/dir1/outputs=/^modules -prefix-map=%t/dir1=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
+// RUN:   -prefix-map=%t/dir1/outputs=%/root^modules -prefix-map=%t/dir1=%/root^src \
+// RUN:   -prefix-map-sdk=%/root^sdk -prefix-map-toolchain=%/root^tc \
 // RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives -optimize-args=none \
 // RUN:   > %t/deps.json
 
@@ -45,50 +46,50 @@
 
 // RUN: cat %t/deps.json >> %t/result.txt
 
-// RUN: FileCheck %s -input-file %t/result.txt -DPREFIX=%/t
+// RUN: cat %t/result.txt | %PathSanitizingFileCheck --sanitize PREFIX=%/t --sanitize ROOT^=%/root^ --enable-yaml-compatibility %s
 
 // CHECK-LABEL: MODULE Top
 // CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
-// CHECK: 2:1 /^src/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 ROOT^src{{/|\\}}Top.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: Module Map:
 // CHECK: Top
 // CHECK:   export *
 // CHECK: Files:
 // CHECK-NOT: module.modulemap
-// CHECK: /^src/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Top.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK-NOT: module.modulemap
 
 // CHECK-LABEL: MODULE Left
 // CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
-// CHECK: 2:1 /^src/Left.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 ROOT^src{{/|\\}}Left.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   2:1 (Module) Top
 // CHECK: Module Map:
 // CHECK: Left
 // CHECK:   export *
 // CHECK: Files:
 // CHECK-NOT: module.modulemap
-// CHECK: /^src/Left.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Left.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK-NOT: module.modulemap
-// CHECK: /^src/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Top.h llvmcas://{{[[:xdigit:]]+}}
 
 // CHECK-LABEL: MODULE Right
 // CHECK: <module-includes> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
-// CHECK: 2:1 /^src/Right.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: 2:1 ROOT^src{{/|\\}}Right.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK:   2:1 (Module) Top
 // CHECK: Module Map:
 // CHECK: Right
 // CHECK:   export *
 // CHECK: Files:
 // CHECK-NOT: module.modulemap
-// CHECK: /^src/Right.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Right.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK-NOT: module.modulemap
-// CHECK: /^src/Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Top.h llvmcas://{{[[:xdigit:]]+}}
 
 // CHECK-LABEL: TRANSLATION UNIT
-// CHECK: /^src/tu.m llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}tu.m llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 1:1 <built-in> llvmcas://{{[[:xdigit:]]+}}
 // CHECK: 2:1 (Module) Left
 // CHECK: 3:1 (Module) Right
@@ -100,9 +101,9 @@
 // CHECK-NOT: Module Map
 // CHECK: Files:
 // CHECK-NOT: module.modulemap
-// CHECK: /^src/Left.h llvmcas://{{[[:xdigit:]]+}}
-// CHECK: /^src/Top.h llvmcas://{{[[:xdigit:]]+}}
-// CHECK: /^src/Right.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Left.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Top.h llvmcas://{{[[:xdigit:]]+}}
+// CHECK: ROOT^src{{/|\\}}Right.h llvmcas://{{[[:xdigit:]]+}}
 
 // CHECK-LABEL: System module-includes
 // CHECK-NEXT: #import "sys.h"
@@ -117,14 +118,14 @@
 // CHECK:                "module-name": "Top"
 // CHECK:              }
 // CHECK-NEXT:       ]
-// CHECK:            "clang-modulemap-file": "[[PREFIX]]/dir1/module.modulemap"
+// CHECK:            "clang-modulemap-file": "PREFIX{{/|\\\\}}dir1{{/|\\\\}}module.modulemap"
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]/cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK-NOT: -fmodule-map-file
 // CHECK:              "-o"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/outputs/{{.*}}/Left-{{.*}}.pcm"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}outputs{{/|\\\\}}{{.*}}{{/|\\\\}}Left-{{.*}}.pcm"
 // CHECK:              "-disable-free"
 // CHECK:              "-fno-pch-timestamp"
 // CHECK:              "-fcas-include-tree"
@@ -132,16 +133,16 @@
 // CHECK:              "-fcache-compile-job"
 // CHECK:              "-emit-module"
 // CHECK:              "-fmodule-file-cache-key"
-// CHECK-NEXT:         "/^modules/{{.*}}/Top-{{.*}}.pcm"
+// CHECK-NEXT:         "ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Top-{{.*}}.pcm"
 // CHECK-NEXT:         "llvmcas://{{[[:xdigit:]]+}}"
-// CHECK:              "-fmodule-file=Top=/^modules/{{.*}}/Top-{{.*}}.pcm"
+// CHECK:              "-fmodule-file=Top=ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Top-{{.*}}.pcm"
 // CHECK:              "-fmodules"
 // CHECK:              "-fmodule-name=Left"
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/dir1/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/Left.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}Left.h"
 // CHECK:            ]
 // CHECK:            "name": "Left"
 // CHECK:          }
@@ -152,14 +153,14 @@
 // CHECK:                "module-name": "Top"
 // CHECK:              }
 // CHECK-NEXT:       ]
-// CHECK:            "clang-modulemap-file": "[[PREFIX]]/dir1/module.modulemap"
+// CHECK:            "clang-modulemap-file": "PREFIX{{/|\\\\}}dir1{{/|\\\\}}module.modulemap"
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]/cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK-NOT: -fmodule-map-file
 // CHECK:              "-o"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/outputs/{{.*}}/Right-{{.*}}.pcm"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}outputs{{/|\\\\}}{{.*}}{{/|\\\\}}Right-{{.*}}.pcm"
 // CHECK:              "-disable-free"
 // CHECK:              "-fno-pch-timestamp"
 // CHECK:              "-fcas-include-tree"
@@ -167,29 +168,29 @@
 // CHECK:              "-fcache-compile-job"
 // CHECK:              "-emit-module"
 // CHECK:              "-fmodule-file-cache-key
-// CHECK-NEXT:         "/^modules/{{.*}}/Top-{{.*}}.pcm"
+// CHECK-NEXT:         "ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Top-{{.*}}.pcm"
 // CHECK-NEXT:         "llvmcas://{{[[:xdigit:]]+}}"
-// CHECK:              "-fmodule-file=Top=/^modules/{{.*}}/Top-{{.*}}.pcm"
+// CHECK:              "-fmodule-file=Top=ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Top-{{.*}}.pcm"
 // CHECK:              "-fmodules"
 // CHECK:              "-fmodule-name=Right"
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/dir1/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/Right.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}Right.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Right"
 // CHECK:          }
 // CHECK-NEXT:     {
 // CHECK:            "cas-include-tree-id": "[[SYS_TREE:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": []
-// CHECK:            "clang-modulemap-file": "[[PREFIX]]/dir1/System/module.modulemap"
+// CHECK:            "clang-modulemap-file": "PREFIX{{/|\\\\}}dir1{{/|\\\\}}System{{/|\\\\}}module.modulemap"
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]/cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-o"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/outputs/{{.*}}/System-{{.*}}.pcm"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}outputs{{/|\\\\}}{{.*}}{{/|\\\\}}System-{{.*}}.pcm"
 // CHECK:              "-disable-free"
 // CHECK:              "-fno-pch-timestamp"
 // CHECK:              "-fcas-include-tree"
@@ -201,22 +202,22 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-DAG:         "[[PREFIX]]/dir1/System/module.modulemap"
-// CHECK-DAG:         "[[PREFIX]]/dir1/System/sys.h"
-// CHECK-DAG:         "{{.*}}/stdbool.h"
+// CHECK-DAG:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}System{{/|\\\\}}module.modulemap"
+// CHECK-DAG:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}System{{/|\\\\}}sys.h"
+// CHECK-DAG:         "{{.*}}{{/|\\\\}}stdbool.h"
 // CHECK:            ]
 // CHECK:            "name": "System"
 // CHECK:          }
 // CHECK-NEXT:     {
 // CHECK:            "cas-include-tree-id": "[[TOP_TREE:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": []
-// CHECK:            "clang-modulemap-file": "[[PREFIX]]/dir1/module.modulemap"
+// CHECK:            "clang-modulemap-file": "PREFIX{{/|\\\\}}dir1{{/|\\\\}}module.modulemap"
 // CHECK:            "command-line": [
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-fcas-path"
-// CHECK-NEXT:         "[[PREFIX]]/cas"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}cas"
 // CHECK:              "-o"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/outputs/{{.*}}/Top-{{.*}}.pcm"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}outputs{{/|\\\\}}{{.*}}{{/|\\\\}}Top-{{.*}}.pcm"
 // CHECK:              "-disable-free"
 // CHECK:              "-fno-pch-timestamp"
 // CHECK:              "-fcas-include-tree"
@@ -228,8 +229,8 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK:            ]
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/dir1/module.modulemap"
-// CHECK-NEXT:         "[[PREFIX]]/dir1/Top.h"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}module.modulemap"
+// CHECK-NEXT:         "PREFIX{{/|\\\\}}dir1{{/|\\\\}}Top.h"
 // CHECK-NEXT:       ]
 // CHECK:            "name": "Top"
 // CHECK:          }
@@ -253,7 +254,7 @@
 // CHECK:                "command-line": [
 // CHECK-NEXT:             "-cc1"
 // CHECK:                  "-fcas-path"
-// CHECK-NEXT:             "[[PREFIX]]/cas"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}cas"
 // CHECK-NOT: -fmodule-map-file
 // CHECK:                  "-disable-free"
 // CHECK:                  "-fcas-include-tree"
@@ -261,20 +262,20 @@
 // CHECK:                  "-fcache-compile-job"
 // CHECK:                  "-fsyntax-only"
 // CHECK:                  "-fmodule-file-cache-key"
-// CHECK-NEXT:             "/^modules/{{.*}}/Left-{{.*}}.pcm"
+// CHECK-NEXT:             "ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Left-{{.*}}.pcm"
 // CHECK-NEXT:             "llvmcas://{{[[:xdigit:]]+}}"
 // CHECK:                  "-fmodule-file-cache-key"
-// CHECK-NEXT:             "/^modules/{{.*}}/Right-{{.*}}.pcm"
+// CHECK-NEXT:             "ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Right-{{.*}}.pcm"
 // CHECK-NEXT:             "llvmcas://{{[[:xdigit:]]+}}"
-// CHECK:                  "-fmodule-file=Left=/^modules/{{.*}}/Left-{{.*}}.pcm"
-// CHECK:                  "-fmodule-file=Right=/^modules/{{.*}}/Right-{{.*}}.pcm"
+// CHECK:                  "-fmodule-file=Left=ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Left-{{.*}}.pcm"
+// CHECK:                  "-fmodule-file=Right=ROOT^modules{{/|\\\\}}{{.*}}{{/|\\\\}}Right-{{.*}}.pcm"
 // CHECK:                  "-fmodules"
 // CHECK:                  "-fno-implicit-modules"
 // CHECK:                ]
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             "[[PREFIX]]/dir1/tu.m"
+// CHECK-NEXT:             "PREFIX{{/|\\\\}}dir1{{/|\\\\}}tu.m"
 // CHECK-NEXT:           ]
-// CHECK:                "input-file": "[[PREFIX]]/dir1/tu.m"
+// CHECK:                "input-file": "PREFIX{{/|\\\\}}dir1{{/|\\\\}}tu.m"
 // CHECK:              }
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
@@ -291,7 +292,8 @@
 // Scan in a different directory
 // RUN: clang-scan-deps -compilation-database %t/cdb2.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/dir2/outputs \
-// RUN:   -prefix-map=%t/dir2/outputs=/^modules -prefix-map=%t/dir2=/^src -prefix-map-sdk=/^sdk -prefix-map-toolchain=/^tc \
+// RUN:   -prefix-map=%t/dir2/outputs=%/root^modules -prefix-map=%t/dir2=%/root^src \
+// RUN:   -prefix-map-sdk=%/root^sdk -prefix-map-toolchain=%/root^tc \
 // RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives -optimize-args=none \
 // RUN:   > %t/deps2.json
 

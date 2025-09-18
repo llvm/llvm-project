@@ -70,7 +70,9 @@ constants.""")
 
     if args.enable_windows_compatibility:
         if args.enable_yaml_compatibility:
-            slashes_re = r'(/|\\\\|\\\\\\\\)'
+            # Put the double escaped backslahes before the single
+            # escaped to ensure longest match
+            slashes_re = r'(/|\\\\\\\\|\\\\)'
         else:
             slashes_re = r'(/|\\\\)'
     else:
