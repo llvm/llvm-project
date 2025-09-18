@@ -69,25 +69,25 @@ void test_operator_new_nothrow() {
 
 // CHECK-LABEL: @_Z8test_newv(
 int *test_new() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new int;
 }
 
 // CHECK-LABEL: @_Z14test_new_arrayv(
 int *test_new_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 40, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 40, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new int[10];
 }
 
 // CHECK-LABEL: @_Z16test_new_nothrowv(
 int *test_new_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new (std::nothrow) int;
 }
 
 // CHECK-LABEL: @_Z22test_new_array_nothrowv(
 int *test_new_array_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnamRKSt9nothrow_t(i64 noundef 40, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnamRKSt9nothrow_t(i64 noundef 40, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new (std::nothrow) int[10];
 }
 
@@ -123,7 +123,7 @@ void may_throw();
 TestClass *test_exception_handling_new() {
   try {
     // CHECK: invoke {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}})
-    // CHECK-NEXT: !alloc_token_hint
+    // CHECK-NEXT: !alloc_token
     TestClass *obj = new TestClass();
     may_throw();
     return obj;
@@ -134,7 +134,7 @@ TestClass *test_exception_handling_new() {
 
 // CHECK-LABEL: @_Z14test_new_classv(
 TestClass *test_new_class() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   TestClass *obj = new TestClass();
   obj->data[0] = 42;
   return obj;
@@ -142,7 +142,7 @@ TestClass *test_new_class() {
 
 // CHECK-LABEL: @_Z20test_new_class_arrayv(
 TestClass *test_new_class_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   TestClass* arr = new TestClass[10];
   arr[0].data[0] = 123;
   return arr;

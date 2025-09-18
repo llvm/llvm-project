@@ -12,7 +12,7 @@ declare ptr @malloc(i64)
 define ptr @test_has_metadata() sanitize_alloc_token {
 entry:
   ; CHECK: call ptr @__alloc_token_malloc(
-  %ptr1 = call ptr @malloc(i64 64), !alloc_token_hint !0
+  %ptr1 = call ptr @malloc(i64 64), !alloc_token !0
   ret ptr %ptr1
 }
 

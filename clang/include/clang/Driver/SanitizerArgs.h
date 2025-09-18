@@ -74,6 +74,7 @@ class SanitizerArgs {
   bool HwasanUseAliases = false;
   llvm::AsanDetectStackUseAfterReturnMode AsanUseAfterReturn =
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
+
   std::string MemtagMode;
   bool AllocTokenFastABI = false;
   bool AllocTokenExtended = false;
