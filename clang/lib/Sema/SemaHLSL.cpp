@@ -1360,7 +1360,7 @@ bool SemaHLSL::handleRootSignatureElements(
              "Number of unbound elements must match the number of clauses");
       bool HasAnySampler = false;
       bool HasAnyNonSampler = false;
-      uint32_t Offset = 0;
+      uint64_t Offset = 0;
       bool Unbound = false;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         SourceLocation Loc = ClauseElem->getLocation();
@@ -1395,9 +1395,7 @@ bool SemaHLSL::handleRootSignatureElements(
           Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
         }
 
-        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
-                     ? uint32_t(RangeBound)
-                     : uint32_t(RangeBound + 1);
+        Offset = RangeBound + 1;
         Unbound = Clause->NumDescriptors ==
                   llvm::hlsl::rootsig::NumDescriptorsUnbounded;
 
