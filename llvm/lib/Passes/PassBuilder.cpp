@@ -2098,11 +2098,8 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       bool UseBFI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
         return Pipeline.Name.contains("simple-loop-unswitch");
       });
-      bool UseBPI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
-        return Pipeline.Name == "loop-predication";
-      });
       FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
-                                                  UseBFI, UseBPI));
+                                                  UseBFI));
       return Error::success();
     }
     if (Name == "machine-function") {
