@@ -18774,7 +18774,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 static SDValue
 performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
-  if (DCI.isBeforeLegalize() && !!DCI.isBeforeLegalizeOps())
+  if (DCI.isBeforeLegalize() && !DCI.isBeforeLegalizeOps())
     return SDValue();
 
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
