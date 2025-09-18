@@ -392,7 +392,8 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) {
     // Making sure that we canonicalize the defines before we create the deep
-    // copy.
+    // copy to avoid unnecessary variants in the scanner and in the resulting
+    // explicit command lines.
     if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
       canonicalizeDefines(Invocation->getPreprocessorOpts());
 
