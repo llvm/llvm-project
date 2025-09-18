@@ -83,6 +83,6 @@ def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prep
       allocatables, then the corresponding `omp::MapInfoOp` needs to be fixed up to map the new heap-allocated
       variable and not the original variable.
     }];
-  let dependentDialects = ["LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"];
+  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES
