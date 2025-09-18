@@ -637,7 +637,7 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                                                 convertOlToPluginAllocTy(Type)))
         return Err;
 
-    void *NewEnd = &reinterpret_cast<char *>(*NewAlloc)[Size];
+    void *NewEnd = &static_cast<char *>(*NewAlloc)[Size];
     auto &AllocBases = OffloadContext::get().AllocBases;
     auto &AllocInfoMap = OffloadContext::get().AllocInfoMap;
     {
