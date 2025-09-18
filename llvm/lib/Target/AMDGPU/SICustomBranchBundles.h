@@ -91,9 +91,7 @@ get_epilog_for_successor(MachineBasicBlock& pred_MBB, MachineBasicBlock& succ_MB
 
   for (MachineInstr &branch_MI : reverse(pred_MBB.instrs()))
     if (branch_MI.isBranch() && TII.getBranchDestBlock(branch_MI) == &succ_MBB)
-      return std::next(branch_MI.getIterator());
-    else
-      assert(branch_MI.isBranch() && "Shouldn't have fall-throughs here.");
+      return ++Epilog_Iterator(branch_MI.getIterator());
 
   llvm_unreachable("There should always be a branch to succ_MBB.");
 }
@@ -132,8 +130,8 @@ static inline void normalize_ir_post_phi_elimination(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     CFG_Rewrite_Entry to_insert = {{}, &MBB, {}};
     for (MachineBasicBlock *pred_MBB : MBB.predecessors()) {
-      MachineBasicBlock::instr_iterator ep_it =
-          get_epilog_for_successor(*pred_MBB, MBB)->getIterator();
+      Epilog_Iterator ep_it =
+          get_epilog_for_successor(*pred_MBB, MBB);
 
       vector<MachineInstr *> epilog;
       while (!ep_it.isEnd())
@@ -175,6 +173,7 @@ static inline void normalize_ir_post_phi_elimination(MachineFunction &MF) {
   // Perform the journaled rewrites.
   for (auto &entry : cfg_rewrite_entries) {
     MachineBasicBlock *mezzanine_MBB = MF.CreateMachineBasicBlock();
+    MF.insert(MF.end(),mezzanine_MBB);
 
     // Deal with mezzanine to successor succession.
     BuildMI(mezzanine_MBB, DebugLoc(), TII.get(AMDGPU::S_BRANCH)).addMBB(entry.succ_MBB);
@@ -192,7 +191,7 @@ static inline void normalize_ir_post_phi_elimination(MachineFunction &MF) {
       pred_MBB->replaceSuccessor(entry.succ_MBB, mezzanine_MBB);
 
       // Delete instructions that were lowered from epilog
-      auto epilog_it = get_epilog_for_successor(*pred_MBB, *entry.succ_MBB);
+      auto epilog_it = ++Epilog_Iterator(branch_ins.getIterator());
       while (!epilog_it.isEnd())
         epilog_it++->eraseFromBundle();
     }
@@ -228,7 +227,8 @@ static inline void hoist_unrelated_copies(MachineFunction &MF) {
       while (!copy_move_it.isEnd()) {
         Epilog_Iterator next = copy_move_it; ++next;
         if (copy_move_it->getOpcode() == AMDGPU::COPY &&
-            !related_copy_sources.count(copy_move_it->getOperand(1).getReg())) {
+            !related_copy_sources.count(copy_move_it->getOperand(1).getReg())
+            || copy_move_it->getOpcode() == AMDGPU::IMPLICIT_DEF) {
           MachineInstr &MI_to_move = *copy_move_it;
           MI_to_move.removeFromBundle();
           MBB.insert(branch_MI.getIterator(),&MI_to_move);
