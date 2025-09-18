@@ -18774,7 +18774,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 static SDValue
 performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
-  if (DCI.isBeforeLegalize())
+  if (DCI.isBeforeLegalize() && !!DCI.isBeforeLegalizeOps())
     return SDValue();
 
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
@@ -18793,7 +18793,7 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   });
 
   auto MaskEC = N->getValueType(0).getVectorElementCount();
-  if (!MaskEC.isKnownMultipleOf(NumExts))
+  if (NumExts == 0 || !MaskEC.isKnownMultipleOf(NumExts))
     return SDValue();
 
   ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumExts);
@@ -18802,12 +18802,8 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SmallVector<SDNode *> Extracts(NumExts, nullptr);
   for (SDNode *Use : N->users()) {
-    if (Use->getOpcode() == AArch64ISD::PTEST_FIRST ||
-        Use->getOpcode() == AArch64ISD::REINTERPRET_CAST)
-      continue;
-
     if (Use->getOpcode() != ISD::EXTRACT_SUBVECTOR)
-      return SDValue();
+      continue;
 
     // Ensure the extract type is correct (e.g. if NumExts is 4 and
     // the mask return type is nxv8i1, each extract should be nxv2i1.
@@ -18842,11 +18838,10 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
   DCI.CombineTo(Extracts[0], R.getValue(0));
   DCI.CombineTo(Extracts[1], R.getValue(1));
+  SmallVector<SDValue> Results = {R.getValue(0), R.getValue(1)};
 
-  if (NumExts == 2) {
-    DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), R.getValue(0));
-    return SDValue(SDValue(N, 0));
-  }
+  if (NumExts == 2)
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Results);
 
   auto Elts = DAG.getElementCount(DL, OpVT, ExtVT.getVectorElementCount() * 2);
   for (unsigned I = 2; I < NumExts; I += 2) {
@@ -18855,10 +18850,11 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     R = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
     DCI.CombineTo(Extracts[I], R.getValue(0));
     DCI.CombineTo(Extracts[I + 1], R.getValue(1));
+    Results.push_back(R.getValue(0));
+    Results.push_back(R.getValue(1));
   }
 
-  DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), R.getValue(0));
-  return SDValue(N, 0);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Results);
 }
 
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce

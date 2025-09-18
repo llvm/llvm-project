@@ -1495,19 +1495,13 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     if ((Mask == Pred) && PTest->getOpcode() == AArch64::PTEST_PP_ANY)
       return PredOpcode;
 
-    if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31) {
-      auto PTestOp = MRI->getUniqueVRegDef(PTest->getOperand(1).getReg());
-      if (PTest->getOpcode() == AArch64::PTEST_PP_FIRST && PTestOp->isCopy() &&
-          PTestOp->getOperand(1).getSubReg() == AArch64::psub0)
-        return PredOpcode;
-
-      // For PTEST(PTRUE_ALL, WHILE), if the element size matches, the PTEST is
-      // redundant since WHILE performs an implicit PTEST with an all active
-      // mask.
-      if (getElementSizeForOpcode(MaskOpcode) ==
-          getElementSizeForOpcode(PredOpcode))
-        return PredOpcode;
-    }
+    // For PTEST(PTRUE_ALL, WHILE), if the element size matches, the PTEST is
+    // redundant since WHILE performs an implicit PTEST with an all active
+    // mask.
+    if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31 &&
+        getElementSizeForOpcode(MaskOpcode) ==
+            getElementSizeForOpcode(PredOpcode))
+      return PredOpcode;
 
     return {};
   }
