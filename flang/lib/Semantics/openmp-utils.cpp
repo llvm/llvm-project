@@ -237,7 +237,9 @@ std::optional<bool> IsContiguous(
             }
             return std::optional<bool>{};
           },
-          [&](const parser::OmpObject::Invalid &) { return std::nullopt; }},
+          [&](const parser::OmpObject::Invalid &) {
+            return std::optional<bool>{};
+          }},
       object.u);
 }
 
