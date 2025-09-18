@@ -18,8 +18,8 @@
 
 # RUN: yaml2obj %s --docnum=3 -o %t-macho.o
 # RUN: yaml2obj %s --docnum=4 -o %t-macho2.o
-# RUN: llvm-size --totals %t-macho.o %t-macho2.o \
-# RUN:   | FileCheck %s --check-prefix=MACHO-CHECK --strict-whitespace \
+# RUN: llvm-size --totals %t-macho.o %t-macho2.o | \
+# RUN:   FileCheck %s --check-prefix=MACHO-CHECK --strict-whitespace \
 # RUN:       --match-full-lines --implicit-check-not={{.}} -DFILE1=%t-macho.o -DFILE2=%t-macho2.o
 
 # MACHO-CHECK:__TEXT	__DATA	__OBJC	others	dec	hex
