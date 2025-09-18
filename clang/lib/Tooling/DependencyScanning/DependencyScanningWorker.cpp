@@ -391,10 +391,14 @@ public:
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) {
+    // Making sure that we canonicalize the defines before we create the deep
+    // copy to avoid unnecessary variants in the scanner and in the resulting
+    // explicit command lines.
+    if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+      canonicalizeDefines(Invocation->getPreprocessorOpts());
+
     // Make a deep copy of the original Clang invocation.
     CompilerInvocation OriginalInvocation(*Invocation);
-    if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
-      canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
       // Scanning runs once for the first -cc1 invocation in a chain of driver
