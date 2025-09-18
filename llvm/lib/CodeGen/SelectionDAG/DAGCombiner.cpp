@@ -54,6 +54,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -5404,6 +5405,14 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // sdiv, srem -> sdivrem
   if (SDValue DivRem = useDivRem(N))
     return DivRem.getValue(1);
+
+  // fold urem(urem(A, BCst), Op1Cst) -> urem(A, Op1Cst)
+  SDValue A;
+  APInt Op1Cst, BCCst;
+  if (sd_match(N0, m_URem(m_Value(A), m_ConstInt(BCCst))) &&
+      sd_match(N1, m_ConstInt(Op1Cst)) && BCCst.urem(Op1Cst).isZero()) {
+    return DAG.getNode(ISD::UREM, DL, VT, A, DAG.getConstant(Op1Cst, DL, VT));
+  }
 
   return SDValue();
 }
