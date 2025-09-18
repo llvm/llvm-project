@@ -458,6 +458,8 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
 // llvm/test/CodeGen/AMDGPU/unpack-non-coissue-insts-post-ra-scheduler.mir.
 bool SIPreEmitPeephole::isUnpackingSupportedInstr(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
+  if (!TII->isNeverCoissue(MI))
+    return false;
   switch (Opcode) {
   case AMDGPU::V_PK_ADD_F32:
   case AMDGPU::V_PK_MUL_F32:
@@ -642,7 +644,6 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (!isUnpackingSupportedInstr(Instr))
       continue;
 
-    assert(TII->isNeverCoissue(Instr) && "Instruction cannot be co-issued.");
     if (canUnpackingClobberRegister(Instr))
       return;
     // If it's a packed instruction, adjust latency: remove the packed
