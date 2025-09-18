@@ -2463,87 +2463,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
-  patterns.add<CIRToLLVMReturnOpLowering>(patterns.getContext());
-  // This could currently be merged with the group below, but it will get more
-  // arguments later, so we'll keep it separate for now.
-  patterns.add<CIRToLLVMAllocaOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMLoadOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMStoreOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMCastOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMPtrStrideOpLowering>(converter, patterns.getContext(),
-                                             dl);
-  patterns.add<CIRToLLVMInlineAsmOpLowering>(converter, patterns.getContext(),
-                                             dl);
   patterns.add<
-      // clang-format off
-               CIRToLLVMACosOpLowering,
-               CIRToLLVMASinOpLowering,
-               CIRToLLVMAssumeOpLowering,
-               CIRToLLVMAssumeAlignedOpLowering,
-               CIRToLLVMAssumeSepStorageOpLowering,
-               CIRToLLVMAtomicCmpXchgLowering,
-               CIRToLLVMBaseClassAddrOpLowering,
-               CIRToLLVMATanOpLowering,
-               CIRToLLVMBinOpLowering,
-               CIRToLLVMBitClrsbOpLowering,
-               CIRToLLVMBitClzOpLowering,
-               CIRToLLVMBitCtzOpLowering,
-               CIRToLLVMBitFfsOpLowering,
-               CIRToLLVMBitParityOpLowering,
-               CIRToLLVMBitPopcountOpLowering,
-               CIRToLLVMBitReverseOpLowering,
-               CIRToLLVMBrCondOpLowering,
-               CIRToLLVMBrOpLowering,
-               CIRToLLVMByteSwapOpLowering,
-               CIRToLLVMCallOpLowering,
-               CIRToLLVMCmpOpLowering,
-               CIRToLLVMComplexAddOpLowering,
-               CIRToLLVMComplexCreateOpLowering,
-               CIRToLLVMComplexImagOpLowering,
-               CIRToLLVMComplexImagPtrOpLowering,
-               CIRToLLVMComplexRealOpLowering,
-               CIRToLLVMComplexRealPtrOpLowering,
-               CIRToLLVMComplexSubOpLowering,
-               CIRToLLVMCopyOpLowering,
-               CIRToLLVMCosOpLowering,
-               CIRToLLVMConstantOpLowering,
-               CIRToLLVMExpectOpLowering,
-               CIRToLLVMFAbsOpLowering,
-               CIRToLLVMFrameAddrOpLowering,
-               CIRToLLVMFuncOpLowering,
-               CIRToLLVMGetBitfieldOpLowering,
-               CIRToLLVMGetGlobalOpLowering,
-               CIRToLLVMGetMemberOpLowering,
-               CIRToLLVMReturnAddrOpLowering,
-               CIRToLLVMRotateOpLowering,
-               CIRToLLVMSelectOpLowering,
-               CIRToLLVMSetBitfieldOpLowering,
-               CIRToLLVMShiftOpLowering,
-               CIRToLLVMStackRestoreOpLowering,
-               CIRToLLVMStackSaveOpLowering,
-               CIRToLLVMSwitchFlatOpLowering,
-               CIRToLLVMThrowOpLowering,
-               CIRToLLVMTrapOpLowering,
-               CIRToLLVMUnaryOpLowering,
-               CIRToLLVMUnreachableOpLowering,
-               CIRToLLVMVAArgOpLowering,
-               CIRToLLVMVAEndOpLowering,
-               CIRToLLVMVAStartOpLowering,
-               CIRToLLVMVecCmpOpLowering,
-               CIRToLLVMVecCreateOpLowering,
-               CIRToLLVMVecExtractOpLowering,
-               CIRToLLVMVecInsertOpLowering,
-               CIRToLLVMVecShuffleDynamicOpLowering,
-               CIRToLLVMVecShuffleOpLowering,
-               CIRToLLVMVecSplatOpLowering,
-               CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMVTableAddrPointOpLowering,
-               CIRToLLVMVTableGetVPtrOpLowering,
-               CIRToLLVMVTableGetVirtualFnAddrOpLowering,
-               CIRToLLVMVTTAddrPointOpLowering
-      // clang-format on
-      >(converter, patterns.getContext());
+#define GET_LLVM_LOWERING_PATTERNS_LIST
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_LLVM_LOWERING_PATTERNS_LIST
+      >(converter, patterns.getContext(), dl);
 
   processCIRAttrs(module);
 
