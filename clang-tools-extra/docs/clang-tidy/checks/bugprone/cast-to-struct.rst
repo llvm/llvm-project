@@ -50,5 +50,5 @@ Options
    and casts from ``short *`` to ``struct T1 *`` (the `*` character needs to be
    escaped). The type name in the cast expression is matched without resolution
    of ``typedef`` types.
-   
-   Default value of the option is an empty list.
+
+   Default value of the option is an empty string.
