@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 // RUN: %flang -### -S %s -g -gdwarf-5  2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-DWARF5 %s
 // RUN: %flang -### -S %s -gdwarf-5  2>&1 \
