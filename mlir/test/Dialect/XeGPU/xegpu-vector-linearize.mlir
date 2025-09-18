@@ -183,101 +183,56 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 }
 
 // -----
-// Check for vector linearization in XeGPU dialect.
-// The vector<64xf16> loaded from memory is linearized into 4 vector<8xf16> using vector.shuffle ops.
-// The pattern is similar to the one used in test_vector_transpose_16x16 above.
+// Check for vector linearization interoperability with XeGPU dialect ops.
+// The `xegpu-vector-linearize` pass does not itself affect the XeGPU ops.
+
+// CHECK: gpu.func @test_kernel(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) kernel {
+// CHECK: %c0 = arith.constant 0 : index
+// CHECK: %cst = arith.constant dense<0.000000e+00> : vector<64xf16>
+// CHECK: %cst_0 = arith.constant dense<5.000000e+00> : vector<64xf32>
+
+// CHECK: %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0]
+// CHECK: %1 = xegpu.load_nd %0
+// CHECK: %2 = vector.shape_cast %1 : vector<8x16xf16> to vector<128xf16>
+// CHECK: %3 = vector.shuffle %2, %cst {{.*}} : vector<128xf16>, vector<64xf16>
+// CHECK: %4 = vector.shape_cast %3 : vector<128xf16> to vector<8x16xf16>
+
+// CHECK: %5 = xegpu.create_nd_tdesc %arg1[%c0, %c0]
+// CHECK: %6 = xegpu.load_nd %5
+// CHECK: %7 = vector.shape_cast %6 : vector<16x16xf16> to vector<256xf16>
+// CHECK: %8 = vector.shuffle %7, %cst {{.*}} : vector<256xf16>, vector<64xf16>
+// CHECK: %9 = vector.shape_cast %8 : vector<256xf16> to vector<16x16xf16>
+
+// CHECK: %10 = xegpu.dpas %4, %9 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK: %11 = vector.shape_cast %10 : vector<8x16xf32> to vector<128xf32>
+// CHECK: %12 = vector.shuffle %11, %11 {{.*}} : vector<128xf32>, vector<128xf32>
+// CHECK: %13 = arith.addf %12, %cst_0 : vector<64xf32>
+// CHECK: %14 = vector.shuffle %11, %13 {{.*}} : vector<128xf32>, vector<64xf32>
+// CHECK: %15 = vector.shape_cast %14 : vector<128xf32> to vector<8x16xf32>
+
+// CHECK: %16 = xegpu.create_nd_tdesc %arg2[%c0, %c0]
+// CHECK: xegpu.store_nd %15, %16
+// CHECK: gpu.return
+
 gpu.module @test_kernel {
-  // CHECK-LABEL: gpu.func @test_kernel
-  gpu.func @test_kernel(%arg0: memref<32x32xf16>, %arg1: memref<32x32xf16>, %arg2: memref<32x32xf32>) kernel {
-    %c24 = arith.constant 24 : index
-    %c16 = arith.constant 16 : index
-    %c8 = arith.constant 8 : index
+  gpu.func @test_kernel(%A: memref<8x16xf16>, %B: memref<16x16xf16>, %C: memref<8x16xf32>) kernel  {
     %c0 = arith.constant 0 : index
-    %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<32x32xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
-    %1 = xegpu.load_nd %0  : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<64xf16>
-    // CHECK: %[[V1:.*]] = vector.shuffle %{{.*}}, %{{.*}} [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<64xf16>, vector<64xf16>
-    %2 = vector.shape_cast %1 : vector<64xf16> to vector<2x32x1xf16>
-    %3 = vector.extract %2[0] : vector<32x1xf16> from vector<2x32x1xf16>
-    // CHECK: %[[V2:.*]] = vector.shuffle %[[V1]], %[[V1]] [0, 1, 2, 3, 4, 5, 6, 7] : vector<32xf16>, vector<32xf16>
-    %4 = vector.extract_strided_slice %3 {offsets = [0], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    // CHECK: %[[V3:.*]] = vector.shuffle %[[V1]], %[[V1]] [8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>, vector<32xf16>
-    %5 = vector.extract_strided_slice %3 {offsets = [8], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    // CHECK: %[[V4:.*]] = vector.shuffle %[[V1]], %[[V1]] [16, 17, 18, 19, 20, 21, 22, 23] : vector<32xf16>, vector<32xf16>
-    %6 = vector.extract_strided_slice %3 {offsets = [16], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    %7 = xegpu.create_nd_tdesc %arg1[%c0, %c0] : memref<32x32xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
-    %8 = xegpu.load_nd %7 <{packed}> : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<64xf16>
-    // CHECK: %[[V5:.*]] = vector.shuffle %{{.*}}, %{{.*}} [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<64xf16>, vector<64xf16>
-    %9 = vector.shape_cast %8 : vector<64xf16> to vector<2x32x1xf16>
-    %10 = vector.extract %9[0] : vector<32x1xf16> from vector<2x32x1xf16>
-    // CHECK: %[[V6:.*]] = vector.shuffle %[[V5]], %[[V5]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>, vector<32xf16>
-    %11 = vector.extract_strided_slice %10 {offsets = [0], sizes = [16], strides = [1]} : vector<32x1xf16> to vector<16x1xf16>
-    %12 = vector.extract %9[1] : vector<32x1xf16> from vector<2x32x1xf16>
-    // CHECK: %[[V7:.*]] = vector.shuffle %{{.*}}, %{{.*}} [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] : vector<64xf16>, vector<64xf16>
-    // CHECK: %[[V8:.*]] = vector.shuffle %[[V7]], %[[V7]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>, vector<32xf16>
-    %13 = vector.extract_strided_slice %12 {offsets = [0], sizes = [16], strides = [1]} : vector<32x1xf16> to vector<16x1xf16>
-    // CHECK: %[[V9:.*]] = vector.shuffle %[[V1]], %[[V1]] [24, 25, 26, 27, 28, 29, 30, 31] : vector<32xf16>, vector<32xf16>
-    %14 = vector.extract_strided_slice %3 {offsets = [24], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    %15 = vector.extract %2[1] : vector<32x1xf16> from vector<2x32x1xf16>
-    // CHECK: %[[V10:.*]] = vector.shuffle %{{.*}}, %{{.*}} [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] : vector<64xf16>, vector<64xf16>
-    // CHECK: %[[V11:.*]] = vector.shuffle %[[V10]], %[[V10]] [0, 1, 2, 3, 4, 5, 6, 7] : vector<32xf16>, vector<32xf16>
-    %16 = vector.extract_strided_slice %15 {offsets = [0], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    // CHECK: %[[V12:.*]] = vector.shuffle %[[V10]], %[[V10]] [8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>, vector<32xf16>
-    %17 = vector.extract_strided_slice %15 {offsets = [8], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    // CHECK: %[[V13:.*]] = vector.shuffle %[[V10]], %[[V10]] [16, 17, 18, 19, 20, 21, 22, 23] : vector<32xf16>, vector<32xf16>
-    %18 = vector.extract_strided_slice %15 {offsets = [16], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    // CHECK: %[[V14:.*]] = vector.shuffle %[[V5]], %[[V5]] [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<32xf16>, vector<32xf16>
-    %19 = vector.extract_strided_slice %10 {offsets = [16], sizes = [16], strides = [1]} : vector<32x1xf16> to vector<16x1xf16>
-    // CHECK: %[[V15:.*]] = vector.shuffle %[[V7]], %[[V7]] [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<32xf16>, vector<32xf16>
-    %20 = vector.extract_strided_slice %12 {offsets = [16], sizes = [16], strides = [1]} : vector<32x1xf16> to vector<16x1xf16>
-    // CHECK: %[[V16:.*]] = vector.shuffle %[[V10]], %[[V10]] [24, 25, 26, 27, 28, 29, 30, 31] : vector<32xf16>, vector<32xf16>
-    %21 = vector.extract_strided_slice %15 {offsets = [24], sizes = [8], strides = [1]} : vector<32x1xf16> to vector<8x1xf16>
-    // CHECK-NOT: vector.shape_cast
-    // CHECK-NOT: vector.extract
-    // CHECK-NOT: vector.extract_strided_slice
-    %22 = vector.shape_cast %4 : vector<8x1xf16> to vector<8xf16>
-    %23 = vector.shape_cast %11 : vector<16x1xf16> to vector<16xf16>
-    %24 = xegpu.dpas %22, %23 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %25 = vector.shape_cast %13 : vector<16x1xf16> to vector<16xf16>
-    %26 = xegpu.dpas %22, %25 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %27 = vector.shape_cast %5 : vector<8x1xf16> to vector<8xf16>
-    %28 = xegpu.dpas %27, %23 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %29 = xegpu.dpas %27, %25 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %30 = vector.shape_cast %6 : vector<8x1xf16> to vector<8xf16>
-    %31 = xegpu.dpas %30, %23 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %32 = xegpu.dpas %30, %25 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %33 = vector.shape_cast %14 : vector<8x1xf16> to vector<8xf16>
-    %34 = xegpu.dpas %33, %23 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %35 = xegpu.dpas %33, %25 : vector<8xf16>, vector<16xf16> -> vector<8xf32>
-    %36 = vector.shape_cast %16 : vector<8x1xf16> to vector<8xf16>
-    %37 = vector.shape_cast %19 : vector<16x1xf16> to vector<16xf16>
-    %38 = xegpu.dpas %36, %37, %24 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %39 = vector.shape_cast %20 : vector<16x1xf16> to vector<16xf16>
-    %40 = xegpu.dpas %36, %39, %26 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %41 = vector.shape_cast %17 : vector<8x1xf16> to vector<8xf16>
-    %42 = xegpu.dpas %41, %37, %28 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %43 = xegpu.dpas %41, %39, %29 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %44 = vector.shape_cast %18 : vector<8x1xf16> to vector<8xf16>
-    %45 = xegpu.dpas %44, %37, %31 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %46 = xegpu.dpas %44, %39, %32 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %47 = vector.shape_cast %21 : vector<8x1xf16> to vector<8xf16>
-    %48 = xegpu.dpas %47, %37, %34 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %49 = xegpu.dpas %47, %39, %35 : vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
-    %50 = xegpu.create_nd_tdesc %arg2[%c0, %c0] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %38, %50  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %51 = xegpu.create_nd_tdesc %arg2[%c0, %c16] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %40, %51  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %52 = xegpu.create_nd_tdesc %arg2[%c8, %c0] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %42, %52  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %53 = xegpu.create_nd_tdesc %arg2[%c8, %c16] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %43, %53  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %54 = xegpu.create_nd_tdesc %arg2[%c16, %c0] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %45, %54  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %55 = xegpu.create_nd_tdesc %arg2[%c16, %c16] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %46, %55  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %56 = xegpu.create_nd_tdesc %arg2[%c24, %c0] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %48, %56  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
-    %57 = xegpu.create_nd_tdesc %arg2[%c24, %c16] : memref<32x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-    xegpu.store_nd %49, %57  : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
+    %cst_vec_0 = arith.constant dense<0.000000e+00> : vector<8x8xf16>
+    %cst_vec_1 = arith.constant dense<0.000000e+00> : vector<8x8xf16>
+    %cst_vec_2 = arith.constant dense<5.000000e+00> : vector<8x8xf32>
+    %a_tdesc = xegpu.create_nd_tdesc %A[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
+    %a_val = xegpu.load_nd %a_tdesc : !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<8x16xf16>
+    %a_val_0 = vector.insert_strided_slice %cst_vec_0, %a_val{offsets = [0, 0], sizes = [8, 8], strides = [1, 1]}: vector<8x8xf16> into vector<8x16xf16>
+    %b_tdesc = xegpu.create_nd_tdesc %B[%c0, %c0] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
+
+    %b_val = xegpu.load_nd  %b_tdesc : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<16x16xf16>
+    %b_val_0 = vector.insert_strided_slice %cst_vec_1, %b_val{offsets = [0, 0], sizes = [8, 8], strides = [1, 1]}: vector<8x8xf16> into vector<16x16xf16>
+    %c_val = xegpu.dpas %a_val_0, %b_val_0 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+    %c_val_0 = vector.extract_strided_slice %c_val {offsets = [0, 0], sizes = [8, 8], strides = [1, 1]} : vector<8x16xf32> to vector<8x8xf32>
+    %c_addf = arith.addf %c_val_0, %cst_vec_2 : vector<8x8xf32>
+    %c_result = vector.insert_strided_slice %c_addf, %c_val {offsets = [0, 0], sizes = [8, 8], strides = [1, 1]} : vector<8x8xf32> into vector<8x16xf32>
+    %c_tdesc = xegpu.create_nd_tdesc %C[%c0, %c0] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<array_length = 1>>
+    xegpu.store_nd %c_result, %c_tdesc : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
     gpu.return
   }
 }
