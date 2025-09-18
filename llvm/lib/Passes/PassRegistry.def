@@ -425,6 +425,7 @@ FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
+FUNCTION_PASS("drop-unnecessary-assumes", DropUnnecessaryAssumesPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
@@ -724,7 +725,7 @@ FUNCTION_PASS_WITH_PARAMS(
     [TM = TM](CodeGenOptLevel OL) {
       return ExpandFpPass(TM, OL);
     },
-    parseExpandFpOptions, "opt-level=N")
+    parseExpandFpOptions, "O0;O1;O2;O3")
     
 #undef FUNCTION_PASS_WITH_PARAMS
 

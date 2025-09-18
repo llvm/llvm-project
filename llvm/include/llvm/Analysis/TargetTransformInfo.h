@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
@@ -796,10 +797,13 @@ public:
                            LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                            TargetLibraryInfo *LibInfo) const;
 
+  /// Which addressing mode Loop Strength Reduction will try to generate.
   enum AddressingModeKind {
-    AMK_PreIndexed,
-    AMK_PostIndexed,
-    AMK_None
+    AMK_None = 0x0,        ///< Don't prefer any addressing mode
+    AMK_PreIndexed = 0x1,  ///< Prefer pre-indexed addressing mode
+    AMK_PostIndexed = 0x2, ///< Prefer post-indexed addressing mode
+    AMK_All = 0x3,         ///< Consider all addressing modes
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/AMK_All)
   };
 
   /// Return the preferred addressing mode LSR should make efforts to generate.
@@ -1324,7 +1328,7 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
+  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
   /// takes an accumulator of type \p AccumType and a second vector operand to
   /// be accumulated, whose element count is specified by \p VF. The type of
   /// reduction is specified by \p Opcode. The second operand passed to the
@@ -1535,7 +1539,9 @@ public:
       Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
       TTI::TargetCostKind CostKind) const;
 
-  /// \return The cost of Load and Store instructions.
+  /// \return The cost of Load and Store instructions. The operand info
+  /// \p OpdInfo should refer to the stored value for stores and the address
+  /// for loads.
   LLVM_ABI InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
@@ -1844,6 +1850,10 @@ public:
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.
   LLVM_ABI bool preferEpilogueVectorization() const;
+
+  /// \returns True if the loop vectorizer should discard any VFs where the
+  /// maximum register pressure exceeds getNumberOfRegisters.
+  LLVM_ABI bool shouldConsiderVectorizationRegPressure() const;
 
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.

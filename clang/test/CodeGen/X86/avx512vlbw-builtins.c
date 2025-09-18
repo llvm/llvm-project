@@ -893,23 +893,56 @@ __m128i test_mm_mask_blend_epi8(__mmask16 __U, __m128i __A, __m128i __W) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm_mask_blend_epi8(__U,__A,__W); 
 }
+TEST_CONSTEXPR(match_v16qi(
+  _mm_mask_blend_epi8(
+    (__mmask16)0x0001,
+    (__m128i)(__v16qi){2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+    (__m128i)(__v16qi){ 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25 }
+  ),
+  10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+));
+
 __m256i test_mm256_mask_blend_epi8(__mmask32 __U, __m256i __A, __m256i __W) {
   // CHECK-LABEL: test_mm256_mask_blend_epi8
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm256_mask_blend_epi8(__U,__A,__W); 
 }
+TEST_CONSTEXPR(match_v32qi(
+  _mm256_mask_blend_epi8(
+    (__mmask32) 0x00000001,
+    (__m256i)(__v32qi) {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+    (__m256i)(__v32qi){ 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}
+  ),
+  10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+));
 
 __m128i test_mm_mask_blend_epi16(__mmask8 __U, __m128i __A, __m128i __W) {
   // CHECK-LABEL: test_mm_mask_blend_epi16
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_blend_epi16(__U,__A,__W); 
 }
+TEST_CONSTEXPR(match_v8hi(
+  _mm_mask_blend_epi16(
+    (__mmask8)0x01,
+    (__m128i)(__v8hi){2, 2, 2, 2, 2, 2, 2, 2},
+    (__m128i)(__v8hi){ 10,11,12,13,14,15,16,17 }
+  ),
+  10, 2, 2, 2, 2, 2, 2, 2
+));
 
 __m256i test_mm256_mask_blend_epi16(__mmask16 __U, __m256i __A, __m256i __W) {
   // CHECK-LABEL: test_mm256_mask_blend_epi16
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_blend_epi16(__U,__A,__W); 
 }
+TEST_CONSTEXPR(match_v16hi(
+  _mm256_mask_blend_epi16(
+    (__mmask16)0x0001,
+    (__m256i)(__v16hi){2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+    (__m256i)(__v16hi){ 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25 }
+  ),
+  10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+));
 
 __m128i test_mm_mask_abs_epi8(__m128i __W, __mmask16 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_abs_epi8
@@ -1928,6 +1961,8 @@ __m128i test_mm_cvtepi16_epi8(__m128i __A) {
   return _mm_cvtepi16_epi8(__A); 
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm_cvtepi16_epi8((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}), 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0));
+
 __m128i test_mm_mask_cvtepi16_epi8(__m128i __O, __mmask8 __M, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_cvtepi16_epi8
   // CHECK: @llvm.x86.avx512.mask.pmov.wb.128
@@ -1946,6 +1981,8 @@ __m128i test_mm256_cvtepi16_epi8(__m256i __A) {
   return _mm256_cvtepi16_epi8(__A); 
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm256_cvtepi16_epi8((__m256i)(__v16hi){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
+
 __m128i test_mm256_mask_cvtepi16_epi8(__m128i __O, __mmask16 __M, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_cvtepi16_epi8
   // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
@@ -1953,12 +1990,16 @@ __m128i test_mm256_mask_cvtepi16_epi8(__m128i __O, __mmask16 __M, __m256i __A) {
   return _mm256_mask_cvtepi16_epi8(__O, __M, __A); 
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm256_mask_cvtepi16_epi8(_mm_set1_epi8(-177), /*1010 0011 0011 0101=*/0xa335, (__m256i)(__v16hi){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, -177, 3, -177, 5, 6, -177, -177, 9, 10, -177, -177, -177, 14, -177, 16));
+
 __m128i test_mm256_maskz_cvtepi16_epi8(__mmask16 __M, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_cvtepi16_epi8
   // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm256_maskz_cvtepi16_epi8(__M, __A); 
 }
+
+TEST_CONSTEXPR(match_v16qi(_mm256_maskz_cvtepi16_epi8(/*1010 0011 0011 0101=*/0xa335, (__m256i)(__v16hi){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, 0, 3, 0, 5, 6, 0, 0, 9, 10, 0, 0, 0, 14, 0, 16));
 
 __m128i test_mm_mask_mulhrs_epi16(__m128i __W, __mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_mask_mulhrs_epi16

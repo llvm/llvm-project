@@ -730,8 +730,8 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
   if (!e->getType()->isAnyComplexType())
     return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
 
-  cgm.errorNYI(e->getSourceRange(), "evaluateExprAsBool: complex type");
-  return createDummyValue(getLoc(loc), boolTy);
+  return emitComplexToScalarConversion(emitComplexExpr(e), e->getType(), boolTy,
+                                       loc);
 }
 
 LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
@@ -1374,6 +1374,30 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   }
 
   return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);
+}
+
+LValue
+CIRGenFunction::getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e) {
+  assert(OpaqueValueMapping::shouldBindAsLValue(e));
+
+  auto it = opaqueLValues.find(e);
+  if (it != opaqueLValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "LValue for a nonunique OVE hasn't been emitted");
+  return emitLValue(e->getSourceExpr());
+}
+
+RValue
+CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
+  assert(!OpaqueValueMapping::shouldBindAsLValue(e));
+
+  auto it = opaqueRValues.find(e);
+  if (it != opaqueRValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
+  return emitAnyExpr(e->getSourceExpr());
 }
 
 LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {

@@ -3217,15 +3217,28 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       }
 
       // Try to fold (C1 * D /u C2) -> C1/C2 * D, if C1 and C2 are powers-of-2,
-      // D is a multiple of C2, and C1 is a multiple of C1.
+      // D is a multiple of C2, and C1 is a multiple of C2. If C2 is a multiple
+      // of C1, fold to (D /u (C2 /u C1)).
       const SCEV *D;
+      APInt C1V = LHSC->getAPInt();
+      // (C1 * D /u C2) == -1 * -C1 * D /u C2 when C1 != INT_MIN. Don't treat -1
+      // as -1 * 1, as it won't enable additional folds.
+      if (C1V.isNegative() && !C1V.isMinSignedValue() && !C1V.isAllOnes())
+        C1V = C1V.abs();
       const SCEVConstant *C2;
-      const APInt &LHSV = LHSC->getAPInt();
-      if (LHSV.isPowerOf2() &&
+      if (C1V.isPowerOf2() &&
           match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
-          C2->getAPInt().isPowerOf2() && LHSV.uge(C2->getAPInt()) &&
-          LHSV.logBase2() <= getMinTrailingZeros(D)) {
-        return getMulExpr(getUDivExpr(LHSC, C2), D);
+          C2->getAPInt().isPowerOf2() &&
+          C1V.logBase2() <= getMinTrailingZeros(D)) {
+        const SCEV *NewMul = nullptr;
+        if (C1V.uge(C2->getAPInt())) {
+          NewMul = getMulExpr(getUDivExpr(getConstant(C1V), C2), D);
+        } else if (C2->getAPInt().logBase2() <= getMinTrailingZeros(D)) {
+          assert(C1V.ugt(1) && "C1 <= 1 should have been folded earlier");
+          NewMul = getUDivExpr(D, getUDivExpr(C2, getConstant(C1V)));
+        }
+        if (NewMul)
+          return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
       }
     }
   }
@@ -15172,15 +15185,20 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
     return;
   }
 
+  // Implication checks are quadratic in the number of predicates. Stop doing
+  // them if there are many predicates, as they should be too expensive to use
+  // anyway at that point.
+  bool CheckImplies = Preds.size() < 16;
+
   // Only add predicate if it is not already implied by this union predicate.
-  if (implies(N, SE))
+  if (CheckImplies && implies(N, SE))
     return;
 
   // Build a new vector containing the current predicates, except the ones that
   // are implied by the new predicate N.
   SmallVector<const SCEVPredicate *> PrunedPreds;
   for (auto *P : Preds) {
-    if (N->implies(P, SE))
+    if (CheckImplies && N->implies(P, SE))
       continue;
     PrunedPreds.push_back(P);
   }
@@ -15445,6 +15463,12 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     const BasicBlock *InBlock = Phi.getIncomingBlock(IncomingIdx);
     if (!VisitedBlocks.insert(InBlock).second)
       return {nullptr, scCouldNotCompute};
+
+    // Avoid analyzing unreachable blocks so that we don't get trapped
+    // traversing cycles with ill-formed dominance or infinite cycles
+    if (!SE.DT.isReachableFromEntry(InBlock))
+      return {nullptr, scCouldNotCompute};
+
     auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
     if (Inserted)
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
@@ -15499,6 +15523,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks, unsigned Depth) {
+
+  assert(SE.DT.isReachableFromEntry(Block) && SE.DT.isReachableFromEntry(Pred));
+
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,

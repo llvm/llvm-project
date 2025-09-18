@@ -83,6 +83,9 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
       createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 
   // FIXME: We should error for the default target.
+  if (STI->getFeatureBits().none())
+    STI->ToggleFeature(AMDGPU::FeatureSouthernIslands);
+
   if (!STI->hasFeature(AMDGPU::FeatureWavefrontSize64) &&
       !STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
     // If there is no default wave size it must be a generation before gfx10,
