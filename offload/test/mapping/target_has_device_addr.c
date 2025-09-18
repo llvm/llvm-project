@@ -3,6 +3,7 @@
 // RUN: | %fcheck-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda-mpi
 
 #include <omp.h>
 #include <stdio.h>

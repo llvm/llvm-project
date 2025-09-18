@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
+// UNSUPPORTED: nvptx64-nvidia-cuda-mpi
+
 #include <omp.h>
 #include <stdio.h>
 
