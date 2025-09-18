@@ -618,6 +618,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::MSGuid: // __declspec(uuid("..."))
   case Decl::TemplateParamObject:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPGroupPrivate:
   case Decl::OMPAllocate:
   case Decl::OMPCapturedExpr:
   case Decl::OMPRequires:
