@@ -3503,6 +3503,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    libc.src.math.rsqrtf
+    libc.hdr.errno_macros
+)
+
+add_fp_unittest(
   rsqrtf16_test
   SUITE
     libc-math-smoke-tests
