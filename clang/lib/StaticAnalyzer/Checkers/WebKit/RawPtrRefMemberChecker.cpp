@@ -121,7 +121,7 @@ public:
       return nullptr;
     if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
       return ObjCType->getDecl();
-    if (auto* ObjCType = dyn_cast<ObjCObjectType>(Desugared))
+    if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
       return ObjCType->getInterface();
     return nullptr;
   }
