@@ -109,10 +109,10 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{
         Promotes this parallel combining op out of its enclosing parallel loop
-        and returns the values that should replace the destinations updated by
+        and returns the value that should replace the destination updated by
         this op.
       }],
-      /*retTy=*/"::mlir::FailureOr<::llvm::SmallVector<::mlir::Value>>",
+      /*retTy=*/"::mlir::FailureOr<::mlir::Value>",
       /*methodName=*/"promoteInParallelLoop",
       /*args=*/(ins "::mlir::RewriterBase &":$rewriter)
     >,
@@ -124,7 +124,8 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
       /*retTy=*/"bool",
       /*methodName=*/"canPromoteInParallelLoop",
       /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
-      /*methodBody=*/[{ return true; }]
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return false; }]
     >,
   ];
 }

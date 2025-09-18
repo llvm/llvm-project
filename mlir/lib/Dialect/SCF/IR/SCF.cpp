@@ -672,13 +672,11 @@ LogicalResult mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp)
     auto parallelCombiningOp =
         dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
     if (!parallelCombiningOp)
-      return rewriter.notifyMatchFailure(
-          forallOp, "terminator has non-parallel-combining op");
+      continue;
     if (!parallelCombiningOp.canPromoteInParallelLoop(rewriter))
       return rewriter.notifyMatchFailure(
           forallOp, "parallel combining op cannot be promoted");
   }
-
 
   // Replace block arguments with lower bounds (replacements for IVs) and
   // outputs.
@@ -702,12 +700,12 @@ LogicalResult mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp)
 
     assert(parallelCombiningOp.canPromoteInParallelLoop(rewriter));
 
-    FailureOr<SmallVector<Value>> promotedValues =
+    FailureOr<Value> promotedValue =
         parallelCombiningOp.promoteInParallelLoop(rewriter);
-    if (failed(promotedValues))
+    if (failed(promotedValue))
       return failure();
 
-    results.append(promotedValues->begin(), promotedValues->end());
+    results.push_back(*promotedValue);
   }
   if (results.size() != forallOp.getResults().size())
     return rewriter.notifyMatchFailure(
