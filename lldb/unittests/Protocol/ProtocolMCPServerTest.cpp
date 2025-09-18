@@ -21,6 +21,7 @@
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -36,19 +37,6 @@ using namespace lldb_private;
 using namespace lldb_protocol::mcp;
 
 namespace {
-class TestMCPTransport final : public MCPTransport {
-public:
-  TestMCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
-      : lldb_protocol::mcp::MCPTransport(in, out, "unittest") {}
-
-  using MCPTransport::Write;
-
-  void Log(llvm::StringRef message) override {
-    log_messages.emplace_back(message);
-  }
-
-  std::vector<std::string> log_messages;
-};
 
 class TestServer : public Server {
 public:
@@ -134,53 +122,73 @@ class ProtocolServerMCPTest : public PipePairTest {
 public:
   SubsystemRAII<FileSystem, HostInfo, Socket> subsystems;
 
-  std::unique_ptr<TestMCPTransport> transport_up;
-  std::unique_ptr<TestServer> server_up;
   MainLoop loop;
+
+  std::unique_ptr<lldb_protocol::mcp::Transport> from_client;
+  std::unique_ptr<lldb_protocol::mcp::Transport> to_client;
+  MainLoopBase::ReadHandleUP handles[2];
+
+  std::unique_ptr<TestServer> server_up;
   MockMessageHandler<Request, Response, Notification> message_handler;
 
   llvm::Error Write(llvm::StringRef message) {
     llvm::Expected<json::Value> value = json::parse(message);
     if (!value)
       return value.takeError();
-    return transport_up->Write(*value);
+    return from_client->Write(*value);
   }
 
-  llvm::Error Write(json::Value value) { return transport_up->Write(value); }
+  llvm::Error Write(json::Value value) { return from_client->Write(value); }
 
   /// Run the transport MainLoop and return any messages received.
-  llvm::Error
-  Run(std::chrono::milliseconds timeout = std::chrono::milliseconds(200)) {
+  llvm::Error Run() {
     loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
-                     timeout);
-    auto handle = transport_up->RegisterMessageHandler(loop, message_handler);
-    if (!handle)
-      return handle.takeError();
-
-    return server_up->Run();
+                     std::chrono::milliseconds(10));
+    return loop.Run().takeError();
   }
 
   void SetUp() override {
     PipePairTest::SetUp();
 
-    transport_up = std::make_unique<TestMCPTransport>(
+    from_client = std::make_unique<lldb_protocol::mcp::Transport>(
         std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,
                                      NativeFile::Unowned),
         std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
                                      File::eOpenOptionWriteOnly,
-                                     NativeFile::Unowned));
+                                     NativeFile::Unowned),
+        [](StringRef message) {
+          // Uncomment for debugging
+          // llvm::errs() << "from_client: " << message << '\n';
+        });
+    to_client = std::make_unique<lldb_protocol::mcp::Transport>(
+        std::make_shared<NativeFile>(output.GetReadFileDescriptor(),
+                                     File::eOpenOptionReadOnly,
+                                     NativeFile::Unowned),
+        std::make_shared<NativeFile>(input.GetWriteFileDescriptor(),
+                                     File::eOpenOptionWriteOnly,
+                                     NativeFile::Unowned),
+        [](StringRef message) {
+          // Uncomment for debugging
+          // llvm::errs() << "to_client: " << message << '\n';
+        });
 
-    server_up = std::make_unique<TestServer>(
-        "lldb-mcp", "0.1.0",
-        std::make_unique<TestMCPTransport>(
-            std::make_shared<NativeFile>(output.GetReadFileDescriptor(),
-                                         File::eOpenOptionReadOnly,
-                                         NativeFile::Unowned),
-            std::make_shared<NativeFile>(input.GetWriteFileDescriptor(),
-                                         File::eOpenOptionWriteOnly,
-                                         NativeFile::Unowned)),
-        loop);
+    server_up = std::make_unique<TestServer>("lldb-mcp", "0.1.0", *to_client,
+                                             [](StringRef message) {
+                                               // Uncomment for debugging
+                                               // llvm::errs() << "server: " <<
+                                               // message << '\n';
+                                             });
+
+    auto maybe_from_client_handle =
+        from_client->RegisterMessageHandler(loop, message_handler);
+    EXPECT_THAT_EXPECTED(maybe_from_client_handle, Succeeded());
+    handles[0] = std::move(*maybe_from_client_handle);
+
+    auto maybe_to_client_handle =
+        to_client->RegisterMessageHandler(loop, *server_up);
+    EXPECT_THAT_EXPECTED(maybe_to_client_handle, Succeeded());
+    handles[1] = std::move(*maybe_to_client_handle);
   }
 };
 

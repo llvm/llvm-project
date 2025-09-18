@@ -1001,8 +1001,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                                        ->getName(CallReg)))
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
-          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg, AllocSiteTy);
+      DIE &CallSiteDIE =
+          CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
+                                       PCAddr, CallAddr, CallReg, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -2711,7 +2712,8 @@ void DwarfDebug::skippedNonDebugFunction() {
 
 // Gather and emit post-function debug information.
 void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
-  const DISubprogram *SP = MF->getFunction().getSubprogram();
+  const Function &F = MF->getFunction();
+  const DISubprogram *SP = F.getSubprogram();
 
   assert(CurFn == MF &&
       "endFunction should be called with the same function as beginFunction");
@@ -2780,11 +2782,12 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 
   ProcessedSPNodes.insert(SP);
   DIE &ScopeDIE =
-      TheCU.constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+      TheCU.constructSubprogramScopeDIE(SP, F, FnScope, FunctionLineTableLabel);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
+      SkelCU->constructSubprogramScopeDIE(SP, F, FnScope,
+                                          FunctionLineTableLabel);
 
   FunctionLineTableLabel = nullptr;
 
@@ -3111,8 +3114,10 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                             &AP](const DbgValueLocEntry &Entry,
                                  DIExpressionCursor &Cursor) -> bool {
     if (Entry.isInt()) {
-      if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
-                 BT->getEncoding() == dwarf::DW_ATE_signed_char))
+      if (BT && (BT->getEncoding() == dwarf::DW_ATE_boolean))
+        DwarfExpr.addBooleanConstant(Entry.getInt());
+      else if (BT && (BT->getEncoding() == dwarf::DW_ATE_signed ||
+                      BT->getEncoding() == dwarf::DW_ATE_signed_char))
         DwarfExpr.addSignedConstant(Entry.getInt());
       else
         DwarfExpr.addUnsignedConstant(Entry.getInt());

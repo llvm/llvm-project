@@ -241,6 +241,21 @@ class DAPTestCaseBase(TestBase):
                 f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
 
+    def verify_invalidated_event(self, expected_areas):
+        event = self.dap_server.invalidated_event
+        self.dap_server.invalidated_event = None
+        self.assertIsNotNone(event)
+        areas = event["body"].get("areas", [])
+        self.assertEqual(set(expected_areas), set(areas))
+
+    def verify_memory_event(self, memoryReference):
+        if memoryReference is None:
+            self.assertIsNone(self.dap_server.memory_event)
+        event = self.dap_server.memory_event
+        self.dap_server.memory_event = None
+        self.assertIsNotNone(event)
+        self.assertEqual(memoryReference, event["body"].get("memoryReference"))
+
     def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
@@ -352,13 +367,21 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
+    def set_variable(self, varRef, name, value, id=None):
+        """Set a variable."""
+        response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+        if response["success"]:
+            self.verify_invalidated_event(["variables"])
+            self.verify_memory_event(response["body"].get("memoryReference"))
+        return response
+
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.dap_server.request_setVariable(1, name, str(value), id=id)
+        return self.set_variable(1, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.dap_server.request_setVariable(2, name, str(value), id=id)
+        return self.set_variable(2, name, str(value), id=id)
 
     def stepIn(
         self,
@@ -577,4 +600,6 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_writeMemory(
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )
+        if response["success"]:
+            self.verify_invalidated_event(["all"])
         return response

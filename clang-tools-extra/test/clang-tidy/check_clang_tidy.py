@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- check_clang_tidy.py - ClangTidy Test Helper ------------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.

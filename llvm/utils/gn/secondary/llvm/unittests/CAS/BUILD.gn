@@ -10,5 +10,6 @@ unittest("CASTests") {
     "ActionCacheTest.cpp",
     "CASTestConfig.cpp",
     "ObjectStoreTest.cpp",
+    "ProgramTest.cpp",
   ]
 }

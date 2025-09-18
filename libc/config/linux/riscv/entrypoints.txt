@@ -749,6 +749,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundevenf16
     libc.src.math.roundf16
+    libc.src.math.rsqrtf16
     libc.src.math.scalblnf16
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
@@ -925,6 +926,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sqrtbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16

@@ -634,8 +634,8 @@ public:
 
     EvalStatus() = default;
 
-    // hasSideEffects - Return true if the evaluated expression has
-    // side effects.
+    /// Return true if the evaluated expression has
+    /// side effects.
     bool hasSideEffects() const {
       return HasSideEffects;
     }
@@ -646,8 +646,8 @@ public:
     /// Val - This is the value the expression can be folded to.
     APValue Val;
 
-    // isGlobalLValue - Return true if the evaluated lvalue expression
-    // is global.
+    /// Return true if the evaluated lvalue expression
+    /// is global.
     bool isGlobalLValue() const;
   };
 
@@ -1038,7 +1038,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::detail::ConstantLog2<alignof(Expr)>::value,
+                  llvm::ConstantLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
