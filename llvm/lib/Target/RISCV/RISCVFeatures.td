@@ -288,7 +288,6 @@ def FeatureStdExtF
 def HasStdExtF : Predicate<"Subtarget->hasStdExtF()">,
                  AssemblerPredicate<(all_of FeatureStdExtF),
                                     "'F' (Single-Precision Floating-Point)">;
-def NoStdExtF : Predicate<"!Subtarget->hasStdExtF()">;
 
 def FeatureStdExtD
     : RISCVExtension<2, 2, "Double-Precision Floating-Point",
