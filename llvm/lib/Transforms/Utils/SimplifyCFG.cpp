@@ -1857,6 +1857,9 @@ static std::optional<bool>
 visitConditions(Value *V, const Value *BaseCond, const BasicBlock *ContextBB,
                 SmallVectorImpl<Instruction *> &ImpliedConditions,
                 const DataLayout &DL) {
+  if (!V)
+    return std::nullopt;
+
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I)
     return std::nullopt;
@@ -1873,8 +1876,9 @@ visitConditions(Value *V, const Value *BaseCond, const BasicBlock *ContextBB,
   std::optional<bool> Imp = isImpliedCondition(V, BaseCond, DL);
   std::optional<bool> LHS = visitConditions(I->getOperand(0), BaseCond,
                                             ContextBB, ImpliedConditions, DL);
-  std::optional<bool> RHS = visitConditions(I->getOperand(1), BaseCond,
-                                            ContextBB, ImpliedConditions, DL);
+  std::optional<bool> RHS =
+      visitConditions((I->getNumOperands() >= 2 ? I->getOperand(1) : nullptr),
+                      BaseCond, ContextBB, ImpliedConditions, DL);
 
   // TODO: Handle negated condition case.
   // Leaf condition node that implies the base condition.
