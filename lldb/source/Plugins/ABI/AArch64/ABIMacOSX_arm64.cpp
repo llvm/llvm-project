@@ -760,6 +760,8 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
 constexpr addr_t tbi_mask = 0xff80000000000000ULL;
 constexpr addr_t pac_sign_extension = 0x0080000000000000ULL;
 
+/// Consults the process for its {code, data} address masks and applies it to
+/// `addr`.
 static addr_t DoFixAddr(addr_t addr, bool is_code, ProcessSP process_sp) {
   if (!process_sp)
     return addr;
