@@ -213,6 +213,9 @@ void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
 
 void DecoderTableEmitter::emitCheckAllNode(const CheckAllNode *N,
                                            indent Indent) {
+  // TODO: Single-child CheckAll should be optimized out.
+  // TODO: Nested CheckAll nodes should be flattened.
+  // TODO: Sibling CheckAll and other Check* nodes should be merged together.
   for (const DecoderTreeNode *Child : N->children())
     emitNode(Child, Indent);
 }
