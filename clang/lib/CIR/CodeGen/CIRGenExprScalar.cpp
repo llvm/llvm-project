@@ -667,8 +667,9 @@ public:
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
   mlir::Value VisitUnaryReal(const UnaryOperator *e);
-
   mlir::Value VisitUnaryImag(const UnaryOperator *e);
+  mlir::Value VisitRealImag(const UnaryOperator *e,
+                            QualType promotionType = QualType());
 
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
@@ -864,11 +865,13 @@ public:
   // TODO(cir): Candidate to be in a common AST helper between CIR and LLVM
   // codegen.
   QualType getPromotionType(QualType ty) {
-    if (ty->getAs<ComplexType>()) {
-      assert(!cir::MissingFeatures::complexType());
-      cgf.cgm.errorNYI("promotion to complex type");
-      return QualType();
+    const clang::ASTContext &ctx = cgf.getContext();
+    if (auto *complexTy = ty->getAs<ComplexType>()) {
+      QualType elementTy = complexTy->getElementType();
+      if (elementTy.UseExcessPrecision(ctx))
+        return ctx.getComplexType(ctx.FloatTy);
     }
+
     if (ty.UseExcessPrecision(cgf.getContext())) {
       if (ty->getAs<VectorType>()) {
         assert(!cir::MissingFeatures::vectorType());
@@ -877,6 +880,7 @@ public:
       }
       return cgf.getContext().FloatTy;
     }
+
     return QualType();
   }
 
@@ -2057,28 +2061,27 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
-  // TODO(cir): handle scalar promotion.
-  Expr *op = e->getSubExpr();
-  if (op->getType()->isAnyComplexType()) {
-    // If it's an l-value, load through the appropriate subobject l-value.
-    // Note that we have to ask `e` because `op` might be an l-value that
-    // this won't work for, e.g. an Obj-C property.
-    if (e->isGLValue()) {
-      mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      mlir::Value complex = cgf.emitComplexExpr(op);
-      return cgf.builder.createComplexReal(loc, complex);
-    }
-
-    // Otherwise, calculate and project.
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "VisitUnaryReal calculate and project");
-  }
-
-  return Visit(op);
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitRealImag(e, promotionTy);
+  if (result && !promotionTy.isNull())
+    result = emitUnPromotedValue(result, e->getType());
+  return result;
 }
 
 mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
-  // TODO(cir): handle scalar promotion.
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitRealImag(e, promotionTy);
+  if (result && !promotionTy.isNull())
+    result = emitUnPromotedValue(result, e->getType());
+  return result;
+}
+
+mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
+                                             QualType promotionTy) {
+  assert(e->getOpcode() == clang::UO_Real ||
+         e->getOpcode() == clang::UO_Imag &&
+             "Invalid UnaryOp kind for ComplexType Real or Imag");
+
   Expr *op = e->getSubExpr();
   if (op->getType()->isAnyComplexType()) {
     // If it's an l-value, load through the appropriate subobject l-value.
@@ -2087,15 +2090,26 @@ mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
     if (e->isGLValue()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       mlir::Value complex = cgf.emitComplexExpr(op);
-      return cgf.builder.createComplexImag(loc, complex);
+      if (!promotionTy.isNull()) {
+        complex = cgf.emitPromotedValue(complex, promotionTy);
+      }
+
+      return e->getOpcode() == clang::UO_Real
+                 ? builder.createComplexReal(loc, complex)
+                 : builder.createComplexImag(loc, complex);
     }
 
     // Otherwise, calculate and project.
     cgf.cgm.errorNYI(e->getSourceRange(),
-                     "VisitUnaryImag calculate and project");
+                     "VisitRealImag calculate and project");
+    return {};
   }
 
-  return Visit(op);
+  // __real or __imag on a scalar returns zero. Emit the subexpr to ensure side
+  // effects are evaluated, but not the actual value.
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "VisitRealImag __real or __imag on a scalar");
+  return {};
 }
 
 /// Return the size or alignment of the type of argument of the sizeof
