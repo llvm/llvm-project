@@ -1394,7 +1394,7 @@ bool SemaHLSL::handleRootSignatureElements(
         // Update offset to be 1 past this range's bound
         Offset = RangeBound + 1;
         Unbound = Clause->NumDescriptors ==
-                       llvm::hlsl::rootsig::NumDescriptorsUnbounded;
+                  llvm::hlsl::rootsig::NumDescriptorsUnbounded;
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
