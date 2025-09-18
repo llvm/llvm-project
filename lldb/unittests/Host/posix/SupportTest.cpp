@@ -38,4 +38,5 @@ TEST(Support, getProcFile_Tid) {
   ASSERT_TRUE(BufferOrError);
   ASSERT_TRUE(*BufferOrError);
 }
-#endif // #if (defined(_AIX) || defined(__linux__)) && defined(LLVM_ENABLE_THREADING)
+#endif // #if (defined(_AIX) || defined(__linux__)) &&
+       // defined(LLVM_ENABLE_THREADING)
