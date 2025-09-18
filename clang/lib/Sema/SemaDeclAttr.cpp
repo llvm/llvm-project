@@ -1802,7 +1802,11 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() == 1) {
     DeallocPtrIdx = ParamIdx(1, DeallocFD);
 
-    if (!DeallocPtrIdx.isValid() ||
+    // FIXME: We could probably be better about diagnosing that there IS no
+    // argument, or that the function doesn't have a prototype, but this is how
+    // GCC diagnoses this, and is reasonably clear.
+    if (!DeallocPtrIdx.isValid() || !hasFunctionProto(DeallocFD) ||
+        getFunctionOrMethodNumParams(DeallocFD) < 1 ||
         !getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex())
              .getCanonicalType()
              ->isPointerType()) {
@@ -6835,10 +6839,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   // though they were unknown attributes.
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
-    if (AL.isRegularKeywordAttribute() || AL.isDeclspecAttribute()) {
-      S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
-                              ? diag::err_keyword_not_supported_on_target
-                              : diag::warn_unhandled_ms_attribute_ignored)
+    if (AL.isRegularKeywordAttribute()) {
+      S.Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target)
+          << AL.getAttrName() << AL.getRange();
+    } else if (AL.isDeclspecAttribute()) {
+      S.Diag(AL.getLoc(), diag::warn_unhandled_ms_attribute_ignored)
           << AL.getAttrName() << AL.getRange();
     } else {
       S.DiagnoseUnknownAttribute(AL);

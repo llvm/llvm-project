@@ -1866,7 +1866,8 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
   // There cannot be any alias with errno if the given memory location is an
   // identified function-local object, or the size of the memory access is
   // larger than the integer size.
-  if (Loc.Size.hasValue() && Loc.Size.getValue() * 8 > TLI.getIntSize())
+  if (Loc.Size.hasValue() &&
+      Loc.Size.getValue().getKnownMinValue() * 8 > TLI.getIntSize())
     return AliasResult::NoAlias;
 
   if (isIdentifiedFunctionLocal(getUnderlyingObject(Loc.Ptr)))

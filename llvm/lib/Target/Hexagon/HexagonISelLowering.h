@@ -577,6 +577,8 @@ private:
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 

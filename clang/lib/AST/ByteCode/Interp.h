@@ -2127,19 +2127,28 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   if (Ptr.isUnknownSizeArray())
     return false;
 
+  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
-  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+  if (Idx == 0 && !Desc->isArray()) {
     Ptr.initialize();
     new (&Ptr.deref<T>()) T(Value);
     return true;
   }
 
-  const Pointer &ElemPtr = Ptr.atIndex(Idx);
-  if (!CheckInit(S, OpPC, ElemPtr))
+  if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  ElemPtr.initialize();
-  new (&ElemPtr.deref<T>()) T(Value);
+  if (Idx >= Desc->getNumElems()) {
+    // CheckRange.
+    if (S.getLangOpts().CPlusPlus) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+          << AK_Assign << S.Current->getRange(OpPC);
+    }
+    return false;
+  }
+  Ptr.initializeElement(Idx);
+  new (&Ptr.elem<T>(Idx)) T(Value);
   return true;
 }
 
@@ -2148,22 +2157,32 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
   if (Ptr.isUnknownSizeArray())
     return false;
 
+  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
-  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+  if (Idx == 0 && !Desc->isArray()) {
     Ptr.initialize();
     new (&Ptr.deref<T>()) T(Value);
     return true;
   }
 
-  const Pointer &ElemPtr = Ptr.atIndex(Idx);
-  if (!CheckInit(S, OpPC, ElemPtr))
+  if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  ElemPtr.initialize();
-  new (&ElemPtr.deref<T>()) T(Value);
+  if (Idx >= Desc->getNumElems()) {
+    // CheckRange.
+    if (S.getLangOpts().CPlusPlus) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+          << AK_Assign << S.Current->getRange(OpPC);
+    }
+    return false;
+  }
+  Ptr.initializeElement(Idx);
+  new (&Ptr.elem<T>(Idx)) T(Value);
   return true;
 }
 

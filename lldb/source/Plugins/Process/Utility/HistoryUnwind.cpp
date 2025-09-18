@@ -60,6 +60,7 @@ static bool BehavesLikeZerothFrame(HistoryPCType pc_type, uint32_t frame_idx) {
   case HistoryPCType::Calls:
     return true;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 bool HistoryUnwind::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,

@@ -407,7 +407,7 @@ llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
           }};
 }
 
-#ifndef LLVM_SIMPLIFYCFG_LINK_INTO_TOOLS
+#ifndef LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
   return getExampleIRTransformsPluginInfo();

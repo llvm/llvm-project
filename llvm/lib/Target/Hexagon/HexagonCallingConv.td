@@ -6,6 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// We cannot use the standard CCIfArgVarArg class here since in Hexagon there
+// exists a special case for a musl environment.  In a musl environment VarArgs
+// are treated like non VarArgs.  I.e., in a musl enviroment unnamed arguments
+// can also be passed in registers.  The CCIfArgVarArg class only checks each
+// individual argument, but not whether State.isVarArg() is true.  We also have
+// to check State.isVarArg() which is determined by the TreatAsVarArg argument.
+class CCIfStateVarArgAndArgVarArg<CCAction A>
+  : CCIf<"State.isVarArg() && ArgFlags.isVarArg()", A>;
+
 def CC_HexagonStack: CallingConv<[
   CCIfType<[i32,v2i16,v4i8],
     CCAssignToStack<4,4>>,
@@ -23,7 +32,7 @@ def CC_Hexagon_Legacy: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,8>>,
-  CCIfArgVarArg<
+  CCIfStateVarArgAndArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.
@@ -53,7 +62,7 @@ def CC_Hexagon: CallingConv<[
 
   CCIfByVal<
     CCPassByVal<8,1>>,
-  CCIfArgVarArg<
+  CCIfStateVarArgAndArgVarArg<
     CCDelegateTo<CC_HexagonStack>>,
 
   // Pass split values in pairs, allocate odd register if necessary.

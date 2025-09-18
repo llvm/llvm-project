@@ -469,7 +469,10 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI) {
+    WithColor::error(errs(), ProgName) << "unable to create subtarget info\n";
+    return 1;
+  }
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.

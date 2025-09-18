@@ -475,7 +475,15 @@ math_test(
     hdrs = ["FloorTest.h"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmaf128 tests.
+math_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+)
 
 # TODO: Reenable this test once it passes at Google.
 # math_test(

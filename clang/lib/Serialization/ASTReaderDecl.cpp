@@ -2339,13 +2339,18 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
 void ASTDeclReader::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
   VisitCXXMethodDecl(D);
 
+  CXXDestructorDecl *Canon = D->getCanonicalDecl();
   if (auto *OperatorDelete = readDeclAs<FunctionDecl>()) {
-    CXXDestructorDecl *Canon = D->getCanonicalDecl();
     auto *ThisArg = Record.readExpr();
     // FIXME: Check consistency if we have an old and new operator delete.
     if (!Canon->OperatorDelete) {
       Canon->OperatorDelete = OperatorDelete;
       Canon->OperatorDeleteThisArg = ThisArg;
+    }
+  }
+  if (auto *OperatorGlobDelete = readDeclAs<FunctionDecl>()) {
+    if (!Canon->OperatorGlobalDelete) {
+      Canon->OperatorGlobalDelete = OperatorGlobDelete;
     }
   }
 }
@@ -4843,6 +4848,14 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         First->OperatorDelete = Del;
         First->OperatorDeleteThisArg = ThisArg;
       }
+      break;
+    }
+
+    case DeclUpdateKind::CXXResolvedDtorGlobDelete: {
+      auto *Del = readDeclAs<FunctionDecl>();
+      auto *Canon = cast<CXXDestructorDecl>(D->getCanonicalDecl());
+      if (!Canon->OperatorGlobalDelete)
+        Canon->OperatorGlobalDelete = Del;
       break;
     }
 

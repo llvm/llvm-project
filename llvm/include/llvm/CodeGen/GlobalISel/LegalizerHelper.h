@@ -511,6 +511,7 @@ public:
   LLVM_ABI LegalizeResult lowerInsert(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerSADDE(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSSUBE(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShlSat(MachineInstr &MI);

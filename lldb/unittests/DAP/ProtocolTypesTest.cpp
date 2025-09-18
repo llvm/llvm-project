@@ -1088,3 +1088,16 @@ TEST(ProtocolTypesTest, InvalidatedEventBody) {
 })";
   EXPECT_EQ(json, pp(body));
 }
+
+TEST(ProtocolTypesTest, MemoryEventBody) {
+  MemoryEventBody body;
+  body.memoryReference = 12345;
+  body.offset = 0;
+  body.count = 4;
+  StringRef json = R"({
+  "count": 4,
+  "memoryReference": "0x3039",
+  "offset": 0
+})";
+  EXPECT_EQ(json, pp(body));
+}

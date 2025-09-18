@@ -930,3 +930,6 @@ print *, [(j,j=1,10)]
   or contiguous array can be used as the initial element of a storage
   sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
   "&GRP A(1:)=1. 2. 3./".
+  This extension is necessarily disabled when the type of the array
+  has an accessible defined formatted READ subroutine.
+

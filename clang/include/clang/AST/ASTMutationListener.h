@@ -86,6 +86,10 @@ public:
                                       const FunctionDecl *Delete,
                                       Expr *ThisArg) {}
 
+  /// A virtual destructor's operator global delete has been resolved.
+  virtual void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                          const FunctionDecl *GlobDelete) {}
+
   /// An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 

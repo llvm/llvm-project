@@ -694,12 +694,6 @@ bool AArch64PassConfig::addPreISel() {
     // is disabled as we emit the .subsections_via_symbols directive which
     // means that merging extern globals is not safe.
     bool MergeExternalByDefault = !TM->getTargetTriple().isOSBinFormatMachO();
-
-    // FIXME: extern global merging is only enabled when we optimise for size
-    // because there are some regressions with it also enabled for performance.
-    if (!OnlyOptimizeForSize)
-      MergeExternalByDefault = false;
-
     addPass(createGlobalMergePass(TM, 4095, OnlyOptimizeForSize,
                                   MergeExternalByDefault));
   }

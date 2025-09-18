@@ -82,6 +82,9 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   // (e.g. references) can be changed.
   SendInvalidatedEvent(dap, {InvalidatedEventBody::eAreaVariables});
 
+  // Also send memory event to signal client that variable memory was changed.
+  SendMemoryEvent(dap, variable);
+
   return body;
 }
 

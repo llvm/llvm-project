@@ -433,7 +433,8 @@ bool Pointer::isInitialized() const {
   if (!isBlockPointer())
     return true;
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
     const GlobalInlineDescriptor &GD =
         *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
     return GD.InitState == GlobalInitState::Initialized;
@@ -461,7 +462,8 @@ bool Pointer::isElementInitialized(unsigned Index) const {
   if (isStatic() && BS.Base == 0)
     return true;
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
     const GlobalInlineDescriptor &GD =
         *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
     return GD.InitState == GlobalInitState::Initialized;
@@ -486,7 +488,8 @@ void Pointer::initialize() const {
 
   assert(BS.Pointee && "Cannot initialize null pointer");
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
     GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
         asBlockPointer().Pointee->rawData());
     GD.InitState = GlobalInitState::Initialized;
@@ -496,35 +499,39 @@ void Pointer::initialize() const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
-    // Primitive global arrays don't have an initmap.
-    if (isStatic() && BS.Base == 0)
-      return;
-
-    // Nothing to do for these.
-    if (Desc->getNumElems() == 0)
-      return;
-
-    InitMapPtr &IM = getInitMap();
-    if (!IM)
-      IM =
-          std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
-
-    assert(IM);
-
-    // All initialized.
-    if (IM->first)
-      return;
-
-    if (IM->second->initializeElement(getIndex())) {
-      IM->first = true;
-      IM->second.reset();
-    }
+    if (Desc->getNumElems() != 0)
+      initializeElement(getIndex());
     return;
   }
 
   // Field has its bit in an inline descriptor.
   assert(BS.Base != 0 && "Only composite fields can be initialised");
   getInlineDesc()->IsInitialized = true;
+}
+
+void Pointer::initializeElement(unsigned Index) const {
+  // Primitive global arrays don't have an initmap.
+  if (isStatic() && BS.Base == 0)
+    return;
+
+  assert(Index < getFieldDesc()->getNumElems());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM) {
+    const Descriptor *Desc = getFieldDesc();
+    IM = std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
+  }
+
+  assert(IM);
+
+  // All initialized.
+  if (IM->first)
+    return;
+
+  if (IM->second->initializeElement(Index)) {
+    IM->first = true;
+    IM->second.reset();
+  }
 }
 
 void Pointer::initializeAllElements() const {
@@ -547,7 +554,8 @@ bool Pointer::allElementsInitialized() const {
   if (isStatic() && BS.Base == 0)
     return true;
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
     const GlobalInlineDescriptor &GD =
         *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
     return GD.InitState == GlobalInitState::Initialized;

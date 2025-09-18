@@ -2529,9 +2529,9 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 
   StmtResult TryBlock(ParseCompoundStatement(
-      /*isStmtExpr=*/false, Scope::DeclScope | Scope::TryScope |
-                                Scope::CompoundStmtScope |
-                                (FnTry ? Scope::FnTryCatchScope : 0)));
+      /*isStmtExpr=*/false,
+      Scope::DeclScope | Scope::TryScope | Scope::CompoundStmtScope |
+          (FnTry ? Scope::FnTryCatchScope : Scope::NoScope)));
   if (TryBlock.isInvalid())
     return TryBlock;
 
@@ -2593,9 +2593,9 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // C++ 3.3.2p3:
   // The name in a catch exception-declaration is local to the handler and
   // shall not be redeclared in the outermost block of the handler.
-  ParseScope CatchScope(this, Scope::DeclScope | Scope::ControlScope |
-                                  Scope::CatchScope |
-                                  (FnCatch ? Scope::FnTryCatchScope : 0));
+  ParseScope CatchScope(
+      this, Scope::DeclScope | Scope::ControlScope | Scope::CatchScope |
+                (FnCatch ? Scope::FnTryCatchScope : Scope::NoScope));
 
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.

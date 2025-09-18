@@ -442,15 +442,8 @@ template <class T> struct has_CustomMappingTraits {
       is_detected<check, CustomMappingTraits<T>>::value;
 };
 
-// has_FlowTraits<int> will cause an error with some compilers because
-// it subclasses int.  Using this wrapper only instantiates the
-// real has_FlowTraits only if the template type is a class.
-template <typename T, bool Enabled = std::is_class_v<T>> class has_FlowTraits {
-public:
-  static constexpr bool value = false;
-};
-
-template <class T> struct has_FlowTraits<T, true> {
+// Test if flow is defined on type T.
+template <typename T> struct has_FlowTraits {
   template <class U> using check = decltype(&U::flow);
 
   static constexpr bool value = is_detected<check, T>::value;

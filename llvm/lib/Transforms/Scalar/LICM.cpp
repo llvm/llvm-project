@@ -437,10 +437,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // potentially happen in other passes where instructions are being moved
   // across that edge.
   bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
-    return llvm::any_of(*BB, [](Instruction &I) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      return II && II->getIntrinsicID() == Intrinsic::coro_suspend;
-    });
+    using namespace PatternMatch;
+    return any_of(make_pointer_range(*BB),
+                  match_fn(m_Intrinsic<Intrinsic::coro_suspend>()));
   });
 
   MemorySSAUpdater MSSAU(MSSA);

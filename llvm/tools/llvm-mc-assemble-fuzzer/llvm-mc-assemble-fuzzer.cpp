@@ -156,7 +156,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   if (!MRI) {
-    errs() << "Unable to create target register info!";
+    errs() << "Unable to create target register info!\n";
     abort();
   }
 
@@ -164,12 +164,16 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI) {
-    errs() << "Unable to create target asm info!";
+    errs() << "Unable to create target asm info!\n";
     abort();
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+  if (!STI) {
+    errs() << "Unable to create subtargettarget info!\n";
+    abort();
+  }
 
   MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
