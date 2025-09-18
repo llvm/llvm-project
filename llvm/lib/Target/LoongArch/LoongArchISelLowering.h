@@ -332,6 +332,11 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  /// Check if a constant splat can be generated using [x]vldi, where imm[12]
+  /// is 1.
+  static std::pair<bool, uint64_t>
+  isImmVLDILegalForMode1(const APInt &SplatValue, const unsigned SplatBitSize);
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,

@@ -158,6 +158,7 @@ def vsplatf32_fpimm_eq_1
   N = N->getOperand(0).getNode();
 
   return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == 32 &&
          Imm.getBitWidth() == EltTy.getSizeInBits() &&
          Imm == APFloat(+1.0f).bitcastToAPInt();
 }]>;
