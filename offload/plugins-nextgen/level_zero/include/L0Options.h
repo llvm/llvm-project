@@ -152,18 +152,6 @@ struct L0OptionsTy {
     }
   }
 
-  /// Parse the string and split it into tokens of string_views based on the
-  /// Delim character.
-  static std::vector<std::string_view>
-  tokenize(const std::string_view &Filter, const std::string &Delim,
-           bool ProhibitEmptyTokens = false);
-
-  bool isDigits(const std::string_view &str) {
-    if (str.size() == 0)
-      return false;
-    return std::all_of(str.begin(), str.end(), ::isdigit);
-  }
-
   bool match(const StringEnvar &Var, const llvm::StringRef Matched) {
     return Matched.equals_insensitive(Var.get());
   }

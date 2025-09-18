@@ -53,43 +53,51 @@ void L0OptionsTy::processEnvironmentVars() {
   if (DeviceSelectorVar.isPresent()) {
     std::string EnvStr(std::move(DeviceSelectorVar.get()));
     uint32_t numDiscard = 0;
-    std::transform(EnvStr.begin(), EnvStr.end(), EnvStr.begin(),
-                   [](unsigned char C) { return std::tolower(C); });
+    std::transform(EnvStr.begin(), EnvStr.end(), EnvStr.begin(), tolower);
 
-    std::vector<std::string_view> Entries = tokenize(EnvStr, ";", true);
+    llvm::StringRef EnvRef(EnvStr);
+    llvm::SmallVector<llvm::StringRef> Entries;
+    EnvRef.split(Entries, ';', /* MaxSplit = */ 0,
+                 /* KeepEmpty = */ false);
     for (const auto &Term : Entries) {
       bool isDiscard = false;
-      std::vector<std::string_view> Pair = tokenize(Term, ":", true);
-      if (Pair.empty()) {
+
+      auto Parts = Term.split(':');
+      if (Parts.first.empty()) {
         FAILURE_MESSAGE(
             "Incomplete selector! Pair and device must be specified.\n");
-      } else if (Pair.size() == 1) {
-        FAILURE_MESSAGE("Incomplete selector!  Try '%s:*'if all devices "
-                        "under the Pair was original intention.\n",
-                        Pair[0].data());
-      } else if (Pair.size() > 2) {
+      }
+      if (Parts.second.empty()) {
+        FAILURE_MESSAGE(
+            "Incomplete selector! Pair and device must be specified.\n");
+      }
+      if (Parts.second.contains(':')) {
         FAILURE_MESSAGE(
             "Error parsing selector string \"%s\" Too many colons (:)\n",
             Term.data());
       }
-      if (!((Pair[0][0] == '*') ||
-            (!strncmp(Pair[0].data(), "level_zero", Pair[0].length())) ||
-            (!strncmp(Pair[0].data(), "!level_zero", Pair[0].length()))))
+
+      if (!(Parts.first[0] == '*' || Parts.first == "level_zero" ||
+          Parts.first == "!level_zero"))
         break;
-      isDiscard = Pair[0][0] == '!';
+      isDiscard = Parts.first[0] == '!';
+
       if (isDiscard)
         numDiscard++;
       else if (numDiscard > 0)
         FAILURE_MESSAGE("All negative(discarding) filters must appear after "
                         "all positive(accepting) filters!");
 
-      std::vector<std::string_view> Targets = tokenize(Pair[1], ",", true);
+      llvm::SmallVector<llvm::StringRef> Targets;
+      Parts.second.split(Targets, ',', /* MaxSplit = */ 0,
+                         /* KeepEmpty = */ false);
       for (const auto &TargetStr : Targets) {
         bool HasDeviceWildCard = false;
         bool HasSubDeviceWildCard = false;
         bool DeviceNum = false;
-        std::vector<std::string_view> DeviceSubTuple =
-            tokenize(TargetStr, ".", true);
+        llvm::SmallVector<llvm::StringRef, 3> DeviceSubTuple;
+        TargetStr.split(DeviceSubTuple, '.', /* MaxSplit = */ 0,
+                         /* KeepEmpty = */ false);
         int32_t RootD[3] = {-1, -1, -1};
         if (DeviceSubTuple.empty()) {
           FAILURE_MESSAGE(
@@ -97,7 +105,7 @@ void L0OptionsTy::processEnvironmentVars() {
               "specified.");
         }
 
-        std::string_view TopDeviceStr = DeviceSubTuple[0];
+        auto TopDeviceStr = DeviceSubTuple[0];
         static const std::array<std::string, 7> DeviceStr = {
             "host", "cpu", "gpu", "acc", "*"};
         auto It =
@@ -107,15 +115,13 @@ void L0OptionsTy::processEnvironmentVars() {
           if (TopDeviceStr[0] == '*') {
             HasDeviceWildCard = true;
             RootD[0] = -2;
-          } else if (!strncmp(DeviceSubTuple[0].data(), "gpu", 3))
+          } else if (TopDeviceStr == "gpu")
             continue;
         } else {
-          std::string TDS(TopDeviceStr);
-          if (!isDigits(TDS)) {
+          if (TopDeviceStr.getAsInteger(10, RootD[0])) {
             FAILURE_MESSAGE("error parsing device number: %s",
-                            DeviceSubTuple[0].data());
+                            DeviceSubTuple[0].str().c_str());
           } else {
-            RootD[0] = std::stoi(TDS);
             DeviceNum = true;
           }
         }
@@ -124,7 +130,7 @@ void L0OptionsTy::processEnvironmentVars() {
             FAILURE_MESSAGE("sub-devices can only be requested when parent "
                             "device is specified by number or wildcard, not a "
                             "device type like \'gpu\'");
-          std::string_view SubDeviceStr = DeviceSubTuple[1];
+          auto SubDeviceStr = DeviceSubTuple[1];
           if (SubDeviceStr[0] == '*') {
             HasSubDeviceWildCard = true;
             RootD[1] = -2;
@@ -134,28 +140,24 @@ void L0OptionsTy::processEnvironmentVars() {
                   "sub-device can't be requested by number if parent "
                   "device is specified by a wildcard.");
 
-            std::string SDS(SubDeviceStr);
-            if (!isDigits(SDS)) {
+            if (!SubDeviceStr.getAsInteger(10, RootD[1])) {
               FAILURE_MESSAGE("error parsing subdevice index: %s",
-                              DeviceSubTuple[1].data());
-            } else
-              RootD[1] = std::stoi(SDS);
+                              DeviceSubTuple[1].str().c_str());
+            }
           }
         }
         if (DeviceSubTuple.size() == 3) {
-          std::string_view SubSubDeviceStr = DeviceSubTuple[2];
+          auto SubSubDeviceStr = DeviceSubTuple[2];
           if (SubSubDeviceStr[0] == '*') {
             RootD[2] = -2;
           } else {
             if (HasSubDeviceWildCard)
               FAILURE_MESSAGE("sub-sub-device can't be requested by number if "
                               "sub-device before is specified by a wildcard.");
-            std::string SSDS(SubSubDeviceStr);
-            if (!isDigits(SSDS)) {
+            if (!SubSubDeviceStr.getAsInteger(10, RootD[2])) {
               FAILURE_MESSAGE("error parsing sub-sub-device index: %s",
-                              DeviceSubTuple[2].data());
-            } else
-              RootD[2] = std::stoi(SSDS);
+                              DeviceSubTuple[2].str().c_str());
+            }
           }
         } else if (DeviceSubTuple.size() > 3) {
           FAILURE_MESSAGE("error parsing %s Only two levels of sub-devices "
@@ -332,40 +334,6 @@ void L0OptionsTy::processEnvironmentVars() {
       INVALID_OPTION(LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE,
                      CommandModeVar.get().c_str());
   }
-}
-/// Parse String  and split into tokens of string_views based on the
-/// Delim character.
-std::vector<std::string_view>
-L0OptionsTy::tokenize(const std::string_view &Filter, const std::string &Delim,
-                      bool ProhibitEmptyTokens) {
-  std::vector<std::string_view> Tokens;
-  size_t Pos = 0;
-  size_t LastPos = 0;
-  while ((Pos = Filter.find(Delim, LastPos)) != std::string::npos) {
-    std::string_view Tok(Filter.data() + LastPos, (Pos - LastPos));
-
-    if (!Tok.empty()) {
-      Tokens.push_back(Tok);
-    } else if (ProhibitEmptyTokens) {
-      FAILURE_MESSAGE("ONEAPI_DEVICE_SELECTOR parsing error. Empty input "
-                      "before '%s'delimiter is not allowed.",
-                      Delim.c_str());
-    }
-    // move the search starting index
-    LastPos = Pos + 1;
-  }
-
-  // Add remainder if any
-  if (LastPos < Filter.size()) {
-    std::string_view Tok(Filter.data() + LastPos, Filter.size() - LastPos);
-    Tokens.push_back(Tok);
-  } else if ((LastPos != 0) && ProhibitEmptyTokens) {
-    // if delimiter is the last sybmol in the string.
-    FAILURE_MESSAGE("ONEAPI_DEVICE_SELECTOR parsing error. Empty input after "
-                    "'%s' delimiter is not allowed.",
-                    Delim.c_str());
-  }
-  return Tokens;
 }
 
 } // namespace llvm::omp::target::plugin
