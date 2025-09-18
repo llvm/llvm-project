@@ -958,7 +958,8 @@ namespace llvm {
     void select(SDNode *ISelN);
     void materialize(const ResultStack &Results);
 
-    SDValue getConst32(int Val, const SDLoc &dl);
+    SDValue getConst32(unsigned Val, const SDLoc &dl);
+    SDValue getSignedConst32(int Val, const SDLoc &dl);
     SDValue getVectorConstant(ArrayRef<uint8_t> Data, const SDLoc &dl);
 
     enum : unsigned {
@@ -2145,7 +2146,8 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     for (int i = 0, e = std::size(Opcodes); i != e; ++i) {
       auto [Size, Odd] = Packs[i];
       if (same(SM.Mask, shuffles::mask(shuffles::vdeal, HwLen, Size, Odd))) {
-        Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(-2 * Size, dl)});
+        Results.push(Hexagon::A2_tfrsi, MVT::i32,
+                     {getSignedConst32(-2 * Size, dl)});
         Results.push(Hexagon::V6_vdealvdd, PairTy, {Vb, Va, OpRef::res(-1)});
         auto vdeal = OpRef::res(Results.top());
         Results.push(Opcodes[i], SingleTy,
@@ -2545,8 +2547,12 @@ OpRef HvxSelector::butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   return OpRef::fail();
 }
 
-SDValue HvxSelector::getConst32(int Val, const SDLoc &dl) {
+SDValue HvxSelector::getConst32(unsigned Val, const SDLoc &dl) {
   return DAG.getTargetConstant(Val, dl, MVT::i32);
+}
+
+SDValue HvxSelector::getSignedConst32(int Val, const SDLoc &dl) {
+  return DAG.getSignedTargetConstant(Val, dl, MVT::i32);
 }
 
 SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,

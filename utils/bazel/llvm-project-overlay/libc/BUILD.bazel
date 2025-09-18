@@ -6328,6 +6328,31 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "vasprintf_internal",
+    hdrs = ["src/stdio/printf_core/vasprintf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_macros_attributes",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
+        ":printf_main",
+        ":printf_writer",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "asprintf",
+    srcs = ["src/stdio/asprintf.cpp"],
+    hdrs = ["src/stdio/asprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
+    ],
+)
+
 libc_function(
     name = "sprintf",
     srcs = ["src/stdio/sprintf.cpp"],
@@ -6376,6 +6401,16 @@ libc_function(
         ":errno",
         ":types_FILE",
         ":vfprintf_internal",
+    ],
+)
+
+libc_function(
+    name = "vasprintf",
+    srcs = ["src/stdio/vasprintf.cpp"],
+    hdrs = ["src/stdio/vasprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
     ],
 )
 
