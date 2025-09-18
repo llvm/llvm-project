@@ -1176,3 +1176,43 @@ void foo21() {
 
 // OGCG: %[[SIZE:.*]] = alloca i64, align 8
 // OGCG: store i64 4, ptr %[[SIZE]], align 8
+
+void foo22() {
+  vi4 a;
+  vi4 b;
+  vi4 c = a || b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b"]
+// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["c", init]
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.binop(or, %[[NE_A_ZERO]], %[[NE_B_ZERO]]) : !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// LLVM: %[[NE_A_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_A]], zeroinitializer
+// LLVM: %[[NE_A_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_A_ZERO]] to <4 x i32>
+// LLVM: %[[NE_B_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_B]], zeroinitializer
+// LLVM: %[[NE_B_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_B_ZERO]] to <4 x i32>
+// LLVM: %[[RESULT:.*]] = or <4 x i32> %[[NE_A_ZERO_SEXT]], %[[NE_B_ZERO_SEXT]]
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// OGCG: %[[NE_A_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_A]], zeroinitializer
+// OGCG: %[[NE_B_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_B]], zeroinitializer
+// OGCG: %[[VEC_OR:.*]] = or <4 x i1> %[[NE_A_ZERO]], %[[NE_B_ZERO]]
+// OGCG: %[[RESULT:.*]] = sext <4 x i1> %[[VEC_OR]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
