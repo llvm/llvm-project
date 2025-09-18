@@ -91,11 +91,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
 
   addRegisterClass(MVT::i32, &AMDGPU::SReg_32RegClass);
-  addRegisterClass(MVT::f32, &AMDGPU::VGPR_32RegClass);
+
+  const SIRegisterInfo *TRI = STI.getRegisterInfo();
+  const TargetRegisterClass *V32RegClass =
+      TRI->getDefaultVectorSuperClassForBitWidth(32);
+  addRegisterClass(MVT::f32, V32RegClass);
 
   addRegisterClass(MVT::v2i32, &AMDGPU::SReg_64RegClass);
 
-  const SIRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetRegisterClass *V64RegClass =
       TRI->getDefaultVectorSuperClassForBitWidth(64);
 
