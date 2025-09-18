@@ -8,29 +8,26 @@
 #include <cstdio>
 #include <exception>
 
-void throwInFunction(){
-    throw std::exception("test2");
-}
+void throwInFunction() { throw std::exception("test2"); }
 
-int main()
-{
-    // case 1: direct throw
-	try	{
-		throw std::exception("test1");
-	} catch (const std::exception& ex){
-		puts(ex.what());
-        // CHECK: test1
-	}
+int main() {
+  // case 1: direct throw
+  try {
+    throw std::exception("test1");
+  } catch (const std::exception &ex) {
+    puts(ex.what());
+    // CHECK: test1
+  }
 
-    // case 2: throw in function
-    try {
-        throwInFunction();
-    } catch (const std::exception& ex){
-        puts(ex.what());
-        // CHECK: test2
-    }
+  // case 2: throw in function
+  try {
+    throwInFunction();
+  } catch (const std::exception &ex) {
+    puts(ex.what());
+    // CHECK: test2
+  }
 
-    printf("Success!\n");
-    // CHECK: Success!
-	return 0;
+  printf("Success!\n");
+  // CHECK: Success!
+  return 0;
 }
