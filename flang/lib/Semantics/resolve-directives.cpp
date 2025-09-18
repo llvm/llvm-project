@@ -3133,12 +3133,11 @@ void OmpAttributeVisitor::ResolveOmpObject(
           },
           [&](const parser::OmpObject::Invalid &invalid) {
             switch (invalid.v) {
+              SWITCH_COVERS_ALL_CASES
             case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
               context_.Say(invalid.source,
                   "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
               break;
-            default:
-              llvm_unreachable("Unexpected invalid object");
             }
           },
       },
