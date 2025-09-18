@@ -145,8 +145,9 @@ std::string getQualification(ASTContext &Context,
   for (const auto *CurD : llvm::reverse(Parents)) {
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurD)) {
       QualType T;
-      if (const auto *RD = cast<CXXRecordDecl>(TD);
-          ClassTemplateDecl *CTD = RD->getDescribedClassTemplate()) {
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
+          ClassTemplateDecl *CTD =
+              RD ? RD->getDescribedClassTemplate() : nullptr) {
         ArrayRef<TemplateArgument> Args;
         if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
           Args = SD->getTemplateArgs().asArray();
