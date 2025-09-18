@@ -160,10 +160,40 @@ LogicalResult FunctionCallOp::verify() {
            << fnName.getValue() << "' not found in nearest symbol table";
   }
 
+  auto functionType = funcOp.getFunctionType();
+
   if (getNumResults() > 1) {
     return emitOpError(
                "expected callee function to have 0 or 1 result, but provided ")
            << getNumResults();
+  }
+
+  if (functionType.getNumInputs() != getNumOperands()) {
+    return emitOpError("has incorrect number of operands for callee: expected ")
+           << functionType.getNumInputs() << ", but provided "
+           << getNumOperands();
+  }
+
+  for (uint32_t i = 0, e = functionType.getNumInputs(); i != e; ++i) {
+    if (getOperand(i).getType() != functionType.getInput(i)) {
+      return emitOpError("operand type mismatch: expected operand type ")
+             << functionType.getInput(i) << ", but provided "
+             << getOperand(i).getType() << " for operand number " << i;
+    }
+  }
+
+  if (functionType.getNumResults() != getNumResults()) {
+    return emitOpError(
+               "has incorrect number of results has for callee: expected ")
+           << functionType.getNumResults() << ", but provided "
+           << getNumResults();
+  }
+
+  if (getNumResults() &&
+      (getResult(0).getType() != functionType.getResult(0))) {
+    return emitOpError("result type mismatch: expected ")
+           << functionType.getResult(0) << ", but provided "
+           << getResult(0).getType();
   }
 
   return success();
