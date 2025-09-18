@@ -28,21 +28,21 @@ void *sink; // prevent optimizations from removing the calls
 
 // CHECK-LABEL: @_Z16test_malloc_likev(
 void test_malloc_like() {
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = malloc(sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_calloc(i64 noundef 3, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = calloc(3, sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_realloc(ptr noundef {{[^,]*}}, i64 noundef 8, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_realloc(ptr noundef {{[^,]*}}, i64 noundef 8, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = realloc(sink, sizeof(long));
-  // CHECK: call{{.*}} ptr @__alloc_token_reallocarray(ptr noundef {{[^,]*}}, i64 noundef 5, i64 noundef 8, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_reallocarray(ptr noundef {{[^,]*}}, i64 noundef 5, i64 noundef 8, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = reallocarray(sink, 5, sizeof(long));
-  // CHECK: call{{.*}} align 128{{.*}} ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} align 128{{.*}} ptr @__alloc_token_aligned_alloc(i64 noundef 128, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = aligned_alloc(128, sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_memalign(i64 noundef 16, i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = memalign(16, sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_valloc(i64 noundef 4, i64 {{[1-9][0-9]*}}), !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_valloc(i64 noundef 4, i64 {{[1-9][0-9]*}}), !alloc_token
   sink = valloc(sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_pvalloc(i64 noundef 4, i64 {{[1-9][0-9]*}}), !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_pvalloc(i64 noundef 4, i64 {{[1-9][0-9]*}}), !alloc_token
   sink = pvalloc(sizeof(int));
   // FIXME: Should not be token ID 0!
   // CHECK: call{{.*}} i32 @__alloc_token_posix_memalign(ptr noundef {{[^,]*}}, i64 noundef 64, i64 noundef 4, i64 0)
@@ -53,9 +53,9 @@ class ForwardDecl;
 
 // CHECK-LABEL: @_Z21test_malloc_like_castv(
 void test_malloc_like_cast() {
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = (int *)malloc(64);
-  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call{{.*}} ptr @__alloc_token_malloc(i64 noundef 64, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = reinterpret_cast<int *>(malloc(64));
 
   // Always fails to assign token ID for incomplete types.
@@ -65,41 +65,41 @@ void test_malloc_like_cast() {
 
 // CHECK-LABEL: @_Z17test_operator_newv(
 void test_operator_new() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = __builtin_operator_new(sizeof(int));
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = ::operator new(sizeof(int));
 }
 
 // CHECK-LABEL: @_Z25test_operator_new_nothrowv(
 void test_operator_new_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = __builtin_operator_new(sizeof(int), std::nothrow);
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = ::operator new(sizeof(int), std::nothrow);
 }
 
 // CHECK-LABEL: @_Z8test_newv(
 int *test_new() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new int;
 }
 
 // CHECK-LABEL: @_Z14test_new_arrayv(
 int *test_new_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 40, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 40, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new int[10];
 }
 
 // CHECK-LABEL: @_Z16test_new_nothrowv(
 int *test_new_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new (std::nothrow) int;
 }
 
 // CHECK-LABEL: @_Z22test_new_array_nothrowv(
 int *test_new_array_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnamRKSt9nothrow_t(i64 noundef 40, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_ZnamRKSt9nothrow_t(i64 noundef 40, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new (std::nothrow) int[10];
 }
 
@@ -135,7 +135,7 @@ void may_throw();
 TestClass *test_exception_handling_new() {
   try {
     // CHECK: invoke {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}})
-    // CHECK-NEXT: !alloc_token_hint
+    // CHECK-NEXT: !alloc_token
     TestClass *obj = new TestClass();
     may_throw();
     return obj;
@@ -146,7 +146,7 @@ TestClass *test_exception_handling_new() {
 
 // CHECK-LABEL: @_Z14test_new_classv(
 TestClass *test_new_class() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   TestClass *obj = new TestClass();
   obj->data[0] = 42;
   return obj;
@@ -154,7 +154,7 @@ TestClass *test_new_class() {
 
 // CHECK-LABEL: @_Z20test_new_class_arrayv(
 TestClass *test_new_class_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token_hint
+  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   TestClass* arr = new TestClass[10];
   arr[0].data[0] = 123;
   return arr;

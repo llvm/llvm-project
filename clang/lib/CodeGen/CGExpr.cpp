@@ -1273,8 +1273,58 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
-void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
-                                         QualType AllocType) {
+static bool
+typeContainsPointer(QualType T,
+                    llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
+                    bool &IncompleteType) {
+  QualType CanonicalType = T.getCanonicalType();
+  if (CanonicalType->isPointerType())
+    return true; // base case
+
+  // Look through typedef chain to check for special types.
+  for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
+       CurrentT = TT->getDecl()->getUnderlyingType()) {
+    const IdentifierInfo *II = TT->getDecl()->getIdentifier();
+    if (!II)
+      continue;
+    // Special Case: Syntactically uintptr_t is not a pointer; semantically,
+    // however, very likely used as such. Therefore, classify uintptr_t as a
+    // pointer, too.
+    if (II->isStr("uintptr_t"))
+      return true;
+  }
+
+  // The type is an array; check the element type.
+  if (const ArrayType *AT = CanonicalType->getAsArrayTypeUnsafe())
+    return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
+  // The type is a struct, class, or union.
+  if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
+    if (!RD->isCompleteDefinition()) {
+      IncompleteType = true;
+      return false;
+    }
+    if (!VisitedRD.insert(RD).second)
+      return false; // already visited
+    // Check all fields.
+    for (const FieldDecl *Field : RD->fields()) {
+      if (typeContainsPointer(Field->getType(), VisitedRD, IncompleteType))
+        return true;
+    }
+    // For C++ classes, also check base classes.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Polymorphic types require a vptr.
+      if (CXXRD->isPolymorphic())
+        return true;
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (typeContainsPointer(Base.getType(), VisitedRD, IncompleteType))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   assert(SanOpts.has(SanitizerKind::AllocToken) &&
          "Only needed with -fsanitize=alloc-token");
 
@@ -1291,54 +1341,8 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
   // recursively check if a type contains a pointer type.
   llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
   bool IncompleteType = false;
-  auto TypeContainsPtr = [&](auto &&self, QualType T) -> bool {
-    QualType CanonicalType = T.getCanonicalType();
-    if (CanonicalType->isPointerType())
-      return true; // base case
-
-    // Look through typedef chain to check for special types.
-    for (QualType CurrentT = T; const auto *TT = CurrentT->getAs<TypedefType>();
-         CurrentT = TT->getDecl()->getUnderlyingType()) {
-      const IdentifierInfo *II = TT->getDecl()->getIdentifier();
-      if (!II)
-        continue;
-      // Special Case: Syntactically uintptr_t is not a pointer; semantically,
-      // however, very likely used as such. Therefore, classify uintptr_t as a
-      // pointer, too.
-      if (II->isStr("uintptr_t"))
-        return true;
-    }
-
-    // The type is an array; check the element type.
-    if (const ArrayType *AT = CanonicalType->getAsArrayTypeUnsafe())
-      return self(self, AT->getElementType());
-    // The type is a struct, class, or union.
-    if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
-      if (!RD->isCompleteDefinition()) {
-        IncompleteType = true;
-        return false;
-      }
-      if (!VisitedRD.insert(RD).second)
-        return false; // already visited
-      // Check all fields.
-      for (const FieldDecl *Field : RD->fields()) {
-        if (self(self, Field->getType()))
-          return true;
-      }
-      // For C++ classes, also check base classes.
-      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-        // Polymorphic types require a vptr.
-        if (CXXRD->isPolymorphic())
-          return true;
-        for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
-          if (self(self, Base.getType()))
-            return true;
-        }
-      }
-    }
-    return false;
-  };
-  const bool ContainsPtr = TypeContainsPtr(TypeContainsPtr, AllocType);
+  const bool ContainsPtr =
+      typeContainsPointer(AllocType, VisitedRD, IncompleteType);
   if (!ContainsPtr && IncompleteType)
     return;
   auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
@@ -1347,7 +1351,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
   // Format: !{<type-name>, <contains-pointer>}
   auto *MDN =
       llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
-  CB->setMetadata(llvm::LLVMContext::MD_alloc_token_hint, MDN);
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
 }
 
 /// Infer type from a simple sizeof expression.
@@ -1355,11 +1359,10 @@ static QualType inferTypeFromSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   if (const auto *UET = dyn_cast<UnaryExprOrTypeTraitExpr>(Arg)) {
     if (UET->getKind() == UETT_SizeOf) {
-      if (UET->isArgumentType()) {
+      if (UET->isArgumentType())
         return UET->getArgumentTypeInfo()->getType();
-      } else {
+      else
         return UET->getArgumentExpr()->getType();
-      }
     }
   }
   return QualType();
@@ -1369,9 +1372,8 @@ static QualType inferTypeFromSizeofExpr(const Expr *E) {
 static QualType inferTypeFromArithSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   // The argument is a lone sizeof expression.
-  QualType QT = inferTypeFromSizeofExpr(Arg);
-  if (!QT.isNull())
-    return QT;
+  if (QualType T = inferTypeFromSizeofExpr(Arg); !T.isNull())
+    return T;
   if (const auto *BO = dyn_cast<BinaryOperator>(Arg)) {
     // Argument is an arithmetic expression. Cover common arithmetic patterns
     // involving sizeof.
@@ -1382,12 +1384,10 @@ static QualType inferTypeFromArithSizeofExpr(const Expr *E) {
     case BO_Shl:
     case BO_Shr:
     case BO_Sub:
-      QT = inferTypeFromArithSizeofExpr(BO->getLHS());
-      if (!QT.isNull())
-        return QT;
-      QT = inferTypeFromArithSizeofExpr(BO->getRHS());
-      if (!QT.isNull())
-        return QT;
+      if (QualType T = inferTypeFromArithSizeofExpr(BO->getLHS()); !T.isNull())
+        return T;
+      if (QualType T = inferTypeFromArithSizeofExpr(BO->getRHS()); !T.isNull())
+        return T;
       break;
     default:
       break;
@@ -1403,9 +1403,8 @@ static QualType inferTypeFromVarInitSizeofExpr(const Expr *E) {
   const Expr *Arg = E->IgnoreParenImpCasts();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (const Expr *Init = VD->getInit()) {
+      if (const Expr *Init = VD->getInit())
         return inferTypeFromArithSizeofExpr(Init);
-      }
     }
   }
   return QualType();
@@ -1423,8 +1422,7 @@ static QualType inferTypeFromCastExpr(const CallExpr *CallE,
   return QualType();
 }
 
-void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
-                                         const CallExpr *E) {
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
   QualType AllocType;
   // First check arguments.
   for (const Expr *Arg : E->arguments()) {
@@ -1439,7 +1437,7 @@ void CodeGenFunction::EmitAllocTokenHint(llvm::CallBase *CB,
     AllocType = inferTypeFromCastExpr(E, CurCast);
   // Emit if we were able to infer the type.
   if (!AllocType.isNull())
-    EmitAllocTokenHint(CB, AllocType);
+    EmitAllocToken(CB, AllocType);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
@@ -6778,8 +6776,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
         CalleeDecl->hasAttr<AllocSizeAttr>()) {
       // Function has malloc or alloc_size attribute.
       if (SanOpts.has(SanitizerKind::AllocToken)) {
-        // Set !alloc_token_hint metadata.
-        EmitAllocTokenHint(LocalCallOrInvoke, E);
+        // Set !alloc_token metadata.
+        EmitAllocToken(LocalCallOrInvoke, E);
       }
     }
   }

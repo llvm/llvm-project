@@ -1375,8 +1375,8 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
         RValue RV = EmitNewDeleteCall(*this, FD, Type, Args);
         if (auto *CB = dyn_cast_if_present<llvm::CallBase>(RV.getScalarVal())) {
           if (SanOpts.has(SanitizerKind::AllocToken)) {
-            // Set !alloc_token_hint metadata.
-            EmitAllocTokenHint(CB, TheCall);
+            // Set !alloc_token metadata.
+            EmitAllocToken(CB, TheCall);
           }
         }
         return RV;
@@ -1721,8 +1721,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
         CGDI->addHeapAllocSiteMetadata(newCall, allocType, E->getExprLoc());
       }
       if (SanOpts.has(SanitizerKind::AllocToken)) {
-        // Set !alloc_token_hint metadata.
-        EmitAllocTokenHint(newCall, allocType);
+        // Set !alloc_token metadata.
+        EmitAllocToken(newCall, allocType);
       }
     }
 
