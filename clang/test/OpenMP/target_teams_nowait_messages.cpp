@@ -6,13 +6,20 @@ void foo() {
 }
 
 int main(int argc, char **argv) {
-#pragma omp target teams nowait( // expected-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}}
-  foo();
-#pragma omp target teams nowait (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}}
+  int z;
+#pragma omp target teams nowait( // expected-error {{expected expression}} // expected-error {{expected ')'}} //expected-note {{to match this '('}}
   foo();
 #pragma omp target teams nowait device (-10u)
   foo();
-#pragma omp target teams nowait (3.14) device (-10u) // expected-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}}
+#pragma omp target teams nowait (3.14) device (-10u)
+  foo();
+#pragma omp target teams nowait (argc>> z)
+  foo();
+#pragma omp target teams nowait (argv[1] = 2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
+#pragma omp target teams nowait (argc > 0 ? argv[1] : argv[2])
+  foo();
+#pragma omp target teams nowait (S1) // expected-error {{use of undeclared identifier 'S1'}}
   foo();
 
   return 0;
