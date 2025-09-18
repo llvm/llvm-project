@@ -1715,12 +1715,12 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
         static_cast<uint64_t>(FunctionKind::NOT_INDIRECT_TARGET));
   } else {
     if (const auto *TypeId = extractNumericCGTypeId(F)) {
-      OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionKind::INDIRECT_TARGET_KNOWN_TID));
+      OutStreamer->emitInt64(
+          static_cast<uint64_t>(FunctionKind::INDIRECT_TARGET_KNOWN_TID));
       OutStreamer->emitInt64(TypeId->getZExtValue());
     } else {
-      OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
+      OutStreamer->emitInt64(
+          static_cast<uint64_t>(FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
     }
   }
 

@@ -17,8 +17,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -387,8 +387,9 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
-  /// Iff MI is an indirect call, generate and emit a label after the callsites which will
-  /// be used to populate the .callgraph section. For direct callsites add the callee symbol to direct callsites list of FuncCGInfo.
+  /// Iff MI is an indirect call, generate and emit a label after the callsites
+  /// which will be used to populate the .callgraph section. For direct
+  /// callsites add the callee symbol to direct callsites list of FuncCGInfo.
   void handleCallsiteForCallgraph(
       FunctionCallGraphInfo &FuncCGInfo,
       const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
@@ -481,7 +482,8 @@ public:
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
 
-  void emitCallGraphSection(const MachineFunction &MF, FunctionCallGraphInfo &FuncCGInfo);
+  void emitCallGraphSection(const MachineFunction &MF,
+                            FunctionCallGraphInfo &FuncCGInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 
