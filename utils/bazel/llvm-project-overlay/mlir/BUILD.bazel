@@ -1646,6 +1646,7 @@ cc_library(
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
