@@ -453,7 +453,7 @@ public:
   InFlightRemark emitOptimizationRemarkAnalysis(Location loc, RemarkOpts opts);
 
   /// Get the postponed remarks.
-  DenseSet<Remark> getPostponedRemarks() const { return postponedRemarks; }
+  const DenseSet<Remark> &getPostponedRemarks() const { return postponedRemarks; }
 
   /// Clear the postponed remarks.
   void clearPostponedRemarks() { postponedRemarks.clear(); }
