@@ -644,7 +644,7 @@ define void @test12() nounwind {
 ; CHECK:       bb55.us.us:
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i32 undef, undef
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 undef, undef
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[B]], [[A]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[B]], true
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB55_US_US]], label [[MALFORMED]]
 ; CHECK:       malformed:
 ; CHECK-NEXT:    ret void
