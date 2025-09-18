@@ -899,6 +899,15 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
   return Error::success();
 }
 
+Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
+                           size_t ProgDataSize, bool *IsValid) {
+  // Make a copy of the program binary in case it is released by the caller.
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+  *IsValid = Device->Device->Plugin.isDeviceCompatible(
+      Device->Device->getDeviceId(), Buffer);
+  return Error::success();
+}
+
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
   if (auto Err = Device.unloadBinary(Program->Image))
