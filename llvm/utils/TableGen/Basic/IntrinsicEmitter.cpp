@@ -629,10 +629,10 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
     UniqAttributes.try_emplace(&Int, ID);
   }
 
-  const uint8_t UniqAttributesBitSize = Log2_32_Ceil(UniqAttributes.size() + 1);
+  const uint8_t UniqAttributesBitSize = Log2_32_Ceil(UniqAttributes.size());
   // Note, ID `-1` is used to indicate no function attributes.
   const uint8_t UniqFnAttributesBitSize =
-      Log2_32_Ceil(UniqFnAttributes.size() + 2);
+      Log2_32_Ceil(UniqFnAttributes.size() + 1);
   const uint16_t NoFunctionAttrsID =
       maskTrailingOnes<uint16_t>(UniqFnAttributesBitSize);
   if (UniqAttributesBitSize + UniqFnAttributesBitSize > 16)
