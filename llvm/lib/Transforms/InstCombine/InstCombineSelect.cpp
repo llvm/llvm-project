@@ -4010,8 +4010,9 @@ static Value *foldSelectICmpIntoMaxMin(SelectInst &SI,
   // Note: OneUse check for `Cmp` is necessary because it makes sure that other
   // InstCombine folds don't undo this transformation and cause an infinite
   // loop. Furthermore, it could also increase the operation count.
-  if (match(&SI, m_OneUse(m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Y))),
-                          m_Value(TVal), m_Value(FVal)))))
+  if (match(&SI,
+            m_OneUse(m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Y))),
+                              m_Value(TVal), m_Value(FVal)))))
     return TryFoldIntoMaxMinIntrinsic(Pred, X, Y, TVal, FVal);
 
   return nullptr;
