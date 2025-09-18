@@ -61,6 +61,7 @@
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1195,21 +1196,20 @@ bool Preprocessor::HandleModuleContextualKeyword(
   } else if (!TokAtPhysicalStartOfLine)
     return false;
 
-  bool SavedParsingPreprocessorDirective =
-      CurPPLexer->ParsingPreprocessorDirective;
-  CurPPLexer->ParsingPreprocessorDirective = true;
-  auto _ = llvm::make_scope_exit([&]() {
-    CurPPLexer->ParsingPreprocessorDirective =
-        SavedParsingPreprocessorDirective;
-  });
+  llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
+      CurPPLexer->ParsingPreprocessorDirective, true);
 
-  if (Result.getIdentifierInfo()->isModulesImport() &&
-      isNextPPTokenOneOf(tok::raw_identifier, tok::less, tok::string_literal,
-                         tok::colon)) {
-    Result.setKind(tok::kw_import);
-    ModuleImportLoc = Result.getLocation();
-    IsAtImport = false;
-    return true;
+  if (Result.getIdentifierInfo()->isModulesImport()) {
+    // The next token may be an angled string literal.
+    llvm::SaveAndRestore<bool> SavedParsingFilemame(CurPPLexer->ParsingFilename,
+                                                    true);
+    if (isNextPPTokenOneOf(tok::raw_identifier, tok::less, tok::string_literal,
+                           tok::colon, tok::header_name)) {
+      Result.setKind(tok::kw_import);
+      ModuleImportLoc = Result.getLocation();
+      IsAtImport = false;
+      return true;
+    }
   }
 
   if (Result.getIdentifierInfo()->isModulesDeclaration() &&

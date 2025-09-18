@@ -623,24 +623,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
       goto module_decl;
     case tok::kw_import:
       goto import_decl;
-    // Error recovery and recognize context-sensitive C++20 'export module' and
-    // 'export import' declarations. If the module/import directive is
-    // well-formed, it should be converted to a keyword in preprocessor, but not
-    // an identifier we saw here.
-    //
-    // FIXME: We should generate better diagnostic information here to explain
-    // why the module/import directive is ill-formed.
-    case tok::identifier: {
-      if (NextToken().isModuleContextualKeyword(getLangOpts()) &&
-          GetLookAheadToken(2).isNot(tok::coloncolon)) {
-        if (NextToken().getIdentifierInfo()->isStr(
-                tok::getKeywordSpelling(tok::kw_module)))
-          goto module_decl;
-        else
-          goto import_decl;
-      }
-      break;
-    }
     default:
       break;
     }
@@ -708,25 +690,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
-  case tok::identifier:
-    // C++20 [basic.link]p3:
-    //   A token sequence beginning with 'export[opt] module' or
-    //   'export[opt] import' and not immediately followed by '::'
-    //   is never interpreted as the declaration of a top-level-declaration.
-    //
-    // Error recovery and recognize context-sensitive C++20 'export module' and
-    // 'export import' declarations. If the module/import directive is
-    // well-formed, it should be converted to a keyword in preprocessor, but not
-    // an identifier we saw here.
-    if (Tok.isModuleContextualKeyword(getLangOpts()) &&
-        NextToken().isNot(tok::coloncolon)) {
-      if (Tok.getIdentifierInfo()->isStr(
-              tok::getKeywordSpelling(tok::kw_module)))
-        goto module_decl;
-      else
-        goto import_decl;
-    }
-    break;
   default:
     break;
   }
@@ -2362,10 +2325,6 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                tok::getKeywordSpelling(tok::kw_module)))) &&
          "not a module declaration");
 
-  if (getLangOpts().CPlusPlusModules && Tok.is(tok::identifier))
-    Diag(StartLoc, diag::err_invalid_module_or_import_directive)
-        << /*IsImport=*/false;
-
   SourceLocation ModuleLoc = ConsumeToken();
 
   // Attributes appear after the module name, not before.
@@ -2449,12 +2408,6 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
-  if (getLangOpts().CPlusPlusModules && !IsObjCAtImport &&
-      Tok.is(tok::identifier)) {
-    Diag(StartLoc, diag::err_invalid_module_or_import_directive)
-        << /*IsImport=*/true;
-  }
-
   SourceLocation ImportLoc = ConsumeToken();
 
   // For C++20 modules, we can have "name" or ":Partition name" as valid input.

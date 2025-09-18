@@ -20,6 +20,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/foo.cppm -emit-module-interface -o %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 %t/import_decl_not_in_same_line.cpp -fmodule-file=foo=%t/foo.pcm -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/not_import.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/import_spaceship.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/leading_empty_macro.cpp -fsyntax-only -verify
+
 
 //--- hash.cpp
 // expected-no-diagnostics
@@ -54,22 +57,34 @@ import rightpad;        // preprocessing directive
 import :part;           // preprocessing directive
 
 //--- module_decl_not_in_same_line.cpp
-module                  // expected-error {{the module directive is ill-formed, module keyword must be immediately followed on the same line by an identifier, or a ';' after being at the start of a line, or preceded by an export keyword at the start of a line}}
-;export module M;       // expected-error {{the module directive is ill-formed, module keyword must be immediately followed on the same line by an identifier, or a ';' after being at the start of a line, or preceded by an export keyword at the start of a line}}
+module                  // expected-error {{a type specifier is required for all declarations}}
+;export module M;       // expected-error {{export declaration can only be used within a module interface}} \
+                        // expected-error {{unknown type name 'module'}}
 
 //--- foo.cppm
 export module foo;
 
 //--- import_decl_not_in_same_line.cpp
 export module M;
-export                  // expected-error {{the import directive is ill-formed, import keyword must be immediately followed on the same line by an identifier, '<', '"', or ':', but not '::', after being at the start of a line or preceded by an export at the start of the line}}
-import
+export
+import                  // expected-error {{unknown type name 'import'}}
 foo;
 
-export                  // expected-error {{the import directive is ill-formed, import keyword must be immediately followed on the same line by an identifier, '<', '"', or ':', but not '::', after being at the start of a line or preceded by an export at the start of the line}}
-import foo;
+export
+import foo;             // expected-error {{unknown type name 'import'}}
 
 //--- not_import.cpp
 export module M;
 import ::               // expected-error {{use of undeclared identifier 'import'}}
 import ->               // expected-error {{cannot use arrow operator on a type}}
+
+//--- import_spaceship.cpp
+export module M;
+import <=>; // expected-error {{'=' file not found}}
+
+//--- leading_empty_macro.cpp
+// expected-no-diagnostics
+export module M;
+typedef int import;
+#define EMP
+EMP import m; // The phase 7 grammar should see import as a typedef-name.
