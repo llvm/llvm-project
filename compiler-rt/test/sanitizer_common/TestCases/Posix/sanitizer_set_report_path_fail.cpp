@@ -16,12 +16,12 @@ int main(int argc, char **argv) {
   if (argc == 1) {
     // Case 1
     sprintf(buff, "%s/report", argv[0]);
-    // ERROR1: Can't create directory: {{.*}}
+    // ERROR1: Can't create directory
   } else {
     // Case 2
     snprintf(buff, sizeof(buff), "%04095d", 42);
-    // ERROR2: Path is too long: 00000000...
+    // ERROR2: Path is too long
   }
   __sanitizer_set_report_path(buff);
 }
-// FALLBACK: Fallback to stderr
+// FALLBACK: falling back to stderr

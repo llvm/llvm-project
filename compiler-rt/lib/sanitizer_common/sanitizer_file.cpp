@@ -37,12 +37,12 @@ void RawWrite(const char *buffer) {
 void ReportFile::ReopenIfNecessary() {
   mu->CheckLocked();
   uptr pid = internal_getpid();
-  if (lastOpenFailed && fd_pid != pid) {
-    // If lastOpenFailed is set then we fellback to stderr. If this is a new
-    // process, mark fd as invalid so we attempt to open again.
+  if (fallbackToStderrActive && fd_pid != pid) {
+    // If fallbackToStderrActive is set then we fellback to stderr. If this is a
+    // new process, mark fd as invalid so we attempt to open again.
     CHECK_EQ(fd, kStderrFd);
     fd = kInvalidFd;
-    lastOpenFailed = false;
+    fallbackToStderrActive = false;
   }
   if (fd == kStdoutFd || fd == kStderrFd)
     return;
@@ -72,17 +72,18 @@ void ReportFile::ReopenIfNecessary() {
   error_t err;
   fd = OpenFile(full_path, WrOnly, &err);
   if (fd == kInvalidFd) {
-    const char *ErrorMsgPrefix = "ERROR: Can't open file: ";
+    bool fallback = common_flags()->log_fallback_to_stderr;
+    const char *ErrorMsgPrefix =
+        fallback ? "WARNING: Can't open file, falling back to stderr: "
+                 : "ERROR: Can't open file: ";
     WriteToFile(kStderrFd, ErrorMsgPrefix, internal_strlen(ErrorMsgPrefix));
     WriteToFile(kStderrFd, full_path, internal_strlen(full_path));
     char errmsg[100];
     internal_snprintf(errmsg, sizeof(errmsg), " (reason: %d)\n", err);
     WriteToFile(kStderrFd, errmsg, internal_strlen(errmsg));
-    if (!common_flags()->log_fallback_to_stderr)
+    if (!fallback)
       Die();
-    const char *errmsg2 = "ERROR: Fallback to stderr\n";
-    WriteToFile(kStderrFd, errmsg2, internal_strlen(errmsg2));
-    lastOpenFailed = true;
+    fallbackToStderrActive = true;
     fd = kStderrFd;
   }
   fd_pid = pid;
@@ -97,16 +98,17 @@ static void RecursiveCreateParentDirs(char *path, fd_t &fd) {
       continue;
     path[i] = '\0';
     if (!DirExists(path) && !CreateDir(path)) {
-      const char *ErrorMsgPrefix = "ERROR: Can't create directory: ";
+      bool fallback = common_flags()->log_fallback_to_stderr;
+      const char *ErrorMsgPrefix =
+          fallback ? "WARNING: Can't create directory, falling back to stderr: "
+                   : "ERROR: Can't create directory: ";
       WriteToFile(kStderrFd, ErrorMsgPrefix, internal_strlen(ErrorMsgPrefix));
       WriteToFile(kStderrFd, path, internal_strlen(path));
       const char *ErrorMsgSuffix = "\n";
       WriteToFile(kStderrFd, ErrorMsgSuffix, internal_strlen(ErrorMsgSuffix));
-      if (!common_flags()->log_fallback_to_stderr)
+      if (!fallback)
         Die();
       path[i] = save;
-      const char *ErrorMsgSuffix2 = "ERROR: Fallback to stderr\n";
-      WriteToFile(kStderrFd, ErrorMsgSuffix2, internal_strlen(ErrorMsgSuffix2));
       fd = kStderrFd;
       return;
     }
@@ -179,15 +181,16 @@ void ReportFile::SetReportPath(const char *path) {
   if (path) {
     uptr len = internal_strlen(path);
     if (len > sizeof(path_prefix) - 100) {
-      const char *message = "ERROR: Path is too long: ";
+      bool fallback = common_flags()->log_fallback_to_stderr;
+      const char *message =
+          fallback ? "WARNING: Path is too long, falling back to stderr: "
+                   : "ERROR: Path is too long: ";
       WriteToFile(kStderrFd, message, internal_strlen(message));
       WriteToFile(kStderrFd, path, 8);
       message = "...\n";
       WriteToFile(kStderrFd, message, internal_strlen(message));
-      if (!common_flags()->log_fallback_to_stderr)
+      if (!fallback)
         Die();
-      const char *message2 = "ERROR: Fallback to stderr\n";
-      WriteToFile(kStderrFd, message2, internal_strlen(message2));
       path = "stderr";
     }
   }

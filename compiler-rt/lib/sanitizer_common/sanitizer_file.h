@@ -45,7 +45,7 @@ struct ReportFile {
   uptr fd_pid;
   // Set to true if the last attempt to open the logfile failed, perhaps due to
   // permission errors
-  bool lastOpenFailed = false;
+  bool fallbackToStderrActive = false;
 
  private:
   void ReopenIfNecessary();
