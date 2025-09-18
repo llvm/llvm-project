@@ -211,6 +211,10 @@ if (LLDB_ENABLE_PYTHON)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
+else()
+  # Even if Python scripting is disabled, we still need a Python interpreter to
+  # build, for example to generate SBLanguages.h.
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
 endif()
 
 if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
