@@ -3742,6 +3742,9 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
       return false;
     // Operands 1 and 2 are commutable, if we switch the opcode.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  case RISCV::QC_MVEQ:
+  case RISCV::QC_MVNE:
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 4);
   case RISCV::TH_MULA:
   case RISCV::TH_MULAW:
   case RISCV::TH_MULAH:
@@ -3951,6 +3954,14 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.setDesc(get(MI.getOpcode() == RISCV::TH_MVEQZ ? RISCV::TH_MVNEZ
                                                             : RISCV::TH_MVEQZ));
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
+                                                   OpIdx2);
+  }
+  case RISCV::QC_MVEQ:
+  case RISCV::QC_MVNE: {
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVEQ ? RISCV::QC_MVNE
+                                                           : RISCV::QC_MVEQ));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
