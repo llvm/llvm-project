@@ -769,23 +769,108 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
-bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D) {
-  const auto *AnnotationAttr = D->getAttr<HLSLAnnotationAttr>();
-  if (AnnotationAttr) {
-    CheckSemanticAnnotation(FD, D, AnnotationAttr);
-    return true;
+HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info) {
+  std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
+
+  if (dyn_cast<HLSLUserSemanticAttr>(Info.Semantic))
+    return createSemanticAttr<HLSLUserSemanticAttr>(*Info.Semantic, Info.Index);
+
+  if (SemanticName == "SV_DISPATCHTHREADID") {
+    return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(*Info.Semantic,
+                                                           Info.Index);
+  } else if (SemanticName == "SV_GROUPINDEX") {
+    return createSemanticAttr<HLSLSV_GroupIndexAttr>(*Info.Semantic,
+                                                     Info.Index);
+  } else if (SemanticName == "SV_GROUPTHREADID") {
+    return createSemanticAttr<HLSLSV_GroupThreadIDAttr>(*Info.Semantic,
+                                                        Info.Index);
+  } else if (SemanticName == "SV_GROUPID") {
+    return createSemanticAttr<HLSLSV_GroupIDAttr>(*Info.Semantic, Info.Index);
+  } else if (SemanticName == "SV_POSITION") {
+    return createSemanticAttr<HLSLSV_PositionAttr>(*Info.Semantic, Info.Index);
+  } else
+    Diag(Info.Semantic->getLoc(), diag::err_hlsl_unknown_semantic)
+        << *Info.Semantic;
+
+  return nullptr;
+}
+
+bool SemaHLSL::isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic) {
+  if (ActiveSemantic.Semantic == nullptr) {
+    ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
+    if (ActiveSemantic.Semantic &&
+        ActiveSemantic.Semantic->isSemanticIndexExplicit())
+      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  }
+
+  if (!ActiveSemantic.Semantic) {
+    Diag(D->getLocation(), diag::err_hlsl_missing_semantic_annotation);
+    return false;
+  }
+
+  auto *A = createSemantic(ActiveSemantic);
+  if (!A)
+    return false;
+
+  checkSemanticAnnotation(FD, D, A);
+  D->dropAttrs<HLSLSemanticAttr>();
+  D->addAttr(A);
+
+  unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
+  unsigned ElementCount = AT ? AT->getZExtSize() : 1;
+  ActiveSemantic.Index = Location + ElementCount;
+
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  for (unsigned I = 0; I < ElementCount; ++I) {
+    Twine VariableName = BaseName.concat(Twine(Location + I));
+
+    auto It = ActiveInputSemantics.find(FD);
+    if (It == ActiveInputSemantics.end()) {
+      llvm::StringSet<> Set({VariableName.str()});
+      auto Item = std::make_pair(FD, std::move(Set));
+      ActiveInputSemantics.insert(std::move(Item));
+      continue;
+    }
+
+    auto [_, Inserted] = ActiveInputSemantics[FD].insert(VariableName.str());
+    if (!Inserted) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
+          << VariableName.str();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D,
+                               SemanticInfo &ActiveSemantic) {
+  if (ActiveSemantic.Semantic == nullptr) {
+    ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
+    if (ActiveSemantic.Semantic &&
+        ActiveSemantic.Semantic->isSemanticIndexExplicit())
+      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
   const Type *T = D->getType()->getUnqualifiedDesugaredType();
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
-    return false;
+    return isSemanticOnScalarValid(FD, D, ActiveSemantic);
 
   const RecordDecl *RD = RT->getOriginalDecl();
   for (FieldDecl *Field : RD->fields()) {
-    if (!isSemanticValid(FD, Field))
+    SemanticInfo Info = ActiveSemantic;
+    if (!isSemanticValid(FD, Field, Info)) {
+      Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
+    }
+    if (ActiveSemantic.Semantic)
+      ActiveSemantic = Info;
   }
+
   return true;
 }
 
@@ -852,8 +937,11 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   }
 
   for (ParmVarDecl *Param : FD->parameters()) {
-    if (!isSemanticValid(FD, Param)) {
-      Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
+    SemanticInfo ActiveSemantic;
+    ActiveSemantic.Semantic = nullptr;
+    ActiveSemantic.Index = std::nullopt;
+
+    if (!isSemanticValid(FD, Param, ActiveSemantic)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
@@ -861,31 +949,33 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   // FIXME: Verify return type semantic annotation.
 }
 
-void SemaHLSL::CheckSemanticAnnotation(
-    FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAnnotationAttr *AnnotationAttr) {
+void SemaHLSL::checkSemanticAnnotation(FunctionDecl *EntryPoint,
+                                       const Decl *Param,
+                                       const HLSLSemanticAttr *SemanticAttr) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
 
-  switch (AnnotationAttr->getKind()) {
+  switch (SemanticAttr->getKind()) {
   case attr::HLSLSV_DispatchThreadID:
   case attr::HLSLSV_GroupIndex:
   case attr::HLSLSV_GroupThreadID:
   case attr::HLSLSV_GroupID:
     if (ST == llvm::Triple::Compute)
       return;
-    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
+    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Compute});
     break;
   case attr::HLSLSV_Position:
     // TODO(#143523): allow use on other shader types & output once the overall
     // semantic logic is implemented.
     if (ST == llvm::Triple::Pixel)
       return;
-    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
+    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Pixel});
     break;
+  case attr::HLSLUserSemantic:
+    return;
   default:
-    llvm_unreachable("Unknown HLSLAnnotationAttr");
+    llvm_unreachable("Unknown SemanticAttr");
   }
 }
 
@@ -1694,7 +1784,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+    D->addAttr(createSemanticAttr<HLSLUserSemanticAttr>(AL, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
