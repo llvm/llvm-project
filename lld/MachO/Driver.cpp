@@ -1709,7 +1709,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     firstTLVDataSection = nullptr;
     tar = nullptr;
-    memset(&in, 0, sizeof(in));
+    in = InStruct();
 
     resetLoadedDylibs();
     resetOutputSegments();
