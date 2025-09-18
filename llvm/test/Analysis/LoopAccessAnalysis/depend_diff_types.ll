@@ -273,10 +273,6 @@ exit:
 ;   ^ ~~~~~~~~~~~~~~~~ ^ iv.next = iv + 8
 ;
 ; Measurements are in bytes.
-;
-; TODO: Relax the HasSameSize check; the strided accesses are
-; independent, as determined by both the source size and the sink size.
-; This test should report no dependencies.
 define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_independent'
 ; CHECK-NEXT:    loop:
