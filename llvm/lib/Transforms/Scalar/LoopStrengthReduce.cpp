@@ -1431,10 +1431,12 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step)))) {
         // If the step size matches the base offset, we could use pre-indexed
         // addressing.
-        bool CanPreIndex = (AMK & TTI::AMK_PreIndexed) && F.BaseOffset.isFixed() &&
-          Step->getAPInt() == F.BaseOffset.getFixedValue();
-        bool CanPostIndex = (AMK & TTI::AMK_PostIndexed) && !isa<SCEVConstant>(Start) &&
-          SE->isLoopInvariant(Start, L);
+        bool CanPreIndex = (AMK & TTI::AMK_PreIndexed) &&
+                           F.BaseOffset.isFixed() &&
+                           Step->getAPInt() == F.BaseOffset.getFixedValue();
+        bool CanPostIndex = (AMK & TTI::AMK_PostIndexed) &&
+                            !isa<SCEVConstant>(Start) &&
+                            SE->isLoopInvariant(Start, L);
         // We can only pre or post index when the load/store is unconditional.
         if ((CanPreIndex || CanPostIndex) && LU.AllFixupsUnconditional)
           LoopCost = 0;
