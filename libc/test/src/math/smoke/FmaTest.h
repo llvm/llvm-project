@@ -86,7 +86,6 @@ public:
     }
 
     // Test overflow.
-    OutType z = out.max_normal;
     InType in_z = LIBC_NAMESPACE::fputil::cast<InType>(out.max_normal);
     EXPECT_FP_EQ_ALL_ROUNDING(func(InType(-0.25), in_z, in_z),
                               func(InType(1.75), in_z, -in_z));
