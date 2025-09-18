@@ -1156,8 +1156,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   PushContextAndClauseSets(beginName.source, beginName.v);
 
   if (!endSpec) {
-    context_.Say(beginName.source,
-        "Expected OpenMP END SECTIONS directive"_err_en_US);
+    context_.Say(
+        beginName.source, "Expected OpenMP END SECTIONS directive"_err_en_US);
     // Following code assumes the option is present.
     return;
   }
