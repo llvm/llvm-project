@@ -1529,9 +1529,6 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
              const CASOptions &CASOpts, DiagnosticsEngine &Diags,
              IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
              std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
-  if (!OverrideCAS)
-    return BaseFS;
-
   if (FSOpts.CASFileSystemRootID.empty() && FEOpts.CASIncludeTreeID.empty())
     return BaseFS;
 

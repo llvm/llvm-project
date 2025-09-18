@@ -293,6 +293,10 @@ void CompilerInstance::createVirtualFileSystem(
   DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts, DC,
                           /*ShouldOwnClient=*/false);
 
+  std::tie(CAS, ActionCache) =
+      getInvocation().getCASOpts().getOrCreateDatabases(
+          Diags, /*CreateEmptyCASOnFailure=*/false);
+
   VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
                                         std::move(BaseFS), CAS);
   // FIXME: Should this go into createVFSFromCompilerInvocation?
@@ -964,7 +968,7 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
 
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
-CompilerInstance::createCASDatabases() {
+CompilerInstance::getOrCreateCASDatabases() {
   // Create a new CAS databases from the CompilerInvocation. Future calls to
   // createFileManager() will use the same CAS.
   std::tie(CAS, ActionCache) =
@@ -976,13 +980,13 @@ CompilerInstance::createCASDatabases() {
 
 llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
   if (!CAS)
-    createCASDatabases();
+    getOrCreateCASDatabases();
   return *CAS;
 }
 
 llvm::cas::ActionCache &CompilerInstance::getOrCreateActionCache() {
   if (!ActionCache)
-    createCASDatabases();
+    getOrCreateCASDatabases();
   return *ActionCache;
 }
 
