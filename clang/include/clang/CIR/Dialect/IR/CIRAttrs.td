@@ -798,19 +798,21 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
     Example:
 
     ```
-    cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<i32>
+    cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE
+      : !cir.ptr<i32>
 
-    !rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+    !rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>,
+      !cir.ptr<!u8i>}>
 
     cir.global constant external @type_info = #cir.typeinfo<{
       #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2 : i32]>
-      : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1A>
-      : !cir.ptr<!u8i>}> : !rec_anon_struct
+      : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>,
+      #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}> : !rec_anon_struct
     ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "mlir::ArrayAttr":$data);
+                        CIR_IntOrGlobalViewArrayAttr:$data);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
