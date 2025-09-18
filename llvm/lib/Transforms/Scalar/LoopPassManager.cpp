@@ -223,10 +223,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   BlockFrequencyInfo *BFI = UseBlockFrequencyInfo && F.hasProfileData()
                                 ? (&AM.getResult<BlockFrequencyAnalysis>(F))
                                 : nullptr;
-  BranchProbabilityInfo *BPI =
-      UseBranchProbabilityInfo && F.hasProfileData()
-          ? (&AM.getResult<BranchProbabilityAnalysis>(F))
-          : nullptr;
   LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
                                      AM.getResult<AssumptionAnalysis>(F),
                                      AM.getResult<DominatorTreeAnalysis>(F),
@@ -235,7 +231,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                      AM.getResult<TargetLibraryAnalysis>(F),
                                      AM.getResult<TargetIRAnalysis>(F),
                                      BFI,
-                                     BPI,
                                      MSSA};
 
   // Setup the loop analysis manager from its proxy. It is important that
