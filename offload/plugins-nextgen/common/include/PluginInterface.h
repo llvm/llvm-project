@@ -192,7 +192,7 @@ struct InfoTreeNode {
   llvm::DenseMap<DeviceInfo, size_t> DeviceInfoMap;
 
   InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
-  InfoTreeNode(std::string &&Key, VariantType Value, std::string &&Units)
+  InfoTreeNode(std::string Key, VariantType Value, std::string Units)
       : Key(std::move(Key)), Value(Value), Units(std::move(Units)) {}
 
   /// Add a new info entry as a child of this node. The entry requires at least
@@ -201,7 +201,8 @@ struct InfoTreeNode {
   /// and must be a string. Providing a device info key allows liboffload to
   /// use that value for an appropriate olGetDeviceInfo query
   template <typename T = std::monostate>
-  InfoTreeNode *add(std::string &&Key, T Value = T(), std::string &&Units = "",
+  InfoTreeNode *add(std::string Key, T Value = T(),
+                    std::string Units = std::string(),
                     std::optional<DeviceInfo> DeviceInfoKey = std::nullopt) {
     assert(!Key.empty() && "Invalid info key");
 
