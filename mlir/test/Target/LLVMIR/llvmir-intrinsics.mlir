@@ -613,7 +613,7 @@ llvm.func @trap_intrinsics() {
   // CHECK: call void @llvm.debugtrap()
   llvm.intr.debugtrap
   // CHECK: call void @llvm.ubsantrap(i8 1)
-  llvm.intr.ubsantrap {failureKind = 1 : i8}
+  llvm.intr.ubsantrap <{failureKind = 1 : i8}>
   llvm.return
 }
 
