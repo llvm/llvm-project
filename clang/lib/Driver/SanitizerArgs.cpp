@@ -1131,8 +1131,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AsanUseAfterScope = Args.hasFlag(
         options::OPT_fsanitize_address_use_after_scope,
         options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
+    AsanDisableContainerOverflow = Args.hasFlag(
+        options::OPT_fsanitize_address_disable_container_overflow,
+        options::OPT_fno_sanitize_address_disable_container_overflow,
+        AsanDisableContainerOverflow);
   } else {
     AsanUseAfterScope = false;
+    AsanDisableContainerOverflow = false;
   }
 
   if (AllAddedKinds & SanitizerKind::HWAddress) {
@@ -1458,6 +1463,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (AsanUseAfterScope)
     CmdArgs.push_back("-fsanitize-address-use-after-scope");
+
+  if (AsanDisableContainerOverflow)
+    CmdArgs.push_back("-fsanitize-address-disable-container-overflow");
 
   if (AsanPoisonCustomArrayCookie)
     CmdArgs.push_back("-fsanitize-address-poison-custom-array-cookie");

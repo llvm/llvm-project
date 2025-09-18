@@ -586,6 +586,8 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   LangOpts.ForceEmitVTables = CodeGenOpts.ForceEmitVTables;
   LangOpts.SpeculativeLoadHardening = CodeGenOpts.SpeculativeLoadHardening;
   LangOpts.CurrentModule = LangOpts.ModuleName;
+  LangOpts.SanitizeAddressDisableContainerOverflow =
+      CodeGenOpts.SanitizeAddressDisableContainerOverflow;
 
   llvm::Triple T(TargetOpts.Triple);
   llvm::Triple::ArchType Arch = T.getArch();

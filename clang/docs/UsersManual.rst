@@ -5125,6 +5125,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Select the mode of detecting stack use-after-return in AddressSanitizer: never | runtime (default) | always
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
+      -fsanitize-address-disable-container-overflow
+                              Disable container overflow detection at compile time in AddressSanitizer (experimental)
       -fsanitize-address-use-odr-indicator
                               Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
       -fsanitize-ignorelist=<value>

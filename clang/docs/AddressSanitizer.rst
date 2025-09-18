@@ -18,6 +18,7 @@ following types of bugs:
     * Enable with: ``ASAN_OPTIONS=detect_stack_use_after_return=1`` (already enabled on Linux).
     * Disable with: ``ASAN_OPTIONS=detect_stack_use_after_return=0``.
 * Use-after-scope (clang flag ``-fsanitize-address-use-after-scope``)
+* Container overflow detection (clang flag ``-fsanitize-address-disable-container-overflow`` to disable (experimental))
 * Double-free, invalid free
 * Memory leaks (experimental)
 
@@ -164,6 +165,23 @@ To summarize: ``-fsanitize-address-use-after-return=<mode>``
   * ``always``: Enables detection of UAR errors in all cases. (reduces code
     size, but not as much as ``never``).
 
+Container Overflow Detection
+----------------------------
+
+AddressSanitizer can detect overflows in containers with custom allocators
+(such as std::vector) where the Library developers have added calls into the
+AddressSanitizer runtime to indicate which memory is poisoned etc.
+
+In environments where not all the process binaries can be recompiled with 
+AddressSanitizer enabled, these checks can cause false positives.
+
+These checks can be disabled at runtime using
+``ASAN_OPTIONS=detect_container_overflow=0``
+
+``-fsanitize-address-disable-container-overflow`` can be used at compile time
+to disable container overflow checks if both the container and compiler support
+the flag (experimental).
+
 Memory leak detection
 ---------------------
 
@@ -241,6 +259,32 @@ AddressSanitizer also supports
 ``__attribute__((disable_sanitizer_instrumentation))``. This attribute
 works similar to ``__attribute__((no_sanitize("address")))``, but it also
 prevents instrumentation performed by other sanitizers.
+
+Disabling container overflow checks with ``__has_feature(sanitize_address_disable_container_overflow)``
+-------------------------------------------------------------------------------------------------------
+
+Library developers may use this feature test in conjunction with the
+AddressSanitizer feature test to conditionally include container overflow
+related code compiled into user code:
+
+The recommended form is
+
+.. code-block:: c
+
+    #if __has_feature(address_sanitizer) && !__has_feature(sanitize_address_disable_container_overflow)
+    // Container overflow detection enabled - include annotations
+    __sanitizer_annotate_contiguous_container(beg, end, old_mid, new_mid);
+    #endif
+
+This pattern ensures that:
+
+* Container overflow annotations are only included when AddressSanitizer is
+  enabled
+* Container overflow detection can be disabled by 
+  ``-fsanitize-address-disable-container-overflow``
+* Code compiles correctly with older compilers that don't support the 
+  ``sanitize_address_disable_container_overflow`` feature test (defaulting to
+  enabled container overflow checks)
 
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------

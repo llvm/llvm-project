@@ -2512,6 +2512,12 @@ An operator new\[\] is "custom" if it is not one of the allocation functions
 provided by the C++ standard library. Array cookies from non-custom allocation
 functions are always poisoned.}]>,
   Group<f_clang_Group>;
+defm sanitize_address_disable_container_overflow : BoolOption<"f", "sanitize-address-disable-container-overflow",
+  CodeGenOpts<"SanitizeAddressDisableContainerOverflow">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Enable">,
+  BothFlags<[], [ClangOption], " container overflow checks in AddressSanitizer (experimental)">>,
+  Group<f_clang_Group>;
 defm sanitize_address_globals_dead_stripping : BoolOption<"f", "sanitize-address-globals-dead-stripping",
   CodeGenOpts<"SanitizeAddressGlobalsDeadStripping">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable linker dead stripping of globals in AddressSanitizer">,

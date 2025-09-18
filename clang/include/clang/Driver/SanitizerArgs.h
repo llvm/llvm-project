@@ -50,6 +50,7 @@ class SanitizerArgs {
   bool SharedRuntime = false;
   bool StableABI = false;
   bool AsanUseAfterScope = true;
+  bool AsanDisableContainerOverflow = false;
   bool AsanPoisonCustomArrayCookie = false;
   bool AsanGlobalsDeadStripping = false;
   bool AsanUseOdrIndicator = false;
