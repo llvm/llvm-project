@@ -2074,8 +2074,8 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
 // that is true if any function's address is taken, or if any function
 // has external linkage. This is used to determine the safety of
 // external/library calls.
-static bool hasRecursiveCallee(Function &F,
-                               bool AnyFunctionsAddressIsTaken = true) {
+static bool mayHaveRecursiveCallee(Function &F,
+                                   bool AnyFunctionsAddressIsTaken = true) {
   for (const auto &BB : F) {
     for (const auto &I : BB.instructionsWithoutDebug()) {
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
@@ -2108,7 +2108,7 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   Function *F = *SCCNodes.begin();
   if (!F || !F->hasExactDefinition() || F->doesNotRecurse())
     return;
-  if (!hasRecursiveCallee(*F)) {
+  if (!mayHaveRecursiveCallee(*F)) {
     // Every call was to a non-recursive function other than this function, and
     // we have no indirect recursion as the SCC size is one. This function
     // cannot recurse.
@@ -2456,9 +2456,8 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
   // linkage, there is no path for a callback to any user function.
   bool AnyFunctionsAddressIsTaken = false;
   for (Function &F : M) {
-    if (F.isDeclaration() || F.doesNotRecurse()) {
+    if (F.isDeclaration() || F.doesNotRecurse())
       continue;
-    }
     if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
       AnyFunctionsAddressIsTaken = true;
       break;
@@ -2475,26 +2474,23 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
     // Skip any RefSCC that is part of a call cycle. A RefSCC containing more
     // than one SCC indicates a recursive relationship, which could involve
     // direct or indirect calls.
-    if (RC.size() > 1) {
+    if (RC.size() > 1)
       continue;
-    }
 
     // A single-SCC RefSCC could still be a self-loop.
     LazyCallGraph::SCC &S = *RC.begin();
-    if (S.size() > 1) {
+    if (S.size() > 1)
       continue;
-    }
 
     // Get the single function from this SCC.
     Function &F = S.begin()->getFunction();
-    if (!F.hasExactDefinition() || F.doesNotRecurse()) {
+    if (!F.hasExactDefinition() || F.doesNotRecurse())
       continue;
-    }
 
     // If the analysis confirms that this function has no recursive calls
     // (either direct, indirect, or through external linkages),
     // we can safely apply the norecurse attribute.
-    if (!hasRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
+    if (!mayHaveRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
       F.setDoesNotRecurse();
       ++NumNoRecurse;
       Changed = true;
