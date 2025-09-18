@@ -779,6 +779,7 @@ __m256i test0_mm256_inserti128_si256(__m256i a, __m128i b) {
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   return _mm256_inserti128_si256(a, b, 0);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_inserti128_si256(((__m256i){1ULL, 2ULL, 3ULL, 4ULL}), ((__m128i){10ULL, 20ULL}), 0), 10ULL, 20ULL, 3ULL, 4ULL));
 
 __m256i test1_mm256_inserti128_si256(__m256i a, __m128i b) {
   // CHECK-LABEL: test1_mm256_inserti128_si256
