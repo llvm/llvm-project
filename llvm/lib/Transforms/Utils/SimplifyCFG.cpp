@@ -1871,16 +1871,14 @@ visitConditions(Value *V, const Value *BaseCond, const BasicBlock *ContextBB,
     return std::nullopt;
 
   std::optional<bool> Imp = isImpliedCondition(V, BaseCond, DL);
-  // TODO: Handle negated condition case.
-  if (Imp != true)
-    return std::nullopt;
-
   std::optional<bool> LHS = visitConditions(I->getOperand(0), BaseCond,
                                             ContextBB, ImpliedConditions, DL);
   std::optional<bool> RHS = visitConditions(I->getOperand(1), BaseCond,
                                             ContextBB, ImpliedConditions, DL);
 
-  if (!LHS.has_value() && !RHS.has_value()) {
+  // TODO: Handle negated condition case.
+  // Leaf condition node that implies the base condition.
+  if (Imp == true && !LHS.has_value() && !RHS.has_value()) {
     ImpliedConditions.push_back(I);
   }
 
@@ -1937,20 +1935,11 @@ static bool hoistImplyingConditions(BranchInst *BI, IRBuilder<> &Builder,
   // Now that we know ChildBI condition implies parent BI condition,
   // we need to find out which conditions to hoist out.
   SmallVector<Instruction *, 2> HoistCandidates;
-  std::optional<bool> Imp =
-      visitConditions(ChildBI->getCondition(), BI->getCondition(),
-                      (!IsCommonBBonTruePath ? ParentTrueBB : ParentFalseBB),
-                      HoistCandidates, DL);
-  // We found no implication relationship.
-  if (!Imp.has_value())
-    return false;
-
-  // TODO: Handle negated condition case.
-  if (Imp == false)
-    return false;
-
+  visitConditions(ChildBI->getCondition(), BI->getCondition(),
+                  (!IsCommonBBonTruePath ? ParentTrueBB : ParentFalseBB),
+                  HoistCandidates, DL);
   // We don't handle multiple hoist candidates for now.
-  if (HoistCandidates.size() > 1)
+  if (HoistCandidates.empty() || HoistCandidates.size() > 2)
     return false;
 
   // We can hoist the condition.
