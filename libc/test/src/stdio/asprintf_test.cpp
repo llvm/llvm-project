@@ -76,6 +76,7 @@ TEST(LlvmLibcASPrintfTest, LargeStringNoConv) {
 TEST(LlvmLibcASPrintfTest, ManyReAlloc) {
   char *buff = nullptr;
   char long_str[1001];
+  // TODO: simplify test to match with vasprintf_test
   auto expected_num_chars =
       LIBC_NAMESPACE::sprintf(long_str, "%200s%200s%200s", "a", "b", "c");
   long_str[expected_num_chars] = '\0';
