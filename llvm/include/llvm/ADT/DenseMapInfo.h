@@ -194,20 +194,16 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
     return getHashValueImpl<0>(values);
   }
 
-  template <unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs) {
-    if constexpr (I == sizeof...(Ts)) {
-      return true;
-    } else {
-      using EltType = std::tuple_element_t<I, Tuple>;
-      return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs),
-                                            std::get<I>(rhs)) &&
-             isEqualImpl<I + 1>(lhs, rhs);
-    }
+  template <std::size_t... Is>
+  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs,
+                          std::index_sequence<Is...>) {
+    return (DenseMapInfo<std::tuple_element_t<Is, Tuple>>::isEqual(
+                std::get<Is>(lhs), std::get<Is>(rhs)) &&
+            ...);
   }
 
   static bool isEqual(const Tuple &lhs, const Tuple &rhs) {
-    return isEqualImpl<0>(lhs, rhs);
+    return isEqualImpl(lhs, rhs, std::index_sequence_for<Ts...>{});
   }
 };
 

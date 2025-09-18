@@ -28,11 +28,6 @@ using MappedFileRegion = MappedFileRegionArena::RegionT;
 
 /// Generic handle for a table.
 ///
-/// Probably we want some table kinds for pointing at multiple tables.
-/// - Probably a tree or trie type makes sense.
-/// - Or a deque. Linear search is okay as long as there aren't many tables in
-///   a file.
-///
 /// Generic table header layout:
 /// - 2-bytes: TableKind
 /// - 2-bytes: TableNameSize
@@ -46,7 +41,7 @@ public:
   struct Header {
     TableKind Kind;
     uint16_t NameSize;
-    int32_t NameRelOffset; // Relative to Header.
+    int32_t NameRelOffset; ///< Relative to Header.
   };
 
   explicit operator bool() const { return H; }
@@ -255,18 +250,23 @@ Error DatabaseFile::validate(MappedFileRegion &Region) {
 namespace {
 
 class SubtrieHandle;
+class TrieRawHashMapHandle;
 class TrieVisitor;
+
+/// A value stored in the slots inside a SubTrie. A stored value can either be a
+/// subtrie (encoded after negation) which is the file offset to another
+/// subtrie, or it can be a fileset to a DataRecord.
 class SubtrieSlotValue {
 public:
   explicit operator bool() const { return !isEmpty(); }
   bool isEmpty() const { return !Offset; }
   bool isData() const { return Offset > 0; }
   bool isSubtrie() const { return Offset < 0; }
-  int64_t asData() const {
+  uint64_t asData() const {
     assert(isData());
     return Offset;
   }
-  int64_t asSubtrie() const {
+  uint64_t asSubtrie() const {
     assert(isSubtrie());
     return -Offset;
   }
@@ -304,8 +304,6 @@ private:
   explicit SubtrieSlotValue(int64_t Offset) : Offset(Offset) {}
   int64_t Offset = 0;
 };
-
-class TrieRawHashMapHandle;
 
 /// Subtrie layout:
 /// - 2-bytes: StartBit
@@ -418,7 +416,7 @@ private:
 ///
 /// TrieRawHashMap table layout:
 /// - [8-bytes: Generic table header]
-/// - 1-byte: NumSubtrieBits
+/// - 1-byte:  NumSubtrieBits
 /// - 1-byte:  Flags (not used yet)
 /// - 2-bytes: NumHashBits
 /// - 4-bytes: RecordDataSize (in bytes)
@@ -427,8 +425,8 @@ private:
 /// - <name> '\0'
 ///
 /// Record layout:
-/// - <data>
 /// - <hash>
+/// - <data>
 class TrieRawHashMapHandle {
 public:
   static constexpr TableHandle::TableKind Kind =
@@ -437,7 +435,7 @@ public:
   struct Header {
     TableHandle::Header GenericHeader;
     uint8_t NumSubtrieBits;
-    uint8_t Flags; // None used yet.
+    uint8_t Flags; ///< None used yet.
     uint16_t NumHashBits;
     uint32_t RecordDataSize;
     std::atomic<int64_t> RootTrieOffset;
@@ -645,45 +643,28 @@ TrieRawHashMapHandle::createRecord(MappedFileRegionArena &Alloc,
   return Record;
 }
 
-OnDiskTrieRawHashMap::const_pointer
-OnDiskTrieRawHashMap::recoverFromHashPointer(
-    const uint8_t *HashBeginPtr) const {
-  // Record hashes occur immediately after data. Compute the beginning of the
-  // record and check for overflow.
-  const uintptr_t HashBegin = reinterpret_cast<uintptr_t>(HashBeginPtr);
-  const uintptr_t RecordBegin = HashBegin - Impl->Trie.getRecordSize();
-  if (HashBegin < RecordBegin)
-    return const_pointer();
-
-  // Check that it'll be a positive offset.
-  const uintptr_t FileBegin =
-      reinterpret_cast<uintptr_t>(Impl->File.getRegion().data());
-  if (RecordBegin < FileBegin)
-    return const_pointer();
-
-  // Good enough to form an offset. Continue checking there.
-  return recoverFromFileOffset(FileOffset(RecordBegin - FileBegin));
-}
-
-OnDiskTrieRawHashMap::const_pointer
+Expected<OnDiskTrieRawHashMap::const_pointer>
 OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   // Check alignment.
   if (!isAligned(MappedFileRegionArena::getAlign(), Offset.get()))
-    return const_pointer();
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "unaligned file offset at 0x" +
+                                 utohexstr(Offset.get(), /*LowerCase=*/true));
 
   // Check bounds.
   //
   // Note: There's no potential overflow when using \c uint64_t because Offset
-  // is in \c [0,INT64_MAX] and the record size is in \c [0,UINT32_MAX].
-  assert(Offset.get() >= 0 && "Expected FileOffset constructor guarantee this");
-  if ((uint64_t)Offset.get() + Impl->Trie.getRecordSize() >
-      Impl->File.getAlloc().size())
-    return const_pointer();
+  // is in valid offset range and the record size is in \c [0,UINT32_MAX].
+  if (!validOffset(Offset) ||
+      Offset.get() + Impl->Trie.getRecordSize() > Impl->File.getAlloc().size())
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "file offset too large: 0x" +
+                                 utohexstr(Offset.get(), /*LowerCase=*/true));
 
   // Looks okay...
   TrieRawHashMapHandle::RecordData D =
       Impl->Trie.getRecord(SubtrieSlotValue::getDataOffset(Offset));
-  return const_pointer(D.getFileOffset(), D.Proxy);
+  return const_pointer(D.Proxy, D.getFileOffset());
 }
 
 OnDiskTrieRawHashMap::const_pointer
@@ -706,7 +687,7 @@ OnDiskTrieRawHashMap::find(ArrayRef<uint8_t> Hash) const {
     // Check for an exact match.
     if (V.isData()) {
       TrieRawHashMapHandle::RecordData D = Trie.getRecord(V);
-      return D.Proxy.Hash == Hash ? const_pointer(D.getFileOffset(), D.Proxy)
+      return D.Proxy.Hash == Hash ? const_pointer(D.Proxy, D.getFileOffset())
                                   : const_pointer();
     }
 
@@ -758,7 +739,7 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
       }
 
       if (S->compare_exchange_strong(Index, Existing, NewRecord->Offset))
-        return pointer(NewRecord->Offset.asDataFileOffset(), NewRecord->Proxy);
+        return pointer(NewRecord->Proxy, NewRecord->Offset.asDataFileOffset());
 
       // Race means that Existing is no longer empty; fall through...
     }
@@ -775,8 +756,8 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
       if (NewRecord && OnLeak)
         OnLeak(NewRecord->Offset.asDataFileOffset(), NewRecord->Proxy,
                ExistingRecord.Offset.asDataFileOffset(), ExistingRecord.Proxy);
-      return pointer(ExistingRecord.Offset.asDataFileOffset(),
-                     ExistingRecord.Proxy);
+      return pointer(ExistingRecord.Proxy,
+                     ExistingRecord.Offset.asDataFileOffset());
     }
 
     // Sink the existing content as long as the indexes match.
@@ -839,13 +820,7 @@ void OnDiskTrieRawHashMap::print(
   Impl->Trie.print(OS, PrintRecordData);
 }
 
-static void printHexDigit(raw_ostream &OS, uint8_t Digit) {
-  if (Digit < 10)
-    OS << char(Digit + '0');
-  else
-    OS << char(Digit - 10 + 'a');
-}
-
+// Helper function that prints hexdigit and have a sub-byte starting position.
 static void printHexDigits(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                            size_t StartBit, size_t NumBits) {
   assert(StartBit % 4 == 0);
@@ -853,7 +828,7 @@ static void printHexDigits(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
   for (size_t I = StartBit, E = StartBit + NumBits; I != E; I += 4) {
     uint8_t HexPair = Bytes[I / 8];
     uint8_t HexDigit = I % 8 == 0 ? HexPair >> 4 : HexPair & 0xf;
-    printHexDigit(OS, HexDigit);
+    OS << hexdigit(HexDigit, /*LowerCase=*/true);
   }
 }
 
@@ -902,7 +877,7 @@ static void printPrefix(raw_ostream &OS, StringRef Prefix) {
     bool ErrorParsingBinary = Prefix.take_front(4).getAsInteger(2, Digit);
     assert(!ErrorParsingBinary);
     (void)ErrorParsingBinary;
-    printHexDigit(OS, Digit);
+    OS << hexdigit(Digit, /*LowerCase=*/true);
     Prefix = Prefix.drop_front(4);
   }
   if (!Prefix.empty())
@@ -1044,12 +1019,12 @@ static Error createInvalidTrieError(uint64_t Offset, const Twine &Msg) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-// A vistior to traverse the Trie and it can be multi-threaded.
-//
-// TODO: add more sanity checks that isn't just plain data corruption. For
-// example, some ill-formed data can be constructed to form a cycle using
-// Sub-Tries and it can lead to inifinite loop when visiting (or inserting
-// data).
+/// A vistior to traverse the Trie and it can be multi-threaded.
+///
+/// TODO: add more sanity checks that isn't just plain data corruption. For
+/// example, some ill-formed data can be constructed to form a cycle using
+/// Sub-Tries and it can lead to inifinite loop when visiting (or inserting
+/// data).
 class TrieVisitor {
 public:
   TrieVisitor(TrieRawHashMapHandle Trie, unsigned ThreadCount = 0,
@@ -1108,7 +1083,7 @@ private:
   DefaultThreadPool Threads;
 };
 
-// A visitor that traverse and print the Trie.
+/// A visitor that traverse and print the Trie.
 class TriePrinter : public TrieVisitor {
 public:
   TriePrinter(TrieRawHashMapHandle Trie, raw_ostream &OS,
@@ -1190,7 +1165,7 @@ private:
   SmallVector<int64_t> Records;
 };
 
-// TrieVerifier that adds additional verification on top of the basic visitor.
+/// TrieVerifier that adds additional verification on top of the basic visitor.
 class TrieVerifier : public TrieVisitor {
 public:
   TrieVerifier(
@@ -1518,7 +1493,7 @@ OnDiskDataAllocator::allocate(size_t Size) {
 const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
   assert(Offset);
   assert(Impl);
-  assert(Offset.get() < (int64_t)Impl->File.getAlloc().size());
+  assert(Offset.get() < Impl->File.getAlloc().size());
   return Impl->File.getRegion().data() + Offset.get();
 }
 
@@ -1545,7 +1520,8 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
                              std::optional<uint64_t> NewFileInitialSize,
                              std::optional<size_t> NewTableNumRootBits,
                              std::optional<size_t> NewTableNumSubtrieBits) {
-  report_fatal_error("not supported");
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskTrieRawHashMap is not supported");
 }
 
 Expected<OnDiskTrieRawHashMap::pointer>
@@ -1555,7 +1531,7 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
   report_fatal_error("not supported");
 }
 
-OnDiskTrieRawHashMap::const_pointer
+Expected<OnDiskTrieRawHashMap::const_pointer>
 OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
   report_fatal_error("not supported");
 }
@@ -1593,7 +1569,8 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
     std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
     function_ref<void(void *)> UserHeaderInit) {
-  report_fatal_error("not supported");
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskDataAllocator is not supported");
 }
 
 Expected<OnDiskDataAllocator::pointer>

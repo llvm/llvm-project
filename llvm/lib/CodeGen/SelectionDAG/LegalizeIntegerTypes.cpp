@@ -1631,7 +1631,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   // type.
   if (IsFSHR)
     Amt = DAG.getNode(ISD::ADD, DL, AmtVT, Amt,
-                      DAG.getConstant(NewBits - OldBits, DL, VT));
+                      DAG.getConstant(NewBits - OldBits, DL, AmtVT));
 
   return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt);
 }

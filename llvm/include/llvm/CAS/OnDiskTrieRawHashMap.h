@@ -29,19 +29,19 @@ class raw_ostream;
 
 namespace cas {
 
-/// FileOffset is a wrapper around `int64_t` to represent the offset of data
+/// FileOffset is a wrapper around `uint64_t` to represent the offset of data
 /// from the beginning of the file.
 class FileOffset {
 public:
-  int64_t get() const { return Offset; }
+  uint64_t get() const { return Offset; }
 
   explicit operator bool() const { return Offset; }
 
   FileOffset() = default;
-  explicit FileOffset(int64_t Offset) : Offset(Offset) { assert(Offset >= 0); }
+  explicit FileOffset(uint64_t Offset) : Offset(Offset) {}
 
 private:
-  int64_t Offset = 0;
+  uint64_t Offset = 0;
 };
 
 /// OnDiskTrieRawHashMap is a persistent trie data structure used as hash maps.
@@ -100,12 +100,17 @@ public:
   Error validate(
       function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const;
 
+  /// Check the valid range of file offset for OnDiskTrieRawHashMap.
+  static bool validOffset(FileOffset Offset) {
+    return Offset.get() < (1LL << 48);
+  }
+
 public:
   /// Template class to implement a `pointer` type into the trie data structure.
   ///
   /// It provides pointer-like operation, e.g., dereference to get underlying
-  /// data. It also reserves top 16 bits of the pointer value, which can be used
-  /// to pack additional information if needed.
+  /// data. It also reserves the top 16 bits of the pointer value, which can be
+  /// used to pack additional information if needed.
   template <class ProxyT> class PointerImpl {
   public:
     FileOffset getOffset() const {
@@ -126,19 +131,11 @@ public:
     PointerImpl() = default;
 
   protected:
-    PointerImpl(FileOffset Offset, ProxyT Value)
-        : PointerImpl(Value, Offset, /*IsValue=*/true) {}
-
-    PointerImpl(ProxyT Value, FileOffset Offset, bool IsValue)
+    PointerImpl(ProxyT Value, FileOffset Offset, bool IsValue = true)
         : Value(Value), OffsetLow32((uint64_t)Offset.get()),
           OffsetHigh16((uint64_t)Offset.get() >> 32), IsValue(IsValue) {
       if (IsValue)
-        checkOffset(Offset);
-    }
-
-    static void checkOffset(FileOffset Offset) {
-      assert(Offset.get() > 0);
-      assert((uint64_t)Offset.get() < (1LL << 48));
+        assert(validOffset(Offset));
     }
 
     ProxyT Value;
@@ -174,33 +171,14 @@ public:
     using pointer::PointerImpl::PointerImpl;
   };
 
-  pointer getMutablePointer(const_pointer CP) {
-    if (!CP)
-      return pointer();
-    ValueProxy V{CP->Hash, MutableArrayRef(const_cast<char *>(CP->Data.data()),
-                                           CP->Data.size())};
-    return pointer(CP.getOffset(), V);
-  }
-
+  /// Find the value from hash.
+  ///
+  /// \returns pointer to the value if exists, otherwise returns a non-value
+  /// pointer that evaluates to `false` when convert to boolean.
   const_pointer find(ArrayRef<uint8_t> Hash) const;
-  pointer find(ArrayRef<uint8_t> Hash) {
-    return getMutablePointer(
-        const_cast<const OnDiskTrieRawHashMap *>(this)->find(Hash));
-  }
 
-  const_pointer recoverFromHashPointer(const uint8_t *HashBegin) const;
-  pointer recoverFromHashPointer(const uint8_t *HashBegin) {
-    return getMutablePointer(
-        const_cast<const OnDiskTrieRawHashMap *>(this)->recoverFromHashPointer(
-            HashBegin));
-  }
-
-  const_pointer recoverFromFileOffset(FileOffset Offset) const;
-  pointer recoverFromFileOffset(FileOffset Offset) {
-    return getMutablePointer(
-        const_cast<const OnDiskTrieRawHashMap *>(this)->recoverFromFileOffset(
-            Offset));
-  }
+  /// Helper function to recover a pointer into the trie from file offset.
+  Expected<const_pointer> recoverFromFileOffset(FileOffset Offset) const;
 
   using LazyInsertOnConstructCB =
       function_ref<void(FileOffset TentativeOffset, ValueProxy TentativeValue)>;

@@ -124,11 +124,23 @@ TEST(OnDiskTrieRawHashMapTest, Insertion) {
 
     // Recover from an offset.
     {
-      auto Recovered = Trie1->recoverFromFileOffset(*Offset);
+      OnDiskTrieRawHashMap::const_pointer Recovered;
+      ASSERT_THAT_ERROR(
+          Trie1->recoverFromFileOffset(*Offset).moveInto(Recovered),
+          Succeeded());
       ASSERT_TRUE(Recovered);
       EXPECT_EQ(Offset->get(), Recovered.getOffset().get());
       EXPECT_EQ(Hash0, Recovered->Hash);
       EXPECT_EQ(Data0v2, Recovered->Data);
+    }
+
+    // Recover from a bad offset.
+    {
+      FileOffset BadOffset(1);
+      OnDiskTrieRawHashMap::const_pointer Recovered;
+      ASSERT_THAT_ERROR(
+          Trie1->recoverFromFileOffset(BadOffset).moveInto(Recovered),
+          Failed());
     }
 
     // Insert another thing.

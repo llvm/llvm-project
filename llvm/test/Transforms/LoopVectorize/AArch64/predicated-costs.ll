@@ -8,14 +8,14 @@ target triple = "aarch64-unknown-linux"
 define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8 %n, i64 %off) #0 {
 ; CHECK-LABEL: define void @test_predicated_load_cast_hint(
 ; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]], i8 [[N:%.*]], i64 [[OFF:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = sext i8 [[N]] to i32
 ; CHECK-NEXT:    [[N_SUB:%.*]] = add i32 [[N_EXT]], -15
 ; CHECK-NEXT:    [[SMAX16:%.*]] = call i32 @llvm.smax.i32(i32 [[N_SUB]], i32 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX16]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N_SUB]], i32 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[SMAX]], -1
@@ -39,7 +39,7 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP10]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[DST_2]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
@@ -268,7 +268,7 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

@@ -1969,10 +1969,9 @@ define amdgpu_kernel void @add_inline_imm_neg_1_f64(ptr addrspace(1) %out, [8 x 
 ; GFX942-LABEL: add_inline_imm_neg_1_f64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX942-NEXT:    v_mov_b32_e32 v0, -1
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2009,8 +2008,7 @@ define amdgpu_kernel void @add_inline_imm_neg_2_f64(ptr addrspace(1) %out, [8 x 
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, -2
-; GFX942-NEXT:    v_mov_b32_e32 v1, -1
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -2
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2047,8 +2045,7 @@ define amdgpu_kernel void @add_inline_imm_neg_16_f64(ptr addrspace(1) %out, [8 x
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, -16
-; GFX942-NEXT:    v_mov_b32_e32 v1, -1
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -16
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2163,10 +2160,9 @@ define amdgpu_kernel void @store_inline_imm_0.0_f64(ptr addrspace(1) %out) {
 ; GFX942-LABEL: store_inline_imm_0.0_f64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2239,8 +2235,7 @@ define amdgpu_kernel void @store_inline_imm_0.5_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0x3fe00000
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0.5
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2276,8 +2271,7 @@ define amdgpu_kernel void @store_inline_imm_m_0.5_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0xbfe00000
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -0.5
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2313,8 +2307,7 @@ define amdgpu_kernel void @store_inline_imm_1.0_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0x3ff00000
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 1.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2350,8 +2343,7 @@ define amdgpu_kernel void @store_inline_imm_m_1.0_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0xbff00000
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -1.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2387,8 +2379,7 @@ define amdgpu_kernel void @store_inline_imm_2.0_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 2.0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 2.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2424,8 +2415,7 @@ define amdgpu_kernel void @store_inline_imm_m_2.0_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, -2.0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -2.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2461,8 +2451,7 @@ define amdgpu_kernel void @store_inline_imm_4.0_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0x40100000
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 4.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2498,8 +2487,7 @@ define amdgpu_kernel void @store_inline_imm_m_4.0_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0xc0100000
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], -4.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
@@ -2535,8 +2523,7 @@ define amdgpu_kernel void @store_inv_2pi_f64(ptr addrspace(1) %out) {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX942-NEXT:    s_mov_b32 s2, -1
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0x6dc9c882
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0x3fc45f30
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0.15915494309189532
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX942-NEXT:    s_endpgm
