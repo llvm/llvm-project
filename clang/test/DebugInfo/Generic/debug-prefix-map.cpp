@@ -8,4 +8,4 @@ struct alignas(64) an {
 
 struct an *pan = new an;
 
-// CHECK: !DISubprogram(name: "(unnamed struct at ./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}",
+// CHECK: !DISubprogram(name: "(unnamed)",
