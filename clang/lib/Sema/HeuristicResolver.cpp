@@ -259,6 +259,25 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
+
+    // Similarly, heuristically replace a template template parameter with its
+    // default argument if it has one.
+    if (const auto *TST =
+            dyn_cast_if_present<TemplateSpecializationType>(T.Type)) {
+      if (const auto *TTPD = dyn_cast_if_present<TemplateTemplateParmDecl>(
+              TST->getTemplateName().getAsTemplateDecl())) {
+        if (TTPD->hasDefaultArgument()) {
+          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+          if (DefaultArg.getKind() == TemplateArgument::Template) {
+            if (const auto *CTD = dyn_cast_if_present<ClassTemplateDecl>(
+                    DefaultArg.getAsTemplate().getAsTemplateDecl())) {
+              return {Ctx.getCanonicalTagType(CTD->getTemplatedDecl())};
+            }
+          }
+        }
+      }
+    }
+
     // Check if the expression refers to an explicit object parameter of
     // templated type. If so, heuristically treat it as having the type of the
     // enclosing class.
