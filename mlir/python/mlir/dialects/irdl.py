@@ -24,7 +24,7 @@ class DialectOp(DialectOp):
 
 
 def dialect(sym_name, *, loc=None, ip=None) -> DialectOp:
-  return DialectOp(sym_name=sym_name, loc=loc, ip=ip)
+    return DialectOp(sym_name=sym_name, loc=loc, ip=ip)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -41,7 +41,7 @@ class OperationOp(OperationOp):
 
 
 def operation_(sym_name, *, loc=None, ip=None) -> OperationOp:
-  return OperationOp(sym_name=sym_name, loc=loc, ip=ip)
+    return OperationOp(sym_name=sym_name, loc=loc, ip=ip)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -58,7 +58,7 @@ class TypeOp(TypeOp):
 
 
 def type_(sym_name, *, loc=None, ip=None) -> TypeOp:
-  return TypeOp(sym_name=sym_name, loc=loc, ip=ip)
+    return TypeOp(sym_name=sym_name, loc=loc, ip=ip)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -75,7 +75,7 @@ class AttributeOp(AttributeOp):
 
 
 def attribute(sym_name, *, loc=None, ip=None) -> AttributeOp:
-  return AttributeOp(sym_name=sym_name, loc=loc, ip=ip)
+    return AttributeOp(sym_name=sym_name, loc=loc, ip=ip)
 
 
 @register_attribute_builder("VariadicityArrayAttr")
