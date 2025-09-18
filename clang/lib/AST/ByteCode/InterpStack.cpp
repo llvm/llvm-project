@@ -24,9 +24,6 @@ InterpStack::~InterpStack() {
     std::free(Chunk->Next);
   if (Chunk)
     std::free(Chunk);
-  Chunk = nullptr;
-  StackSize = 0;
-  ItemTypes.clear();
 }
 
 // We keep the last chunk around to reuse.
@@ -56,28 +53,11 @@ void InterpStack::clearTo(size_t NewSize) {
   assert(size() == NewSize);
 }
 
-void *InterpStack::grow(size_t Size) {
-  assert(Size < ChunkSize - sizeof(StackChunk) && "Object too large");
-
-  if (!Chunk || sizeof(StackChunk) + Chunk->size() + Size > ChunkSize) {
-    if (Chunk && Chunk->Next) {
-      Chunk = Chunk->Next;
-    } else {
-      StackChunk *Next = new (std::malloc(ChunkSize)) StackChunk(Chunk);
-      if (Chunk)
-        Chunk->Next = Next;
-      Chunk = Next;
-    }
-  }
-
-  auto *Object = reinterpret_cast<void *>(Chunk->End);
-  Chunk->End += Size;
-  StackSize += Size;
-  return Object;
-}
-
 void *InterpStack::peekData(size_t Size) const {
   assert(Chunk && "Stack is empty!");
+
+  if (LLVM_LIKELY(Size <= Chunk->size()))
+    return reinterpret_cast<void *>(Chunk->start() + Chunk->Size - Size);
 
   StackChunk *Ptr = Chunk;
   while (Size > Ptr->size()) {
@@ -86,11 +66,18 @@ void *InterpStack::peekData(size_t Size) const {
     assert(Ptr && "Offset too large");
   }
 
-  return reinterpret_cast<void *>(Ptr->End - Size);
+  return reinterpret_cast<void *>(Ptr->start() + Ptr->Size - Size);
 }
 
 void InterpStack::shrink(size_t Size) {
   assert(Chunk && "Chunk is empty!");
+
+  // Likely case is that we simply remove something from the current chunk.
+  if (LLVM_LIKELY(Size <= Chunk->size())) {
+    Chunk->Size -= Size;
+    StackSize -= Size;
+    return;
+  }
 
   while (Size > Chunk->size()) {
     Size -= Chunk->size();
@@ -98,12 +85,12 @@ void InterpStack::shrink(size_t Size) {
       std::free(Chunk->Next);
       Chunk->Next = nullptr;
     }
-    Chunk->End = Chunk->start();
+    Chunk->Size = 0;
     Chunk = Chunk->Prev;
     assert(Chunk && "Offset too large");
   }
 
-  Chunk->End -= Size;
+  Chunk->Size -= Size;
   StackSize -= Size;
 }
 
