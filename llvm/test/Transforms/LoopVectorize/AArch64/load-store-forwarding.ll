@@ -5,19 +5,38 @@
 define void @different_type_sizes_store_size_cannot_prevent_forwarding(ptr %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @different_type_sizes_store_size_cannot_prevent_forwarding(
 ; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i32, ptr [[A]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1022, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = sub i64 1022, [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV]], -7
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_A]], align 4
-; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr i32, ptr [[A_1]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[GEP_A]], i64 -7
+; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[A_1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP4]], align 2
+; CHECK-NEXT:    store i16 [[TMP5]], ptr [[B]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1016
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 6, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP_A1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV1]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_A1]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr i32, ptr [[A_1]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP_A_1]], align 2
 ; CHECK-NEXT:    store i16 [[L]], ptr [[B]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV1]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV1]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
