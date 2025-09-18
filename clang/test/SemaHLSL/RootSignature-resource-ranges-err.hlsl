@@ -146,3 +146,7 @@ void offset_overflow() {}
 // expected-error@+1 {{descriptor range offset overflows [4294967295, 4294967296]}}
 [RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1, numDescriptors = 2))")]
 void appended_offset_overflow() {}
+
+// expected-error@+1 {{descriptor range offset overflows [4294967296, 4294967296]}}
+[RootSignature("DescriptorTable(CBV(b0, offset = 4294967294), CBV(b1), CBV(b2))")]
+void multiple_appended_offset_overflow() {}
