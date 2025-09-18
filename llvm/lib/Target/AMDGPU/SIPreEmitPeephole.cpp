@@ -62,7 +62,7 @@ private:
   // v_fma_f32 v1, v0, v2, v2
   // Here, we have overwritten v0 before we use it. This function checks if
   // unpacking can lead to such a situation.
-  bool canUnpackingIntroduceDependencies(const MachineInstr &MI);
+  bool canUnpackingClobberRegister(const MachineInstr &MI);
   // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
   // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
   // this transformation.
@@ -469,7 +469,7 @@ bool SIPreEmitPeephole::isUnpackingSupportedInstr(MachineInstr &MI) const {
   llvm_unreachable("Fully covered switch");
 }
 
-bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
+bool SIPreEmitPeephole::canUnpackingClobberRegister(
     const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
@@ -481,14 +481,12 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
   // Such scenarios can arise due to specific combinations of op_sel and
   // op_sel_hi modifiers.
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
-  unsigned Src0Mods =
-      TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
-  unsigned Src1Mods =
-      TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
 
   const MachineOperand *Src0MO = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-  if (Src0MO->isReg()) {
+  if (Src0MO && Src0MO->isReg()) {
     Register SrcReg0 = Src0MO->getReg();
+    unsigned Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm();
     Register HiSrc0Reg = (Src0Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg0, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg0, AMDGPU::sub0);
@@ -499,8 +497,10 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
   }
 
   const MachineOperand *Src1MO = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Src1MO->isReg()) {
+  if (Src1MO && Src1MO->isReg()) {
     Register SrcReg1 = Src1MO->getReg();
+    unsigned Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm();
     Register HiSrc1Reg = (Src1Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg1, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg1, AMDGPU::sub0);
@@ -511,13 +511,13 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
   // Applicable for packed instructions with 3 source operands, such as
   // V_PK_FMA.
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
-    unsigned Src2Mods =
-        TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm();
     const MachineOperand *Src2MO =
         TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-    if (Src2MO->isReg()) {
+    if (Src2MO && Src2MO->isReg()) {
       Register SrcReg2 =
           TII->getNamedOperand(MI, AMDGPU::OpName::src2)->getReg();
+      unsigned Src2Mods =
+          TII->getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm();
       Register HiSrc2Reg = (Src2Mods & SISrcMods::OP_SEL_1)
                                ? TRI->getSubReg(SrcReg2, AMDGPU::sub1)
                                : TRI->getSubReg(SrcReg2, AMDGPU::sub0);
@@ -614,19 +614,19 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     MachineInstr &Instr = *I;
     if (Instr.isMetaInstruction())
       continue;
-    if (Instr.isTerminator())
+    if ((Instr.isTerminator()) ||
+        (TII->isNeverCoissue(Instr) && !isUnpackingSupportedInstr(Instr)) ||
+        (SIInstrInfo::modifiesModeRegister(Instr) &&
+         Instr.modifiesRegister(AMDGPU::EXEC, TRI)))
       return;
-    if (TII->isNeverCoissue(Instr) && !isUnpackingSupportedInstr(Instr))
-      return;
-    if (SIInstrInfo::modifiesModeRegister(Instr) &&
-        Instr.modifiesRegister(AMDGPU::EXEC, TRI))
-      return;
+
     const MCSchedClassDesc *InstrSchedClassDesc =
         SchedModel.resolveSchedClass(&Instr);
-    TotalCyclesBetweenCandidates +=
+    uint16_t Latency =
         SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
+    TotalCyclesBetweenCandidates += Latency;
 
-    if (TotalCyclesBetweenCandidates > NumMFMACycles)
+    if (TotalCyclesBetweenCandidates > NumMFMACycles - 1)
       return;
     // Identify register dependencies between those used by the MFMA
     // instruction and the following packed instructions. Also checks for
@@ -634,29 +634,26 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // def and uses. Conservatively ensures that we do not incorrectly
     // read/write registers.
     for (const MachineOperand &InstrMO : Instr.operands()) {
-      if (InstrMO.isReg()) {
-        if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
-          return;
-      }
-    }
-    if (isUnpackingSupportedInstr(Instr)) {
-      assert(TII->isNeverCoissue(Instr) && "Instruction cannot be co-issued.");
-      if (canUnpackingIntroduceDependencies(Instr))
+      if (!InstrMO.isReg() || !InstrMO.getReg().isValid())
+        continue;
+      if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
         return;
-      // If it is a packed instruction, we should subtract it's latency from the
-      // overall latency calculation here, because the packed instruction will
-      // be removed and replaced by 2 unpacked instructions.
-      TotalCyclesBetweenCandidates -=
-          SchedModel.getWriteProcResBegin(InstrSchedClassDesc)->ReleaseAtCycle;
-      // We're adding 2 to account for the extra latency added by unpacking into
-      // 2 instructions. At the time of writing, the considered unpacked
-      // instructions have latency of 1.
-      // TODO: improve latency handling of possible inserted instructions.
-      TotalCyclesBetweenCandidates += 2;
-      // Subtract 1 to account for MFMA issue latency.
-      if (!(TotalCyclesBetweenCandidates >= NumMFMACycles - 1))
-        InstrsToUnpack.insert(&Instr);
     }
+    if (!isUnpackingSupportedInstr(Instr))
+      continue;
+
+    assert(TII->isNeverCoissue(Instr) && "Instruction cannot be co-issued.");
+    if (canUnpackingClobberRegister(Instr))
+      return;
+    // If it's a packed instruction, adjust latency: remove the packed
+    // latency, add latency of two unpacked instructions (currently estimated
+    // as 2 cycles).
+    TotalCyclesBetweenCandidates -= Latency;
+    // TODO: improve latency handling based on instruction modeling.
+    TotalCyclesBetweenCandidates += 2;
+    // Subtract 1 to account for MFMA issue latency.
+    if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
+      InstrsToUnpack.insert(&Instr);
   }
   return;
 }
@@ -672,8 +669,7 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/false);
   MachineOperand LoDstOp = Op0LOp1L->getOperand(0);
 
-  if (DstOp.isUndef())
-    LoDstOp.setIsUndef();
+  LoDstOp.setIsUndef(DstOp.isUndef());
 
   MachineInstrBuilder Op0HOp1H =
       createUnpackedMI(I, UnpackedOpcode, /*IsHiBits=*/true);
@@ -687,10 +683,9 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
     Op0LOp1L->setFlag(MachineInstr::MIFlag::FmContract);
     Op0HOp1H->setFlag(MachineInstr::MIFlag::FmContract);
   }
-  if (DstOp.getReg().isPhysical() && DstOp.isRenamable()) {
-    LoDstOp.setIsRenamable(true);
-    HiDstOp.setIsRenamable(true);
-  }
+
+  LoDstOp.setIsRenamable(DstOp.isRenamable());
+  HiDstOp.setIsRenamable(DstOp.isRenamable());
 
   I.eraseFromParent();
   return;
@@ -804,22 +799,19 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the compiler
     // to co-issue unpacked instructions with MFMA
-    uint16_t NumMFMACycles = 0;
     auto SchedModel = TII->getSchedModel();
     SetVector<MachineInstr *> InstrsToUnpack;
     for (auto &MI : make_early_inc_range(MBB.instrs())) {
-      if (SIInstrInfo::isMFMA(MI)) {
-        const MCSchedClassDesc *SchedClassDesc =
-            SchedModel.resolveSchedClass(&MI);
-        NumMFMACycles =
-            SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-        collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
-      }
+      if (!SIInstrInfo::isMFMA(MI))
+        continue;
+      const MCSchedClassDesc *SchedClassDesc =
+          SchedModel.resolveSchedClass(&MI);
+      uint16_t NumMFMACycles =
+          SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
     }
-    if (!InstrsToUnpack.empty()) {
-      for (MachineInstr *MI : InstrsToUnpack) {
-        performF32Unpacking(*MI);
-      }
+    for (MachineInstr *MI : InstrsToUnpack) {
+      performF32Unpacking(*MI);
     }
   }
 
