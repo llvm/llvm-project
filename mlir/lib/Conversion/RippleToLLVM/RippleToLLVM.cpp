@@ -154,6 +154,32 @@ public:
   }
 };
 
+class BroadcastPtrOpLowering : public ConversionPattern {
+public:
+  explicit BroadcastPtrOpLowering(MLIRContext *context)
+      : ConversionPattern(ripple::BroadcastPtrOp::getOperationName(), 1,
+                          context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 3)
+      return failure();
+
+    auto retType = operands[2].getType();
+
+    auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.broadcast"),
+        ValueRange(operands));
+
+    rewriter.replaceOp(op, callIntrOpRef);
+    return success();
+  }
+};
+
 class SliceOpLowering : public ConversionPattern {
 public:
   explicit SliceOpLowering(MLIRContext *context)
@@ -278,6 +304,242 @@ public:
     return success();
   }
 };
+
+class ReduceAddOpLowering : public ConversionPattern {
+public:
+  explicit ReduceAddOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceAddOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    if (retType.isInteger()) {
+      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.add"),
+        ValueRange(operands));
+
+      rewriter.replaceOp(op, callIntrOpRef);
+    } else if (retType.isFloat()) {
+      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.fadd"),
+        ValueRange(operands));
+
+      rewriter.replaceOp(op, callIntrOpRef);
+    } else {
+      return failure();
+    }
+
+    return success();
+  }
+};
+
+class ReduceMulOpLowering : public ConversionPattern {
+public:
+  explicit ReduceMulOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceMulOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    if (retType.isInteger()) {
+      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.mul"),
+        ValueRange(operands));
+
+      rewriter.replaceOp(op, callIntrOpRef);
+    } else if (retType.isFloat()) {
+      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.fmul"),
+        ValueRange(operands));
+
+      rewriter.replaceOp(op, callIntrOpRef);
+    } else {
+      return failure();
+    }
+
+    return success();
+  }
+};
+
+class ReduceAndOpLowering : public ConversionPattern {
+public:
+  explicit ReduceAndOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceAndOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+      loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.and"),
+      ValueRange(operands));
+
+    rewriter.replaceOp(op, callIntrOpRef);
+  }
+};
+
+class ReduceOrOpLowering : public ConversionPattern {
+public:
+  explicit ReduceOrOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceAndOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+      loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.or"),
+      ValueRange(operands));
+
+    rewriter.replaceOp(op, callIntrOpRef);
+  }
+};
+
+class ReduceXorOpLowering : public ConversionPattern {
+public:
+  explicit ReduceXorOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceAndOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+      loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.xor"),
+      ValueRange(operands));
+
+    rewriter.replaceOp(op, callIntrOpRef);
+  }
+};
+
+class ReduceMaxOpLowering : public ConversionPattern {
+public:
+  explicit ReduceMaxOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceMaxOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    if (retType.isInteger()) {
+      if (retType.isSignedInteger()){
+        auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+          loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.smax"),
+          ValueRange(operands));
+
+        rewriter.replaceOp(op, callIntrOpRef);
+      } else {
+        // NOTE: This makes the assumption that a *signless* integer is also
+        // semantically an unsigned integer.
+        auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+          loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.umax"),
+          ValueRange(operands));
+
+        rewriter.replaceOp(op, callIntrOpRef);
+      }
+    } else if (retType.isFloat()) {
+      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.fmax"),
+        ValueRange(operands));
+
+      rewriter.replaceOp(op, callIntrOpRef);
+    } else {
+      return failure();
+    }
+
+    return success();
+  }
+};
+
+class ReduceMinOpLowering : public ConversionPattern {
+public:
+  explicit ReduceMinOpLowering(MLIRContext *context)
+    : ConversionPattern(ripple::ReduceMinOp::getOperationName(), 1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto *context = rewriter.getContext();
+    auto loc = op->getLoc();
+
+    if (operands.size() != 2)
+      return failure();
+
+    auto retType = operands[1].getType();
+
+    if (retType.isInteger()) {
+      if (retType.isSignedInteger()){
+        auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+          loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.smin"),
+          ValueRange(operands));
+
+        rewriter.replaceOp(op, callIntrOpRef);
+      } else {
+        // NOTE: This makes the assumption that a *signless* integer is also
+        // semantically an unsigned integer.
+        auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+          loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.umin"),
+          ValueRange(operands));
+
+        rewriter.replaceOp(op, callIntrOpRef);
+      }
+    } else if (retType.isFloat()) {
+      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, retType, mlir::StringAttr::get(context, "llvm.ripple.reduce.fmin"),
+        ValueRange(operands));
+
+      rewriter.replaceOp(op, callIntrOpRef);
+    } else {
+      return failure();
+    }
+
+    return success();
+  }
+};
 } // namespace
 
 namespace {
@@ -305,9 +567,18 @@ void RippleToLLVMPass::runOnOperation() {
   patterns.insert<GetSizeOpLowering>(&getContext());
   patterns.insert<IndexOpLowering>(&getContext());
   patterns.insert<BroadcastOpLowering>(&getContext());
+  patterns.insert<BroadcastPtrOpLowering>(&getContext());
   patterns.insert<SliceOpLowering>(&getContext());
   patterns.insert<ShuffleOpLowering>(&getContext());
   patterns.insert<ShufflePairOpLowering>(&getContext());
+
+  patterns.insert<ReduceAddOpLowering>(&getContext());
+  patterns.insert<ReduceMulOpLowering>(&getContext());
+  patterns.insert<ReduceAndOpLowering>(&getContext());
+  patterns.insert<ReduceOrOpLowering>(&getContext());
+  patterns.insert<ReduceXorOpLowering>(&getContext());
+  patterns.insert<ReduceMaxOpLowering>(&getContext());
+  patterns.insert<ReduceMinOpLowering>(&getContext());
 
   auto *module = getOperation();
   if (failed(applyFullConversion(module, target,

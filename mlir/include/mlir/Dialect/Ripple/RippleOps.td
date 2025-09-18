@@ -70,6 +70,19 @@ def Ripple_BroadcastOp : Op<Ripple_Dialect, "broadcast", []> {
                        "attr-dict `:` type($to_bcast) `]` `->` type($result)";
 }
 
+def Ripple_BroadcastPtrOp : Op<Ripple_Dialect, "broadcast.ptr", []> {
+  let summary = "The '``ripple.broadcast.ptr``' intrinsic provides "
+                "an explicit pointer broadcast of a pointer to a scalar "
+                "value along dimensions defined by a bitmask.";
+
+  let arguments = (ins PtrLikeTypeInterface:$bs, I64:$dim,
+      PtrLikeTypeInterface:$to_bcast);
+  let results = (outs PtrLikeTypeInterface:$result);
+
+  let assemblyFormat = "`(` $bs `:` type($bs) `)` `[` $dim `,` $to_bcast  "
+                       "attr-dict `:` type($to_bcast) `]` `->` type($result)";
+}
+
 def Ripple_SliceOp : Op<Ripple_Dialect, "slice", []> {
   let summary =
       "The '``ripple.slice``' intrinsic returns a copy of a slice of the input "
@@ -108,6 +121,58 @@ def Ripple_ShufflePairOp : Op<Ripple_Dialect, "shuffle.pair", []> {
   let assemblyFormat =
       "`[` $src1 attr-dict `:` type($src1) `,` $src2 `:` type($src2) `,` "
       "$callee `:` type($callee) `]` `->` type($result)";
+}
+
+class Ripple_ReduceOp<string mnemonic, list<Trait> traits = []>
+    : Op<Ripple_Dialect, mnemonic, traits> {
+  let arguments = (ins I64:$ind, Ripple_ScalarType:$partial);
+  let results = (outs Ripple_ScalarType:$result);
+
+  let assemblyFormat =
+      "$ind `[` $partial attr-dict `:` type($partial) `]` `->` type($result)";
+}
+
+def Ripple_ReduceAddOp : Ripple_ReduceOp<"reduce.add", []> {
+    let summary = "The ``ripple.reduce.add`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the scalar sum of all elements along that dimension.";
+}
+
+def Ripple_ReduceMulOp : Ripple_ReduceOp<"reduce.mul", []> {
+    let summary = "The ``ripple.reduce.mul`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the scalar product of all elements along that dimension.";
+}
+
+def Ripple_ReduceAndOp : Ripple_ReduceOp<"reduce.and", []> {
+    let summary = "The ``ripple.reduce.and`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the logical and of all elements along that dimension.";
+}
+
+def Ripple_ReduceOrOp : Ripple_ReduceOp<"reduce.or", []> {
+    let summary = "The ``ripple.reduce.or`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the logical or of all elements along that dimension.";
+}
+
+def Ripple_ReduceXorOp : Ripple_ReduceOp<"reduce.xor", []> {
+    let summary = "The ``ripple.reduce.xor`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the logical exclusive or of all elements along that "
+                  "dimension.";
+}
+
+def Ripple_ReduceMaxOp : Ripple_ReduceOp<"reduce.max", []> {
+    let summary = "The ``ripple.reduce.max`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the maximum value of all elements along that dimension.";
+}
+
+def Ripple_ReduceMinOp : Ripple_ReduceOp<"reduce.min", []> {
+    let summary = "The ``ripple.reduce.min`` intrinsic performs a reduction "
+                  "along the dimension specified by the bitfield. The result "
+                  "is the minimum value of all elements along that dimension.";
 }
 
 #endif // RIPPLE_OPS
