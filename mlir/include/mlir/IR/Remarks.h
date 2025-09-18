@@ -576,21 +576,25 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
   static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
   static constexpr StringRef kTombstoneKey = "<TOMBSTONE_KEY>";
 
+  /// Helper to provide a static dummy context for sentinel keys.
+  static mlir::MLIRContext *getStaticDummyContext() {
+    static mlir::MLIRContext dummyContext;
+    return &dummyContext;
+  }
+
   /// Create an empty remark
   static inline mlir::remark::detail::Remark getEmptyKey() {
-    mlir::MLIRContext dummyContext;
     return mlir::remark::detail::Remark(
         mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
-        mlir::UnknownLoc::get(&dummyContext),
+        mlir::UnknownLoc::get(getStaticDummyContext()),
         mlir::remark::RemarkOpts::name(kEmptyKey));
   }
 
   /// Create a dead remark
   static inline mlir::remark::detail::Remark getTombstoneKey() {
-    mlir::MLIRContext dummyContext;
     return mlir::remark::detail::Remark(
         mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
-        mlir::UnknownLoc::get(&dummyContext),
+        mlir::UnknownLoc::get(getStaticDummyContext()),
         mlir::remark::RemarkOpts::name(kTombstoneKey));
   }
 
