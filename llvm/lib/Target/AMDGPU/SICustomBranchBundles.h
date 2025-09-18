@@ -163,9 +163,18 @@ static inline void normalize_ir_post_phi_elimination(MachineFunction &MF) {
 
     // Handle the last potential rewrite entry.  Lower instead of journaling a
     // rewrite entry if all predecessor MBBs are in this single entry.
-    if (to_insert.pred_MBBs.size() == MBB.pred_size())
-      // Lower
-      move_body(to_insert.body,MBB);
+    if (to_insert.pred_MBBs.size() == MBB.pred_size()) {
+      move_body(to_insert.body, MBB);
+      for (MachineBasicBlock *pred_MBB : to_insert.pred_MBBs) {
+        // Delete instructions that were lowered from epilog
+        MachineInstr &branch_ins =
+          get_branch_with_dest(*pred_MBB, *to_insert.succ_MBB);
+        auto epilog_it = ++Epilog_Iterator(branch_ins.getIterator());
+        while (!epilog_it.isEnd())
+          epilog_it++->eraseFromBundle();
+      }
+
+    }
     else if (to_insert.body.size())
       cfg_rewrite_entries.push_back(to_insert);
   }
