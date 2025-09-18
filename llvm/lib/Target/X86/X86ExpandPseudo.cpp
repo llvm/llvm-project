@@ -63,6 +63,8 @@ private:
                                MachineBasicBlock::iterator MBBI);
   void expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  void expandCALL_ImpCall(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMBB(MachineBasicBlock &MBB);
 
@@ -252,6 +254,20 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
   if (TM.getTargetTriple().isOSDarwin())
     finalizeBundle(MBB, OriginalCall->getIterator(),
                    std::next(RtCall->getIterator()));
+}
+
+void X86ExpandPseudo::expandCALL_ImpCall(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI) {
+  // Expand CALL64_ImpCall pseudo to CALL64m.
+  MachineInstr &MI = *MBBI;
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(X86::CALL64m))
+      .addReg(X86::RIP)
+      .addImm(1)
+      .addReg(0)
+      .addGlobalAddress(MI.getOperand(0).getGlobal(), 0,
+                        MI.getOperand(0).getTargetFlags())
+      .addReg(0);
+  MI.eraseFromParent();
 }
 
 /// If \p MBBI is a pseudo instruction, this method expands
@@ -885,6 +901,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return true;
   case X86::CALL64r_ImpCall:
     MI.setDesc(TII->get(X86::CALL64r));
+    return true;
+  case X86::CALL64_ImpCall:
+    expandCALL_ImpCall(MBB, MBBI);
     return true;
   case X86::ADD32mi_ND:
   case X86::ADD64mi32_ND:
