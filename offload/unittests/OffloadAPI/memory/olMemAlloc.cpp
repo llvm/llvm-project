@@ -34,6 +34,26 @@ TEST_P(olMemAllocTest, SuccessAllocDevice) {
   olMemFree(Alloc);
 }
 
+TEST_P(olMemAllocTest, SuccessAllocMany) {
+  std::vector<void *> Allocs;
+  Allocs.reserve(1000);
+
+  constexpr ol_alloc_type_t TYPES[3] = {
+      OL_ALLOC_TYPE_DEVICE, OL_ALLOC_TYPE_MANAGED, OL_ALLOC_TYPE_HOST};
+
+  for (size_t I = 1; I < 1000; I++) {
+    void *Alloc = nullptr;
+    ASSERT_SUCCESS(olMemAlloc(Device, TYPES[I % 3], 1024 * I, &Alloc));
+    ASSERT_NE(Alloc, nullptr);
+
+    Allocs.push_back(Alloc);
+  }
+
+  for (auto *A : Allocs) {
+    olMemFree(A);
+  }
+}
+
 TEST_P(olMemAllocTest, InvalidNullDevice) {
   void *Alloc = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
