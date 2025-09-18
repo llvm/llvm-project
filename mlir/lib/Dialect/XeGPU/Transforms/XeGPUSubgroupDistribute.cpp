@@ -1318,7 +1318,7 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
     if (!operand)
       return rewriter.notifyMatchFailure(
           warpOp,
-          "warp result is not a xegpu::MemrefExtractAlignedPointerAsIndex op");
+          "warp result is not a memref::MemrefExtractAlignedPointerAsIndex op");
     auto extractOp =
         operand->get().getDefiningOp<memref::ExtractAlignedPointerAsIndexOp>();
     unsigned operandIdx = operand->getOperandNumber();

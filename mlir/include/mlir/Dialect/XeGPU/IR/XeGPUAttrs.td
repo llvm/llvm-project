@@ -245,16 +245,9 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                         return false;
                       if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
                         return false;
-                      // check if the permutation is valid
-                      int64_t rank = $_self.getRank();
-                      SmallVector<bool, 8> seen(rank, false);
-                      for (const auto &ta : llvm::enumerate(perm)) {
-                        if (ta.value() < 0 || ta.value() >= rank)
-                          return false;
-                        if (seen[ta.value()])
-                          return false;
-                        seen[ta.value()] = true;
-                      }
+                      // Check if the permutation is valid
+                      if (!isPermutationVector(perm))
+                        return false;
                       auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
                         // If both `dst` and `src` are empty, conservatively return true
                         // here because some layout fields can be empty.
