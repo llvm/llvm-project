@@ -333,13 +333,15 @@ CompressedOffloadBundle::compress(compression::Params P,
   if (Version == 2) {
     // For V2, ensure the sizes don't exceed 32-bit limit.
     if (UncompressedSize64 > std::numeric_limits<uint32_t>::max())
-      return createStringError(inconvertibleErrorCode(),
-                               "uncompressed size exceeds version 2 limit");
+      return createStringError(
+          inconvertibleErrorCode(),
+          "uncompressed size exceeds version 2 unsigned 32-bit integer limit");
     if ((MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
          sizeof(CompressionMethod) + sizeof(uint32_t) + sizeof(TruncatedHash) +
          CompressedBuffer.size()) > std::numeric_limits<uint32_t>::max())
-      return createStringError(inconvertibleErrorCode(),
-                               "total file size exceeds version 2 limit");
+      return createStringError(
+          inconvertibleErrorCode(),
+          "total file size exceeds version 2 unsigned 32-bit integer limit");
 
     TotalFileSize64 = MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
                       sizeof(CompressionMethod) + sizeof(uint32_t) +
