@@ -1308,7 +1308,7 @@ func.func @test_vectorize_pack(%src: tensor<32x8x16xf32>, %dest: tensor<4x1x32x1
   %pack = linalg.pack %src outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %dest : tensor<32x8x16xf32> -> tensor<4x1x32x16x2xf32>
   return %pack : tensor<4x1x32x16x2xf32>
 }
-//  CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[CST:.*]] = ub.poison : f32
 //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[READ:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %[[CST]]
 // CHECK-SAME:    {in_bounds = [true, true, true]} : tensor<32x8x16xf32>, vector<32x8x16xf32>
@@ -1376,7 +1376,7 @@ func.func @test_vectorize_dynamic_pack(%src: tensor<?x?xf32>, %dest: tensor<?x?x
   return %pack : tensor<?x?x16x2xf32>
 }
 
-//  CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[CST:.*]] = ub.poison : f32
 //  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
 //  CHECK-DAG: %[[C0_0:.*]] = arith.constant 0 : index
 //  CHECK-DAG: %[[C1_0:.*]] = arith.constant 1 : index
@@ -1417,7 +1417,7 @@ func.func @test_vectorize_pack_no_vector_sizes(%src: tensor<64x4xf32>, %dest: te
   %pack = linalg.pack %src outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [16, 2] into %dest : tensor<64x4xf32> -> tensor<2x4x16x2xf32>
   return %pack : tensor<2x4x16x2xf32>
 }
-//  CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[CST:.*]] = ub.poison : f32
 //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[READ:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]]], %[[CST]]
 // CHECK-SAME:    {in_bounds = [true, true]} : tensor<64x4xf32>, vector<64x4xf32>
