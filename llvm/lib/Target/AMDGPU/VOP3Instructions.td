@@ -10,9 +10,6 @@ def BITOP3_32 : ComplexPattern<i32, 4, "SelectBITOP3", [and, or, xor]>;
 def BITOP3_16 : ComplexPattern<i16, 4, "SelectBITOP3", [and, or, xor]>;
 
 // Matches PTRADD as a commutative operation.
-// FIXME: Patterns using this PatFrag together with a C++ predicate must set
-// GISelShouldIgnore = 1 to avoid a bug in the GlobalISelMatchTable optimizer
-// that hoists the predicate check above the operand matching checks.
 def ptradd_commutative : PatFrags<(ops node:$src0, node:$src1),
   [(ptradd node:$src0, node:$src1), (ptradd node:$src1, node:$src0)]>;
 
@@ -954,9 +951,7 @@ def : GCNPat<
 def : GCNPat <
   // (ptradd z, (shl x, y)) or (ptradd (shl x, y), z) -> ((x << y) + z)
   (ThreeOpFrag<shl_0_to_4, ptradd_commutative> i64:$src0, i32:$src1, i64:$src2),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)> {
-  let GISelShouldIgnore = 1;
-}
+  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)>;
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
@@ -1041,9 +1036,7 @@ class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat
 
 multiclass IMAD32_Mul24_Pats<VOP3_Pseudo inst> {
   def : IMAD32_Mul24_Pats_Impl<inst, add>;
-  def : IMAD32_Mul24_Pats_Impl<inst, ptradd_commutative> {
-    let GISelShouldIgnore = 1;
-  }
+  def : IMAD32_Mul24_Pats_Impl<inst, ptradd_commutative>;
 }
 
 // exclude pre-GFX9 where it was slow
