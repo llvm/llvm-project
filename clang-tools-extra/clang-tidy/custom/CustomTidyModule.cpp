@@ -38,6 +38,14 @@ extern void registerCustomChecks(const ClangTidyOptions &Options,
   }
 }
 
+struct CustomChecksRegisterInitializer {
+  CustomChecksRegisterInitializer() noexcept {
+    RegisterCustomChecks = &custom::registerCustomChecks;
+  }
+};
+
+static CustomChecksRegisterInitializer Init{};
+
 } // namespace custom
 
 // Register the CustomTidyModule using this statically initialized variable.
