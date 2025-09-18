@@ -108,6 +108,7 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     Value *V = VPV->getLiveInIRValue();
     if (!V)
       return false;
+    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI)
       return false;
