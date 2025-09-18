@@ -2959,6 +2959,73 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
     return nullptr;
   SmallVector<SemaOpenMP::UsesAllocatorsData, 4> Data;
   do {
+    // Parse 'traits(expr) : Allocator' for >=5.2
+    if (getLangOpts().OpenMP >= 52 && Tok.is(tok::identifier) &&
+        Tok.getIdentifierInfo()->getName() == "traits") {
+
+      SemaOpenMP::UsesAllocatorsData &D = Data.emplace_back();
+
+      ConsumeToken();
+
+      // Parse '(' <expr> ')'
+      BalancedDelimiterTracker TraitParens(*this, tok::l_paren,
+                                           tok::annot_pragma_openmp_end);
+      TraitParens.consumeOpen();
+      ExprResult AllocatorTraits =
+          getLangOpts().CPlusPlus ? ParseCXXIdExpression() : ParseExpression();
+      TraitParens.consumeClose();
+
+      if (AllocatorTraits.isInvalid()) {
+        SkipUntil(
+            {tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
+            StopBeforeMatch);
+        break;
+      }
+
+      // Expect ':'
+      if (Tok.isNot(tok::colon)) {
+        Diag(Tok, diag::err_expected) << tok::colon;
+        SkipUntil(
+            {tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
+            StopBeforeMatch);
+        continue;
+      }
+      ConsumeToken();
+
+      CXXScopeSpec SS;
+      Token Replacement;
+      ExprResult AllocatorExpr =
+          getLangOpts().CPlusPlus
+              ? ParseCXXIdExpression()
+              : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
+                                        Replacement);
+
+      if (AllocatorExpr.isInvalid()) {
+        SkipUntil(
+            {tok::comma, tok::semi, tok::r_paren, tok::annot_pragma_openmp_end},
+            StopBeforeMatch);
+        break;
+      }
+
+      D.Allocator = AllocatorExpr.get();
+      D.AllocatorTraits = AllocatorTraits.get();
+      D.LParenLoc = TraitParens.getOpenLocation();
+      D.RParenLoc = TraitParens.getCloseLocation();
+
+      // Separator handling(;)
+      if (Tok.is(tok::comma)) {
+        // In 5.2, comma is invalid
+        Diag(Tok.getLocation(), diag::err_omp_allocator_comma_separator)
+            << FixItHint::CreateReplacement(Tok.getLocation(), ";");
+        ConsumeAnyToken();
+      } else if (Tok.is(tok::semi)) {
+        ConsumeAnyToken(); // valid separator
+      }
+
+      continue;
+    }
+
+    // Parse 'Allocator(expr)' for <5.2
     CXXScopeSpec SS;
     Token Replacement;
     ExprResult Allocator =
@@ -2988,6 +3055,14 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
       D.AllocatorTraits = AllocatorTraits.get();
       D.LParenLoc = T.getOpenLocation();
       D.RParenLoc = T.getCloseLocation();
+
+      // Deprecation diagnostic in >= 5.2
+      if (getLangOpts().OpenMP >= 52) {
+        Diag(Loc, diag::err_omp_deprecate_old_syntax)
+            << "allocator(expr)"      // %0: old form
+            << "uses_allocators"      // %1: clause name
+            << "traits(expr): alloc"; // %2: suggested new form
+      }
     }
     if (Tok.isNot(tok::comma) && Tok.isNot(tok::r_paren))
       Diag(Tok, diag::err_omp_expected_punc) << "uses_allocators" << 0;

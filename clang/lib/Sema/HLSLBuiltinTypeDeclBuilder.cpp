@@ -761,49 +761,6 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
       .finalize();
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
-
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  ASTContext &AST = SemaRef.getASTContext();
-  QualType HandleType = getResourceHandleField()->getType();
-
-  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
-      .addParam("registerNo", AST.UnsignedIntTy)
-      .addParam("spaceNo", AST.UnsignedIntTy)
-      .addParam("range", AST.IntTy)
-      .addParam("index", AST.UnsignedIntTy)
-      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
-      .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
-                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
-      .assign(PH::Handle, PH::LastStmt)
-      .finalize();
-}
-
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
-
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-  ASTContext &AST = SemaRef.getASTContext();
-  QualType HandleType = getResourceHandleField()->getType();
-
-  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
-      .addParam("spaceNo", AST.UnsignedIntTy)
-      .addParam("range", AST.IntTy)
-      .addParam("index", AST.UnsignedIntTy)
-      .addParam("orderId", AST.UnsignedIntTy)
-      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
-      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
-                   HandleType, PH::Handle, PH::_3, PH::_0, PH::_1, PH::_2,
-                   PH::_4)
-      .assign(PH::Handle, PH::LastStmt)
-      .finalize();
-}
-
 // Adds static method that initializes resource from binding:
 //
 // static Resource<T> __createFromBinding(unsigned registerNo,
