@@ -1673,7 +1673,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
 
 /// Emits .callgraph section.
 void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
-                                      FunctionInfo &FuncInfo) {
+                                      FunctionCallGraphInfo &FuncCGInfo) {
   if (!MF.getTarget().Options.EmitCallGraphSection)
     return;
 
@@ -1712,35 +1712,34 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // Emit function kind, and type id if available.
   if (!IsIndirectTarget) {
     OutStreamer->emitInt64(
-        static_cast<uint64_t>(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET));
+        static_cast<uint64_t>(FunctionKind::NOT_INDIRECT_TARGET));
   } else {
     if (const auto *TypeId = extractNumericCGTypeId(F)) {
       OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID));
+          FunctionKind::INDIRECT_TARGET_KNOWN_TID));
       OutStreamer->emitInt64(TypeId->getZExtValue());
     } else {
       OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
+          FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
     }
   }
 
   // Emit callsite labels, where each element is a pair of type id and
   // indirect callsite pc.
-  const auto &CallSiteLabels = FuncInfo.CallSiteLabels;
+  const auto &CallSiteLabels = FuncCGInfo.CallSiteLabels;
   OutStreamer->emitInt64(CallSiteLabels.size());
   for (const auto &[TypeId, Label] : CallSiteLabels) {
     OutStreamer->emitInt64(TypeId);
     OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
   }
-  FuncInfo.CallSiteLabels.clear();
+  FuncCGInfo.CallSiteLabels.clear();
 
-  const auto &DirectCallSiteLabels = FuncInfo.DirectCallSiteLabels;
-  OutStreamer->emitInt64(DirectCallSiteLabels.size());
-  for (const auto &[CallSiteAddrLabel, CalleeSymbol] : DirectCallSiteLabels) {
-    OutStreamer->emitSymbolValue(CallSiteAddrLabel, TM.getProgramPointerSize());
+  const auto &DirectCallees = FuncCGInfo.DirectCallees;
+  OutStreamer->emitInt64(DirectCallees.size());
+  for (const auto &CalleeSymbol : DirectCallees) {
     OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
   }
-  FuncInfo.DirectCallSiteLabels.clear();
+  FuncCGInfo.DirectCallees.clear();
 
   OutStreamer->popSection();
 }
@@ -1875,8 +1874,8 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
-void AsmPrinter::emitCallsiteLabelsForCallgraph(
-    FunctionInfo &FuncInfo,
+void AsmPrinter::handleCallsiteForCallgraph(
+    FunctionCallGraphInfo &FuncCGInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() &&
@@ -1896,9 +1895,7 @@ void AsmPrinter::emitCallsiteLabelsForCallgraph(
       llvm_unreachable(
           "Expected to only handle direct call instructions here.");
     }
-    MCSymbol *S = MF->getContext().createTempSymbol();
-    OutStreamer->emitLabel(S);
-    FuncInfo.DirectCallSiteLabels.emplace_back(S, CalleeSymbol);
+    FuncCGInfo.DirectCallees.insert(CalleeSymbol);
     return; // Early exit after handling the direct call instruction.
   }
   const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
@@ -1910,7 +1907,7 @@ void AsmPrinter::emitCallsiteLabelsForCallgraph(
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-    FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+    FuncCGInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
   }
 }
 
@@ -1960,7 +1957,7 @@ void AsmPrinter::emitFunctionBody() {
     MBBSectionRanges[MF->front().getSectionID()] =
         MBBSectionRange{CurrentFnBegin, nullptr};
 
-  FunctionInfo FuncInfo;
+  FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
@@ -2097,7 +2094,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
-        emitCallsiteLabelsForCallgraph(FuncInfo, CallSitesInfoMap, MI);
+        handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
@@ -2279,7 +2276,7 @@ void AsmPrinter::emitFunctionBody() {
   emitStackSizeSection(*MF);
 
   // Emit section containing call graph metadata.
-  emitCallGraphSection(*MF, FuncInfo);
+  emitCallGraphSection(*MF, FuncCGInfo);
 
   // Emit .su file containing function stack size information.
   emitStackUsage(*MF);
