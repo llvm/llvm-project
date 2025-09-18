@@ -157,6 +157,9 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
       diags.Report(debugWarning) << arg->getValue();
     }
+    opts.DwarfVersion =
+        getLastArgIntValue(args, clang::driver::options::OPT_dwarf_version_EQ,
+                           /*Default=*/0, diags);
   }
   return true;
 }

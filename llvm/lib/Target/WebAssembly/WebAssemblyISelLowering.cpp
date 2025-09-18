@@ -418,7 +418,7 @@ MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
 
 bool WebAssemblyTargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
+  if (I->getIntrinsicID() != Intrinsic::vector_partial_reduce_add)
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
@@ -2117,8 +2117,7 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
 // extmul and adds.
 SDValue performLowerPartialReduction(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
-  if (N->getConstantOperandVal(0) !=
-      Intrinsic::experimental_vector_partial_reduce_add)
+  if (N->getConstantOperandVal(0) != Intrinsic::vector_partial_reduce_add)
     return SDValue();
 
   assert(N->getValueType(0) == MVT::v4i32 && "can only support v4i32");

@@ -1,5 +1,13 @@
 ; RUN: llc -mtriple=x86_64 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
-;
+
+; Ensure that static local variable elemnt is placed in abstract subprogram DIE.
+; CHECK:                   DW_TAG_subprogram
+; CHECK-NOT:               DW_TAG
+; CHECK:                     DW_AT_inline  (DW_INL_inlined)
+; CHECK-EMPTY:
+; CHECK-NEXT:                DW_TAG_variable
+; CHECK-NEXT:                  DW_AT_name  ("elemnt")
+
 ; CHECK: [[SYM:[a-z0-9]+]]:  DW_TAG_formal_parameter
 ; CHECK:                     DW_AT_name	("esym")
 ; CHECK:                     DW_AT_type	([[TYPE:[a-z0-9]+]] "CHARACTER_1")
