@@ -14102,6 +14102,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(Result, E);
     }
     }
+    llvm_unreachable("Fully covered switch above");
   }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
@@ -17865,14 +17866,12 @@ bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
          !hasUnacceptableSideEffect(Result, SEK);
 }
 
-APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
-                    SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
+APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
-  EVResult.Diag = Diag;
   EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 

@@ -117,6 +117,8 @@ class NetBSDCoreCommonTestCase(TestBase):
                 )
 
     def do_test(self, filename, pid, region_count):
+        # Temporary workaround for https://github.com/llvm/llvm-project/issues/159377
+        self.runCmd("settings set target.parallel-module-load false")
         target = self.dbg.CreateTarget(filename)
         process = target.LoadCore(filename + ".core")
 

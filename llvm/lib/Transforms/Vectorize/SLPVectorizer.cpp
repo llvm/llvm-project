@@ -22409,10 +22409,10 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTruncRoot = true;
   }
   bool IsSignedCmp = false;
-  if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
-        return match(V, m_SMin(m_Value(), m_Value())) ||
-               match(V, m_SMax(m_Value(), m_Value()));
-      }))
+  if (UserIgnoreList &&
+      all_of(*UserIgnoreList,
+             match_fn(m_CombineOr(m_SMin(m_Value(), m_Value()),
+                                  m_SMax(m_Value(), m_Value())))))
     IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
@@ -24435,135 +24435,134 @@ public:
       VectorizedTree = GetNewVectorizedTree(
           VectorizedTree,
           emitReduction(Builder, *TTI, ReductionRoot->getType()));
-    if (VectorizedTree) {
-      // Reorder operands of bool logical op in the natural order to avoid
-      // possible problem with poison propagation. If not possible to reorder
-      // (both operands are originally RHS), emit an extra freeze instruction
-      // for the LHS operand.
-      // I.e., if we have original code like this:
-      // RedOp1 = select i1 ?, i1 LHS, i1 false
-      // RedOp2 = select i1 RHS, i1 ?, i1 false
 
-      // Then, we swap LHS/RHS to create a new op that matches the poison
-      // semantics of the original code.
-
-      // If we have original code like this and both values could be poison:
-      // RedOp1 = select i1 ?, i1 LHS, i1 false
-      // RedOp2 = select i1 ?, i1 RHS, i1 false
-
-      // Then, we must freeze LHS in the new op.
-      auto FixBoolLogicalOps = [&, VectorizedTree](Value *&LHS, Value *&RHS,
-                                                   Instruction *RedOp1,
-                                                   Instruction *RedOp2,
-                                                   bool InitStep) {
-        if (!AnyBoolLogicOp)
-          return;
-        if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
-                                      getRdxOperand(RedOp1, 0) == LHS ||
-                                      isGuaranteedNotToBePoison(LHS, AC)))
-          return;
-        if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
-                                      getRdxOperand(RedOp2, 0) == RHS ||
-                                      isGuaranteedNotToBePoison(RHS, AC))) {
-          std::swap(LHS, RHS);
-          return;
-        }
-        if (LHS != VectorizedTree)
-          LHS = Builder.CreateFreeze(LHS);
-      };
-      // Finish the reduction.
-      // Need to add extra arguments and not vectorized possible reduction
-      // values.
-      // Try to avoid dependencies between the scalar remainders after
-      // reductions.
-      auto FinalGen =
-          [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals,
-              bool InitStep) {
-            unsigned Sz = InstVals.size();
-            SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 +
-                                                                     Sz % 2);
-            for (unsigned I = 0, E = (Sz / 2) * 2; I < E; I += 2) {
-              Instruction *RedOp = InstVals[I + 1].first;
-              Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
-              Value *RdxVal1 = InstVals[I].second;
-              Value *StableRdxVal1 = RdxVal1;
-              auto It1 = TrackedVals.find(RdxVal1);
-              if (It1 != TrackedVals.end())
-                StableRdxVal1 = It1->second;
-              Value *RdxVal2 = InstVals[I + 1].second;
-              Value *StableRdxVal2 = RdxVal2;
-              auto It2 = TrackedVals.find(RdxVal2);
-              if (It2 != TrackedVals.end())
-                StableRdxVal2 = It2->second;
-              // To prevent poison from leaking across what used to be
-              // sequential, safe, scalar boolean logic operations, the
-              // reduction operand must be frozen.
-              FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
-                                RedOp, InitStep);
-              Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
-                                         StableRdxVal2, "op.rdx", ReductionOps);
-              ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
-            }
-            if (Sz % 2 == 1)
-              ExtraReds[Sz / 2] = InstVals.back();
-            return ExtraReds;
-          };
-      SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
-      ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
-                                   VectorizedTree);
-      SmallPtrSet<Value *, 8> Visited;
-      for (ArrayRef<Value *> Candidates : ReducedVals) {
-        for (Value *RdxVal : Candidates) {
-          if (!Visited.insert(RdxVal).second)
-            continue;
-          unsigned NumOps = VectorizedVals.lookup(RdxVal);
-          for (Instruction *RedOp :
-               ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
-            ExtraReductions.emplace_back(RedOp, RdxVal);
-        }
+    if (!VectorizedTree) {
+      if (!CheckForReusedReductionOps) {
+        for (ReductionOpsType &RdxOps : ReductionOps)
+          for (Value *RdxOp : RdxOps)
+            V.analyzedReductionRoot(cast<Instruction>(RdxOp));
       }
-      // Iterate through all not-vectorized reduction values/extra arguments.
-      bool InitStep = true;
-      while (ExtraReductions.size() > 1) {
-        SmallVector<std::pair<Instruction *, Value *>> NewReds =
-            FinalGen(ExtraReductions, InitStep);
-        ExtraReductions.swap(NewReds);
-        InitStep = false;
-      }
-      VectorizedTree = ExtraReductions.front().second;
+      return nullptr;
+    }
 
-      ReductionRoot->replaceAllUsesWith(VectorizedTree);
+    // Reorder operands of bool logical op in the natural order to avoid
+    // possible problem with poison propagation. If not possible to reorder
+    // (both operands are originally RHS), emit an extra freeze instruction
+    // for the LHS operand.
+    // I.e., if we have original code like this:
+    // RedOp1 = select i1 ?, i1 LHS, i1 false
+    // RedOp2 = select i1 RHS, i1 ?, i1 false
 
-      // The original scalar reduction is expected to have no remaining
-      // uses outside the reduction tree itself.  Assert that we got this
-      // correct, replace internal uses with undef, and mark for eventual
-      // deletion.
-#ifndef NDEBUG
-      SmallPtrSet<Value *, 4> IgnoreSet;
-      for (ArrayRef<Value *> RdxOps : ReductionOps)
-        IgnoreSet.insert_range(RdxOps);
-#endif
-      for (ArrayRef<Value *> RdxOps : ReductionOps) {
-        for (Value *Ignore : RdxOps) {
-          if (!Ignore)
-            continue;
-#ifndef NDEBUG
-          for (auto *U : Ignore->users()) {
-            assert(IgnoreSet.count(U) &&
-                   "All users must be either in the reduction ops list.");
+    // Then, we swap LHS/RHS to create a new op that matches the poison
+    // semantics of the original code.
+
+    // If we have original code like this and both values could be poison:
+    // RedOp1 = select i1 ?, i1 LHS, i1 false
+    // RedOp2 = select i1 ?, i1 RHS, i1 false
+
+    // Then, we must freeze LHS in the new op.
+    auto FixBoolLogicalOps =
+        [&, VectorizedTree](Value *&LHS, Value *&RHS, Instruction *RedOp1,
+                            Instruction *RedOp2, bool InitStep) {
+          if (!AnyBoolLogicOp)
+            return;
+          if (isBoolLogicOp(RedOp1) && ((!InitStep && LHS == VectorizedTree) ||
+                                        getRdxOperand(RedOp1, 0) == LHS ||
+                                        isGuaranteedNotToBePoison(LHS, AC)))
+            return;
+          if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
+                                        getRdxOperand(RedOp2, 0) == RHS ||
+                                        isGuaranteedNotToBePoison(RHS, AC))) {
+            std::swap(LHS, RHS);
+            return;
           }
-#endif
-          if (!Ignore->use_empty()) {
-            Value *P = PoisonValue::get(Ignore->getType());
-            Ignore->replaceAllUsesWith(P);
-          }
-        }
-        V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
+          if (LHS != VectorizedTree)
+            LHS = Builder.CreateFreeze(LHS);
+        };
+    // Finish the reduction.
+    // Need to add extra arguments and not vectorized possible reduction values.
+    // Try to avoid dependencies between the scalar remainders after reductions.
+    auto FinalGen = [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals,
+                        bool InitStep) {
+      unsigned Sz = InstVals.size();
+      SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 + Sz % 2);
+      for (unsigned I = 0, E = (Sz / 2) * 2; I < E; I += 2) {
+        Instruction *RedOp = InstVals[I + 1].first;
+        Builder.SetCurrentDebugLocation(RedOp->getDebugLoc());
+        Value *RdxVal1 = InstVals[I].second;
+        Value *StableRdxVal1 = RdxVal1;
+        auto It1 = TrackedVals.find(RdxVal1);
+        if (It1 != TrackedVals.end())
+          StableRdxVal1 = It1->second;
+        Value *RdxVal2 = InstVals[I + 1].second;
+        Value *StableRdxVal2 = RdxVal2;
+        auto It2 = TrackedVals.find(RdxVal2);
+        if (It2 != TrackedVals.end())
+          StableRdxVal2 = It2->second;
+        // To prevent poison from leaking across what used to be sequential,
+        // safe, scalar boolean logic operations, the reduction operand must be
+        // frozen.
+        FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
+                          RedOp, InitStep);
+        Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
+                                   StableRdxVal2, "op.rdx", ReductionOps);
+        ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
       }
-    } else if (!CheckForReusedReductionOps) {
-      for (ReductionOpsType &RdxOps : ReductionOps)
-        for (Value *RdxOp : RdxOps)
-          V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      if (Sz % 2 == 1)
+        ExtraReds[Sz / 2] = InstVals.back();
+      return ExtraReds;
+    };
+    SmallVector<std::pair<Instruction *, Value *>> ExtraReductions;
+    ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
+                                 VectorizedTree);
+    SmallPtrSet<Value *, 8> Visited;
+    for (ArrayRef<Value *> Candidates : ReducedVals) {
+      for (Value *RdxVal : Candidates) {
+        if (!Visited.insert(RdxVal).second)
+          continue;
+        unsigned NumOps = VectorizedVals.lookup(RdxVal);
+        for (Instruction *RedOp :
+             ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
+          ExtraReductions.emplace_back(RedOp, RdxVal);
+      }
+    }
+    // Iterate through all not-vectorized reduction values/extra arguments.
+    bool InitStep = true;
+    while (ExtraReductions.size() > 1) {
+      SmallVector<std::pair<Instruction *, Value *>> NewReds =
+          FinalGen(ExtraReductions, InitStep);
+      ExtraReductions.swap(NewReds);
+      InitStep = false;
+    }
+    VectorizedTree = ExtraReductions.front().second;
+
+    ReductionRoot->replaceAllUsesWith(VectorizedTree);
+
+    // The original scalar reduction is expected to have no remaining
+    // uses outside the reduction tree itself.  Assert that we got this
+    // correct, replace internal uses with undef, and mark for eventual
+    // deletion.
+#ifndef NDEBUG
+    SmallPtrSet<Value *, 4> IgnoreSet;
+    for (ArrayRef<Value *> RdxOps : ReductionOps)
+      IgnoreSet.insert_range(RdxOps);
+#endif
+    for (ArrayRef<Value *> RdxOps : ReductionOps) {
+      for (Value *Ignore : RdxOps) {
+        if (!Ignore)
+          continue;
+#ifndef NDEBUG
+        for (auto *U : Ignore->users()) {
+          assert(IgnoreSet.count(U) &&
+                 "All users must be either in the reduction ops list.");
+        }
+#endif
+        if (!Ignore->use_empty()) {
+          Value *P = PoisonValue::get(Ignore->getType());
+          Ignore->replaceAllUsesWith(P);
+        }
+      }
+      V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
     }
     return VectorizedTree;
   }
