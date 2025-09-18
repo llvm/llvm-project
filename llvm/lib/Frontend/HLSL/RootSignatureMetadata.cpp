@@ -60,8 +60,9 @@ static std::optional<StringRef> extractMdStringValue(MDNode *Node,
 template <typename T, typename = std::enable_if_t<
                           std::is_enum_v<T> &&
                           std::is_same_v<std::underlying_type_t<T>, uint32_t>>>
-Expected<T> extractEnumValue(MDNode *Node, unsigned int OpId, StringRef ErrText,
-                             llvm::function_ref<bool(uint32_t)> VerifyFn) {
+static Expected<T>
+extractEnumValue(MDNode *Node, unsigned int OpId, StringRef ErrText,
+                 llvm::function_ref<bool(uint32_t)> VerifyFn) {
   if (std::optional<uint32_t> Val = extractMdIntValue(Node, OpId)) {
     if (!VerifyFn(*Val))
       return make_error<RootSignatureValidationError<uint32_t>>(ErrText, *Val);
@@ -543,8 +544,9 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
 }
 
-Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
-                                          uint32_t Location) {
+static Error
+validateDescriptorTableSamplerMixin(const mcdxbc::DescriptorTable &Table,
+                                    uint32_t Location) {
   dxil::ResourceClass CurrRC = dxil::ResourceClass::Sampler;
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
     if (Range.RangeType == dxil::ResourceClass::Sampler &&
@@ -555,8 +557,9 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
   return Error::success();
 }
 
-Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
-                                              uint32_t Location) {
+static Error
+validateDescriptorTableRegisterOverflow(const mcdxbc::DescriptorTable &Table,
+                                        uint32_t Location) {
   uint64_t Offset = 0;
 
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
