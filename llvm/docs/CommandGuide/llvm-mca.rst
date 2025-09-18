@@ -393,7 +393,7 @@ cache misses that impact load latencies. The syntax is like
   mov (%edi), %eax
   # LLVM-MCA-LATENCY
 
-It set the latency of mov instruction to 100. LLVM-MCA-LATENCY without
+It sets the latency of mov instruction to 100. LLVM-MCA-LATENCY without
 argument ends the region with explicit latency, after it default target
 latencies are used.
 
