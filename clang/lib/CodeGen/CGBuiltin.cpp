@@ -1692,6 +1692,23 @@ getBitTestAtomicOrdering(BitTest::InterlockingKind I) {
   llvm_unreachable("invalid interlocking");
 }
 
+static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
+  llvm::Value *ArgValue = CGF.EmitScalarExpr(E);
+  llvm::Type *ArgType = ArgValue->getType();
+
+  // Boolean vectors can be casted directly to its bitfield representation. We
+  // intentionally do not round up to the next power of two size and let LLVM
+  // handle the trailing bits.
+  if (auto *VT = dyn_cast<llvm::FixedVectorType>(ArgType);
+      VT && VT->getElementType()->isIntegerTy(1)) {
+    llvm::Type *StorageType =
+        llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
+    ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
+  }
+
+  return ArgValue;
+}
+
 /// Emit a _bittest* intrinsic. These intrinsics take a pointer to an array of
 /// bits and a bit position and read and optionally modify the bit at that
 /// position. The position index can be arbitrarily large, i.e. it can be larger
@@ -2019,7 +2036,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   assert((Kind == BCK_CLZPassedZero || Kind == BCK_CTZPassedZero) &&
          "Unsupported builtin check kind");
 
-  Value *ArgValue = EmitScalarExpr(E);
+  Value *ArgValue = EmitBitCountExpr(*this, E);
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
@@ -3333,7 +3350,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getNumArgs() > 1;
 
     Value *ArgValue =
-        HasFallback ? EmitScalarExpr(E->getArg(0))
+        HasFallback ? EmitBitCountExpr(*this, E->getArg(0))
                     : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CTZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3370,7 +3387,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getNumArgs() > 1;
 
     Value *ArgValue =
-        HasFallback ? EmitScalarExpr(E->getArg(0))
+        HasFallback ? EmitBitCountExpr(*this, E->getArg(0))
                     : EmitCheckedArgForBuiltin(E->getArg(0), BCK_CLZPassedZero);
 
     llvm::Type *ArgType = ArgValue->getType();
@@ -3455,7 +3472,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
   case Builtin::BI__builtin_popcountg: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    Value *ArgValue = EmitBitCountExpr(*this, E->getArg(0));
 
     llvm::Type *ArgType = ArgValue->getType();
     Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
@@ -4254,7 +4271,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
-  case Builtin::BI__builtin_masked_load: {
+  case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load: {
     llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(1));
 
@@ -4264,15 +4282,24 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
+    if (E->getNumArgs() > 2)
+      PassThru = EmitScalarExpr(E->getArg(2));
 
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
-
-    llvm::Value *Result =
-        Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    llvm::Value *Result;
+    if (BuiltinID == Builtin::BI__builtin_masked_load) {
+      Function *F =
+          CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
+      Result =
+          Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
+    } else {
+      Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
+      Result =
+          Builder.CreateCall(F, {Ptr, Mask, PassThru}, "masked_expand_load");
+    }
     return RValue::get(Result);
   };
-  case Builtin::BI__builtin_masked_store: {
+  case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store: {
     llvm::Value *Mask = EmitScalarExpr(E->getArg(0));
     llvm::Value *Val = EmitScalarExpr(E->getArg(1));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
@@ -4285,10 +4312,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *AlignVal =
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
-    llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
-
-    Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    if (BuiltinID == Builtin::BI__builtin_masked_store) {
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
+      Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
+    } else {
+      llvm::Function *F =
+          CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
+      Builder.CreateCall(F, {Val, Ptr, Mask});
+    }
     return RValue::get(nullptr);
   }
 

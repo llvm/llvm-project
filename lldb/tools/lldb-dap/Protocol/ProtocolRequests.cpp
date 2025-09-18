@@ -219,7 +219,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
          OM.map("linesStartAt1", IRA.linesStartAt1) &&
          OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.map("pathFormat", IRA.pathFormat) &&
+         OM.mapOptional("pathFormat", IRA.pathFormat) &&
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
@@ -303,7 +303,8 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
          O.mapOptional("runInTerminal", LRA.console) &&
-         O.mapOptional("console", LRA.console) && parseEnv(Params, LRA.env, P);
+         O.mapOptional("console", LRA.console) &&
+         O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,

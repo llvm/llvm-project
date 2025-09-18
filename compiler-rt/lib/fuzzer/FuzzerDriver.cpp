@@ -163,13 +163,13 @@ static bool ParseOneFlag(const char *Param) {
         auto Val = MyStol(Str);
         *FlagDescriptions[F].IntFlag = static_cast<int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %d\n", Name, Val);
+          Printf("Flag: %s %d\n", Name, (int)Val);
         return true;
       } else if (FlagDescriptions[F].UIntFlag) {
         auto Val = std::stoul(Str);
         *FlagDescriptions[F].UIntFlag = static_cast<unsigned int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %u\n", Name, Val);
+          Printf("Flag: %s %u\n", Name, (uint32_t)Val);
         return true;
       } else if (FlagDescriptions[F].StrFlag) {
         *FlagDescriptions[F].StrFlag = Str;
@@ -306,7 +306,7 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   return HasErrors ? 1 : 0;
 }
 
-static void StartRssThread(Fuzzer *F, size_t RssLimitMb);
+void StartRssThread(Fuzzer *F, size_t RssLimitMb);
 
 // Fuchsia needs to do some book checking before starting the RssThread,
 // so it has its own implementation.
@@ -320,7 +320,7 @@ static void RssThread(Fuzzer *F, size_t RssLimitMb) {
   }
 }
 
-static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
+void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
   if (!RssLimitMb)
     return;
   std::thread T(RssThread, F, RssLimitMb);

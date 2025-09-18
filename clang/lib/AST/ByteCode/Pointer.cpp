@@ -433,7 +433,8 @@ bool Pointer::isInitialized() const {
   if (!isBlockPointer())
     return true;
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
     const GlobalInlineDescriptor &GD =
         *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
     return GD.InitState == GlobalInitState::Initialized;
@@ -442,26 +443,43 @@ bool Pointer::isInitialized() const {
   assert(BS.Pointee && "Cannot check if null pointer was initialized");
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
+  if (Desc->isPrimitiveArray())
+    return isElementInitialized(getIndex());
+
+  if (asBlockPointer().Base == 0)
+    return true;
+  // Field has its bit in an inline descriptor.
+  return getInlineDesc()->IsInitialized;
+}
+
+bool Pointer::isElementInitialized(unsigned Index) const {
+  if (!isBlockPointer())
+    return true;
+
+  const Descriptor *Desc = getFieldDesc();
+  assert(Desc);
+
+  if (isStatic() && BS.Base == 0)
+    return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    const GlobalInlineDescriptor &GD =
+        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
   if (Desc->isPrimitiveArray()) {
-    if (isStatic() && BS.Base == 0)
-      return true;
-
     InitMapPtr &IM = getInitMap();
-
     if (!IM)
       return false;
 
     if (IM->first)
       return true;
 
-    return IM->second->isElementInitialized(getIndex());
+    return IM->second->isElementInitialized(Index);
   }
-
-  if (asBlockPointer().Base == 0)
-    return true;
-
-  // Field has its bit in an inline descriptor.
-  return getInlineDesc()->IsInitialized;
+  return isInitialized();
 }
 
 void Pointer::initialize() const {
@@ -470,7 +488,8 @@ void Pointer::initialize() const {
 
   assert(BS.Pointee && "Cannot initialize null pointer");
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
     GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
         asBlockPointer().Pointee->rawData());
     GD.InitState = GlobalInitState::Initialized;
@@ -480,35 +499,39 @@ void Pointer::initialize() const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
-    // Primitive global arrays don't have an initmap.
-    if (isStatic() && BS.Base == 0)
-      return;
-
-    // Nothing to do for these.
-    if (Desc->getNumElems() == 0)
-      return;
-
-    InitMapPtr &IM = getInitMap();
-    if (!IM)
-      IM =
-          std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
-
-    assert(IM);
-
-    // All initialized.
-    if (IM->first)
-      return;
-
-    if (IM->second->initializeElement(getIndex())) {
-      IM->first = true;
-      IM->second.reset();
-    }
+    if (Desc->getNumElems() != 0)
+      initializeElement(getIndex());
     return;
   }
 
   // Field has its bit in an inline descriptor.
   assert(BS.Base != 0 && "Only composite fields can be initialised");
   getInlineDesc()->IsInitialized = true;
+}
+
+void Pointer::initializeElement(unsigned Index) const {
+  // Primitive global arrays don't have an initmap.
+  if (isStatic() && BS.Base == 0)
+    return;
+
+  assert(Index < getFieldDesc()->getNumElems());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM) {
+    const Descriptor *Desc = getFieldDesc();
+    IM = std::make_pair(false, std::make_shared<InitMap>(Desc->getNumElems()));
+  }
+
+  assert(IM);
+
+  // All initialized.
+  if (IM->first)
+    return;
+
+  if (IM->second->initializeElement(Index)) {
+    IM->first = true;
+    IM->second.reset();
+  }
 }
 
 void Pointer::initializeAllElements() const {
@@ -522,6 +545,24 @@ void Pointer::initializeAllElements() const {
     IM->first = true;
     IM->second.reset();
   }
+}
+
+bool Pointer::allElementsInitialized() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  if (isStatic() && BS.Base == 0)
+    return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    const GlobalInlineDescriptor &GD =
+        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
+  InitMapPtr &IM = getInitMap();
+  return IM && IM->first;
 }
 
 void Pointer::activate() const {
@@ -593,9 +634,6 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
     return true;
   if (A.isTypeidPointer() && B.isTypeidPointer())
     return true;
-
-  if (A.isIntegralPointer() || B.isIntegralPointer())
-    return A.getSource() == B.getSource();
 
   if (A.StorageKind != B.StorageKind)
     return false;
@@ -700,7 +738,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       return true;
     }
 
-    if (const auto *RT = Ty->getAs<RecordType>()) {
+    if (const auto *RT = Ty->getAsCanonical<RecordType>()) {
       const auto *Record = Ptr.getRecord();
       assert(Record && "Missing record descriptor");
 
@@ -771,13 +809,13 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       R = APValue(APValue::UninitArray{}, NumElems, NumElems);
 
       bool Ok = true;
-      for (unsigned I = 0; I < NumElems; ++I) {
+      OptPrimType ElemT = Ctx.classify(ElemTy);
+      for (unsigned I = 0; I != NumElems; ++I) {
         APValue &Slot = R.getArrayInitializedElt(I);
-        const Pointer &EP = Ptr.atIndex(I);
-        if (OptPrimType T = Ctx.classify(ElemTy)) {
-          TYPE_SWITCH(*T, Slot = EP.deref<T>().toAPValue(ASTCtx));
+        if (ElemT) {
+          TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(I).toAPValue(ASTCtx));
         } else {
-          Ok &= Composite(ElemTy, EP.narrow(), Slot);
+          Ok &= Composite(ElemTy, Ptr.atIndex(I).narrow(), Slot);
         }
       }
       return Ok;
@@ -785,8 +823,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
-      QualType ElemTy = CT->getElementType();
+      // Can happen via C casts.
+      if (!Ptr.getFieldDesc()->isPrimitiveArray())
+        return false;
 
+      QualType ElemTy = CT->getElementType();
       if (ElemTy->isIntegerType()) {
         OptPrimType ElemT = Ctx.classify(ElemTy);
         assert(ElemT);

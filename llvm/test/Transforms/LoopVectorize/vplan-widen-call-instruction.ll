@@ -8,8 +8,8 @@ declare double @llvm.sqrt.f64(double %0)
 define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr noalias nocapture readonly %b.in, ptr noalias nocapture %c.out) {
 ; CHECK-LABEL: define void @widen_call_instruction(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A_IN:%.*]], ptr noalias readonly captures(none) [[B_IN:%.*]], ptr noalias captures(none) [[C_OUT:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -38,12 +38,11 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVAR11:%.*]], %[[FOR1_LATCH:.*]] ]
+; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[INDVAR11:%.*]], %[[FOR1_LATCH:.*]] ]
 ; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds double, ptr [[A_IN]], i64 [[INDVAR1]]
 ; CHECK-NEXT:    [[A:%.*]] = load double, ptr [[A_PTR]], align 8
 ; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds double, ptr [[B_IN]], i64 [[INDVAR1]]
@@ -151,7 +150,7 @@ declare void @use()
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
 ; CHECK: [[META5]] = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.

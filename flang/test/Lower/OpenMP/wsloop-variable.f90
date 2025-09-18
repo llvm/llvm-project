@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenMP DO Directive(Worksharing) for different
 ! types of loop iteration variable, lower bound, upper bound, and step.
 
-!REQUIRES: shell
 !RUN: bbc -fopenmp -emit-hlfir %s -o - 2>&1 | FileCheck %s
 
 !CHECK:  OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed into 64 bits.
@@ -23,7 +22,7 @@ program wsloop_variable
 !CHECK:      %[[TMP6:.*]] = fir.convert %[[TMP1]] : (i32) -> i64
 !CHECK:      %[[TMP7:.*]] = fir.convert %{{.*}} : (i32) -> i64
 !CHECK:      omp.wsloop private({{.*}}) {
-!CHECK-NEXT:   omp.loop_nest (%[[ARG0:.*]], %[[ARG1:.*]]) : i64 = (%[[TMP2]], %[[TMP5]]) to (%[[TMP3]], %[[TMP6]]) inclusive step (%[[TMP4]], %[[TMP7]]) {
+!CHECK-NEXT:   omp.loop_nest (%[[ARG0:.*]], %[[ARG1:.*]]) : i64 = (%[[TMP2]], %[[TMP5]]) to (%[[TMP3]], %[[TMP6]]) inclusive step (%[[TMP4]], %[[TMP7]]) collapse(2) {
 !CHECK:          %[[ARG0_I16:.*]] = fir.convert %[[ARG0]] : (i64) -> i16
 !CHECK:          hlfir.assign %[[ARG0_I16]] to %[[STORE_IV0:.*]]#0 : i16, !fir.ref<i16>
 !CHECK:          hlfir.assign %[[ARG1]] to %[[STORE_IV1:.*]]#0 : i64, !fir.ref<i64>

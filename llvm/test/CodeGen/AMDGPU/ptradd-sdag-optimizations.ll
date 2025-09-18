@@ -103,17 +103,16 @@ define void @baseptr_null(i64 %offset, i8 %v) {
 define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
 ; GFX942-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    global_load_ubyte v0, v2, s[2:3] sc0 sc1
-; GFX942-NEXT:    global_load_ubyte v0, v2, s[4:5] offset:8 sc0 sc1
-; GFX942-NEXT:    global_load_ubyte v0, v2, s[0:1] sc0 sc1
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    global_load_ubyte v1, v0, s[2:3] sc0 sc1
+; GFX942-NEXT:    global_load_ubyte v1, v0, s[4:5] offset:8 sc0 sc1
+; GFX942-NEXT:    global_load_ubyte v1, v0, s[0:1] sc0 sc1
 ; GFX942-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
 ; GFX942-NEXT:    ; kill: killed $sgpr2_sgpr3
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_endpgm
   %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
@@ -266,18 +265,11 @@ define amdgpu_kernel void @fold_mad64(ptr addrspace(1) %p) {
 
 ; Use non-zero shift amounts in v_lshl_add_u64.
 define ptr @select_v_lshl_add_u64(ptr %base, i64 %voffset) {
-; GFX942_PTRADD-LABEL: select_v_lshl_add_u64:
-; GFX942_PTRADD:       ; %bb.0:
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_PTRADD-NEXT:    v_lshlrev_b64 v[2:3], 3, v[2:3]
-; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942_LEGACY-LABEL: select_v_lshl_add_u64:
-; GFX942_LEGACY:       ; %bb.0:
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_LEGACY-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 3, v[0:1]
-; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: select_v_lshl_add_u64:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 3, v[0:1]
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr inbounds i64, ptr %base, i64 %voffset
   ret ptr %gep
 }
@@ -285,23 +277,13 @@ define ptr @select_v_lshl_add_u64(ptr %base, i64 %voffset) {
 ; Fold mul and add into v_mad, even if amdgpu-codegenprepare-mul24 turned the
 ; mul into a mul24.
 define ptr @fold_mul24_into_mad(ptr %base, i64 %a, i64 %b) {
-; GFX942_PTRADD-LABEL: fold_mul24_into_mad:
-; GFX942_PTRADD:       ; %bb.0:
-; GFX942_PTRADD-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_PTRADD-NEXT:    v_and_b32_e32 v2, 0xfffff, v2
-; GFX942_PTRADD-NEXT:    v_and_b32_e32 v4, 0xfffff, v4
-; GFX942_PTRADD-NEXT:    v_mul_hi_u32_u24_e32 v3, v2, v4
-; GFX942_PTRADD-NEXT:    v_mul_u32_u24_e32 v2, v2, v4
-; GFX942_PTRADD-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942_PTRADD-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX942_LEGACY-LABEL: fold_mul24_into_mad:
-; GFX942_LEGACY:       ; %bb.0:
-; GFX942_LEGACY-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942_LEGACY-NEXT:    v_and_b32_e32 v2, 0xfffff, v2
-; GFX942_LEGACY-NEXT:    v_and_b32_e32 v3, 0xfffff, v4
-; GFX942_LEGACY-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v2, v3, v[0:1]
-; GFX942_LEGACY-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: fold_mul24_into_mad:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v2, 0xfffff, v2
+; GFX942-NEXT:    v_and_b32_e32 v3, 0xfffff, v4
+; GFX942-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], v2, v3, v[0:1]
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %a_masked = and i64 %a, u0xfffff
   %b_masked = and i64 %b, u0xfffff
   %mul = mul i64 %a_masked, %b_masked

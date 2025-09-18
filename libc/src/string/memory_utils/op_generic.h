@@ -31,6 +31,7 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -39,12 +40,22 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
+#ifdef LIBC_COMPILER_IS_MSVC
+
+namespace LIBC_NAMESPACE_DECL {
+using generic_v128 = __m128i;
+using generic_v256 = __m256i;
+using generic_v512 = __m512i;
+} // namespace LIBC_NAMESPACE_DECL
+
+#else
 namespace LIBC_NAMESPACE_DECL {
 // Compiler types using the vector attributes.
 using generic_v128 = uint8_t __attribute__((__vector_size__(16)));
 using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
 } // namespace LIBC_NAMESPACE_DECL
+#endif // LIBC_COMPILER_IS_MSVC
 
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {

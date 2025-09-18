@@ -88,8 +88,8 @@ public:
   void Leave(const parser::OpenMPAssumeConstruct &);
   void Enter(const parser::OpenMPDeclarativeAssumes &);
   void Leave(const parser::OpenMPDeclarativeAssumes &);
-  void Enter(const parser::OpenMPBlockConstruct &);
-  void Leave(const parser::OpenMPBlockConstruct &);
+  void Enter(const parser::OmpBlockConstruct &);
+  void Leave(const parser::OmpBlockConstruct &);
   void Leave(const parser::OmpBeginDirective &);
   void Enter(const parser::OmpEndDirective &);
   void Leave(const parser::OmpEndDirective &);
@@ -167,6 +167,8 @@ private:
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
+  void AnalyzeObject(const parser::OmpObject &object);
+  void AnalyzeObjects(const parser::OmpObjectList &objects);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -313,7 +315,7 @@ private:
       const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
   void CheckLastprivateModifier(const parser::OmpLastprivateModifier &);
-  void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
+  void CheckMasterNesting(const parser::OmpBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
   void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);

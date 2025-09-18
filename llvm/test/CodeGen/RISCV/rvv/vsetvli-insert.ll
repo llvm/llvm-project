@@ -24,7 +24,7 @@ define <vscale x 1 x double> @test1(i64 %avl, <vscale x 1 x double> %a, <vscale 
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
@@ -40,7 +40,7 @@ define <vscale x 1 x double> @test2(i64 %avl, <vscale x 1 x double> %a, <vscale 
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %avl)
@@ -134,7 +134,7 @@ for.body:                                         ; preds = %entry, %for.body
   %i.012 = phi i64 [ %add, %for.body ], [ 0, %entry ]
   %add.ptr = getelementptr inbounds i32, ptr %A, i64 %i.012
   %2 = bitcast ptr %add.ptr to ptr
-  %3 = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, ptr %2, i64 %1)
+  %3 = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> poison, ptr %2, i64 %1)
   %4 = tail call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.i32.i64(<vscale x 2 x i32> %3, i32 -2, i64 %1)
   %5 = tail call <vscale x 2 x i1> @llvm.riscv.vmsgt.nxv2i32.i32.i64(<vscale x 2 x i32> %3, i32 2, i64 %1)
   %6 = tail call <vscale x 2 x i1> @llvm.riscv.vmor.nxv2i1.i64(<vscale x 2 x i1> %4, <vscale x 2 x i1> %5, i64 %1)
@@ -248,7 +248,7 @@ define <vscale x 1 x double> @test13(<vscale x 1 x double> %a, <vscale x 1 x dou
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 -1)
@@ -266,12 +266,12 @@ define <vscale x 1 x double> @test14(i64 %avl, <vscale x 1 x double> %a, <vscale
 entry:
   %vsetvli = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %f1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 1)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %f1,
     <vscale x 1 x double> %b,
     i64 7, i64 %vsetvli)
@@ -288,12 +288,12 @@ define <vscale x 1 x double> @test15(i64 %avl, <vscale x 1 x double> %a, <vscale
 entry:
   %vsetvli = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %f1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %avl)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %f1,
     <vscale x 1 x double> %b,
     i64 7, i64 %vsetvli)
@@ -317,7 +317,7 @@ entry:
   %head = insertelement <vscale x 1 x double> poison, double %a, i32 0
   %splat = shufflevector <vscale x 1 x double> %head, <vscale x 1 x double> poison, <vscale x 1 x i32> zeroinitializer
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %splat,
     <vscale x 1 x double> %b,
     i64 7, i64 %vsetvli)
@@ -337,7 +337,7 @@ entry:
   %vsetvli = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %c1 = extractelement <vscale x 1 x double> %a, i32 0
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %vsetvli)
@@ -363,7 +363,7 @@ entry:
   %y = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
     <vscale x 1 x double> %a, double %b, i64 2)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %a,
     i64 7, i64 %x)
@@ -502,7 +502,7 @@ define <vscale x 1 x i64> @vleNff(ptr %str, i64 %n, i64 %x) {
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 0, i64 2)
   %1 = bitcast ptr %str to ptr
-  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %1, i64 %0)
+  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> poison, ptr %1, i64 %0)
   %3 = extractvalue { <vscale x 1 x i64>, i64 } %2, 0
   %4 = extractvalue { <vscale x 1 x i64>, i64 } %2, 1
   %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> %3, <vscale x 1 x i64> %3, i64 %x, i64 %4)
@@ -522,10 +522,10 @@ define <vscale x 1 x i64> @vleNff2(ptr %str, i64 %n, i64 %x) {
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 0, i64 2)
   %1 = bitcast ptr %str to ptr
-  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, ptr %1, i64 %0)
+  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> poison, ptr %1, i64 %0)
   %3 = extractvalue { <vscale x 1 x i64>, i64 } %2, 0
   %4 = extractvalue { <vscale x 1 x i64>, i64 } %2, 1
-  %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %3, i64 %x, i64 %4)
+  %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %3, i64 %x, i64 %4)
   ret <vscale x 1 x i64> %5
 }
 
@@ -545,7 +545,7 @@ define <vscale x 2 x i32> @avl_forward5(ptr %addr) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %gvl = tail call i64 @llvm.riscv.vsetvli.i64(i64 32, i64 0, i64 2)
-  %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, ptr %addr, i64 %gvl)
+  %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> poison, ptr %addr, i64 %gvl)
   ret <vscale x 2 x i32> %ret
 }
 
@@ -562,12 +562,12 @@ define <vscale x 1 x double> @test20(i64 %avl, <vscale x 1 x float> %a, <vscale 
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x float> %a,
     <vscale x 1 x float> %b,
     i64 7, i64 %0)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %c,
     i64 7, i64 %0)
@@ -708,7 +708,7 @@ define <vscale x 2 x i32> @avl_undef1(<vscale x 2 x i32>, <vscale x 2 x i32>, <v
     <vscale x 2 x i32> %0,
     <vscale x 2 x i32> %1,
     <vscale x 2 x i32> %2,
-    i64 undef
+    i64 poison
   )
   ret <vscale x 2 x i32> %a
 }

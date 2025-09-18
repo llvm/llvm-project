@@ -1,4 +1,4 @@
-//===--- SuspiciousCallArgumentCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -413,10 +413,11 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
 
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
-    if ((ParamType->isEnumeralType() &&
-         ParamType->castAs<EnumType>()->getOriginalDecl()->isScoped()) ||
+    if ((ParamType->isEnumeralType() && ParamType->castAsCanonical<EnumType>()
+                                            ->getOriginalDecl()
+                                            ->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAs<EnumType>()->getOriginalDecl()->isScoped()))
+         ArgType->castAsCanonical<EnumType>()->getOriginalDecl()->isScoped()))
       return false;
 
     return true;
