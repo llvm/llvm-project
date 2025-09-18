@@ -1016,6 +1016,7 @@ bool InferAddressSpacesImpl::updateAddressSpace(
         OperandAS = PtrOperand->getType()->getPointerAddressSpace();
         if (auto *C = dyn_cast<Constant>(PtrOperand);
             C && OperandAS == FlatAddrSpace) {
+          // Defer joining the address space of constant pointer operands.
           ConstantPtrOps.push_back(C);
           continue;
         }
