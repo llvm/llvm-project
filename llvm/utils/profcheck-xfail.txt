@@ -56,6 +56,7 @@ CodeGen/AMDGPU/global_atomics_optimizer_fp_no_rtn.ll
 CodeGen/AMDGPU/GlobalISel/atomic_optimizations_mul_one.ll
 CodeGen/AMDGPU/lower-buffer-fat-pointers-mem-transfer.ll
 CodeGen/AMDGPU/lower-ctor-dtor.ll
+CodeGen/AMDGPU/lower-intrinsics-cluster-barrier.ll
 CodeGen/AMDGPU/lower-mem-intrinsics.ll
 CodeGen/AMDGPU/lower-mem-intrinsics-threshold.ll
 CodeGen/AMDGPU/opencl-printf-and-hostcall.ll
@@ -1231,6 +1232,7 @@ Transforms/LoopVectorize/AArch64/single-early-exit-interleave.ll
 Transforms/LoopVectorize/AArch64/smallest-and-widest-types.ll
 Transforms/LoopVectorize/AArch64/store-costs-sve.ll
 Transforms/LoopVectorize/AArch64/strict-fadd.ll
+Transforms/LoopVectorize/AArch64/struct-return-cost.ll
 Transforms/LoopVectorize/AArch64/sve2-histcnt-epilogue.ll
 Transforms/LoopVectorize/AArch64/sve-basic-vec.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-inloop-reductions.ll
