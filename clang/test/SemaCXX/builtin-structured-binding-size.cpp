@@ -229,3 +229,12 @@ static_assert(__is_same_as(tag_of_t<S1>, int));
 static_assert(__is_same_as(tag_of_t<int>, int)); // error
 // expected-error@-1 {{constraints not satisfied for alias template 'tag_of_t' [with T = int]}}
 // expected-note@#tag-of-constr {{because substituted constraint expression is ill-formed: type 'int' cannot be decomposed}}
+
+struct Neg {
+  int a;
+};
+template <> struct std::tuple_size<Neg> {
+  static constexpr int value = -1;
+};
+
+int e = __builtin_structured_binding_size(Neg); // expected-error {{type 'Neg' cannot be decomposed}}
