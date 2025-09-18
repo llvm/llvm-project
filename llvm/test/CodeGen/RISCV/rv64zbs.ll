@@ -547,8 +547,20 @@ define signext i32 @bclri_i32_31(i32 signext %a) nounwind {
 ; CHECK-NEXT:    slli a0, a0, 33
 ; CHECK-NEXT:    srli a0, a0, 33
 ; CHECK-NEXT:    ret
-  %and = and i32 %a, -2147483649
+  %and = and i32 %a, 2147483647
   ret i32 %and
+}
+
+define signext i32 @bclri_i32_31_allWUsers(i32 signext %a) nounwind {
+; CHECK-LABEL: bclri_i32_31_allWUsers:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 33
+; CHECK-NEXT:    srli a0, a0, 33
+; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    ret
+  %and = and i32 %a, 2147483647
+  %add = add i32 %and, 1
+  ret i32 %add
 }
 
 define i64 @bclri_i64_10(i64 %a) nounwind {
@@ -724,6 +736,18 @@ define signext i32 @bseti_i32_31(i32 signext %a) nounwind {
   ret i32 %or
 }
 
+define signext i32 @bseti_i32_31_allWUsers(i32 signext %a) nounwind {
+; CHECK-LABEL: bseti_i32_31_allWUsers:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    ret
+  %or = or i32 %a, 2147483648
+  %add = add i32 %or, 1
+  ret i32 %add
+}
+
 define i64 @bseti_i64_10(i64 %a) nounwind {
 ; CHECK-LABEL: bseti_i64_10:
 ; CHECK:       # %bb.0:
@@ -860,6 +884,18 @@ define signext i32 @binvi_i32_31(i32 signext %a) nounwind {
 ; CHECK-NEXT:    ret
   %xor = xor i32 %a, 2147483648
   ret i32 %xor
+}
+
+define void @binvi_i32_31_allWUsers(i32 signext %a, ptr %p) nounwind {
+; CHECK-LABEL: binvi_i32_31_allWUsers:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    ret
+  %xor = xor i32 %a, 2147483648
+  store i32 %xor, ptr %p
+  ret void
 }
 
 define i64 @binvi_i64_10(i64 %a) nounwind {
