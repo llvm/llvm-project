@@ -201,10 +201,6 @@ if (LLVM_USES_LIBSTDCXX)
   endif()
 endif()
 
-if (LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS)
-  add_compile_definitions(STRICT_FIXED_SIZE_VECTORS)
-endif()
-
 string(TOUPPER "${LLVM_ABI_BREAKING_CHECKS}" uppercase_LLVM_ABI_BREAKING_CHECKS)
 
 if( uppercase_LLVM_ABI_BREAKING_CHECKS STREQUAL "WITH_ASSERTS" )
@@ -890,6 +886,14 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.1)
       append("-Wno-class-memaccess" CMAKE_CXX_FLAGS)
+    endif()
+  endif()
+
+  # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
+  # to produce a large number of false positives.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
+      append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
     endif()
   endif()
 

@@ -30,6 +30,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/c_string.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
@@ -260,7 +261,11 @@ constexpr char const *GetPrettyFunctionParamType(char const *str) {
 // This function recovers ParamType at compile time by using __PRETTY_FUNCTION__
 // It can be customized by using the REGISTER_TYPE_NAME macro below.
 template <typename ParamType> static constexpr const char *GetTypeName() {
+#ifdef LIBC_COMPILER_IS_MSVC
+  return GetPrettyFunctionParamType(__FUNCSIG__);
+#else
   return GetPrettyFunctionParamType(__PRETTY_FUNCTION__);
+#endif // LIBC_COMPILER_IS_MSVC
 }
 
 template <typename T>

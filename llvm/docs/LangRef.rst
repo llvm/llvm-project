@@ -3273,7 +3273,6 @@ specifications are given in this list:
 -  ``p[n]:64:64:64`` - Other address spaces are assumed to be the
    same as the default address space.
 -  ``S0`` - natural stack alignment is unspecified
--  ``i1:8:8`` - i1 is 8-bit (byte) aligned
 -  ``i8:8:8`` - i8 is 8-bit (byte) aligned as mandated
 -  ``i16:16:16`` - i16 is 16-bit aligned
 -  ``i32:32:32`` - i32 is 32-bit aligned
@@ -3388,6 +3387,10 @@ This explains code motion of these instructions across operations that impact
 the object's lifetime. A stack object's lifetime can be explicitly specified
 using :ref:`llvm.lifetime.start <int_lifestart>` and
 :ref:`llvm.lifetime.end <int_lifeend>` intrinsic function calls.
+
+As an exception to the above, loading from a stack object outside its lifetime
+is not undefined behavior and returns a poison value instead. Storing to it is
+still undefined behavior.
 
 .. _pointeraliasing:
 
@@ -7837,6 +7840,54 @@ If a loop was successfully processed by the loop distribution pass,
 this metadata is added (i.e., has been distributed).  See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
+'``llvm.loop.estimated_trip_count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata records an estimated trip count for the loop.  The first operand
+is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
+integer constant of type ``i32`` or smaller specifying the estimate.  For
+example:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.estimated_trip_count", i32 8}
+
+Purpose
+"""""""
+
+A loop's estimated trip count is an estimate of the average number of loop
+iterations (specifically, the number of times the loop's header executes) each
+time execution reaches the loop.  It is usually only an estimate based on, for
+example, profile data.  The actual number of iterations might vary widely.
+
+The estimated trip count serves as a parameter for various loop transformations
+and typically helps estimate transformation cost.  For example, it can help
+determine how many iterations to peel or how aggressively to unroll.
+
+Initialization and Maintenance
+""""""""""""""""""""""""""""""
+
+Passes should interact with estimated trip counts always via
+``llvm::getLoopEstimatedTripCount`` and ``llvm::setLoopEstimatedTripCount``.
+
+When the ``llvm.loop.estimated_trip_count`` metadata is not present on a loop,
+``llvm::getLoopEstimatedTripCount`` estimates the loop's trip count from the
+loop's ``branch_weights`` metadata under the assumption that the latter still
+accurately encodes the program's original profile data.  However, as passes
+transform existing loops and create new loops, they must be free to update and
+create ``branch_weights`` metadata in a way that maintains accurate block
+frequencies.  Trip counts estimated from this new ``branch_weights`` metadata
+are not necessarily useful to the passes that consume estimated trip counts.
+
+For this reason, when a pass transforms or creates loops, the pass should
+separately estimate new trip counts based on the estimated trip counts that
+``llvm::getLoopEstimatedTripCount`` returns at the start of the pass, and the
+pass should record the new estimates by calling
+``llvm::setLoopEstimatedTripCount``, which creates or updates
+``llvm.loop.estimated_trip_count`` metadata.  Once this metadata is present on a
+loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
+estimating the trip count from the loop's ``branch_weights`` metadata.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -8382,6 +8433,13 @@ Example:
     !0 = !{!"amdgpu-synchronize-as", !"global"}
     !1 = !{!"amdgpu-synchronize-as", !"private"}
     !2 = !{!0, !1}
+
+'``nofree``' Metadata
+^^^^^^^^^^^^^^^^^^^^^
+
+The ``nofree`` metadata indicates the memory pointed by the pointer will not be
+freed after the attached instruction.
+
 
 Module Flags Metadata
 =====================
@@ -12494,7 +12552,7 @@ Syntax:
 
 ::
 
-      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]             ; yields ty2
+      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofree !<empty_node>]            ; yields ty2
 
 Overview:
 """""""""
@@ -12518,6 +12576,11 @@ The optional ``!dereferenceable_or_null`` metadata must reference a single
 metadata name ``<deref_bytes_node>`` corresponding to a metadata node with one
 ``i64`` entry.
 See ``dereferenceable_or_null`` metadata.
+
+The optional ``!nofree`` metadata must reference a single metadata name
+``<empty_node>`` corresponding to a metadata node with no entries.
+The existence of the ``!nofree`` metadata on the instruction tells the optimizer
+that the memory pointed by the pointer will not be freed after this point.
 
 Semantics:
 """"""""""
@@ -14619,6 +14682,8 @@ Semantics:
 
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
       must match the target's :ref:`alloca address space <alloca_addrspace>` type.
+
+.. _int_prefetch:
 
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21111,6 +21176,53 @@ Example:
       %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
       %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
 
+Floating-Point Conversion Intrinsics
+------------------------------------
+
+This class of intrinsics is designed for floating-point conversions that do
+not fall into other categories. For example conversions with specified rounding
+mode or mini-float conversions.
+
+'``llvm.fptrunc.round``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ty2>
+      @llvm.fptrunc.round(<type> <value>, metadata <rounding mode>)
+
+Overview:
+"""""""""
+
+The '``llvm.fptrunc.round``' intrinsic truncates
+:ref:`floating-point <t_floating>` ``value`` to type ``ty2``
+with a specified rounding mode.
+
+Arguments:
+""""""""""
+
+The '``llvm.fptrunc.round``' intrinsic takes a :ref:`floating-point
+<t_floating>` value to cast and a :ref:`floating-point <t_floating>` type
+to cast it to. This argument must be larger in size than the result.
+
+The second argument specifies the rounding mode as described in the constrained
+intrinsics section.
+For this intrinsic, the "round.dynamic" mode is not supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.fptrunc.round``' intrinsic casts a ``value`` from a larger
+:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
+<t_floating>` type.
+This intrinsic is assumed to execute in the default :ref:`floating-point
+environment <floatenv>` *except* for the rounding mode.
+This intrinsic is not supported on all targets. Some targets may not support
+all rounding modes.
+
 Convergence Intrinsics
 ----------------------
 
@@ -23975,8 +24087,7 @@ indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
 ``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
 the unsigned less-than comparison operator.  Overflow cannot occur in
 ``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  If ``%n`` is ``0``, then the result is a
-poison value. The above is equivalent to:
+numbers and not in machine numbers.  The above is equivalent to:
 
 ::
 
@@ -24006,6 +24117,130 @@ Examples:
       %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
+
+.. _int_loop_dependence_war_mask:
+
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector load from %ptrA followed by a vector store to %ptrB, this
+instruction generates a mask where an active lane indicates that the
+write-after-read sequence can be performed safely for that lane, without the
+danger of a write-after-read hazard occurring.
+
+A write-after-read hazard occurs when a write-after-read sequence for a given
+lane in a vector ends up being executed as a read-after-write sequence due to
+the aliasing of pointers.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when loading from %ptrA then storing to
+%ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
+
+* (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
+* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+  before the store to the same address)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
+
+.. _int_loop_dependence_raw_mask:
+
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector store to %ptrA followed by a vector load from %ptrB, this
+instruction generates a mask where an active lane indicates that the
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
+
+A read-after-write hazard occurs when a read-after-write sequence for a given
+lane in a vector ends up being executed as a write-after-read sequence due to
+the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when storing to %ptrA then loading from
+%ptrB is safe and doesn't result in aliasing, meaning that:
+
+* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+  occurs before loading from this address), or
+* ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask)
+      [...]
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
 
 .. _int_experimental_vp_splice:
 
@@ -29588,9 +29823,15 @@ Arguments:
 """"""""""
 
 The ``llvm.objectsize`` intrinsic takes four arguments. The first argument is a
-pointer to or into the ``object``. The second argument determines whether
-``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size is
-unknown. The third argument controls how ``llvm.objectsize`` acts when ``null``
+pointer to or into the ``object``.
+
+The second argument determines whether ``llvm.objectsize`` returns the minimum
+(if true) or maximum (if false) object size. The minimum size may be any size
+smaller than or equal to the actual object size (including 0 if unknown). The
+maximum size may be any size greater than or equal to the actual object size
+(including -1 if unknown).
+
+The third argument controls how ``llvm.objectsize`` acts when ``null``
 in address space 0 is used as its pointer argument. If it's ``false``,
 ``llvm.objectsize`` reports 0 bytes available when given ``null``. Otherwise, if
 the ``null`` is in a non-zero address space or if ``true`` is given for the
@@ -31154,42 +31395,3 @@ Semantics:
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
 
-'``llvm.fptrunc.round``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.fptrunc.round(<type> <value>, metadata <rounding mode>)
-
-Overview:
-"""""""""
-
-The '``llvm.fptrunc.round``' intrinsic truncates
-:ref:`floating-point <t_floating>` ``value`` to type ``ty2``
-with a specified rounding mode.
-
-Arguments:
-""""""""""
-
-The '``llvm.fptrunc.round``' intrinsic takes a :ref:`floating-point
-<t_floating>` value to cast and a :ref:`floating-point <t_floating>` type
-to cast it to. This argument must be larger in size than the result.
-
-The second argument specifies the rounding mode as described in the constrained
-intrinsics section.
-For this intrinsic, the "round.dynamic" mode is not supported.
-
-Semantics:
-""""""""""
-
-The '``llvm.fptrunc.round``' intrinsic casts a ``value`` from a larger
-:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
-<t_floating>` type.
-This intrinsic is assumed to execute in the default :ref:`floating-point
-environment <floatenv>` *except* for the rounding mode.
-This intrinsic is not supported on all targets. Some targets may not support
-all rounding modes.

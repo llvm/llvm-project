@@ -20,6 +20,14 @@ public:
   const T &value() const &;
   T &value() &;
 
+  constexpr T &makeValue();
+
+  template <typename U>
+  constexpr T &makeValue(U&& v);
+
+  template <typename... ARGS>
+  constexpr T &makeValueInplace(ARGS &&... args);
+
   // 'operator bool' is inherited from bsl::optional
 
   constexpr bool isNull() const noexcept;

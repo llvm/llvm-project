@@ -199,6 +199,16 @@ static cl::opt<unsigned> MaxProfitableLoadStride(
     cl::desc("The maximum stride, considered to be profitable."));
 
 static cl::opt<bool>
+    DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
+                       cl::desc("Disable tree reordering even if it is "
+                                "profitable. Used for testing only."));
+
+static cl::opt<bool>
+    ForceStridedLoads("slp-force-strided-loads", cl::init(false), cl::Hidden,
+                      cl::desc("Generate strided loads even if they are not "
+                               "profitable. Used for testing only."));
+
+static cl::opt<bool>
     ViewSLPTree("view-slp-tree", cl::Hidden,
                 cl::desc("Display the SLP trees with Graphviz"));
 
@@ -5243,6 +5253,7 @@ private:
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
+              ::isCommutative(User) ||
               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
           EdgeInfo EI(TE, U.getOperandNo());
           if (!IsCommutativeUser && !isa<CmpInst>(User)) {
@@ -5574,7 +5585,23 @@ private:
       if (auto *SD = dyn_cast<ScheduleData>(Data)) {
         SD->setScheduled(/*Scheduled=*/true);
         LLVM_DEBUG(dbgs() << "SLP:   schedule " << *SD << "\n");
-        ProcessBundleMember(SD, {});
+        SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
+        SmallVector<ScheduleBundle *> Bundles;
+        Instruction *In = SD->getInst();
+        if (R.isVectorized(In)) {
+          ArrayRef<TreeEntry *> Entries = R.getTreeEntries(In);
+          for (TreeEntry *TE : Entries) {
+            if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
+                In->getNumOperands() != TE->getNumOperands())
+              continue;
+            auto &BundlePtr =
+                PseudoBundles.emplace_back(std::make_unique<ScheduleBundle>());
+            BundlePtr->setTreeEntry(TE);
+            BundlePtr->add(SD);
+            Bundles.push_back(BundlePtr.get());
+          }
+        }
+        ProcessBundleMember(SD, Bundles);
       } else {
         ScheduleBundle &Bundle = *cast<ScheduleBundle>(Data);
         Bundle.setScheduled(/*Scheduled=*/true);
@@ -6323,17 +6350,11 @@ static bool isReverseOrder(ArrayRef<unsigned> Order) {
 }
 
 /// Checks if the provided list of pointers \p Pointers represents the strided
-/// pointers for type ElemTy. If they are not, std::nullopt is returned.
-/// Otherwise, if \p Inst is not specified, just initialized optional value is
-/// returned to show that the pointers represent strided pointers. If \p Inst
-/// specified, the runtime stride is materialized before the given \p Inst.
-/// \returns std::nullopt if the pointers are not pointers with the runtime
-/// stride, nullptr or actual stride value, otherwise.
-static std::optional<Value *>
-calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
-                  const DataLayout &DL, ScalarEvolution &SE,
-                  SmallVectorImpl<unsigned> &SortedIndices,
-                  Instruction *Inst = nullptr) {
+/// pointers for type ElemTy. If they are not, nullptr is returned.
+/// Otherwise, SCEV* of the stride value is returned.
+static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
+                                     const DataLayout &DL, ScalarEvolution &SE,
+                                     SmallVectorImpl<unsigned> &SortedIndices) {
   SmallVector<const SCEV *> SCEVs;
   const SCEV *PtrSCEVLowest = nullptr;
   const SCEV *PtrSCEVHighest = nullptr;
@@ -6342,7 +6363,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   for (Value *Ptr : PointerOps) {
     const SCEV *PtrSCEV = SE.getSCEV(Ptr);
     if (!PtrSCEV)
-      return std::nullopt;
+      return nullptr;
     SCEVs.push_back(PtrSCEV);
     if (!PtrSCEVLowest && !PtrSCEVHighest) {
       PtrSCEVLowest = PtrSCEVHighest = PtrSCEV;
@@ -6350,14 +6371,14 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
     }
     const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
     if (isa<SCEVCouldNotCompute>(Diff))
-      return std::nullopt;
+      return nullptr;
     if (Diff->isNonConstantNegative()) {
       PtrSCEVLowest = PtrSCEV;
       continue;
     }
     const SCEV *Diff1 = SE.getMinusSCEV(PtrSCEVHighest, PtrSCEV);
     if (isa<SCEVCouldNotCompute>(Diff1))
-      return std::nullopt;
+      return nullptr;
     if (Diff1->isNonConstantNegative()) {
       PtrSCEVHighest = PtrSCEV;
       continue;
@@ -6366,7 +6387,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   // Dist = PtrSCEVHighest - PtrSCEVLowest;
   const SCEV *Dist = SE.getMinusSCEV(PtrSCEVHighest, PtrSCEVLowest);
   if (isa<SCEVCouldNotCompute>(Dist))
-    return std::nullopt;
+    return nullptr;
   int Size = DL.getTypeStoreSize(ElemTy);
   auto TryGetStride = [&](const SCEV *Dist,
                           const SCEV *Multiplier) -> const SCEV * {
@@ -6387,10 +6408,10 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
     const SCEV *Sz = SE.getConstant(Dist->getType(), Size * (SCEVs.size() - 1));
     Stride = TryGetStride(Dist, Sz);
     if (!Stride)
-      return std::nullopt;
+      return nullptr;
   }
   if (!Stride || isa<SCEVConstant>(Stride))
-    return std::nullopt;
+    return nullptr;
   // Iterate through all pointers and check if all distances are
   // unique multiple of Stride.
   using DistOrdPair = std::pair<int64_t, int>;
@@ -6404,28 +6425,28 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
       const SCEV *Coeff = TryGetStride(Diff, Stride);
       if (!Coeff)
-        return std::nullopt;
+        return nullptr;
       const auto *SC = dyn_cast<SCEVConstant>(Coeff);
       if (!SC || isa<SCEVCouldNotCompute>(SC))
-        return std::nullopt;
+        return nullptr;
       if (!SE.getMinusSCEV(PtrSCEV, SE.getAddExpr(PtrSCEVLowest,
                                                   SE.getMulExpr(Stride, SC)))
                ->isZero())
-        return std::nullopt;
+        return nullptr;
       Dist = SC->getAPInt().getZExtValue();
     }
     // If the strides are not the same or repeated, we can't vectorize.
     if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
-      return std::nullopt;
+      return nullptr;
     auto Res = Offsets.emplace(Dist, Cnt);
     if (!Res.second)
-      return std::nullopt;
+      return nullptr;
     // Consecutive order if the inserted element is the last one.
     IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
     ++Cnt;
   }
   if (Offsets.size() != SCEVs.size())
-    return std::nullopt;
+    return nullptr;
   SortedIndices.clear();
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
@@ -6436,10 +6457,7 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       ++Cnt;
     }
   }
-  if (!Inst)
-    return nullptr;
-  SCEVExpander Expander(SE, DL, "strided-load-vec");
-  return Expander.expandCodeFor(Stride, Stride->getType(), Inst);
+  return Stride;
 }
 
 static std::pair<InstructionCost, InstructionCost>
@@ -7763,6 +7781,9 @@ static void combineOrders(MutableArrayRef<unsigned> Order,
 }
 
 bool BoUpSLP::isProfitableToReorder() const {
+  if (DisableTreeReorder)
+    return false;
+
   constexpr unsigned TinyVF = 2;
   constexpr unsigned TinyTree = 10;
   constexpr unsigned PhiOpsLimit = 12;
@@ -11280,9 +11301,6 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
       return false;
 
-    SmallVector<Value *> NewVL(VL.size());
-    copy(Op1, NewVL.begin());
-    copy(Op2, std::next(NewVL.begin(), Op1.size()));
     auto Invalid = ScheduleBundle::invalid();
     auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
                             UserTreeIdx, {}, ReorderIndices);
@@ -13023,7 +13041,7 @@ void BoUpSLP::transformNodes() {
         InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
             Instruction::Load, VecTy, BaseLI->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind, BaseLI);
-        if (StridedCost < OriginalVecCost)
+        if (StridedCost < OriginalVecCost || ForceStridedLoads)
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
           E.State = TreeEntry::StridedVectorize;
@@ -19520,11 +19538,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             return cast<LoadInst>(V)->getPointerOperand();
           });
           OrdersType Order;
-          std::optional<Value *> Stride =
-              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order,
-                                &*Builder.GetInsertPoint());
+          const SCEV *StrideSCEV =
+              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order);
+          assert(StrideSCEV && "At this point stride should be known");
+          SCEVExpander Expander(*SE, *DL, "strided-load-vec");
+          Value *Stride = Expander.expandCodeFor(
+              StrideSCEV, StrideSCEV->getType(), &*Builder.GetInsertPoint());
           Value *NewStride =
-              Builder.CreateIntCast(*Stride, StrideTy, /*isSigned=*/true);
+              Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
           StrideVal = Builder.CreateMul(
               NewStride,
               ConstantInt::get(
@@ -20778,6 +20799,14 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           continue;
         }
         auto *SD = cast<ScheduleData>(SE);
+        if (SD->hasValidDependencies() &&
+            (!S.areInstructionsWithCopyableElements() ||
+             !S.isCopyableElement(SD->getInst())) &&
+            !getScheduleCopyableData(SD->getInst()).empty() && EI.UserTE &&
+            EI.UserTE->hasState() &&
+            (!EI.UserTE->hasCopyableElements() ||
+             !EI.UserTE->isCopyableElement(SD->getInst())))
+          SD->clearDirectDependencies();
         for (const Use &U : SD->getInst()->operands()) {
           unsigned &NumOps =
               UserOpToNumOps
@@ -21879,6 +21908,10 @@ bool BoUpSLP::collectValuesToDemote(
     return TryProcessInstruction(BitWidth);
   case Instruction::ZExt:
   case Instruction::SExt:
+    if (E.UserTreeIndex.UserTE && E.UserTreeIndex.UserTE->hasState() &&
+        E.UserTreeIndex.UserTE->getOpcode() == Instruction::BitCast &&
+        E.UserTreeIndex.UserTE->getMainOp()->getType()->isFPOrFPVectorTy())
+      return false;
     IsProfitableToDemote = true;
     return TryProcessInstruction(BitWidth);
 
@@ -24669,21 +24702,23 @@ private:
                 FMF &= FPCI->getFastMathFlags();
               Ops.push_back(RdxVal->user_back());
             }
-            FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                      *TTI, TLI);
-            if (FMACost.isValid()) {
-              // Calculate actual FMAD cost.
-              IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
-                                          {RVecTy, RVecTy, RVecTy}, FMF);
-              FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+            if (!Ops.empty()) {
+              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
+                                        *TTI, TLI);
+              if (FMACost.isValid()) {
+                // Calculate actual FMAD cost.
+                IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
+                                            {RVecTy, RVecTy, RVecTy}, FMF);
+                FMACost = TTI->getIntrinsicInstrCost(ICA, CostKind);
 
-              LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
-              // Also, exclude vector fmul cost.
-              InstructionCost FMulCost = TTI->getArithmeticInstrCost(
-                  Instruction::FMul, RVecTy, CostKind);
-              LLVM_DEBUG(dbgs()
-                         << "Minus vector FMul cost: " << FMulCost << "\n");
-              FMACost -= FMulCost;
+                LLVM_DEBUG(dbgs() << "Vector FMA cost: " << FMACost << "\n");
+                // Also, exclude vector fmul cost.
+                InstructionCost FMulCost = TTI->getArithmeticInstrCost(
+                    Instruction::FMul, RVecTy, CostKind);
+                LLVM_DEBUG(dbgs()
+                           << "Minus vector FMul cost: " << FMulCost << "\n");
+                FMACost -= FMulCost;
+              }
             }
           }
           if (FMACost.isValid())
