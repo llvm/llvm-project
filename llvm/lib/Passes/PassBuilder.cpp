@@ -565,7 +565,6 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
     return true;                                                               \
   }
 #include "PassRegistry.def"
-#undef MODULE_CALLBACK
         return false;
       });
 
@@ -584,7 +583,6 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
     return true;                                                               \
   }
 #include "PassRegistry.def"
-#undef MODULE_LTO_CALLBACK
         return false;
       });
 
@@ -603,7 +601,6 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
     return true;                                                               \
   }
 #include "PassRegistry.def"
-#undef FUNCTION_CALLBACK
         return false;
       });
 
@@ -622,7 +619,6 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
     return true;                                                               \
   }
 #include "PassRegistry.def"
-#undef CGSCC_CALLBACK
         return false;
       });
 
@@ -641,7 +637,6 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
     return true;                                                               \
   }
 #include "PassRegistry.def"
-#undef LOOP_CALLBACK
         return false;
       });
 }
