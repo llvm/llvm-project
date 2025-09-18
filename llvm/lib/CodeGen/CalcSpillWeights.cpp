@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -79,7 +80,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
 
 // Check if all values in LI are rematerializable
 bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
-                                        const LiveIntervals &LIS,
+                                        LiveIntervals &LIS,
                                         const VirtRegMap &VRM,
                                         const TargetInstrInfo &TII) {
   Register Reg = LI.reg();
@@ -124,6 +125,19 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
 
     if (!TII.isTriviallyReMaterializable(*MI))
       return false;
+
+    // If MI has register uses, it will only be rematerializable if its uses are
+    // also live at the indices it will be rematerialized at.
+    SmallVector<Register, 8> NewRegs;
+    LiveRangeEdit LRE(nullptr, NewRegs, *MI->getMF(), LIS, nullptr);
+    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+    for (MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
+      SlotIndex UseIdx = LIS.getInstructionIndex(Use);
+      if (LI.getVNInfoAt(UseIdx) != VNI)
+        continue;
+      if (!LRE.allUsesAvailableAt(MI, VNI->def, UseIdx))
+        return false;
+    }
   }
   return true;
 }
