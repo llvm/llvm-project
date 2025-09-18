@@ -26,7 +26,7 @@ class TestCase(TestBase):
                       enqueuePriority = 0
                       parent = nil
                       children = \{
-                        0 = id:2 flags:(?:running\|)?(?:enqueued\|)?asyncLetTask \{
+                        0 = id:2 flags:(?:suspended\|)?(?:running\|)?(?:enqueued\|)?asyncLetTask \{
                           address = 0x[0-9a-f]+
                           id = 2
                           enqueuePriority = \.medium
