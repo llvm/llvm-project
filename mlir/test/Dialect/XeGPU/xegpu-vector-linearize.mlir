@@ -59,6 +59,29 @@ func.func @test_vector_store_load_4x4_f16(%buffer: memref<4x4xf16>) {
   vector.store %0, %buffer[%c0, %c0] : memref<4x4xf16>, vector<4x4xf16>
   return
 }
+
+// -----
+// CHECK-LABEL: func.func @test_vector_store_load_4x4x4
+// CHECK-SAME: (%[[BUF:.*]]: memref<4x4x4xf32>)
+// Constants (order not important)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+// All 16 scalar-slice (row/col plane) loads of 1D vectors
+// CHECK-COUNT-16: vector.load {{.*}} : memref<4x4x4xf32>, vector<4xf32>
+// No remaining 3D vector load
+// CHECK-NOT: vector.load {{.*}} : memref<4x4x4xf32>, vector<4x4x4xf32>
+// All 16 stores of 1D vectors
+// CHECK-COUNT-16: vector.store {{.*}} : memref<4x4x4xf32>, vector<4xf32>
+// CHECK: return
+func.func @test_vector_store_load_4x4x4(%buffer: memref<4x4x4xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = vector.load %buffer[%c0, %c0, %c0] : memref<4x4x4xf32>, vector<4x4x4xf32>
+  vector.store %0, %buffer[%c0, %c0, %c0] : memref<4x4x4xf32>, vector<4x4x4xf32>
+  return
+}
+
 // -----
 // CHECK-LABEL: func.func @test_linearize_index
 // CHECK-SAME: (%[[ARG0:.*]]: vector<2x2xindex>, %[[ARG1:.*]]: vector<2x2xi32>) -> vector<2x2xindex>

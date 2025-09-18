@@ -16,6 +16,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 
@@ -48,7 +50,8 @@ struct XeGPUVectorLinearizePass final
         return signalPassFailure();
     }
 
-    // Unroll load store from <MxN> to M <1xN> load/stores and then linearize
+    // Unroll load/store from <d1xd2x...xdk> to (d1*d2*...*d(k-1)) slices of
+    // <1x1x...x1xdk>.
     {
       RewritePatternSet patterns(&getContext());
       vector::UnrollVectorOptions vectorOptions;
@@ -62,19 +65,36 @@ struct XeGPUVectorLinearizePass final
               return nullptr;
             };
 
-            auto vecType = extractVectorType(op);
+            VectorType vecType = extractVectorType(op);
             if (!vecType)
               return std::nullopt;
 
-            auto shape = vecType.getShape();
-            if (shape.size() != 2)
+            // Only handle rank >= 2 so we actually unroll something.
+            int64_t rank = vecType.getRank();
+            if (rank < 2)
               return std::nullopt;
 
-            return SmallVector<int64_t>{1, shape[1]};
+            ArrayRef<int64_t> shape = vecType.getShape();
+            // Bail if any of the (rank-1) leading dims are dynamic (can't fully
+            // unroll).
+            for (int64_t i = 0; i < rank - 1; ++i)
+              if (shape[i] == ShapedType::kDynamic) {
+                LLVM_DEBUG(llvm::dbgs()
+                           << "Dynamic leading dim " << i << " in " << vecType
+                           << " prevents full unroll.\n");
+                return std::nullopt;
+              }
+
+            // Produce native shape: 1 x 1 x ... x (original last dim).
+            SmallVector<int64_t> native(rank, 1);
+            native.back() = shape.back();
+            return native;
           });
       vector::populateVectorUnrollPatterns(patterns, vectorOptions);
-      if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+        LLVM_DEBUG(llvm::dbgs() << "Unroll failed.\n");
         return signalPassFailure();
+      }
     }
 
     // Use vector linearization patterns
@@ -90,8 +110,10 @@ struct XeGPUVectorLinearizePass final
       scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                            target);
       if (failed(applyPartialConversion(getOperation(), target,
-                                        std::move(patterns))))
+                                        std::move(patterns)))) {
+        LLVM_DEBUG(llvm::dbgs() << "Linearization failed.\n");
         return signalPassFailure();
+      }
     }
   }
 };
