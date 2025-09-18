@@ -58,9 +58,10 @@ Improvements and New Features
 - The performance of ``insert(iterator, iterator)`` of ``map``, ``set``, ``multimap`` and ``multiset`` has been improved
   by up to 2.5x
 - The performance of ``map::insert_or_assign`` has been improved by up to 2x
-
 - ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
   in chunks into a buffer.
+- Multiple internal types have been refactored to use ``[[no_unique_address]]``, resulting in faster compile times and
+  reduced debug information.
 
 Deprecations and Removals
 -------------------------
@@ -87,6 +88,11 @@ ABI Affecting Changes
 - The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
   ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
+
+- The internal types ``__map_value_compare``, ``__unordered_map_hasher``, ``__unordered_map_equal``,
+  ``__hash_map_hasher`` and ``__hash_map_equal`` have been refactored to use ``_LIBCPP_COMPRESSED_ELEMENT`` instead of
+  potentially inheriting from the types they wrap. At this point in time we are not aware of any ABI changes caused by
+  this.
 
 Build System Changes
 --------------------

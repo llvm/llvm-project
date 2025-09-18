@@ -600,6 +600,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
+#  include <__memory/compressed_pair.h>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
@@ -643,34 +644,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key,
-          class _Cp,
-          class _Hash,
-          class _Pred,
-          bool = is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
-class __unordered_map_hasher : private _Hash {
-public:
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher() _NOEXCEPT_(is_nothrow_default_constructible<_Hash>::value) : _Hash() {}
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher(const _Hash& __h) _NOEXCEPT_(is_nothrow_copy_constructible<_Hash>::value)
-      : _Hash(__h) {}
-  _LIBCPP_HIDE_FROM_ABI const _Hash& hash_function() const _NOEXCEPT { return *this; }
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Cp& __x) const { return static_cast<const _Hash&>(*this)(__x.first); }
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Key& __x) const { return static_cast<const _Hash&>(*this)(__x); }
-#  if _LIBCPP_STD_VER >= 20
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const _K2& __x) const {
-    return static_cast<const _Hash&>(*this)(__x);
-  }
-#  endif
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Hash>) {
-    using std::swap;
-    swap(static_cast<_Hash&>(*this), static_cast<_Hash&>(__y));
-  }
-};
-
 template <class _Key, class _Cp, class _Hash, class _Pred>
-class __unordered_map_hasher<_Key, _Cp, _Hash, _Pred, false> {
-  _Hash __hash_;
+class __unordered_map_hasher {
+  _LIBCPP_COMPRESSED_ELEMENT(_Hash, __hash_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher() _NOEXCEPT_(is_nothrow_default_constructible<_Hash>::value)
@@ -692,60 +668,16 @@ public:
   }
 };
 
-template <class _Key, class _Cp, class _Hash, class _Pred, bool __b>
+template <class _Key, class _Cp, class _Hash, class _Pred>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__unordered_map_hasher<_Key, _Cp, _Hash, _Pred, __b>& __x,
-     __unordered_map_hasher<_Key, _Cp, _Hash, _Pred, __b>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(__unordered_map_hasher<_Key, _Cp, _Hash, _Pred>& __x, __unordered_map_hasher<_Key, _Cp, _Hash, _Pred>& __y)
+    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
 
-template <class _Key,
-          class _Cp,
-          class _Pred,
-          class _Hash,
-          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value>
-class __unordered_map_equal : private _Pred {
-public:
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal() _NOEXCEPT_(is_nothrow_default_constructible<_Pred>::value) : _Pred() {}
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal(const _Pred& __p) _NOEXCEPT_(is_nothrow_copy_constructible<_Pred>::value)
-      : _Pred(__p) {}
-  _LIBCPP_HIDE_FROM_ABI const _Pred& key_eq() const _NOEXCEPT { return *this; }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Cp& __x, const _Cp& __y) const {
-    return static_cast<const _Pred&>(*this)(__x.first, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Cp& __x, const _Key& __y) const {
-    return static_cast<const _Pred&>(*this)(__x.first, __y);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _Cp& __y) const {
-    return static_cast<const _Pred&>(*this)(__x, __y.__get_value().first);
-  }
-#  if _LIBCPP_STD_VER >= 20
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Cp& __x, const _K2& __y) const {
-    return static_cast<const _Pred&>(*this)(__x.first, __y);
-  }
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _Cp& __y) const {
-    return static_cast<const _Pred&>(*this)(__x, __y.__get_value().first);
-  }
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _K2& __y) const {
-    return static_cast<const _Pred&>(*this)(__x, __y);
-  }
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _Key& __y) const {
-    return static_cast<const _Pred&>(*this)(__x, __y);
-  }
-#  endif
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Pred>) {
-    using std::swap;
-    swap(static_cast<_Pred&>(*this), static_cast<_Pred&>(__y));
-  }
-};
-
 template <class _Key, class _Cp, class _Pred, class _Hash>
-class __unordered_map_equal<_Key, _Cp, _Pred, _Hash, false> {
-  _Pred __pred_;
+class __unordered_map_equal {
+  _LIBCPP_COMPRESSED_ELEMENT(_Pred, __pred_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __unordered_map_equal() _NOEXCEPT_(is_nothrow_default_constructible<_Pred>::value)
@@ -780,9 +712,9 @@ public:
   }
 };
 
-template <class _Key, class _Cp, class _Pred, class _Hash, bool __b>
+template <class _Key, class _Cp, class _Pred, class _Hash>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__unordered_map_equal<_Key, _Cp, _Pred, _Hash, __b>& __x, __unordered_map_equal<_Key, _Cp, _Pred, _Hash, __b>& __y)
+swap(__unordered_map_equal<_Key, _Cp, _Pred, _Hash>& __x, __unordered_map_equal<_Key, _Cp, _Pred, _Hash>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }

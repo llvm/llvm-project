@@ -589,6 +589,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
+#  include <__memory/compressed_pair.h>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
@@ -633,47 +634,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key,
-          class _CP,
-          class _Compare,
-          bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
-class __map_value_compare : private _Compare {
-public:
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
-      : _Compare() {}
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-      : _Compare(__c) {}
-  _LIBCPP_HIDE_FROM_ABI const _Compare& key_comp() const _NOEXCEPT { return *this; }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const {
-    return static_cast<const _Compare&>(*this)(__x.first, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _Key& __y) const {
-    return static_cast<const _Compare&>(*this)(__x.first, __y);
-  }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
-    return static_cast<const _Compare&>(*this)(__x, __y.first);
-  }
-  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
-    using std::swap;
-    swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
-  }
-
-#  if _LIBCPP_STD_VER >= 14
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
-    return static_cast<const _Compare&>(*this)(__x, __y.first);
-  }
-
-  template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
-    return static_cast<const _Compare&>(*this)(__x.first, __y);
-  }
-#  endif
-};
-
 template <class _Key, class _CP, class _Compare>
-class __map_value_compare<_Key, _CP, _Compare, false> {
-  _Compare __comp_;
+class __map_value_compare {
+  _LIBCPP_COMPRESSED_ELEMENT(_Compare, __comp_);
 
 public:
   _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
@@ -685,7 +648,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const { return __comp_(__x.first, __y.first); }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _Key& __y) const { return __comp_(__x.first, __y); }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const { return __comp_(__x, __y.first); }
-  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(__comp_, __y.__comp_);
   }
@@ -747,9 +710,9 @@ struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _
 };
 #  endif // _LIBCPP_STD_VER >= 14
 
-template <class _Key, class _CP, class _Compare, bool __b>
+template <class _Key, class _CP, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(__map_value_compare<_Key, _CP, _Compare, __b>& __x, __map_value_compare<_Key, _CP, _Compare, __b>& __y)
+swap(__map_value_compare<_Key, _CP, _Compare>& __x, __map_value_compare<_Key, _CP, _Compare>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
