@@ -26,9 +26,7 @@ TEST_F(LlvmLibcRsqrtfTest, SpecialNumbers) {
   EXPECT_FP_EQ(neg_inf, LIBC_NAMESPACE::rsqrtf(neg_zero));
   EXPECT_MATH_ERRNO(ERANGE);
 
-  EXPECT_FP_EQ(
-      1.0f,
-      LIBC_NAMESPACE::rsqrtf(1.0f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::rsqrtf(1.0f));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::rsqrtf(inf));

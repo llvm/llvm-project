@@ -16,7 +16,7 @@ using LlvmLibcRsqrtfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 // Range: [0, Inf]
-static constexpr uint32_t POS_START = 0x00000000u; 
+static constexpr uint32_t POS_START = 0x00000000u;
 static constexpr uint32_t POS_STOP = 0x7F800000u;
 
 // Range: [-Inf, 0)
