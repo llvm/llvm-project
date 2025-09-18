@@ -13,7 +13,6 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
-#include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVStructurizerWrapper.h"

@@ -84,30 +84,7 @@ static bool replaceCBufferAccesses(Module &M) {
       // ConstantExprs, which cannot be replaced with non-constants.
       SmallVector<User *, 4> Users(MemberGV->users());
       for (User *U : Users) {
-        auto *CE = dyn_cast<ConstantExpr>(U);
-        if (!CE) {
-          U->replaceUsesOfWith(MemberGV, GetPointerCall);
-          continue;
-        }
-        SmallVector<Instruction *, 4> Insts;
-        std::function<void(ConstantExpr *)> findInstructions =
-            [&](ConstantExpr *Const) {
-              for (User *ConstU : Const->users()) {
-                if (auto *ConstCE = dyn_cast<ConstantExpr>(ConstU)) {
-                  findInstructions(ConstCE);
-                } else if (auto *I = dyn_cast<Instruction>(ConstU)) {
-                  Insts.push_back(I);
-                }
-              }
-            };
-        findInstructions(CE);
-
-        for (Instruction *I : Insts) {
-          Instruction *NewInst = CE->getAsInstruction();
-          NewInst->insertBefore(I->getIterator());
-          I->replaceUsesOfWith(CE, NewInst);
-          NewInst->replaceUsesOfWith(MemberGV, GetPointerCall);
-        }
+        U->replaceUsesOfWith(MemberGV, GetPointerCall);
       }
     }
   }
