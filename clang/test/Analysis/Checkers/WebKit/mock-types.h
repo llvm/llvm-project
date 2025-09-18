@@ -1,5 +1,5 @@
-#ifndef mock_types_1103988513531
-#define mock_types_1103988513531
+#ifndef std_move
+#define std_move
 
 namespace std {
 
@@ -12,6 +12,15 @@ typedef T type;
 };
 
 template<typename T> typename remove_reference<T>::type&& move(T&& t);
+
+}
+
+#endif
+
+#ifndef mock_types_1103988513531
+#define mock_types_1103988513531
+
+namespace std {
 
 template <typename T>
 class unique_ptr {

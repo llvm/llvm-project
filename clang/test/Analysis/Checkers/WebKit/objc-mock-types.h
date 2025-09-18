@@ -1,3 +1,22 @@
+#ifndef std_move
+#define std_move
+
+namespace std {
+
+template <typename T> struct remove_reference {
+typedef T type;
+};
+
+template <typename T> struct remove_reference<T&> {
+typedef T type;
+};
+
+template<typename T> typename remove_reference<T>::type&& move(T&& t);
+
+}
+
+#endif
+
 @class NSString;
 @class NSArray;
 @class NSMutableArray;
@@ -171,16 +190,6 @@ NS_RETURNS_RETAINED dispatch_queue_t dispatch_queue_create(const char *label, di
 const char *dispatch_queue_get_label(dispatch_queue_t queue);
 
 namespace std {
-
-template <typename T> struct remove_reference {
-typedef T type;
-};
-
-template <typename T> struct remove_reference<T&> {
-typedef T type;
-};
-
-template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
 template <typename StorageType>
 void swap(StorageType& a, StorageType& b)
