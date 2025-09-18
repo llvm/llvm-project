@@ -566,6 +566,7 @@ OpenMP Support
 - Added support for ``variable-category`` modifier in ``default clause``.
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
+- Added parsing and semantic analysis support for ``groupprivate`` directive.
 
 Improvements
 ^^^^^^^^^^^^
