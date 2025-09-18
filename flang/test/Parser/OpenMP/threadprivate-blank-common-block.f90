@@ -4,6 +4,6 @@
 program main
     integer :: a
     common//a
-    !CHECK: error: expected one of '$@ABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+    !CHECK: error: expected end of line
     !$omp threadprivate(//)
  end
