@@ -11573,10 +11573,7 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
       << SourceTy << DestTy;
   return false;
 }
-// i should emplement SLLDQ, SRLDQ shift (intrinsics) in constant expression
-// handling inside this function
-// avx2intrin.h -> _mm256_slli_si256
-// emmintrin.h -> _mm_slli_si128
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -12133,7 +12130,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
-  case X86::BI__builtin_ia32_psrldqi256_byteshift: {
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift: {
     APSInt Amt;
     if (!EvaluateInteger(E->getArg(1), Amt, Info))
       return false;
@@ -12152,10 +12151,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     bool IsLeft =
         (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
-         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
+         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift ||
+         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi512_byteshift);
 
     if (ShiftVal >= LaneBytes)
-      return Success(APValue(Result.data(), Result.size()), E);
+      return ZeroInitialization(E);
 
     for (unsigned laneBase = 0; laneBase < NumElts; laneBase += LaneBytes) {
       for (unsigned i = 0; i < LaneBytes; ++i) {
