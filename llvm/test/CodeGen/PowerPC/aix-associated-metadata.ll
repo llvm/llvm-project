@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -data-sections=false -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck -check-prefix=NODATA %s
 
 @a = global i32 1
 @b = global i32 2
@@ -21,3 +22,21 @@
 
 ; CHECK: .csect custom_section_f[RW]
 ; CHECK: .ref b[RW]
+
+; NODATA:      .csect .data[RW]
+; NODATA-NOT:  .csect
+; NODATA:      .globl a
+; NODATA-NOT:  .csect
+; NODATA:      .globl b
+; NODATA:      .csect custom_section_c[RW]
+; NODATA:      .globl c
+; NODATA:      .csect .data[RW]
+; NODATA:      .ref a
+; NODATA:      .globl d
+; NODATA:      .csect .rodata[RO]
+; NODATA:      .ref b
+; NODATA:      .ref c
+; NODATA:      .globl e
+; NODATA:      .csect custom_section_f[RW]
+; NODATA:      .ref b
+; NODATA:      .globl f
