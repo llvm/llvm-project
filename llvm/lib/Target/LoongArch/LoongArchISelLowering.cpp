@@ -8511,7 +8511,7 @@ SDValue LoongArchTargetLowering::LowerReturn(
 // Check if a constant splat can be generated using [x]vldi, where imm[12] == 1.
 // Note: The following prefixes are excluded:
 //   imm[11:8] == 4'b0000, 4'b0100, 4'b1000
-// as thy can be represented using [x]vrepli.[whb]
+// as they can be represented using [x]vrepli.[whb]
 std::pair<bool, uint64_t>
 LoongArchTargetLowering::isImmVLDILegalForMode1(const APInt &SplatValue,
                                                 const unsigned SplatBitSize) {
