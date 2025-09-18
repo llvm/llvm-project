@@ -666,8 +666,9 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   //   store for the target. If later on, we don't end up with a chain that
   //   could be vectorized into a legal masked store, the chains with extra
   //   elements will be filtered out in splitChainByAlignment.
-  bool TryFillGaps = isa<LoadInst>(C[0].Inst) ? TTI.isLegalToWidenLoads()
-                                              : shouldAttemptMaskedStore(C);
+  bool TryFillGaps = isa<LoadInst>(C[0].Inst)
+                         ? TTI.isLegalToWidenLoads(F.getContext())
+                         : shouldAttemptMaskedStore(C);
 
   unsigned ASPtrBits =
       DL.getIndexSizeInBits(getLoadStoreAddressSpace(C[0].Inst));
@@ -924,7 +925,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         // otherwise we may unnecessary split the chain when the target actually
         // supports non-pow2 VF.
         if (accessIsAllowedAndFast(NewSizeBytes, AS, Alignment, VecElemBits) &&
-            ((IsLoadChain ? TTI.isLegalToWidenLoads()
+            ((IsLoadChain ? TTI.isLegalToWidenLoads(F.getContext())
                           : TTI.isLegalMaskedStore(
                                 FixedVectorType::get(VecElemTy, NewNumVecElems),
                                 Alignment, AS, /*IsMaskConstant=*/true)))) {

@@ -72,7 +72,9 @@ public:
     return isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment, AddrSpace);
   }
 
-  bool isLegalToWidenLoads() const override { return true; };
+  bool isLegalToWidenLoads(LLVMContext &Context) const override {
+    return true;
+  };
 
   // NVPTX has infinite registers of all kinds, but the actual machine doesn't.
   // We conservatively return 1 here which is just enough to enable the
