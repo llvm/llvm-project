@@ -31,7 +31,7 @@
  * Sema::NormalizationCache such that it is only computed once.
  *
  * a `NormalizedConstraint` is a recursive data structure, where each node
- * contains a parameter maping, represented by the indexes of all parameter
+ * contains a parameter mapping, represented by the indexes of all parameter
  * being used.
  *
  * Checking satisfaction is done by ConstraintSatisfactionChecker, recursively
@@ -45,7 +45,7 @@
  * template <typename U>
  * concept B = A<U> && __is_same(U, int);
  *
- * The normal form of b is is `__is_same(T, int) /T->U, innermost level/
+ * The normal form of B is is `__is_same(T, int) /T->U, innermost level/
  *                          && __is_same(U, int) {U->U} /T->U, outermost most
  * level/
  *                            `
@@ -635,7 +635,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
                                   /*DefaultArguments=*/{},
                                   /*PartialTemplateArgs=*/false, CTAI))
     return std::nullopt;
-  NormalizedConstraint::OccurenceList Used = Constraint.mappingOccurenceList();
+  const NormalizedConstraint::OccurenceList &Used =
+      Constraint.mappingOccurenceList();
   SubstitutedOuterMost =
       llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
