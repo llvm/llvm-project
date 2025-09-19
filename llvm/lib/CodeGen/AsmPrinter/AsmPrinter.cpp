@@ -1711,9 +1711,10 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // 3) FunctionKind: Whether the function is indirect target, and if so,
   //    whether its type id is known.
   // 4) FunctionTypeID if the function is indirect target, and its type id is
-  //    known. 
+  //    known.
   // 5) Number of indirect callsites.
-  // 6) For each indirect callsite, its callsite PC and callee's expected type id.
+  // 6) For each indirect callsite, its callsite PC and callee's expected type
+  // id.
 
   OutStreamer->emitInt32(CallGraphSectionFormatVersion::V_0);
   const MCSymbol *FunctionSymbol = getFunctionBegin();

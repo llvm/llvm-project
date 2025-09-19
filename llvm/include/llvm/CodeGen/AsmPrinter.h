@@ -205,16 +205,16 @@ private:
     /// Enumeration of function kinds, and their mapping to function kind values
     /// stored in callgraph section entries.
     /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
-    enum class FunctionKind : uint8_t {
-      /// Function cannot be target to indirect calls.
-      NOT_INDIRECT_TARGET = 0,
+  enum class FunctionKind : uint8_t {
+    /// Function cannot be target to indirect calls.
+    NOT_INDIRECT_TARGET = 0,
 
-      /// Function may be target to indirect calls but its type id is unknown.
-      INDIRECT_TARGET_UNKNOWN_TID = 1,
+    /// Function may be target to indirect calls but its type id is unknown.
+    INDIRECT_TARGET_UNKNOWN_TID = 1,
 
-      /// Function may be target to indirect calls and its type id is known.
-      INDIRECT_TARGET_KNOWN_TID = 2,
-    };
+    /// Function may be target to indirect calls and its type id is known.
+    INDIRECT_TARGET_KNOWN_TID = 2,
+  };
   enum CallGraphSectionFormatVersion : uint32_t {
     V_0 = 0,
   };
