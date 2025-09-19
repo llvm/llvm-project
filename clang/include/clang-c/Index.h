@@ -5074,11 +5074,11 @@ CINDEX_LINKAGE CXSourceRange clang_getTokenExtent(CXTranslationUnit, CXToken);
  * \param Range the source range in which text should be tokenized. All of the
  * tokens produced by tokenization will fall within this source range,
  *
- * \param Tokens this pointer will be set to point to the array of tokens
+ * \param[out] Tokens this pointer will be set to point to the array of tokens
  * that occur within the given source range. The returned pointer must be
  * freed with clang_disposeTokens() before the translation unit is destroyed.
  *
- * \param NumTokens will be set to the number of tokens in the \c *Tokens
+ * \param[out] NumTokens will be set to the number of tokens in the \c *Tokens
  * array.
  *
  */
