@@ -127,6 +127,10 @@ Improvements to clang-tidy
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
 
+- :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
+  configuration option.
+  :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
+
 - The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
