@@ -361,7 +361,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       // in the enclosing function context.
       if (isa<VarDecl>(ManglingContextDecl) &&
           !cast<VarDecl>(ManglingContextDecl)->hasGlobalStorage())
-          ManglingContextDecl = nullptr;
+        ManglingContextDecl = nullptr;
     }
     return std::make_tuple(nullptr, ManglingContextDecl);
   }
