@@ -86,10 +86,13 @@
 ; GCN-O0-NEXT:        Register Usage Information Propagation
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        Two-Address instruction pass
+; GCN-O0-NEXT:        MachineDominator Tree Construction
+; GCN-O0-NEXT:        Slot index numbering
+; GCN-O0-NEXT:        Live Interval Analysis
+; GCN-O0-NEXT:        SI Whole Quad Mode
 ; GCN-O0-NEXT:        AMDGPU Pre-RA Long Branch Reg
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        Machine Cycle Info Analysis
-; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        AMDGPU Control Flow Wave Transform
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI lower SGPR spill instructions
@@ -359,8 +362,10 @@
 ; GCN-O3-NEXT:        Rewrite Partial Register Uses
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
 ; GCN-O3-NEXT:        AMDGPU Pre-RA optimizations
+; GCN-O3-NEXT:        SI Whole Quad Mode
 ; GCN-O3-NEXT:        SI Form memory clauses
 ; GCN-O3-NEXT:        AMDGPU Pre-RA Long Branch Reg
+; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Debug Variable Analysis
 ; GCN-O3-NEXT:        Live Stack Slot Analysis

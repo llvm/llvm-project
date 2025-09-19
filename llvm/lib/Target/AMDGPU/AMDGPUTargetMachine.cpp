@@ -1624,12 +1624,7 @@ void GCNPassConfig::addFastRegAlloc() {
   if (!WaveTransformCF)
     insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
-  // TODO-WAVETRANSFORM: it is not clear how we are going to deal with
-  // pixel-shader whole-quad-mode. Skip this for now because we initially want
-  // to limit our application to compute-only, will deal with this when
-  // we need to support pixel-shaders.
-  if (!WaveTransformCF)
-    insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
+  insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
 }
@@ -1669,11 +1664,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
   // instructions that cause scheduling barriers.
-  // TODO-WAVETRANSFORM: it is not clear how we are going to deal with
-  // pixel-shader whole-quad-mode. Skip this for now because we initially want
-  // to limit our application to compute-only.
-  if (!WaveTransformCF)
-    insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
+  insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
 
   if (!WaveTransformCF && OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
