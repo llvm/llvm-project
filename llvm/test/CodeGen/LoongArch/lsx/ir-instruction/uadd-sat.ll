@@ -5,9 +5,7 @@
 define <16 x i8> @vuadd_b(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vuadd_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxori.b $vr2, $vr1, 255
-; CHECK-NEXT:    vmin.bu $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsadd.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
   %ret = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %ret
@@ -16,10 +14,7 @@ define <16 x i8> @vuadd_b(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i16> @vuadd_h(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vuadd_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr2, $vr1, $vr2
-; CHECK-NEXT:    vmin.hu $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsadd.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
   %ret = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   ret <8 x i16> %ret
@@ -28,10 +23,7 @@ define <8 x i16> @vuadd_h(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @vuadd_w(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vuadd_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr2, $vr1, $vr2
-; CHECK-NEXT:    vmin.wu $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsadd.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
   %ret = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
   ret <4 x i32> %ret
@@ -40,10 +32,7 @@ define <4 x i32> @vuadd_w(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @vuadd_d(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vuadd_d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr2, $vr1, $vr2
-; CHECK-NEXT:    vmin.du $vr0, $vr0, $vr2
-; CHECK-NEXT:    vadd.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsadd.du $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
   %ret = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %ret
