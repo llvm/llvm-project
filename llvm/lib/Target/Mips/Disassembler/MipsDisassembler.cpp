@@ -916,6 +916,9 @@ DecodeGPRMM16MovePRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+// Tablegen emits references to these unimplemented functions due to usage of
+// RegClassByHwMode - it does not detect that the RegClassByHwMode decoders are
+// unused, which in turn use these register class decoders.
 static DecodeStatus DecodeGP32RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
