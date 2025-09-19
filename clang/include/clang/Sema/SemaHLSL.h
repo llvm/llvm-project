@@ -260,10 +260,10 @@ private:
                                const HLSLSemanticAttr *SemanticAttr);
   HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
                                    Decl *TargetDecl);
-  bool isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
+  bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic);
+  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
                                SemanticInfo &ActiveSemantic);
-  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D,
-                       SemanticInfo &ActiveSemantic);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
 

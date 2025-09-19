@@ -796,8 +796,9 @@ HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
   return nullptr;
 }
 
-bool SemaHLSL::isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
-                                       SemanticInfo &ActiveSemantic) {
+bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
+                                               DeclaratorDecl *D,
+                                               SemanticInfo &ActiveSemantic) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
     if (ActiveSemantic.Semantic &&
@@ -819,8 +820,8 @@ bool SemaHLSL::isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
   return true;
 }
 
-bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D,
-                               SemanticInfo &ActiveSemantic) {
+bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
     if (ActiveSemantic.Semantic &&
@@ -831,12 +832,12 @@ bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D,
   const Type *T = D->getType()->getUnqualifiedDesugaredType();
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
-    return isSemanticOnScalarValid(FD, D, ActiveSemantic);
+    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!isSemanticValid(FD, Field, Info)) {
+    if (!determineActiveSemantic(FD, Field, Info)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -914,7 +915,7 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     ActiveSemantic.Semantic = nullptr;
     ActiveSemantic.Index = std::nullopt;
 
-    if (!isSemanticValid(FD, Param, ActiveSemantic)) {
+    if (!determineActiveSemantic(FD, Param, ActiveSemantic)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
