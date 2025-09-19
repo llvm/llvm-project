@@ -2489,23 +2489,22 @@ ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                           SubstNonTypeTemplateParmExpr *E) {
   ExprResult SubstReplacement = E->getReplacement();
-  QualType ParamType = E->getParameterType(getSema().Context);
-  bool WasDependentLambda = false;
-  if (auto *RT = dyn_cast<RecordType>(ParamType);
-      RT && RT->getAsCXXRecordDecl())
-    WasDependentLambda = RT->getAsCXXRecordDecl()->isDependentLambda();
   if (!isa<ConstantExpr>(SubstReplacement.get()))
     SubstReplacement = TransformExpr(E->getReplacement());
   if (SubstReplacement.isInvalid())
     return true;
-  // FIXME: This transform cannot find the instantiated lambda declaration
-  // because lambdas are instantiated in a unique scope.
-  QualType SubstType =
-      WasDependentLambda
-          ? SubstReplacement.get()->getType().getUnqualifiedType()
-          : TransformType(ParamType);
+  QualType SubstType = TransformType(E->getParameterType(getSema().Context));
   if (SubstType.isNull())
     return true;
+  // FIXME: The type transform cannot find the instantiated lambda declaration
+  // because lambdas are instantiated in a unique scope. So use the Type of
+  // SubstReplacement to avoid creating incorrect dependent expressions.
+  if (QualType Type = SubstReplacement.get()->getType();
+      SubstType->isDependentType() && !Type->isDependentType() &&
+      // This ensures that ImpCastExpr is unnecessary, which is built by
+      // CheckTemplateArgument.
+      SubstType == E->getReplacement()->getType())
+    SubstType = Type;
   // The type may have been previously dependent and not now, which means we
   // might have to implicit cast the argument to the new type, for example:
   // template<auto T, decltype(T) U>

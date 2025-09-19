@@ -2881,14 +2881,16 @@ happens in a ConceptIdConstraint if its expression is satisfied.
 The normal form of the associated constraints of a declaration is cached in
 Sema::NormalizationCache such that it is only computed once.
 
-a ``NormalizedConstraint`` is a recursive data structure, where each node
+A ``NormalizedConstraint`` is a recursive data structure, where each node
 contains a parameter mapping, represented by the indexes of all parameter
 being used.
 
-Checking satisfaction is done by ConstraintSatisfactionChecker, recursively
-walking NormalizedConstraint. At each level, we substitute the outermost
+Checking satisfaction is done by ``ConstraintSatisfactionChecker``, recursively
+walking ``NormalizedConstraint``. At each level, we substitute the outermost
 level of the template arguments referenced in the parameter mapping of a
 normalized expression (``MultiLevelTemplateArgumentList``).
+
+For the following example,
 
 .. code-block:: c++
 
@@ -2902,10 +2904,10 @@ The normal form of B is
 
 .. code-block:: c++
     __is_same(T, int) /*T->U, innermost level*/
- && __is_same(U, int) {U->U} /*T->U, outermost most level*/
+ && __is_same(U, int) {U->U} /*T->U, outermost level*/
 
 After substitution in the mapping, we substitute in the constraint expression
-using that copy of the MultiLevelTemplateArgumentList, and then evaluate it.
+using that copy of the ``MultiLevelTemplateArgumentList``, and then evaluate it.
 
 Because this is expensive, it is cached in
 ``UnsubstitutedConstraintSatisfactionCache``.
