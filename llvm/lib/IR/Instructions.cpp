@@ -720,6 +720,10 @@ CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
     return CI;
   }
 
+  // Bundles on assumes are captures(none).
+  if (getIntrinsicID() == Intrinsic::assume)
+    return CaptureInfo::none();
+
   // deopt operand bundles are captures(none)
   auto &BOI = getBundleOpInfoForOperand(OpNo);
   auto OBU = operandBundleFromBundleOpInfo(BOI);

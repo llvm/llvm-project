@@ -3,9 +3,6 @@
 
 define void @PR45687(i32 %0)  {
 ; CHECK-LABEL: @PR45687(
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 3
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
   %2 = add i32 %0, 1

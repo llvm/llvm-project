@@ -9145,10 +9145,22 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
-    // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV) && (!HasCZero || isSimm12Constant(TrueV))) {
-      SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
+    if (isNullConstant(FalseV)) {
+      // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
+      if (auto *TrueC = dyn_cast<ConstantSDNode>(TrueV)) {
+        uint64_t TrueM1 = TrueC->getZExtValue() - 1;
+        if (isPowerOf2_64(TrueM1)) {
+          unsigned ShAmount = Log2_64(TrueM1);
+          if (Subtarget.hasShlAdd(ShAmount))
+            return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, CondV,
+                               DAG.getConstant(ShAmount, DL, VT), CondV);
+        }
+      }
+      // (select c, y, 0) -> -c & y
+      if (!HasCZero || isSimm12Constant(TrueV)) {
+        SDValue Neg = DAG.getNegative(CondV, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
+      }
     }
   }
 
@@ -10706,7 +10718,7 @@ static SDValue lowerCttzElts(SDNode *N, SelectionDAG &DAG,
   return DAG.getSelect(DL, XLenVT, Setcc, VL, Res);
 }
 
-static inline void promoteVCIXScalar(const SDValue &Op,
+static inline void promoteVCIXScalar(SDValue Op,
                                      SmallVectorImpl<SDValue> &Operands,
                                      SelectionDAG &DAG) {
   const RISCVSubtarget &Subtarget =
@@ -10742,7 +10754,7 @@ static inline void promoteVCIXScalar(const SDValue &Op,
   }
 }
 
-static void processVCIXOperands(SDValue &OrigOp,
+static void processVCIXOperands(SDValue OrigOp,
                                 SmallVectorImpl<SDValue> &Operands,
                                 SelectionDAG &DAG) {
   promoteVCIXScalar(OrigOp, Operands, DAG);
@@ -11005,7 +11017,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
 }
 
-static inline SDValue getVCIXISDNodeWCHAIN(SDValue &Op, SelectionDAG &DAG,
+static inline SDValue getVCIXISDNodeWCHAIN(SDValue Op, SelectionDAG &DAG,
                                            unsigned Type) {
   SDLoc DL(Op);
   SmallVector<SDValue> Operands{Op->op_values()};
@@ -11042,7 +11054,7 @@ static inline SDValue getVCIXISDNodeWCHAIN(SDValue &Op, SelectionDAG &DAG,
   return NewNode;
 }
 
-static inline SDValue getVCIXISDNodeVOID(SDValue &Op, SelectionDAG &DAG,
+static inline SDValue getVCIXISDNodeVOID(SDValue Op, SelectionDAG &DAG,
                                          unsigned Type) {
   SmallVector<SDValue> Operands{Op->op_values()};
   Operands.erase(Operands.begin() + 1);
@@ -15132,6 +15144,10 @@ static unsigned getVecReduceOpcode(unsigned Opc) {
   case ISD::FADD:
     // Note: This is the associative form of the generic reduction opcode.
     return ISD::VECREDUCE_FADD;
+  case ISD::FMAXNUM:
+    return ISD::VECREDUCE_FMAX;
+  case ISD::FMINNUM:
+    return ISD::VECREDUCE_FMIN;
   }
 }
 
@@ -15160,13 +15176,22 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
   const EVT VT = N->getValueType(0);
   const unsigned Opc = N->getOpcode();
 
-  // For FADD, we only handle the case with reassociation allowed.  We
-  // could handle strict reduction order, but at the moment, there's no
-  // known reason to, and the complexity isn't worth it.
-  // TODO: Handle fminnum and fmaxnum here
-  if (!VT.isInteger() &&
-      (Opc != ISD::FADD || !N->getFlags().hasAllowReassociation()))
-    return SDValue();
+  if (!VT.isInteger()) {
+    switch (Opc) {
+    default:
+      return SDValue();
+    case ISD::FADD:
+      // For FADD, we only handle the case with reassociation allowed.  We
+      // could handle strict reduction order, but at the moment, there's no
+      // known reason to, and the complexity isn't worth it.
+      if (!N->getFlags().hasAllowReassociation())
+        return SDValue();
+      break;
+    case ISD::FMAXNUM:
+    case ISD::FMINNUM:
+      break;
+    }
+  }
 
   const unsigned ReduceOpc = getVecReduceOpcode(Opc);
   assert(Opc == ISD::getVecReduceBaseOpcode(ReduceOpc) &&
@@ -21556,6 +21581,16 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.sext(BitWidth);
     break;
   }
+  case RISCVISD::SHL_ADD: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    Known <<= ShAmt;
+    Known.Zero.setLowBits(ShAmt); // the <<= operator left these bits unknown
+    Known2 = DAG.computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+    Known = KnownBits::add(Known, Known2);
+    break;
+  }
   case RISCVISD::CTZW: {
     KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     unsigned PossibleTZ = Known2.trunc(32).countMaxTrailingZeros();
@@ -22472,6 +22507,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
            "ReadCounterWide is only to be used on riscv32");
     return emitReadCounterWidePseudo(MI, BB);
   case RISCV::Select_GPR_Using_CC_GPR:
+  case RISCV::Select_GPR_Using_CC_Imm5_Zibi:
   case RISCV::Select_GPR_Using_CC_SImm5_CV:
   case RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC:
   case RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC:
