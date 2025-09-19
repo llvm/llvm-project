@@ -213,25 +213,25 @@ TemplateDecl *TemplateName::getAsTemplateDecl(bool IgnoreDeduced) const {
       dyn_cast_if_present<Decl *>(Name.Storage));
 }
 
-std::pair<TemplateDecl *, DefaultArguments>
+std::pair<TemplateName, DefaultArguments>
 TemplateName::getTemplateDeclAndDefaultArgs() const {
+  DefaultArguments DefArgs;
   for (TemplateName Name = *this; /**/; /**/) {
-    if (Name.getKind() == TemplateName::DeducedTemplate) {
-      DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
-      TemplateDecl *TD =
-          DTS->getUnderlying().getAsTemplateDecl(/*IgnoreDeduced=*/true);
-      DefaultArguments DefArgs = DTS->getDefaultArguments();
-      if (TD && DefArgs)
+    if (DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName()) {
+      assert(!DefArgs && "multiple default args?");
+      DefArgs = DTS->getDefaultArguments();
+      if (TemplateDecl *TD = DTS->getUnderlying().getAsTemplateDecl();
+          TD && DefArgs)
         assert(DefArgs.StartPos + DefArgs.Args.size() <=
                TD->getTemplateParameters()->size());
-      return {TD, DTS->getDefaultArguments()};
+      Name = DTS->getUnderlying();
     }
     if (std::optional<TemplateName> UnderlyingOrNone =
             Name.desugar(/*IgnoreDeduced=*/false)) {
       Name = *UnderlyingOrNone;
       continue;
     }
-    return {cast_if_present<TemplateDecl>(Name.Storage.dyn_cast<Decl *>()), {}};
+    return {Name, DefArgs};
   }
 }
 

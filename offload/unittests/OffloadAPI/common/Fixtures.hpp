@@ -40,12 +40,16 @@
   } while (0)
 #endif
 
-// TODO: rework this so the EXPECTED/ACTUAL results are readable
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
-    ASSERT_TRUE(Res && (Res->Code == EXPECTED));                               \
+    if (!Res)                                                                  \
+      GTEST_FAIL() << #ACTUAL " succeeded when we expected it to fail";        \
+    if (Res->Code != EXPECTED)                                                 \
+      GTEST_FAIL() << #ACTUAL " was expected to return "                       \
+                   << #EXPECTED " but instead returned " << Res->Code << ": "  \
+                   << Res->Details;                                            \
   } while (0)
 #endif
 
@@ -250,9 +254,13 @@ struct OffloadEventTest : OffloadQueueTest {
   ol_event_handle_t Event = nullptr;
 };
 
+// Devices might not be available for offload testing, so allow uninstantiated
+// tests (as the device list will be empty). This means that all tests requiring
+// a device will be silently skipped.
 #define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(FIXTURE)                      \
   INSTANTIATE_TEST_SUITE_P(                                                    \
       , FIXTURE, ::testing::ValuesIn(TestEnvironment::getDevices()),           \
       [](const ::testing::TestParamInfo<TestEnvironment::Device> &info) {      \
         return SanitizeString(info.param.Name);                                \
-      })
+      });                                                                      \
+  GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(FIXTURE)

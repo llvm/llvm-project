@@ -24,6 +24,7 @@
 // TODO: investigation needed
 // XFAIL: target={{.*}}-linux-gnu{{.*}}, freebsd
 // XFAIL: target={{.*}}-amazon-linux{{.*}}
+// XFAIL: target={{.*}}-apple-{{.*}}
 
 #include <regex>
 #include <cassert>

@@ -1754,9 +1754,6 @@ LogicalResult cir::BinOp::verify() {
     return emitError() << "The nsw/nuw flags and the saturated flag are "
                           "mutually exclusive";
 
-  assert(!cir::MissingFeatures::complexType());
-  // TODO(cir): verify for complex binops
-
   return mlir::success();
 }
 
@@ -2728,6 +2725,20 @@ mlir::LogicalResult cir::ThrowOp::verify() {
   }
 
   return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCmpXchg
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicCmpXchg::verify() {
+  mlir::Type pointeeType = getPtr().getType().getPointee();
+
+  if (pointeeType != getExpected().getType() ||
+      pointeeType != getDesired().getType())
+    return emitOpError("ptr, expected and desired types must match");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1093,3 +1093,38 @@ loop:
 ret:
   ret i32 %3
 }
+
+define <3 x ptr> @v3move(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
+; CHECK-SD-LABEL: v3move:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov d1, d7
+; CHECK-SD-NEXT:    fmov d0, d6
+; CHECK-SD-NEXT:    ldr d2, [sp]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v3move:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr x8, [sp]
+; CHECK-GI-NEXT:    fmov d0, d6
+; CHECK-GI-NEXT:    fmov d1, d7
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    ret
+entry:
+  ret <3 x ptr> %x
+}
+
+define ptr @v3ext(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
+; CHECK-SD-LABEL: v3ext:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr d0, [sp]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v3ext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr x0, [sp]
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = extractelement <3 x ptr> %x, i32 2
+  ret ptr %c
+}

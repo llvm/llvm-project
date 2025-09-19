@@ -242,3 +242,22 @@ llvm.func @prefetch(%ptr: !llvm.ptr<1>) {
   llvm.return
 }
 
+// -----
+// CHECK-LABEL: llvm.func @llvm.load
+llvm.func @llvm.load(%a: !llvm.ptr<1>) -> i32 {
+  // CHECK: xevm.DecorationCacheControl =
+  // CHECK-SAME: 6442 : i32, 0 : i32, 1 : i32, 0 : i32
+  // CHECK-SAME: 6442 : i32, 1 : i32, 1 : i32, 0 : i32
+  %val = llvm.load %a {cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>} : !llvm.ptr<1> -> i32
+  llvm.return %val : i32
+}
+
+// -----
+// CHECK-LABEL: llvm.func @llvm.store
+llvm.func @llvm.store(%a: !llvm.ptr<1>, %val: i32) {
+  // CHECK: xevm.DecorationCacheControl =
+  // CHECK-SAME: 6443 : i32, 0 : i32, 2 : i32, 0 : i32
+  // CHECK-SAME: 6443 : i32, 1 : i32, 2 : i32, 0 : i32
+  llvm.store %val, %a {cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>} : i32, !llvm.ptr<1>
+  llvm.return
+}

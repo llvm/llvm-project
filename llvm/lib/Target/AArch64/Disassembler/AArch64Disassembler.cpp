@@ -198,11 +198,7 @@ static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
-  int64_t ImmVal = Imm;
-
-  // Sign-extend 19-bit immediate.
-  if (ImmVal & (1 << (19 - 1)))
-    ImmVal |= ~((1LL << 19) - 1);
+  int64_t ImmVal = SignExtend64<19>(Imm);
 
   if (!Decoder->tryAddingSymbolicOperand(
           Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 0, 4))
@@ -212,11 +208,7 @@ static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
 
 static DecodeStatus DecodePCRelLabel9(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                       const MCDisassembler *Decoder) {
-  int64_t ImmVal = Imm;
-
-  // Sign-extend 9-bit immediate.
-  if (ImmVal & (1 << (9 - 1)))
-    ImmVal |= ~((1LL << 9) - 1);
+  int64_t ImmVal = SignExtend64<9>(Imm);
 
   if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal * 4), Addr,
                                          /*IsBranch=*/true, 0, 0, 4))
@@ -533,12 +525,7 @@ static DecodeStatus DecodeSignedLdStInstruction(MCInst &Inst, uint32_t insn,
                                                 const MCDisassembler *Decoder) {
   unsigned Rt = fieldFromInstruction(insn, 0, 5);
   unsigned Rn = fieldFromInstruction(insn, 5, 5);
-  int64_t offset = fieldFromInstruction(insn, 12, 9);
-
-  // offset is a 9-bit signed immediate, so sign extend it to
-  // fill the unsigned.
-  if (offset & (1 << (9 - 1)))
-    offset |= ~((1LL << 9) - 1);
+  int64_t offset = SignExtend64<9>(fieldFromInstruction(insn, 12, 9));
 
   // First operand is always the writeback to the address register, if needed.
   switch (Inst.getOpcode()) {
@@ -835,13 +822,8 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   unsigned Rt = fieldFromInstruction(insn, 0, 5);
   unsigned Rn = fieldFromInstruction(insn, 5, 5);
   unsigned Rt2 = fieldFromInstruction(insn, 10, 5);
-  int64_t offset = fieldFromInstruction(insn, 15, 7);
+  int64_t offset = SignExtend64<7>(fieldFromInstruction(insn, 15, 7));
   bool IsLoad = fieldFromInstruction(insn, 22, 1);
-
-  // offset is a 7-bit signed immediate, so sign extend it to
-  // fill the unsigned.
-  if (offset & (1 << (7 - 1)))
-    offset |= ~((1LL << 7) - 1);
 
   unsigned Opcode = Inst.getOpcode();
   bool NeedsDisjointWritebackTransfer = false;
@@ -1211,12 +1193,8 @@ static DecodeStatus DecodeAdrInstruction(MCInst &Inst, uint32_t insn,
                                          uint64_t Addr,
                                          const MCDisassembler *Decoder) {
   unsigned Rd = fieldFromInstruction(insn, 0, 5);
-  int64_t imm = fieldFromInstruction(insn, 5, 19) << 2;
-  imm |= fieldFromInstruction(insn, 29, 2);
-
-  // Sign-extend the 21-bit immediate.
-  if (imm & (1 << (21 - 1)))
-    imm |= ~((1LL << 21) - 1);
+  int64_t imm = SignExtend64<21>((fieldFromInstruction(insn, 5, 19) << 2) |
+                                 fieldFromInstruction(insn, 29, 2));
 
   DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rd, Addr,
                                                              Decoder);
@@ -1270,11 +1248,7 @@ static DecodeStatus DecodeAddSubImmShift(MCInst &Inst, uint32_t insn,
 static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
                                               uint64_t Addr,
                                               const MCDisassembler *Decoder) {
-  int64_t imm = fieldFromInstruction(insn, 0, 26);
-
-  // Sign-extend the 26-bit immediate.
-  if (imm & (1 << (26 - 1)))
-    imm |= ~((1LL << 26) - 1);
+  int64_t imm = SignExtend64<26>(fieldFromInstruction(insn, 0, 26));
 
   if (!Decoder->tryAddingSymbolicOperand(Inst, imm * 4, Addr, true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(imm));
@@ -1337,11 +1311,7 @@ static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
   uint64_t Rt = fieldFromInstruction(insn, 0, 5);
   uint64_t bit = fieldFromInstruction(insn, 31, 1) << 5;
   bit |= fieldFromInstruction(insn, 19, 5);
-  int64_t dst = fieldFromInstruction(insn, 5, 14);
-
-  // Sign-extend 14-bit immediate.
-  if (dst & (1 << (14 - 1)))
-    dst |= ~((1LL << 14) - 1);
+  int64_t dst = SignExtend64<14>(fieldFromInstruction(insn, 5, 14));
 
   if (fieldFromInstruction(insn, 31, 1) == 0)
     DecodeSimpleRegisterClass<AArch64::GPR32RegClassID, 0, 32>(Inst, Rt, Addr,

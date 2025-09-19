@@ -2364,7 +2364,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           break;
 
         const MCInstrDesc &MCID = MI.getDesc();
-        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i, TRI, MF);
+        const TargetRegisterClass *RegClass = TII.getRegClass(MCID, i, TRI);
         if (RegClass && !RegClass->contains(ARM::SP))
           HasNonSPFrameIndex = true;
 

@@ -22,9 +22,9 @@ def Myi32 : Operand<i32> {
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>; // Mode 1
-def ModeB : HwMode<"+b", [HasB]>; // Mode 2
-def ModeC : HwMode<"+c", []>;     // Mode 3
+def ModeA : HwMode<[HasA]>; // Mode 1
+def ModeB : HwMode<[HasB]>; // Mode 2
+def ModeC : HwMode<[]>;     // Mode 3
 
 
 def fooTypeEncDefault : InstructionEncoding {
@@ -189,25 +189,29 @@ def unrelated: Instruction {
 // For 'baz' we only assigned ModeB for it, so it will be presented
 // as '0' in the tables of ModeA, ModeC and Default Mode.
 // ENCODER-LABEL:   static const uint64_t InstBits[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
-// ENCODER:         UINT64_C(8),        // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(0),        // baz
+// ENCODER-NEXT:    UINT64_C(8),        // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeA[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
-// ENCODER:         UINT64_C(12),       // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(0),        // baz
+// ENCODER-NEXT:    UINT64_C(12),       // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeB[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(12),       // baz
-// ENCODER:         UINT64_C(3),        // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(12),       // baz
+// ENCODER-NEXT:    UINT64_C(3),        // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeC[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
-// ENCODER:         UINT64_C(12582915), // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(0),        // baz
+// ENCODER-NEXT:    UINT64_C(12582915), // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 
 // ENCODER-LABEL: case ::bar:
 // ENCODER-LABEL: case ::unrelated:
@@ -221,33 +225,27 @@ def unrelated: Instruction {
 // ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER: case 3: InstBitsByHw = InstBits_ModeC; break;
 // ENCODER: };
-// ENCODER: Value = InstBitsByHw[opcode];
+// ENCODER: Value = InstBitsByHw[TableIndex];
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
 // ENCODER: case 0: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 1: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 2: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(255);
-// ENCODER: op <<= 8;
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xff) << 8;
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 3: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(255);
-// ENCODER: op <<= 24;
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xff) << 24;
 // ENCODER: break;
 // ENCODER: }
 // ENCODER-LABEL: case ::baz: {
@@ -256,12 +254,11 @@ def unrelated: Instruction {
 // ENCODER: default: llvm_unreachable("Unknown hardware mode!"); break;
 // ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER: };
-// ENCODER: Value = InstBitsByHw[opcode];
+// ENCODER: Value = InstBitsByHw[TableIndex];
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
 // ENCODER: case 2: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }

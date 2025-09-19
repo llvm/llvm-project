@@ -66,6 +66,10 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  /// The temporary alloca to hold the return value. This is
+  /// invalid iff the function has no return value.
+  Address returnValue = Address::invalid();
+
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
 
@@ -702,6 +706,14 @@ public:
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
                                    mlir::Type fieldType, unsigned index);
 
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -725,6 +737,14 @@ public:
                                                 const CXXRecordDecl *derived,
                                                 const CXXRecordDecl *base,
                                                 bool baseIsVirtual);
+
+  /// Determine whether a return value slot may overlap some other object.
+  AggValueSlot::Overlap_t getOverlapForReturnValue() {
+    // FIXME: Assuming no overlap here breaks guaranteed copy elision for base
+    // class subobjects. These cases may need to be revisited depending on the
+    // resolution of the relevant core issue.
+    return AggValueSlot::DoesNotOverlap;
+  }
 
   /// Determine whether a base class initialization may overlap some other
   /// object.

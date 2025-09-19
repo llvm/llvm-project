@@ -48,7 +48,8 @@ TEST(Remark, TestOutputOptimizationRemark) {
     context.printStackTraceOnDiagnostic(true);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryInliner};
@@ -197,7 +198,8 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     });
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryUnroll};
@@ -278,7 +280,8 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryLoopunroll,
                                         /*missed=*/std::nullopt,
                                         /*analysis=*/std::nullopt,
                                         /*failed=*/categoryLoopunroll};

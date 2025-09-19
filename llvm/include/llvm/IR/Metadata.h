@@ -919,8 +919,8 @@ public:
 
   // Check if MDOperand is of type MDString and equals `Str`.
   bool equalsStr(StringRef Str) const {
-    return isa<MDString>(this->get()) &&
-           cast<MDString>(this->get())->getString() == Str;
+    return isa_and_nonnull<MDString>(get()) &&
+           cast<MDString>(get())->getString() == Str;
   }
 
   ~MDOperand() { untrack(); }
