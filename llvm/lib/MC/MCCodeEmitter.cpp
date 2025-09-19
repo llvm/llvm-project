@@ -18,12 +18,17 @@ MCCodeEmitter::MCCodeEmitter() = default;
 
 MCCodeEmitter::~MCCodeEmitter() = default;
 
-void MCCodeEmitter::ReportFatalError(const MCInst &Inst,
-                                     std::optional<unsigned> OpNum) {
-  std::string msg;
-  raw_string_ostream Msg(msg);
-  Msg << "Unsupported instruction " << Inst;
-  if (OpNum)
-    Msg << ", OpNum = " << *OpNum;
-  report_fatal_error(msg.c_str());
+void MCCodeEmitter::reportUnsupportedInst(const MCInst &Inst) {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  OS << "Unsupported instruction : " << Inst;
+  report_fatal_error(Msg.c_str());
+}
+
+void MCCodeEmitter::reportUnsupportedOperand(const MCInst &Inst,
+                                             unsigned OpNum) {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  OS << "Unsupported instruction/operand : \"" << Inst << "\"[" << OpNum << "]";
+  report_fatal_error(Msg.c_str());
 }

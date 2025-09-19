@@ -39,9 +39,9 @@ public:
 
 protected:
   // Helper function used by CodeEmitterGen for error reporting.
-  [[noreturn]] static void
-  ReportFatalError(const MCInst &Inst,
-                   std::optional<unsigned> OpNum = std::nullopt);
+  [[noreturn]] static void reportUnsupportedInst(const MCInst &Inst);
+  [[noreturn]] static void reportUnsupportedOperand(const MCInst &Inst,
+                                                    unsigned OpNum);
 };
 
 } // end namespace llvm

@@ -472,7 +472,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
   O << R"(
   const unsigned opcode = MI.getOpcode();
   if (opcode < FirstSupportedOpcode)
-    ReportFatalError(MI);
+    reportUnsupportedInst(MI);
   unsigned TableIndex = opcode - FirstSupportedOpcode;
 )";
 
@@ -498,7 +498,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
 
   // Default case: unhandled opcode.
   O << "  default:\n"
-    << "    ReportFatalError(MI);\n"
+    << "    reportUnsupportedInst(MI);\n"
     << "  }\n";
   if (UseAPInt)
     O << "  Inst = Value;\n";
@@ -515,7 +515,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << "  switch (MI.getOpcode()) {\n";
   emitCaseMap(O, BitOffsetCaseMap);
   O << "  }\n"
-    << "  ReportFatalError(MI, OpNum);\n"
+    << "  reportUnsupportedOperand(MI, OpNum);\n"
     << "}\n\n"
     << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
 }

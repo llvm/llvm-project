@@ -320,7 +320,7 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
   }
   // Default case: unhandled opcode
   OS << "  default:\n"
-     << "    ReportFatalError(MI);\n"
+     << "    reportUnsupportedInst(MI);\n"
      << "  }\n";
   OS << "}\n\n";
 }
