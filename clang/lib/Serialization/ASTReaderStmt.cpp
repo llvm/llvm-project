@@ -2469,8 +2469,21 @@ void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
+void ASTStmtReader::VisitOMPCanonicalLoopSequenceTransformationDirective(
+    OMPCanonicalLoopSequenceTransformationDirective *D) {
+  VisitStmt(D);
+  // Field NumLoopsInSequence was read in ReadStmtFromStream.
+  Record.skipInts(1);
+  VisitOMPExecutableDirective(D);
+  D->setNumGeneratedTopLevelLoops(Record.readUInt32());
+}
+
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPFuseDirective(OMPFuseDirective *D) {
+  VisitOMPCanonicalLoopSequenceTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {
@@ -3612,6 +3625,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
       S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
+      break;
+    }
+    case STMT_OMP_FUSE_DIRECTIVE: {
+      unsigned NumLoopsInSequence = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPFuseDirective::CreateEmpty(Context, NumClauses,
+                                        NumLoopsInSequence);
       break;
     }
 
