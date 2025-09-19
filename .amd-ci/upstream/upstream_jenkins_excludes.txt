@@ -1,0 +1,18 @@
+# Extended regexp patterns of files to exclude from the AOCC 'upstream' pipeline.
+^.*aocc-essentials/notes/
+^.*SPEC_perf_cfgs/cpuV8/
+^.*SPEC_perf_cfgs/cpuv8_.*
+^.*_jenkins_excludes.txt
+^.*/create_rel_branch.sh
+# Other pipelines or their test materials:
+^aocc-essentials/build_essentials/Jenkinsfile.*
+^aocc-essentials/build_essentials/groovy_lib/test/
+^aocc-essentials/build_essentials/groovy_lib/src/test/
+^.*aocc-essentials/build_essentials/groovy_lib/Jenkinsfile.GitHub
+^.*aocc-essentials/build_essentials/groovy_lib/build.gradle
+^.*aocc-essentials/build_essentials/groovy_lib/test.sh
+#
+^.*prj-essentials/devo/aocc/merge/
+^prj-essentials/devo/aocc/CODEOWNERS\.AOCC\.m4
+^\.github/\.ai_pr_platform/
+^\.github/workflows/amd-validate-.*config-file\.yml

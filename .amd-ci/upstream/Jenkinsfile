@@ -3,35 +3,7 @@ import hudson.model.Result
 /* groovylint-disable-next-line CompileStatic */
 String actualTarget = env.CHANGE_TARGET ?: env.BRANCH_NAME
 String upstreamBranch = 'upstream-main', stagingBranch = 'amd-staging'
-
-if (!(actualTarget in [stagingBranch, upstreamBranch])) {
-    echo 'Pipeline skipped for base branch ' + actualTarget
-    return this
-}
-
-String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
-Boolean isPrBranch = env.CHANGE_BRANCH != null
-
-if (!isPrBranch && actualTarget != upstreamBranch) {
-    echo 'Pipeline skipped for non-PR branch ' + actualHead + ' of base ' + actualTarget
-    return this
-}
-
-Boolean postsub = !isPrBranch && actualTarget == upstreamBranch && actualHead == upstreamBranch
-
-if (postsub && env.BRANCH_NAME != upstreamBranch) {
-    echo 'Pipeline postsub not supported for branch ' + env.BRANCH_NAME
-    return this
-}
-
-if (actualTarget == stagingBranch &&
-    !currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause') &&
-    !currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')) {
-    String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
-    echo 'Pipeline for base ' + actualTarget + ' skipped for cause ' + cause
-    echo 'Pipeline only runs if manually or timer triggered.'
-    return this
-}
+String releaseBranchPrefix = 'aocc_'
 
 /**
  * Coerce Result enums to String, seems to
@@ -39,6 +11,72 @@ if (actualTarget == stagingBranch &&
  */
 String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
+
+if (!(actualTarget in [stagingBranch, upstreamBranch]) &&
+    !(actualTarget.startsWith(releaseBranchPrefix))) {
+    echo 'Pipeline skipped for base branch ' + actualTarget
+    return this
+}
+
+String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
+Boolean isPrBranch = env.CHANGE_BRANCH != null
+
+if (!isPrBranch &&
+    !(actualTarget in [stagingBranch, upstreamBranch]) &&
+    !(actualTarget.startsWith(releaseBranchPrefix))) {
+    echo 'Pipeline skipped for non-PR branch ' + actualHead + ' of base ' + actualTarget
+    return this
+}
+
+String manualCause = 'hudson.model.Cause$UserIdCause'
+if (isPrBranch &&
+    pullRequest.draft &&
+    !currentBuild.getBuildCauses(manualCause)) {
+    String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
+    echo 'Draft PR aborted for cause ' + cause
+    echo 'Pipeline only runs for draft PRs if manually triggered.'
+    currentBuild.result = abortedResultStr
+    return this
+}
+
+Boolean postsub = (
+    !isPrBranch &&
+        (
+        (actualTarget == upstreamBranch && actualHead == upstreamBranch) ||
+            (actualTarget == stagingBranch && actualHead == stagingBranch) ||
+            (actualTarget.startsWith(releaseBranchPrefix) &&
+             actualHead.startsWith(releaseBranchPrefix))
+    )
+)
+
+if (postsub && !(env.BRANCH_NAME in [stagingBranch, upstreamBranch]) &&
+    !(env.BRANCH_NAME.startsWith(releaseBranchPrefix))) {
+    echo 'Pipeline postsub not supported for branch ' + env.BRANCH_NAME
+    return this
+}
+
+// Code smell: should be false; we should be doing merge/push syncing in the separate llvm_sync job:
+Boolean intraJobRepoSync = postsub && env.BRANCH_NAME == upstreamBranch
+
+Boolean disableStaging = false, disableRelease = true
+if (((disableStaging &&
+     actualTarget == stagingBranch) ||
+     (disableRelease &&
+      actualTarget.startsWith(releaseBranchPrefix))) &&
+    !currentBuild.getBuildCauses(manualCause) &&
+    !currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')) {
+    String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
+    echo 'Pipeline for base ' + actualTarget + ' not built for cause ' + cause
+    echo 'Pipeline only runs if manually or timer triggered.'
+    currentBuild.result = notBuiltResultStr
+    return this
+}
+
+Boolean runDownstream = (
+    actualTarget == upstreamBranch ||
+        (actualTarget == stagingBranch && isPrBranch) ||
+        (actualTarget.startsWith(releaseBranchPrefix) && isPrBranch)
+)
 
 String space = ' ', andChain = '&&', underScore = '_', slash = '/'
 String gitCommitEnv = 'GIT_COMMIT'
@@ -140,7 +178,7 @@ try {
                         )
                     }
                 }
-                if (postsub) {
+                if (intraJobRepoSync) {
                     theUrl = 'ssh://git@github.amd.com/AOCC/llvm-project.git'
                     /*
                      * Direct CLI clone using the system's orequest SSH credentials,
@@ -219,13 +257,12 @@ try {
                                 }
                             }
                             if (activeStat == successStat) {
-                                String dummyFile = env.BUILD_TAG + '_dummy.txt'
                                 activeStat = sh(
                                     label: 'has-active-files',
                                     script: (
-                                        'set +x; echo "# Dummy" > ' + dummyFile + andChain +
-                                            'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
-                                            gitVars.GIT_COMMIT + space + dummyFile + ' && rm -f ' + dummyFile
+                                        'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
+                                            gitVars.GIT_COMMIT + space +
+                                            '.amd-ci/upstream/upstream_jenkins_excludes.txt'
                                     ),
                                     returnStatus: true
                                 )
@@ -272,7 +309,7 @@ try {
                     deleteDirs: true,
                     patterns: cleanExcludes
                 )
-                return this
+                return // From node
             }
             stage ('run') {
                 try {
@@ -284,7 +321,7 @@ try {
                     }
                     currentBuild.result = successResultStr
                 } finally {
-                    if (postsub) {
+                    if (intraJobRepoSync) {
                         stage ('merge-post') {
                             withEnv([gitPathEnv]) {
                                 sh 'llvm-project/.amd-ci/upstream/repo_sync.sh'
@@ -302,36 +339,41 @@ try {
                 }
             }
         }
-        stage ('downstream-tasks') {
-            Map allTasks = [
-                failFast: false,
-            ]
-            List<String> downstreamSuites = ['GFortran', 'NAGLLVM']
-            for (suite in downstreamSuites) {
-                String suiteName = suite
-                allTasks[suiteName] = {
-                    stage ('downstream-suite-' + suiteName) {
-                        build(
-                            propagate: true,
-                            wait: true,
-                            job: 'AOCC-Workloads/TestSuites/' + suiteName,
-                            parameters: [
-                                // Use the name of build tar as defined in the run script:
-                                string(
-                                    name: 'CUT',
-                                    value: (
-                                        env.BUILD_URL + 'artifact/' +
-                                            jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
-                                    )
-                                ),
-                                string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
-                                string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
-                            ]
-                        )
+        if (!hasSourceChanges) {
+            return // From timeout
+        }
+        if (runDownstream) {
+            stage ('downstream-tasks') {
+                Map allTasks = [
+                    failFast: false,
+                ]
+                List<String> downstreamSuites = ['GFortran', 'NAGLLVM']
+                for (suite in downstreamSuites) {
+                    String suiteName = suite
+                    allTasks[suiteName] = {
+                        stage ('downstream-suite-' + suiteName) {
+                            build(
+                                propagate: true,
+                                wait: true,
+                                job: 'AOCC-Workloads/TestSuites/' + suiteName,
+                                parameters: [
+                                    // Use the name of build tar as defined in the run script:
+                                    string(
+                                        name: 'CUT',
+                                        value: (
+                                            env.BUILD_URL + 'artifact/' +
+                                                jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+                                        )
+                                    ),
+                                    string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                                    string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
+                                ]
+                            )
+                        }
                     }
                 }
+                parallel(allTasks)
             }
-            parallel(allTasks)
         }
     }
 } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
