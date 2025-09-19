@@ -22,7 +22,7 @@ void MCCodeEmitter::reportUnsupportedInst(const MCInst &Inst) {
   std::string Msg;
   raw_string_ostream OS(Msg);
   OS << "Unsupported instruction : " << Inst;
-  report_fatal_error(Msg.c_str());
+  reportFatalInternalError(Msg.c_str());
 }
 
 void MCCodeEmitter::reportUnsupportedOperand(const MCInst &Inst,
@@ -30,5 +30,5 @@ void MCCodeEmitter::reportUnsupportedOperand(const MCInst &Inst,
   std::string Msg;
   raw_string_ostream OS(Msg);
   OS << "Unsupported instruction/operand : \"" << Inst << "\"[" << OpNum << "]";
-  report_fatal_error(Msg.c_str());
+  reportFatalInternalError(Msg.c_str());
 }
