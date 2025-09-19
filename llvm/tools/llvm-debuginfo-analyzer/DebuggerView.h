@@ -28,7 +28,8 @@ class LVOptions;
 
 namespace debuggerview {
 
-extern cl::opt<bool> EnableDebuggerView;
+extern cl::OptionCategory Category;
+extern cl::opt<bool> Enable;
 int printDebuggerView(std::vector<std::string> &Objects, raw_ostream &OS);
 
 } // namespace debuggerview

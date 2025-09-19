@@ -1,3 +1,4 @@
+#include "DebuggerView.h"
 #include "Options.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
@@ -7,11 +8,33 @@
 #include <unordered_set>
 
 using namespace llvm;
+using namespace debuggerview;
 
-cl::opt<bool> EnableDebuggerView("debugger-view");
-static cl::opt<bool> DebuggerViewVars("debugger-view-vars");
-static cl::opt<bool> DebuggerViewCode("debugger-view-code");
-static cl::opt<bool> DebuggerViewHelp("debugger-view-help");
+cl::OptionCategory llvm::debuggerview::Category(
+    "Debugger View",
+    "Special printing mode that emulate how debugger uses debug info.");
+
+cl::opt<bool> llvm::debuggerview::Enable(
+    "debugger-view",
+    cl::desc("Enables debugger view. Normal debug-info printing is disabled "
+             "and options are ignored."),
+    cl::init(false), cl::cat(Category));
+static cl::opt<bool>
+    IncludeVars("debugger-view-vars",
+                cl::desc("Include live variables at each statement line."),
+                cl::init(false), cl::cat(Category));
+static cl::opt<bool>
+    IncludeCode("debugger-view-code",
+                cl::desc("Include disassembly at each statement line"),
+                cl::init(false), cl::cat(Category));
+static cl::opt<bool> IncludeRanges("debugger-view-ranges",
+                                   cl::desc("Include variable ranges"),
+                                   cl::init(false), cl::cat(Category));
+static cl::opt<bool> Help(
+    "debugger-view-help",
+    cl::desc(
+        "Print a detailed help screen about what kind of output to expect"),
+    cl::init(false), cl::cat(Category));
 
 constexpr const char *HelpText =
     R"(Prints debug info in a way that is easy to verify correctness of debug info.
@@ -31,17 +54,8 @@ FUNCTION: main
 using namespace llvm;
 using namespace logicalview;
 
-static cl::opt<std::string>
-    InputFilename(cl::Positional, "<input-file>",
-                  cl::desc("Input file, an object file with DWARF."),
-                  cl::Required);
-
-static cl::opt<bool> IncludeCode("code", cl::desc("Include asm"));
-static cl::opt<bool>
-    IncludeRanges("ranges", cl::desc("Include variable ranges"), cl::Hidden);
-static cl::opt<bool> IncludeVars("vars", cl::desc("Include live variables"));
-
-template <typename T> T Take(Expected<T> ExpectedResult, const Twine &Msg) {
+template <typename T>
+static T Take(Expected<T> ExpectedResult, const Twine &Msg) {
   if (!ExpectedResult) {
     auto Err = ExpectedResult.takeError();
     errs() << Msg << " " << toStringWithoutConsuming(Err) << '\n';
@@ -50,6 +64,8 @@ template <typename T> T Take(Expected<T> ExpectedResult, const Twine &Msg) {
   T ret = std::move(*ExpectedResult);
   return ret;
 }
+
+namespace {
 
 struct ScopePrinter {
   std::vector<const LVLine *> Lines;
@@ -189,55 +205,15 @@ struct ScopePrinter {
     }
   }
 };
-#if 0
-int main(int argc, char *argv[]) {
-  InitLLVM X(argc, argv);
 
-  // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  InitializeAllDisassemblers();
+} // namespace
 
-  cl::ParseCommandLineOptions(argc, argv, HelpText);
-
-  ScopedPrinter W(llvm::outs());
-  LVOptions Options;
-  Options.setAttributeAll();
-  Options.setAttributeAnyLocation();
-  Options.setPrintAll();
-  Options.setPrintAnyLine();
-  Options.resolveDependencies();
-  std::vector<std::string> Objects;
-  LVReaderHandler Handler(Objects, W, Options);
-  auto Readers = Take(Handler.createReader(InputFilename),
-                      Twine("Failed to create LV reader from '") +
-                          Twine(InputFilename) + Twine("'"));
-
-  auto *CU = Readers->getCompileUnit();
-  if (!CU) {
-    errs() << "No compute unit found.\n";
-    return 2;
+int llvm::debuggerview::printDebuggerView(std::vector<std::string> &Objects,
+                                          raw_ostream &OS) {
+  if (Help) {
+    OS << HelpText;
+    return EXIT_SUCCESS;
   }
-
-  for (LVElement *Child : *CU->getChildren()) {
-    auto *Fn = dyn_cast<LVScopeFunction>(Child);
-    if (Fn) {
-      const LVLines *Lines = Fn->getLines();
-      // If there's no lines, this function has no body.
-      if (!Lines)
-        continue;
-      outs() << "FUNCTION: " << Child->getName() << "\n";
-
-      ScopePrinter P(outs(), Fn);
-      P.Print();
-    }
-  }
-
-  return EXIT_SUCCESS;
-}
-#endif
-
-int llvm::debuggerview::printDebuggerView(std::vector<std::string> &Objects, raw_ostream &OS) {
 
   LVOptions Options;
   Options.setAttributeAll();
@@ -248,27 +224,37 @@ int llvm::debuggerview::printDebuggerView(std::vector<std::string> &Objects, raw
 
   ScopedPrinter W(nulls());
   LVReaderHandler Handler(Objects, W, Options);
-  auto Readers = Take(Handler.createReader(InputFilename),
-                      Twine("Failed to create LV reader from '") +
-                          Twine(InputFilename) + Twine("'"));
-
-  auto *CU = Readers->getCompileUnit();
-  if (!CU) {
-    errs() << "No compute unit found.\n";
-    return 2;
+  std::vector<std::unique_ptr<LVReader>> Readers;
+  for (auto &Object : Objects) {
+    auto ExpectedReader = Handler.createReader(Object);
+    if (!ExpectedReader) {
+      auto Err = ExpectedReader.takeError();
+      errs() << "Failed to create reader: " << toStringWithoutConsuming(Err)
+             << '\n';
+      return 2;
+    }
+    Readers.emplace_back(std::move(*ExpectedReader));
   }
 
-  for (LVElement *Child : *CU->getChildren()) {
-    auto *Fn = dyn_cast<LVScopeFunction>(Child);
-    if (Fn) {
-      const LVLines *Lines = Fn->getLines();
-      // If there's no lines, this function has no body.
-      if (!Lines)
-        continue;
-      outs() << "FUNCTION: " << Child->getName() << "\n";
+  for (auto &Reader : Readers) {
+    auto *CU = Reader->getCompileUnit();
+    if (!CU) {
+      errs() << "No compute unit found.\n";
+      return 2;
+    }
 
-      ScopePrinter P(OS, Fn);
-      P.Print();
+    for (LVElement *Child : *CU->getChildren()) {
+      auto *Fn = dyn_cast<LVScopeFunction>(Child);
+      if (Fn) {
+        const LVLines *Lines = Fn->getLines();
+        // If there's no lines, this function has no body.
+        if (!Lines)
+          continue;
+        outs() << "FUNCTION: " << Child->getName() << "\n";
+
+        ScopePrinter P(OS, Fn);
+        P.Print();
+      }
     }
   }
 

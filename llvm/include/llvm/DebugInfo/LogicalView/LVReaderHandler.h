@@ -87,6 +87,8 @@ public:
     return std::move(Readers[0]);
   }
 
+  const LVReaders &getReaders() const { return TheReaders; }
+
   LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

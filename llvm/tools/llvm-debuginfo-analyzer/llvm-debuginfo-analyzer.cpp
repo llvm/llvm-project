@@ -96,9 +96,10 @@ int main(int argc, char **argv) {
   cl::extrahelp HelpResponse(
       "\nPass @FILE as argument to read options from FILE.\n");
 
-  cl::HideUnrelatedOptions(
-      {&AttributeCategory, &CompareCategory, &InternalCategory, &OutputCategory,
-       &PrintCategory, &ReportCategory, &SelectCategory, &WarningCategory});
+  cl::HideUnrelatedOptions({&AttributeCategory, &CompareCategory,
+                            &InternalCategory, &OutputCategory, &PrintCategory,
+                            &ReportCategory, &SelectCategory, &WarningCategory,
+                            &debuggerview::Category});
   cl::ParseCommandLineOptions(argc, argv,
                               "Printing a logical representation of low-level "
                               "debug information.\n");
@@ -121,7 +122,7 @@ int main(int argc, char **argv) {
     llvm::append_range(Objects, Objs);
   }
 
-  if (debuggerview::EnableDebuggerView)
+  if (debuggerview::Enable)
     return debuggerview::printDebuggerView(Objects, OutputFile.os());
 
   ScopedPrinter W(OutputFile.os());
