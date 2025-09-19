@@ -137,9 +137,6 @@ for.body:                                         ; preds = %entry, %cont
   store i8 0, ptr %arrayidx, align 1
   %0 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %i.04, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
-; It is theoretically possible to prove this, but SCEV cannot
-; represent non-unsigned-wrapping subtraction operations.
-
 ; CHECK: for.body:
 ; CHECK-NOT: @llvm.ssub.with.overflow.i32
 ; CHECK: br i1 false, label %trap, label %cont, !nosanitize !0
