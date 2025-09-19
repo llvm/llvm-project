@@ -770,22 +770,25 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
-HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info) {
+HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
+                                           Decl *TargetDecl) {
   std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
 
   if (SemanticName == "SV_DISPATCHTHREADID") {
-    return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(*Info.Semantic,
-                                                           Info.Index);
+    return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(
+        *Info.Semantic, TargetDecl, Info.Index);
   } else if (SemanticName == "SV_GROUPINDEX") {
-    return createSemanticAttr<HLSLSV_GroupIndexAttr>(*Info.Semantic,
+    return createSemanticAttr<HLSLSV_GroupIndexAttr>(*Info.Semantic, TargetDecl,
                                                      Info.Index);
   } else if (SemanticName == "SV_GROUPTHREADID") {
     return createSemanticAttr<HLSLSV_GroupThreadIDAttr>(*Info.Semantic,
-                                                        Info.Index);
+                                                        TargetDecl, Info.Index);
   } else if (SemanticName == "SV_GROUPID") {
-    return createSemanticAttr<HLSLSV_GroupIDAttr>(*Info.Semantic, Info.Index);
+    return createSemanticAttr<HLSLSV_GroupIDAttr>(*Info.Semantic, TargetDecl,
+                                                  Info.Index);
   } else if (SemanticName == "SV_POSITION") {
-    return createSemanticAttr<HLSLSV_PositionAttr>(*Info.Semantic, Info.Index);
+    return createSemanticAttr<HLSLSV_PositionAttr>(*Info.Semantic, TargetDecl,
+                                                   Info.Index);
   } else
     Diag(Info.Semantic->getLoc(), diag::err_hlsl_unknown_semantic)
         << *Info.Semantic;
@@ -807,13 +810,12 @@ bool SemaHLSL::isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
     return false;
   }
 
-  auto *A = createSemantic(ActiveSemantic);
+  auto *A = createSemantic(ActiveSemantic, D);
   if (!A)
     return false;
 
   checkSemanticAnnotation(FD, D, A);
-  D->dropAttrs<HLSLSemanticAttr>();
-  D->addAttr(A);
+  FD->addAttr(A);
   return true;
 }
 
@@ -1719,28 +1721,30 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, Index);
+    Attribute =
+        createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_GROUPINDEX") {
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, Index);
+    Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_GROUPTHREADID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, Index);
+    Attribute =
+        createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_GROUPID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, Index);
+    Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, nullptr, Index);
   } else if (SemanticName == "SV_POSITION") {
     const auto *VT = ValueType->getAs<VectorType>();
     if (!ValueType->hasFloatingRepresentation() ||
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
-    Attribute = createSemanticAttr<HLSLSV_PositionAttr>(AL, Index);
+    Attribute = createSemanticAttr<HLSLSV_PositionAttr>(AL, nullptr, Index);
   } else
     Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
 

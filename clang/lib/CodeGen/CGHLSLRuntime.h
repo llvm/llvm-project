@@ -144,22 +144,23 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  void collectInputSemantic(llvm::IRBuilder<> &B, const DeclaratorDecl *D,
-                            llvm::Type *Type,
-                            SmallVectorImpl<llvm::Value *> &Inputs);
-
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       Attr *Semantic,
                                       std::optional<unsigned> Index);
 
-  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
+                                        const FunctionDecl *FD,
+                                        llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl);
 
-  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B,
+                                        const FunctionDecl *FD,
+                                        llvm::Type *Type,
                                         const clang::DeclaratorDecl *Decl);
 
-  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                                  llvm::Type *Type,
                                   const clang::DeclaratorDecl *Decl);
 
 public:

@@ -176,9 +176,10 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const AttributeCommonInfo &ACI,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI, Decl *TargetDecl,
                         std::optional<unsigned> Location) {
     T *Attr = ::new (getASTContext()) T(getASTContext(), ACI);
+
     if (Attr->isSemanticIndexable())
       Attr->setSemanticIndex(Location ? *Location : 0);
     else if (Location.has_value()) {
@@ -187,6 +188,7 @@ public:
       return nullptr;
     }
 
+    Attr->setTargetDecl(TargetDecl);
     return Attr;
   }
 
@@ -256,7 +258,8 @@ private:
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLSemanticAttr *SemanticAttr);
-  HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic);
+  HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
+                                   Decl *TargetDecl);
   bool isSemanticOnScalarValid(FunctionDecl *FD, DeclaratorDecl *D,
                                SemanticInfo &ActiveSemantic);
   bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D,
