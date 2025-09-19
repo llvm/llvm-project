@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression: true}}" --
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t \
+// RUN:   -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression: true}}" \
+// RUN:   -- -fno-delayed-template-parsing
 
 class C {
   int size() { return sizeof(this); }
