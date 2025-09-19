@@ -1672,7 +1672,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
 
 /// Emits .callgraph section.
 void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
-                                      FunctionInfo &FuncInfo) {
+                                      FunctionCallGraphInfo &FuncCGInfo) {
   if (!MF.getTarget().Options.EmitCallGraphSection)
     return;
 
@@ -1683,55 +1683,49 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   OutStreamer->pushSection();
   OutStreamer->switchSection(FuncCGSection);
 
-  // Emit format version number.
-  OutStreamer->emitInt64(CallGraphSectionFormatVersion::V_0);
+  auto EmitFunctionKindAndTypeId = [&]() {
+    const Function &F = MF.getFunction();
+    // If this function has external linkage or has its address taken and
+    // it is not a callback, then anything could call it.
+    bool IsIndirectTarget = !F.hasLocalLinkage() ||
+                            F.hasAddressTaken(nullptr,
+                                              /*IgnoreCallbackUses=*/true,
+                                              /*IgnoreAssumeLikeCalls=*/true,
+                                              /*IgnoreLLVMUsed=*/false);
+    if (!IsIndirectTarget) {
+      OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::NOT_INDIRECT_TARGET);
+      return;
+    }
 
-  // Emit function's self information, which is composed of:
-  //  1) FunctionEntryPc
-  //  2) FunctionKind: Whether the function is indirect target, and if so,
-  //     whether its type id is known.
-  //  3) FunctionTypeId: Emit only when the function is an indirect target
-  //     and its type id is known.
+    if (const auto *TypeId = extractNumericCGTypeId(F)) {
+      OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_KNOWN_TID);
+      OutStreamer->emitInt64(TypeId->getZExtValue());
+      return;
+    }
+    OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_UNKNOWN_TID);
+  };
 
-  // Emit function entry pc.
+  // Emit function's call graph information.
+  // 1) CallGraphSectionFormatVersion
+  // 2) Function entry PC.
+  // 3) FunctionKind: Whether the function is indirect target, and if so,
+  //    whether its type id is known.
+  // 4) FunctionTypeID if the function is indirect target, and its type id is
+  //    known. 
+  // 5) Number of indirect callsites.
+  // 6) For each indirect callsite, its callsite PC and callee's expected type id.
+
+  OutStreamer->emitInt32(CallGraphSectionFormatVersion::V_0);
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
-
-  // If this function has external linkage or has its address taken and
-  // it is not a callback, then anything could call it.
-  const Function &F = MF.getFunction();
-  bool IsIndirectTarget =
-      !F.hasLocalLinkage() || F.hasAddressTaken(nullptr,
-                                                /*IgnoreCallbackUses=*/true,
-                                                /*IgnoreAssumeLikeCalls=*/true,
-                                                /*IgnoreLLVMUsed=*/false);
-
-  // FIXME: FunctionKind takes a few values but emitted as a 64-bit value.
-  // Can be optimized to occupy 2 bits instead.
-  // Emit function kind, and type id if available.
-  if (!IsIndirectTarget) {
-    OutStreamer->emitInt64(
-        static_cast<uint64_t>(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET));
-  } else {
-    if (const auto *TypeId = extractNumericCGTypeId(F)) {
-      OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID));
-      OutStreamer->emitInt64(TypeId->getZExtValue());
-    } else {
-      OutStreamer->emitInt64(static_cast<uint64_t>(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
-    }
-  }
-
-  // Emit callsite labels, where each element is a pair of type id and
-  // indirect callsite pc.
-  const auto &CallSiteLabels = FuncInfo.CallSiteLabels;
-  OutStreamer->emitInt64(CallSiteLabels.size());
-  for (const auto &[TypeId, Label] : CallSiteLabels) {
+  EmitFunctionKindAndTypeId();
+  const auto &IndirectCallsites = FuncCGInfo.IndirectCallsites;
+  OutStreamer->emitInt32(IndirectCallsites.size());
+  for (const auto &[TypeId, Label] : IndirectCallsites) {
     OutStreamer->emitInt64(TypeId);
     OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
   }
-  FuncInfo.CallSiteLabels.clear();
+  FuncCGInfo.IndirectCallsites.clear();
 
   OutStreamer->popSection();
 }
@@ -1867,7 +1861,7 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
 }
 
 void AsmPrinter::emitIndirectCalleeLabels(
-    FunctionInfo &FuncInfo,
+    FunctionCallGraphInfo &FuncCGInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   // Only indirect calls have type identifiers set.
@@ -1879,7 +1873,7 @@ void AsmPrinter::emitIndirectCalleeLabels(
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
     uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-    FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+    FuncCGInfo.IndirectCallsites.emplace_back(CalleeTypeIdVal, S);
   }
 }
 
@@ -1929,7 +1923,7 @@ void AsmPrinter::emitFunctionBody() {
     MBBSectionRanges[MF->front().getSectionID()] =
         MBBSectionRange{CurrentFnBegin, nullptr};
 
-  FunctionInfo FuncInfo;
+  FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
@@ -2066,7 +2060,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
-        emitIndirectCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
+        emitIndirectCalleeLabels(FuncCGInfo, CallSitesInfoMap, MI);
 
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
@@ -2248,7 +2242,7 @@ void AsmPrinter::emitFunctionBody() {
   emitStackSizeSection(*MF);
 
   // Emit section containing call graph metadata.
-  emitCallGraphSection(*MF, FuncInfo);
+  emitCallGraphSection(*MF, FuncCGInfo);
 
   // Emit .su file containing function stack size information.
   emitStackUsage(*MF);

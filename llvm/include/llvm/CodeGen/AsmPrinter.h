@@ -192,15 +192,20 @@ private:
 
   /// Store symbols and type identifiers used to create callgraph section
   /// entries related to a function.
-  struct FunctionInfo {
+  struct FunctionCallGraphInfo {
     /// Numeric type identifier used in callgraph section for indirect calls
     /// and targets.
     using CGTypeId = uint64_t;
 
+    /// Map type identifiers to callsite labels. Labels are generated for each
+    /// indirect callsite in the function.
+    SmallVector<std::pair<CGTypeId, MCSymbol *>> IndirectCallsites;
+  };
+
     /// Enumeration of function kinds, and their mapping to function kind values
     /// stored in callgraph section entries.
     /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
-    enum class FunctionKind : uint64_t {
+    enum class FunctionKind : uint8_t {
       /// Function cannot be target to indirect calls.
       NOT_INDIRECT_TARGET = 0,
 
@@ -210,13 +215,7 @@ private:
       /// Function may be target to indirect calls and its type id is known.
       INDIRECT_TARGET_KNOWN_TID = 2,
     };
-
-    /// Map type identifiers to callsite labels. Labels are generated for each
-    /// indirect callsite in the function.
-    SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
-  };
-
-  enum CallGraphSectionFormatVersion : uint64_t {
+  enum CallGraphSectionFormatVersion : uint32_t {
     V_0 = 0,
   };
 
