@@ -29,7 +29,6 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Demangle/Demangle.h"
@@ -804,8 +803,7 @@ struct AddressSanitizer {
 
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
   void getInterestingMemoryOperands(
-      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting,
-      const TargetTransformInfo *TTI);
+      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
 
   void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
                      InterestingMemoryOperand &O, bool UseCalls,
@@ -845,8 +843,7 @@ struct AddressSanitizer {
   void instrumentMemIntrinsic(MemIntrinsic *MI, RuntimeCallInserter &RTCI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
-  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI,
-                          const TargetTransformInfo *TTI);
+  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
@@ -1317,8 +1314,7 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
         Options.MaxInlinePoisoningSize, Options.CompileKernel, Options.Recover,
         Options.UseAfterScope, Options.UseAfterReturn);
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-    const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
-    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI, &TTI);
+    Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
   }
   Modified |= ModuleSanitizer.instrumentModule();
   if (!Modified)
@@ -1456,8 +1452,7 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
 }
 
 void AddressSanitizer::getInterestingMemoryOperands(
-    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting,
-    const TargetTransformInfo *TTI) {
+    Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting) {
   // Do not instrument the load fetching the dynamic shadow address.
   if (LocalDynamicShadow == I)
     return;
@@ -1575,12 +1570,6 @@ void AddressSanitizer::getInterestingMemoryOperands(
       break;
     }
     default:
-      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-        MemIntrinsicInfo IntrInfo;
-        if (TTI->getTgtMemIntrinsic(II, IntrInfo))
-          Interesting = IntrInfo.InterestingOperands;
-        return;
-      }
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
             ignoreAccess(I, CI->getArgOperand(ArgNo)))
@@ -2996,8 +2985,7 @@ bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
 }
 
 bool AddressSanitizer::instrumentFunction(Function &F,
-                                          const TargetLibraryInfo *TLI,
-                                          const TargetTransformInfo *TTI) {
+                                          const TargetLibraryInfo *TLI) {
   bool FunctionModified = false;
 
   // Do not apply any instrumentation for naked functions.
@@ -3050,7 +3038,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
-      getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
+      getInterestingMemoryOperands(&Inst, InterestingOperands);
 
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
