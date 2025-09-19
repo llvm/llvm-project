@@ -92,5 +92,22 @@ FilterMatcher::createExactOrRE(const llvm::cl::opt<std::string> &ExactArg,
   return std::nullopt;
 }
 
+bool Filters::filterRemark(const Remark &Remark) {
+  if (FunctionFilter && !FunctionFilter->match(Remark.FunctionName))
+    return false;
+  if (RemarkNameFilter && !RemarkNameFilter->match(Remark.RemarkName))
+    return false;
+  if (PassNameFilter && !PassNameFilter->match(Remark.PassName))
+    return false;
+  if (RemarkTypeFilter)
+    return *RemarkTypeFilter == Remark.RemarkType;
+  if (ArgFilter) {
+    if (!any_of(Remark.Args,
+                [this](Argument Arg) { return ArgFilter->match(Arg.Val); }))
+      return false;
+  }
+  return true;
+}
+
 } // namespace remarks
 } // namespace llvm
