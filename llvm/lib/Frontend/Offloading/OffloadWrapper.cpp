@@ -817,7 +817,7 @@ struct SYCLWrapper {
           emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL, C,
                               /*Name*/ "__sycl_offload_entry_name", /*Size*/ 0,
                               /*Flags*/ 0, /*Data*/ 0);
-      EntriesInits.push_back(GV);
+      EntriesInits.push_back(GV->getInitializer());
     }
 
     auto *Arr = ConstantArray::get(ArrayType::get(EntryTy, EntriesInits.size()),
