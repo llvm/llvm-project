@@ -615,7 +615,6 @@ public:
   NODE_ENUM(OmpLinearModifier, Value)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLocatorList)
-  NODE(parser, OmpLoopDirective)
   NODE(parser, OmpMapClause)
   NODE(OmpMapClause, Modifier)
   NODE(parser, OmpMapper)
