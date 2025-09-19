@@ -2852,7 +2852,7 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ptestz(InterpState &S, CodePtr OpPC,
-                                  const CallExpr *Call) {
+                                   const CallExpr *Call) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
@@ -2870,15 +2870,15 @@ static bool interp__builtin_ptestz(InterpState &S, CodePtr OpPC,
 
   bool Flag = true;
   INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
-      for (unsigned I = 0; I < SourceLen; ++I) {
-        const APSInt A = LHS.elem<T>(I).toAPSInt();
-        const APSInt B = RHS.elem<T>(I).toAPSInt();
-        if ( (A & B) != 0 ) { 
-          Flag = false; 
-          break; 
-        }
+    for (unsigned I = 0; I < SourceLen; ++I) {
+      const APSInt A = LHS.elem<T>(I).toAPSInt();
+      const APSInt B = RHS.elem<T>(I).toAPSInt();
+      if ((A & B) != 0) {
+        Flag = false;
+        break;
       }
-    });
+    }
+  });
 
   pushInteger(S, Flag ? 1 : 0, Call->getType());
   return true;
@@ -3616,7 +3616,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case X86::BI__builtin_ia32_ptestz128:
     return interp__builtin_ptestz(S, OpPC, Call);
-  
+
     // case X86::BI__builtin_ia32_ptestz256:
 
     // case X86::BI__builtin_ia32_ptestc128:

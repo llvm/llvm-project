@@ -470,4 +470,4 @@ int test_mm_testz_si128(__m128i x, __m128i y) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testz_si128(x, y);
 }
-// TEST_CONSTEXPR(_mm_testz_si128((__m128i)(__v2di){0,0}, (__m128i)(__v2di){0,0}) == 1);
+TEST_CONSTEXPR(_mm_testz_si128((__m128i)(__v2di){0,0}, (__m128i)(__v2di){0,0}) == 1);
