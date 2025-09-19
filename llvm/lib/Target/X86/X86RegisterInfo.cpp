@@ -53,14 +53,14 @@ static cl::opt<bool>
 extern cl::opt<bool> X86EnableAPXForRelocation;
 
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
-    : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
+    : X86GenRegisterInfo((TT.isX86_64() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
                          X86_MC::getDwarfRegFlavour(TT, true),
-                         (TT.isArch64Bit() ? X86::RIP : X86::EIP)) {
+                         (TT.isX86_64() ? X86::RIP : X86::EIP)) {
   X86_MC::initLLVMToSEHAndCVRegMapping(this);
 
   // Cache some information.
-  Is64Bit = TT.isArch64Bit();
+  Is64Bit = TT.isX86_64();
   IsTarget64BitLP64 = Is64Bit && !TT.isX32();
   IsWin64 = Is64Bit && TT.isOSWindows();
   IsUEFI64 = Is64Bit && TT.isUEFI();
