@@ -1768,7 +1768,7 @@ LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
-         Opcode == ISD::SIGN_EXTEND || Opcode == ISD::FP_EXTEND;
+         Opcode == ISD::SIGN_EXTEND;
 }
 
 inline bool isExtVecInRegOpcode(unsigned Opcode) {
