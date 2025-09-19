@@ -69,8 +69,8 @@ public:
   unsigned getNumOpcodes() const { return NumOpcodes; }
 
   const int16_t *getRegClassByHwModeTable(unsigned ModeId) const {
-    assert(RegClassByHwModeTables);
-    assert(NumRegClassByHwModes != 0);
+    assert(RegClassByHwModeTables && NumRegClassByHwModes != 0 &&
+                "MCInstrInfo not properly initialized");
     return &RegClassByHwModeTables[ModeId * NumRegClassByHwModes];
   }
 
