@@ -32,6 +32,9 @@ let Predicates = [HasStdExtZvfbfwma],
 defm VFWMACCBF16_V : VWMAC_FV_V_F<"vfwmaccbf16", 0b111011>;
 }
 
+//===----------------------------------------------------------------------===//
+// Pseudo instructions
+//===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvfbfmin] in {
   defm PseudoVFWCVTBF16_F_F :  VPseudoVWCVTD_V;
   defm PseudoVFNCVTBF16_F_F :  VPseudoVNCVTD_W_RM;
@@ -40,7 +43,9 @@ let Predicates = [HasStdExtZvfbfmin] in {
 let mayRaiseFPException = true, Predicates = [HasStdExtZvfbfwma] in
   defm PseudoVFWMACCBF16  : VPseudoVWMAC_VV_VF_BF_RM;
 
-
+//===----------------------------------------------------------------------===//
+// Patterns
+//===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvfbfmin] in {
   defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
                                 "PseudoVFWCVTBF16_F_F", isSEWAware=1>;
