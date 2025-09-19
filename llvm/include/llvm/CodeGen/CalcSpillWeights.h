@@ -78,7 +78,8 @@ class VirtRegMap;
                              const MachineRegisterInfo &MRI);
 
     /// Determine if all values in LI are rematerializable.
-    static bool isRematerializable(const LiveInterval &LI, LiveIntervals &LIS,
+    static bool isRematerializable(const LiveInterval &LI,
+                                   const LiveIntervals &LIS,
                                    const VirtRegMap &VRM,
                                    const TargetInstrInfo &TII);
 
