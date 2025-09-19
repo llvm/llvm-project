@@ -10734,7 +10734,7 @@ static SDValue lowerCttzElts(SDNode *N, SelectionDAG &DAG,
 }
 
 static inline void promoteVCIXScalar(SDValue Op,
-                                     SmallVectorImpl<SDValue> &Operands,
+                                     MutableArrayRef<SDValue> Operands,
                                      SelectionDAG &DAG) {
   const RISCVSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
@@ -10770,7 +10770,7 @@ static inline void promoteVCIXScalar(SDValue Op,
 }
 
 static void processVCIXOperands(SDValue OrigOp,
-                                SmallVectorImpl<SDValue> &Operands,
+                                MutableArrayRef<SDValue> Operands,
                                 SelectionDAG &DAG) {
   promoteVCIXScalar(OrigOp, Operands, DAG);
   const RISCVSubtarget &Subtarget =
