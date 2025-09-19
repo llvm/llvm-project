@@ -812,6 +812,18 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
+  std::optional<ModuleSummaryIndex> Index;
+  if (!ExportSummary && !ImportSummary) {
+    // If we don't have the ExportSummary, that means we are out of LTO mode,
+    // so we enable the speculative devirtualization.
+    ClDevirtualizeSpeculatively = true;
+    // Build the ExportSummary from the module.
+    assert(!ExportSummary &&
+           "ExportSummary is expected to be empty in non-LTO mode");
+    ProfileSummaryInfo PSI(M);
+    Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
+    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+  }
   if (!DevirtModule(M, MAM, ExportSummary, ImportSummary).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
