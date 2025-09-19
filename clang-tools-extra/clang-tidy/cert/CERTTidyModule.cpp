@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../bugprone/AvoidSetjmpLongjmpCheck.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
@@ -38,7 +39,6 @@
 #include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
-#include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 #include "VariadicFunctionDefCheck.h"
@@ -256,7 +256,8 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
+    CheckFactories.registerCheck<bugprone::AvoidSetjmpLongjmpCheck>(
+        "cert-err52-cpp");
     CheckFactories.registerCheck<StaticObjectExceptionCheck>("cert-err58-cpp");
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
