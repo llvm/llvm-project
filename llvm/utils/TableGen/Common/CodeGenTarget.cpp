@@ -278,21 +278,32 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
     const CodeGenInstruction *Instr = GetInstByName(Name, InstMap, Records);
     assert(Instr && "Missing target independent instruction");
     assert(Instr->Namespace == "TargetOpcode" && "Bad namespace");
+
     InstrsByEnum.push_back(Instr);
   }
   unsigned EndOfPredefines = InstrsByEnum.size();
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
+  unsigned SkippedInsts = 0;
+
   for (const auto &[_, CGIUp] : InstMap) {
     const CodeGenInstruction *CGI = CGIUp.get();
     if (CGI->Namespace != "TargetOpcode") {
+
+      if (CGI->TheDef->isSubClassOf(
+              "TargetSpecializedStandardPseudoInstruction")) {
+        ++SkippedInsts;
+        continue;
+      }
+
       InstrsByEnum.push_back(CGI);
       NumPseudoInstructions += CGI->TheDef->getValueAsBit("isPseudo");
     }
   }
 
-  assert(InstrsByEnum.size() == InstMap.size() && "Missing predefined instr");
+  assert(InstrsByEnum.size() + SkippedInsts == InstMap.size() &&
+         "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
   llvm::sort(
