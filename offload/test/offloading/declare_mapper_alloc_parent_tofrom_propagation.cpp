@@ -10,7 +10,7 @@ struct vec {
 };
 
 // Map the dynamic payload with tofrom semantics via a user-defined mapper.
-#pragma omp declare mapper(default : vec v) map(tofrom : v.data [0:v.len])
+#pragma omp declare mapper(default : vec v) map(tofrom : v.data[0 : v.len])
 
 int main() {
   vec s{};
