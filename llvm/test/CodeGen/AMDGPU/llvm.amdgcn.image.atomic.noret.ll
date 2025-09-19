@@ -569,12 +569,12 @@ define amdgpu_ps void @atomic_add_1d_slc(<8 x i32> inreg %rsrc, i32 %data, i32 %
 ;
 ; GFX12-GISE-LABEL: atomic_add_1d_slc:
 ; GFX12-GISE:       ; %bb.0:
-; GFX12-GISE-NEXT:    image_atomic_add_uint v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_HT
+; GFX12-GISE-NEXT:    image_atomic_add_uint v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT
 ; GFX12-GISE-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: atomic_add_1d_slc:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    image_atomic_add_uint v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_HT
+; GFX12-NEXT:    image_atomic_add_uint v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT
 ; GFX12-NEXT:    s_endpgm
   %v = call i32 @llvm.amdgcn.image.atomic.add.1d.i32.i32(i32 %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 2)
   ret void

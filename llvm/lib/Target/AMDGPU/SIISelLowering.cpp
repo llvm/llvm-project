@@ -9135,7 +9135,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
   unsigned IntrOpcode = Intr->BaseOpcode;
-  if (Intr->NoRetBaseOpcode != 0 && !Op.getNode()->hasAnyUseOfValue(0))
+  if (Intr->NoRetBaseOpcode != Intr->BaseOpcode &&
+      !Op.getNode()->hasAnyUseOfValue(0))
     IntrOpcode = Intr->NoRetBaseOpcode;
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);
@@ -9144,12 +9145,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
 
-  SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
-  if (BaseOpcode->NoReturn && BaseOpcode->Atomic) {
-    ResultTypes.clear();
+  SmallVector<EVT, 3> ResultTypes;
+  if (BaseOpcode->NoReturn && BaseOpcode->Atomic)
     ResultTypes.push_back(MVT::Other);
-  }
+  else
+    ResultTypes = OrigResultTypes;
 
   bool IsD16 = false;
   bool IsG16 = false;
@@ -9169,10 +9170,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     VData = Op.getOperand(2);
 
     IsAtomicPacked16Bit =
-        (Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
-         Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
-         Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
-         Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
+        (IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
+         IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
+         IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
+         IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
 
     bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {

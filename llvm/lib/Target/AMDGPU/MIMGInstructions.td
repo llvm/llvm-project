@@ -998,11 +998,11 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       string renamed = ""> {
   let hasSideEffects = 1, // FIXME: remove this
       mayLoad = 1, mayStore = 1, hasPostISelHook = 0, DisableWQM = 1,
-      FPAtomic = isFP in {
+      FPAtomic = isFP, IsAtomicNoRet = noRtn in {
     let VAddrDwords = 1 in {
       let ssamp = 0 in {
         if op.HAS_SI then {
-          def _V1_si : MIMG_Atomic_si <op, asm, data_rc, VGPR_32, noRtn,enableDasm>;
+          def _V1_si : MIMG_Atomic_si <op, asm, data_rc, VGPR_32, noRtn, enableDasm>;
         }
         if op.HAS_VI then {
           def _V1_vi : MIMG_Atomic_vi <op, asm, data_rc, VGPR_32, noRtn, enableDasm>;
@@ -1098,11 +1098,11 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
 
 multiclass MIMG_Atomic_Impl <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         bit noRtn = 0, string renamed = ""> { // 64-bit atomics
-  let IsAtomicRet = !if(noRtn, 0, 1) in {
+  let IsAtomicRet = !not(noRtn) in {
     def "" : MIMGBaseOpcode {
       let Atomic = 1;
       let AtomicX2 = isCmpSwap;
-      let NoReturn = !if(noRtn, 1, 0);
+      let NoReturn = noRtn;
     }
 
     let BaseOpcode = !cast<MIMGBaseOpcode>(NAME) in {
