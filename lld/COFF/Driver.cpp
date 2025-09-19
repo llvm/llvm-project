@@ -405,8 +405,12 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         StringRef parentName) {
 
   auto reportBufferError = [=](Error &&e) {
+    StringRef childName =
+      CHECK(c.getName(),
+            "could not get child name for archive " + parentName +
+            " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
-               << &sym << ": " << parentName << "(" << check(c.getName())
+               << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
   };
 
