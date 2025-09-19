@@ -771,7 +771,7 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 }
 
 HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
-                                           Decl *TargetDecl) {
+                                           DeclaratorDecl *TargetDecl) {
   std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
 
   if (SemanticName == "SV_DISPATCHTHREADID") {

@@ -176,19 +176,17 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const AttributeCommonInfo &ACI, Decl *TargetDecl,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI, NamedDecl *TargetDecl,
                         std::optional<unsigned> Location) {
-    T *Attr = ::new (getASTContext()) T(getASTContext(), ACI);
+    T *Attr =
+        ::new (getASTContext()) T(getASTContext(), ACI, TargetDecl,
+                                  Location.value_or(0), Location.has_value());
 
-    if (Attr->isSemanticIndexable())
-      Attr->setSemanticIndex(Location ? *Location : 0);
-    else if (Location.has_value()) {
+    if (!Attr->isSemanticIndexable() && Location.has_value()) {
       Diag(Attr->getLocation(), diag::err_hlsl_semantic_indexing_not_supported)
           << Attr->getAttrName()->getName();
       return nullptr;
     }
-
-    Attr->setTargetDecl(TargetDecl);
     return Attr;
   }
 
@@ -259,7 +257,7 @@ private:
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLSemanticAttr *SemanticAttr);
   HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
-                                   Decl *TargetDecl);
+                                   DeclaratorDecl *TargetDecl);
   bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
                                        SemanticInfo &ActiveSemantic);
   bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,

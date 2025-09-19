@@ -787,6 +787,8 @@ class HLSLSemanticAttr<bit Indexable> : HLSLAnnotationAttr {
   let Spellings = [];
   let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+  let Args = [DeclArgument<Named, "Target">, IntArgument<"SemanticIndex">,
+              BoolArgument<"SemanticExplicitIndex">];
 }
 
 /// A target-specific attribute.  This class is meant to be used as a mixin
