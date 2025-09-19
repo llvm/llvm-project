@@ -363,10 +363,10 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
-      NullAllocatable, Subroutine)
+  ENUM_CLASS(Attr, Pure, Simple, Elemental, BindC, ImplicitInterface,
+      NullPointer, NullAllocatable, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
-  Procedure(){};
+  Procedure() {};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);
   Procedure(DummyArguments &&, Attrs); // for subroutines and NULL()
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(Procedure)
@@ -396,6 +396,7 @@ struct Procedure {
   bool IsSubroutine() const { return attrs.test(Attr::Subroutine); }
 
   bool IsPure() const { return attrs.test(Attr::Pure); }
+  bool IsSimple() const { return attrs.test(Attr::Simple); }
   bool IsElemental() const { return attrs.test(Attr::Elemental); }
   bool IsBindC() const { return attrs.test(Attr::BindC); }
   bool HasExplicitInterface() const {

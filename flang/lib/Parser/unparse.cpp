@@ -1761,6 +1761,7 @@ public:
   void Post(const PrefixSpec::Non_Recursive) { Word("NON_RECURSIVE"); }
   void Post(const PrefixSpec::Pure) { Word("PURE"); }
   void Post(const PrefixSpec::Recursive) { Word("RECURSIVE"); }
+  void Post(const PrefixSpec::Simple) { Word("SIMPLE"); }
   void Unparse(const PrefixSpec::Attributes &x) {
     Word("ATTRIBUTES("), Walk(x.v), Word(")");
   }
