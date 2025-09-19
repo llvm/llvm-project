@@ -56,7 +56,7 @@ struct BubbleDownMemorySpaceCasts
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateBubbleDownMemorySpaceCastPatterns(patterns, PatternBenefit());
+    populateBubbleDownMemorySpaceCastPatterns(patterns, PatternBenefit(1));
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       signalPassFailure();
   }
