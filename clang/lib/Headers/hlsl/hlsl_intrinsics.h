@@ -428,8 +428,7 @@ constexpr int4 D3DCOLORtoUBYTE4(float4 V) {
 
 /// \fn uint NonUniformResourceIndex(uint I)
 /// \brief A compiler hint to indicate that a resource index varies across
-/// threads.
-// / within a wave (i.e., it is non-uniform).
+/// threads within a wave (i.e., it is non-uniform).
 /// \param I [in] Resource array index
 ///
 /// The return value is the \Index parameter.
@@ -438,7 +437,7 @@ constexpr int4 D3DCOLORtoUBYTE4(float4 V) {
 /// some GPU hardware and drivers require the compiler to know whether the index
 /// is uniform (same for all threads) or non-uniform (varies per thread).
 ///
-/// Using NonUniformResourceIndex explicitly marks an index as non-uniform, .
+/// Using NonUniformResourceIndex explicitly marks an index as non-uniform,
 /// disabling certain assumptions or optimizations that could lead to incorrect
 /// behavior when dynamically accessing resource arrays with non-uniform
 /// indices.
