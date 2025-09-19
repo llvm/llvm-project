@@ -1713,28 +1713,25 @@ Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
 
 int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 
-int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
-  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                   utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
-
+int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
     return false;
   };
-  switch (identify_magic(Buffer)) {
+  switch (identify_magic(Image)) {
   case file_magic::elf:
   case file_magic::elf_relocatable:
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core: {
-    auto MatchOrErr = checkELFImage(Buffer);
+    auto MatchOrErr = checkELFImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
   case file_magic::bitcode: {
-    auto MatchOrErr = checkBitcodeImage(Buffer);
+    auto MatchOrErr = checkBitcodeImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
@@ -1744,36 +1741,32 @@ int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
   }
 }
 
-int32_t GenericPluginTy::is_device_compatible(int32_t DeviceId,
-                                              __tgt_device_image *Image) {
-  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                   utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
-
+int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
     return false;
   };
-  switch (identify_magic(Buffer)) {
+  switch (identify_magic(Image)) {
   case file_magic::elf:
   case file_magic::elf_relocatable:
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core: {
-    auto MatchOrErr = checkELFImage(Buffer);
+    auto MatchOrErr = checkELFImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     if (!*MatchOrErr)
       return false;
 
     // Perform plugin-dependent checks for the specific architecture if needed.
-    auto CompatibleOrErr = isELFCompatible(DeviceId, Buffer);
+    auto CompatibleOrErr = isELFCompatible(DeviceId, Image);
     if (Error Err = CompatibleOrErr.takeError())
       return HandleError(std::move(Err));
     return *CompatibleOrErr;
   }
   case file_magic::bitcode: {
-    auto MatchOrErr = checkBitcodeImage(Buffer);
+    auto MatchOrErr = checkBitcodeImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;

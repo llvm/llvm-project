@@ -26,8 +26,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/LogicalResult.h"
 
-#include <numeric>
-
 using namespace mlir;
 using namespace cir;
 
@@ -342,8 +340,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::VTableAttr>(
-          attrType))
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
+                cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -2737,6 +2735,20 @@ LogicalResult cir::AtomicCmpXchg::verify() {
   if (pointeeType != getExpected().getType() ||
       pointeeType != getDesired().getType())
     return emitOpError("ptr, expected and desired types must match");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::TypeInfoAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ::mlir::ArrayAttr typeInfoData) {
+
+  if (cir::ConstRecordAttr::verify(emitError, type, typeInfoData).failed())
+    return failure();
 
   return success();
 }
