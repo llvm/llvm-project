@@ -2256,9 +2256,16 @@ For example:
     behavior at runtime if the function ever does dynamically return. Annotated
     functions may still raise an exception, i.a., ``nounwind`` is not implied.
 ``norecurse``
-    This function attribute indicates that the function does not call itself
-    either directly or indirectly down any possible call path. This produces
-    undefined behavior at runtime if the function ever does recurse.
+    This function attribute indicates that the function is not recursive and
+    does not participate in recursion. This means that the function never
+    occurs inside a cycle in the dynamic call graph.
+    For example:
+
+.. code-block:: llvm
+
+    fn -> other_fn -> fn       ; fn is not norecurse
+    other_fn -> fn -> other_fn ; fn is not norecurse
+    fn -> other_fn -> other_fn ; fn is norecurse
 
 .. _langref_willreturn:
 
@@ -20562,7 +20569,7 @@ Note that it has the following implications:
 -  If ``%cnt`` is non-zero, the return value is non-zero as well.
 -  If ``%cnt`` is less than or equal to ``%max_lanes``, the return value is equal to ``%cnt``.
 
-'``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
+'``llvm.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20571,15 +20578,15 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
+      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
+      declare <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
 
 Overview:
 """""""""
 
-The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
+The '``llvm.vector.partial.reduce.add.*``' intrinsics reduce the
 concatenation of the two vector arguments down to the number of elements of the
 result vector type.
 
