@@ -60201,8 +60201,30 @@ static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   MVT VT = N->getSimpleValueType(0);
-  unsigned NumEltBits = VT.getScalarSizeInBits();
+
+  bool AddLow = N->getOpcode() == X86ISD::VPMADD52L;
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+  SDLoc DL(N);
+
+  APInt C0, C1;
+  bool HasC0 = X86::isConstantSplat(Op0, C0),
+       HasC1 = X86::isConstantSplat(Op1, C1);
+
+  // lo/hi(C * X) + Z --> lo/hi(X * C) + Z
+  if (HasC0 && !HasC1)
+    return DAG.getNode(N->getOpcode(), DL, VT, Op1, Op0, Op2);
+
+  // lo(X * 1) + Z --> lo(X) + Z iff X == lo(X)
+  if (AddLow && HasC1 && C1.trunc(52).isOne()) {
+    KnownBits KnownOp0 = DAG.computeKnownBits(Op0);
+    if (KnownOp0.countMinLeadingZeros() >= 12)
+      return DAG.getNode(ISD::ADD, DL, VT, Op0, Op2);
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned NumEltBits = VT.getScalarSizeInBits();
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumEltBits),
                                DCI))
     return SDValue(N, 0);
