@@ -17497,7 +17497,7 @@ canFoldToVWWithSameExtension(SDNode *Root, const NodeExtensionHelper &LHS,
       Subtarget);
 }
 
-/// Check if \p Root follows a pattern Root(bf16ext(LHS), bf16ext(RHS))
+/// Check if \p Root follows a pattern Root(zext(LHS), zext(RHS))
 ///
 /// \returns std::nullopt if the pattern doesn't match or a CombineResult that
 /// can be used to apply the pattern.
@@ -17509,7 +17509,7 @@ canFoldToVWWithSameExtZEXT(SDNode *Root, const NodeExtensionHelper &LHS,
                                           Subtarget);
 }
 
-/// Check if \p Root follows a pattern Root(ext(LHS), zext(RHS))
+/// Check if \p Root follows a pattern Root(bf16ext(LHS), bf16ext(RHS))
 ///
 /// \returns std::nullopt if the pattern doesn't match or a CombineResult that
 /// can be used to apply the pattern.
