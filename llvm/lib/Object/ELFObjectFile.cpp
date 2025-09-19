@@ -438,7 +438,7 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   case ELF::EM_AMDGPU:
     return getAMDGPUCPUName();
   case ELF::EM_CUDA:
-    return getNVPTXCPUName();
+    return getCUDACPUName();
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
@@ -620,7 +620,7 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
   }
 }
 
-StringRef ELFObjectFileBase::getNVPTXCPUName() const {
+StringRef ELFObjectFileBase::getCUDACPUName() const {
   assert(getEMachine() == ELF::EM_CUDA);
   unsigned SM = getEIdentABIVersion() == ELF::ELFABIVERSION_CUDA_V1
                     ? getPlatformFlags() & ELF::EF_CUDA_SM

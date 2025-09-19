@@ -139,7 +139,7 @@ Triple ObjectFile::makeTriple() const {
     TheTriple.setObjectFormat(Triple::GOFF);
   } else if (TheTriple.isAMDGPU()) {
     TheTriple.setVendor(Triple::AMD);
-  } else if (TheTriple.isNVPTX()) {
+  } else if (TheTriple.isNVPTX() || TheTriple.isNVSASS()) {
     TheTriple.setVendor(Triple::NVIDIA);
   }
 
