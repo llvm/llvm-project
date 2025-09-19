@@ -720,6 +720,30 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
+def _expandLateSubstitutions(cmd, arguments, cwd):
+    for i, arg in enumerate(arguments):
+        if not isinstance(arg, str):
+            continue
+
+        def _replaceReadFile(match):
+            filePath = match.group(1)
+            if not os.path.isabs(filePath):
+                filePath = os.path.join(cwd, filePath)
+            try:
+                with open(filePath) as fileHandle:
+                    return fileHandle.read()
+            except FileNotFoundError:
+                raise InternalShellError(
+                    cmd,
+                    "File specified in readfile substitution does not exist: %s"
+                    % filePath,
+                )
+
+        arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
+
+    return arguments
+
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
@@ -833,6 +857,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Ensure args[0] is hashable.
         args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+
+        # Expand all late substitutions.
+        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
 
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
