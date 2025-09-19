@@ -797,6 +797,23 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToXeVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
+  let summary = "Convert Math dialect to XeVM"; // TODO: what do I call this?
+  let description = [{
+    This pass converts supported Math ops to XeVM.
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "func::FuncDialect",
+    "xevm::XeVMDialect",
+    "vector::VectorDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToEmitC
 //===----------------------------------------------------------------------===//
 
