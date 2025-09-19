@@ -1272,7 +1272,7 @@ multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
                                    is_col, sme_elm_idx0_0, ZPR128, mnemonic>,
                                    SMEPseudo2Instr<NAME # _Q, 1> {
     bits<4> ZAd;
-    bits<1> imm;
+    bits<0> imm;
     let Inst{3-0} = ZAd;
   }
 
