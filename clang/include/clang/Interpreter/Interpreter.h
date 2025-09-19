@@ -23,6 +23,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -143,8 +144,8 @@ public:
     /// Factory function for creating LLJITBuilder instances.
     /// This allows clients to customize JIT builder creation while still
     /// providing sensible defaults.
-    llvm::unique_function<llvm::Expected<
-        std::unique_ptr<llvm::orc::LLJITBuilder>>(const JITConfig &)>
+    std::function<llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>(
+        const JITConfig &)>
         MakeJITBuilder = makeDefaultJITBuilder;
 
     JITConfig()
