@@ -1327,18 +1327,18 @@ mlir::Value genComplexPow(fir::FirOpBuilder &builder, mlir::Location loc,
                           const MathOperation &mathOp,
                           mlir::FunctionType mathLibFuncType,
                           llvm::ArrayRef<mlir::Value> args) {
-  bool isAMDGPU = fir::getTargetTriple(builder.getModule()).isAMDGCN();
-  if (!isAMDGPU)
+  if (mathRuntimeVersion == preciseVersion)
     return genLibCall(builder, loc, mathOp, mathLibFuncType, args);
-
   auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
-  auto realTy = complexTy.getElementType();
-  mlir::Value realExp = builder.createConvert(loc, realTy, args[1]);
-  mlir::Value zero = builder.createRealConstant(loc, realTy, 0);
-  mlir::Value complexExp =
-      builder.create<mlir::complex::CreateOp>(loc, complexTy, realExp, zero);
-  mlir::Value result =
-      builder.create<mlir::complex::PowOp>(loc, args[0], complexExp);
+  mlir::Value exp = args[1];
+  if (!mlir::isa<mlir::ComplexType>(exp.getType())) {
+    auto realTy = complexTy.getElementType();
+    mlir::Value realExp = builder.createConvert(loc, realTy, exp);
+    mlir::Value zero = builder.createRealConstant(loc, realTy, 0);
+    exp =
+        builder.create<mlir::complex::CreateOp>(loc, complexTy, realExp, zero);
+  }
+  mlir::Value result = builder.create<mlir::complex::PowOp>(loc, args[0], exp);
   result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   return result;
 }
@@ -1668,11 +1668,11 @@ static constexpr MathOperation mathOperations[] = {
     {"pow", RTNAME_STRING(PowF128), FuncTypeReal16Real16Real16, genLibF128Call},
     {"pow", "cpowf",
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Complex<4>>,
-     genComplexMathOp<mlir::complex::PowOp>},
+     genComplexPow},
     {"pow", "cpow", genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Complex<8>>,
-     genComplexMathOp<mlir::complex::PowOp>},
+     genComplexPow},
     {"pow", RTNAME_STRING(CPowF128), FuncTypeComplex16Complex16Complex16,
-     genLibF128Call},
+     genComplexPow},
     {"pow", RTNAME_STRING(FPow4i),
      genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Integer<4>>,
      genMathOp<mlir::math::FPowIOp>},
@@ -1698,7 +1698,7 @@ static constexpr MathOperation mathOperations[] = {
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<4>>,
      genComplexPow},
     {"pow", RTNAME_STRING(cqpowi), FuncTypeComplex16Complex16Integer4,
-     genLibF128Call},
+     genComplexPow},
     {"pow", RTNAME_STRING(cpowk),
      genFuncType<Ty::Complex<4>, Ty::Complex<4>, Ty::Integer<8>>,
      genComplexPow},
@@ -1706,7 +1706,7 @@ static constexpr MathOperation mathOperations[] = {
      genFuncType<Ty::Complex<8>, Ty::Complex<8>, Ty::Integer<8>>,
      genComplexPow},
     {"pow", RTNAME_STRING(cqpowk), FuncTypeComplex16Complex16Integer8,
-     genLibF128Call},
+     genComplexPow},
     {"pow-unsigned", RTNAME_STRING(UPow1),
      genFuncType<Ty::Integer<1>, Ty::Integer<1>, Ty::Integer<1>>, genLibCall},
     {"pow-unsigned", RTNAME_STRING(UPow2),
