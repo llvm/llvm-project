@@ -227,6 +227,13 @@ void loop_access_elements(int num, struct B b) {
   for(int i = 0, j = 0; i < sizeof(arr) && j < sizeof(buf); i++, j++) {}
 }
 
+template <typename T>
+void templated_array() {
+  T arr[10];
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: warning: suspicious usage of 'sizeof' in the loop [bugprone-sizeof-expression]
+  for (int i = 0; i < sizeof(arr); ++i) {}
+}
+
 template <int T>
 int Foo() { int A[T]; return sizeof(T); }
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(K)'
