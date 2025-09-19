@@ -7,7 +7,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
  
-# ERR: {{.*}}llvm-readelf: error: 'While reading call graph info's [number of indirect callsites] for function at [0x0]': unexpected end of data at offset 0x19 while reading [0x18, 0x20)
+# ERR: {{.*}}llvm-readelf{{.*}}: error: 'While reading call graph info's [number of indirect callsites] for function at [0x0]': unexpected end of data at offset 0x19 while reading [0x18, 0x20)
 
 .text
 .globl _Z3foov

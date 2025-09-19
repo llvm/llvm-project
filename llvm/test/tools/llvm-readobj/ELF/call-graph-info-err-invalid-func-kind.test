@@ -8,7 +8,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 
-# ERR: {{.*}}llvm-readelf: error: 'While reading call graph info's [FunctionKind] for function at [0x0]': Unknown value [4].
+# ERR: {{.*}}llvm-readelf{{.*}}: error: 'While reading call graph info's [FunctionKind] for function at [0x0]': Unknown value [4].
 
 .text
 .globl _Z3foov

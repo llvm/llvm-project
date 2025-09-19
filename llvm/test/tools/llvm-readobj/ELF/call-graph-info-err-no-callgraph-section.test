@@ -7,7 +7,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
 
-# CHECK: {{.*}}llvm-readelf: error: 'Missing section': No .callgraph section found.
+# CHECK: {{.*}}llvm-readelf{{.*}}: error: 'Missing section': No .callgraph section found.
 
 .text
 .globl _Z3foov

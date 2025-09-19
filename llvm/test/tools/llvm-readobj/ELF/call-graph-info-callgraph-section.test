@@ -7,7 +7,7 @@
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
 
-# CHECK: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
+# CHECK: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
 # CHECK-NEXT: Per-function call graph information:: 
 # CHECK-EMPTY: 
 # CHECK-NEXT: Function:: foo
@@ -40,7 +40,7 @@
 # CHECK-NEXT: Direct callee count:: 0
 
 
-# LLVM: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
+# LLVM: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
 # LLVM: callgraph_info [
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     Name: foo
@@ -83,7 +83,7 @@
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
-# JSON: {{.*}}llvm-readelf: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
+# JSON: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
 # JSON:     "callgraph_info": [
 # JSON-NEXT:       {
 # JSON-NEXT:         "Function": {
