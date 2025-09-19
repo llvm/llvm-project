@@ -47,39 +47,19 @@ static func::FuncOp getOrDeclare(fir::FirOpBuilder &builder, Location loc,
   return func;
 }
 
-static bool isZero(Value v) {
-  if (auto cst = v.getDefiningOp<arith::ConstantOp>())
-    if (auto attr = dyn_cast<FloatAttr>(cst.getValue()))
-      return attr.getValue().isZero();
-  return false;
-}
-
 void ConvertComplexPowPass::runOnOperation() {
   ModuleOp mod = getOperation();
   fir::FirOpBuilder builder(mod, fir::getKindMapping(mod));
 
-  mod.walk([&](complex::PowOp op) {
-    builder.setInsertionPoint(op);
-    Location loc = op.getLoc();
-    auto complexTy = cast<ComplexType>(op.getType());
-    auto elemTy = complexTy.getElementType();
-
-    Value base = op.getLhs();
-    Value rhs = op.getRhs();
-
-    Value intExp;
-    if (auto create = rhs.getDefiningOp<complex::CreateOp>()) {
-      if (isZero(create.getImaginary())) {
-        if (auto conv = create.getReal().getDefiningOp<fir::ConvertOp>()) {
-          if (auto intTy = dyn_cast<IntegerType>(conv.getValue().getType()))
-            intExp = conv.getValue();
-        }
-      }
-    }
-
-    func::FuncOp callee;
-    SmallVector<Value> args;
-    if (intExp) {
+  mod.walk([&](Operation *op) {
+    if (auto powIop = dyn_cast<complex::PowiOp>(op)) {
+      builder.setInsertionPoint(powIop);
+      Location loc = powIop.getLoc();
+      auto complexTy = cast<ComplexType>(powIop.getType());
+      auto elemTy = complexTy.getElementType();
+      Value base = powIop.getLhs();
+      Value intExp = powIop.getRhs();
+      func::FuncOp callee;
       unsigned realBits = cast<FloatType>(elemTy).getWidth();
       unsigned intBits = cast<IntegerType>(intExp.getType()).getWidth();
       auto funcTy = builder.getFunctionType(
@@ -98,9 +78,20 @@ void ConvertComplexPowPass::runOnOperation() {
         callee = getOrDeclare(builder, loc, RTNAME_STRING(cqpowk), funcTy);
       else
         return;
-      args = {base, intExp};
-    } else {
+      auto call = fir::CallOp::create(builder, loc, callee, {base, intExp});
+      if (auto fmf = powIop.getFastmathAttr())
+        call.setFastmathAttr(fmf);
+      powIop.replaceAllUsesWith(call.getResult(0));
+      powIop.erase();
+    }
+
+    if (auto powOp = dyn_cast<complex::PowOp>(op)) {
+      builder.setInsertionPoint(powOp);
+      Location loc = powOp.getLoc();
+      auto complexTy = cast<ComplexType>(powOp.getType());
+      auto elemTy = complexTy.getElementType();
       unsigned realBits = cast<FloatType>(elemTy).getWidth();
+      func::FuncOp callee;
       auto funcTy =
           builder.getFunctionType({complexTy, complexTy}, {complexTy});
       if (realBits == 32)
@@ -111,13 +102,12 @@ void ConvertComplexPowPass::runOnOperation() {
         callee = getOrDeclare(builder, loc, RTNAME_STRING(CPowF128), funcTy);
       else
         return;
-      args = {base, rhs};
+      auto call = fir::CallOp::create(builder, loc, callee,
+                                      {powOp.getLhs(), powOp.getRhs()});
+      if (auto fmf = powOp.getFastmathAttr())
+        call.setFastmathAttr(fmf);
+      powOp.replaceAllUsesWith(call.getResult(0));
+      powOp.erase();
     }
-
-    auto call = fir::CallOp::create(builder, loc, callee, args);
-    if (auto fmf = op.getFastmathAttr())
-      call.setFastmathAttr(fmf);
-    op.replaceAllUsesWith(call.getResult(0));
-    op.erase();
   });
 }

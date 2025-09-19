@@ -2,51 +2,38 @@
 
 module {
   func.func @pow_c4_i4(%arg0: complex<f32>, %arg1: i32) -> complex<f32> {
-    %c0 = arith.constant 0.0 : f32
-    %0 = fir.convert %arg1 : (i32) -> f32
-    %1 = complex.create %0, %c0 : complex<f32>
-    %2 = complex.pow %arg0, %1 : complex<f32>
-    return %2 : complex<f32>
+    %0 = complex.powi %arg0, %arg1 : complex<f32>, i32
+    return %0 : complex<f32>
+  }
+
+  func.func @pow_c4_i4_fast(%arg0: complex<f32>, %arg1: i32) -> complex<f32> {
+    %0 = complex.powi %arg0, %arg1 fastmath<fast> : complex<f32>, i32
+    return %0 : complex<f32>
   }
 
   func.func @pow_c4_i8(%arg0: complex<f32>, %arg1: i64) -> complex<f32> {
-    %c0 = arith.constant 0.0 : f32
-    %0 = fir.convert %arg1 : (i64) -> f32
-    %1 = complex.create %0, %c0 : complex<f32>
-    %2 = complex.pow %arg0, %1 : complex<f32>
-    return %2 : complex<f32>
+    %0 = complex.powi %arg0, %arg1 : complex<f32>, i64
+    return %0 : complex<f32>
   }
 
   func.func @pow_c8_i4(%arg0: complex<f64>, %arg1: i32) -> complex<f64> {
-    %c0 = arith.constant 0.0 : f64
-    %0 = fir.convert %arg1 : (i32) -> f64
-    %1 = complex.create %0, %c0 : complex<f64>
-    %2 = complex.pow %arg0, %1 : complex<f64>
-    return %2 : complex<f64>
+    %0 = complex.powi %arg0, %arg1 : complex<f64>, i32
+    return %0 : complex<f64>
   }
 
   func.func @pow_c8_i8(%arg0: complex<f64>, %arg1: i64) -> complex<f64> {
-    %c0 = arith.constant 0.0 : f64
-    %0 = fir.convert %arg1 : (i64) -> f64
-    %1 = complex.create %0, %c0 : complex<f64>
-    %2 = complex.pow %arg0, %1 : complex<f64>
-    return %2 : complex<f64>
+    %0 = complex.powi %arg0, %arg1 : complex<f64>, i64
+    return %0 : complex<f64>
   }
 
   func.func @pow_c16_i4(%arg0: complex<f128>, %arg1: i32) -> complex<f128> {
-    %c0 = arith.constant 0.0 : f128
-    %0 = fir.convert %arg1 : (i32) -> f128
-    %1 = complex.create %0, %c0 : complex<f128>
-    %2 = complex.pow %arg0, %1 : complex<f128>
-    return %2 : complex<f128>
+    %0 = complex.powi %arg0, %arg1 : complex<f128>, i32
+    return %0 : complex<f128>
   }
 
   func.func @pow_c16_i8(%arg0: complex<f128>, %arg1: i64) -> complex<f128> {
-    %c0 = arith.constant 0.0 : f128
-    %0 = fir.convert %arg1 : (i64) -> f128
-    %1 = complex.create %0, %c0 : complex<f128>
-    %2 = complex.pow %arg0, %1 : complex<f128>
-    return %2 : complex<f128>
+    %0 = complex.powi %arg0, %arg1 : complex<f128>, i64
+    return %0 : complex<f128>
   }
 
   func.func @pow_c4_fast(%arg0: complex<f32>, %arg1: f32) -> complex<f32> {
@@ -74,26 +61,37 @@ module {
 // CHECK-LABEL: func.func @pow_c4_i4(
 // CHECK: fir.call @_FortranAcpowi(%{{.*}}, %{{.*}}) : (complex<f32>, i32) -> complex<f32>
 // CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
+
+// CHECK-LABEL: func.func @pow_c4_i4_fast(
+// CHECK: fir.call @_FortranAcpowi(%{{.*}}, %{{.*}}) fastmath<fast> : (complex<f32>, i32) -> complex<f32>
+// CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
 
 // CHECK-LABEL: func.func @pow_c4_i8(
 // CHECK: fir.call @_FortranAcpowk(%{{.*}}, %{{.*}}) : (complex<f32>, i64) -> complex<f32>
 // CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
 
 // CHECK-LABEL: func.func @pow_c8_i4(
 // CHECK: fir.call @_FortranAzpowi(%{{.*}}, %{{.*}}) : (complex<f64>, i32) -> complex<f64>
 // CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
 
 // CHECK-LABEL: func.func @pow_c8_i8(
 // CHECK: fir.call @_FortranAzpowk(%{{.*}}, %{{.*}}) : (complex<f64>, i64) -> complex<f64>
 // CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
 
 // CHECK-LABEL: func.func @pow_c16_i4(
 // CHECK: fir.call @_FortranAcqpowi(%{{.*}}, %{{.*}}) : (complex<f128>, i32) -> complex<f128>
 // CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
 
 // CHECK-LABEL: func.func @pow_c16_i8(
 // CHECK: fir.call @_FortranAcqpowk(%{{.*}}, %{{.*}}) : (complex<f128>, i64) -> complex<f128>
 // CHECK-NOT: complex.pow
+// CHECK-NOT: complex.powi
 
 // CHECK-LABEL: func.func @pow_c4_fast(
 // CHECK: %[[EXP:.*]] = complex.create %{{.*}}, %{{.*}} : complex<f32>
