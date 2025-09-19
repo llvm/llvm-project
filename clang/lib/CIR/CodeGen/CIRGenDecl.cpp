@@ -732,9 +732,8 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
 
   // Optimize for a constant array size.
   if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
-    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
+    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>())
       size = constIntAttr.getUInt();
-    }
   } else {
     cgm.errorNYI(begin.getDefiningOp()->getLoc(),
                  "dynamic-length array expression");
