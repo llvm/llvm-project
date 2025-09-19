@@ -6139,16 +6139,13 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   case AMDGPU::G_AMDGPU_SMED3:
   case AMDGPU::G_AMDGPU_UMED3: {
     auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
-    unsigned Tmp2 =
-        Analysis.computeNumSignBitsImpl(Src2, DemandedElts, Depth + 1);
+    unsigned Tmp2 = Analysis.computeNumSignBits(Src2, DemandedElts, Depth + 1);
     if (Tmp2 == 1)
       return 1;
-    unsigned Tmp1 =
-        Analysis.computeNumSignBitsImpl(Src1, DemandedElts, Depth + 1);
+    unsigned Tmp1 = Analysis.computeNumSignBits(Src1, DemandedElts, Depth + 1);
     if (Tmp1 == 1)
       return 1;
-    unsigned Tmp0 =
-        Analysis.computeNumSignBitsImpl(Src0, DemandedElts, Depth + 1);
+    unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
     if (Tmp0 == 1)
       return 1;
     return std::min({Tmp0, Tmp1, Tmp2});

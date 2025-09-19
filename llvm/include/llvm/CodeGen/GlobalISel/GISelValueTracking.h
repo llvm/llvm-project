@@ -67,9 +67,6 @@ public:
   void computeKnownBitsImpl(Register R, KnownBits &Known,
                             const APInt &DemandedElts, unsigned Depth = 0);
 
-  virtual unsigned computeNumSignBitsImpl(Register R, const APInt &DemandedElts,
-                                          unsigned Depth = 0);
-
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
                               unsigned Depth = 0);
   unsigned computeNumSignBits(Register R, unsigned Depth = 0);
