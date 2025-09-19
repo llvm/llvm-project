@@ -18,8 +18,8 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 class Location;
@@ -236,9 +236,10 @@ memref::AllocaOp allocToAlloca(
 /// TODO: Move this utility function directly within ExpandShapeOp. For now,
 /// this is not possible because this function uses the Affine dialect and the
 /// MemRef dialect cannot depend on the Affine dialect.
-SmallVector<OpFoldResult>
-getExpandedSizes(ExpandShapeOp expandShape, OpBuilder &builder,
-                 ArrayRef<OpFoldResult> origSizes, unsigned groupId);
+SmallVector<OpFoldResult> getExpandedSizes(ExpandShapeOp expandShape,
+                                           OpBuilder &builder,
+                                           ArrayRef<OpFoldResult> origSizes,
+                                           unsigned groupId);
 
 /// Compute the expanded strides of the given \p expandShape for the
 /// \p groupId-th reassociation group.
@@ -277,11 +278,10 @@ SmallVector<OpFoldResult> getExpandedStrides(ExpandShapeOp expandShape,
 ///
 /// \pre for all index in indices: index < values.size()
 /// \pre for all index in indices: index < maybeConstants.size()
-OpFoldResult
-getProductOfValues(ArrayRef<int64_t> indices, OpBuilder &builder, Location loc,
-                   ArrayRef<int64_t> maybeConstants,
-                   ArrayRef<OpFoldResult> values,
-                   llvm::function_ref<bool(int64_t)> isDynamic);
+OpFoldResult getProductOfValues(ArrayRef<int64_t> indices, OpBuilder &builder,
+                                Location loc, ArrayRef<int64_t> maybeConstants,
+                                ArrayRef<OpFoldResult> values,
+                                llvm::function_ref<bool(int64_t)> isDynamic);
 
 /// Compute the collapsed size of the given \p collapseShape for the
 /// \p groupId-th reassociation group.
@@ -291,9 +291,10 @@ getProductOfValues(ArrayRef<int64_t> indices, OpBuilder &builder, Location loc,
 /// TODO: Move this utility function directly within CollapseShapeOp. For now,
 /// this is not possible because this function uses the Affine dialect and the
 /// MemRef dialect cannot depend on the Affine dialect.
-SmallVector<OpFoldResult>
-getCollapsedSize(CollapseShapeOp collapseShape, OpBuilder &builder,
-                 ArrayRef<OpFoldResult> origSizes, unsigned groupId);
+SmallVector<OpFoldResult> getCollapsedSize(CollapseShapeOp collapseShape,
+                                           OpBuilder &builder,
+                                           ArrayRef<OpFoldResult> origSizes,
+                                           unsigned groupId);
 
 /// Compute the collapsed stride of the given \p collpaseShape for the
 /// \p groupId-th reassociation group.
@@ -307,10 +308,11 @@ getCollapsedSize(CollapseShapeOp collapseShape, OpBuilder &builder,
 ///
 /// \post result.size() == 1, in other words, each group collapse to one
 /// dimension.
-SmallVector<OpFoldResult>
-getCollapsedStride(CollapseShapeOp collapseShape, OpBuilder &builder,
-                   ArrayRef<OpFoldResult> origSizes,
-                   ArrayRef<OpFoldResult> origStrides, unsigned groupId);
+SmallVector<OpFoldResult> getCollapsedStride(CollapseShapeOp collapseShape,
+                                             OpBuilder &builder,
+                                             ArrayRef<OpFoldResult> origSizes,
+                                             ArrayRef<OpFoldResult> origStrides,
+                                             unsigned groupId);
 
 } // namespace memref
 } // namespace mlir

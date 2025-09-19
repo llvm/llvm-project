@@ -21,9 +21,9 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -47,7 +47,6 @@ static Value getValueFromOpFoldResult(OpBuilder &rewriter, Location loc,
   }
   return cast<Value>(in);
 }
-
 
 /// Returns a collapsed memref and the linearized index to access the element
 /// at the specified indices.
@@ -281,9 +280,8 @@ struct FlattenGlobal final : public OpRewritePattern<memref::GlobalOp> {
     return {};
   }
 
-  LogicalResult
-  matchAndRewrite(memref::GlobalOp globalOp,
-                  PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(memref::GlobalOp globalOp,
+                                PatternRewriter &rewriter) const override {
     auto oldType = llvm::dyn_cast<MemRefType>(globalOp.getType());
     if (!oldType || !oldType.getLayout().isIdentity() || oldType.getRank() <= 1)
       return failure();
@@ -314,7 +312,8 @@ struct FlattenCollapseShape final
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getSrc());
 
     SmallVector<OpFoldResult> origSizes = metadata.getConstifiedMixedSizes();
-    SmallVector<OpFoldResult> origStrides = metadata.getConstifiedMixedStrides();
+    SmallVector<OpFoldResult> origStrides =
+        metadata.getConstifiedMixedStrides();
     OpFoldResult offset = metadata.getConstifiedMixedOffset();
 
     SmallVector<OpFoldResult> collapsedSizes;
@@ -338,7 +337,8 @@ struct FlattenCollapseShape final
   }
 };
 
-struct FlattenExpandShape final : public OpRewritePattern<memref::ExpandShapeOp> {
+struct FlattenExpandShape final
+    : public OpRewritePattern<memref::ExpandShapeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::ExpandShapeOp op,
@@ -348,7 +348,8 @@ struct FlattenExpandShape final : public OpRewritePattern<memref::ExpandShapeOp>
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getSrc());
 
     SmallVector<OpFoldResult> origSizes = metadata.getConstifiedMixedSizes();
-    SmallVector<OpFoldResult> origStrides = metadata.getConstifiedMixedStrides();
+    SmallVector<OpFoldResult> origStrides =
+        metadata.getConstifiedMixedStrides();
     OpFoldResult offset = metadata.getConstifiedMixedOffset();
 
     SmallVector<OpFoldResult> expandedSizes;
@@ -371,7 +372,6 @@ struct FlattenExpandShape final : public OpRewritePattern<memref::ExpandShapeOp>
     return success();
   }
 };
-
 
 // Flattens memref subview ops with more than 1 dimension into 1-D accesses.
 struct FlattenSubView final : public OpRewritePattern<memref::SubViewOp> {
@@ -405,9 +405,8 @@ struct FlattenSubView final : public OpRewritePattern<memref::SubViewOp> {
     for (OpFoldResult ofr : mixedOffsets)
       offsetValues.push_back(getValueFromOpFoldResult(rewriter, loc, ofr));
 
-    auto [flatSource, linearOffset] =
-        getFlattenMemrefAndOffset(rewriter, loc, op.getSource(),
-                                  ValueRange(offsetValues));
+    auto [flatSource, linearOffset] = getFlattenMemrefAndOffset(
+        rewriter, loc, op.getSource(), ValueRange(offsetValues));
 
     memref::ExtractStridedMetadataOp sourceMetadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getSource());
@@ -424,9 +423,14 @@ struct FlattenSubView final : public OpRewritePattern<memref::SubViewOp> {
     resultStrides.reserve(resultType.getRank());
 
     OpFoldResult resultOffset = sourceOffset;
-    for (auto [idx, it] : llvm::enumerate(llvm::zip_equal(
+    for (auto zipped : llvm::enumerate(llvm::zip_equal(
              mixedOffsets, sourceStrides, mixedSizes, mixedStrides))) {
-      auto [offsetOfr, strideOfr, sizeOfr, relativeStrideOfr] = it;
+      auto idx = zipped.index();
+      auto it = zipped.value();
+      auto offsetOfr = std::get<0>(it);
+      auto strideOfr = std::get<1>(it);
+      auto sizeOfr = std::get<2>(it);
+      auto relativeStrideOfr = std::get<3>(it);
       OpFoldResult contribution = [&]() -> OpFoldResult {
         if (Attribute offsetAttr = dyn_cast<Attribute>(offsetOfr)) {
           if (Attribute strideAttr = dyn_cast<Attribute>(strideOfr)) {
@@ -449,7 +453,8 @@ struct FlattenSubView final : public OpRewritePattern<memref::SubViewOp> {
           }
         }
         Value offsetVal = getValueFromOpFoldResult(rewriter, loc, resultOffset);
-        Value contribVal = getValueFromOpFoldResult(rewriter, loc, contribution);
+        Value contribVal =
+            getValueFromOpFoldResult(rewriter, loc, contribution);
         return rewriter.create<arith::AddIOp>(loc, offsetVal, contribVal)
             .getResult();
       }();
@@ -478,12 +483,12 @@ struct FlattenSubView final : public OpRewritePattern<memref::SubViewOp> {
     memref::LinearizedMemRefInfo linearizedInfo;
     [[maybe_unused]] OpFoldResult linearizedIndex;
     std::tie(linearizedInfo, linearizedIndex) =
-        memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, elementBitWidth, elementBitWidth, resultOffset,
-            resultSizes, resultStrides);
+        memref::getLinearizedMemRefOffsetAndSize(rewriter, loc, elementBitWidth,
+                                                 elementBitWidth, resultOffset,
+                                                 resultSizes, resultStrides);
 
-    Value flattenedSize = getValueFromOpFoldResult(
-        rewriter, loc, linearizedInfo.linearizedSize);
+    Value flattenedSize =
+        getValueFromOpFoldResult(rewriter, loc, linearizedInfo.linearizedSize);
     Value strideOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
 
     Value flattenedSubview = memref::SubViewOp::create(
@@ -524,10 +529,11 @@ struct FlattenGetGlobal : public OpRewritePattern<memref::GetGlobalOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::GetGlobalOp op,
-                               PatternRewriter &rewriter) const override {
+                                PatternRewriter &rewriter) const override {
     // Check if this get_global references a multi-dimensional global
     auto module = op->template getParentOfType<ModuleOp>();
-    auto globalOp = module.template lookupSymbol<memref::GlobalOp>(op.getName());
+    auto globalOp =
+        module.template lookupSymbol<memref::GlobalOp>(op.getName());
     if (!globalOp) {
       return failure();
     }
@@ -537,12 +543,13 @@ struct FlattenGetGlobal : public OpRewritePattern<memref::GetGlobalOp> {
 
     // Only apply if the global has been flattened but the get_global hasn't
     if (globalType.getRank() == 1 && resultType.getRank() > 1) {
-      auto newGetGlobal = memref::GetGlobalOp::create(
-          rewriter, op.getLoc(), globalType, op.getName());
+      auto newGetGlobal = memref::GetGlobalOp::create(rewriter, op.getLoc(),
+                                                      globalType, op.getName());
 
       // Cast the flattened result back to the original shape
       memref::ExtractStridedMetadataOp stridedMetadata =
-          memref::ExtractStridedMetadataOp::create(rewriter, op.getLoc(), op.getResult());
+          memref::ExtractStridedMetadataOp::create(rewriter, op.getLoc(),
+                                                   op.getResult());
       auto castResult = memref::ReinterpretCastOp::create(
           rewriter, op.getLoc(), resultType, newGetGlobal,
           /*offset=*/rewriter.getIndexAttr(0),
@@ -572,13 +579,9 @@ void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
                   MemRefRewritePattern<memref::StoreOp>,
                   MemRefRewritePattern<memref::AllocOp>,
                   MemRefRewritePattern<memref::AllocaOp>,
-                  MemRefRewritePattern<memref::DeallocOp>,
-                  FlattenExpandShape,
-                  FlattenCollapseShape,
-                  FlattenSubView,
-                  FlattenGetGlobal,
-                  FlattenGlobal>(
-      patterns.getContext());
+                  MemRefRewritePattern<memref::DeallocOp>, FlattenExpandShape,
+                  FlattenCollapseShape, FlattenSubView, FlattenGetGlobal,
+                  FlattenGlobal>(patterns.getContext());
 }
 
 void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
