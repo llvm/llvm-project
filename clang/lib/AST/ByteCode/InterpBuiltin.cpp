@@ -2851,6 +2851,39 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ptestz(InterpState &S, CodePtr OpPC,
+                                  const CallExpr *Call) {
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+
+  assert(LHS.getNumElems() == RHS.getNumElems());
+  assert(LHS.getFieldDesc()->isPrimitiveArray() &&
+         RHS.getFieldDesc()->isPrimitiveArray());
+
+  if (!S.getASTContext().hasSameUnqualifiedType(getElemType(LHS),
+                                                getElemType(RHS)))
+    return false;
+
+  unsigned SourceLen = LHS.getNumElems();
+  const QualType ElemQT = getElemType(LHS);
+  const OptPrimType ElemPT = S.getContext().classify(ElemQT);
+
+  bool Flag = true;
+  INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APSInt A = LHS.elem<T>(I).toAPSInt();
+        const APSInt B = RHS.elem<T>(I).toAPSInt();
+        if ( (A & B) != 0 ) { 
+          Flag = false; 
+          break; 
+        }
+      }
+    });
+
+  pushInteger(S, Flag ? 1 : 0, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -3581,9 +3614,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return ((APInt)C).isNegative() ? T : F;
         });
 
-  case X86::BI__builtin_ia32_ptestz128: {
-  }
-
+  case X86::BI__builtin_ia32_ptestz128:
+    return interp__builtin_ptestz(S, OpPC, Call);
+  
     // case X86::BI__builtin_ia32_ptestz256:
 
     // case X86::BI__builtin_ia32_ptestc128:
