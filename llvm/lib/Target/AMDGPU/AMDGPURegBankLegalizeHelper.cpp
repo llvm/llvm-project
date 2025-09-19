@@ -476,8 +476,10 @@ void RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
     // For signed operations, use sign extension
     auto [Val0_Lo, Val0_Hi] = unpackSExt(MI.getOperand(1).getReg());
     auto [Val1_Lo, Val1_Hi] = unpackSExt(MI.getOperand(2).getReg());
-    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo}).getReg(0);
-    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi}).getReg(0);
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+             .getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+             .getReg(0);
     break;
   }
   case AMDGPU::G_UMIN:
@@ -485,8 +487,10 @@ void RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
     // For unsigned operations, use zero extension
     auto [Val0_Lo, Val0_Hi] = unpackZExt(MI.getOperand(1).getReg());
     auto [Val1_Lo, Val1_Hi] = unpackZExt(MI.getOperand(2).getReg());
-    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo}).getReg(0);
-    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi}).getReg(0);
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Lo, Val1_Lo})
+             .getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0_Hi, Val1_Hi})
+             .getReg(0);
     break;
   }
   default:
@@ -1359,7 +1363,13 @@ void RegBankLegalizeHelper::applyMappingTrivial(MachineInstr &MI) {
     B.setInstr(MI);
     for (unsigned i = NumDefs; i < NumOperands; ++i) {
       Register Reg = MI.getOperand(i).getReg();
-      if (MRI.getRegBank(Reg) != RB) {
+      // Helper to check if a register should be skipped for VGPR conversion
+      auto shouldSkipVGPRConversion = [&](Register Reg) {
+        MachineInstr *DefMI = MRI.getVRegDef(Reg);
+        // Skip if defining instruction is implicit_def
+        return DefMI && DefMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+      };
+      if (MRI.getRegBank(Reg) != RB && !shouldSkipVGPRConversion(Reg)) {
         auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
         MI.getOperand(i).setReg(Copy.getReg(0));
       }
