@@ -152,7 +152,7 @@ private:
   void AddThumb1SBit(MCInst &MI, bool InITBlock) const;
   bool isVectorPredicable(const MCInst &MI) const;
   DecodeStatus AddThumbPredicate(MCInst&) const;
-  void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
+  void UpdateThumbPredicate(DecodeStatus &S, MCInst &MI) const;
 
   llvm::endianness InstructionEndianness;
 };
@@ -1378,24 +1378,6 @@ static DecodeStatus DecodeRFEInstruction(MCInst &Inst, unsigned Insn,
   DecodeStatus S = MCDisassembler::Success;
 
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
-  unsigned mode = fieldFromInstruction(Insn, 23, 2);
-
-  switch (mode) {
-    case 0:
-      mode = ARM_AM::da;
-      break;
-    case 1:
-      mode = ARM_AM::ia;
-      break;
-    case 2:
-      mode = ARM_AM::db;
-      break;
-    case 3:
-      mode = ARM_AM::ib;
-      break;
-  }
-
-  Inst.addOperand(MCOperand::createImm(mode));
   if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
     return MCDisassembler::Fail;
 
@@ -2792,10 +2774,6 @@ static DecodeStatus DecodeMVEModImmInstruction(MCInst &Inst, unsigned Insn,
 
   Inst.addOperand(MCOperand::createImm(imm));
 
-  Inst.addOperand(MCOperand::createImm(ARMVCC::None));
-  Inst.addOperand(MCOperand::createReg(0));
-  Inst.addOperand(MCOperand::createImm(0));
-
   return S;
 }
 
@@ -2820,7 +2798,6 @@ static DecodeStatus DecodeMVEVADCInstruction(MCInst &Inst, unsigned Insn,
     return MCDisassembler::Fail;
   if (!fieldFromInstruction(Insn, 12, 1)) // I bit clear => need input FPSCR
     Inst.addOperand(MCOperand::createReg(ARM::FPSCR_NZCV));
-  Inst.addOperand(MCOperand::createImm(Qd));
 
   return S;
 }
@@ -5926,10 +5903,6 @@ static DecodeStatus DecodeMVEVCMP(MCInst &Inst, unsigned Insn, uint64_t Address,
   if (!Check(S, predicate_decoder(Inst, fc, Address, Decoder)))
     return MCDisassembler::Fail;
 
-  Inst.addOperand(MCOperand::createImm(ARMVCC::None));
-  Inst.addOperand(MCOperand::createReg(0));
-  Inst.addOperand(MCOperand::createImm(0));
-
   return S;
 }
 
@@ -6073,9 +6046,23 @@ DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CS) const {
+  DecodeStatus S;
   if (STI.hasFeature(ARM::ModeThumb))
-    return getThumbInstruction(MI, Size, Bytes, Address, CS);
-  return getARMInstruction(MI, Size, Bytes, Address, CS);
+    S = getThumbInstruction(MI, Size, Bytes, Address, CS);
+  else
+    S = getARMInstruction(MI, Size, Bytes, Address, CS);
+  if (S == DecodeStatus::Fail)
+    return S;
+
+  // Verify that the decoded instruction has the correct number of operands.
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  if (!MCID.isVariadic() && MI.getNumOperands() != MCID.getNumOperands()) {
+    reportFatalInternalError(MCII->getName(MI.getOpcode()) + ": expected " +
+                             Twine(MCID.getNumOperands()) + " operands, got " +
+                             Twine(MI.getNumOperands()) + "\n");
+  }
+
+  return S;
 }
 
 DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
@@ -6114,7 +6101,7 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
   const DecodeTable Tables[] = {
       {DecoderTableVFP32, false},      {DecoderTableVFPV832, false},
       {DecoderTableNEONData32, true},  {DecoderTableNEONLoadStore32, true},
-      {DecoderTableNEONDup32, true},   {DecoderTablev8NEON32, false},
+      {DecoderTableNEONDup32, false},  {DecoderTablev8NEON32, false},
       {DecoderTablev8Crypto32, false},
   };
 
@@ -6124,8 +6111,10 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
       Size = 4;
       // Add a fake predicate operand, because we share these instruction
       // definitions with Thumb2 where these instructions are predicable.
-      if (Table.DecodePred && !DecodePredicateOperand(MI, 0xE, Address, this))
-        return MCDisassembler::Fail;
+      if (Table.DecodePred && MCII->get(MI.getOpcode()).isPredicable()) {
+        MI.addOperand(MCOperand::createImm(ARMCC::AL));
+        MI.addOperand(MCOperand::createReg(ARM::NoRegister));
+      }
       return Result;
     }
   }
@@ -6159,8 +6148,6 @@ void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
       return;
     }
   }
-
-  MI.insert(I, MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
 }
 
 bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
@@ -6291,13 +6278,12 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
   return S;
 }
 
-// Thumb VFP instructions are a special case.  Because we share their
-// encodings between ARM and Thumb modes, and they are predicable in ARM
+// Thumb VFP and some NEON instructions are a special case. Because we share
+// their encodings between ARM and Thumb modes, and they are predicable in ARM
 // mode, the auto-generated decoder will give them an (incorrect)
 // predicate operand.  We need to rewrite these operands based on the IT
 // context as a post-pass.
-void ARMDisassembler::UpdateThumbVFPPredicate(
-  DecodeStatus &S, MCInst &MI) const {
+void ARMDisassembler::UpdateThumbPredicate(DecodeStatus &S, MCInst &MI) const {
   unsigned CC;
   CC = ITBlock.getITCC();
   if (CC == 0xF)
@@ -6444,7 +6430,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
         decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
-      UpdateThumbVFPPredicate(Result, MI);
+      UpdateThumbPredicate(Result, MI);
       return Result;
     }
   }
@@ -6461,7 +6447,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                                STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
-      Check(Result, AddThumbPredicate(MI));
+      UpdateThumbPredicate(Result, MI);
       return Result;
     }
   }
