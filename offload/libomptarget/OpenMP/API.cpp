@@ -197,7 +197,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
 }
 
 /// Check whether a pointer is accessible from a device.
-/// Returns true when accessibility is guaranteed otherwise returns false. 
+/// Returns true when accessibility is guaranteed otherwise returns false.
 EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
                                     int DeviceNum) {
   TIMESCOPE();
