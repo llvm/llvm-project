@@ -1890,9 +1890,9 @@ bool OmpAttributeVisitor::Pre(
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
-  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-  switch (beginDir.v) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+  switch (beginName.v) {
   case llvm::omp::Directive::OMPD_distribute:
   case llvm::omp::Directive::OMPD_distribute_parallel_do:
   case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
@@ -1930,21 +1930,23 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   case llvm::omp::Directive::OMPD_teams_loop:
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll:
-    PushContext(beginDir.source, beginDir.v);
+    PushContext(beginName.source, beginName.v);
     break;
   default:
     break;
   }
-  if (beginDir.v == llvm::omp::OMPD_master_taskloop ||
-      beginDir.v == llvm::omp::OMPD_master_taskloop_simd ||
-      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop ||
-      beginDir.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
-      beginDir.v == llvm::omp::Directive::OMPD_target_loop)
-    IssueNonConformanceWarning(beginDir.v, beginDir.source, 52);
+  if (beginName.v == llvm::omp::OMPD_master_taskloop ||
+      beginName.v == llvm::omp::OMPD_master_taskloop_simd ||
+      beginName.v == llvm::omp::OMPD_parallel_master_taskloop ||
+      beginName.v == llvm::omp::OMPD_parallel_master_taskloop_simd ||
+      beginName.v == llvm::omp::Directive::OMPD_target_loop) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    IssueNonConformanceWarning(beginName.v, beginName.source, version);
+  }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetNumAffectedLoopsFromLoopConstruct(x));
 
-  if (beginDir.v == llvm::omp::Directive::OMPD_do) {
+  if (beginName.v == llvm::omp::Directive::OMPD_do) {
     auto &optLoopCons = std::get<std::optional<parser::NestedConstruct>>(x.t);
     if (optLoopCons.has_value()) {
       if (const auto &doConstruct{
@@ -2094,8 +2096,7 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
     const parser::OpenMPLoopConstruct &x,
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
-  const auto &clauseList{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+  const auto &clauseList{x.BeginDir().Clauses()};
 
   CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
   CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
@@ -2228,15 +2229,14 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else if (const auto &loop{std::get_if<
+    } else if (const auto *loop{std::get_if<
                    common::Indirection<parser::OpenMPLoopConstruct>>(
                    innerMostNest)}) {
-      auto &beginDirective =
-          std::get<parser::OmpBeginLoopDirective>(loop->value().t);
-      auto &beginLoopDirective =
-          std::get<parser::OmpLoopDirective>(beginDirective.t);
-      if (beginLoopDirective.v != llvm::omp::Directive::OMPD_unroll &&
-          beginLoopDirective.v != llvm::omp::Directive::OMPD_tile) {
+      const parser::OmpDirectiveSpecification &beginSpec{
+          loop->value().BeginDir()};
+      const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+      if (beginName.v != llvm::omp::Directive::OMPD_unroll &&
+          beginName.v != llvm::omp::Directive::OMPD_tile) {
         context_.Say(GetContext().directiveSource,
             "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
             parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(

@@ -372,7 +372,7 @@ struct LowerGpuOpsToNVVMOpsPass final
       populateGpuRewritePatterns(patterns);
       // Transform N-D vector.from_elements to 1-D vector.from_elements before
       // conversion.
-      vector::populateVectorFromElementsLoweringPatterns(patterns);
+      vector::populateVectorFromElementsUnrollPatterns(patterns);
       if (failed(applyPatternsGreedily(m, std::move(patterns))))
         return signalPassFailure();
     }
