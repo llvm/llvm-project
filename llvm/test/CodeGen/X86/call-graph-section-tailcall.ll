@@ -29,6 +29,8 @@ declare !type !2 i32 @bar(i8 signext)
 
 !0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
 !1 = !{!2}
-; CHECK-DAG: 5486bc59 814b8e30
+;; Verify that the type id 0x308e4b8159bc8654 is in section.
+; CHECK:      5486bc 59814b8e
+; CHECK-NEXT: 0x00000020 30000000 00000000 00000000 00000000
 !2 = !{i64 0, !"_ZTSFicE.generalized"}
 !3 = !{i64 0, !"_ZTSFiiE.generalized"}

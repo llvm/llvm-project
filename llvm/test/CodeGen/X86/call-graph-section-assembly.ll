@@ -34,10 +34,10 @@ entry:
 
 ; CHECK: .section .callgraph,"o",@progbits,.text
 
-; CHECK-NEXT: .quad   0
+; CHECK-NEXT: .long   0
 ; CHECK-NEXT: .quad   [[LABEL_FUNC]]
-; CHECK-NEXT: .quad   1
-; CHECK-NEXT: .quad   3
+; CHECK-NEXT: .byte   1
+; CHECK-NEXT: .long   3
 !0 = !{!1}
 !1 = !{i64 0, !"_ZTSFvE.generalized"}
 ;; Test for MD5 hash of _ZTSFvE.generalized and the generated temporary callsite label.
