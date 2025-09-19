@@ -1518,9 +1518,7 @@ public:
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
-    ProcessMapperSpecifier(std::get<parser::OmpMapperSpecifier>(x.t),
-        std::get<parser::OmpClauseList>(x.t));
-    return false;
+    return true;
   }
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
@@ -1686,6 +1684,7 @@ public:
       PopScope();
     }
   }
+  bool Pre(const parser::OmpMapperSpecifier &x) { return false; }
   bool Pre(const parser::OmpDirectiveSpecification &x);
   void Post(const parser::OmpDirectiveSpecification &) {
     messageHandler().set_currStmtSource(std::nullopt);

@@ -43,7 +43,6 @@ MAKE_CONSTR_ID(OmpErrorDirective, D::OMPD_error);
 MAKE_CONSTR_ID(OmpMetadirectiveDirective, D::OMPD_metadirective);
 MAKE_CONSTR_ID(OpenMPDeclarativeAllocate, D::OMPD_allocate);
 MAKE_CONSTR_ID(OpenMPDeclarativeAssumes, D::OMPD_assumes);
-MAKE_CONSTR_ID(OpenMPDeclareMapperConstruct, D::OMPD_declare_mapper);
 MAKE_CONSTR_ID(OpenMPDeclareReductionConstruct, D::OMPD_declare_reduction);
 MAKE_CONSTR_ID(OpenMPDeclareSimdConstruct, D::OMPD_declare_simd);
 MAKE_CONSTR_ID(OpenMPDeclareTargetConstruct, D::OMPD_declare_target);
@@ -105,7 +104,6 @@ struct DirectiveNameScope {
           std::is_same_v<T, OmpMetadirectiveDirective> ||
           std::is_same_v<T, OpenMPDeclarativeAllocate> ||
           std::is_same_v<T, OpenMPDeclarativeAssumes> ||
-          std::is_same_v<T, OpenMPDeclareMapperConstruct> ||
           std::is_same_v<T, OpenMPDeclareReductionConstruct> ||
           std::is_same_v<T, OpenMPDeclareSimdConstruct> ||
           std::is_same_v<T, OpenMPDeclareTargetConstruct> ||
