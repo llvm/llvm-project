@@ -175,9 +175,9 @@ public:
   /// parameter was substituted.
   TemplateArgument getArgumentPack() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID, ASTContext &Context);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
 
-  static void Profile(llvm::FoldingSetNodeID &ID, ASTContext &Context,
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       const TemplateArgument &ArgPack, Decl *AssociatedDecl,
                       unsigned Index, bool Final);
 };
