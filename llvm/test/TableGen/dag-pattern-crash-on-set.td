@@ -17,7 +17,7 @@ def LOAD : Instruction {
   let AsmString = "movimm $dst, $addr";
 }
 
-// CHECK: [[@LINE+1]]:5: error: In CrashPat: unknown node type 'set in input pattern
+// CHECK: [[@LINE+1]]:5: error: In CrashPat: unknown node type 'set' in input pattern
 def CrashPat : Pat <
   (set R0, (load GPR:$addr)),
   (LOAD $addr)
