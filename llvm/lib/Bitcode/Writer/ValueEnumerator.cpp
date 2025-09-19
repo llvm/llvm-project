@@ -495,6 +495,12 @@ ValueEnumerator::ValueEnumerator(const Module &M,
             EnumerateMetadata(&F, Op);
       }
   }
+  for (const GlobalIFunc &GIF : M.ifuncs()) {
+    MDs.clear();
+    GIF.getAllMetadata(MDs);
+    for (const auto &I : MDs)
+      EnumerateMetadata(nullptr, I.second);
+  }
 
   // Optimize constant ordering.
   OptimizeConstants(FirstConstant, Values.size());
