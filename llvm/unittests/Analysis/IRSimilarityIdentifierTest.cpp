@@ -19,13 +19,10 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace IRSimilarity;
-
-using testing::SizeIs;
 
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
@@ -51,6 +48,9 @@ void getSimilarities(
   IRSimilarityIdentifier Identifier(/*EnableBranchMatching = */false);
   SimilarityCandidates = Identifier.findSimilarity(M);
 }
+
+// TODO: All these tests could probably become IR LIT tests like
+// IROutliner/outlining-special-state.ll
 
 // Checks that different opcodes are mapped to different values
 TEST(IRInstructionMapper, OpcodeDifferentiation) {
@@ -731,162 +731,6 @@ TEST(IRInstructionMapper, StoreDifferentAtomic) {
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
   ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
-}
-
-// Checks that atomicrmw that have the different types are mapped to
-// different unsigned integers.
-TEST(IRInstructionMapper, AtomicRMWDifferentType) {
-  StringRef ModuleString = R"(
-                          define i32 @f(ptr %a, ptr %b) {
-                          bb0:
-                             %1 = atomicrmw add ptr %a, i32 1 acquire
-                             %2 = atomicrmw add ptr %b, i64 1 acquire
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_THAT(UnsignedVec, SizeIs(3));
-  EXPECT_NE(UnsignedVec[0], UnsignedVec[1]);
-}
-
-// Checks that atomicrmw that have the different aligns are mapped to different
-// unsigned integers.
-TEST(IRInstructionMapper, AtomicRMWDifferentAlign) {
-  StringRef ModuleString = R"(
-                          define i32 @f(ptr %a, ptr %b) {
-                          bb0:
-                             %1 = atomicrmw add ptr %a, i32 1 acquire, align 4
-                             %2 = atomicrmw add ptr %b, i32 1 acquire, align 8
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_THAT(UnsignedVec, SizeIs(3));
-  EXPECT_NE(UnsignedVec[0], UnsignedVec[1]);
-}
-
-// Checks that atomicrmw that have the different volatile settings are mapped to
-// different unsigned integers.
-TEST(IRInstructionMapper, AtomicRMWDifferentVolatile) {
-  StringRef ModuleString = R"(
-                          define i32 @f(ptr %a, ptr %b) {
-                          bb0:
-                             %1 = atomicrmw volatile add ptr %a, i32 1 acquire
-                             %2 = atomicrmw add ptr %b, i32 1 acquire
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_THAT(UnsignedVec, SizeIs(3));
-  EXPECT_NE(UnsignedVec[0], UnsignedVec[1]);
-}
-
-// Checks that cmpxchg that have the different types are mapped to
-// different unsigned integers.
-TEST(IRInstructionMapper, AtomicCmpXchgDifferentType) {
-  StringRef ModuleString = R"(
-                          define i32 @f(ptr %a, ptr %b) {
-                          bb0:
-                             %1 = cmpxchg ptr %a, i32 0, i32 1 monotonic monotonic
-                             %2 = cmpxchg ptr %b, i64 0, i64 1 monotonic monotonic
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_THAT(UnsignedVec, SizeIs(3));
-  EXPECT_NE(UnsignedVec[0], UnsignedVec[1]);
-}
-
-// Checks that cmpxchg that have the different aligns are mapped to different
-// unsigned integers.
-TEST(IRInstructionMapper, AtomicCmpXchgDifferentAlign) {
-  StringRef ModuleString = R"(
-                          define i32 @f(ptr %a, ptr %b) {
-                          bb0:
-                             %1 = cmpxchg ptr %a, i32 0, i32 1 monotonic monotonic, align 4
-                             %2 = cmpxchg ptr %b, i32 0, i32 1 monotonic monotonic, align 8
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_THAT(UnsignedVec, SizeIs(3));
-  EXPECT_NE(UnsignedVec[0], UnsignedVec[1]);
-}
-
-// Checks that cmpxchg that have the different volatile settings are mapped to
-// different unsigned integers.
-TEST(IRInstructionMapper, AtomicCmpXchgDifferentVolatile) {
-  StringRef ModuleString = R"(
-                          define i32 @f(ptr %a, ptr %b) {
-                          bb0:
-                             %1 = cmpxchg volatile ptr %a, i32 0, i32 1 monotonic monotonic
-                             %2 = cmpxchg ptr %b, i32 0, i32 1 monotonic monotonic
-                             ret i32 0
-                          })";
-  LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
-
-  std::vector<IRInstructionData *> InstrList;
-  std::vector<unsigned> UnsignedVec;
-
-  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
-  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
-  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
-  getVectors(*M, Mapper, InstrList, UnsignedVec);
-
-  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_THAT(UnsignedVec, SizeIs(3));
-  EXPECT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
 // Checks that the branch is mapped to legal when the option is set.
