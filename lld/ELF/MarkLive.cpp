@@ -533,8 +533,8 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
   std::error_code ec;
   raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.printGcSections, ec);
   if (ec) {
-    ErrAlways(ctx) << "--print-gc-sections=: cannot open "
-                   << ctx.arg.printGcSections << ": " << ec.message();
+    Err(ctx) << "cannot open --print-gc-sections= file "
+             << ctx.arg.printGcSections << ": " << ec.message();
     return;
   }
   for (InputSectionBase *sec : ctx.inputSections)

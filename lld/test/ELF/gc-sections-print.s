@@ -16,6 +16,10 @@
 
 # NOPRINT-NOT: removing
 
+# RUN: not ld.lld %t --gc-sections --print-gc-sections=/ -o %t2 2>&1 | FileCheck --check-prefix=ERR %s
+
+# ERR: error: cannot open --print-gc-sections= file /: {{.*}}
+
 .globl _start
 .protected a, x, y
 _start:
