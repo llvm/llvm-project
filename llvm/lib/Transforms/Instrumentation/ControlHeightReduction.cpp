@@ -1592,6 +1592,12 @@ static void insertTrivialPHIs(CHRScope *Scope,
         TrivialPHIs.insert(PN);
         CHR_DEBUG(dbgs() << "Insert phi " << *PN << "\n");
         for (Instruction *UI : Users) {
+          // Drop lifetime annotations as it is illegal for them to refer to a
+          // phi node.
+          if (UI->isLifetimeStartOrEnd()) {
+            UI->eraseFromParent();
+            continue;
+          }
           for (unsigned J = 0, NumOps = UI->getNumOperands(); J < NumOps; ++J) {
             if (UI->getOperand(J) == &I) {
               UI->setOperand(J, PN);
