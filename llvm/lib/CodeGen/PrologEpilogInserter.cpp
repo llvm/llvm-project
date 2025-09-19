@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PEI.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -79,6 +80,7 @@ namespace {
 
 class PEIImpl {
   RegScavenger *RS = nullptr;
+  ReachingDefInfo &RDI;
 
   // MinCSFrameIndex, MaxCSFrameIndex - Keeps the range of callee saved
   // stack frame indexes.
@@ -125,7 +127,8 @@ class PEIImpl {
   void insertZeroCallUsedRegs(MachineFunction &MF);
 
 public:
-  PEIImpl(MachineOptimizationRemarkEmitter *ORE) : ORE(ORE) {}
+  PEIImpl(ReachingDefInfo &RDI, MachineOptimizationRemarkEmitter *ORE)
+      : RDI(RDI), ORE(ORE) {}
   bool run(MachineFunction &MF);
 };
 
@@ -155,6 +158,7 @@ INITIALIZE_PASS_BEGIN(PEILegacy, DEBUG_TYPE, "Prologue/Epilogue Insertion",
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(PEILegacy, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
                     false)
@@ -171,6 +175,7 @@ void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<ReachingDefInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -361,7 +366,8 @@ bool PEIImpl::run(MachineFunction &MF) {
 bool PEILegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineOptimizationRemarkEmitter *ORE =
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  return PEIImpl(ORE).run(MF);
+  auto &RDI = getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
+  return PEIImpl(RDI, ORE).run(MF);
 }
 
 PreservedAnalyses
@@ -369,7 +375,8 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
   MachineOptimizationRemarkEmitter &ORE =
       MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
-  if (!PEIImpl(&ORE).run(MF))
+  auto &RDI = MFAM.getResult<ReachingDefAnalysis>(MF);
+  if (!PEIImpl(RDI, &ORE).run(MF))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()
@@ -1187,6 +1194,11 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
 /// prolog and epilog code to the function.
 void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+
+  if (MF.getSubtarget().savesCSRsEarly()) {
+    RDI.reset();
+    TFI.emitCFIsEarly(MF, RDI);
+  }
 
   // Add prologue to the function...
   for (MachineBasicBlock *SaveBlock : SaveBlocks)

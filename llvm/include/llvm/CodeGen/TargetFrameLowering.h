@@ -25,16 +25,17 @@ namespace llvm {
   class CalleeSavedInfo;
   class MachineFunction;
   class RegScavenger;
+  class ReachingDefInfo;
 
-namespace TargetStackID {
-enum Value {
-  Default = 0,
-  SGPRSpill = 1,
-  ScalableVector = 2,
-  WasmLocal = 3,
-  ScalablePredicateVector = 4,
-  NoAlloc = 255
-};
+  namespace TargetStackID {
+  enum Value {
+    Default = 0,
+    SGPRSpill = 1,
+    ScalableVector = 2,
+    WasmLocal = 3,
+    ScalablePredicateVector = 4,
+    NoAlloc = 255
+  };
 }
 
 /// Information about stack frame layout on the target.  It holds the direction
@@ -211,6 +212,12 @@ public:
   /// Returns true if the target can safely skip saving callee-saved registers
   /// for noreturn nounwind functions.
   virtual bool enableCalleeSaveSkip(const MachineFunction &MF) const;
+
+  /// If savesCSRsEarly is true, we don't really know where the CSRs are
+  /// saved. This function calculates where each CSR is at every point in the
+  /// function and inserts necessary CFIs. It has to run before frame indicies
+  /// are resolved.
+  virtual void emitCFIsEarly(MachineFunction &MF, ReachingDefInfo &RDA) const {}
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
