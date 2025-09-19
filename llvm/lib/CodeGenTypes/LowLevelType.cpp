@@ -22,7 +22,7 @@ static std::optional<LLT::FPVariant> deriveFPInfo(MVT VT) {
 
   switch (VT.getScalarType().SimpleTy) {
   case MVT::bf16:
-    return LLT::FPVariant::BRAIN_FLOAT;
+    return LLT::FPVariant::BF16;
   case MVT::f80:
     return LLT::FPVariant::EXTENDED_FP80;
   case MVT::ppcf128:

@@ -417,8 +417,12 @@ public:
   /// amounts, returns MVT::i32.
   EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL) const;
 
-  virtual LLT getLLTForType(Type &Ty, const DataLayout &DL) const;
-  virtual LLT getLLTForMVT(MVT Ty) const;
+  /// Returns LLT for given Type, taking into account
+  /// TargetOptions::EnableGlobalISelExtendedLLT.
+  LLT getLLTForType(Type &Ty, const DataLayout &DL) const;
+  /// Returns LLT for given MVT, taking into account
+  /// TargetOptions::EnableGlobalISelExtendedLLT.
+  LLT getLLTForMVT(MVT Ty) const;
 
   /// Return the preferred type to use for a shift opcode, given the shifted
   /// amount type is \p ShiftValueTy.

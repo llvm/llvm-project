@@ -1971,7 +1971,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     if (Token.range().starts_with("f"))
       FPVariant = LLT::FPVariant::IEEE_FLOAT;
     else if (Token.range().starts_with("bf"))
-      FPVariant = LLT::FPVariant::BRAIN_FLOAT;
+      FPVariant = LLT::FPVariant::BF16;
     else
       return error("unknown floating point type identifier");
 
@@ -2053,7 +2053,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     auto ScalarSize = APSInt(VectorTyDigits).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
       return error("invalid size for bfloat element in vector");
-    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::BRAIN_FLOAT);
+    Ty = LLT::floatingPoint(ScalarSize, LLT::FPVariant::BF16);
   } else
     return GetError();
   lex();

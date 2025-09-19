@@ -3723,9 +3723,8 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
 }
 
 bool IRTranslator::mayTranslateUserTypes(const User &U) const {
-  if (TLI->getTargetMachine().Options.EnableGlobalISelExtendedLLT) {
+  if (TLI->getTargetMachine().Options.EnableGlobalISelExtendedLLT)
     return true;
-  }
 
   // BF16 cannot currently be represented by default LLT, to avoid miscompiles
   // we prevent any instructions using them in targets with disabled

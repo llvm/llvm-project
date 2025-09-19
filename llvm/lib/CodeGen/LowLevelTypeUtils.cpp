@@ -67,9 +67,8 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL, bool AllowExtendedLLT) {
       llvm_unreachable("Unhandled LLVM IR floating point type");
     }
 
-    if (Ty.isIntegerTy()) {
+    if (Ty.isIntegerTy())
       return LLT::integer(SizeInBits);
-    }
 
     return LLT::scalar(SizeInBits);
   }
@@ -81,10 +80,9 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL, bool AllowExtendedLLT) {
 }
 
 MVT llvm::getMVTForLLT(LLT Ty) {
-  if (Ty.isVector()) {
+  if (Ty.isVector())
     return MVT::getVectorVT(getMVTForLLT(Ty.getElementType()),
                             Ty.getElementCount());
-  }
 
   if (Ty.isFloat()) {
     if (Ty == LLT::bfloat16())

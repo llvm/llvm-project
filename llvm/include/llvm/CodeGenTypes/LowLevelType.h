@@ -40,26 +40,26 @@ class raw_ostream;
 class LLT {
 public:
   enum class FPVariant {
-    IEEE_FLOAT = 0x0,
-    BRAIN_FLOAT = 0x1,     // BRAIN_FLOAT
-    PPC128_FLOAT = 0x2,    // PPC128_FLOAT
-    EXTENDED_FP80 = 0x3,   // FP80
-    TENSOR_FLOAT32 = 0x4,  // TENSOR_FLOAT32
-    VARIANT_FLOAT_5 = 0x5, // UNASSIGNED
-    VARIANT_FLOAT_6 = 0x6, // UNASSIGNED
-    VARIANT_FLOAT_7 = 0x7, // UNASSIGNED
+    IEEE_FLOAT,
+    BF16,            // BF16
+    TENSOR_FLOAT32,  // TENSOR_FLOAT32
+    EXTENDED_FP80,   // FP80
+    PPC128_FLOAT,    // PPC128_FLOAT
+    VARIANT_FLOAT_5, // UNASSIGNED
+    VARIANT_FLOAT_6, // UNASSIGNED
+    VARIANT_FLOAT_7, // UNASSIGNED
   };
 
-  enum class Kind : uint64_t {
-    INVALID = 0b0000,
-    ANY_SCALAR = 0b0001,
-    INTEGER = 0b0010,
-    FLOAT = 0b0011,
-    POINTER = 0b0100,
-    VECTOR_ANY = 0b0101,
-    VECTOR_INTEGER = 0b0110,
-    VECTOR_FLOAT = 0b0111,
-    VECTOR_POINTER = 0b1000,
+  enum class Kind : uint8_t {
+    INVALID,
+    ANY_SCALAR,
+    INTEGER,
+    FLOAT,
+    POINTER,
+    VECTOR_ANY,
+    VECTOR_INTEGER,
+    VECTOR_FLOAT,
+    VECTOR_POINTER,
   };
 
   constexpr static Kind toVector(Kind Ty) {
@@ -136,15 +136,9 @@ public:
                ScalarTy.isFloat() ? ScalarTy.getFPVariant()
                                   : static_cast<FPVariant>(0)};
   }
-  // Get a 8-bit brain float value.
-  static constexpr LLT bfloat8() {
-    return floatingPoint(8, FPVariant::BRAIN_FLOAT);
-  }
 
-  // Get a 16-bit brain float value.
-  static constexpr LLT bfloat16() {
-    return floatingPoint(16, FPVariant::BRAIN_FLOAT);
-  }
+  // Get a bfloat16 value.
+  static constexpr LLT bfloat16() { return floatingPoint(16, FPVariant::BF16); }
 
   /// Get a 16-bit IEEE half value.
   static constexpr LLT float16() {
@@ -231,7 +225,7 @@ public:
   constexpr bool isScalar(unsigned Size) const {
     return isScalar() && getScalarSizeInBits() == Size;
   }
-  constexpr bool isFloat() const { return isValid() && Info == Kind::FLOAT; }
+  constexpr bool isFloat() const { return Info == Kind::FLOAT; }
   constexpr bool isFloat(unsigned Size) const {
     return isFloat() && getScalarSizeInBits() == Size;
   }
@@ -244,14 +238,12 @@ public:
   constexpr bool isVariantFloat(unsigned Size, FPVariant Variant) const {
     return isVariantFloat(Variant) && getScalarSizeInBits() == Size;
   }
-  constexpr bool isFloatVector() const {
-    return isVector() && Info == Kind::VECTOR_FLOAT;
-  }
+  constexpr bool isFloatVector() const { return Info == Kind::VECTOR_FLOAT; }
   constexpr bool isIEEEFloat(unsigned Size) const {
     return isVariantFloat(Size, FPVariant::IEEE_FLOAT);
   }
   constexpr bool isBFloat(unsigned Size) const {
-    return isVariantFloat(Size, FPVariant::BRAIN_FLOAT);
+    return isVariantFloat(Size, FPVariant::BF16);
   }
   constexpr bool isX86FP80() const {
     return isVariantFloat(80, FPVariant::EXTENDED_FP80);
@@ -262,31 +254,22 @@ public:
   constexpr bool isToken() const {
     return Info == Kind::ANY_SCALAR && RawData == 0;
   }
-  constexpr bool isAnyScalar() const {
-    return isValid() && Info == Kind::ANY_SCALAR;
-  }
-  constexpr bool isVectorAny() const {
-    return isVector() && Info == Kind::VECTOR_ANY;
-  }
-  constexpr bool isInteger() const {
-    return isValid() && Info == Kind::INTEGER;
-  }
+  constexpr bool isAnyScalar() const { return Info == Kind::ANY_SCALAR; }
+  constexpr bool isVectorAny() const { return Info == Kind::VECTOR_ANY; }
+  constexpr bool isInteger() const { return Info == Kind::INTEGER; }
   constexpr bool isInteger(unsigned Size) const {
     return isInteger() && getScalarSizeInBits() == Size;
   }
   constexpr bool isIntegerVector() const {
-    return isVector() && Info == Kind::VECTOR_INTEGER;
+    return Info == Kind::VECTOR_INTEGER;
   }
   constexpr bool isVector() const {
-    return isValid() &&
-           (Info == Kind::VECTOR_ANY || Info == Kind::VECTOR_INTEGER ||
-            Info == Kind::VECTOR_FLOAT || Info == Kind::VECTOR_POINTER);
+    return Info == Kind::VECTOR_ANY || Info == Kind::VECTOR_INTEGER ||
+           Info == Kind::VECTOR_FLOAT || Info == Kind::VECTOR_POINTER;
   }
-  constexpr bool isPointer() const {
-    return isValid() && Info == Kind::POINTER;
-  }
+  constexpr bool isPointer() const { return Info == Kind::POINTER; }
   constexpr bool isPointerVector() const {
-    return isVector() && Info == Kind::VECTOR_POINTER;
+    return Info == Kind::VECTOR_POINTER;
   }
   constexpr bool isPointerOrPointerVector() const {
     return isPointer() || isPointerVector();
@@ -469,13 +452,13 @@ public:
 #endif
 
   constexpr bool operator==(const LLT &RHS) const {
-    if (isAnyScalar() || RHS.isAnyScalar()) {
+    if (isAnyScalar() || RHS.isAnyScalar())
       return isScalar() == RHS.isScalar() && RawData == RHS.RawData;
-    }
-    if (isVector() && RHS.isVector()) {
+
+    if (isVector() && RHS.isVector())
       return getElementType() == RHS.getElementType() &&
              getElementCount() == RHS.getElementCount();
-    }
+
     return Info == RHS.Info && RawData == RHS.RawData;
   }
 
@@ -488,7 +471,7 @@ private:
   /// LLT is packed into 64 bits as follows:
   /// Info : 4
   /// RawData : 60
-  /// with 61 bits of RawData remaining for Kind-specific data, packed in
+  /// with 60 bits of RawData remaining for Kind-specific data, packed in
   /// bitfields as described below. As there isn't a simple portable way to pack
   /// bits into bitfields, here the different fields in the packed structure is
   /// described in static const *Field variables. Each of these variables
@@ -509,38 +492,52 @@ private:
                                             ###                             (6)
                                                                       %%%%  (7)
 
-  (1) ScalarSize  (2) PointerSize  (3) PointerAddressSpace
-  (4) VectorElements  (5) VectorScalable  (6) FPVariant  (7) Kind
+  (1) ScalarSize:          [63:32]
+  (2) PointerSize:         [63:48]
+  (3) PointerAddressSpace: [47:24]
+  (4) VectorElements:      [23:8]
+  (5) VectorScalable:      [4:4]
+  (6) FPVariant:           [26:24]
+  (7) Kind:                [3:0]
 
   */
-  typedef int BitFieldInfo[2];
-  ///
-  /// This is how the bitfields are packed per Kind:
+
+  /// This is how the LLT are packed per Kind:
   /// * Invalid:
-  ///   gets encoded as RawData == 0, as that is an invalid encoding, since for
-  ///   valid encodings, SizeInBits/SizeOfElement must be larger than 0.
+  ///   Info: [3:0] = 0
+  ///   RawData: [63:4] = 0;
+  ///
   /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
-  ///   SizeInBits: 32;
-  ///   FPInfoField: 3;
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
-  static const constexpr BitFieldInfo FPFieldInfo{3, 20};
+  ///   Info: [3:0];
+  ///   FPVariant: [26:24];
+  ///   SizeOfElement: [63:32];
+  ///
   /// * Pointer (isPointer == 1 && isVector == 0):
-  ///   SizeInBits: 16;
-  ///   AddressSpace: 24;
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 20};
+  ///   Info: [3:0];
+  ///   AddressSpace: [47:24];
+  ///   SizeInBits: [63:48];
+  ///
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
-  ///   NumElements: 16;
-  ///   SizeOfElement: 32;
-  ///   FPInfoField: 3;
-  ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
-  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
+  ///   Info: [3:0]
+  ///   Scalable: [4:4];
+  ///   VectorElements: [23:8];
+  ///   FPVariant: [26:24];
+  ///   SizeOfElement: [63:32];
+  ///
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
-  ///   NumElements: 16;
-  ///   SizeOfElement: 16;
-  ///   AddressSpace: 24;
-  ///   Scalable: 1;
+  ///   Scalable: [4:4];
+  ///   VectorElements: [23:8];
+  ///   AddressSpace: [47:24];
+  ///   SizeInBits: [63:48];
+
+  /// BitFieldInfo: {Size, Offset}
+  typedef int BitFieldInfo[2];
+  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
+  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
+  static const constexpr BitFieldInfo FPFieldInfo{3, 20};
+  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 20};
+  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
+  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
 
   Kind Info : 4;
   uint64_t RawData : 60;
