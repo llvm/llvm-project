@@ -18,8 +18,7 @@ write_cmake_config("clang-tidy-config") {
     values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=" ]
   }
 
-  # FIXME: Add a setting? Tests seem to fail when it's not set though:
-  # https://github.com/llvm/llvm-project/pull/131804#issuecomment-3312465207
+  # FIXME: Add option for this?
   values += [ "CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS=1" ]
 
   # Let targets depending on this find the generated file.
