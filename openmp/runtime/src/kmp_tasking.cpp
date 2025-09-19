@@ -1394,6 +1394,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   taskdata->td_flags.onced = 0;
   taskdata->is_taskgraph = 0;
   taskdata->tdg = nullptr;
+  taskdata->td_tdg_node_info = nullptr;
 #endif
   KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
   // start at one because counts current task and children
@@ -1833,6 +1834,8 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
       tdg->record_map[new_taskdata->td_tdg_task_id].task = new_task;
       tdg->record_map[new_taskdata->td_tdg_task_id].parent_task =
           new_taskdata->td_parent;
+      new_taskdata->td_tdg_node_info =
+          &tdg->record_map[new_taskdata->td_tdg_task_id];
       KMP_ATOMIC_INC(&tdg->num_tasks);
       __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
