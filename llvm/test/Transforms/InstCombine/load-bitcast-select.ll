@@ -20,7 +20,8 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw float, ptr @b, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[DOTV:%.*]] = call float @llvm.maxnum.f32(float [[TMP2]], float [[TMP1]])
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast olt float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[CMP_I]], float [[TMP2]], float [[TMP1]]
 ; CHECK-NEXT:    store float [[DOTV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
@@ -78,7 +79,8 @@ define void @bitcasted_minmax_with_select_of_pointers(ptr %loadaddr1, ptr %loada
 ; CHECK-LABEL: @bitcasted_minmax_with_select_of_pointers(
 ; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[LOADADDR1:%.*]], align 4
 ; CHECK-NEXT:    [[LD2:%.*]] = load float, ptr [[LOADADDR2:%.*]], align 4
-; CHECK-NEXT:    [[LD_V:%.*]] = call float @llvm.maxnum.f32(float [[LD1]], float [[LD2]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[LD1]], [[LD2]]
+; CHECK-NEXT:    [[LD_V:%.*]] = select i1 [[COND]], float [[LD1]], float [[LD2]]
 ; CHECK-NEXT:    store float [[LD_V]], ptr [[STOREADDR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

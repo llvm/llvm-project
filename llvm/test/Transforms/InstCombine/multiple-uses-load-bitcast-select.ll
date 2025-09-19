@@ -5,7 +5,8 @@ define void @PR35618(ptr %st1, ptr %st2, ptr %y1, ptr %z1) {
 ; CHECK-LABEL: @PR35618(
 ; CHECK-NEXT:    [[LD1:%.*]] = load double, ptr [[Y1:%.*]], align 8
 ; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[Z1:%.*]], align 8
-; CHECK-NEXT:    [[TMP12_V:%.*]] = call double @llvm.minnum.f64(double [[LD1]], double [[LD2]])
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp olt double [[LD1]], [[LD2]]
+; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP]], double [[LD1]], double [[LD2]]
 ; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST1:%.*]], align 8
 ; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST2:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -24,7 +25,8 @@ define void @PR35618_asan(ptr %st1, ptr %st2, ptr %y1, ptr %z1) sanitize_address
 ; CHECK-LABEL: @PR35618_asan(
 ; CHECK-NEXT:    [[LD1:%.*]] = load double, ptr [[Y1:%.*]], align 8
 ; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[Z1:%.*]], align 8
-; CHECK-NEXT:    [[TMP12_V:%.*]] = call double @llvm.minnum.f64(double [[LD1]], double [[LD2]])
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp olt double [[LD1]], [[LD2]]
+; CHECK-NEXT:    [[TMP12_V:%.*]] = select i1 [[TMP]], double [[LD1]], double [[LD2]]
 ; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST1:%.*]], align 8
 ; CHECK-NEXT:    store double [[TMP12_V]], ptr [[ST2:%.*]], align 8
 ; CHECK-NEXT:    ret void

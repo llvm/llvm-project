@@ -202,8 +202,10 @@ define <2 x i1> @test_fcmp_select_const_const_vec(<2 x double> %x) {
 
 define double @test_fcmp_select_clamp(double %x) {
 ; CHECK-LABEL: @test_fcmp_select_clamp(
-; CHECK-NEXT:    [[SEL1:%.*]] = call double @llvm.minnum.f64(double [[X:%.*]], double 9.000000e-01)
-; CHECK-NEXT:    [[SEL2:%.*]] = call double @llvm.maxnum.f64(double [[SEL1]], double 5.000000e-01)
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[X:%.*]], 9.000000e-01
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], double 9.000000e-01, double [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt double [[SEL1]], 5.000000e-01
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], double 5.000000e-01, double [[SEL1]]
 ; CHECK-NEXT:    ret double [[SEL2]]
 ;
   %cmp1 = fcmp ogt double %x, 9.000000e-01
@@ -282,7 +284,8 @@ define i1 @test_fcmp_ord_select_fcmp_oeq_var_const(double %x) {
 
 define float @test_select_nnan_nsz_fcmp_olt(float %x) {
 ; CHECK-LABEL: @test_select_nnan_nsz_fcmp_olt(
-; CHECK-NEXT:    [[SEL1:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float -0.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %cmp = fcmp olt float %x, 0.000000e+00

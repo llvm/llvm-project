@@ -14,7 +14,8 @@ define float @select_max_ugt(float %a, float %b) {
 
 define float @select_max_uge(float %a, float %b) {
 ; CHECK-LABEL: @select_max_uge(
-; CHECK-NEXT:    [[SEL:%.*]] = call nnan ninf float @llvm.maxnum.f32(float [[B:%.*]], float [[A:%.*]])
+; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan ninf i1 [[CMP_INV]], float [[B]], float [[A]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp nnan uge float %a, %b
@@ -76,7 +77,8 @@ define float @select_min_ult(float %a, float %b) {
 
 define float @select_min_ule(float %a, float %b) {
 ; CHECK-LABEL: @select_min_ule(
-; CHECK-NEXT:    [[SEL:%.*]] = call ninf float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
+; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp arcp ogt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select ninf i1 [[CMP_INV]], float [[B]], float [[A]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp arcp ule float %a, %b
