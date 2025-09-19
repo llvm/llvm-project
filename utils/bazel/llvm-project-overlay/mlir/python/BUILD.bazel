@@ -538,6 +538,38 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# IRDL dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "IRDLOpsPyGen",
+    tbl_outs = {
+        "mlir/dialects/_irdl_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=irdl",
+        ],
+        "mlir/dialects/_irdl_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=irdl",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/IRDLOps.td",
+    deps = [
+        "//mlir:IRDLTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "IRDLPyFiles",
+    srcs = [
+        "mlir/dialects/irdl.py",
+        ":IRDLOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Math dialect.
 ##---------------------------------------------------------------------------##
 
