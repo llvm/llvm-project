@@ -16252,6 +16252,10 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     }
 
     const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+      if (const SCEV *S = Map.lookup(Expr))
+        return S;
+
+
       // Helper to check if S is a subtraction (A - B) where A != B, and if so,
       // return UMax(S, 1).
       auto RewriteSubtraction = [&](const SCEV *S) -> const SCEV * {
@@ -16286,6 +16290,18 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
               ScalarEvolution::maskFlags(Expr->getNoWrapFlags(), FlagMask));
         if (const SCEV *S = Map.lookup(Add))
           return SE.getAddExpr(Expr->getOperand(0), S);
+
+        // For expressions of the form (Const + A), check if we have guard info
+        // for (Const + 1 + A), and rewrite to ((Const + 1 + A) - 1). This makes
+        // sure we don't loose information when rewriting expressions based on
+        // back-edge taken counts in some cases..
+        if (Expr->getNumOperands() == 2) {
+          auto *NewC =
+              SE.getAddExpr(Expr->getOperand(0), SE.getOne(Expr->getType()));
+          if (const SCEV *S =
+                  Map.lookup(SE.getAddExpr(NewC, Expr->getOperand(1))))
+            return SE.getMinusSCEV(S, SE.getOne(Expr->getType()));
+        }
       }
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
