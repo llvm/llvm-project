@@ -50,13 +50,6 @@ struct NormalizedConstraint {
 
   using OccurenceList = llvm::SmallBitVector;
 
-  friend bool
-  substituteParameterMappings(Sema &S, NormalizedConstraint &N,
-                              const MultiLevelTemplateArgumentList &MLTAL,
-                              const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                              TemplateParameterList *TemplateParams,
-                              const NamedDecl *D);
-
 protected:
   using ExprOrConcept =
       llvm::PointerUnion<const Expr *, const ConceptReference *>;

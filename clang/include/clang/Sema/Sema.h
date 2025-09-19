@@ -14860,8 +14860,6 @@ public:
       UnsubstitutedConstraintSatisfactionCache;
 
 private:
-  friend class CalculateConstraintSatisfaction;
-
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
   /// fact subsume the second's.
