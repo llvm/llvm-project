@@ -233,7 +233,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
-  a crash on ``sizeof`` of an array of template type.
+  a crash on ``sizeof`` of an array of dependent type.
 
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
