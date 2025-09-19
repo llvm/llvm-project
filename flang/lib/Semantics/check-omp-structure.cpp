@@ -679,10 +679,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(x.DirName().source, x.DirId());
     return false;
   }
-  bool Pre(const parser::OmpLoopDirective &x) {
-    checker_(x.source, x.v);
-    return false;
-  }
 
   bool Pre(const parser::OmpDirectiveSpecification &x) {
     auto &name = std::get<parser::OmpDirectiveName>(x.t);
