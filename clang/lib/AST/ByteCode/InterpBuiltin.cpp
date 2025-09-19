@@ -3001,6 +3001,7 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
     }
   }
   Dst.initializeAllElements();
+  return true;
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
