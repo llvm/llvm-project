@@ -1,5 +1,8 @@
 // RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 
+#map = affine_map<()[s0] -> (s0 floordiv 4)>
+#map1 = affine_map<()[s0] -> (s0 mod 4)>
+
 gpu.module @test_round_robin_assignment {
   // CHECK-LABEL: create_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
@@ -11,6 +14,30 @@ gpu.module @test_round_robin_assignment {
         -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
       gpu.return
     }
+
+  // CHECK-LABEL: create_nd_tdesc_with_shared_data
+  // CHECK-SAME: [[ARG_0:%.*]]: memref<256x128xf32>
+  gpu.func @create_nd_tdesc_with_shared_data(%src: memref<256x128xf32>) {
+    //CHECK: [[sgId:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[IdY:%.+]] = affine.apply #map()[[[sgId]]]
+    //CHECK: [[IdX:%.+]] = affine.apply #map1()[[[sgId]]]
+    //CHECK: [[C16:%.+]] = arith.constant 16 : index
+    //CHECK: [[LY:%.+]] = index.mul [[IdY]], [[C16]]
+    //CHECK: [[C64:%.+]] = arith.constant 64 : index
+    //CHECK: [[LX:%.+]] = index.mul [[IdX]], [[C64]]
+    //CHECK: [[C0:%.+]] = arith.constant 0 : index
+    //CHECK: [[C0_1:%.+]] = arith.constant 0 : index
+    //CHECK: [[ADDY:%.+]] = arith.addi [[LY]], [[C0]] : index
+    //CHECK: [[ADDX:%.+]] = arith.addi [[LX]], [[C0_1]] : index
+    //CHECK: [[C128:%.+]] = arith.constant 128 : index
+    //CHECK: [[offY:%.+]] = index.remu [[ADDY]], [[C128]]
+    //CHECK: [[C64_2:%.+]] = arith.constant 64 : index
+    //CHECK: [[offX:%.+]] = index.remu [[ADDX]], [[C64_2]]
+    //CHECK: xegpu.create_nd_tdesc [[ARG_0]][[[offY]], [[offX]]] : memref<256x128xf32> -> !xegpu.tensor_desc<16x64xf32>
+    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
+      -> !xegpu.tensor_desc<128x64xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64]>>
+    gpu.return
+  }
 
   // CHECK-LABEL: load_nd_tdesc
   // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>

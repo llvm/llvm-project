@@ -71,18 +71,17 @@ define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 ; CHECK-LABEL: test_vec(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<7>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_vec_param_0];
 ; CHECK-NEXT:    ld.param.v2.b8 {%rs3, %rs4}, [test_vec_param_1];
 ; CHECK-NEXT:    mov.b32 %r1, {%rs3, %rs4};
-; CHECK-NEXT:    and.b32 %r2, %r1, 16711935;
 ; CHECK-NEXT:    shr.u16 %rs5, %rs2, 5;
 ; CHECK-NEXT:    shr.u16 %rs6, %rs1, 5;
-; CHECK-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; CHECK-NEXT:    or.b32 %r4, %r3, %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    mov.b32 %r2, {%rs6, %rs5};
+; CHECK-NEXT:    or.b32 %r3, %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %ext = zext <2 x i8> %y to <2 x i16>
   %shl = shl <2 x i16> %ext, splat(i16 5)

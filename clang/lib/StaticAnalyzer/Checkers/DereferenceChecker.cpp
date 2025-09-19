@@ -48,7 +48,8 @@ class DereferenceChecker
 public:
   void checkLocation(SVal location, bool isLoad, const Stmt* S,
                      CheckerContext &C) const;
-  void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
 
   static void AddDerefSource(raw_ostream &os,
                              SmallVectorImpl<SourceRange> &Ranges,
@@ -309,7 +310,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
 }
 
 void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
-                                   CheckerContext &C) const {
+                                   bool AtDeclInit, CheckerContext &C) const {
   // If we're binding to a reference, check if the value is known to be null.
   if (V.isUndef())
     return;

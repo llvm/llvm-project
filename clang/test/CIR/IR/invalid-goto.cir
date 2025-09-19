@@ -1,0 +1,9 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error@+1 {{goto/label mismatch}}
+cir.func @bad_goto() -> () {
+  cir.goto "somewhere"
+^bb1:
+  cir.label "label"
+  cir.return
+}

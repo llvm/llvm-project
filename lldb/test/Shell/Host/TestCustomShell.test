@@ -6,7 +6,7 @@
 # XFAIL: system-openbsd
 
 # RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
-# RUN: SHELL=bogus not %lldb %t.out -b -o 'process launch -X 1 --' 2>&1 | FileCheck %s --check-prefix ERROR
+# RUN: env SHELL=bogus not %lldb %t.out -b -o 'process launch -X 1 --' 2>&1 | FileCheck %s --check-prefix ERROR
 # RUN: env -i ASAN_OPTIONS='detect_container_overflow=0' %lldb %t.out -b -o 'process launch -X 1 --' 2>&1 | FileCheck %s
 
 # ERROR: error: shell expansion failed

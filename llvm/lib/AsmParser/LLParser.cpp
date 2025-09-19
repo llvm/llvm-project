@@ -1258,6 +1258,9 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       GV->setPartition(Lex.getStrVal());
       if (parseToken(lltok::StringConstant, "expected partition string"))
         return true;
+    } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
+      if (parseGlobalObjectMetadataAttachment(*GI.get()))
+        return true;
     } else {
       return tokError("unknown alias or ifunc property!");
     }
@@ -4273,6 +4276,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint: {
     unsigned Opc = Lex.getUIntVal();
     Type *DestTy = nullptr;
@@ -7310,6 +7314,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
+  case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
   case lltok::kw_fptrunc:

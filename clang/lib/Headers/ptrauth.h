@@ -95,7 +95,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
    __ptrauth qualifier; the compiler will perform this check
    automatically. */
 
-#if __has_feature(ptrauth_intrinsics)
+#if __has_feature(ptrauth_intrinsics) || defined(__PTRAUTH__)
 
 /* Strip the signature from a value without authenticating it.
 
@@ -388,6 +388,6 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define __ptrauth_objc_isa_uintptr
 #define __ptrauth_objc_super_pointer
 
-#endif /* __has_feature(ptrauth_intrinsics) */
+#endif /* __has_feature(ptrauth_intrinsics) || defined(__PTRAUTH__) */
 
 #endif /* __PTRAUTH_H */

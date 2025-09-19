@@ -166,6 +166,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
+  case Intrinsic::vector_extract:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
@@ -200,6 +201,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::vp_llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::vector_extract:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -1123,7 +1125,7 @@ Constant *
 llvm::createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
                            const InterleaveGroup<Instruction> &Group) {
   // All 1's means mask is not needed.
-  if (Group.getNumMembers() == Group.getFactor())
+  if (Group.isFull())
     return nullptr;
 
   // TODO: support reversed access.
@@ -1669,7 +1671,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // load would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Case 2: If first and last members of the group don't wrap this implies
@@ -1704,7 +1706,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // store would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Interleave-store-group with gaps is implemented using masked wide store.

@@ -9,7 +9,7 @@
 #include <clc/integer/clc_clz.h>
 #include <clc/opencl/integer/clz.h>
 
-#define FUNCTION clz
+#define __CLC_FUNCTION clz
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/integer/gentype.inc>

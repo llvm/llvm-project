@@ -71,9 +71,15 @@ typedef enum {
 } hsa_isa_info_t;
 
 typedef enum {
+  HSA_MACHINE_MODEL_SMALL = 0,
+  HSA_MACHINE_MODEL_LARGE = 1
+} hsa_machine_model_t;
+
+typedef enum {
   HSA_AGENT_INFO_NAME = 0,
   HSA_AGENT_INFO_VENDOR_NAME = 1,
   HSA_AGENT_INFO_FEATURE = 2,
+  HSA_AGENT_INFO_MACHINE_MODEL = 3,
   HSA_AGENT_INFO_PROFILE = 4,
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   HSA_AGENT_INFO_WORKGROUP_MAX_DIM = 7,

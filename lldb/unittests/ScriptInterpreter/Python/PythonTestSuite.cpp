@@ -22,7 +22,7 @@ void PythonTestSuite::SetUp() {
   // test suite.
   Py_InitializeEx(0);
   m_gil_state = PyGILState_Ensure();
-  PyRun_SimpleString("import sys");
+  python::RunSimpleString("import sys");
 }
 
 void PythonTestSuite::TearDown() {

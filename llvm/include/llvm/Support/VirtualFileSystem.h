@@ -1069,7 +1069,7 @@ public:
   /// Redirect each of the remapped files from first to second.
   static std::unique_ptr<RedirectingFileSystem>
   create(ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-         bool UseExternalNames, FileSystem &ExternalFS);
+         bool UseExternalNames, IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
   bool exists(const Twine &Path) override;
@@ -1114,14 +1114,10 @@ protected:
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the
-/// \p YAMLFilePath. This is used by the module dependency collector to forward
+/// \p VFS. This is used by the module dependency collector to forward
 /// the entries into the reproducer output VFS YAML file.
-LLVM_ABI void collectVFSFromYAML(
-    std::unique_ptr<llvm::MemoryBuffer> Buffer,
-    llvm::SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
-    SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-    void *DiagContext = nullptr,
-    IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
+void collectVFSEntries(RedirectingFileSystem &VFS,
+                       SmallVectorImpl<YAMLVFSEntry> &CollectedEntries);
 
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;

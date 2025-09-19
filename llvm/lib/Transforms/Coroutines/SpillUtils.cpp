@@ -183,6 +183,16 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(I);
   }
 
+  void visitInsertElementInst(InsertElementInst &I) {
+    enqueueUsers(I);
+    handleAlias(I);
+  }
+
+  void visitInsertValueInst(InsertValueInst &I) {
+    enqueueUsers(I);
+    handleAlias(I);
+  }
+
   void visitStoreInst(StoreInst &SI) {
     // Regardless whether the alias of the alloca is the value operand or the
     // pointer operand, we need to assume the alloca is been written.
@@ -264,11 +274,6 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   }
 
   void visitIntrinsicInst(IntrinsicInst &II) {
-    // When we found the lifetime markers refers to a
-    // subrange of the original alloca, ignore the lifetime
-    // markers to avoid misleading the analysis.
-    if (!IsOffsetKnown || !Offset.isZero())
-      return Base::visitIntrinsicInst(II);
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);

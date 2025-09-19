@@ -187,7 +187,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
       Size = Data->Size;
     }
     outs() << format("Entry %x ", I) << formatAddr(Addr)
-           << format(" %08x %s\n", uint32_t(Size), DirName[I]);
+           << format(" %08x %s\n", Size, DirName[I]);
   }
 }
 

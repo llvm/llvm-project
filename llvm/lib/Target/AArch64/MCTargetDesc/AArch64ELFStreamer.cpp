@@ -35,7 +35,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/AArch64BuildAttributes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -418,7 +417,8 @@ private:
   }
 
   MCSymbol *emitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
     return Symbol;
   }
@@ -455,7 +455,7 @@ void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
 
 void AArch64TargetELFStreamer::emitDirectiveVariantPCS(MCSymbol *Symbol) {
   getStreamer().getAssembler().registerSymbol(*Symbol);
-  cast<MCSymbolELF>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
+  static_cast<MCSymbolELF *>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
 }
 
 void AArch64TargetELFStreamer::finish() {
@@ -541,7 +541,7 @@ void AArch64TargetELFStreamer::finish() {
 
   MCSectionELF *MemtagSec = nullptr;
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    auto &Sym = static_cast<const MCSymbolELF &>(Symbol);
     if (Sym.isMemtag()) {
       MemtagSec = Ctx.getELFSection(".memtag.globals.static",
                                     ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
@@ -556,7 +556,7 @@ void AArch64TargetELFStreamer::finish() {
   S.switchSection(MemtagSec);
   const auto *Zero = MCConstantExpr::create(0, Ctx);
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    auto &Sym = static_cast<const MCSymbolELF &>(Symbol);
     if (!Sym.isMemtag())
       continue;
     auto *SRE = MCSymbolRefExpr::create(&Sym, Ctx);

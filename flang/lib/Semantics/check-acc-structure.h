@@ -98,8 +98,14 @@ private:
 
   bool CheckAllowedModifier(llvm::acc::Clause clause);
   bool IsComputeConstruct(llvm::acc::Directive directive) const;
+  bool IsLoopConstruct(llvm::acc::Directive directive) const;
+  std::optional<llvm::acc::Directive> getParentComputeConstruct() const;
   bool IsInsideComputeConstruct() const;
+  bool IsInsideKernelsConstruct() const;
   void CheckNotInComputeConstruct();
+  std::optional<std::int64_t> getGangDimensionSize(
+      DirectiveContext &dirContext);
+  void CheckNotInSameOrSubLevelLoopConstruct();
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(

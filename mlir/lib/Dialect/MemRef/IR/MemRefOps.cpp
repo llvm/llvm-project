@@ -1549,14 +1549,6 @@ LogicalResult GlobalOp::verify() {
     }
   }
 
-  if (std::optional<uint64_t> alignAttr = getAlignment()) {
-    uint64_t alignment = *alignAttr;
-
-    if (!llvm::isPowerOf2_64(alignment))
-      return emitError() << "alignment attribute value " << alignment
-                         << " is not a power of 2";
-  }
-
   // TODO: verify visibility for declarations.
   return success();
 }
@@ -3558,6 +3550,7 @@ LogicalResult AtomicRMWOp::verify() {
   case arith::AtomicRMWKind::minu:
   case arith::AtomicRMWKind::muli:
   case arith::AtomicRMWKind::ori:
+  case arith::AtomicRMWKind::xori:
   case arith::AtomicRMWKind::andi:
     if (!llvm::isa<IntegerType>(getValue().getType()))
       return emitOpError() << "with kind '"

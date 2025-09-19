@@ -72,7 +72,7 @@ bool MachObjectWriter::doesSymbolRequireExternRelocation(const MCSymbol &S) {
 
   // References to weak definitions require external relocation entries; the
   // definition may not always be the one in the same object file.
-  if (cast<MCSymbolMachO>(S).isWeakDefinition())
+  if (static_cast<const MCSymbolMachO &>(S).isWeakDefinition())
     return true;
 
   // Otherwise, we can use an internal relocation.
@@ -383,15 +383,16 @@ const MCSymbol &MachObjectWriter::findAliasedSymbol(const MCSymbol &Sym) const {
 }
 
 void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
-  const MCSymbol *Symbol = MSD.Symbol;
-  const auto &Data = cast<MCSymbolMachO>(*Symbol);
-  const MCSymbol *AliasedSymbol = &findAliasedSymbol(*Symbol);
+  auto *Symbol = MSD.Symbol;
+  const auto &Data = static_cast<const MCSymbolMachO &>(*Symbol);
+  auto *AliasedSymbol =
+      static_cast<const MCSymbolMachO *>(&findAliasedSymbol(*Symbol));
   uint8_t SectionIndex = MSD.SectionIndex;
   uint8_t Type = 0;
   uint64_t Address = 0;
   bool IsAlias = Symbol != AliasedSymbol;
 
-  const MCSymbol &OrigSymbol = *Symbol;
+  const MCSymbolMachO &OrigSymbol = *Symbol;
   MachSymbolData *AliaseeInfo;
   if (IsAlias) {
     AliaseeInfo = findSymbolData(*AliasedSymbol);
@@ -441,9 +442,8 @@ void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
 
   // The Mach-O streamer uses the lowest 16-bits of the flags for the 'desc'
   // value.
-  bool EncodeAsAltEntry =
-    IsAlias && cast<MCSymbolMachO>(OrigSymbol).isAltEntry();
-  W.write<uint16_t>(cast<MCSymbolMachO>(Symbol)->getEncodedFlags(EncodeAsAltEntry));
+  bool EncodeAsAltEntry = IsAlias && OrigSymbol.isAltEntry();
+  W.write<uint16_t>(Symbol->getEncodedFlags(EncodeAsAltEntry));
   if (is64Bit())
     W.write<uint64_t>(Address);
   else
@@ -570,7 +570,8 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     //
     // FIXME: Do not hardcode.
     if (Asm.registerSymbol(*ISD.Symbol))
-      cast<MCSymbolMachO>(ISD.Symbol)->setReferenceTypeUndefinedLazy(true);
+      static_cast<MCSymbolMachO *>(ISD.Symbol)
+          ->setReferenceTypeUndefinedLazy(true);
   }
 }
 
@@ -588,7 +589,7 @@ void MachObjectWriter::computeSymbolTable(
 
   // Build the string table.
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
+    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
       continue;
 
     StringTable.add(Symbol.getName());
@@ -601,15 +602,16 @@ void MachObjectWriter::computeSymbolTable(
   // match 'as'. Even though it doesn't matter for correctness, this is
   // important for letting us diff .o files.
   for (const MCSymbol &Symbol : Asm.symbols()) {
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     // Ignore non-linker visible symbols.
-    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
+    if (!Sym.isSymbolLinkerVisible())
       continue;
 
-    if (!Symbol.isExternal() && !Symbol.isUndefined())
+    if (!Sym.isExternal() && !Sym.isUndefined())
       continue;
 
     MachSymbolData MSD;
-    MSD.Symbol = &Symbol;
+    MSD.Symbol = &Sym;
     MSD.StringIndex = StringTable.getOffset(Symbol.getName());
 
     if (Symbol.isUndefined()) {
@@ -627,15 +629,16 @@ void MachObjectWriter::computeSymbolTable(
 
   // Now add the data for local symbols.
   for (const MCSymbol &Symbol : Asm.symbols()) {
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     // Ignore non-linker visible symbols.
-    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
+    if (!Sym.isSymbolLinkerVisible())
       continue;
 
-    if (Symbol.isExternal() || Symbol.isUndefined())
+    if (Sym.isExternal() || Sym.isUndefined())
       continue;
 
     MachSymbolData MSD;
-    MSD.Symbol = &Symbol;
+    MSD.Symbol = &Sym;
     MSD.StringIndex = StringTable.getOffset(Symbol.getName());
 
     if (Symbol.isAbsolute()) {

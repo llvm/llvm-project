@@ -99,6 +99,9 @@ STATISTIC(SkippedCallsCloning,
           "Number of calls skipped during cloning due to unexpected operand");
 STATISTIC(MismatchedCloneAssignments,
           "Number of callsites assigned to call multiple non-matching clones");
+STATISTIC(TotalMergeInvokes, "Number of merge invocations for nodes");
+STATISTIC(TotalMergeIters, "Number of merge iterations for nodes");
+STATISTIC(MaxMergeIters, "Max merge iterations for nodes");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -108,6 +111,11 @@ static cl::opt<std::string> DotFilePathPrefix(
 static cl::opt<bool> ExportToDot("memprof-export-to-dot", cl::init(false),
                                  cl::Hidden,
                                  cl::desc("Export graph to dot files."));
+
+// TODO: Remove this option once new handling is validated more widely.
+static cl::opt<bool> DoMergeIteration(
+    "memprof-merge-iteration", cl::init(true), cl::Hidden,
+    cl::desc("Iteratively apply merging on a node to catch new callers"));
 
 // How much of the graph to export to dot.
 enum DotScope {
@@ -308,6 +316,9 @@ public:
 
   /// Node in the Callsite Context Graph
   struct ContextNode {
+    // Assigned to nodes as they are created, useful for debugging.
+    unsigned NodeId = 0;
+
     // Keep this for now since in the IR case where we have an Instruction* it
     // is not as immediately discoverable. Used for printing richer information
     // when dumping graph.
@@ -752,6 +763,7 @@ private:
     auto *NewNode = NodeOwner.back().get();
     if (F)
       NodeToCallingFunc[NewNode] = F;
+    NewNode->NodeId = NodeOwner.size();
     return NewNode;
   }
 
@@ -2969,6 +2981,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
       OS << "\n";
     }
   }
+  OS << "\tNodeId: " << NodeId << "\n";
   OS << "\tAllocTypes: " << getAllocTypeString(AllocTypes) << "\n";
   OS << "\tContextIds:";
   // Make a copy of the computed context ids that we can sort for stability.
@@ -2980,14 +2993,24 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   OS << "\n";
   OS << "\tCalleeEdges:\n";
   for (auto &Edge : CalleeEdges)
-    OS << "\t\t" << *Edge << "\n";
+    OS << "\t\t" << *Edge << " (Callee NodeId: " << Edge->Callee->NodeId
+       << ")\n";
   OS << "\tCallerEdges:\n";
   for (auto &Edge : CallerEdges)
-    OS << "\t\t" << *Edge << "\n";
+    OS << "\t\t" << *Edge << " (Caller NodeId: " << Edge->Caller->NodeId
+       << ")\n";
   if (!Clones.empty()) {
-    OS << "\tClones: " << llvm::interleaved(Clones) << "\n";
+    OS << "\tClones: ";
+    bool First = true;
+    for (auto *C : Clones) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << C << " NodeId: " << C->NodeId;
+    }
+    OS << "\n";
   } else if (CloneOf) {
-    OS << "\tClone of " << CloneOf << "\n";
+    OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
   }
 }
 
@@ -3141,7 +3164,7 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
   static std::string getNodeLabel(NodeRef Node, GraphType G) {
     std::string LabelString =
         (Twine("OrigId: ") + (Node->IsAllocation ? "Alloc" : "") +
-         Twine(Node->OrigStackOrAllocId))
+         Twine(Node->OrigStackOrAllocId) + " NodeId: " + Twine(Node->NodeId))
             .str();
     LabelString += "\n";
     if (Node->hasCall()) {
@@ -3957,6 +3980,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
+  removeAnyExistingAmbiguousAttribute(cast<CallBase>(Call.call()));
   auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
                                 "memprof", AllocTypeString);
   cast<CallBase>(Call.call())->addFnAttr(A);
@@ -3995,7 +4019,7 @@ IndexCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
 
 void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                                             FuncInfo CalleeFunc) {
-  auto *CurF = cast<CallBase>(CallerCall.call())->getCalledFunction();
+  auto *CurF = getCalleeFunc(CallerCall.call());
   auto NewCalleeCloneNo = CalleeFunc.cloneNo();
   if (isMemProfClone(*CurF)) {
     // If we already assigned this callsite to call a specific non-default
@@ -4191,15 +4215,35 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
   if (!Inserted.second)
     return;
 
-  // Make a copy since the recursive call may move a caller edge to a new
-  // callee, messing up the iterator.
-  auto CallerEdges = Node->CallerEdges;
-  for (auto CallerEdge : CallerEdges) {
-    // Skip any caller edge moved onto a different callee during recursion.
-    if (CallerEdge->Callee != Node)
-      continue;
-    mergeClones(CallerEdge->Caller, Visited, ContextIdToAllocationNode);
+  // Iteratively perform merging on this node to handle new caller nodes created
+  // during the recursive traversal. We could do something more elegant such as
+  // maintain a worklist, but this is a simple approach that doesn't cause a
+  // measureable compile time effect, as most nodes don't have many caller
+  // edges to check.
+  bool FoundUnvisited = true;
+  unsigned Iters = 0;
+  while (FoundUnvisited) {
+    Iters++;
+    FoundUnvisited = false;
+    // Make a copy since the recursive call may move a caller edge to a new
+    // callee, messing up the iterator.
+    auto CallerEdges = Node->CallerEdges;
+    for (auto CallerEdge : CallerEdges) {
+      // Skip any caller edge moved onto a different callee during recursion.
+      if (CallerEdge->Callee != Node)
+        continue;
+      // If we found an unvisited caller, note that we should check the caller
+      // edges again as mergeClones may add or change caller nodes.
+      if (DoMergeIteration && !Visited.contains(CallerEdge->Caller))
+        FoundUnvisited = true;
+      mergeClones(CallerEdge->Caller, Visited, ContextIdToAllocationNode);
+    }
   }
+
+  TotalMergeInvokes++;
+  TotalMergeIters += Iters;
+  if (Iters > MaxMergeIters)
+    MaxMergeIters = Iters;
 
   // Merge for this node after we handle its callers.
   mergeNodeCalleeClones(Node, Visited, ContextIdToAllocationNode);
@@ -5473,6 +5517,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               // clone J-1 (J==0 is the original clone and does not have a VMaps
               // entry).
               CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            removeAnyExistingAmbiguousAttribute(CBClone);
             CBClone->addFnAttr(A);
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "

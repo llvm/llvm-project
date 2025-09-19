@@ -1,4 +1,4 @@
-//===--- NoSuspendWithLockCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,9 +23,9 @@ void NoSuspendWithLockCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void NoSuspendWithLockCheck::registerMatchers(MatchFinder *Finder) {
-  auto LockType = elaboratedType(namesType(templateSpecializationType(
+  auto LockType = templateSpecializationType(
       hasDeclaration(namedDecl(matchers::matchesAnyListedName(
-          utils::options::parseStringList(LockGuards)))))));
+          utils::options::parseStringList(LockGuards)))));
 
   StatementMatcher Lock =
       declStmt(has(varDecl(hasType(LockType)).bind("lock-decl")))

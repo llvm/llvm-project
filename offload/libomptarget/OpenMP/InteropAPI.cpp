@@ -10,6 +10,7 @@
 #include "OpenMP/InternalTypes.h"
 #include "OpenMP/omp.h"
 
+#include "OffloadPolicy.h"
 #include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
@@ -56,22 +57,22 @@ void getTypeMismatch(omp_interop_property_t Property, int *Err) {
     *Err = getPropertyErrorType(Property);
 }
 
-const char *getVendorIdToStr(const omp_foreign_runtime_ids_t VendorId) {
-  switch (VendorId) {
-  case cuda:
-    return ("cuda");
-  case cuda_driver:
-    return ("cuda_driver");
-  case opencl:
-    return ("opencl");
-  case sycl:
-    return ("sycl");
-  case hip:
-    return ("hip");
-  case level_zero:
-    return ("level_zero");
-  }
-  return ("unknown");
+static const char *VendorStrTbl[] = {
+    "unknown", "amd",   "arm",  "bsc", "fujitsu", "gnu", "hpe",
+    "ibm",     "intel", "llvm", "nec", "nvidia",  "ti"};
+const char *getVendorIdToStr(const omp_vendor_id_t VendorId) {
+  if (VendorId < omp_vendor_unknown || VendorId >= omp_vendor_last)
+    return ("unknown");
+  return VendorStrTbl[VendorId];
+}
+
+static const char *ForeignRuntimeStrTbl[] = {
+    "none", "cuda", "cuda_driver", "opencl",
+    "sycl", "hip",  "level_zero",  "hsa"};
+const char *getForeignRuntimeIdToStr(const tgt_foreign_runtime_id_t FrId) {
+  if (FrId < tgt_fr_none || FrId >= tgt_fr_last)
+    return ("unknown");
+  return ForeignRuntimeStrTbl[FrId];
 }
 
 template <typename PropertyTy>
@@ -83,7 +84,7 @@ intptr_t getProperty<intptr_t>(omp_interop_val_t &InteropVal,
                                omp_interop_property_t Property, int *Err) {
   switch (Property) {
   case omp_ipr_fr_id:
-    return InteropVal.backend_type_id;
+    return InteropVal.fr_id;
   case omp_ipr_vendor:
     return InteropVal.vendor_id;
   case omp_ipr_device_num:
@@ -99,10 +100,8 @@ const char *getProperty<const char *>(omp_interop_val_t &InteropVal,
                                       omp_interop_property_t Property,
                                       int *Err) {
   switch (Property) {
-  case omp_ipr_fr_id:
-    return InteropVal.interop_type == kmp_interop_type_tasksync
-               ? "tasksync"
-               : "device+context";
+  case omp_ipr_fr_name:
+    return getForeignRuntimeIdToStr(InteropVal.fr_id);
   case omp_ipr_vendor_name:
     return getVendorIdToStr(InteropVal.vendor_id);
   default:
@@ -120,6 +119,8 @@ void *getProperty<void *>(omp_interop_val_t &InteropVal,
       return InteropVal.device_info.Device;
     *Err = omp_irc_no_value;
     return const_cast<char *>(InteropVal.err_str);
+  case omp_ipr_platform:
+    return InteropVal.device_info.Platform;
   case omp_ipr_device_context:
     return InteropVal.device_info.Context;
   case omp_ipr_targetsync:
@@ -145,13 +146,13 @@ bool getPropertyCheck(omp_interop_val_t **InteropPtr,
     return false;
   }
   if (Property == omp_ipr_targetsync &&
-      (*InteropPtr)->interop_type != kmp_interop_type_tasksync) {
+      (*InteropPtr)->interop_type != kmp_interop_type_targetsync) {
     if (Err)
       *Err = omp_irc_other;
     return false;
   }
   if ((Property == omp_ipr_device || Property == omp_ipr_device_context) &&
-      (*InteropPtr)->interop_type == kmp_interop_type_tasksync) {
+      (*InteropPtr)->interop_type == kmp_interop_type_targetsync) {
     if (Err)
       *Err = omp_irc_other;
     return false;
@@ -166,7 +167,7 @@ bool getPropertyCheck(omp_interop_val_t **InteropPtr,
                                        omp_interop_property_t property_id,     \
                                        int *err) {                             \
     omp_interop_val_t *interop_val = (omp_interop_val_t *)interop;             \
-    assert((interop_val)->interop_type == kmp_interop_type_tasksync);          \
+    assert((interop_val)->interop_type == kmp_interop_type_targetsync);        \
     if (!getPropertyCheck(&interop_val, property_id, err)) {                   \
       return (RETURN_TYPE)(0);                                                 \
     }                                                                          \
@@ -193,119 +194,278 @@ __OMP_GET_INTEROP_TY3(const char *, type_desc)
 __OMP_GET_INTEROP_TY3(const char *, rc_desc)
 #undef __OMP_GET_INTEROP_TY3
 
-static const char *copyErrorString(llvm::Error &&Err) {
-  // TODO: Use the error string while avoiding leaks.
-  std::string ErrMsg = llvm::toString(std::move(Err));
-  char *UsrMsg = reinterpret_cast<char *>(malloc(ErrMsg.size() + 1));
-  strcpy(UsrMsg, ErrMsg.c_str());
-  return UsrMsg;
-}
-
 extern "C" {
 
-void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
-                        omp_interop_val_t *&InteropPtr,
-                        kmp_interop_type_t InteropType, int32_t DeviceId,
-                        int32_t Ndeps, kmp_depend_info_t *DepList,
-                        int32_t HaveNowait) {
-  int32_t NdepsNoalias = 0;
-  kmp_depend_info_t *NoaliasDepList = NULL;
-  assert(InteropType != kmp_interop_type_unknown &&
-         "Cannot initialize with unknown interop_type!");
-  if (DeviceId == -1) {
-    DeviceId = omp_get_default_device();
+omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
+                                     int64_t DeviceNum, int32_t NumPrefers,
+                                     interop_spec_t *Prefers,
+                                     interop_ctx_t *Ctx, dep_pack_t *Deps) {
+
+  DP("Call to %s with device_num %" PRId64 ", interop type %" PRId32
+     ", number of preferred specs %" PRId32 "%s%s\n",
+     __func__, DeviceNum, InteropType, NumPrefers,
+     Ctx->flags.implicit ? " (implicit)" : "",
+     Ctx->flags.nowait ? " (nowait)" : "");
+
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED)
+    return omp_interop_none;
+
+  // Now, try to create an interop with device_num.
+  if (DeviceNum == OFFLOAD_DEVICE_DEFAULT)
+    DeviceNum = omp_get_default_device();
+
+  auto gtid = Ctx->gtid;
+
+  if (InteropType == kmp_interop_type_targetsync) {
+    if (Ctx->flags.nowait)
+      DP("Warning: nowait flag on interop creation not supported yet. "
+         "Ignored\n");
+    if (Deps)
+      __kmpc_omp_wait_deps(LocRef, gtid, Deps->ndeps, Deps->deplist,
+                           Deps->ndeps_noalias, Deps->noalias_deplist);
   }
 
-  if (InteropType == kmp_interop_type_tasksync) {
-    __kmpc_omp_wait_deps(LocRef, Gtid, Ndeps, DepList, NdepsNoalias,
-                         NoaliasDepList);
-  }
-
-  InteropPtr = new omp_interop_val_t(DeviceId, InteropType);
-
-  auto DeviceOrErr = PM->getDevice(DeviceId);
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr) {
-    InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
-    return;
+    DP("Couldn't find device %" PRId64
+       " while constructing interop object: %s\n",
+       DeviceNum, toString(DeviceOrErr.takeError()).c_str());
+    return omp_interop_none;
   }
+  auto &Device = *DeviceOrErr;
+  omp_interop_val_t *Interop = omp_interop_none;
+  auto InteropSpec = Device.RTL->select_interop_preference(
+      DeviceNum, InteropType, NumPrefers, Prefers);
+  if (InteropSpec.fr_id == tgt_fr_none) {
+    DP("Interop request not supported by device %" PRId64 "\n", DeviceNum);
+    return omp_interop_none;
+  }
+  DP("Selected interop preference is fr_id=%s%s impl_attrs=%" PRId64 "\n",
+     getForeignRuntimeIdToStr((tgt_foreign_runtime_id_t)InteropSpec.fr_id),
+     InteropSpec.attrs.inorder ? " inorder" : "", InteropSpec.impl_attrs);
 
-  DeviceTy &Device = *DeviceOrErr;
-  if (!Device.RTL ||
-      Device.RTL->init_device_info(DeviceId, &(InteropPtr)->device_info,
-                                   &(InteropPtr)->err_str)) {
-    delete InteropPtr;
-    InteropPtr = omp_interop_none;
-  }
-  if (InteropType == kmp_interop_type_tasksync) {
-    if (!Device.RTL ||
-        Device.RTL->init_async_info(DeviceId, &(InteropPtr)->async_info)) {
-      delete InteropPtr;
-      InteropPtr = omp_interop_none;
+  if (Ctx->flags.implicit) {
+    // This is a request for an RTL managed interop object.
+    // Get it from the InteropTbl if possible
+    for (auto iop : PM->InteropTbl) {
+      if (iop->isCompatibleWith(InteropType, InteropSpec, DeviceNum, gtid)) {
+        Interop = iop;
+        Interop->markDirty();
+        DP("Reused interop " DPxMOD " from device number %" PRId64
+           " for gtid %" PRId32 "\n",
+           DPxPTR(Interop), DeviceNum, gtid);
+        return Interop;
+      }
     }
   }
+
+  Interop = Device.RTL->create_interop(DeviceNum, InteropType, &InteropSpec);
+  DP("Created an interop " DPxMOD " from device number %" PRId64 "\n",
+     DPxPTR(Interop), DeviceNum);
+
+  if (Ctx->flags.implicit) {
+    // register the new implicit interop in the RTL
+    Interop->setOwner(gtid);
+    Interop->markDirty();
+    PM->InteropTbl.add(Interop);
+  } else {
+    Interop->setOwner(omp_interop_val_t::no_owner);
+  }
+
+  return Interop;
 }
 
-void __tgt_interop_use(ident_t *LocRef, int32_t Gtid,
-                       omp_interop_val_t *&InteropPtr, int32_t DeviceId,
-                       int32_t Ndeps, kmp_depend_info_t *DepList,
-                       int32_t HaveNowait) {
-  int32_t NdepsNoalias = 0;
-  kmp_depend_info_t *NoaliasDepList = NULL;
-  assert(InteropPtr && "Cannot use nullptr!");
-  omp_interop_val_t *InteropVal = InteropPtr;
-  if (DeviceId == -1) {
-    DeviceId = omp_get_default_device();
-  }
-  assert(InteropVal != omp_interop_none &&
-         "Cannot use uninitialized interop_ptr!");
-  assert((DeviceId == -1 || InteropVal->device_id == DeviceId) &&
-         "Inconsistent device-id usage!");
+int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
+                      interop_ctx_t *Ctx, dep_pack_t *Deps) {
+  bool Nowait = Ctx->flags.nowait;
+  DP("Call to %s with interop " DPxMOD ", nowait %" PRId32 "\n", __func__,
+     DPxPTR(Interop), Nowait);
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
+    return OFFLOAD_FAIL;
 
-  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (Interop->interop_type == kmp_interop_type_targetsync) {
+    if (Deps) {
+      if (Nowait) {
+        DP("Warning: nowait flag on interop use with dependences not supported"
+           "yet. Ignored\n");
+        Nowait = false;
+      }
+
+      __kmpc_omp_wait_deps(LocRef, Ctx->gtid, Deps->ndeps, Deps->deplist,
+                           Deps->ndeps_noalias, Deps->noalias_deplist);
+    }
+  }
+
+  auto DeviceOrErr = Interop->getDevice();
   if (!DeviceOrErr) {
-    InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
-    return;
+    REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(Interop),
+           toString(DeviceOrErr.takeError()).c_str());
+    return OFFLOAD_FAIL;
+  }
+  auto &IOPDevice = *DeviceOrErr;
+
+  if (Interop->async_info && Interop->async_info->Queue) {
+    if (Nowait)
+      Interop->async_barrier(IOPDevice);
+    else {
+      Interop->flush(IOPDevice);
+      Interop->sync_barrier(IOPDevice);
+      Interop->markClean();
+    }
   }
 
-  if (InteropVal->interop_type == kmp_interop_type_tasksync) {
-    __kmpc_omp_wait_deps(LocRef, Gtid, Ndeps, DepList, NdepsNoalias,
-                         NoaliasDepList);
-  }
-  // TODO Flush the queue associated with the interop through the plugin
+  return OFFLOAD_SUCCESS;
 }
 
-void __tgt_interop_destroy(ident_t *LocRef, int32_t Gtid,
-                           omp_interop_val_t *&InteropPtr, int32_t DeviceId,
-                           int32_t Ndeps, kmp_depend_info_t *DepList,
-                           int32_t HaveNowait) {
-  int32_t NdepsNoalias = 0;
-  kmp_depend_info_t *NoaliasDepList = NULL;
-  assert(InteropPtr && "Cannot use nullptr!");
-  omp_interop_val_t *InteropVal = InteropPtr;
-  if (DeviceId == -1) {
-    DeviceId = omp_get_default_device();
+int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
+                          interop_ctx_t *Ctx, dep_pack_t *Deps) {
+  DP("Call to %s with interop " DPxMOD "\n", __func__, DPxPTR(Interop));
+
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
+    return OFFLOAD_FAIL;
+
+  if (Interop->interop_type == kmp_interop_type_targetsync) {
+    if (Ctx->flags.nowait)
+      DP("Warning: nowait flag on interop destroy not supported "
+         "yet. Ignored\n");
+    if (Deps) {
+      __kmpc_omp_wait_deps(LocRef, Ctx->gtid, Deps->ndeps, Deps->deplist,
+                           Deps->ndeps_noalias, Deps->noalias_deplist);
+    }
   }
 
-  if (InteropVal == omp_interop_none)
-    return;
-
-  assert((DeviceId == -1 || InteropVal->device_id == DeviceId) &&
-         "Inconsistent device-id usage!");
-  auto DeviceOrErr = PM->getDevice(DeviceId);
+  auto DeviceOrErr = Interop->getDevice();
   if (!DeviceOrErr) {
-    InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
-    return;
+    REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(Interop),
+           toString(DeviceOrErr.takeError()).c_str());
+    return OFFLOAD_FAIL;
   }
 
-  if (InteropVal->interop_type == kmp_interop_type_tasksync) {
-    __kmpc_omp_wait_deps(LocRef, Gtid, Ndeps, DepList, NdepsNoalias,
-                         NoaliasDepList);
-  }
-  // TODO Flush the queue associated with the interop through the plugin
-  // TODO Signal out dependences
+  return Interop->release(*DeviceOrErr);
+}
 
-  delete InteropPtr;
-  InteropPtr = omp_interop_none;
+EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
+                                                ompx_interop_cb_t *CB,
+                                                void *Data) {
+  DP("Call to %s with interop " DPxMOD ", property callback " DPxMOD
+     "and data " DPxMOD "\n",
+     __func__, DPxPTR(Interop), DPxPTR(CB), DPxPTR(Data));
+
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
+    return omp_irc_other;
+
+  Interop->addCompletionCb(CB, Data);
+
+  return omp_irc_success;
 }
 
 } // extern "C"
+
+llvm::Expected<DeviceTy &> omp_interop_val_t::getDevice() const {
+  return PM->getDevice(device_id);
+}
+
+bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
+                                         const interop_spec_t &Spec) {
+  if (interop_type != InteropType)
+    return false;
+  if (Spec.fr_id != fr_id)
+    return false;
+  if (Spec.attrs.inorder != attrs.inorder)
+    return false;
+  if (Spec.impl_attrs != impl_attrs)
+    return false;
+
+  return true;
+}
+
+bool omp_interop_val_t::isCompatibleWith(int32_t InteropType,
+                                         const interop_spec_t &Spec,
+                                         int64_t DeviceNum, int GTID) {
+  if (device_id != DeviceNum)
+    return false;
+
+  if (GTID != owner_gtid)
+    return false;
+
+  return isCompatibleWith(InteropType, Spec);
+}
+
+int32_t omp_interop_val_t::flush(DeviceTy &Device) {
+  return Device.RTL->flush_queue(this);
+}
+
+int32_t omp_interop_val_t::sync_barrier(DeviceTy &Device) {
+  if (Device.RTL->sync_barrier(this) != OFFLOAD_SUCCESS) {
+    FATAL_MESSAGE(device_id, "Interop sync barrier failed for %p object\n",
+                  this);
+  }
+  DP("Calling completion callbacks for " DPxMOD "\n", DPxPTR(this));
+  runCompletionCbs();
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t omp_interop_val_t::async_barrier(DeviceTy &Device) {
+  return Device.RTL->async_barrier(this);
+}
+
+int32_t omp_interop_val_t::release(DeviceTy &Device) {
+  if (async_info != nullptr && (!hasOwner() || !isClean())) {
+    flush(Device);
+    sync_barrier(Device);
+  }
+  return Device.RTL->release_interop(device_id, this);
+}
+
+void syncImplicitInterops(int Gtid, void *Event) {
+  if (PM->InteropTbl.size() == 0)
+    return;
+
+  DP("target_sync: syncing interops for gtid %" PRId32 ", event " DPxMOD "\n",
+     Gtid, DPxPTR(Event));
+
+  for (auto iop : PM->InteropTbl) {
+    if (iop->async_info && iop->async_info->Queue && iop->isOwnedBy(Gtid) &&
+        !iop->isClean()) {
+
+      auto DeviceOrErr = iop->getDevice();
+      if (!DeviceOrErr) {
+        REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(iop),
+               toString(DeviceOrErr.takeError()).c_str());
+        continue;
+      }
+      auto &IOPDevice = *DeviceOrErr;
+
+      iop->flush(IOPDevice);
+      iop->sync_barrier(IOPDevice);
+      iop->markClean();
+
+      // Alternate implementation option in case using barriers is not
+      // efficient enough:
+      //
+      // Instead of using a synchronous barrier, queue an asynchronous
+      // barrier and create a proxy task associated to the event to handle
+      // OpenMP synchronizations.
+      // When the event is completed, fulfill the proxy task to notify the
+      // OpenMP runtime.
+      // event = iop->asyncBarrier();
+      // ptask = createProxyTask();
+      // Events->add(event,ptask);
+    }
+  }
+  // This would be needed for the alternate implementation
+  // processEvents();
+}
+
+void InteropTblTy::clear() {
+  DP("Clearing Interop Table\n");
+  PerThreadTable::clear([](auto &IOP) {
+    auto DeviceOrErr = IOP->getDevice();
+    if (!DeviceOrErr) {
+      REPORT("Failed to get device for interop " DPxMOD ": %s\n", DPxPTR(IOP),
+             toString(DeviceOrErr.takeError()).c_str());
+      return;
+    }
+    IOP->release(*DeviceOrErr);
+  });
+}

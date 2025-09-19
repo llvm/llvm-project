@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorMultiReduction.cpp
   LowerVectorScan.cpp
   LowerVectorShapeCast.cpp
+  LowerVectorShuffle.cpp
   LowerVectorStep.cpp
   LowerVectorToFromElementsToShuffleTree.cpp
   LowerVectorTransfer.cpp
@@ -43,6 +44,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect
+  MLIRMemRefTransforms
   MLIRMemRefUtils
   MLIRSCFDialect
   MLIRSideEffectInterfaces

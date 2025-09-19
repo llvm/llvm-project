@@ -68,13 +68,15 @@ def FeatureFlatInstOffsets : SubtargetFeature<"flat-inst-offsets",
 def FeatureFlatGlobalInsts : SubtargetFeature<"flat-global-insts",
   "FlatGlobalInsts",
   "true",
-  "Have global_* flat memory instructions"
+  "Have global_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatScratchInsts : SubtargetFeature<"flat-scratch-insts",
   "FlatScratchInsts",
   "true",
-  "Have scratch_* flat memory instructions"
+  "Have scratch_* flat memory instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureScalarFlatScratchInsts : SubtargetFeature<"scalar-flat-scratch-insts",
@@ -92,7 +94,8 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
 def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
   "FlatGVSMode",
   "true",
-  "Have GVS addressing mode with flat_* instructions"
+  "Have GVS addressing mode with flat_* instructions",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
@@ -286,12 +289,6 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "VMEM CU scope prefetches do not fail on illegal address"
 >;
 
-def FeatureCUStores : SubtargetFeature<"cu-stores",
-  "HasCUStores",
-  "true",
-  "Whether SCOPE_CU stores can be used on GFX12.5"
->;
-
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
@@ -417,6 +414,12 @@ def FeatureGFX9Insts : SubtargetFeature<"gfx9-insts",
   "GFX9Insts",
   "true",
   "Additional instructions for GFX9+"
+>;
+
+def FeatureRequiresAlignedVGPRs : SubtargetFeature<"vgpr-align2",
+  "RequiresAlignVGPR",
+  "true",
+  "VGPR and AGPR tuple operands require even alignment"
 >;
 
 def FeatureGFX90AInsts : SubtargetFeature<"gfx90a-insts",
@@ -575,6 +578,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "EnableRealTrue16Insts",
   "true",
   "Use true 16-bit registers"
+>;
+
+def FeatureD16Writes32BitVgpr : SubtargetFeature<"d16-write-vgpr32",
+  "EnableD16Writes32BitVgpr",
+  "true",
+  "D16 instructions potentially have 32-bit data dependencies"
 >;
 
 def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
@@ -928,13 +937,15 @@ def FeatureAtomicFMinFMaxF64GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-glo
 def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
   "HasAtomicFMinFMaxF32FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for float"
+  "Has flat memory instructions for atomicrmw fmin/fmax for float",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
   "HasAtomicFMinFMaxF64FlatInsts",
   "true",
-  "Has flat memory instructions for atomicrmw fmin/fmax for double"
+  "Has flat memory instructions for atomicrmw fmin/fmax for double",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
@@ -986,7 +997,8 @@ def FeatureFlatAtomicFaddF32Inst
   : SubtargetFeature<"flat-atomic-fadd-f32-inst",
   "HasFlatAtomicFaddF32Inst",
   "true",
-  "Has flat_atomic_add_f32 instruction"
+  "Has flat_atomic_add_f32 instruction",
+  [FeatureFlatAddressSpace]
 >;
 
 def FeatureFlatBufferGlobalAtomicFaddF64Inst
@@ -1011,6 +1023,14 @@ def FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   "supported by PCIe (i.e. integer atomic add, exchange, and "
   "compare-and-swap), are functional for allocations in host or peer "
   "device memory."
+>;
+
+def FeatureEmulatedSystemScopeAtomics
+  : SubtargetFeature<"emulated-system-scope-atomics",
+  "HasEmulatedSystemScopeAtomics",
+  "true",
+  "System scope atomics unsupported by the PCI-e are emulated in HW via CAS "
+  "loop and functional."
 >;
 
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
@@ -1160,6 +1180,12 @@ def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
   "Has v_tanh_f32/f16 instructions"
 >;
 
+def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
+  "HasTensorCvtLutInsts",
+  "true",
+  "Has v_perm_pk16* instructions"
+>;
+
 def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
   "HasTransposeLoadF4F6Insts",
   "true",
@@ -1188,6 +1214,12 @@ def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Has64BitLiterals",
   "true",
   "Can use 64-bit literals with single DWORD instructions"
+>;
+
+def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
+  "Has1024AddressableVGPRs",
+  "true",
+  "Has 1024 addressable VGPRs"
 >;
 
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
@@ -1359,6 +1391,13 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
+def FeatureGloballyAddressableScratch : SubtargetFeature<
+  "globally-addressable-scratch",
+  "HasGloballyAddressableScratch",
+  "true",
+  "FLAT instructions can access scratch memory for any thread in any wave"
+>;
+
 // FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
@@ -1527,7 +1566,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
 
 def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   "gfx12",
-  [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
+  [FeatureFP64, FeatureMIMG_R128,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
@@ -1700,6 +1739,7 @@ def FeatureISAVersion9_0_9 : FeatureSet<
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
     [FeatureGFX90AInsts,
+     FeatureRequiresAlignedVGPRs,
      FeatureFmacF64Inst,
      FeatureDPALU_DPP,
      FeaturePackedFP32Ops,
@@ -1722,6 +1762,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
    FeatureGFX940Insts,
+   FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -1873,6 +1914,7 @@ def FeatureISAVersion10_3_Generic: FeatureSet<
 
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
+   FeatureBackOffBarrier,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot5Insts,
@@ -1892,7 +1934,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureRealTrue16Insts]>;
+   FeatureRealTrue16Insts,
+   FeatureD16Writes32BitVgpr,
+]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -1956,6 +2000,8 @@ def FeatureISAVersion11_5_3 : FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   FeatureBackOffBarrier,
+   FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot7Insts,
@@ -1997,8 +2043,10 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
-   FeatureCUStores,
+   FeatureRequiresAlignedVGPRs,
+   FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
+   Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2030,6 +2078,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
+   FeatureTensorCvtLutInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2048,6 +2097,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureEmulatedSystemScopeAtomics,
+   FeatureGloballyAddressableScratch,
    FeatureKernargPreload,
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
@@ -2056,6 +2107,10 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
+
+def FeatureISAVersion12_51 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
+  [FeatureDPALU_DPP])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2520,6 +2575,11 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
+def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
+def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
+
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
 
@@ -2576,12 +2636,20 @@ def HasFmaakFmamkF64Insts :
   Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
+def HasAddMinMaxInsts :
+  Predicate<"Subtarget->hasAddMinMaxInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
+def HasSGetShaderCyclesInst :
+  Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
@@ -2781,6 +2849,9 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
   AssemblerPredicate<(all_of FeatureTanhInsts)>;
 
+def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
+  AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
+
 def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
   AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;
 
@@ -2792,6 +2863,9 @@ def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
 
 def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
   AssemblerPredicate<(all_of Feature64BitLiterals)>;
+
+def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
+  AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

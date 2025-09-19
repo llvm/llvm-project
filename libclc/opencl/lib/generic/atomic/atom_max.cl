@@ -31,15 +31,15 @@ unsigned long
 __clc__sync_fetch_and_umax_global_8(volatile global unsigned long *,
                                     unsigned long);
 
-#define IMPL(AS, TYPE, OP)                                                     \
+#define __CLC_IMPL(AS, TYPE, OP)                                               \
   _CLC_OVERLOAD _CLC_DEF TYPE atom_max(volatile AS TYPE *p, TYPE val) {        \
     return __clc__sync_fetch_and_##OP##_##AS##_8(p, val);                      \
   }
 
-IMPL(global, long, max)
-IMPL(global, unsigned long, umax)
-IMPL(local, long, max)
-IMPL(local, unsigned long, umax)
-#undef IMPL
+__CLC_IMPL(global, long, max)
+__CLC_IMPL(global, unsigned long, umax)
+__CLC_IMPL(local, long, max)
+__CLC_IMPL(local, unsigned long, umax)
+#undef __CLC_IMPL
 
 #endif // cl_khr_int64_extended_atomics

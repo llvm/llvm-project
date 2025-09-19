@@ -98,6 +98,7 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
         "Wasm read failed for invalid address 0x%" PRIx64, vm_addr);
     return 0;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 llvm::Expected<std::vector<lldb::addr_t>>
@@ -130,4 +131,37 @@ ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
     call_stack_pcs.push_back(data.GetU64(&offset));
 
   return call_stack_pcs;
+}
+
+llvm::Expected<lldb::DataBufferSP>
+ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind, int frame_index,
+                             int index) {
+  StreamString packet;
+  switch (kind) {
+  case eWasmTagLocal:
+    packet.Printf("qWasmLocal:");
+    break;
+  case eWasmTagGlobal:
+    packet.Printf("qWasmGlobal:");
+    break;
+  case eWasmTagOperandStack:
+    packet.PutCString("qWasmStackValue:");
+    break;
+  case eWasmTagNotAWasmLocation:
+    return llvm::createStringError("not a Wasm location");
+  }
+  packet.Printf("%d;%d", frame_index, index);
+
+  StringExtractorGDBRemote response;
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) !=
+      GDBRemoteCommunication::PacketResult::Success)
+    return llvm::createStringError("failed to send Wasm variable");
+
+  if (!response.IsNormalResponse())
+    return llvm::createStringError("failed to get response for Wasm variable");
+
+  WritableDataBufferSP buffer_sp(
+      new DataBufferHeap(response.GetStringRef().size() / 2, 0));
+  response.GetHexBytes(buffer_sp->GetData(), '\xcc');
+  return buffer_sp;
 }
