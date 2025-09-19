@@ -27,7 +27,6 @@
 
 namespace lldb_protocol::mcp {
 
-
 class Server {
 
   using MCPTransportUP = std::unique_ptr<lldb_protocol::mcp::MCPTransport>;
