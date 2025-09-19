@@ -5360,7 +5360,7 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
     SDValue B = Op0.getOperand(1);
     SDValue C = Op1;
     return DCI.DAG.getNode(MinMaxOp3, SDLoc(N), VT, A, B, C, N->getFlags());
-  } else if (Op1->getOpcode() == MinMaxOp2 && Op1->hasOneUse()) {
+  } else if (Op1.getOpcode() == MinMaxOp2 && Op1.hasOneUse()) {
     // (maxnum a, (maxnum b, c)) -> (maxnum3 a, b, c)
     SDValue A = Op0;
     SDValue B = Op1.getOperand(0);
