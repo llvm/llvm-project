@@ -528,7 +528,8 @@ bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
 bool SymbolInfoMap::bindOpResult(StringRef symbol, const Operator &op) {
   int index = -1;
   StringRef name = getValuePackName(symbol, &index);
-  auto inserted = symbolInfoMap.emplace(name.str(), SymbolInfo::getResult(&op, index));
+  auto inserted =
+      symbolInfoMap.emplace(name.str(), SymbolInfo::getResult(&op, index));
 
   return symbolInfoMap.count(inserted->first) == 1;
 }
