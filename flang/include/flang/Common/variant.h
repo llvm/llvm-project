@@ -24,6 +24,9 @@ using cuda::std::variant_size_v;
 using cuda::std::visit;
 } // namespace std
 #else // !RT_USE_LIBCUDACXX
+#include <initializer_list>
+#undef _GLIBCXX_THROW_OR_ABORT
+#define _GLIBCXX_THROW_OR_ABORT(_EXC) (__builtin_abort())
 #include <variant>
 #endif // !RT_USE_LIBCUDACXX
 
