@@ -70,7 +70,7 @@ template <class Alloc, class AllocatorInvariant = NoOp>
 void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
                 const Alloc& rhs_alloc                   = Alloc(),
                 AllocatorInvariant check_alloc_invariant = NoOp()) {
-  {   // Test empty/non-empy map combinations
+  {   // Test empty/non-empty map combinations
     { // assign from a non-empty container into an empty one
       using V   = std::pair<const int, int>;
       using Map = std::map<int, int, std::less<int>, Alloc>;
@@ -225,7 +225,7 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
     }
     check_alloc_invariant();
   }
-  { // Make a somewhat larget set to exercise the algorithm a bit
+  { // Make a somewhat larger set to exercise the algorithm a bit
     using V   = std::pair<const int, int>;
     using Map = std::map<int, int, std::less<int>, Alloc>;
 

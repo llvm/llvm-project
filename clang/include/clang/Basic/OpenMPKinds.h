@@ -107,6 +107,13 @@ enum OpenMPDistScheduleClauseKind {
   OMPC_DIST_SCHEDULE_unknown
 };
 
+/// OpenMP variable-category for 'default' clause.
+enum OpenMPDefaultClauseVariableCategory {
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name) OMPC_DEFAULT_VC_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEFAULT_VC_unknown
+};
+
 /// OpenMP attributes for 'defaultmap' clause.
 enum OpenMPDefaultmapClauseKind {
 #define OPENMP_DEFAULTMAP_KIND(Name) \
@@ -257,6 +264,10 @@ struct OMPInteropInfo final {
   llvm::SmallVector<Expr *, 4> PreferTypes;
 };
 
+OpenMPDefaultClauseVariableCategory
+getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts);
+const char *getOpenMPDefaultVariableCategoryName(unsigned VC);
+
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);
 const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
@@ -364,6 +375,13 @@ bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 /// directives that need loop bound sharing across loops outlined in nested
 /// functions
 bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop nest.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.

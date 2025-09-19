@@ -533,6 +533,24 @@ def LLVM_DIRecursiveTypeAttrInterface
   ];
 }
 
+def LLVM_LLVMAddrSpaceAttrInterface :
+    AttrInterface<"LLVMAddrSpaceAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM address spaces.
+    Implementing attributes should provide access to the address space value
+    as an unsigned integer.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the address space as an unsigned integer.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getAddressSpace",
+      /*args=*/(ins)
+    >
+  ];
+}
+
 def LLVM_TargetAttrInterface
   : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
   let description = [{
@@ -560,8 +578,10 @@ def LLVM_TargetAttrInterface
       /*args=*/(ins)
     >,
     InterfaceMethod<
-      /*description=*/"Returns the target features as a string.",
-      /*retTy=*/"StringAttr",
+      /*description=*/"Returns the target features as a TargetFeaturesAttr.",
+      /*retTy=*/"Attribute", // NB: will be a LLVM::TargetFeaturesAttr, though
+                             // need to work around a cyclic dependency on
+                             // LLVMInterfaces.td and LLVMAttrDefs.td.
       /*methodName=*/"getFeatures",
       /*args=*/(ins)
     >

@@ -91,7 +91,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
 
   return true;
 }
@@ -121,12 +121,12 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                    APValue &Result) {
+                                    const Expr *Init, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
@@ -135,7 +135,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
-  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
+  auto Res = C.interpretDecl(VD, Init, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     C.cleanup();
     Stk.clearTo(StackSizeBefore);
@@ -153,7 +153,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 #endif
   }
 
-  Result = Res.toAPValue();
+  Result = Res.stealAPValue();
   return true;
 }
 
@@ -364,8 +364,7 @@ OptPrimType Context::classify(QualType T) const {
     return integralTypeToPrimTypeU(BT->getNumBits());
   }
 
-  if (const auto *ET = T->getAs<EnumType>()) {
-    const auto *D = ET->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *D = T->getAsEnumDecl()) {
     if (!D->isComplete())
       return std::nullopt;
     return classify(D->getIntegerType());

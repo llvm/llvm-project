@@ -1893,7 +1893,7 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    unsigned row_length = op.getRowLength();
+    unsigned rowLength = op.getRowLength();
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
@@ -1906,16 +1906,25 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
       Type i32pair = LLVM::LLVMStructType::getLiteral(
           rewriter.getContext(), {v.getType(), v.getType()});
 
-      if (row_length == 16)
+      if (rowLength == 16)
         res = ROCDL::Permlane16SwapOp::create(rewriter, loc, i32pair, v, v, fi,
                                               boundctrl);
-      else if (row_length == 32)
+      else if (rowLength == 32)
         res = ROCDL::Permlane32SwapOp::create(rewriter, loc, i32pair, v, v, fi,
                                               boundctrl);
       else
         llvm_unreachable("unsupported row length");
 
-      Value vdstNew = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      const Value vdst0 = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      const Value vdst1 = LLVM::ExtractValueOp::create(rewriter, loc, res, {1});
+
+      const Value isEqual =
+          rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, vdst0, v);
+
+      // Per `permlane(16|32)` semantics: if the first extracted element equals
+      // 'v', the result is the second element; otherwise it is the first.
+      Value vdstNew =
+          rewriter.create<LLVM::SelectOp>(loc, isEqual, vdst1, vdst0);
       permuted.emplace_back(vdstNew);
     }
 

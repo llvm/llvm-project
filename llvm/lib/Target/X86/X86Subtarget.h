@@ -226,8 +226,7 @@ public:
   // TODO: Currently we're always allowing widening on CPUs without VLX,
   // because for many cases we don't have a better option.
   bool canExtendTo512DQ() const {
-    return hasAVX512() && hasEVEX512() &&
-           (!hasVLX() || getPreferVectorWidth() >= 512);
+    return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
   }
   bool canExtendTo512BW() const  {
     return hasBWI() && canExtendTo512DQ();
@@ -247,8 +246,7 @@ public:
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
   // disable them in the legalizer.
   bool useAVX512Regs() const {
-    return hasAVX512() && hasEVEX512() &&
-           (canExtendTo512DQ() || RequiredVectorWidth > 256);
+    return hasAVX512() && (canExtendTo512DQ() || RequiredVectorWidth > 256);
   }
 
   bool useLight256BitInstructions() const {

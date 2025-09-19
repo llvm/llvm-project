@@ -22,8 +22,6 @@ using namespace dataflow;
 using ::llvm::Failed;
 using ::llvm::HasValue;
 using ::llvm::Succeeded;
-using ::testing::ElementsAre;
-using ::testing::IsEmpty;
 
 class SerializeFormulaTest : public ::testing::Test {
 protected:

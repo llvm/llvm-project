@@ -38,7 +38,6 @@ using namespace llvm;
 namespace {
 /// Parses AVR assembly from a stream.
 class AVRAsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
   const std::string GENERATE_STUBS = "gs";
@@ -93,7 +92,7 @@ class AVRAsmParser : public MCTargetAsmParser {
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -318,7 +317,7 @@ bool AVRAsmParser::missingFeature(llvm::SMLoc const &Loc,
 
 bool AVRAsmParser::emit(MCInst &Inst, SMLoc const &Loc, MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
+  Out.emitInstruction(Inst, *STI);
 
   return false;
 }
@@ -411,7 +410,7 @@ bool AVRAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
 
   // Reject R0~R15 on avrtiny.
   if (AVR::R0 <= Reg && Reg <= AVR::R15 &&
-      STI.hasFeature(AVR::FeatureTinyEncoding))
+      STI->hasFeature(AVR::FeatureTinyEncoding))
     return Error(Parser.getTok().getLoc(), "invalid register on avrtiny");
 
   AsmToken const &T = Parser.getTok();
@@ -758,7 +757,7 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
       // Reject R0~R15 on avrtiny.
       if (0 <= RegNum && RegNum <= 15 &&
-          STI.hasFeature(AVR::FeatureTinyEncoding))
+          STI->hasFeature(AVR::FeatureTinyEncoding))
         return Match_InvalidRegisterOnTiny;
 
       std::ostringstream RegName;

@@ -121,12 +121,13 @@ static std::string capitalize(llvm::StringRef str) {
 llvm::StringRef DAP::debug_adapter_path = "";
 
 DAP::DAP(Log *log, const ReplMode default_repl_mode,
-         std::vector<std::string> pre_init_commands,
+         std::vector<std::string> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      repl_mode(default_repl_mode), m_client_name(client_name), m_loop(loop) {
+      repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
+      m_client_name(client_name), m_loop(loop) {
   configuration.preInitCommands = std::move(pre_init_commands);
   RegisterRequests();
 }
@@ -1068,6 +1069,11 @@ llvm::Error DAP::Loop() {
     out.Stop();
     err.Stop();
     StopEventHandlers();
+
+    // Destroy the debugger when the session ends. This will trigger the
+    // debugger's destroy callbacks for earlier logging and clean-ups, rather
+    // than waiting for the termination of the lldb-dap process.
+    lldb::SBDebugger::Destroy(debugger);
   });
 
   while (true) {
@@ -1257,6 +1263,27 @@ protocol::Capabilities DAP::GetCapabilities() {
 
   // Put in non-DAP specification lldb specific information.
   capabilities.lldbExtVersion = debugger.GetVersionString();
+
+  return capabilities;
+}
+
+protocol::Capabilities DAP::GetCustomCapabilities() {
+  protocol::Capabilities capabilities;
+
+  // Add all custom capabilities here.
+  const llvm::DenseSet<AdapterFeature> all_custom_features = {
+      protocol::eAdapterFeatureSupportsModuleSymbolsRequest,
+  };
+
+  for (auto &kv : request_handlers) {
+    llvm::SmallDenseSet<AdapterFeature, 1> features =
+        kv.second->GetSupportedFeatures();
+
+    for (auto &feature : features) {
+      if (all_custom_features.contains(feature))
+        capabilities.supportedFeatures.insert(feature);
+    }
+  }
 
   return capabilities;
 }
@@ -1617,6 +1644,7 @@ void DAP::RegisterRequests() {
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();
   RegisterRequest<ModulesRequestHandler>();
+  RegisterRequest<ModuleSymbolsRequestHandler>();
 
   // Testing requests
   RegisterRequest<TestGetTargetBreakpointsRequestHandler>();

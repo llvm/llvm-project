@@ -1219,8 +1219,9 @@ static void createQuickSortFunc(OpBuilder &builder, ModuleOp module,
 
 /// Implements the rewriting for operator sort and sort_coo.
 template <typename OpTy>
-LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, AffineMap xPerm,
-                                    uint64_t ny, PatternRewriter &rewriter) {
+static LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys,
+                                           AffineMap xPerm, uint64_t ny,
+                                           PatternRewriter &rewriter) {
   Location loc = op.getLoc();
   SmallVector<Value> operands{constantIndex(rewriter, loc, 0), op.getN()};
 

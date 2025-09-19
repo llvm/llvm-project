@@ -1045,6 +1045,14 @@ private:
       }
     }
     // Parse the [DagArgList] part
+    return parseTableGenDAGArgList(Opener, BreakInside);
+  }
+
+  // DagArgList   ::=  "," DagArg [DagArgList]
+  // This parses SimpleValue 6's [DagArgList] part.
+  bool parseTableGenDAGArgList(FormatToken *Opener, bool BreakInside) {
+    ScopedContextCreator ContextCreator(*this, tok::l_paren, 0);
+    Contexts.back().IsTableGenDAGArgList = true;
     bool FirstDAGArgListElm = true;
     while (CurrentToken) {
       if (!FirstDAGArgListElm && CurrentToken->is(tok::comma)) {
@@ -1101,6 +1109,9 @@ private:
     // SimpleValue6 ::=  "(" DagArg [DagArgList] ")"
     if (Tok->is(tok::l_paren)) {
       Tok->setType(TT_TableGenDAGArgOpener);
+      // Nested DAGArg requires space before '(' as separator.
+      if (Contexts.back().IsTableGenDAGArgList)
+        Tok->SpacesRequiredBefore = 1;
       return parseTableGenDAGArgAndList(Tok);
     }
     // SimpleValue 9: Bang operator
@@ -2138,7 +2149,7 @@ private:
     // Whether the braces may mean concatenation instead of structure or array
     // literal.
     bool VerilogMayBeConcatenation = false;
-    bool IsTableGenDAGArg = false;
+    bool IsTableGenDAGArgList = false;
     bool IsTableGenBangOpe = false;
     bool IsTableGenCondOpe = false;
     enum {
@@ -3616,7 +3627,7 @@ void TokenAnnotator::setCommentLineLevels(
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      Line->Level = Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
                             PPDirectiveOrImportStmt
                         ? 0
                         : NextNonCommentLine->Level;
@@ -4012,7 +4023,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     auto *Tok = Line.Last->Previous;
     while (Tok->isNot(tok::r_brace))
       Tok = Tok->Previous;
-    if (auto *LBrace = Tok->MatchingParen; LBrace) {
+    if (auto *LBrace = Tok->MatchingParen; LBrace && LBrace->is(TT_Unknown)) {
       assert(LBrace->is(tok::l_brace));
       Tok->setBlockKind(BK_Block);
       LBrace->setBlockKind(BK_Block);

@@ -524,8 +524,8 @@ public:
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti, MII),
-        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(), sti.getCPU(),
-                                          Options)) {
+        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(),
+                                          Options.getABIName())) {
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");

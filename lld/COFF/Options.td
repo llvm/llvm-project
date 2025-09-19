@@ -102,6 +102,7 @@ def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
     MetaVarName<"<name>=<file>">,
     HelpText<"Embed the contents of <file> in the PDB as named stream <name>">;
 def section : P<"section", "Specify section attributes">;
+def sectionlayout : P<"sectionlayout", "Specifies the layout strategy for output sections">;
 def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
@@ -199,6 +200,12 @@ defm appcontainer : B<"appcontainer",
                       "Image can run outside an app container (default)">;
 defm cetcompat : B<"cetcompat", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack",
                    "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack (default)">;
+defm cetcompatstrict : B<"cetcompatstrict", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in strict mode",
+                         "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in strict mode (default)">;
+defm cetdynamicapisinproc : B<"cetdynamicapisinproc", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack in such a way that dynamic APIs allowed in process",
+                              "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with dynamic APIs allowed in process (default)">;
+defm cetipvalidationrelaxed : B<"cetipvalidationrelaxed", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with relaxed context IP validation",
+                                "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack with relaxed context IP validation (default)">;
 defm dynamicbase : B<"dynamicbase", "Enable ASLR (default unless /fixed)",
                      "Disable ASLR (default when /fixed)">;
 defm fixed : B<"fixed", "Disable base relocations",
@@ -206,6 +213,8 @@ defm fixed : B<"fixed", "Disable base relocations",
 defm highentropyva : B<"highentropyva",
                        "Enable 64-bit ASLR (default on 64-bit)",
                        "Disable 64-bit ASLR">;
+defm hotpatchcompatible : B<"hotpatchcompatible", "Mark executable image as compatible with hotpatch",
+                            "Don't mark executable image as compatible with hotpatch (default)">;
 defm incremental : B<"incremental",
                      "Keep original import library if contents are unchanged",
                      "Overwrite import library even if contents are unchanged">;

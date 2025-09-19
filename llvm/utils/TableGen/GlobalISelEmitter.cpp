@@ -86,8 +86,6 @@ static cl::opt<bool> OptimizeMatchTable(
     cl::desc("Generate an optimized version of the match table"),
     cl::init(true), cl::cat(GlobalISelEmitterCat));
 
-namespace {
-
 static std::string explainPredicates(const TreePatternNode &N) {
   std::string Explanation;
   StringRef Separator = "";
@@ -167,7 +165,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
   return Explanation;
 }
 
-std::string explainOperator(const Record *Operator) {
+static std::string explainOperator(const Record *Operator) {
   if (Operator->isSubClassOf("SDNode"))
     return (" (" + Operator->getValueAsString("Opcode") + ")").str();
 
@@ -314,6 +312,7 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
   return *MaybeOpTy;
 }
 
+namespace {
 class GlobalISelEmitter final : public GlobalISelMatchTableExecutorEmitter {
 public:
   explicit GlobalISelEmitter(const RecordKeeper &RK);
@@ -493,8 +492,11 @@ private:
                        const TreePredicateFn &Predicate,
                        InstructionMatcher &InsnMatcher, bool &HasAddedMatcher);
 };
+} // namespace
 
-StringRef getPatFragPredicateEnumName(const Record *R) { return R->getName(); }
+static StringRef getPatFragPredicateEnumName(const Record *R) {
+  return R->getName();
+}
 
 void GlobalISelEmitter::gatherOpcodeValues() {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
@@ -859,9 +861,9 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
-    if (SrcGIOrNull->TheDef->getName() == "G_CONSTANT" ||
-        SrcGIOrNull->TheDef->getName() == "G_FCONSTANT" ||
-        SrcGIOrNull->TheDef->getName() == "G_FRAME_INDEX") {
+    if (SrcGIOrNull->getName() == "G_CONSTANT" ||
+        SrcGIOrNull->getName() == "G_FCONSTANT" ||
+        SrcGIOrNull->getName() == "G_FRAME_INDEX") {
       // imm/fpimm still have operands but we don't need to do anything with it
       // here since we don't support ImmLeaf predicates yet. However, we still
       // need to note the hidden operand to get GIM_CheckNumOperands correct.
@@ -874,9 +876,9 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     // source.
 
     unsigned NumChildren = Src.getNumChildren();
-    bool IsFCmp = SrcGIOrNull->TheDef->getName() == "G_FCMP";
+    bool IsFCmp = SrcGIOrNull->getName() == "G_FCMP";
 
-    if (IsFCmp || SrcGIOrNull->TheDef->getName() == "G_ICMP") {
+    if (IsFCmp || SrcGIOrNull->getName() == "G_ICMP") {
       const TreePatternNode &SrcChild = Src.getChild(NumChildren - 1);
       if (SrcChild.isLeaf()) {
         const DefInit *DI = dyn_cast<DefInit>(SrcChild.getLeafValue());
@@ -899,11 +901,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 
     // Match the used operands (i.e. the children of the operator).
     bool IsIntrinsic =
-        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" ||
-        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS" ||
-        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_CONVERGENT" ||
-        SrcGIOrNull->TheDef->getName() ==
-            "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS";
+        SrcGIOrNull->getName() == "G_INTRINSIC" ||
+        SrcGIOrNull->getName() == "G_INTRINSIC_W_SIDE_EFFECTS" ||
+        SrcGIOrNull->getName() == "G_INTRINSIC_CONVERGENT" ||
+        SrcGIOrNull->getName() == "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS";
     const CodeGenIntrinsic *II = Src.getIntrinsicInfo(CGP);
     if (IsIntrinsic && !II)
       return failedImport("Expected IntInit containing intrinsic ID)");
@@ -1521,7 +1522,7 @@ GlobalISelEmitter::createInstructionRenderer(action_iterator InsertPt,
 
   // COPY_TO_REGCLASS is just a copy with a ConstrainOperandToRegClassAction
   // attached. Similarly for EXTRACT_SUBREG except that's a subregister copy.
-  StringRef Name = DstI->TheDef->getName();
+  StringRef Name = DstI->getName();
   if (Name == "COPY_TO_REGCLASS" || Name == "EXTRACT_SUBREG")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
 
@@ -1603,7 +1604,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst.getOperator());
 
-  StringRef Name = OrigDstI->TheDef->getName();
+  StringRef Name = OrigDstI->getName();
   unsigned ExpectedDstINumUses = Dst.getNumChildren();
 
   // EXTRACT_SUBREG needs to use a subregister COPY.
@@ -1784,7 +1785,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
                                            const TreePatternNode &Dst) const {
   const Record *DstOp = Dst.getOperator();
   const CodeGenInstruction &DstI = Target.getInstruction(DstOp);
-  StringRef DstIName = DstI.TheDef->getName();
+  StringRef DstIName = DstI.getName();
 
   if (DstIName == "COPY_TO_REGCLASS") {
     // COPY_TO_REGCLASS does not provide operand constraints itself but the
@@ -1934,7 +1935,7 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
 
   // Handle any special-case instructions which we can safely infer register
   // classes from.
-  StringRef InstName = Inst.TheDef->getName();
+  StringRef InstName = Inst.getName();
   if (InstName == "REG_SEQUENCE") {
     // (outs $super_dst), (ins $dst_regclass, variable_ops)
     // Destination register class is explicitly specified by the first operand.
@@ -2534,8 +2535,6 @@ void GlobalISelEmitter::declareSubtargetFeature(const Record *Predicate) {
 unsigned GlobalISelEmitter::declareHwModeCheck(StringRef HwModeFeatures) {
   return HwModes.emplace(HwModeFeatures.str(), HwModes.size()).first->second;
 }
-
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 

@@ -93,6 +93,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
+  const unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  UCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
+
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
@@ -103,9 +106,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
-  theModule->setAttr(
-      cir::CIRDialect::getSourceLanguageAttrName(),
-      cir::SourceLanguageAttr::get(&mlirContext, getCIRSourceLanguage()));
+  std::optional<cir::SourceLanguage> sourceLanguage = getCIRSourceLanguage();
+  if (sourceLanguage)
+    theModule->setAttr(
+        cir::CIRDialect::getSourceLanguageAttrName(),
+        cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 
@@ -513,7 +518,7 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   assert(!cir::MissingFeatures::setTargetAttributes());
 }
 
-cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
+std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   using ClangStd = clang::LangStandard;
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
@@ -528,6 +533,7 @@ cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
   // TODO(cir): support remaining source languages.
   assert(!cir::MissingFeatures::sourceLanguageCases());
   errorNYI("CIR does not yet support the given source language");
+  return std::nullopt;
 }
 
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
@@ -998,10 +1004,17 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
       mlir::SymbolTable::lookupSymbolIn(theModule, name));
 
   if (gv) {
-    // There should be handling added here to check the type as assert that
-    // gv was a declaration if the type doesn't match and handling below
-    // to replace the variable if it was a declaration.
-    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: already exists");
+    // Check if the variable has the right type.
+    if (gv.getSymType() == ty)
+      return gv;
+
+    // Because of C++ name mangling, the only way we can end up with an already
+    // existing global with the same name is if it has been declared extern
+    // "C".
+    assert(gv.isDeclaration() && "Declaration has wrong type!");
+
+    errorNYI(loc, "createOrReplaceCXXRuntimeVariable: declaration exists with "
+                  "wrong type");
     return gv;
   }
 
@@ -1074,8 +1087,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
     if (astContext.isAlignmentRequired(varType))
       return true;
 
-    if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+    if (const auto *rd = varType->getAsRecordDecl()) {
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
@@ -2178,10 +2190,7 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     // Get the layout.
     const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
 
-    const auto *baseDecl =
-        cast<CXXRecordDecl>(
-            base->getType()->castAs<clang::RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *baseDecl = base->getType()->castAsCXXRecordDecl();
 
     // Add the offset.
     offset += layout.getBaseClassOffset(baseDecl);

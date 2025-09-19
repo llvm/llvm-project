@@ -69,6 +69,7 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolutionDivision.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -184,6 +185,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -271,6 +273,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
+#include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
@@ -1491,6 +1494,27 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
+Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+  if (Param.empty())
+    return CodeGenOptLevel::None;
+
+  // Parse a CodeGenOptLevel, e.g. "O1", "O2", "O3".
+  auto [Prefix, Digit] = Param.split('O');
+
+  uint8_t N;
+  if (!Prefix.empty() || Digit.getAsInteger(10, N))
+    return createStringError("invalid expand-fp pass parameter '%s'",
+                             Param.str().c_str());
+
+  std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
+  if (!Level.has_value())
+    return createStringError(
+        "invalid optimization level for expand-fp pass: %s",
+        Digit.str().c_str());
+
+  return *Level;
+}
+
 Expected<RAGreedyPass::Options>
 parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
   if (Params.empty() || Params == "all")
@@ -2075,11 +2099,8 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       bool UseBFI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
         return Pipeline.Name.contains("simple-loop-unswitch");
       });
-      bool UseBPI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
-        return Pipeline.Name == "loop-predication";
-      });
       FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
-                                                  UseBFI, UseBPI));
+                                                  UseBFI));
       return Error::success();
     }
     if (Name == "machine-function") {

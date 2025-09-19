@@ -18,7 +18,7 @@ struct X { int z[17]; };
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[ADD_PTR]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[Y_ADDR_ASCAST]], align 1
 // CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i8, ptr [[AGG_RESULT_ASCAST]], i64 2
-// CHECK-NEXT:    store i8 [[TMP1]], ptr [[ADD_PTR1]], align 1
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[ADD_PTR1]], align 2
 // CHECK-NEXT:    ret void
 //
 X foo(char x, char y) {

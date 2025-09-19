@@ -11,12 +11,12 @@
 # "a.out-dwo-missing-error.dwo".
 # RUN: rm -rf %t.compdir/
 # RUN: mkdir -p %t.compdir/a/b/
-# RUN: cd %t.compdir/a/b/
+# RUN: pushd %t.compdir/a/b/
 # RUN: %clang_host %S/Inputs/dwo-missing-error.c -glldb -gdwarf-5 \
 # RUN:     -gsplit-dwarf -fdebug-prefix-map=%t.compdir=. -o a.out
 # RUN: rm *.dwo
 # RUN: %lldb a.out -s %s -o exit 2>&1 | FileCheck %s 
-# RUN: cd -
+# RUN: popd
 
 # Test the error message with an absolute DW_AT_comp_dir and DW_AT_dwo_name.
 # RUN: rm -rf %t.compdir/

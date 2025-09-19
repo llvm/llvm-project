@@ -99,6 +99,14 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
+# Targeting the GPU directly requires a few flags to make CMake happy.
+if("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
+elseif("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+endif()
+
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
@@ -133,35 +141,41 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
-# Build host runtime library, after LIBOMPTARGET variables are set since they are needed
-# to enable time profiling support in the OpenMP runtime.
-add_subdirectory(runtime)
+# Use the current compiler target to determine the appropriate runtime to build.
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx")
+  add_subdirectory(device)
+else()
+  # Build host runtime library, after LIBOMPTARGET variables are set since they
+  # are needed to enable time profiling support in the OpenMP runtime.
+  add_subdirectory(runtime)
 
-set(ENABLE_OMPT_TOOLS ON)
-# Currently tools are not tested well on Windows or MacOS X.
-if (APPLE OR WIN32)
-  set(ENABLE_OMPT_TOOLS OFF)
+  set(ENABLE_OMPT_TOOLS ON)
+  # Currently tools are not tested well on Windows or MacOS X.
+  if (APPLE OR WIN32)
+    set(ENABLE_OMPT_TOOLS OFF)
+  endif()
+
+  option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
+         ${ENABLE_OMPT_TOOLS})
+  if (OPENMP_ENABLE_OMPT_TOOLS)
+    add_subdirectory(tools)
+  endif()
+
+  # Propagate OMPT support to offload
+  if(NOT ${OPENMP_STANDALONE_BUILD})
+    set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+    set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
+  endif()
+
+  option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
+
+  # Build libompd.so
+  add_subdirectory(libompd)
+
+  # Build documentation
+  add_subdirectory(docs)
+
+  # Now that we have seen all testsuites, create the check-openmp target.
+  construct_check_openmp_target()
 endif()
-
-option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
-       ${ENABLE_OMPT_TOOLS})
-if (OPENMP_ENABLE_OMPT_TOOLS)
-  add_subdirectory(tools)
-endif()
-
-# Propagate OMPT support to offload
-if(NOT ${OPENMP_STANDALONE_BUILD})
-  set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
-  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
-endif()
-
-option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
-
-# Build libompd.so
-add_subdirectory(libompd)
-
-# Build documentation
-add_subdirectory(docs)
-
-# Now that we have seen all testsuites, create the check-openmp target.
-construct_check_openmp_target()

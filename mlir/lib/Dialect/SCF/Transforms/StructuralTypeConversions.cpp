@@ -52,8 +52,8 @@ public:
     SmallVector<unsigned> offsets;
     offsets.push_back(0);
     // Do the type conversion and record the offsets.
-    for (Type type : op.getResultTypes()) {
-      if (failed(typeConverter->convertTypes(type, dstTypes)))
+    for (Value v : op.getResults()) {
+      if (failed(typeConverter->convertType(v, dstTypes)))
         return rewriter.notifyMatchFailure(op, "could not convert result type");
       offsets.push_back(dstTypes.size());
     }
@@ -127,7 +127,6 @@ public:
     // Inline the type converted region from the original operation.
     rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
                                 newOp.getRegion().end());
-
     return newOp;
   }
 };
@@ -226,15 +225,14 @@ void mlir::scf::populateSCFStructuralTypeConversions(
 
 void mlir::scf::populateSCFStructuralTypeConversionTarget(
     const TypeConverter &typeConverter, ConversionTarget &target) {
-  target.addDynamicallyLegalOp<ForOp, IfOp>([&](Operation *op) {
-    return typeConverter.isLegal(op->getResultTypes());
-  });
+  target.addDynamicallyLegalOp<ForOp, IfOp>(
+      [&](Operation *op) { return typeConverter.isLegal(op->getResults()); });
   target.addDynamicallyLegalOp<scf::YieldOp>([&](scf::YieldOp op) {
     // We only have conversions for a subset of ops that use scf.yield
     // terminators.
     if (!isa<ForOp, IfOp, WhileOp>(op->getParentOp()))
       return true;
-    return typeConverter.isLegal(op.getOperandTypes());
+    return typeConverter.isLegal(op.getOperands());
   });
   target.addDynamicallyLegalOp<WhileOp, ConditionOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });

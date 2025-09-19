@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: libcpp-abi-no-compressed-pair-padding
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstdint>
 #include <map>
 
@@ -89,8 +87,25 @@ struct user_struct {
   [[no_unique_address]] common_base_allocator<int> a;
 };
 
+struct TEST_ALIGNAS(32) AlignedLess {};
+struct FinalLess final {};
+struct NonEmptyLess {
+  int i;
+  char c;
+};
+
+static_assert(std::is_empty<std::__map_value_compare<int, std::pair<const int, int>, std::less<int> > >::value, "");
+static_assert(std::is_empty<std::__map_value_compare<int, std::pair<const int, int>, AlignedLess> >::value, "");
+static_assert(!std::is_empty<std::__map_value_compare<int, std::pair<const int, int>, FinalLess> >::value, "");
+static_assert(!std::is_empty<std::__map_value_compare<int, std::pair<const int, int>, NonEmptyLess> >::value, "");
+
 #if __SIZE_WIDTH__ == 64
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 32, "");
+#  else
+static_assert(sizeof(user_struct) == 24, "");
+#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(map_alloc<int, std::allocator<std::pair<const int, int> > >) == 24, "");
@@ -117,14 +132,21 @@ static_assert(TEST_ALIGNOF(map_alloc<char, test_allocator<std::pair<const char, 
 static_assert(TEST_ALIGNOF(map_alloc<char, small_iter_allocator<std::pair<const char, char> > >) == 2, "");
 static_assert(TEST_ALIGNOF(map_alloc<char, final_small_iter_allocator<std::pair<const char, char> > >) == 2, "");
 
-struct TEST_ALIGNAS(32) AlignedLess {};
-
-// This part of the ABI has been broken between LLVM 19 and LLVM 20.
 static_assert(sizeof(std::map<int, int, AlignedLess>) == 64, "");
+static_assert(sizeof(std::map<int, int, FinalLess>) == 32, "");
+static_assert(sizeof(std::map<int, int, NonEmptyLess>) == 32, "");
+
 static_assert(TEST_ALIGNOF(std::map<int, int, AlignedLess>) == 32, "");
+static_assert(TEST_ALIGNOF(std::map<int, int, FinalLess>) == 8, "");
+static_assert(TEST_ALIGNOF(std::map<int, int, NonEmptyLess>) == 8, "");
 
 #elif __SIZE_WIDTH__ == 32
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(user_struct) == 16, "");
+#  else
+static_assert(sizeof(user_struct) == 12, "");
+#  endif
 static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(map_alloc<int, std::allocator<std::pair<const int, int> > >) == 12, "");
@@ -151,10 +173,13 @@ static_assert(TEST_ALIGNOF(map_alloc<char, test_allocator<std::pair<const char, 
 static_assert(TEST_ALIGNOF(map_alloc<char, small_iter_allocator<std::pair<const char, char> > >) == 2, "");
 static_assert(TEST_ALIGNOF(map_alloc<char, final_small_iter_allocator<std::pair<const char, char> > >) == 2, "");
 
-struct TEST_ALIGNAS(32) AlignedLess {};
+static_assert(sizeof(std::map<int, int, AlignedLess>) == 64, "");
+static_assert(sizeof(std::map<int, int, FinalLess>) == 16, "");
+static_assert(sizeof(std::map<int, int, NonEmptyLess>) == 20, "");
 
-static_assert(sizeof(std::map<int, int, AlignedLess>) == 64);
-static_assert(TEST_ALIGNOF(std::map<int, int, AlignedLess>) == 32);
+static_assert(TEST_ALIGNOF(std::map<int, int, AlignedLess>) == 32, "");
+static_assert(TEST_ALIGNOF(std::map<int, int, FinalLess>) == 4, "");
+static_assert(TEST_ALIGNOF(std::map<int, int, NonEmptyLess>) == 4, "");
 
 #else
 #  error std::size_t has an unexpected size

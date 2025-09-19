@@ -27,7 +27,7 @@ if (POLLY_BUNDLED_ISL)
     # The source directory is preconfigured
     file(READ "${ISL_SOURCE_DIR}/gitversion.h" GITVERSION_H)
     string(REGEX REPLACE ".*\\\"([^\\\"]*)\\\".*" "\\1" ISL_GIT_HEAD_ID "${GITVERSION_H}")
-  elseif ()
+  else ()
     # Unknown revision
     # TODO: We could look for a .git and get the revision from HEAD
     set(ISL_GIT_HEAD_ID "UNKNOWN")
