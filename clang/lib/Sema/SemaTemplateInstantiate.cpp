@@ -1506,8 +1506,8 @@ namespace {
 
     TemplateArgument ForgetPartiallySubstitutedPack() {
       TemplateArgument Result;
-      if (NamedDecl *PartialPack =
-              SemaRef.CurrentInstantiationScope->getPartiallySubstitutedPack()) {
+      if (NamedDecl *PartialPack = SemaRef.CurrentInstantiationScope
+                                       ->getPartiallySubstitutedPack()) {
         MultiLevelTemplateArgumentList &TemplateArgs =
             const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
         unsigned Depth, Index;
@@ -1529,8 +1529,8 @@ namespace {
       if (Arg.isNull())
         return;
 
-      if (NamedDecl *PartialPack =
-              SemaRef.CurrentInstantiationScope->getPartiallySubstitutedPack()) {
+      if (NamedDecl *PartialPack = SemaRef.CurrentInstantiationScope
+                                       ->getPartiallySubstitutedPack()) {
         MultiLevelTemplateArgumentList &TemplateArgs =
             const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs);
         unsigned Depth, Index;
@@ -1739,7 +1739,8 @@ namespace {
     // This has to be here to allow its overload.
     ExprResult RebuildPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
                                     UnsignedOrNone NumExpansions) {
-      return inherited::RebuildPackExpansion(Pattern, EllipsisLoc, NumExpansions);
+      return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
+                                             NumExpansions);
     }
 
     TemplateArgumentLoc RebuildPackExpansion(TemplateArgumentLoc Pattern,
