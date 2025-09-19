@@ -331,9 +331,8 @@ public:
         .def_prop_ro(
             "element_type",
             [](PyShapedTypeComponents &self) { return self.elementType; },
-            // clang-format off
-            nb::sig("def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")),
-            // clang-format on
+            nb::sig("def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+                "ir.Type")),
             "Returns the element type of the shaped type components.")
         .def_static(
             "get",

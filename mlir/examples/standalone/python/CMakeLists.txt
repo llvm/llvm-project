@@ -85,7 +85,7 @@ mlir_generate_type_stubs(
   DEPENDS_TARGET_SRC_DEPS "${_standalone_extension_srcs}"
   IMPORT_PATHS "${StandalonePythonModules_ROOT_PREFIX}/.."
 )
-add_dependencies(StandalonePythonModules "${NB_STUBGEN_CUSTOM_TARGET}")
+set(_standaloneDialectsNanobind_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
 
 declare_mlir_python_sources(
   StandalonePythonSources.type_stub_gen
@@ -109,3 +109,4 @@ add_mlir_python_modules(StandalonePythonModules
   COMMON_CAPI_LINK_LIBS
     StandalonePythonCAPI
 )
+add_dependencies(StandalonePythonModules "${_standaloneDialectsNanobind_typestub_gen_target}")

@@ -30,8 +30,9 @@ NB_MODULE(_standaloneDialectsNanobind, m) {
           mlirDialectHandleLoadDialect(handle, context);
         }
       },
+      nb::arg("context").none() = nb::none(), nb::arg("load") = true,
       // clang-format off
-      nb::sig("def register_dialect(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", load: bool = True) -> None"));
-  // clang-format on
-      nb::arg("context").none() = nb::none(), nb::arg("load") = true);
+      nb::sig("def register_dialect(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", load: bool = True) -> None")
+      // clang-format on
+      );
 }

@@ -1671,9 +1671,8 @@ public:
         [](PyOpResultList &self) {
           return getValueTypes(self, self.operation->getContext());
         },
-        // clang-format off
-        nb::sig("def types(self) -> list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Type") "]"));
-    // clang-format on
+        nb::sig("def types(self) -> list[" MAKE_MLIR_PYTHON_QUALNAME(
+            "ir.Type") "]"));
     c.def_prop_ro(
         "owner",
         [](PyOpResultList &self) { return self.operation->createOpView(); },
@@ -2433,9 +2432,8 @@ public:
         [](PyBlockArgumentList &self) {
           return getValueTypes(self, self.operation->getContext());
         },
-        // clang-format off
-        nb::sig("def types(self) -> list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Type") "]"));
-    // clang-format on
+        nb::sig("def types(self) -> list[" MAKE_MLIR_PYTHON_QUALNAME(
+            "ir.Type") "]"));
   }
 
 private:
@@ -2705,13 +2703,11 @@ public:
         .def("__contains__", &PyOpAttributeMap::dunderContains)
         .def("__len__", &PyOpAttributeMap::dunderLen)
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed,
-             // clang-format off
-             nb::sig("def __getitem__(self, arg: str, /) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")))
-        // clang-format on
+             nb::sig("def __getitem__(self, arg: str, /) "
+                     "-> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")))
         .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed,
-             // clang-format off
-             nb::sig("def __getitem__(self, arg: int, /) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")))
-        // clang-format on
+             nb::sig("def __getitem__(self, arg: int, /) "
+                     "-> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")))
         .def("__setitem__", &PyOpAttributeMap::dunderSetItem)
         .def("__delitem__", &PyOpAttributeMap::dunderDelItem);
   }
@@ -3139,9 +3135,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               return std::nullopt;
             return loc;
           },
-          // clang-format off
-          nb::sig("def current(/) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Location") " | None"),
-          // clang-format on
+          nb::sig("def current(/) -> " MAKE_MLIR_PYTHON_QUALNAME(
+              "ir.Location") " | None"),
           "Gets the Location bound to the current thread or raises ValueError")
       .def_static(
           "unknown",
@@ -3168,13 +3163,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kContextGetCallSiteLocationDocstring)
       .def("is_a_callsite", mlirLocationIsACallSite)
       .def_prop_ro("callee", mlirLocationCallSiteGetCallee,
-                   // clang-format off
-                   nb::sig("def callee(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Location")))
-      // clang-format on
+                   nb::sig("def callee(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+                       "ir.Location")))
       .def_prop_ro("caller", mlirLocationCallSiteGetCaller,
-                   // clang-format off
-                   nb::sig("def caller(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Location")))
-      // clang-format on
+                   nb::sig("def caller(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+                       "ir.Location")))
       .def_static(
           "file",
           [](std::string filename, int line, int col,
@@ -3236,9 +3229,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               mlirLocationFusedGetLocations(loc, locations.data());
             return locations;
           },
-          // clang-format off
-          nb::sig("def locations(self) -> list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Location") "]"))
-      // clang-format on
+          nb::sig("def locations(self) -> list[" MAKE_MLIR_PYTHON_QUALNAME(
+              "ir.Location") "]"))
       .def_static(
           "name",
           [](std::string name, std::optional<PyLocation> childLoc,
@@ -3260,9 +3252,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           nb::sig("def name_str(self) -> str"))
       .def_prop_ro("child_loc", mlirLocationNameGetChildLoc,
-                   // clang-format off
-                   nb::sig("def child_loc(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Location")))
-      // clang-format on
+                   nb::sig("def child_loc(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+                       "ir.Location")))
       .def_static(
           "from_attr",
           [](PyAttribute &attribute, DefaultingPyMlirContext context) {
@@ -3278,9 +3269,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "attr",
           [](PyLocation &self) { return mlirLocationGetAttribute(self); },
-          // clang-format off
-          nb::sig("def attr(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
-          // clang-format on
+          nb::sig(
+              "def attr(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
           "Get the underlying LocationAttr")
       .def(
           "emit_error",
@@ -3934,9 +3924,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               throw nb::value_error("No current InsertionPoint");
             return ip;
           },
-          // clang-format off
-          nb::sig("def current(/) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.InsertionPoint")),
-          // clang-format on
+          nb::sig("def current(/) -> " MAKE_MLIR_PYTHON_QUALNAME(
+              "ir.InsertionPoint")),
           "Gets the InsertionPoint bound to the current thread or raises "
           "ValueError if none has been set")
       .def(nb::init<PyOperationBase &>(), nb::arg("beforeOperation"),
@@ -3987,21 +3976,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("asm"), nb::arg("context") = nb::none(),
           // clang-format off
           nb::sig("def parse(asm: str, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
-          // clang-format off
+          // clang-format on
           "Parses an attribute from an assembly form. Raises an MLIRError on "
           "failure.")
       .def_prop_ro(
           "context",
           [](PyAttribute &self) { return self.getContext().getObject(); },
-          // clang-format off
-          nb::sig("def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Context")),
-          // clang-format on
+          nb::sig(
+              "def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Context")),
           "Context that owns the Attribute")
       .def_prop_ro(
           "type", [](PyAttribute &self) { return mlirAttributeGetType(self); },
-          // clang-format off
           nb::sig("def type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")))
-      // clang-format on
       .def(
           "get_named",
           [](PyAttribute &self, std::string name) {
@@ -4049,9 +4035,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                    "mlirTypeID was expected to be non-null.");
             return mlirTypeID;
           },
-          // clang-format off
-          nb::sig("def typeid(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")))
-      // clang-format on
+          nb::sig(
+              "def typeid(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")))
       .def(
           MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
           [](PyAttribute &self) {
@@ -4065,9 +4050,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               return nb::cast(self);
             return typeCaster.value()(self);
           },
-          // clang-format off
-          nb::sig("def maybe_downcast(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")));
-  // clang-format on
+          nb::sig("def maybe_downcast(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+              "ir.Attribute")));
 
   //----------------------------------------------------------------------------
   // Mapping of PyNamedAttribute
@@ -4098,9 +4082,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           "attr",
           [](PyNamedAttribute &self) { return self.namedAttr.attribute; },
           nb::keep_alive<0, 1>(),
-          // clang-format off
-          nb::sig("def attr(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
-          // clang-format on
+          nb::sig(
+              "def attr(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
           "The underlying generic attribute of the NamedAttribute binding");
 
   //----------------------------------------------------------------------------
@@ -4130,9 +4113,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kContextParseTypeDocstring)
       .def_prop_ro(
           "context", [](PyType &self) { return self.getContext().getObject(); },
-          // clang-format off
-          nb::sig("def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Context")),
-          // clang-format on
+          nb::sig(
+              "def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Context")),
           "Context that owns the Type")
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def(
@@ -4179,9 +4161,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               return nb::cast(self);
             return typeCaster.value()(self);
           },
-          // clang-format off
-          nb::sig("def maybe_downcast(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")))
-      // clang-format on
+          nb::sig("def maybe_downcast(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+              "ir.Type")))
       .def_prop_ro(
           "typeid",
           [](PyType &self) -> MlirTypeID {
@@ -4192,9 +4173,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             throw nb::value_error(
                 (origRepr + llvm::Twine(" has no typeid.")).str().c_str());
           },
-          // clang-format off
-          nb::sig("def typeid(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")));
-  // clang-format on
+          nb::sig(
+              "def typeid(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")));
 
   //----------------------------------------------------------------------------
   // Mapping of PyTypeID.
@@ -4229,9 +4209,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
               [](PyValue &self) {
                 return self.getParentOperation()->getContext();
               },
-              // clang-format off
-          nb::sig("def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Context")),
-              // clang-format on
+              nb::sig("def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+                  "ir.Context")),
               "Context in which the value lives.")
           .def(
               "dump", [](PyValue &self) { mlirValueDump(self.get()); },
@@ -4259,7 +4238,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 return nb::none();
               },
               // clang-format off
-          nb::sig("def owner(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") " | " MAKE_MLIR_PYTHON_QUALNAME("ir.Block") " | None"))
+              nb::sig("def owner(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") " | " MAKE_MLIR_PYTHON_QUALNAME("ir.Block") " | None"))
           // clang-format on
           .def_prop_ro("uses",
                        [](PyValue &self) {
@@ -4320,9 +4299,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           .def_prop_ro(
               "type",
               [](PyValue &self) { return mlirValueGetType(self.get()); },
-              // clang-format off
-          nb::sig("def type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")))
-          // clang-format on
+              nb::sig(
+                  "def type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")))
           .def(
               "set_type",
               [](PyValue &self, const PyType &type) {
@@ -4342,7 +4320,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
               },
               // clang-format off
-          nb::sig("def replace_all_uses_except(self, with_: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ", exceptions: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None"),
+              nb::sig("def replace_all_uses_except(self, with_: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ", exceptions: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ") -> None"),
               // clang-format on
               nb::arg("with_"), nb::arg("exceptions"),
               kValueReplaceAllUsesExceptDocstring)
@@ -4361,16 +4339,15 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                     exceptionOps.data());
               },
               // clang-format off
-          nb::sig("def replace_all_uses_except(self, with_: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ", exceptions: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") "]) -> None"),
+              nb::sig("def replace_all_uses_except(self, with_: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ", exceptions: list[" MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") "]) -> None"),
               // clang-format on
               nb::arg("with_"), nb::arg("exceptions"),
               kValueReplaceAllUsesExceptDocstring)
           .def(
               MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
               [](PyValue &self) { return self.maybeDownCast(); },
-              // clang-format off
-          nb::sig("def maybe_downcast(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Value")))
-          // clang-format on
+              nb::sig("def maybe_downcast(self) -> " MAKE_MLIR_PYTHON_QUALNAME(
+                  "ir.Value")))
           .def_prop_ro(
               "location",
               [](MlirValue self) {
