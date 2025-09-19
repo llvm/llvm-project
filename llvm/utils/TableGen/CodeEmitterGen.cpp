@@ -514,7 +514,9 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
   emitCaseMap(O, BitOffsetCaseMap);
-  O << "  }\n"
+  O << "  default:\n"
+    << "    reportUnsupportedInst(MI);\n"
+    << "  }\n"
     << "  reportUnsupportedOperand(MI, OpNum);\n"
     << "}\n\n"
     << "#endif // GET_OPERAND_BIT_OFFSET\n\n";

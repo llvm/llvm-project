@@ -29,6 +29,6 @@ void MCCodeEmitter::reportUnsupportedOperand(const MCInst &Inst,
                                              unsigned OpNum) {
   std::string Msg;
   raw_string_ostream OS(Msg);
-  OS << "Unsupported instruction/operand : \"" << Inst << "\"[" << OpNum << "]";
+  OS << "Unsupported instruction operand : \"" << Inst << "\"[" << OpNum << "]";
   reportFatalInternalError(Msg.c_str());
 }
