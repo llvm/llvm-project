@@ -487,11 +487,30 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
   Value destBox = destConvert.getValue();
   Value srcBox = srcConvert.getValue();
 
+  // get defining alloca op of destBox and srcBox
+  auto destAlloca = destBox.getDefiningOp<fir::AllocaOp>();
+
+  if (!destAlloca) {
+    emitError(loc, "Unimplemented: FortranAssign to OpenMP lowering\n");
+    return;
+  }
+
+  // get the store op that stores to the alloca
+  for (auto user : destAlloca->getUsers()) {
+    if (auto storeOp = dyn_cast<fir::StoreOp>(user)) {
+      destBox = storeOp.getValue();
+      break;
+    }
+  }
+
   builder.setInsertionPoint(teamsOp);
-  // Load destination array box and source scalar
-  auto arrayBox = builder.create<fir::LoadOp>(loc, destBox);
+  // Load destination array box (if it's a reference)
+  Value arrayBox = destBox;
+  if (isa<fir::ReferenceType>(destBox.getType()))
+    arrayBox = builder.create<fir::LoadOp>(loc, destBox);
+
   auto scalarValue = builder.create<fir::BoxAddrOp>(loc, srcBox);
-  auto scalar = builder.create<fir::LoadOp>(loc, scalarValue);
+  Value scalar = builder.create<fir::LoadOp>(loc, scalarValue);
 
   // Calculate total number of elements (flattened)
   auto c0 = builder.create<arith::ConstantIndexOp>(loc, 0);
@@ -543,9 +562,8 @@ WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
   bool changed = false;
   omp::TargetOp targetOp;
   // Get the target op parent of teams
-  if (auto teamsOp = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp())) {
-    targetOp = dyn_cast<omp::TargetOp>(teamsOp->getParentOp());
-  }
+  targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
+  SmallVector<Operation *> opsToErase;
   for (auto &op : workdistribute.getOps()) {
     if (&op == terminator) {
       break;
@@ -560,11 +578,14 @@ WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
           targetOpsToProcess.insert(targetOp);
           replaceWithUnorderedDoLoop(rewriter, loc, teams, workdistribute,
                                      runtimeCall);
-          op.erase();
-          return true;
+          opsToErase.push_back(&op);
+          changed = true;
         }
       }
     }
+  }
+  for (auto *op : opsToErase) {
+    op->erase();
   }
   return changed;
 }
@@ -911,7 +932,7 @@ static void reloadCacheAndRecompute(
 
   unsigned originalMapVarsSize = targetOp.getMapVars().size();
   unsigned hostEvalVarsSize = hostEvalVars.size();
-  // Create Stores for allocs.
+  // Create load operations for each allocated variable.
   for (unsigned i = 0; i < allocs.size(); ++i) {
     Value original = allocs[i];
     // Get the new block argument for this specific allocated value.
@@ -1196,6 +1217,12 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
   Block *targetBlock = &targetOp.getRegion().front();
   assert(targetBlock == &targetOp.getRegion().back());
   IRMapping mapping;
+
+  auto targetDataOp = cast<omp::TargetDataOp>(targetOp->getParentOp());
+  if (!targetDataOp) {
+    llvm_unreachable("Expected target op to be inside target_data op");
+    return;
+  }
   // create mapping for host_eval_vars
   unsigned hostEvalVarCount = targetOp.getHostEvalVars().size();
   for (unsigned i = 0; i < targetOp.getHostEvalVars().size(); ++i) {
@@ -1361,12 +1388,14 @@ static void computeAllocsCacheRecomputable(
        it++) {
     // Check if any of the results are used outside the split point.
     for (auto res : it->getResults()) {
-      if (usedOutsideSplit(res, splitBeforeOp))
+      if (usedOutsideSplit(res, splitBeforeOp)) {
         requiredVals.push_back(res);
+      }
     }
     // If the op is not recomputable, add it to the nonRecomputable set.
-    if (!isRecomputableAfterFission(&*it, splitBeforeOp))
+    if (!isRecomputableAfterFission(&*it, splitBeforeOp)) {
       nonRecomputable.insert(&*it);
+    }
   }
   // For each required value, collect its dependencies.
   for (auto requiredVal : requiredVals)
