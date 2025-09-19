@@ -99,14 +99,6 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
-# Targeting the GPU directly requires a few flags to make CMake happy.
-if("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
-endif()
-
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
