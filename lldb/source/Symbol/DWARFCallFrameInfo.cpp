@@ -20,9 +20,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <list>
 #include <optional>
 
@@ -151,23 +151,19 @@ GetGNUEHPointer(const DataExtractor &DE, lldb::offset_t *offset_ptr,
 
 // Check if the given cie_id value indicates a CIE (Common Information Entry)
 // as opposed to an FDE (Frame Description Entry).
-//
-// For eh_frame sections: CIE is marked with cie_id == 0
-// For debug_frame sections:
-//   - DWARF32: CIE is marked with cie_id ==
-//   std::numeric_limits<uint32_t>::max()
-//   - DWARF64: CIE is marked with cie_id ==
-//   std::numeric_limits<uint64_t>::max()
 static bool IsCIEMarker(uint64_t cie_id, bool is_64bit,
                         DWARFCallFrameInfo::Type type) {
+  // Check eh_frame CIE marker
   if (type == DWARFCallFrameInfo::EH)
     return cie_id == 0;
 
-  // DWARF type
+  // Check debug_frame CIE marker
+  // DWARF64
   if (is_64bit)
-    return cie_id == std::numeric_limits<uint64_t>::max();
+    return cie_id == llvm::dwarf::DW64_CIE_ID;
 
-  return cie_id == std::numeric_limits<uint32_t>::max();
+  // DWARF32
+  return cie_id == llvm::dwarf::DW_CIE_ID;
 }
 
 DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
@@ -306,7 +302,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     GetCFIData();
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_id, end_offset;
-  bool is_64bit = (length == std::numeric_limits<uint32_t>::max());
+  bool is_64bit = (length == llvm::dwarf::DW_LENGTH_DWARF64);
   if (is_64bit) {
     length = m_cfi_data.GetU64(&offset);
     cie_id = m_cfi_data.GetU64(&offset);
@@ -494,7 +490,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
     const dw_offset_t current_entry = offset;
     dw_offset_t cie_id, next_entry, cie_offset;
     uint32_t len = m_cfi_data.GetU32(&offset);
-    bool is_64bit = (len == std::numeric_limits<uint32_t>::max());
+    bool is_64bit = (len == llvm::dwarf::DW_LENGTH_DWARF64);
     if (is_64bit) {
       len = m_cfi_data.GetU64(&offset);
       cie_id = m_cfi_data.GetU64(&offset);
@@ -589,7 +585,7 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
 
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_offset;
-  bool is_64bit = (length == std::numeric_limits<uint32_t>::max());
+  bool is_64bit = (length == llvm::dwarf::DW_LENGTH_DWARF64);
   if (is_64bit) {
     length = m_cfi_data.GetU64(&offset);
     cie_offset = m_cfi_data.GetU64(&offset);
@@ -599,7 +595,8 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
 
   // FDE entries with zeroth cie_offset may occur for debug_frame.
   assert(!(m_type == EH && 0 == cie_offset) &&
-         cie_offset != std::numeric_limits<uint32_t>::max());
+         cie_offset !=
+             (is_64bit ? llvm::dwarf::DW64_CIE_ID : llvm::dwarf::DW_CIE_ID));
 
   // Translate the CIE_id from the eh_frame format, which is relative to the
   // FDE offset, into a __eh_frame section offset
