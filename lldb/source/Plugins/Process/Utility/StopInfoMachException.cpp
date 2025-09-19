@@ -78,7 +78,7 @@ static void DescribeAddressBriefly(Stream &strm, const Address &addr,
 }
 
 static constexpr uint8_t g_mte_tag_shift = 64 - 8;
-static constexpr uintptr_t g_mte_tag_mask = (uintptr_t)0x0f << g_mte_tag_shift;
+static constexpr addr_t g_mte_tag_mask = (addr_t)0x0f << g_mte_tag_shift;
 
 bool StopInfoMachException::DetermineTagMismatch(ExecutionContext &exe_ctx) {
   const bool IsBadAccess = m_value == 1;            // EXC_BAD_ACCESS
@@ -97,7 +97,7 @@ bool StopInfoMachException::DetermineTagMismatch(ExecutionContext &exe_ctx) {
               m_exc_code, bad_address);
 
   const uint8_t tag = (bad_address & g_mte_tag_mask) >> g_mte_tag_shift;
-  const uint64_t canonical_addr = bad_address & ~g_mte_tag_mask;
+  const addr_t canonical_addr = bad_address & ~g_mte_tag_mask;
   strm.Printf(
       "Note: MTE tag mismatch detected: pointer tag=%d, address=0x%" PRIx64,
       tag, canonical_addr);
