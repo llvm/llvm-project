@@ -1395,9 +1395,10 @@ void InstrInfoEmitter::emitEnums(
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
   OS << "  };\n";
 
-  if (!Target.getAllRegClassByHwMode().empty()) {
+  ArrayRef<const Record *> RegClassesByHwMode = Target.getAllRegClassByHwMode();
+  if (!RegClassesByHwMode.empty()) {
     OS << "  enum RegClassByHwModeUses : uint16_t {\n";
-    for (const Record *ClassByHwMode : Target.getAllRegClassByHwMode())
+    for (const Record *ClassByHwMode : RegClassesByHwMode)
       OS << indent(4) << ClassByHwMode->getName() << ",\n";
     OS << "  };\n";
   }
