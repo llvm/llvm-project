@@ -25093,7 +25093,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     } else if (SDValue R = LowerSELECTWithCmpZero(CmpOp0, Op1, Op2, CondCode,
                                                   DL, DAG, Subtarget)) {
       return R;
-    } else if ((VT == MVT::i32 || VT == MVT::i64) && isNullConstant(Op2) &&
+    } else if (VT.isScalarInteger() && isNullConstant(Op2) &&
                Cmp.getNode()->hasOneUse() && (CmpOp0 == Op1) &&
                ((CondCode == X86::COND_S) ||                    // smin(x, 0)
                 (CondCode == X86::COND_G && hasAndNot(Op1)))) { // smax(x, 0)
