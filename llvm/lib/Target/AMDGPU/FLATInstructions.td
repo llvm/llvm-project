@@ -2693,6 +2693,11 @@ class FLAT_Real_vi <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
                   !subst("$sccb", !if(has_sccb, "$sccb",""), ps.AsmOperands);
 }
 
+class FLAT_Real_vi_ex_gfx9 <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
+  FLAT_Real_vi <op, ps, has_sccb> {
+  let AssemblerPredicate = isGFX8orGFX9After908;
+}
+
 class FLAT_Real_gfx9 <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
   FLAT_Real_vi <op, ps, has_sccb> {
   let AssemblerPredicate = isGFX9NotGFX90A;
@@ -2702,9 +2707,7 @@ class FLAT_Real_gfx9 <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> :
 }
 
 multiclass FLAT_Real_mc_vi <bits<7> op, FLAT_Pseudo ps, bit has_sccb = ps.has_sccb> {
-  let AssemblerPredicate = isGFX8orGFX9After908 in { // GFX8 or GFX9's starting with 90A
-    def _vi: FLAT_Real_vi<op, ps, has_sccb>;
-  }
+  def _vi: FLAT_Real_vi_ex_gfx9<op, ps, has_sccb>;
   def _gfx9: FLAT_Real_gfx9<op, ps, has_sccb>;
 }
 
@@ -2714,10 +2717,10 @@ multiclass FLAT_Real_AllAddr_vi<bits<7> op,
   defm _SADDR : FLAT_Real_mc_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb>;
 }
 
-multiclass FLAT_Real_AllAddr_vi_only<bits<7> op,
+multiclass FLAT_Real_AllAddr_vi_ex_gfx9<bits<7> op,
   bit has_sccb = !cast<FLAT_Pseudo>(NAME).has_sccb> {
-  def _vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME), has_sccb>;
-  def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb>;
+  def _vi : FLAT_Real_vi_ex_gfx9<op, !cast<FLAT_Pseudo>(NAME), has_sccb>;
+  def _SADDR_vi : FLAT_Real_vi_ex_gfx9<op, !cast<FLAT_Pseudo>(NAME#"_SADDR"), has_sccb>;
 }
 
 class FLAT_Real_gfx940 <bits<7> op, FLAT_Pseudo ps> :
@@ -2796,18 +2799,18 @@ defm FLAT_LOAD_SHORT_D16_HI_vi : FLAT_Real_mc_vi <0x25, FLAT_LOAD_SHORT_D16_HI>;
 multiclass FLAT_Real_Atomics_vi <bits<7> op,
   bit has_sccb = !cast<FLAT_Pseudo>(NAME).has_sccb> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  defm ""     : FLAT_Real_mc_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr), has_sccb>;
+  defm "" : FLAT_Real_mc_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr), has_sccb>;
   defm _RTN : FLAT_Real_mc_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN"), has_sccb>;
+  def _RTN_agpr_vi : FLAT_Real_vi_ex_gfx9<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN_agpr"), has_sccb>;
 }
 
-// FLAT_Real_mc_vi contains a vi variant and a gfx9 variant. In some cases, only the vi
-// variant is needed.
-multiclass FLAT_Real_Atomics_vi_only <bits<7> op,
+multiclass FLAT_Real_Atomics_vi_ex_gfx9 <bits<7> op,
   bit has_sccb = !cast<FLAT_Pseudo>(NAME).has_sccb> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
-  def _vi     : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr), has_sccb>;
-  def _RTN_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN"), has_sccb>;
-  def _RTN_agpr_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN_agpr"), has_sccb>;
+  def _vi     : FLAT_Real_vi_ex_gfx9<op, !cast<FLAT_Pseudo>(ps.PseudoInstr), has_sccb>;
+  def _RTN_vi : FLAT_Real_vi_ex_gfx9<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN"), has_sccb>;
+
+  def _RTN_agpr_vi : FLAT_Real_vi_ex_gfx9<op, !cast<FLAT_Pseudo>(ps.PseudoInstr # "_RTN_agpr"), has_sccb>;
 }
 
 multiclass FLAT_Global_Real_Atomics_vi<bits<7> op,
@@ -2815,16 +2818,19 @@ multiclass FLAT_Global_Real_Atomics_vi<bits<7> op,
   FLAT_Real_AllAddr_vi<op, has_sccb> {
   defm _RTN  : FLAT_Real_mc_vi <op, !cast<FLAT_Pseudo>(NAME#"_RTN"), has_sccb>;
   defm _SADDR_RTN : FLAT_Real_mc_vi <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN"), has_sccb>;
+
+  def _RTN_agpr_vi  : FLAT_Real_vi_ex_gfx9 <op, !cast<FLAT_Pseudo>(NAME#"_RTN_agpr"), has_sccb>;
+  def _SADDR_RTN_agpr_vi : FLAT_Real_vi_ex_gfx9 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN_agpr"), has_sccb>;
 }
 
-multiclass FLAT_Global_Real_Atomics_vi_only<bits<7> op,
+multiclass FLAT_Global_Real_Atomics_vi_ex_gfx9<bits<7> op,
   bit has_sccb = !cast<FLAT_Pseudo>(NAME).has_sccb> :
-  FLAT_Real_AllAddr_vi_only<op, has_sccb> {
-  def _RTN_vi  : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_RTN"), has_sccb>;
-  def _SADDR_RTN_vi : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN"), has_sccb>;
+  FLAT_Real_AllAddr_vi_ex_gfx9<op, has_sccb> {
+  def _RTN_vi  : FLAT_Real_vi_ex_gfx9 <op, !cast<FLAT_Pseudo>(NAME#"_RTN"), has_sccb>;
+  def _SADDR_RTN_vi : FLAT_Real_vi_ex_gfx9 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN"), has_sccb>;
 
-  def _RTN_agpr_vi  : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_RTN_agpr"), has_sccb>;
-  def _SADDR_RTN_agpr_vi : FLAT_Real_vi <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN_agpr"), has_sccb>;
+  def _RTN_agpr_vi  : FLAT_Real_vi_ex_gfx9 <op, !cast<FLAT_Pseudo>(NAME#"_RTN_agpr"), has_sccb>;
+  def _SADDR_RTN_agpr_vi : FLAT_Real_vi_ex_gfx9 <op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN_agpr"), has_sccb>;
 }
 
 defm FLAT_ATOMIC_SWAP       : FLAT_Real_Atomics_vi <0x40>;
@@ -2986,10 +2992,10 @@ let AssemblerPredicate = isGFX940Plus in {
   defm GLOBAL_ATOMIC_ADD_F64     : FLAT_Global_Real_Atomics_gfx940<0x4f>;
   defm GLOBAL_ATOMIC_MIN_F64     : FLAT_Global_Real_Atomics_gfx940<0x50>;
   defm GLOBAL_ATOMIC_MAX_F64     : FLAT_Global_Real_Atomics_gfx940<0x51>;
-  defm FLAT_ATOMIC_ADD_F32       : FLAT_Real_Atomics_vi_only<0x4d>;
-  defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Real_Atomics_vi_only<0x4e>;
-  defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Real_Atomics_vi_only<0x52>;
-  defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Real_Atomics_vi_only<0x52>;
+  defm FLAT_ATOMIC_ADD_F32       : FLAT_Real_Atomics_vi_ex_gfx9<0x4d>;
+  defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Real_Atomics_vi_ex_gfx9<0x4e>;
+  defm FLAT_ATOMIC_PK_ADD_BF16   : FLAT_Real_Atomics_vi_ex_gfx9<0x52>;
+  defm GLOBAL_ATOMIC_PK_ADD_BF16 : FLAT_Global_Real_Atomics_vi_ex_gfx9<0x52>;
 } // End AssemblerPredicate = isGFX940Plus
 
 //===----------------------------------------------------------------------===//

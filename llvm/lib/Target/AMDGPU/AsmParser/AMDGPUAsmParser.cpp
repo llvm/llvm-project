@@ -1602,6 +1602,11 @@ public:
 
   bool hasKernargPreload() const { return AMDGPU::hasKernargPreload(getSTI()); }
 
+  bool isFlatInstAndNVAllowed(const MCInst &Inst) const {
+    uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+    return (TSFlags & SIInstrFlags::FLAT) && isGFX9() && !isGFX90A();
+  }
+
   AMDGPUTargetStreamer &getTargetStreamer() {
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
@@ -5371,8 +5376,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
       Error(S, "scale_offset is not supported on this GPU");
     }
-    if ((CPol & CPol::NV) && (!isGFX9() || isGFX90A())) {
-      // nv not supported on GFX90A+
+    if ((CPol & CPol::NV) && !isFlatInstAndNVAllowed(Inst)) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
