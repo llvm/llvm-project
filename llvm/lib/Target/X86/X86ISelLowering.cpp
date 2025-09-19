@@ -31205,10 +31205,10 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     unsigned NumElts = VT.getVectorNumElements();
 
     if (Subtarget.hasVBMI2() && EltSizeInBits > 8) {
-      if (IsFSHR)
-        std::swap(Op0, Op1);
 
       if (IsCstSplat) {
+        if (IsFSHR)
+          std::swap(Op0, Op1);
         uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
         SDValue Imm = DAG.getTargetConstant(ShiftAmt, DL, MVT::i8);
         return getAVX512Node(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
@@ -35129,8 +35129,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VALIGN)
   NODE_NAME_CASE(VSHLD)
   NODE_NAME_CASE(VSHRD)
-  NODE_NAME_CASE(VSHLDV)
-  NODE_NAME_CASE(VSHRDV)
   NODE_NAME_CASE(PSHUFD)
   NODE_NAME_CASE(PSHUFHW)
   NODE_NAME_CASE(PSHUFLW)
