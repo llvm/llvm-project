@@ -1002,6 +1002,9 @@ foreach smallT = [
         Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
 
       let summary = "Scales 8 " # smallT.name # " and converts them to 8 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
       let results = (outs largeT.type:$res);
       let assemblyFormat = [{
         attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
@@ -1029,10 +1032,14 @@ foreach smallT = [
         Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
 
       let summary = "Scales 16 " # smallT.name # " and converts them to 16 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
       let results = (outs largeT.type:$res);
       let assemblyFormat = [{
         attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
       }];
+
     }
   } // foreach largeT
 } // foreach smallTOp
