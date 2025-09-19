@@ -7,7 +7,7 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 4 x i64> [[TMP0]], splat (i64 2)
@@ -63,7 +63,7 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -92,14 +92,14 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:    [[WIDE_IV_1_NEXT]] = add i64 [[WIDE_IV_1]], 3
 ; CHECK-NEXT:    [[WIDE_IV_2_NEXT]] = add i64 [[WIDE_IV_2]], 4
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 ; NO-REG-PRESSURE-CHECK-LABEL: define void @f(
 ; NO-REG-PRESSURE-CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-REG-PRESSURE-CHECK-NEXT:  [[ENTRY:.*:]]
-; NO-REG-PRESSURE-CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; NO-REG-PRESSURE-CHECK:       [[VECTOR_PH]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 8 x i64> [[TMP0]], splat (i64 2)
@@ -155,7 +155,7 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; NO-REG-PRESSURE-CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-REG-PRESSURE-CHECK:       [[MIDDLE_BLOCK]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[EXIT:.*]]
-; NO-REG-PRESSURE-CHECK:       [[SCALAR_PH]]:
+; NO-REG-PRESSURE-CHECK:       [[SCALAR_PH:.*]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[LOOP:.*]]
 ; NO-REG-PRESSURE-CHECK:       [[LOOP]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -184,7 +184,7 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_1_NEXT]] = add i64 [[WIDE_IV_1]], 3
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_2_NEXT]] = add i64 [[WIDE_IV_2]], 4
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 1024
-; NO-REG-PRESSURE-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; NO-REG-PRESSURE-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; NO-REG-PRESSURE-CHECK:       [[EXIT]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    ret void
 ;

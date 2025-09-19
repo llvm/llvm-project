@@ -131,8 +131,8 @@ private:
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
   GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
-                        const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
+                        std::unique_ptr<MemoryBuffer> &&TgtImage)
+      : DeviceImageTy(ImageId, Device, std::move(TgtImage)), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -189,11 +189,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setContext() override { return Plugin::success(); }
 
   /// Load the binary image into the device and allocate an image object.
-  Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
-                                           int32_t ImageId) override {
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
