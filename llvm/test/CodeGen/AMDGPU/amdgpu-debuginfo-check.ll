@@ -1,5 +1,5 @@
 ; RUN: llc %s -o %t.o -mcpu=gfx1030 -filetype=obj -O0
-; RUN: llvm-debuginfo-analyzer --check --check-vars %t.o | FileCheck %s
+; RUN: llvm-debuginfo-analyzer --debugger-view --debugger-view-vars %t.o | FileCheck %s
 
 ; This test compiles this module with AMDGPU backend under -O0,
 ; and makes sure llvm-debuginfo-check works for it.
