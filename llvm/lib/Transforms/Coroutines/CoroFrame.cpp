@@ -916,8 +916,8 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
         MA = A->getParamAlign();
       }
     }
-    FieldIDType Id = B.addField(FieldType, MA, false /*header*/,
-                                true /*IsSpillOfValue*/);
+    FieldIDType Id =
+        B.addField(FieldType, MA, false /*header*/, true /*IsSpillOfValue*/);
     FrameData.setFieldIndex(S.first, Id);
   }
 
