@@ -884,13 +884,13 @@ set(_core_type_stub_sources
 # **NOT** MLIRPythonModules.extension._mlir.dso. So be sure to use the correct target!
 get_target_property(_core_extension_srcs MLIRPythonExtension.Core INTERFACE_SOURCES)
 
-# Why is MODULE_NAME _mlir_libs._mlir here but mlir._mlir_libs._mlirPythonTestNanobind below???
+# Why is MODULE_NAME _mlir here but mlir._mlir_libs._mlirPythonTestNanobind below???
 # The _mlir extension can be imported independently of any other python code and/or extension modules.
-# I.e., you could do `cd $MLIRPythonModules_ROOT_PREFIX && python -c "import _mlir_libs._mlir"` (try it!).
+# I.e., you could do `cd $MLIRPythonModules_ROOT_PREFIX/_mlir_libs && python -c "import _mlir"` (try it!).
 # _mlir is also (currently) the only extension for which this is possible because dialect extensions modules,
 # which generally make use of `mlir_value_subclass/mlir_type_subclass/mlir_attribute_subclass`, perform an
 # `import mlir` right when they're loaded (see the mlir_*_subclass ctors in NanobindAdaptors.h).
-# Note, this also why IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}" here while below
+# Note, this also why IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs" here while below
 # "${MLIRPythonModules_ROOT_PREFIX}/.." (because MLIR_BINDINGS_PYTHON_INSTALL_PREFIX, by default, ends at mlir).
 #
 # Further note: this function creates file targets like
@@ -898,12 +898,12 @@ get_target_property(_core_extension_srcs MLIRPythonExtension.Core INTERFACE_SOUR
 # that declare_mlir_python_sources expects, which are like "${ROOT_DIR}/${WHATEVER_SOURCE}".
 # This is why _mlir_libs is prepended below.
 mlir_generate_type_stubs(
-  MODULE_NAME _mlir_libs._mlir
+  MODULE_NAME _mlir
   DEPENDS_TARGETS MLIRPythonModules.extension._mlir.dso
   OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
   OUTPUTS "${_core_type_stub_sources}"
   DEPENDS_TARGET_SRC_DEPS "${_core_extension_srcs}"
-  IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}"
+  IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
 )
 set(_mlir_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
 

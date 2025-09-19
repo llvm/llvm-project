@@ -28,6 +28,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ThreadPool.h"
 
+#include <mlir-c/BuiltinAttributes.h>
+
 namespace mlir {
 namespace python {
 
@@ -75,7 +77,7 @@ public:
   /// Releases the object held by this instance, returning it.
   /// This is the proper thing to return from a function that wants to return
   /// the reference. Note that this does not work from initializers.
-  nanobind::object releaseObject() {
+  nanobind::typed<nanobind::object, T> releaseObject() {
     assert(referrent && object);
     referrent = nullptr;
     auto stolen = std::move(object);
@@ -87,7 +89,7 @@ public:
     assert(referrent && object);
     return referrent;
   }
-  nanobind::object getObject() {
+  nanobind::typed<nanobind::object, T> getObject() {
     assert(referrent && object);
     return object;
   }
@@ -270,8 +272,7 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      MAKE_MLIR_PYTHON_QUALNAME("ir.Context");
+  static constexpr const char kTypeDescription[] = "Context";
   static PyMlirContext &resolve();
 };
 
@@ -497,8 +498,7 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] =
-      MAKE_MLIR_PYTHON_QUALNAME("ir.Location");
+  static constexpr const char kTypeDescription[] = "Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -599,6 +599,7 @@ public:
 /// drops to zero or it is attached to a parent, at which point its lifetime
 /// is bounded by its top-level parent reference.
 class PyOperation;
+class PyOpView;
 using PyOperationRef = PyObjectRef<PyOperation>;
 class PyOperation : public PyOperationBase, public BaseContextObject {
 public:
@@ -678,7 +679,7 @@ public:
          PyLocation &location, const nanobind::object &ip, bool inferType);
 
   /// Creates an OpView suitable for this operation.
-  nanobind::object createOpView();
+  nanobind::typed<nanobind::object, PyOpView> createOpView();
 
   /// Erases the underlying MlirOperation, removes its pointer from the
   /// parent context's live operations map, and sets the valid bit false.
@@ -688,7 +689,7 @@ public:
   void setInvalid() { valid = false; }
 
   /// Clones this operation.
-  nanobind::object clone(const nanobind::object &ip);
+  nanobind::typed<nanobind::object, PyOpView> clone(const nanobind::object &ip);
 
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
 
@@ -888,6 +889,8 @@ public:
   /// is taken by calling this function.
   static PyType createFromCapsule(nanobind::object capsule);
 
+  nanobind::typed<nanobind::object, PyType> maybeDownCast();
+
 private:
   MlirType type;
 };
@@ -962,22 +965,18 @@ public:
         nanobind::arg("other"));
     cls.def_prop_ro_static(
         "static_typeid",
-        [](nanobind::object & /*class*/) -> MlirTypeID {
+        [](nanobind::object & /*class*/) {
           if (DerivedTy::getTypeIdFunction)
-            return DerivedTy::getTypeIdFunction();
+            return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
               (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
                   .str()
                   .c_str());
         },
         nanobind::sig("def static_typeid(/) -> TypeID"));
-    cls.def_prop_ro(
-        "typeid",
-        [](PyType &self) {
-          return nanobind::cast<MlirTypeID>(
-              nanobind::cast(self).attr("typeid"));
-        },
-        nanobind::sig("def typeid(self) -> TypeID"));
+    cls.def_prop_ro("typeid", [](PyType &self) {
+      return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
+    });
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
       printAccum.parts.append(DerivedTy::pyClassName);
@@ -1019,6 +1018,8 @@ public:
   /// may be a pre-existing object. Ownership of the underlying MlirAttribute
   /// is taken by calling this function.
   static PyAttribute createFromCapsule(nanobind::object capsule);
+
+  nanobind::typed<nanobind::object, PyAttribute> maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1097,27 +1098,24 @@ public:
           return DerivedTy::isaFunction(otherAttr);
         },
         nanobind::arg("other"));
-    cls.def_prop_ro(
-        "type", [](PyAttribute &attr) { return mlirAttributeGetType(attr); },
-        nanobind::sig("def type(self) -> Type"));
+    cls.def_prop_ro("type", [](PyAttribute &attr) {
+      return PyType(attr.getContext(), mlirAttributeGetType(attr))
+          .maybeDownCast();
+    });
     cls.def_prop_ro_static(
         "static_typeid",
-        [](nanobind::object & /*class*/) -> MlirTypeID {
+        [](nanobind::object & /*class*/) -> PyTypeID {
           if (DerivedTy::getTypeIdFunction)
-            return DerivedTy::getTypeIdFunction();
+            return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
               (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
                   .str()
                   .c_str());
         },
         nanobind::sig("def static_typeid(/) -> TypeID"));
-    cls.def_prop_ro(
-        "typeid",
-        [](PyAttribute &self) {
-          return nanobind::cast<MlirTypeID>(
-              nanobind::cast(self).attr("typeid"));
-        },
-        nanobind::sig("def typeid(self) -> TypeID"));
+    cls.def_prop_ro("typeid", [](PyAttribute &self) {
+      return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
+    });
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
       printAccum.parts.append(DerivedTy::pyClassName);
@@ -1144,6 +1142,17 @@ public:
   static void bindDerived(ClassTy &m) {}
 };
 
+class PyStringAttribute : public PyConcreteAttribute<PyStringAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAString;
+  static constexpr const char *pyClassName = "StringAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirStringAttrGetTypeID;
+
+  static void bindDerived(ClassTy &c);
+};
+
 /// Wrapper around the generic MlirValue.
 /// Values are managed completely by the operation that resulted in their
 /// definition. For op result value, this is the operation that defines the
@@ -1168,7 +1177,7 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::object maybeDownCast();
+  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
@@ -1259,7 +1268,8 @@ public:
 
   /// Returns the symbol (opview) with the given name, throws if there is no
   /// such symbol in the table.
-  nanobind::object dunderGetItem(const std::string &name);
+  nanobind::typed<nanobind::object, PyOpView>
+  dunderGetItem(const std::string &name);
 
   /// Removes the given operation from the symbol table and erases it.
   void erase(PyOperationBase &symbol);
@@ -1270,14 +1280,14 @@ public:
 
   /// Inserts the given operation into the symbol table. The operation must have
   /// the symbol trait.
-  MlirAttribute insert(PyOperationBase &symbol);
+  PyStringAttribute insert(PyOperationBase &symbol);
 
   /// Gets and sets the name of a symbol op.
-  static MlirAttribute getSymbolName(PyOperationBase &symbol);
+  static PyStringAttribute getSymbolName(PyOperationBase &symbol);
   static void setSymbolName(PyOperationBase &symbol, const std::string &name);
 
   /// Gets and sets the visibility of a symbol op.
-  static MlirAttribute getVisibility(PyOperationBase &symbol);
+  static PyStringAttribute getVisibility(PyOperationBase &symbol);
   static void setVisibility(PyOperationBase &symbol,
                             const std::string &visibility);
 
