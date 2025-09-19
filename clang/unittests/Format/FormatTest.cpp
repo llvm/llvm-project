@@ -15433,7 +15433,11 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
                "{ int i; };",
                Style);
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
-  verifyFormat("class foo { int i; };", Style);
+  verifyFormat("class foo\n"
+               "{\n"
+               "};\n"
+               "class foo { int i; };",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
