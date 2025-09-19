@@ -1431,7 +1431,7 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
   [llvm_anyptr_ty],
   [llvm_anyptr_ty, // base
    llvm_i16_ty,    // stride (and swizzle control)
-   llvm_i32_ty,    // NumRecords / extent
+   llvm_i64_ty,    // NumRecords / extent
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
   [IntrNoMem, ReadNone<ArgIndex<0>>,
