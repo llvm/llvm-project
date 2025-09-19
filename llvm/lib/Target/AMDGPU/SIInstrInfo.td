@@ -1969,6 +1969,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT, i1)     : SSrc_i1,
         !eq(VT, i16)    : !if (IsFake16, VCSrc_b16, VCSrcT_b16),
+        !eq(VT, i64)    : VCSrc_b64,
         !eq(VT, f16)    : !if (IsFake16, VCSrc_f16, VCSrcT_f16),
         !eq(VT, bf16)   : !if (IsFake16, VCSrc_bf16, VCSrcT_bf16),
         !eq(VT, v2i16)  : VCSrc_v2b16,
