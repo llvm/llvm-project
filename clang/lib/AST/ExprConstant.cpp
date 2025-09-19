@@ -11575,6 +11575,43 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
   return false;
 }
 
+static bool
+evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
+                llvm::function_ref<APSInt(const APSInt &)> narrowElement) {
+  APValue LHS, RHS;
+  if (!EvaluateAsRValue(Info, E->getArg(0), LHS) ||
+      !EvaluateAsRValue(Info, E->getArg(1), RHS))
+    return false;
+
+  unsigned LHSVecLen = LHS.getVectorLength();
+  unsigned RHSVecLen = RHS.getVectorLength();
+
+  assert(LHSVecLen != 0 && LHSVecLen == RHSVecLen &&
+         "pack builtin LHSVecLen must equal to RHSVecLen");
+
+  const VectorType *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
+  const unsigned SrcBits = Info.Ctx.getIntWidth(VT0->getElementType());
+  const unsigned VectorBits = LHSVecLen * SrcBits;
+  const unsigned srcPerLane = VectorBits >= 128 ? 128 / SrcBits : LHSVecLen;
+  const unsigned lanes = VectorBits >= 128 ? VectorBits / 128 : 1;
+
+  SmallVector<APValue, 64> Out;
+  Out.reserve(LHSVecLen + RHSVecLen);
+
+  for (unsigned lane = 0; lane != lanes; ++lane) {
+    unsigned base = lane * srcPerLane;
+    for (unsigned i = 0; i != srcPerLane; ++i)
+      Out.emplace_back(
+          APValue(narrowElement(LHS.getVectorElt(base + i).getInt())));
+    for (unsigned i = 0; i != srcPerLane; ++i)
+      Out.emplace_back(
+          APValue(narrowElement(RHS.getVectorElt(base + i).getInt())));
+  }
+
+  Result = APValue(Out.data(), Out.size());
+  return true;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -11768,7 +11805,30 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
       return LHS.lshr(RHS.getZExtValue());
     });
-
+  case X86::BI__builtin_ia32_packsswb128:
+  case X86::BI__builtin_ia32_packsswb256:
+  case X86::BI__builtin_ia32_packsswb512:
+  case X86::BI__builtin_ia32_packssdw128:
+  case X86::BI__builtin_ia32_packssdw256:
+  case X86::BI__builtin_ia32_packssdw512:
+    return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
+      APInt Value = APSInt(Src).truncSSat(Src.getBitWidth() / 2);
+      return APSInt(Value, /*isUnsigned=*/false);
+    });
+  case X86::BI__builtin_ia32_packusdw128:
+  case X86::BI__builtin_ia32_packusdw256:
+  case X86::BI__builtin_ia32_packusdw512:
+  case X86::BI__builtin_ia32_packuswb128:
+  case X86::BI__builtin_ia32_packuswb256:
+  case X86::BI__builtin_ia32_packuswb512:
+    return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
+      unsigned DstBits = Src.getBitWidth() / 2;
+      if (Src.isNegative())
+        return APSInt(APInt::getZero(DstBits), /*isUnsigned=*/true);
+      if (Src.isIntN(DstBits))
+        return APSInt(Src.trunc(DstBits), /*isUnsigned=*/true);
+      return APSInt(APInt::getAllOnes(DstBits), /*isUnsigned=*/true);
+    });
   case clang::X86::BI__builtin_ia32_pmuldq128:
   case clang::X86::BI__builtin_ia32_pmuldq256:
   case clang::X86::BI__builtin_ia32_pmuldq512:
