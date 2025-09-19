@@ -7,7 +7,7 @@ define void @test(ptr %data) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[DATA:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -19,7 +19,7 @@ define void @test(ptr %data) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -31,7 +31,7 @@ define void @test(ptr %data) {
 ; CHECK-NEXT:    store i16 [[LRINT_TRUNC]], ptr [[DATA]], align 2, !tbaa [[SHORT_TBAA4]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[END]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;

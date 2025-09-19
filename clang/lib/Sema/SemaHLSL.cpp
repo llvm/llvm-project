@@ -3956,6 +3956,34 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   return false;
 }
 
+// Return true if everything is ok; returns false if there was an error.
+bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
+                                  Expr *RHSExpr, SourceLocation Loc) {
+  assert((LHSExpr->getType()->isHLSLResourceRecord() ||
+          LHSExpr->getType()->isHLSLResourceRecordArray()) &&
+         "expected LHS to be a resource record or array of resource records");
+  if (Opc != BO_Assign)
+    return true;
+
+  // If LHS is an array subscript, get the underlying declaration.
+  Expr *E = LHSExpr;
+  while (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
+
+  // Report error if LHS is a resource declared at a global scope.
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (VD->hasGlobalStorage()) {
+        // assignment to global resource is not allowed
+        SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
+        SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // Walks though the global variable declaration, collects all resource binding
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnVarDecl(VarDecl *VD) {

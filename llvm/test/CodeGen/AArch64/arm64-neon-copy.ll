@@ -4,6 +4,8 @@
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for test_bitcastv2f32tov1f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_bitcastv1f64tov2f32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_v1i32_undef
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_diff_v1i32_v1i32
 
 define <16 x i8> @ins16bw(<16 x i8> %tmp1, i8 %tmp2) {
 ; CHECK-LABEL: ins16bw:

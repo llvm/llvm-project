@@ -226,9 +226,19 @@ static void ThreadTerminateCallback(uptr thread) {
 void InitializePlatformEarly() {
 #  if !SANITIZER_GO && SANITIZER_IOS
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
-  if (max_vm != HiAppMemEnd()) {
-    Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
-           (void *)max_vm, (void *)HiAppMemEnd());
+  if (max_vm < HiAppMemEnd()) {
+    Report(
+        "ThreadSanitizer: Unsupported virtual memory layout:\n\tVM address "
+        "limit = %p\n\tExpected %p.\n",
+        (void*)max_vm, (void*)HiAppMemEnd());
+    Die();
+  }
+  // In some configurations, the max_vm is expanded, but much of this space is
+  // already mapped. TSAN will not work in this configuration.
+  if (IsAddressInMappedRegion(HiAppMemEnd() - 1)) {
+    Report(
+        "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
+        "already mapped.\n");
     Die();
   }
 #endif

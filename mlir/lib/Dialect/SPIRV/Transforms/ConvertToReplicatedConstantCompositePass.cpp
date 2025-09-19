@@ -64,7 +64,7 @@ getSplatAttrAndNumElements(Attribute valueAttr, Type valueType) {
 }
 
 struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::ConstantOp op,
                                 PatternRewriter &rewriter) const override {
@@ -85,7 +85,7 @@ struct ConstantOpConversion final : OpRewritePattern<spirv::ConstantOp> {
 
 struct SpecConstantCompositeOpConversion final
     : OpRewritePattern<spirv::SpecConstantCompositeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::SpecConstantCompositeOp op,
                                 PatternRewriter &rewriter) const override {

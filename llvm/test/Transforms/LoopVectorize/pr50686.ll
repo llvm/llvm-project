@@ -6,14 +6,14 @@ define void @m(ptr nocapture %p, ptr nocapture %p2, i32 %q) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX9_1:%.*]] = getelementptr inbounds i32, ptr [[P2:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX9_2:%.*]] = getelementptr inbounds i32, ptr [[P2]], i64 2
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 252
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[P2]], i64 12
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P]], [[UGLYGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P2]], [[UGLYGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -38,7 +38,7 @@ define void @m(ptr nocapture %p, ptr nocapture %p2, i32 %q) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 60, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 60, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_COND5:%.*]]
 ; CHECK:       for.cond5:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND5]] ]
