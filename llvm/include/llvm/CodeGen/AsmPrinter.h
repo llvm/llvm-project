@@ -387,7 +387,7 @@ public:
   /// Generate and emit labels for callees of the indirect callsites which will
   /// be used to populate the .callgraph section.
   void emitIndirectCalleeLabels(
-      FunctionInfo &FuncInfo,
+      FunctionCallGraphInfo &FuncCGInfo,
       const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
       const MachineInstr &MI);
 
@@ -478,7 +478,7 @@ public:
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
 
-  void emitCallGraphSection(const MachineFunction &MF, FunctionInfo &FuncInfo);
+  void emitCallGraphSection(const MachineFunction &MF, FunctionCallGraphInfo &FuncCGInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 
