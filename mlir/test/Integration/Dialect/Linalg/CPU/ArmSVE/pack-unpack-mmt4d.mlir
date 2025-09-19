@@ -39,7 +39,8 @@
 ///    the corresponding lowering and lowering configs.
 /// 
 /// TODO: Ideally, we should consider fusion opportunities by moving
-/// pack/unapack/mmt4d Ops into one function.
+/// pack/unapack/mmt4d Ops into one function:
+///   * https://github.com/llvm/llvm-project/issues/159770
 /// TODO: Vectorize linalg.pack + linalg.unpack:
 ///   * https://github.com/llvm/llvm-project/issues/159751
 //===----------------------------------------------------------------------===//
