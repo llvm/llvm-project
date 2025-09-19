@@ -5970,9 +5970,12 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    const TargetRegisterClass *Dest1RC = MRI.getRegClass(Dest1.getReg());
+    unsigned Dest1Size = TRI->getRegSizeInBits(*Dest1RC);
+    assert(Dest1Size == 64 || Dest1Size == 32);
+    unsigned SelOpc =
+        (Dest1Size == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(1).addImm(0);
 
     MI.eraseFromParent();
     return BB;
