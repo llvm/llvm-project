@@ -119,22 +119,19 @@ class Twine {
     /// An int value, to render as a signed decimal integer.
     DecIKind,
 
-    /// A pointer to an unsigned long value, to render as an unsigned decimal
-    /// integer.
+    /// An unsigned long value, to render as an unsigned decimal integer.
     DecULKind,
 
-    /// A pointer to a long value, to render as a signed decimal integer.
+    /// A long value, to render as a signed decimal integer.
     DecLKind,
 
-    /// A pointer to an unsigned long long value, to render as an unsigned
-    /// decimal integer.
+    /// An unsigned long long value, to render as an unsigned decimal integer.
     DecULLKind,
 
-    /// A pointer to a long long value, to render as a signed decimal integer.
+    /// A long long value, to render as a signed decimal integer.
     DecLLKind,
 
-    /// A pointer to a uint64_t value, to render as an unsigned hexadecimal
-    /// integer.
+    /// A uint64_t value, to render as an unsigned hexadecimal integer.
     UHexKind
   };
 
@@ -150,11 +147,11 @@ class Twine {
     char character;
     unsigned int decUI;
     int decI;
-    const unsigned long *decUL;
-    const long *decL;
-    const unsigned long long *decULL;
-    const long long *decLL;
-    const uint64_t *uHex;
+    unsigned long decUL;
+    long decL;
+    unsigned long long decULL;
+    long long decLL;
+    uint64_t uHex;
   };
 
   /// LHS - The prefix in the concatenation, which may be uninitialized for
@@ -336,22 +333,18 @@ public:
   explicit Twine(int Val) : LHSKind(DecIKind) { LHS.decI = Val; }
 
   /// Construct a twine to print \p Val as an unsigned decimal integer.
-  explicit Twine(const unsigned long &Val) : LHSKind(DecULKind) {
-    LHS.decUL = &Val;
-  }
+  explicit Twine(unsigned long Val) : LHSKind(DecULKind) { LHS.decUL = Val; }
 
   /// Construct a twine to print \p Val as a signed decimal integer.
-  explicit Twine(const long &Val) : LHSKind(DecLKind) { LHS.decL = &Val; }
+  explicit Twine(long Val) : LHSKind(DecLKind) { LHS.decL = Val; }
 
   /// Construct a twine to print \p Val as an unsigned decimal integer.
-  explicit Twine(const unsigned long long &Val) : LHSKind(DecULLKind) {
-    LHS.decULL = &Val;
+  explicit Twine(unsigned long long Val) : LHSKind(DecULLKind) {
+    LHS.decULL = Val;
   }
 
   /// Construct a twine to print \p Val as a signed decimal integer.
-  explicit Twine(const long long &Val) : LHSKind(DecLLKind) {
-    LHS.decLL = &Val;
-  }
+  explicit Twine(long long Val) : LHSKind(DecLLKind) { LHS.decLL = Val; }
 
   // FIXME: Unfortunately, to make sure this is as efficient as possible we
   // need extra binary constructors from particular types. We can't rely on
@@ -389,9 +382,9 @@ public:
   /// @{
 
   // Construct a twine to print \p Val as an unsigned hexadecimal integer.
-  static Twine utohexstr(const uint64_t &Val) {
+  static Twine utohexstr(uint64_t Val) {
     Child LHS, RHS;
-    LHS.uHex = &Val;
+    LHS.uHex = Val;
     RHS.twine = nullptr;
     return Twine(LHS, UHexKind, RHS, EmptyKind);
   }

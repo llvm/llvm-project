@@ -723,8 +723,8 @@ v_add_f64 v[0:1], s0, v[0:1]
 // NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 v_add_f64 v[0:1], s[0:3], v[0:1]
 
-// NOGCN: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
-// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGCN: :[[@LINE+2]]:{{[0-9]+}}: error: too few operands for instruction
+// NOGFX9: :[[@LINE+1]]:{{[0-9]+}}: error: too few operands for instruction
 v_add_f64 v[0:1], v0, v[0:1]
 
 // NOGCN: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction

@@ -172,7 +172,8 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
 IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
                                     bool UseSharedMemory,
-                                    unsigned SlabAllocateSize) {
+                                    unsigned SlabAllocateSize,
+                                    std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -214,6 +215,9 @@ IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
     // Close the parent ends of the pipes
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
+
+    if (CustomizeFork)
+      CustomizeFork();
 
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;

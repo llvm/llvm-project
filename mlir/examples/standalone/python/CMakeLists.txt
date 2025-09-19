@@ -26,6 +26,8 @@ declare_mlir_python_extension(StandalonePythonSources.Pybind11Extension
   ADD_TO_PARENT StandalonePythonSources
   SOURCES
     StandaloneExtensionPybind11.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY pybind11
@@ -36,6 +38,8 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   ADD_TO_PARENT StandalonePythonSources
   SOURCES
     StandaloneExtensionNanobind.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY nanobind

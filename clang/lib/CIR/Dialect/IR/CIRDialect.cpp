@@ -1754,9 +1754,6 @@ LogicalResult cir::BinOp::verify() {
     return emitError() << "The nsw/nuw flags and the saturated flag are "
                           "mutually exclusive";
 
-  assert(!cir::MissingFeatures::complexType());
-  // TODO(cir): verify for complex binops
-
   return mlir::success();
 }
 

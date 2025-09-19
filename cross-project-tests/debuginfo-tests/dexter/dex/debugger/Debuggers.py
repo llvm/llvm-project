@@ -74,7 +74,7 @@ def add_debugger_tool_base_arguments(parser, defaults):
         type=str,
         metavar="<filepath>",
         default=None,
-        help="log file for messages between Dexter and the debug adapter; set to '-' to log to stdout",
+        help="log file for messages between Dexter and the debug adapter; set to '-' to log to stdout, '-e' to log to stderr",
     )
     dap_group.add_argument(
         "--colorize-dap-log",
@@ -186,7 +186,11 @@ def handle_debugger_tool_base_options(context, defaults):  # noqa
                 '<d>could not find</> <r>"{}"</>'.format(options.lldb_executable)
             )
 
-    if options.dap_message_log is not None and options.dap_message_log != "-":
+    if (
+        options.dap_message_log is not None
+        and options.dap_message_log != "-"
+        and options.dap_message_log != "-e"
+    ):
         options.dap_message_log = os.path.abspath(options.dap_message_log)
 
 

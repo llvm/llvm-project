@@ -1007,7 +1007,7 @@ public:
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     // Match phase.
-    auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
+    auto xferOp = extractOp.getSource().getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
       return failure();
     // Check that we are extracting a scalar and not a sub-vector.

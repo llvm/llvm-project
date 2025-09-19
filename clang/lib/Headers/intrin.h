@@ -30,6 +30,10 @@
 #include <arm64intr.h>
 #endif
 
+#if defined(__ARM_ACLE)
+#include <arm_acle.h>
+#endif
+
 /* For the definition of jmp_buf. */
 #if __STDC_HOSTED__
 #include <setjmp.h>
