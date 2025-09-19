@@ -58,19 +58,9 @@ LIBC_INLINE static constexpr float rsqrtf(float x) {
     return FPBits::zero().get_val();
   }
 
-  // TODO: add integer based implementation when LIBC_TARGET_CPU_HAS_FPU_FLOAT
-  // is not defined
+  // TODO: add float based approximation when
+  // LIBC_TARGET_CPU_HAS_FPU_DOUBLE is not defined
   double result = 1.0f / fputil::sqrt<double>(fputil::cast<double>(x));
-
-  // Targeted post-corrections to ensure correct rounding in half for specific
-  // mantissa patterns
-  /*
-  const uint32_t half_mantissa = x_abs & 0x3ff;
-  if (LIBC_UNLIKELY(half_mantissa == 0x011F)) {
-    result = fputil::multiply_add(result, 0x1.0p-21f, result);
-  } else if (LIBC_UNLIKELY(half_mantissa == 0x0313)) {
-    result = fputil::multiply_add(result, -0x1.0p-21f, result);
-  }*/
 
   return fputil::cast<float>(result);
 }
