@@ -1298,6 +1298,20 @@ llvm.func @rocdl_last_use(%ptr: !llvm.ptr<1>) -> i32 {
   llvm.return %ret : i32
 }
 
+llvm.func @test_med3_f16(%arg0: f16, %arg1: f16, %arg2: f16) -> f16 {
+  // CHECK-LABEL: define half @test_med3_f16(half %0, half %1, half %2)
+  %0 = rocdl.med3 %arg0, %arg1, %arg2 : (f16, f16, f16) -> f16
+  llvm.return %0 : f16
+  // CHECK: call half @llvm.amdgcn.fmed3.f16(half %0, half %1, half %2)
+}
+
+llvm.func @test_med3_f32(%arg0: f32, %arg1: f32, %arg2: f32) -> f32 {
+  // CHECK-LABEL: define float @test_med3_f32(float %0, float %1, float %2)
+  %0 = rocdl.med3 %arg0, %arg1, %arg2 : (f32, f32, f32) -> f32
+  llvm.return %0 : f32
+  // CHECK: call float @llvm.amdgcn.fmed3.f32(float %0, float %1, float %2)
+}
+
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"

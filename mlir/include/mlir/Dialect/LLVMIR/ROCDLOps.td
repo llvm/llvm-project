@@ -1292,6 +1292,26 @@ def ROCDL_CvtScaleF32PkFp4F32Op :
 }
 
 //===----------------------------------------------------------------------===//
+// MED3 operations
+//===----------------------------------------------------------------------===//
+
+def ROCDL_Med3Op : ROCDL_ConcreteNonMemIntrOp<"med3", [Pure, AllTypesMatch<["res", "src0", "src1", "src2"]>], 1>,
+  Arguments<(ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src0,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src1,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src2)> {
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$res);
+  let summary = "Median of three float/half values";
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` `(` type($src0) `,` type($src1) `,` type($src2) `)` `->` type($res)
+  }];
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_fmed3,
+                               {$src0, $src1, $src2},
+                               {moduleTranslation.convertType(op.getRes().getType())});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
 
