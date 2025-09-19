@@ -114,6 +114,15 @@ AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
 
+- Pretty-printing of atomic builtins ``__atomic_test_and_set`` and ``__atomic_clear`` in ``-ast-print`` output.
+  These previously displayed an extra ``<null expr>`` argument, e.g.:
+
+    ``__atomic_test_and_set(p, <null expr>, 0)``
+
+  Now they are printed as:
+
+    ``__atomic_test_and_set(p, 0)``
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -125,6 +134,7 @@ Clang Python Bindings Potentially Breaking Changes
 - TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
   ElaboratedTypes. The value becomes unused, and all the existing users should
   expect the former underlying type to be reported instead.
+- Remove ``AccessSpecifier.NONE`` kind. No libclang interfaces ever returned this kind.
 
 What's New in Clang |release|?
 ==============================
@@ -264,7 +274,8 @@ Improvements to Clang's diagnostics
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 - Added fix-it hint for when scoped enumerations require explicit conversions for binary operations. (#GH24265)
-
+- Constant template parameters are now type checked in template definitions,
+  including template template parameters.
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
   "format specifies type 'unsigned int' but the argument has type 'int' [-Wformat]"

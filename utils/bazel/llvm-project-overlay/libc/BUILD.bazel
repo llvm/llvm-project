@@ -279,6 +279,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_stdlib_macros",
+    hdrs = ["hdr/stdlib_macros.h"],
+    deps = [
+        ":hdr_stdlib_overlay",
+    ],
+)
+
+libc_support_library(
     name = "hdr_stdlib_overlay",
     hdrs = ["hdr/stdlib_overlay.h"],
 )
@@ -5067,6 +5075,41 @@ libc_function(
 )
 
 libc_support_library(
+    name = "rand_util",
+    srcs = ["src/stdlib/rand_util.cpp"],
+    hdrs = ["src/stdlib/rand_util.h"],
+    deps = [
+        ":__support_cpp_atomic",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "rand",
+    srcs = ["src/stdlib/rand.cpp"],
+    hdrs = ["src/stdlib/rand.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_threads_sleep",
+        ":hdr_stdlib_macros",
+        ":rand_util",
+    ],
+)
+
+libc_function(
+    name = "srand",
+    srcs = ["src/stdlib/srand.cpp"],
+    hdrs = ["src/stdlib/srand.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":rand_util",
+    ],
+)
+
+libc_support_library(
     name = "str_from_util",
     hdrs = ["src/stdlib/str_from_util.h"],
     deps = [
@@ -6328,6 +6371,31 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "vasprintf_internal",
+    hdrs = ["src/stdio/printf_core/vasprintf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_macros_attributes",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
+        ":printf_main",
+        ":printf_writer",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "asprintf",
+    srcs = ["src/stdio/asprintf.cpp"],
+    hdrs = ["src/stdio/asprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
+    ],
+)
+
 libc_function(
     name = "sprintf",
     srcs = ["src/stdio/sprintf.cpp"],
@@ -6376,6 +6444,16 @@ libc_function(
         ":errno",
         ":types_FILE",
         ":vfprintf_internal",
+    ],
+)
+
+libc_function(
+    name = "vasprintf",
+    srcs = ["src/stdio/vasprintf.cpp"],
+    hdrs = ["src/stdio/vasprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
     ],
 )
 
