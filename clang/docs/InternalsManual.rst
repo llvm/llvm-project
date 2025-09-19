@@ -2902,6 +2902,7 @@ For the following example,
 The normal form of B is
 
 .. code-block:: c++
+
     __is_same(T, int) /*T->U, innermost level*/
  && __is_same(U, int) {U->U} /*T->U, outermost level*/
 
