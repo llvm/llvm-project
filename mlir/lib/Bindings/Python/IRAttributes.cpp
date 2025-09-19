@@ -753,23 +753,24 @@ public:
       mlirOpaqueAttrGetTypeID;
 
   static void bindDerived(ClassTy &c) {
-    c.def_static(
-        "get",
-        [](const std::string &dialectNamespace, const nb_buffer &buffer,
-           PyType &type, DefaultingPyMlirContext context) {
-          const nb_buffer_info bufferInfo = buffer.request();
-          intptr_t bufferSize = bufferInfo.size;
-          MlirAttribute attr = mlirOpaqueAttrGet(
-              context->get(), toMlirStringRef(dialectNamespace), bufferSize,
-              static_cast<char *>(bufferInfo.ptr), type);
-          return PyOpaqueAttribute(context->getRef(), attr);
-        },
-        nb::arg("dialect_namespace"), nb::arg("buffer"), nb::arg("type"),
-        nb::arg("context") = nb::none(),
-        // clang-format off
+    c
+        .def_static(
+            "get",
+            [](const std::string &dialectNamespace, const nb_buffer &buffer,
+               PyType &type, DefaultingPyMlirContext context) {
+              const nb_buffer_info bufferInfo = buffer.request();
+              intptr_t bufferSize = bufferInfo.size;
+              MlirAttribute attr = mlirOpaqueAttrGet(
+                  context->get(), toMlirStringRef(dialectNamespace), bufferSize,
+                  static_cast<char *>(bufferInfo.ptr), type);
+              return PyOpaqueAttribute(context->getRef(), attr);
+            },
+            nb::arg("dialect_namespace"), nb::arg("buffer"), nb::arg("type"),
+            nb::arg("context") = nb::none(),
+            // clang-format off
         nb::sig("def get(dialect_namespace: str, buffer: typing_extensions.Buffer, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ", context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.OpaqueAttr")),
-        // clang-format on
-        "Gets an Opaque attribute.");
+            // clang-format on
+            "Gets an Opaque attribute.");
     c.def_prop_ro(
         "dialect_namespace",
         [](PyOpaqueAttribute &self) {
@@ -1535,15 +1536,15 @@ public:
   }
 
   static void bindDerived(ClassTy &c) {
-    c.def_static("get_from_buffer",
-                 PyDenseResourceElementsAttribute::getFromBuffer,
-                 nb::arg("array"), nb::arg("name"), nb::arg("type"),
-                 nb::arg("alignment") = nb::none(),
-                 nb::arg("is_mutable") = false, nb::arg("context") = nb::none(),
-                 // clang-format off
+    c.def_static(
+        "get_from_buffer", PyDenseResourceElementsAttribute::getFromBuffer,
+        nb::arg("array"), nb::arg("name"), nb::arg("type"),
+        nb::arg("alignment") = nb::none(), nb::arg("is_mutable") = false,
+        nb::arg("context") = nb::none(),
+        // clang-format off
                  nb::sig("def get_from_buffer(array: typing_extensions.Buffer, name: str, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ", alignment: int | None = None, is_mutable: bool = False, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.DenseResourceElementsAttr")),
-                 // clang-format on
-                 kDenseResourceElementsAttrGetFromBufferDocstring);
+        // clang-format on
+        kDenseResourceElementsAttrGetFromBufferDocstring);
   }
 };
 

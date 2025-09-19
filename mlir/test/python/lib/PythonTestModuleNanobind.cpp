@@ -53,7 +53,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       nb::arg("registry"),
       // clang-format off
       nb::sig("def register_dialect(registry: " MAKE_MLIR_PYTHON_QUALNAME("ir.DialectRegistry") ") -> None"));
-      // clang-format on
+  // clang-format on
 
   m.def(
       "test_diagnostics_with_errors_and_notes",
