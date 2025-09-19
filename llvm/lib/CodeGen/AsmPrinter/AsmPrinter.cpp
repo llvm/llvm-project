@@ -1693,16 +1693,16 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
                                               /*IgnoreAssumeLikeCalls=*/true,
                                               /*IgnoreLLVMUsed=*/false);
     if (!IsIndirectTarget) {
-      OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::NOT_INDIRECT_TARGET);
+      OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::NOT_INDIRECT_TARGET));
       return;
     }
 
     if (const auto *TypeId = extractNumericCGTypeId(F)) {
-      OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_KNOWN_TID);
+      OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_KNOWN_TID));
       OutStreamer->emitInt64(TypeId->getZExtValue());
       return;
     }
-    OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_UNKNOWN_TID);
+    OutStreamer->emitInt8(static_cast<uint8_t>(FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
   };
 
   // Emit function's call graph information.
