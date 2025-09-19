@@ -1324,10 +1324,7 @@ typeContainsPointer(QualType T,
   return false;
 }
 
-void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
-  assert(SanOpts.has(SanitizerKind::AllocToken) &&
-         "Only needed with -fsanitize=alloc-token");
-
+llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
   llvm::MDBuilder MDB(getLLVMContext());
 
   // Get unique type name.
@@ -1344,14 +1341,19 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
   const bool ContainsPtr =
       typeContainsPointer(AllocType, VisitedRD, IncompleteType);
   if (!ContainsPtr && IncompleteType)
-    return;
+    return nullptr;
   auto *ContainsPtrC = Builder.getInt1(ContainsPtr);
   auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
 
   // Format: !{<type-name>, <contains-pointer>}
-  auto *MDN =
-      llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
-  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
+  return llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
+}
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
+  assert(SanOpts.has(SanitizerKind::AllocToken) &&
+         "Only needed with -fsanitize=alloc-token");
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token,
+                  buildAllocToken(AllocType));
 }
 
 /// Infer type from a simple sizeof expression.
@@ -1422,7 +1424,7 @@ static QualType inferTypeFromCastExpr(const CallExpr *CallE,
   return QualType();
 }
 
-void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
+llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
   QualType AllocType;
   // First check arguments.
   for (const Expr *Arg : E->arguments()) {
@@ -1437,7 +1439,15 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
     AllocType = inferTypeFromCastExpr(E, CurCast);
   // Emit if we were able to infer the type.
   if (!AllocType.isNull())
-    EmitAllocToken(CB, AllocType);
+    return buildAllocToken(AllocType);
+  return nullptr;
+}
+
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
+  assert(SanOpts.has(SanitizerKind::AllocToken) &&
+         "Only needed with -fsanitize=alloc-token");
+  if (llvm::MDNode *MDN = buildAllocToken(E))
+    CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
 }
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::

@@ -794,16 +794,6 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles));
     }
-
-    if (LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
-      if (Level == OptimizationLevel::O0) {
-        // The default pass builder only infers libcall function attrs when
-        // optimizing, so we insert it here because we need it for accurate
-        // memory allocation function detection.
-        MPM.addPass(InferFunctionAttrsPass());
-      }
-      MPM.addPass(AllocTokenPass(getAllocTokenOptions(CodeGenOpts)));
-    }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
@@ -844,6 +834,22 @@ static void addSanitizers(const Triple &TargetTriple,
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });
   }
+}
+
+static void addAllocTokenPass(const Triple &TargetTriple,
+                              const CodeGenOptions &CodeGenOpts,
+                              const LangOptions &LangOpts, PassBuilder &PB) {
+  PB.registerOptimizerLastEPCallback(
+      [&](ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase) {
+        if (Level == OptimizationLevel::O0 &&
+            LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
+          // The default pass builder only infers libcall function attrs when
+          // optimizing, so we insert it here because we need it for accurate
+          // memory allocation function detection with -fsanitize=alloc-token.
+          MPM.addPass(InferFunctionAttrsPass());
+        }
+        MPM.addPass(AllocTokenPass(getAllocTokenOptions(CodeGenOpts)));
+      });
 }
 
 void EmitAssemblyHelper::RunOptimizationPipeline(
@@ -1101,6 +1107,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!IsThinLTOPostLink) {
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
+      addAllocTokenPass(TargetTriple, CodeGenOpts, LangOpts, PB);
     }
 
     if (std::optional<GCOVOptions> Options =
