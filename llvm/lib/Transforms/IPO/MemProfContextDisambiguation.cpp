@@ -316,6 +316,9 @@ public:
 
   /// Node in the Callsite Context Graph
   struct ContextNode {
+    // Assigned to nodes as they are created, useful for debugging.
+    unsigned NodeId = 0;
+
     // Keep this for now since in the IR case where we have an Instruction* it
     // is not as immediately discoverable. Used for printing richer information
     // when dumping graph.
@@ -760,6 +763,7 @@ private:
     auto *NewNode = NodeOwner.back().get();
     if (F)
       NodeToCallingFunc[NewNode] = F;
+    NewNode->NodeId = NodeOwner.size();
     return NewNode;
   }
 
@@ -2977,6 +2981,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
       OS << "\n";
     }
   }
+  OS << "\tNodeId: " << NodeId << "\n";
   OS << "\tAllocTypes: " << getAllocTypeString(AllocTypes) << "\n";
   OS << "\tContextIds:";
   // Make a copy of the computed context ids that we can sort for stability.
@@ -2988,14 +2993,24 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   OS << "\n";
   OS << "\tCalleeEdges:\n";
   for (auto &Edge : CalleeEdges)
-    OS << "\t\t" << *Edge << "\n";
+    OS << "\t\t" << *Edge << " (Callee NodeId: " << Edge->Callee->NodeId
+       << ")\n";
   OS << "\tCallerEdges:\n";
   for (auto &Edge : CallerEdges)
-    OS << "\t\t" << *Edge << "\n";
+    OS << "\t\t" << *Edge << " (Caller NodeId: " << Edge->Caller->NodeId
+       << ")\n";
   if (!Clones.empty()) {
-    OS << "\tClones: " << llvm::interleaved(Clones) << "\n";
+    OS << "\tClones: ";
+    bool First = true;
+    for (auto *C : Clones) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << C << " NodeId: " << C->NodeId;
+    }
+    OS << "\n";
   } else if (CloneOf) {
-    OS << "\tClone of " << CloneOf << "\n";
+    OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
   }
 }
 
@@ -3149,7 +3164,7 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
   static std::string getNodeLabel(NodeRef Node, GraphType G) {
     std::string LabelString =
         (Twine("OrigId: ") + (Node->IsAllocation ? "Alloc" : "") +
-         Twine(Node->OrigStackOrAllocId))
+         Twine(Node->OrigStackOrAllocId) + " NodeId: " + Twine(Node->NodeId))
             .str();
     LabelString += "\n";
     if (Node->hasCall()) {

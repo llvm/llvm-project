@@ -41,7 +41,7 @@ struct CoreDefinition {
 } // namespace lldb_private
 
 // This core information can be looked using the ArchSpec::Core as the index
-static const CoreDefinition g_core_definitions[] = {
+static constexpr const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_generic,
      "arm"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4,
@@ -90,12 +90,12 @@ static const CoreDefinition g_core_definitions[] = {
      "thumbv6m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7,
      "thumbv7"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
-     "thumbv7f"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7s,
      "thumbv7s"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7k,
      "thumbv7k"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
+     "thumbv7f"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7m,
      "thumbv7m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7em,
@@ -248,6 +248,9 @@ static const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
+
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::nvsass, ArchSpec::eCore_nvsass,
+     "nvsass"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -256,6 +259,15 @@ static const CoreDefinition g_core_definitions[] = {
 static_assert(sizeof(g_core_definitions) / sizeof(CoreDefinition) ==
                   ArchSpec::kNumCores,
               "make sure we have one core definition for each core");
+
+template <int I> struct ArchSpecValidator : ArchSpecValidator<I + 1> {
+  static_assert(g_core_definitions[I].core == I,
+                "g_core_definitions order doesn't match Core enumeration");
+};
+
+template <> struct ArchSpecValidator<ArchSpec::kNumCores> {};
+
+ArchSpecValidator<ArchSpec::eCore_arm_generic> validator;
 
 struct ArchDefinitionEntry {
   ArchSpec::Core core;
@@ -403,6 +415,7 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_riscv64,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv64}, // riscv64
     {ArchSpec::eCore_loongarch32,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch32}, // loongarch32
     {ArchSpec::eCore_loongarch64,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch64}, // loongarch64
+    {ArchSpec::eCore_nvsass,          llvm::ELF::EM_CUDA,       }, // nvsass
 };
 // clang-format on
 

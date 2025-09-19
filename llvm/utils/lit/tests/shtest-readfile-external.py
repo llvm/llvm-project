@@ -1,11 +1,12 @@
 ## Tests the readfile substitution.
 
+# UNSUPPORTED: system-windows
 # RUN: env LIT_USE_INTERNAL_SHELL=0 not %{lit} -a -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S/Inputs/shtest-readfile/Output %s
 
 # CHECK: -- Testing: 4 tests{{.*}}
 
 # CHECK-LABEL: FAIL: shtest-readfile :: absolute-paths.txt ({{[^)]*}})
-# CHECK: echo $(cat [[TEMP_PATH]]/absolute-paths.txt.tmp) && test -e /home/gha/llvm-project/build/utils/lit/tests/Inputs/shtest-readfile/Output/absolute-paths.txt.tmp {{.*}}
+# CHECK: echo $(cat [[TEMP_PATH]]/absolute-paths.txt.tmp) && test -e [[TEMP_PATH]]/absolute-paths.txt.tmp {{.*}}
 # CHECK: + echo hello
 
 # CHECK-LABEL: FAIL: shtest-readfile :: file-does-not-exist.txt ({{[^)]*}})
@@ -17,5 +18,5 @@
 # CHECK: + echo hello
 
 # CHECK-LABEL: FAIL: shtest-readfile :: two-same-line.txt ({{[^)]*}})
-# CHECK: echo $(cat /home/gha/llvm-project/build/utils/lit/tests/Inputs/shtest-readfile/Output/two-same-line.txt.tmp.1) $(cat /home/gha/llvm-project/build/utils/lit/tests/Inputs/shtest-readfile/Output/two-same-line.txt.tmp.2) && test -e /home/gha/llvm-project/build/utils/lit/tests/Inputs/shtest-readfile/Output/two-same-line.txt.tmp.1 && test -e /home/gha/llvm-project/build/utils/lit/tests/Inputs/shtest-readfile/Output/two-same-line.txt.tmp.2 {{.*}}
+# CHECK: echo $(cat [[TEMP_PATH]]/two-same-line.txt.tmp.1) $(cat [[TEMP_PATH]]/two-same-line.txt.tmp.2) && test -e [[TEMP_PATH]]/two-same-line.txt.tmp.1 && test -e [[TEMP_PATH]]/two-same-line.txt.tmp.2 {{.*}}
 # CHECK: + echo hello bye

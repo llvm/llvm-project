@@ -35,8 +35,8 @@ define <8 x i16> @rhaddu_zext(<8 x i8> %a0, <8 x i8> %a1) {
 define <8 x i16> @hadds_zext(<8 x i8> %a0, <8 x i8> %a1) {
 ; CHECK-LABEL: hadds_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uhadd   v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ushll   v0.8h, v0.8b, #0
+; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = zext <8 x i8> %a0 to <8 x i16>
   %x1 = zext <8 x i8> %a1 to <8 x i16>
