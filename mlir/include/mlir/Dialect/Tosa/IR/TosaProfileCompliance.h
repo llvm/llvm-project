@@ -152,6 +152,7 @@ public:
     case Extension::variable:
     case Extension::controlflow:
     case Extension::dynamic:
+    case Extension::int64:
       return {Profile::pro_fp, Profile::pro_int};
     case Extension::none:
       return {};
