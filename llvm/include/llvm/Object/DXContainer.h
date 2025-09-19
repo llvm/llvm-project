@@ -123,25 +123,26 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
+
+template <typename T> Expected<T> readParameter(StringRef Data) {
+  T Struct;
+  if (sizeof(T) != Data.size())
+    return make_error<GenericBinaryError>(
+        "Reading structure out of file bounds", object_error::parse_failed);
+
+  memcpy(&Struct, Data.data(), sizeof(T));
+  // DXContainer is always little endian
+  if (sys::IsBigEndianHost)
+    Struct.swapBytes();
+  return Struct;
+}
+
 struct RootParameterView {
   const dxbc::RTS0::v1::RootParameterHeader &Header;
   StringRef ParamData;
 
   RootParameterView(const dxbc::RTS0::v1::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
-
-  template <typename T> Expected<T> readParameter() {
-    T Struct;
-    if (sizeof(T) != ParamData.size())
-      return make_error<GenericBinaryError>(
-          "Reading structure out of file bounds", object_error::parse_failed);
-
-    memcpy(&Struct, ParamData.data(), sizeof(T));
-    // DXContainer is always little endian
-    if (sys::IsBigEndianHost)
-      Struct.swapBytes();
-    return Struct;
-  }
 };
 
 struct RootConstantView : RootParameterView {
@@ -151,7 +152,7 @@ struct RootConstantView : RootParameterView {
   }
 
   llvm::Expected<dxbc::RTS0::v1::RootConstants> read() {
-    return readParameter<dxbc::RTS0::v1::RootConstants>();
+    return readParameter<dxbc::RTS0::v1::RootConstants>(ParamData);
   }
 };
 
@@ -167,7 +168,8 @@ struct RootDescriptorView : RootParameterView {
 
   llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
     if (Version == 1) {
-      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      auto Descriptor =
+          readParameter<dxbc::RTS0::v1::RootDescriptor>(ParamData);
       if (Error E = Descriptor.takeError())
         return E;
       return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
@@ -176,9 +178,10 @@ struct RootDescriptorView : RootParameterView {
       return make_error<GenericBinaryError>("Invalid Root Signature version: " +
                                                 Twine(Version),
                                             object_error::parse_failed);
-    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>(ParamData);
   }
 };
+
 template <typename T> struct DescriptorTable {
   uint32_t NumRanges;
   uint32_t RangesOffset;
@@ -247,8 +250,26 @@ public:
   llvm::iterator_range<param_header_iterator> param_headers() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
-  llvm::iterator_range<samplers_iterator> samplers() const {
-    return llvm::make_range(StaticSamplers.begin(), StaticSamplers.end());
+  llvm::Expected<dxbc::RTS0::v3::StaticSampler> getSampler(uint32_t Loc) const {
+    if (Loc >= getNumStaticSamplers())
+      return parseFailed("Static sampler index out of range");
+
+    auto SamplerSize = (Version <= 2) ? sizeof(dxbc::RTS0::v1::StaticSampler)
+                                     : sizeof(dxbc::RTS0::v3::StaticSampler);
+
+    StringRef Buff = PartData.substr(StaticSamplersOffset + (Loc * SamplerSize),
+                                     SamplerSize);
+    if (Version < 3) {
+      auto Sampler = readParameter<dxbc::RTS0::v1::StaticSampler>(Buff);
+      if (Error E = Sampler.takeError())
+        return E;
+      return dxbc::RTS0::v3::StaticSampler(*Sampler);
+    }
+    if (Version != 3)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v3::StaticSampler>(Buff);
   }
   uint32_t getFlags() const { return Flags; }
 

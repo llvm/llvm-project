@@ -163,7 +163,13 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     }
   }
 
-  for (const auto &S : Data.samplers()) {
+  for (uint32_t Loc = 0; Loc < Data.getNumStaticSamplers(); ++Loc) {
+    llvm::Expected<dxbc::RTS0::v3::StaticSampler> MaybeSampler =
+        Data.getSampler(Loc);
+    if (Error E = MaybeSampler.takeError())
+      return std::move(E);
+    const llvm::dxbc::RTS0::v3::StaticSampler &S = *MaybeSampler;
+
     if (!dxbc::isValidSamplerFilter(S.Filter))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for static sampler filter");
@@ -209,6 +215,14 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     NewS.RegisterSpace = S.RegisterSpace;
     NewS.ShaderVisibility = dxbc::ShaderVisibility(S.ShaderVisibility);
 
+    if (Version > 2) {
+      if (Version > 1) {
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  NewS.Enum =                                                                  \
+      (S.Flags & llvm::to_underlying(dxbc::StaticSamplerFlags::Enum)) > 0;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+      }
+    }
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
 
