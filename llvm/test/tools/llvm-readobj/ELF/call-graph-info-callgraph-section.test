@@ -1,5 +1,7 @@
 ## Tests --call-graph-info prints information from call graph section.
 
+# REQUIRES: x86-registered-target
+
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
 # RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --match-full-lines
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
