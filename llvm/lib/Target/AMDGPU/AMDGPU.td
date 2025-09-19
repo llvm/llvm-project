@@ -1238,6 +1238,19 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
+// Ugly hack to accomodate an assembling modules with mixed
+// wavesizes. Ideally we would have a mapping symbol in assembly which
+// would keep track of which sections of code should be treated as
+// wave32 and wave64. Instead what users do is assemble with both
+// wavesizes enabled. We translate this into this special mode so this
+// only influences assembler behavior and nothing else.
+def FeatureAssemblerPermissiveWavesize : SubtargetFeature<
+  "assembler-permissive-wavesize",
+  "AssemblerPermissiveWavesize",
+  "true",
+  "allow parsing wave32 and wave64 variants of instructions"
+>;
+
 class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
   "max-private-element-size-"#size,
   "MaxPrivateElementSize",
@@ -2932,15 +2945,46 @@ def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 
+def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
+                      AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def isWave32 : Predicate<"Subtarget->isWave32()">,
+  AssemblerPredicate <(any_of FeatureWavefrontSize32,
+                              FeatureAssemblerPermissiveWavesize)>;
+def isWave64 : Predicate<"Subtarget->isWave64()">,
+  AssemblerPredicate <(any_of FeatureWavefrontSize64,
+                              FeatureAssemblerPermissiveWavesize)>;
+
+def isWave32Strict : Predicate<"Subtarget->isWave32()">,
+  AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
+def isWave64Strict : Predicate<"Subtarget->isWave64()">,
+  AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+
 //===----------------------------------------------------------------------===//
 // HwModes
 //===----------------------------------------------------------------------===//
 
-// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement
+defvar DefaultMode_Wave64 = DefaultMode;
+defvar DefaultMode_Wave32 = HwMode<[isWave32, NotNeedsAlignedVGPRs]>;
+
+// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement. Implied
+// wave64.
 def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
 
 // gfx1250, has alignment requirement but no AGPRs.
-def AlignedVGPRNoAGPRMode : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs]>;
+def AlignedVGPRNoAGPRMode_Wave32 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave32Strict]>;
+def AlignedVGPRNoAGPRMode_Wave64 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave64Strict]>;
+
+// FIXME: This should be able to only define a separate hwmode that
+// only depends on wavesize for just ValueTypes. These use different
+// HwMode namespaces. If we don't define the full set of modes used
+// for RegClassByHwMode, tablegen crashes for some reason
+def WaveSizeVT : ValueTypeByHwMode<[
+  DefaultMode_Wave64,
+  AVAlign2LoadStoreMode,
+  AlignedVGPRNoAGPRMode_Wave64,
+  DefaultMode_Wave32,
+  AlignedVGPRNoAGPRMode_Wave32], [i64, i64, i64, i32, i32]>;
 
 
 // Include AMDGPU TD files
