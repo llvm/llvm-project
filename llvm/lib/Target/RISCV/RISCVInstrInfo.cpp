@@ -232,8 +232,8 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
+bool RISCVInstrInfo::isReMaterializableImpl(const MachineInstr &MI,
+                                            bool OnlyTrivial) const {
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   case RISCV::VMV_V_X:
   case RISCV::VFMV_V_F:
@@ -241,9 +241,11 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
   case RISCV::VMV_S_X:
   case RISCV::VFMV_S_F:
   case RISCV::VID_V:
+    // FIXME: the v.x and v.f forms are not 'trivial' in the meaning
+    // of this API.  Split them!
     return MI.getOperand(1).isUndef();
   default:
-    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+    return TargetInstrInfo::isReMaterializableImpl(MI, OnlyTrivial);
   }
 }
 

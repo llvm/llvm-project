@@ -1075,8 +1075,8 @@ Register PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 // For opcodes with the ReMaterializable flag set, this function is called to
 // verify the instruction is really rematable.
-bool PPCInstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
+bool PPCInstrInfo::isReMaterializableImpl(const MachineInstr &MI,
+                                          bool OnlyTrivial) const {
   switch (MI.getOpcode()) {
   default:
     // Let base implementaion decide.
@@ -1112,7 +1112,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::DMXXSETACCZ:
     return true;
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI, OnlyTrivial);
 }
 
 Register PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,

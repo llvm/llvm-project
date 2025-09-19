@@ -479,7 +479,8 @@ private:
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI,
+                              bool OnlyTrivial) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.

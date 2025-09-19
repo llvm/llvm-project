@@ -755,8 +755,8 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   return isPICBase;
 }
 
-bool X86InstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
+bool X86InstrInfo::isReMaterializableImpl(const MachineInstr &MI,
+                                          bool OnlyTrivial) const {
   switch (MI.getOpcode()) {
   default:
     // This function should only be called for opcodes with the ReMaterializable
@@ -951,7 +951,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
     break;
   }
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI, OnlyTrivial);
 }
 
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,

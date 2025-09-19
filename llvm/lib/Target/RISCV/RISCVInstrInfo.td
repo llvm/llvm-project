@@ -779,7 +779,7 @@ def SH : Store_rri<0b001, "sh">, Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 def SW : Store_rri<0b010, "sw">, Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 
 // ADDI isn't always rematerializable, but isReMaterializable will be used as
-// a hint which is verified in isReallyTriviallyReMaterializable.
+// a hint which is verified in isReMaterializableImpl.
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def ADDI  : ALU_ri<0b000, "addi">;
 

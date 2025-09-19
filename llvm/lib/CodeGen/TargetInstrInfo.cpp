@@ -1590,8 +1590,8 @@ MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
   return MachineTraceStrategy::TS_MinInstrCount;
 }
 
-bool TargetInstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
+bool TargetInstrInfo::isReMaterializableImpl(
+    const MachineInstr &MI, bool OnlyTrivial) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -1658,10 +1658,11 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializable(
     if (MO.isDef() && Reg != DefReg)
       return false;
 
-    // Don't allow any virtual-register uses. Rematting an instruction with
-    // virtual register uses would length the live ranges of the uses, which
-    // is not necessarily a good idea, certainly not "trivial".
-    if (MO.isUse())
+    // If asked for trivial materialization, don't allow any virtual-register
+    // uses. Rematting an instruction with virtual register uses would length
+    // the live ranges of the uses, which means rematerialization must become
+    // a per-user query which many callers don't want.
+    if (OnlyTrivial && MO.isUse())
       return false;
   }
 

@@ -124,8 +124,8 @@ static bool canRemat(const MachineInstr &MI) {
   return false;
 }
 
-bool SIInstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
+bool SIInstrInfo::isReMaterializableImpl(const MachineInstr &MI,
+                                         bool OnlyTrivial) const {
 
   if (canRemat(MI)) {
     // Normally VALU use of exec would block the rematerialization, but that
@@ -139,13 +139,14 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
     // There is difference to generic method which does not allow
     // rematerialization if there are virtual register uses. We allow this,
     // therefore this method includes SOP instructions as well.
+    // FIXME: This should only be done if OnlyTrivial is setup.
     if (!MI.hasImplicitDef() &&
         MI.getNumImplicitOperands() == MI.getDesc().implicit_uses().size() &&
         !MI.mayRaiseFPException())
       return true;
   }
 
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI, OnlyTrivial);
 }
 
 // Returns true if the scalar result of a VALU instruction depends on exec.

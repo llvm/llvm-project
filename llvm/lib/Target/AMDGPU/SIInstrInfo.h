@@ -244,7 +244,8 @@ public:
     return ST;
   }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI,
+                              bool OnlyTrivial) const override;
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
