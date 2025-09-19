@@ -1612,7 +1612,7 @@ static void insertTrivialPHIs(CHRScope *Scope,
         if (FoundLifetimeAnnotation) {
           for (User *U : make_early_inc_range(I.users())) {
             if (auto *UI = dyn_cast<Instruction>(U))
-              if(UI->isLifetimeStartOrEnd())
+              if (UI->isLifetimeStartOrEnd())
                 UI->eraseFromParent();
           }
         }
@@ -1710,7 +1710,7 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   BasicBlock *ExitBlock = LastRegion->getExit();
   std::optional<uint64_t> ProfileCount = BFI.getBlockProfileCount(EntryBlock);
 
-  SmallVector<AllocaInst*> StaticAllocas;
+  SmallVector<AllocaInst *> StaticAllocas;
   for (Instruction &I : *EntryBlock) {
     if (auto *AI = dyn_cast<AllocaInst>(&I)) {
       if (AI->isStaticAlloca())
