@@ -190,22 +190,11 @@ function (add_flangrt_library name)
     endif ()
   endif ()
 
-  # Must use minimum optimization level of -O2 to prevent dependency on libstdc++
-  foreach (tgtname IN LISTS srctargets)
-    string(REPLACE "-O0" "-O2" CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS)
-    string(REPLACE "-O1" "-O2" CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS)
-    string(FIND "-O" CMAKE_CXX_FLAGS opt_idx)
-    if (opt_idx EQUAL -1)
-      target_compile_options(${tgtname} PRIVATE -O2)
-    endif ()
-  endforeach ()
-
   foreach (tgtname IN LISTS libtargets)
     if (NOT WIN32)
       # Use same stem name for .a and .so. Common in UNIX environments.
       # Not possible in Windows environments.
       set_target_properties(${tgtname} PROPERTIES OUTPUT_NAME "${name}")
-
     endif ()
 
     if (ARG_INSTALL_WITH_TOOLCHAIN)
