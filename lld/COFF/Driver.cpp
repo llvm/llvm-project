@@ -2338,6 +2338,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->is64() &&
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
 
+  // Handle /nodbgdirmerge
+  config->mergeDebugDirectory = !args.hasArg(OPT_nodbgdirmerge);
+
   if (!config->dynamicBase &&
       (config->machine == ARMNT || isAnyArm64(config->machine)))
     Err(ctx) << "/dynamicbase:no is not compatible with "
