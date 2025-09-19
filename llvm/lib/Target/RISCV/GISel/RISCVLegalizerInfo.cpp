@@ -717,6 +717,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen)
       .lower();
 
+  LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
+    LLT VecTy = Query.Types[0];
+    LLT EltTy = Query.Types[1];
+    return VecTy.getElementType() == EltTy;
+  };
+
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   InsertVectorEltPred, sizeIs(2, sXLen.getSizeInBits())))
+      .legalIf(all(typeIsLegalIntOrFPVec(0, BoolVecTys, ST),
+                   InsertVectorEltPred, sizeIs(2, sXLen.getSizeInBits())));
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
