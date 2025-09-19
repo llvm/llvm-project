@@ -25,7 +25,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -88,8 +87,6 @@ struct MemIntrinsicInfo {
   bool ReadMem = false;
   bool WriteMem = false;
   bool IsVolatile = false;
-
-  SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
 
   bool isUnordered() const {
     return (Ordering == AtomicOrdering::NotAtomic ||
