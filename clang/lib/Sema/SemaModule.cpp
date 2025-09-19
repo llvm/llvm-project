@@ -777,7 +777,7 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
     assert((getLangOpts().getCompilingModule() ==
                 LangOptionsBase::CMK_ModuleInterface ||
             ThisModule) &&
-           "was expecting a  module if building a Clang module");
+           "was expecting a module if building a Clang module");
   }
 }
 
