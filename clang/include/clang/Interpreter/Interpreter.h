@@ -140,7 +140,8 @@ public:
     std::optional<std::string> OrcRuntimePath;
     /// PID of the out-of-process JIT executor.
     uint32_t ExecutorPID = 0;
-
+    /// Custom lambda to be executed inside child process/executor
+    std::function<void()> CustomizeFork = nullptr;
     /// Factory function for creating LLJITBuilder instances.
     /// This allows clients to customize JIT builder creation while still
     /// providing sensible defaults.
