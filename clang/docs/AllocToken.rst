@@ -68,7 +68,7 @@ example:
     ptr = malloc(size);
 
     // Instrumented:
-    ptr = __alloc_token_malloc(size, token_id);
+    ptr = __alloc_token_malloc(size, <token id>);
 
 In addition, it is typically recommended to configure the following:
 
@@ -182,6 +182,7 @@ files or functions from instrumentation.
 
 .. code-block:: bash
 
+    [alloc-token]
     # Exclude specific source files
     src:third_party/allocator.c
     # Exclude function name patterns

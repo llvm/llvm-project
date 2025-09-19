@@ -1295,7 +1295,7 @@ typeContainsPointer(QualType T,
   }
 
   // The type is an array; check the element type.
-  if (const ArrayType *AT = CanonicalType->getAsArrayTypeUnsafe())
+  if (const ArrayType *AT = dyn_cast<ArrayType>(CanonicalType))
     return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
   // The type is a struct, class, or union.
   if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
