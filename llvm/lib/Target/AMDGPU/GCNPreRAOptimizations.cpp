@@ -48,7 +48,7 @@ static cl::opt<bool> EnableRegisterAvoidListForMFMARegs(
     "amdgpu-avoid-hazard-hint-for-mfma", cl::Hidden,
     cl::desc("Enable Register Avoidance for "
              "MFMA in GCNPreRAOptimizations stage."),
-    cl::init(true));
+    cl::init(false));
 
 namespace {
 
