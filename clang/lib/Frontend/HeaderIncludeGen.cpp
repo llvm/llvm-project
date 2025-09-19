@@ -117,7 +117,8 @@ class HeaderIncludesDirectPerFileCallback : public PPCallbacks {
     FileEntryRef File;
     const Module *ImportedModule;
 
-    HeaderIncludeInfo(SourceLocation Location, FileEntryRef File, const Module *ImportedModule)
+    HeaderIncludeInfo(SourceLocation Location, FileEntryRef File,
+                      const Module *ImportedModule)
         : Location(Location), File(File), ImportedModule(ImportedModule) {}
   };
 
@@ -125,7 +126,8 @@ class HeaderIncludesDirectPerFileCallback : public PPCallbacks {
   HeaderSearch &HSI;
   raw_ostream *OutputFile;
   bool OwnsOutputFile;
-  using DependencyMap = llvm::DenseMap<FileEntryRef, SmallVector<HeaderIncludeInfo>>;
+  using DependencyMap =
+      llvm::DenseMap<FileEntryRef, SmallVector<HeaderIncludeInfo>>;
   DependencyMap Dependencies;
 
 public:
@@ -304,8 +306,8 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
   }
 }
 
-void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
-                                         Token &FilenameTok,
+void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile,
+                                         const Token &FilenameTok,
                                          SrcMgr::CharacteristicKind FileType) {
   if (!DepOpts.ShowSkippedHeaderIncludes)
     return;
@@ -421,7 +423,9 @@ void HeaderIncludesDirectPerFileCallback::EndOfMainFile() {
               if (Deps[I].ImportedModule) {
                 JOS.object([&] {
                   JOS.attribute("location", Deps[I].Location.printToString(SM));
-                  JOS.attribute("module", Deps[I].ImportedModule->getTopLevelModuleName());
+                  JOS.attribute(
+                      "module",
+                      Deps[I].ImportedModule->getTopLevelModuleName());
                   JOS.attribute("file", Deps[I].File.getName());
                 });
               }
@@ -431,7 +435,7 @@ void HeaderIncludesDirectPerFileCallback::EndOfMainFile() {
       }
     });
   });
-  
+
   OS << "\n";
 
   if (OutputFile->get_kind() == raw_ostream::OStreamKind::OK_FDStream) {
@@ -459,13 +463,15 @@ void HeaderIncludesDirectPerFileCallback::InclusionDirective(
 
   FileEntryRef HeaderOrModuleMapFile = *File;
   if (ModuleImported && SuggestedModule) {
-    OptionalFileEntryRef ModuleMapFile = HSI.getModuleMap().getModuleMapFileForUniquing(SuggestedModule);
+    OptionalFileEntryRef ModuleMapFile =
+        HSI.getModuleMap().getModuleMapFileForUniquing(SuggestedModule);
     if (ModuleMapFile) {
-      HeaderOrModule = *ModuleMapFile;
+      HeaderOrModuleMapFile = *ModuleMapFile;
     }
   }
 
-  HeaderIncludeInfo DependenciesEntry(Loc, HeaderOrModule, (ModuleImported ? SuggestedModule : nullptr));
+  HeaderIncludeInfo DependenciesEntry(
+      Loc, HeaderOrModuleMapFile, (ModuleImported ? SuggestedModule : nullptr));
   Dependencies[*FromFile].push_back(DependenciesEntry);
 }
 
