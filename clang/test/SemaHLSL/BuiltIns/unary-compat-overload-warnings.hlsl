@@ -1,27 +1,27 @@
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=acos %s 2>&1 | FileCheck %s -DFUNC=acos
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=asin %s 2>&1 | FileCheck %s -DFUNC=asin
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=atan %s 2>&1 | FileCheck %s -DFUNC=atan
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=ceil %s 2>&1 | FileCheck %s -DFUNC=ceil
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=cos %s 2>&1 | FileCheck %s -DFUNC=cos
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=cosh %s 2>&1 | FileCheck %s -DFUNC=cosh
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=degrees %s 2>&1 | FileCheck %s -DFUNC=degrees
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=exp %s 2>&1 | FileCheck %s -DFUNC=exp
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=exp2 %s 2>&1 | FileCheck %s -DFUNC=exp2
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=floor %s 2>&1 | FileCheck %s -DFUNC=floor
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=frac %s 2>&1 | FileCheck %s -DFUNC=frac
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=log %s 2>&1 | FileCheck %s -DFUNC=log
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=log10 %s 2>&1 | FileCheck %s -DFUNC=log10
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=log2 %s 2>&1 | FileCheck %s -DFUNC=log2
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=normalize %s 2>&1 | FileCheck %s -DFUNC=normalize
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=rsqrt %s 2>&1 | FileCheck %s -DFUNC=rsqrt
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=round %s 2>&1 | FileCheck %s -DFUNC=round
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=sin %s 2>&1 | FileCheck %s -DFUNC=sin
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=sinh %s 2>&1 | FileCheck %s -DFUNC=sinh
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=sqrt %s 2>&1 | FileCheck %s -DFUNC=sqrt
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=tan %s 2>&1 | FileCheck %s -DFUNC=tan
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=tanh %s 2>&1 | FileCheck %s -DFUNC=tanh
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=trunc %s 2>&1 | FileCheck %s -DFUNC=trunc
-// RUN: %clang_dxc -T cs_6_0 -HV 202x -DFUNC=radians %s 2>&1 | FileCheck %s -DFUNC=radians
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=acos %s 2>&1 | FileCheck %s -DFUNC=acos
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=asin %s 2>&1 | FileCheck %s -DFUNC=asin
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=atan %s 2>&1 | FileCheck %s -DFUNC=atan
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=ceil %s 2>&1 | FileCheck %s -DFUNC=ceil
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=cos %s 2>&1 | FileCheck %s -DFUNC=cos
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=cosh %s 2>&1 | FileCheck %s -DFUNC=cosh
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=degrees %s 2>&1 | FileCheck %s -DFUNC=degrees
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=exp %s 2>&1 | FileCheck %s -DFUNC=exp
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=exp2 %s 2>&1 | FileCheck %s -DFUNC=exp2
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=floor %s 2>&1 | FileCheck %s -DFUNC=floor
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=frac %s 2>&1 | FileCheck %s -DFUNC=frac
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=log %s 2>&1 | FileCheck %s -DFUNC=log
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=log10 %s 2>&1 | FileCheck %s -DFUNC=log10
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=log2 %s 2>&1 | FileCheck %s -DFUNC=log2
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=normalize %s 2>&1 | FileCheck %s -DFUNC=normalize
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=rsqrt %s 2>&1 | FileCheck %s -DFUNC=rsqrt
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=round %s 2>&1 | FileCheck %s -DFUNC=round
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=sin %s 2>&1 | FileCheck %s -DFUNC=sin
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=sinh %s 2>&1 | FileCheck %s -DFUNC=sinh
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=sqrt %s 2>&1 | FileCheck %s -DFUNC=sqrt
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=tan %s 2>&1 | FileCheck %s -DFUNC=tan
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=tanh %s 2>&1 | FileCheck %s -DFUNC=tanh
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=trunc %s 2>&1 | FileCheck %s -DFUNC=trunc
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-compute -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=radians %s 2>&1 | FileCheck %s -DFUNC=radians
 
 // unary double overloads
 float test_unary_double(double p0) {
