@@ -388,6 +388,9 @@ defm pie: B<"pie",
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections (default)">;
+def print_gc_sections_eq: JJ<"print-gc-sections=">,
+  HelpText<"List removed unused sections to <file>">,
+  MetaVarName<"<file>">;
 
 defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",

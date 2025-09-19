@@ -2322,8 +2322,6 @@ defm : VPatFPMulAddVL_VV_VF_RM<any_riscv_vfnmsub_vl, "PseudoVFNMSUB">;
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACC">;
-defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
-                                    AllWidenableBFloatToFloatVectors>;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmadd_vl, "PseudoVFWNMACC">;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmsub_vl, "PseudoVFWMSAC">;
 defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmsub_vl, "PseudoVFWNMSAC">;
@@ -2541,20 +2539,6 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                 GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
-foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
-  defvar fvti = fvtiToFWti.Vti;
-  defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16Minimal] in
-  def : Pat<(fwti.Vector (any_riscv_fpextend_vl
-                             (fvti.Vector fvti.RegClass:$rs1),
-                             (fvti.Mask VMV0:$vm),
-                             VLOpFrag)),
-            (!cast<Instruction>("PseudoVFWCVTBF16_F_F_V_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
-                (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
-                (fvti.Mask VMV0:$vm),
-                GPR:$vl, fvti.Log2SEW, TA_MA)>;
-}
-
 // 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
 defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
 defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_x_f_vl, "PseudoVFNCVT_X_F_W">;
@@ -2594,22 +2578,6 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
-}
-
-foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
-  defvar fvti = fvtiToFWti.Vti;
-  defvar fwti = fvtiToFWti.Wti;
-  let Predicates = [HasVInstructionsBF16Minimal] in
-    def : Pat<(fvti.Vector (any_riscv_fpround_vl
-                               (fwti.Vector fwti.RegClass:$rs1),
-                               (fwti.Mask VMV0:$vm), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
-                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
-                  (fwti.Mask VMV0:$vm),
-                  // Value to indicate no rounding mode change in
-                  // RISCVInsertReadWriteCSR
-                  FRM_DYN,
-                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
 // 14. Vector Reduction Operations

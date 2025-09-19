@@ -1,3 +1,6 @@
+// REQUIRES: shell
+// REQUIRES: custom-check
+
 // RUN: sed -e "s:INPUT_DIR:%S/Inputs/custom-query-check:g" -e "s:OUT_DIR:%t:g" -e "s:MAIN_FILE:%s:g" %S/Inputs/custom-query-check/vfsoverlay.yaml > %t.yaml
 // RUN: clang-tidy --experimental-custom-checks %t/main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SAME-DIR
 // RUN: clang-tidy --experimental-custom-checks %t/subdir/main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-BASE
@@ -6,7 +9,6 @@
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-append/main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml | FileCheck %s --check-prefix=CHECK-SUB-DIR-APPEND
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-append/main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml --list-checks | FileCheck %s --check-prefix=LIST-CHECK
 // RUN: clang-tidy --experimental-custom-checks %t/subdir-append/main.cpp -checks='-*,custom-*' -vfsoverlay %t.yaml --dump-config | FileCheck %s --check-prefix=DUMP-CONFIG
-// REQUIRES: shell
 
 
 long V;
