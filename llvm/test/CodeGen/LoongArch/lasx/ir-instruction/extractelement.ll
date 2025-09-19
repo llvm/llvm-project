@@ -107,21 +107,12 @@ define void @extract_4xdouble(ptr %src, ptr %dst) nounwind {
 define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-LABEL: extract_32xi8_idx:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -96
-; LA32-NEXT:    st.w $ra, $sp, 92 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $fp, $sp, 88 # 4-byte Folded Spill
-; LA32-NEXT:    addi.w $fp, $sp, 96
-; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    addi.w $a0, $sp, 32
-; LA32-NEXT:    bstrins.w $a0, $a2, 4, 0
-; LA32-NEXT:    xvst $xr0, $sp, 32
-; LA32-NEXT:    ld.b $a0, $a0, 0
+; LA32-NEXT:    movgr2fr.w $fa1, $a2
+; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA32-NEXT:    xvshuf.b $xr0, $xr2, $xr0, $xr1
+; LA32-NEXT:    vpickve2gr.b $a0, $vr0, 0
 ; LA32-NEXT:    st.b $a0, $a1, 0
-; LA32-NEXT:    addi.w $sp, $fp, -96
-; LA32-NEXT:    ld.w $fp, $sp, 88 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 92 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 96
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: extract_32xi8_idx:
@@ -141,21 +132,12 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-LABEL: extract_16xi16_idx:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -96
-; LA32-NEXT:    st.w $ra, $sp, 92 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $fp, $sp, 88 # 4-byte Folded Spill
-; LA32-NEXT:    addi.w $fp, $sp, 96
-; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    addi.w $a0, $sp, 32
-; LA32-NEXT:    bstrins.w $a0, $a2, 4, 1
-; LA32-NEXT:    xvst $xr0, $sp, 32
-; LA32-NEXT:    ld.h $a0, $a0, 0
+; LA32-NEXT:    movgr2fr.w $fa1, $a2
+; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA32-NEXT:    xvshuf.h $xr1, $xr2, $xr0
+; LA32-NEXT:    vpickve2gr.h $a0, $vr1, 0
 ; LA32-NEXT:    st.h $a0, $a1, 0
-; LA32-NEXT:    addi.w $sp, $fp, -96
-; LA32-NEXT:    ld.w $fp, $sp, 88 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 92 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 96
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: extract_16xi16_idx:
@@ -242,21 +224,11 @@ define void @extract_8xfloat_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 define void @extract_4xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA32-LABEL: extract_4xdouble_idx:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -96
-; LA32-NEXT:    st.w $ra, $sp, 92 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $fp, $sp, 88 # 4-byte Folded Spill
-; LA32-NEXT:    addi.w $fp, $sp, 96
-; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    addi.w $a0, $sp, 32
-; LA32-NEXT:    bstrins.w $a0, $a2, 4, 3
-; LA32-NEXT:    xvst $xr0, $sp, 32
-; LA32-NEXT:    fld.d $fa0, $a0, 0
-; LA32-NEXT:    fst.d $fa0, $a1, 0
-; LA32-NEXT:    addi.w $sp, $fp, -96
-; LA32-NEXT:    ld.w $fp, $sp, 88 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 92 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 96
+; LA32-NEXT:    movgr2fr.w $fa1, $a2
+; LA32-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA32-NEXT:    xvshuf.d $xr1, $xr2, $xr0
+; LA32-NEXT:    xvstelm.d $xr1, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: extract_4xdouble_idx:

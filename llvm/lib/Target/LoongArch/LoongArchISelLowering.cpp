@@ -2855,10 +2855,6 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   case MVT::v16i16:
   case MVT::v4i64:
   case MVT::v4f64: {
-    // TODO: Similar optimization can be applied for la32.
-    if (!Subtarget.is64Bit())
-      return SDValue();
-
     // Extract the high half subvector and place it to the low half of a new
     // vector. It doesn't matter what the high half of the new vector is.
     EVT HalfTy = VecTy.getHalfNumVectorElementsVT(*DAG.getContext());
@@ -2872,7 +2868,9 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     // of MaskVec is Idx, the rest do not matter. ResVec[0] will hold the
     // desired element.
     SDValue IdxCp =
-        DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx);
+        Subtarget.is64Bit()
+            ? DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx)
+            : DAG.getBitcast(MVT::f32, Idx);
     SDValue IdxVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f32, IdxCp);
     SDValue MaskVec =
         DAG.getBitcast((VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, IdxVec);
