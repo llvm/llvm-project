@@ -64,9 +64,12 @@ struct PowOpToROCDLLibraryCalls : public OpRewritePattern<complex::PowOp> {
   LogicalResult matchAndRewrite(complex::PowOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-    Value logBase = complex::LogOp::create(rewriter, loc, op.getLhs());
-    Value mul = complex::MulOp::create(rewriter, loc, op.getRhs(), logBase);
-    Value exp = complex::ExpOp::create(rewriter, loc, mul);
+    auto fastmath = op.getFastmathAttr();
+    Value logBase =
+        complex::LogOp::create(rewriter, loc, op.getLhs(), fastmath);
+    Value mul =
+        complex::MulOp::create(rewriter, loc, op.getRhs(), logBase, fastmath);
+    Value exp = complex::ExpOp::create(rewriter, loc, mul, fastmath);
     rewriter.replaceOp(op, exp);
     return success();
   }
