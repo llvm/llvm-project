@@ -58,6 +58,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -3480,6 +3481,26 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         break;
     }
     break;
+  case ISD::VECTOR_COMPRESS: {
+    assert(!Op.getValueType().isScalableVector());
+
+    SDValue Vec = Op.getOperand(0);
+    SDValue PassThru = Op.getOperand(2);
+    // If PassThru is undefined, early out
+    if (PassThru.isUndef())
+      break;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    Known2 = computeKnownBits(PassThru, Depth + 1);
+    Known = Known.intersectWith(Known2);
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    Known2 = computeKnownBits(Vec, Depth + 1);
+    Known = Known.intersectWith(Known2);
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     assert(!Op.getValueType().isScalableVector());
     // Collect the known bits that are shared by every vector element referenced
@@ -4791,6 +4812,19 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       Tmp = std::min(Tmp, Tmp2);
     }
     return Tmp;
+
+  case ISD::VECTOR_COMPRESS: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue Mask = Op.getOperand(1);
+    SDValue PassThru = Op.getOperand(2);
+    // If PassThru is undefined, early out.
+    if (PassThru.isUndef())
+      return 1;
+    Tmp = ComputeNumSignBits(Vec, Depth + 1);
+    Tmp2 = ComputeNumSignBits(PassThru, Depth + 1);
+    Tmp = std::min(Tmp, Tmp2);
+    return Tmp;
+  }
 
   case ISD::VECTOR_SHUFFLE: {
     // Collect the minimum number of sign bits that are shared by every vector
