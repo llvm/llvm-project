@@ -160,15 +160,15 @@ struct CUDAKernelTy : public GenericKernelTy {
   /// Return maximum block size for maximum occupancy
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &,
                                   uint64_t DynamicMemSize) const override {
-    int minGridSize;
-    int maxBlockSize;
+    int MinGridSize;
+    int MaxBlockSize;
     auto Res = cuOccupancyMaxPotentialBlockSize(
-        &minGridSize, &maxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
+        &MinGridSize, &MaxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
     if (auto Err = Plugin::check(
             Res, "error in cuOccupancyMaxPotentialBlockSize: %s")) {
       return Err;
     }
-    return maxBlockSize;
+    return MaxBlockSize;
   }
 
 private:
@@ -1581,7 +1581,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
     unsigned SM =
         Header.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1
             ? Header.e_flags & ELF::EF_CUDA_SM
-            : (Header.e_flags & ELF::EF_CUDA_SM_MASK) >> 8;
+            : (Header.e_flags & ELF::EF_CUDA_SM_MASK) >> ELF::EF_CUDA_SM_OFFSET;
 
     CUdevice Device;
     CUresult Res = cuDeviceGet(&Device, DeviceId);

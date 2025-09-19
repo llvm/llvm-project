@@ -76,7 +76,6 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process.stdin.close()
         self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
 
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_partial_content_length(self):
         """
         lldb-dap returns a failure exit code when the input stream is closed

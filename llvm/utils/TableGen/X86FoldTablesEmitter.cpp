@@ -553,10 +553,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
       const Record *RegOpRec = RegInst->Operands[I].Rec;
       const Record *MemOpRec = MemInst->Operands[I].Rec;
-      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
+      // RegClassByHwMode: For instructions like TAILJMPr, TAILJMPr64,
       // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
-           RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
+           (RegOpRec->isSubClassOf("RegClassByHwMode"))) &&
           isMemoryOperand(MemOpRec)) {
         switch (I) {
         case 0:
