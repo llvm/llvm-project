@@ -235,6 +235,54 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "getOffsets",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
+                     to some other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
+                    /*methodBody=*/[{
+                      if (!other)
+                        return false;
+                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
+                        return false;
+                      // Check if the permutation is valid
+                      if (!isPermutationVector(perm))
+                        return false;
+                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
+                        // If both `dst` and `src` are empty, conservatively return true
+                        // here because some layout fields can be empty.
+                        if (dst.empty() && src.empty())
+                          return true;
+                        for (const auto &ta : llvm::enumerate(perm)) {
+                          if (src[ta.index()] != dst[ta.value()])
+                            return false;
+                        }
+                        return true;
+                      };
+                      // Check sgLayout
+                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
+                        return false;
+                      // Check sgData
+                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
+                        return false;
+                      // Check instData
+                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
+                        return false;
+                      // Check laneLayout
+                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
+                        return false;
+                      // Check laneData
+                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
+                        return false;
+                      // Check order if both sides have order field.
+                      if ($_self.getOrder() && other.getOrder()) {
+                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
+                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
+                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
+                          return false;
+                      }
+                      return true;
+                    }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
