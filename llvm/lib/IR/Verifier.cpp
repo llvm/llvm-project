@@ -192,6 +192,9 @@ private:
     case DbgVariableRecord::LocationType::Declare:
       *OS << "declare";
       break;
+    case DbgVariableRecord::LocationType::DeclareValue:
+      *OS << "declare_value";
+      break;
     case DbgVariableRecord::LocationType::Assign:
       *OS << "assign";
       break;
@@ -7002,6 +7005,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 
   CheckDI(DVR.getType() == DbgVariableRecord::LocationType::Value ||
               DVR.getType() == DbgVariableRecord::LocationType::Declare ||
+              DVR.getType() == DbgVariableRecord::LocationType::DeclareValue ||
               DVR.getType() == DbgVariableRecord::LocationType::Assign,
           "invalid #dbg record type", &DVR, DVR.getType(), BB, F);
 

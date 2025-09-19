@@ -1002,6 +1002,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DBGRECORDTYPEKEYWORD(declare);
   DBGRECORDTYPEKEYWORD(assign);
   DBGRECORDTYPEKEYWORD(label);
+  DBGRECORDTYPEKEYWORD(declare_value);
 #undef DBGRECORDTYPEKEYWORD
 
   if (Keyword.starts_with("DIFlag")) {

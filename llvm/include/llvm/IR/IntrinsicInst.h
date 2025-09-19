@@ -428,6 +428,7 @@ public:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
     case Intrinsic::dbg_assign:
+    case Intrinsic::dbg_declare_value:
       return true;
     default:
       return false;
@@ -457,6 +458,26 @@ public:
   /// @{
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::dbg_declare;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
+/// This represents the llvm.dbg.declare_value instruction.
+class DbgDeclareValueInst : public DbgVariableIntrinsic {
+public:
+  Value *getAddress() const {
+    assert(getNumVariableLocationOps() == 1 &&
+           "dbg.declare_value must have exactly 1 location operand.");
+    return getVariableLocationOp(0);
+  }
+
+  /// \name Casting methods
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::dbg_declare_value;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

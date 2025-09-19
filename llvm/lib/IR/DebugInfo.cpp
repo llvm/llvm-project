@@ -63,6 +63,23 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   return Declares;
 }
 
+TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclareValues(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup. This check is a bitfield datamember lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = ValueAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DbgVariableRecord *> Coros;
+  for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers())
+    if (DVR->getType() == DbgVariableRecord::LocationType::DeclareValue)
+      Coros.push_back(DVR);
+
+  return Coros;
+}
+
 TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup. This check is a bitfield datamember lookup.
