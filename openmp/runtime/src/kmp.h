@@ -2649,6 +2649,14 @@ typedef struct kmp_node_info {
   kmp_taskdata_t *parent_task; // Parent implicit task
 } kmp_node_info_t;
 
+// Representation of recorded nodes
+typedef struct kmp_node_vector {
+  kmp_node_info_t **blocks;
+  kmp_int32 block_size;
+  std::atomic<kmp_int32> num_of_blocks;
+  kmp_bootstrap_lock_t lock;
+} kmp_node_vector_t;
+
 /// Represent a TDG's current status
 typedef enum kmp_tdg_status {
   KMP_TDG_NONE = 0,
@@ -2660,10 +2668,10 @@ typedef enum kmp_tdg_status {
 typedef struct kmp_tdg_info {
   kmp_int32 tdg_id; // Unique idenfifier of the TDG
   kmp_taskgraph_flags_t tdg_flags; // Flags related to a TDG
-  kmp_int32 map_size; // Number of allocated TDG nodes
+  /* kmp_int32 map_size; // Number of allocated TDG nodes */
   kmp_int32 num_roots; // Number of roots tasks int the TDG
   kmp_int32 *root_tasks; // Array of tasks identifiers that are roots
-  kmp_node_info_t *record_map; // Array of TDG nodes
+  kmp_node_vector_t *record_map; // Array of TDG nodes
   kmp_tdg_status_t tdg_status =
       KMP_TDG_NONE; // Status of the TDG (recording, ready...)
   std::atomic<kmp_int32> num_tasks; // Number of TDG nodes

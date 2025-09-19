@@ -93,6 +93,13 @@ static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
 }
 
 extern void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start);
+#if OMPX_TASKGRAPH
+extern kmp_node_vector_t *kmp_alloc_tdg_vector(kmp_int32 block_size);
+extern kmp_node_info_t *kmp_node_vector_get(kmp_node_vector_t *vector,
+                                            kmp_int32 id);
+extern void kmp_node_vector_resize(kmp_node_vector_t *vector, kmp_int32 size);
+extern void kmp_node_vector_free(kmp_node_vector_t *vector);
+#endif
 
 static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
 
@@ -102,7 +109,10 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
 
     for (int i = 0; i < TaskInfo->nsuccessors; i++) {
       kmp_int32 successorNumber = TaskInfo->successors[i];
-      kmp_node_info_t *successor = &(task->tdg->record_map[successorNumber]);
+      kmp_node_info_t *successor =
+          kmp_node_vector_get(task->tdg->record_map, successorNumber);
+      /* kmp_node_info_t *successor = &(task->tdg->record_map[successorNumber]);
+       */
       kmp_int32 npredecessors = KMP_ATOMIC_DEC(&successor->npredecessors_counter) - 1;
       if (successor->task != nullptr && npredecessors == 0) {
         __kmp_omp_task(gtid, successor->task, false);
