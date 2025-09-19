@@ -3721,6 +3721,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":Support",
         ":TransformUtils",
