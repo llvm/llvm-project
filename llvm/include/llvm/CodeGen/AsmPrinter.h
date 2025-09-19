@@ -478,7 +478,8 @@ public:
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
 
-  void emitCallGraphSection(const MachineFunction &MF, FunctionCallGraphInfo &FuncCGInfo);
+  void emitCallGraphSection(const MachineFunction &MF,
+                            FunctionCallGraphInfo &FuncCGInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 
