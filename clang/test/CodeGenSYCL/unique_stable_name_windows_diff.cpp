@@ -54,6 +54,7 @@ int main() {
   // DEVICE: private unnamed_addr addrspace(1) constant [17 x i8] c"_ZTSZ4mainEUlvE_\00"
   // DEVICE: private unnamed_addr addrspace(1) constant [17 x i8] c"_ZTSZ4mainEUliE_\00"
   // DEVICE: private unnamed_addr addrspace(1) constant [17 x i8] c"_ZTSZ4mainEUldE_\00"
+
   // DEVICE: define dso_local spir_kernel void @_ZTSZ4mainE2K1
   // DEVICE: call spir_func void @_ZZ4mainENKUlvE_clEv
   // DEVICE: define internal spir_func void @_ZZ4mainENKUlvE_clEv
