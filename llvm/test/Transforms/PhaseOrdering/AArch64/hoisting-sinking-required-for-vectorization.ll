@@ -54,8 +54,10 @@ define void @loop(ptr %X, ptr %Y) {
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <2 x double> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt <2 x double> [[WIDE_LOAD8]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call <2 x double> @llvm.minnum.v2f64(<2 x double> [[WIDE_LOAD]], <2 x double> splat (double 6.000000e+00))
-; CHECK-NEXT:    [[TMP8:%.*]] = tail call <2 x double> @llvm.minnum.v2f64(<2 x double> [[WIDE_LOAD8]], <2 x double> splat (double 6.000000e+00))
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], splat (double 6.000000e+00)
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD8]], splat (double 6.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP5]], <2 x double> splat (double 6.000000e+00), <2 x double> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x double> splat (double 6.000000e+00), <2 x double> [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP3]], <2 x double> zeroinitializer, <2 x double> [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP4]], <2 x double> zeroinitializer, <2 x double> [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw double, ptr [[X]], i64 [[INDEX]]
@@ -72,7 +74,8 @@ define void @loop(ptr %X, ptr %Y) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw double, ptr [[Y]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt double [[TMP14]], 0.000000e+00
-; CHECK-NEXT:    [[DOTV_I:%.*]] = tail call double @llvm.minnum.f64(double [[TMP14]], double 6.000000e+00)
+; CHECK-NEXT:    [[CMP1_I:%.*]] = fcmp ogt double [[TMP14]], 6.000000e+00
+; CHECK-NEXT:    [[DOTV_I:%.*]] = select i1 [[CMP1_I]], double 6.000000e+00, double [[TMP14]]
 ; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = select i1 [[CMP_I]], double 0.000000e+00, double [[DOTV_I]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw double, ptr [[X]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store double [[RETVAL_0_I]], ptr [[ARRAYIDX2]], align 8

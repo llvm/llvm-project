@@ -3966,6 +3966,11 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
 // fcmp + sel patterns into max/min intrinsic.
 static Value *foldSelectICmpIntoMaxMin(SelectInst &SI,
                                        InstCombiner::BuilderTy &Builder) {
+  // Do this transformation only when select instruction
+  // gives NSZ guarantee.
+  auto *SIFOp = dyn_cast<FPMathOperator>(&SI);
+  if (!SIFOp || !SIFOp->hasNoSignedZeros())
+    return nullptr;
 
   auto TryFoldIntoMaxMinIntrinsic =
       [&Builder, &SI](CmpInst::Predicate Pred, Value *CmpLHS, Value *CmpRHS,
