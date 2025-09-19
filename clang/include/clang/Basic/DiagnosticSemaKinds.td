@@ -638,6 +638,9 @@ def err_decomp_decl_std_tuple_element_not_specialized : Error<
 def err_decomp_decl_std_tuple_size_not_constant : Error<
   "cannot decompose this type; 'std::tuple_size<%0>::value' "
   "is not a valid integral constant expression">;
+def err_decomp_decl_std_tuple_size_invalid
+    : Error<"cannot decompose this type; 'std::tuple_size<%0>::value' "
+            "is not a valid size: %1">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
 def err_arg_is_not_destructurable : Error<
@@ -13223,6 +13226,8 @@ def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
+def err_hlsl_assign_to_global_resource: Error<
+  "assignment to global resource variable %0 is not allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
