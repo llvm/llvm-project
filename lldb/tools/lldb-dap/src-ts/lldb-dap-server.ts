@@ -1,4 +1,5 @@
 import * as child_process from "node:child_process";
+import * as path from "path";
 import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
 
@@ -12,6 +13,10 @@ export class LLDBDapServer implements vscode.Disposable {
   private serverProcess?: child_process.ChildProcessWithoutNullStreams;
   private serverInfo?: Promise<{ host: string; port: number }>;
   private serverSpawnInfo?: string[];
+  // Detects changes to the lldb-dap executable file since the server's startup.
+  private serverFileWatcher?: vscode.FileSystemWatcher;
+  // Indicates whether the lldb-dap executable file has changed since the server's startup.
+  private serverFileChanged?: boolean;
 
   constructor() {
     vscode.commands.registerCommand(
@@ -83,6 +88,18 @@ export class LLDBDapServer implements vscode.Disposable {
       });
       this.serverProcess = process;
       this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
+      this.serverFileChanged = false;
+      // Cannot do `createFileSystemWatcher(dapPath)` for a single file. Have to use `RelativePattern`.
+      // See https://github.com/microsoft/vscode/issues/141011#issuecomment-1016772527
+      this.serverFileWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(
+          vscode.Uri.file(path.dirname(dapPath)),
+          path.basename(dapPath),
+        ),
+      );
+      this.serverFileWatcher.onDidChange(() => {
+        this.serverFileChanged = true;
+      });
     });
     return this.serverInfo;
   }
@@ -100,20 +117,34 @@ export class LLDBDapServer implements vscode.Disposable {
     args: string[],
     env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
   ): Promise<boolean> {
-    if (!this.serverProcess || !this.serverInfo || !this.serverSpawnInfo) {
+    if (
+      !this.serverProcess ||
+      !this.serverInfo ||
+      !this.serverSpawnInfo ||
+      !this.serverFileWatcher ||
+      this.serverFileChanged === undefined
+    ) {
       return true;
     }
 
-    const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
-    if (isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
-      return true;
-    }
+    // Check if the server has changed. If so, generate message and detail for user prompt.
+    const messageAndDetail = (() => {
+      if (this.serverFileChanged) {
+        return {
+          message:
+            "The lldb-dap binary has changed. Would you like to restart the server?",
+          detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with an old binary.
 
-    const userInput = await vscode.window.showInformationMessage(
-      "The arguments to lldb-dap have changed. Would you like to restart the server?",
-      {
-        modal: true,
-        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with different arguments.
+Restarting the server will interrupt any existing debug sessions and start a new server.`,
+        };
+      }
+
+      const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
+      if (!isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
+        return {
+          message:
+            "The arguments to lldb-dap have changed. Would you like to restart the server?",
+          detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with different arguments.
 
 The previous lldb-dap server was started with:
 
@@ -124,15 +155,31 @@ The new lldb-dap server will be started with:
 ${newSpawnInfo.join(" ")}
 
 Restarting the server will interrupt any existing debug sessions and start a new server.`,
+        };
+      }
+
+      return null;
+    })();
+
+    // If the server hasn't changed, continue startup without killing it.
+    if (messageAndDetail === null) {
+      return true;
+    }
+
+    // The server has changed. Prompt the user to restart it.
+    const { message, detail } = messageAndDetail;
+    const userInput = await vscode.window.showInformationMessage(
+      message,
+      {
+        modal: true,
+        detail,
       },
       "Restart",
       "Use Existing",
     );
     switch (userInput) {
       case "Restart":
-        this.serverProcess.kill();
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.dispose();
         return true;
       case "Use Existing":
         return true;
@@ -156,6 +203,10 @@ Restarting the server will interrupt any existing debug sessions and start a new
     if (this.serverProcess === process) {
       this.serverProcess = undefined;
       this.serverInfo = undefined;
+      this.serverSpawnInfo = undefined;
+      this.serverFileWatcher?.dispose();
+      this.serverFileWatcher = undefined;
+      this.serverFileChanged = undefined;
     }
   }
 
