@@ -12047,36 +12047,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     bool ResultSigned = ResultType->isUnsignedIntegerOrEnumerationType();
     APSInt Result(APInt(BitWidth, Flag), ResultSigned);
     return Success(APValue(Result), E);
-
-    // auto *DestTy = E->getType()->castAs<VectorType>();
-    // QualType DestEltTy = DestTy->getElementType();
-    // bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
-    // const unsigned SourceLen = SourceLHS.getVectorLength();
-    // SmallVector<APValue, 4> ResultElements;
-    // ResultElements.reserve(SourceLen);
-    
-    // unsigned BitWidth = SourceLHS.getVectorElt(0).getInt().getBitWidth();
-
-    // auto PopulateResultElements = [&](bool Flag) {
-    //   for (unsigned I = 0; I < SourceLen - 1; ++I) {
-    //     ResultElements.emplace_back(APSInt(APInt::getZero(BitWidth), DestUnsigned));
-    //   }
-    //   ResultElements.emplace_back(APSInt(APInt(BitWidth, Flag), DestUnsigned));
-    // };
-
-    // for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
-    //   const APInt &A = SourceLHS.getVectorElt(EltNum).getInt();
-    //   const APInt &B = SourceRHS.getVectorElt(EltNum).getInt();
-    //   if ((A & B) != 0) {
-    //     PopulateResultElements(false);
-    //     return Success(APValue(ResultElements.data(), SourceLen), E);
-    //   }
-    // }
-    // PopulateResultElements(true);
-    // return Success(APValue(ResultElements.data(), SourceLen), E);
   }
 
-  // case clang::X86::BI__builtin_ia32_ptestz256:
+  // case X86::BI__builtin_ia32_ptestz256:
 
   // case X86::BI__builtin_ia32_ptestc128:
   // case X86::BI__builtin_ia32_ptestc256:
