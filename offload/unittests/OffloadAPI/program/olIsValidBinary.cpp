@@ -23,4 +23,13 @@ TEST_P(olIsValidBinaryTest, Success) {
   ASSERT_SUCCESS(olIsValidBinary(Device, DeviceBin->getBufferStart(),
                                  DeviceBin->getBufferSize(), &IsValid));
   ASSERT_TRUE(IsValid);
+
+  ASSERT_SUCCESS(
+      olIsValidBinary(Device, DeviceBin->getBufferStart(), 0, &IsValid));
+  ASSERT_FALSE(IsValid);
+
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_POINTER,
+      olIsValidBinary(Device, nullptr, DeviceBin->getBufferSize(), &IsValid));
+  ASSERT_FALSE(IsValid);
 }
