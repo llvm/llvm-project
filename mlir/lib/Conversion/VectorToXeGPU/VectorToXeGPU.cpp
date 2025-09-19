@@ -97,15 +97,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-static LogicalResult gatherScatterPreconditions(PatternRewriter &rewriter,
-                                                Operation *op, Type baseType) {
-  auto srcTy = dyn_cast<MemRefType>(baseType);
-  if (!srcTy)
-    return rewriter.notifyMatchFailure(op, "Expects memref source");
-
-  return success();
-}
-
 static xegpu::CreateNdDescOp
 createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
@@ -610,9 +601,9 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
 
   LogicalResult matchAndRewrite(vector::GatherOp gatherOp,
                                 PatternRewriter &rewriter) const override {
-    if (failed(gatherScatterPreconditions(rewriter, gatherOp,
-                                          gatherOp.getBase().getType())))
-      return failure();
+    auto srcTy = dyn_cast<MemRefType>(gatherOp.getBase().getType());
+    if (!srcTy)
+      return rewriter.notifyMatchFailure(gatherOp, "Expects memref source");
 
     Location loc = gatherOp.getLoc();
     VectorType vectorType = gatherOp.getVectorType();
@@ -645,9 +636,9 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
 
   LogicalResult matchAndRewrite(vector::ScatterOp scatterOp,
                                 PatternRewriter &rewriter) const override {
-    if (failed(gatherScatterPreconditions(rewriter, scatterOp,
-                                          scatterOp.getBase().getType())))
-      return failure();
+    auto srcTy = dyn_cast<MemRefType>(scatterOp.getBase().getType());
+    if (!srcTy)
+      return rewriter.notifyMatchFailure(scatterOp, "Expects memref source");
 
     Location loc = scatterOp.getLoc();
     auto meta = computeMemrefMeta(scatterOp, rewriter);
