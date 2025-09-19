@@ -33,6 +33,35 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+define void @f_sadd_overflow(ptr %a) {
+; CHECK-LABEL: @f_sadd_overflow(
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %cont
+  ret void
+
+for.body:                                         ; preds = %entry, %cont
+  %i.04 = phi i32 [ 2147483645, %entry ], [ %2, %cont ]
+  %idxprom = sext i32 %i.04 to i64
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
+  %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
+  %1 = extractvalue { i32, i1 } %0, 1
+; CHECK: cont:
+; CHECK: br i1 true, label %for.body, label %for.cond.cleanup
+  br i1 %1, label %trap, label %cont, !nosanitize !{}
+
+trap:                                             ; preds = %for.body
+  tail call void @llvm.trap() #2, !nosanitize !{}
+  unreachable, !nosanitize !{}
+
+cont:                                             ; preds = %for.body
+  %2 = extractvalue { i32, i1 } %0, 0
+  %cmp = icmp sle i32 %2, 2147483647
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
 define void @f_uadd(ptr %a) {
 ; CHECK-LABEL: @f_uadd(
 entry:
@@ -63,6 +92,35 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+define void @f_uadd_overflow(ptr %a) {
+; CHECK-LABEL: @f_uadd_overflow(
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %cont
+  ret void
+
+for.body:                                         ; preds = %entry, %cont
+  %i.04 = phi i32 [ 4294967290, %entry ], [ %2, %cont ]
+  %idxprom = sext i32 %i.04 to i64
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
+  %0 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %i.04, i32 1)
+  %1 = extractvalue { i32, i1 } %0, 1
+; CHECK: cont:
+; CHECK: br i1 true, label %for.body, label %for.cond.cleanup
+  br i1 %1, label %trap, label %cont, !nosanitize !{}
+
+trap:                                             ; preds = %for.body
+  tail call void @llvm.trap(), !nosanitize !{}
+  unreachable, !nosanitize !{}
+
+cont:                                             ; preds = %for.body
+  %2 = extractvalue { i32, i1 } %0, 0
+  %cmp = icmp ule i32 %2, 4294967295
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
 define void @f_ssub(ptr nocapture %a) {
 ; CHECK-LABEL: @f_ssub(
 entry:
@@ -90,6 +148,37 @@ trap:                                             ; preds = %for.body
 cont:                                             ; preds = %for.body
   %2 = extractvalue { i32, i1 } %0, 0
   %cmp = icmp sgt i32 %2, -1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+define void @f_ssub_overflow(ptr nocapture %a) {
+; CHECK-LABEL: @f_ssub_overflow(
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %cont
+  ret void
+
+for.body:                                         ; preds = %entry, %cont
+  %i.04 = phi i32 [ -2147483642, %entry ], [ %2, %cont ]
+  %idxprom = sext i32 %i.04 to i64
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
+  %0 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %i.04, i32 1)
+  %1 = extractvalue { i32, i1 } %0, 1
+; CHECK:  [[COND:%[^ ]+]] = extractvalue { i32, i1 } %1, 1
+; CHECK-NEXT:  br i1 [[COND]], label %trap, label %cont, !nosanitize !0
+; CHECK: cont:
+; CHECK: br i1 true, label %for.body, label %for.cond.cleanup
+  br i1 %1, label %trap, label %cont, !nosanitize !{}
+
+trap:                                             ; preds = %for.body
+  tail call void @llvm.trap(), !nosanitize !{}
+  unreachable, !nosanitize !{}
+
+cont:                                             ; preds = %for.body
+  %2 = extractvalue { i32, i1 } %0, 0
+  %cmp = icmp sge i32 %2, -2147483648
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
@@ -146,6 +235,8 @@ for.body:                                         ; preds = %entry, %cont
 ; CHECK: for.body:
 ; CHECK:  [[COND:%[^ ]+]] = extractvalue { i32, i1 } %1, 1
 ; CHECK-NEXT:  br i1 [[COND]], label %trap, label %cont, !nosanitize !0
+; CHECK: cont:
+; CHECK: br i1 true, label %for.body, label %for.cond.cleanup
   br i1 %1, label %trap, label %cont, !nosanitize !{}
 
 trap:                                             ; preds = %for.body
