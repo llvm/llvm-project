@@ -521,7 +521,6 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def roundps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Constant int)">;
 }
 
-
 let Features = "avx",
     Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vtestzpd : X86Builtin<"int(_Vector<2, double>, _Vector<2, double>)">;

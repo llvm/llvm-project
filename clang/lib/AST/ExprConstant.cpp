@@ -12049,31 +12049,31 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(Result), E);
   }
 
-  // case X86::BI__builtin_ia32_ptestz256:
+    // case X86::BI__builtin_ia32_ptestz256:
 
-  // case X86::BI__builtin_ia32_ptestc128:
-  // case X86::BI__builtin_ia32_ptestc256:
+    // case X86::BI__builtin_ia32_ptestc128:
+    // case X86::BI__builtin_ia32_ptestc256:
 
-  // case X86::BI__builtin_ia32_ptestnzc128:
-  // case X86::BI__builtin_ia32_ptestnzc256:
+    // case X86::BI__builtin_ia32_ptestnzc128:
+    // case X86::BI__builtin_ia32_ptestnzc256:
 
-  // case X86::BI__builtin_ia32_vtestzps:
-  // case X86::BI__builtin_ia32_vtestzps256:
+    // case X86::BI__builtin_ia32_vtestzps:
+    // case X86::BI__builtin_ia32_vtestzps256:
 
-  // case X86::BI__builtin_ia32_vtestcps:
-  // case X86::BI__builtin_ia32_vtestcps256:
+    // case X86::BI__builtin_ia32_vtestcps:
+    // case X86::BI__builtin_ia32_vtestcps256:
 
-  // case X86::BI__builtin_ia32_vtestnzcps:
-  // case X86::BI__builtin_ia32_vtestnzcps256:
+    // case X86::BI__builtin_ia32_vtestnzcps:
+    // case X86::BI__builtin_ia32_vtestnzcps256:
 
-  // case X86::BI__builtin_ia32_vtestzpd:
-  // case X86::BI__builtin_ia32_vtestzpd256:
+    // case X86::BI__builtin_ia32_vtestzpd:
+    // case X86::BI__builtin_ia32_vtestzpd256:
 
-  // case X86::BI__builtin_ia32_vtestcpd:
-  // case X86::BI__builtin_ia32_vtestcpd256:
+    // case X86::BI__builtin_ia32_vtestcpd:
+    // case X86::BI__builtin_ia32_vtestcpd256:
 
-  // case X86::BI__builtin_ia32_vtestnzcpd:
-  // case X86::BI__builtin_ia32_vtestnzcpd256:
+    // case X86::BI__builtin_ia32_vtestnzcpd:
+    // case X86::BI__builtin_ia32_vtestnzcpd256:
 
   case Builtin::BI__builtin_elementwise_ctlz:
   case Builtin::BI__builtin_elementwise_cttz: {
