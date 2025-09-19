@@ -129,8 +129,6 @@ def FeatureFPCVT     : SubtargetFeature<"fpcvt", "HasFPCVT", "true",
                                         [FeatureFPU]>;
 def FeatureISEL      : SubtargetFeature<"isel","HasISEL", "true",
                                         "Enable the isel instruction">;
-def FeatureBPERMD    : SubtargetFeature<"bpermd", "HasBPERMD", "true",
-                                        "Enable the bpermd instruction">;
 def FeatureExtDiv    : SubtargetFeature<"extdiv", "HasExtDiv", "true",
                                         "Enable extended divide instructions">;
 def FeatureLDBRX     : SubtargetFeature<"ldbrx","HasLDBRX", "true",
@@ -377,7 +375,7 @@ def NoNaNsFPMath
     : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def NaNsFPMath
     : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
+def HasBPERMD : Predicate<"Subtarget->getCPUDirective() >= PPC::DIR_PWR7">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
 def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
@@ -442,7 +440,6 @@ def ProcessorFeatures {
                                                   FeatureLDBRX,
                                                   Feature64BitSupport,
                                                   /* Feature64BitRegs, */
-                                                  FeatureBPERMD,
                                                   FeatureExtDiv,
                                                   FeatureMFTB,
                                                   DeprecatedDST,
