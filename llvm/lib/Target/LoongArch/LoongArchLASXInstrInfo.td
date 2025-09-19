@@ -1917,21 +1917,21 @@ def : Pat<(i64 (bitconvert (f64 (vector_extract v4f64:$xj, uimm2:$imm)))),
 // Vector extraction with constant index.
 foreach imm = 16...31 in {
   defvar Imm = !and(imm, 15);
-  def : Pat<(i64 (vector_extract v32i8:$xj, imm)),
+  def : Pat<(GRLenVT (vector_extract v32i8:$xj, imm)),
             (VPICKVE2GR_B (EXTRACT_SUBREG (XVPERMI_D v32i8:$xj, 14), sub_128),
                 Imm)>;
 }
 foreach imm = 8...15 in {
   defvar Imm = !and(imm, 7);
-  def : Pat<(i64 (vector_extract v16i16:$xj, imm)),
+  def : Pat<(GRLenVT (vector_extract v16i16:$xj, imm)),
             (VPICKVE2GR_H (EXTRACT_SUBREG (XVPERMI_D v16i16:$xj, 14), sub_128),
                 Imm)>;
 }
-def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
+def : Pat<(GRLenVT (vector_extract v32i8:$xj, uimm4:$imm)),
           (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
-def : Pat<(i64 (vector_extract v16i16:$xj, uimm3:$imm)),
+def : Pat<(GRLenVT (vector_extract v16i16:$xj, uimm3:$imm)),
           (VPICKVE2GR_H (EXTRACT_SUBREG v16i16:$xj, sub_128), uimm3:$imm)>;
-def : Pat<(i64 (vector_extract v8i32:$xj, uimm3:$imm)),
+def : Pat<(GRLenVT (vector_extract v8i32:$xj, uimm3:$imm)),
           (XVPICKVE2GR_W v8i32:$xj, uimm3:$imm)>;
 def : Pat<(i64 (vector_extract v4i64:$xj, uimm2:$imm)),
           (XVPICKVE2GR_D v4i64:$xj, uimm2:$imm)>;
