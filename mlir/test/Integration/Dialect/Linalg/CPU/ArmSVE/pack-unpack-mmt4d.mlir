@@ -37,8 +37,11 @@
 ///
 /// 4. The MMT4D and Pack/Unpack Ops are kept in seperate functions to isolate
 ///    the corresponding lowering and lowering configs.
-///   * TODO: Ideally, we should consider fusion opportunities by moving these
-///     Ops into one function.
+/// 
+/// TODO: Ideally, we should consider fusion opportunities by moving
+/// pack/unapack/mmt4d Ops into one function.
+/// TODO: Vectorize linalg.pack + linalg.unpack:
+///   * https://github.com/llvm/llvm-project/issues/159751
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -276,6 +279,7 @@ module @transforms attributes { transform.with_named_sequence } {
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
     // Step 2: Vectorize linalg.mmt4d (note, the N dim is scalable!)
+    // TODO: Lower directly to named contractions: https://github.com/llvm/llvm-project/issues/159749
     transform.structured.vectorize %tiled_mmt4d
       vector_sizes  [1, 1, 1, 8, [8], 1]  {assume_dynamic_dims_match_vec_sizes} : !transform.any_op
 
