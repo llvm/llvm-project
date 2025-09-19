@@ -161,6 +161,10 @@ static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
   llvm_unreachable("Unsupported number of bytes!");
 }
 
+template <class Range> static bool matchersRecordOperand(Range &&R) {
+  return any_of(R, [](const auto &I) { return I->recordsOperand(); });
+}
+
 //===- Global Data --------------------------------------------------------===//
 
 std::set<LLTCodeGen> llvm::gi::KnownTypes;
@@ -518,6 +522,10 @@ Matcher::~Matcher() {}
 
 //===- GroupMatcher -------------------------------------------------------===//
 
+bool GroupMatcher::recordsOperand() const {
+  return matchersRecordOperand(Conditions) || matchersRecordOperand(Matchers);
+}
+
 bool GroupMatcher::candidateConditionMatches(
     const PredicateMatcher &Predicate) const {
 
@@ -547,12 +555,24 @@ std::unique_ptr<PredicateMatcher> GroupMatcher::popFirstCondition() {
   return P;
 }
 
+/// Check if the Condition, which is a predicate of M, cannot be hoisted outside
+/// of (i.e., checked before) M.
+static bool cannotHoistCondition(const PredicateMatcher &Condition,
+                                 const Matcher &M) {
+  // The condition can't be hoisted if it is a C++ predicate that refers to
+  // operands and the operands are registered within the matcher.
+  return Condition.dependsOnOperands() && M.recordsOperand();
+}
+
 bool GroupMatcher::addMatcher(Matcher &Candidate) {
   if (!Candidate.hasFirstCondition())
     return false;
 
+  // Only add candidates that have a matching first condition that can be
+  // hoisted into the GroupMatcher.
   const PredicateMatcher &Predicate = Candidate.getFirstCondition();
-  if (!candidateConditionMatches(Predicate))
+  if (!candidateConditionMatches(Predicate) ||
+      cannotHoistCondition(Predicate, Candidate))
     return false;
 
   Matchers.push_back(&Candidate);
@@ -570,10 +590,17 @@ void GroupMatcher::finalize() {
     for (const auto &Rule : Matchers)
       if (!Rule->hasFirstCondition())
         return;
+    // Hoist the first condition if it is identical in all matchers in the group
+    // and it can be hoisted in every matcher.
     const auto &FirstCondition = FirstRule.getFirstCondition();
-    for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
-      if (!Matchers[I]->getFirstCondition().isIdentical(FirstCondition))
+    if (cannotHoistCondition(FirstCondition, FirstRule))
+      return;
+    for (unsigned I = 1, E = Matchers.size(); I < E; ++I) {
+      const auto &OtherFirstCondition = Matchers[I]->getFirstCondition();
+      if (!OtherFirstCondition.isIdentical(FirstCondition) ||
+          cannotHoistCondition(OtherFirstCondition, *Matchers[I]))
         return;
+    }
 
     Conditions.push_back(FirstRule.popFirstCondition());
     for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
@@ -629,6 +656,12 @@ void GroupMatcher::optimize() {
 }
 
 //===- SwitchMatcher ------------------------------------------------------===//
+
+bool SwitchMatcher::recordsOperand() const {
+  assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
+         "Switch conditions should not record named operands");
+  return matchersRecordOperand(Matchers);
+}
 
 bool SwitchMatcher::isSupportedPredicateType(const PredicateMatcher &P) {
   return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandMatcher>(P);
@@ -768,6 +801,10 @@ uint64_t RuleMatcher::NextRuleID = 0;
 
 StringRef RuleMatcher::getOpcode() const {
   return Matchers.front()->getOpcode();
+}
+
+bool RuleMatcher::recordsOperand() const {
+  return matchersRecordOperand(Matchers);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
@@ -1439,6 +1476,10 @@ TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
   return TTIdx;
 }
 
+bool OperandMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates);
+}
+
 void OperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                           RuleMatcher &Rule) {
   if (!Optimized) {
@@ -1818,6 +1859,10 @@ OperandMatcher &InstructionMatcher::addPhysRegInput(const Record *Reg,
   Operands.emplace_back(OM);
   Rule.definePhysRegOperand(Reg, *OM);
   return *OM;
+}
+
+bool InstructionMatcher::recordsOperand() const {
+  return matchersRecordOperand(Predicates) || matchersRecordOperand(operands());
 }
 
 void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table,

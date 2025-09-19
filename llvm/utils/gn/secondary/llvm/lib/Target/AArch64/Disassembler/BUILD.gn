@@ -5,7 +5,6 @@ tablegen("AArch64GenDisassemblerTables") {
   args = [
     "-gen-disassembler",
     "-ignore-non-decodable-operands",
-    "-ignore-fully-defined-operands",
   ]
   td_file = "../AArch64.td"
 }

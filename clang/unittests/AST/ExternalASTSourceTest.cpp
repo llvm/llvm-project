@@ -59,7 +59,8 @@ bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);

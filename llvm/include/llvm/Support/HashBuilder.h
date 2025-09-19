@@ -32,8 +32,7 @@ namespace hashbuilder_detail {
 /// Trait to indicate whether a type's bits can be hashed directly (after
 /// endianness correction).
 template <typename U>
-struct IsHashableData
-    : std::integral_constant<bool, is_integral_or_enum<U>::value> {};
+struct IsHashableData : std::bool_constant<is_integral_or_enum<U>::value> {};
 
 } // namespace hashbuilder_detail
 
