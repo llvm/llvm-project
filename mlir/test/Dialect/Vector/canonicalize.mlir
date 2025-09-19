@@ -3375,6 +3375,42 @@ func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
   return %b : vector<1x!llvm.ptr>
 }
 
+// -----
+
+// CHECK-LABEL: @negative_from_elements_poison
+//       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xf32>
+//       CHECK:   return %[[VAL]] : vector<2xf32>
+func.func @negative_from_elements_poison_f32() -> vector<2xf32> {
+  %0 = ub.poison : f32
+  %1 = vector.from_elements %0, %0 : vector<2xf32>
+  return %1 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_from_elements_poison_i32
+//       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xi32>
+//       CHECK:   return %[[VAL]] : vector<2xi32>
+func.func @negative_from_elements_poison_i32() -> vector<2xi32> {
+  %0 = ub.poison : i32
+  %1 = vector.from_elements %0, %0 : vector<2xi32>
+  return %1 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @negative_from_elements_poison_constant_mix
+//       CHECK:   %[[POISON:.*]] = ub.poison : f32
+//       CHECK:   %[[CONST:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[RES:.*]] = vector.from_elements %[[POISON]], %[[CONST]] : vector<2xf32>
+//       CHECK:   return %[[RES]] : vector<2xf32>
+func.func @negative_from_elements_poison_constant_mix() -> vector<2xf32> {
+  %0 = ub.poison : f32
+  %c = arith.constant 1.0 : f32
+  %1 = vector.from_elements %0, %c : vector<2xf32>
+  return %1 : vector<2xf32>
+}
+
 // +---------------------------------------------------------------------------
 // End of  Tests for foldFromElementsToConstant
 // +---------------------------------------------------------------------------
