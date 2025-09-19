@@ -1281,6 +1281,16 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 
 // --- Parsers for directives and constructs --------------------------
 
+static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
+  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
+
+static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+  return [&dirs](const OmpDirectiveName &name) -> bool {
+    return dirs.test(llvm::to_underlying(name.v));
+  };
+}
+
 TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
 
 OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
@@ -1365,16 +1375,6 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
 
 TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
     verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
-
-static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
-  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
-}
-
-static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
-  return [&dirs](const OmpDirectiveName &name) -> bool {
-    return dirs.test(llvm::to_underlying(name.v));
-  };
-}
 
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
