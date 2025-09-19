@@ -2459,10 +2459,12 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   /// The scratch address space does not need the global memory cache
   /// to be flushed as all memory operations by the same thread are
   /// sequentially consistent, and no other thread can access scratch
-  /// memory.
+  /// memory, unless the subtarget has GloballyAddressableScratch.
 
   /// Other address spaces do not have a cache.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+  if (((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE) &&
+      (((AddrSpace & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) ||
+       !ST.hasGloballyAddressableScratch()))
     return false;
 
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
@@ -2520,45 +2522,45 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // The scratch address space does not need the global memory cache
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
-  // memory.
+  // memory, unless the subtarget has GloballyAddressableScratch.
+  if (((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) ||
+      (((AddrSpace & SIAtomicAddrSpace::SCRATCH) != SIAtomicAddrSpace::NONE) &&
+       ST.hasGloballyAddressableScratch())) {
 
-  if (AddrSpace == SIAtomicAddrSpace::SCRATCH)
-    return false;
+    if (Pos == Position::AFTER)
+      ++MI;
 
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  // global_wb is only necessary at system scope for GFX12.0,
-  // they're also necessary at device scope for GFX12.5.
-  //
-  // Emitting it for lower scopes is a slow no-op, so we omit it
-  // for performance.
-  switch (Scope) {
-  case SIAtomicScope::SYSTEM:
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_SYS);
-    break;
-  case SIAtomicScope::AGENT:
-    // TODO DOCS
-    if (ST.hasGFX1250Insts()) {
+    // global_wb is only necessary at system scope for GFX12.0,
+    // they're also necessary at device scope for GFX12.5.
+    //
+    // Emitting it for lower scopes is a slow no-op, so we omit it
+    // for performance.
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-          .addImm(AMDGPU::CPol::SCOPE_DEV);
+          .addImm(AMDGPU::CPol::SCOPE_SYS);
+      break;
+    case SIAtomicScope::AGENT:
+      // TODO DOCS
+      if (ST.hasGFX1250Insts()) {
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+            .addImm(AMDGPU::CPol::SCOPE_DEV);
+      }
+      break;
+    case SIAtomicScope::CLUSTER:
+    case SIAtomicScope::WORKGROUP:
+      // No WB necessary, but we still have to wait.
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // No WB or wait necessary here, but insertWait takes care of that.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
     }
-    break;
-  case SIAtomicScope::CLUSTER:
-  case SIAtomicScope::WORKGROUP:
-    // No WB necessary, but we still have to wait.
-    break;
-  case SIAtomicScope::WAVEFRONT:
-  case SIAtomicScope::SINGLETHREAD:
-    // No WB or wait necessary here.
-    return false;
-  default:
-    llvm_unreachable("Unsupported synchronization scope");
-  }
 
-  if (Pos == Position::AFTER)
-    --MI;
+    if (Pos == Position::AFTER)
+      --MI;
+  }
 
   // We always have to wait for previous memory operations (load/store) to
   // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
