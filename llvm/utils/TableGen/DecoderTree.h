@@ -69,6 +69,7 @@ private:
   KindTy Kind;
 };
 
+/// Common base class for nodes with multiple children.
 class CheckManyNode : public DecoderTreeNode {
   SmallVector<std::unique_ptr<DecoderTreeNode>, 0> Children;
 
@@ -101,16 +102,22 @@ public:
   }
 };
 
+/// Executes child nodes one by one until one of them succeeds or all fail.
+/// The node fails if all child nodes fail. It never succeeds, because if a
+/// child node succeeds, it does not return.
 class CheckAnyNode : public CheckManyNode {
 public:
   CheckAnyNode() : CheckManyNode(CheckAny) {}
 };
 
+/// Executes child nodes one by one until one of them fails all all succeed.
+/// The node fails if any of the child nodes fails.
 class CheckAllNode : public CheckManyNode {
 public:
   CheckAllNode() : CheckManyNode(CheckAll) {}
 };
 
+/// Checks the value of encoding bits in the specified range.
 class CheckFieldNode : public DecoderTreeNode {
   unsigned StartBit;
   unsigned NumBits;
@@ -128,6 +135,10 @@ public:
   uint64_t getValue() const { return Value; }
 };
 
+/// Switch based on the value of encoding bits in the specified range.
+/// If the value of the bits in the range doesn't match any of the cases,
+/// the node fails. This is semantically equivalent to CheckAny node where
+/// every child is a CheckField node, but is faster.
 class SwitchFieldNode : public DecoderTreeNode {
   unsigned StartBit;
   unsigned NumBits;
@@ -166,6 +177,7 @@ public:
   }
 };
 
+/// Checks that the instruction to be decoded has its predicates satisfied.
 class CheckPredicateNode : public DecoderTreeNode {
   unsigned PredicateIndex;
 
@@ -176,6 +188,8 @@ public:
   unsigned getPredicateIndex() const { return PredicateIndex; }
 };
 
+/// Checks if the encoding bits are correct w.r.t. SoftFail semantics.
+/// This is the only node that can never fail.
 class SoftFailNode : public DecoderTreeNode {
   uint64_t PositiveMask, NegativeMask;
 
@@ -188,6 +202,7 @@ public:
   uint64_t getNegativeMask() const { return NegativeMask; }
 };
 
+/// Attempts to decode the specified encoding as the specified instruction.
 class DecodeNode : public DecoderTreeNode {
   StringRef EncodingName;
   unsigned InstOpcode;
