@@ -13025,7 +13025,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     return SDValue();
 
   unsigned LHSOpcode = LHS->getOpcode();
-  if (!ISD::isExtOpcode(LHSOpcode))
+  if (!ISD::isExtOpcode(LHSOpcode) && LHSOpcode != ISD::FP_EXTEND)
     return SDValue();
 
   SDValue LHSExtOp = LHS->getOperand(0);
@@ -13057,7 +13057,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   }
 
   unsigned RHSOpcode = RHS->getOpcode();
-  if (!ISD::isExtOpcode(RHSOpcode))
+  if (!ISD::isExtOpcode(RHSOpcode) && RHSOpcode != ISD::FP_EXTEND)
     return SDValue();
 
   SDValue RHSExtOp = RHS->getOperand(0);
