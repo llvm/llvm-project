@@ -118,7 +118,6 @@ protected:
   /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
   const int16_t *const RegClassByHwMode;
 
-public:
   TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
                   unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u,
                   const int16_t *const RegClassByHwModeTable = nullptr)
