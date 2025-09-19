@@ -966,9 +966,13 @@ using ExpiredLoanMap = llvm::ImmutableMap<LoanID, const ExpireFact *>;
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory;
-  LoanSet::Factory LoanSetFactory;
-  ExpiredLoanMap::Factory ExpiredLoanMapFactory;
+  llvm::BumpPtrAllocator Allocator;
+  OriginLoanMap::Factory OriginMapFactory =
+      OriginLoanMap::Factory(Allocator, /*canonicalize=*/false);
+  LoanSet::Factory LoanSetFactory =
+      LoanSet::Factory(Allocator, /*canonicalize=*/false);
+  ExpiredLoanMap::Factory ExpiredLoanMapFactory =
+      ExpiredLoanMap::Factory(Allocator, /*canonicalize=*/false);
 };
 
 /// Represents the dataflow lattice for loan propagation.
