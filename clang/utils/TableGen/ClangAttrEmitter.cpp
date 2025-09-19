@@ -3983,10 +3983,10 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
       continue;
-    OS << "  bool Traverse"
-       << R.getName() << "Attr(" << R.getName() << "Attr *A);\n";
-    OS << "  bool Visit"
-       << R.getName() << "Attr(" << R.getName() << "Attr *A) {\n"
+    OS << "  bool Traverse" << R.getName()
+       << "Attr(MaybeConst<" << R.getName() << "Attr> *A);\n";
+    OS << "  bool Visit" << R.getName()
+       << "Attr(MaybeConst<" << R.getName() << "Attr> *A) {\n"
        << "    return true; \n"
        << "  }\n";
   }
@@ -3998,9 +3998,9 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
-    OS << "template <typename Derived>\n"
-       << "bool VISITORCLASS<Derived>::Traverse"
-       << R.getName() << "Attr(" << R.getName() << "Attr *A) {\n"
+    OS << "template <typename Derived, bool IsConst>\n"
+       << "bool VISITORCLASS<Derived, IsConst>::Traverse" << R.getName()
+       << "Attr(MaybeConst<" << R.getName() << "Attr> *A) {\n"
        << "  if (!getDerived().VisitAttr(A))\n"
        << "    return false;\n"
        << "  if (!getDerived().Visit" << R.getName() << "Attr(A))\n"
@@ -4018,8 +4018,9 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   // Write generic Traverse routine
-  OS << "template <typename Derived>\n"
-     << "bool VISITORCLASS<Derived>::TraverseAttr(Attr *A) {\n"
+  OS << "template <typename Derived, bool IsConst>\n"
+     << "bool VISITORCLASS<Derived, IsConst>::TraverseAttr("
+     << "MaybeConst<Attr> *A) {\n"
      << "  if (!A)\n"
      << "    return true;\n"
      << "\n"
@@ -4032,7 +4033,8 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
 
     OS << "    case attr::" << R.getName() << ":\n"
        << "      return getDerived().Traverse" << R.getName() << "Attr("
-       << "cast<" << R.getName() << "Attr>(A));\n";
+       << "const_cast<MaybeConst<" << R.getName()
+       << "Attr> *>(static_cast<const " << R.getName() << "Attr *>(A)));\n";
   }
   OS << "  }\n";  // end switch
   OS << "  llvm_unreachable(\"bad attribute kind\");\n";

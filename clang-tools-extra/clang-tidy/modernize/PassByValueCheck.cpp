@@ -95,7 +95,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
   /// \see ExactlyOneUsageVisitor::hasExactlyOneUsageIn()
   class ExactlyOneUsageVisitor
       : public RecursiveASTVisitor<ExactlyOneUsageVisitor> {
-    friend class RecursiveASTVisitor<ExactlyOneUsageVisitor>;
+    friend class RecursiveASTVisitorBase<ExactlyOneUsageVisitor, /*Const=*/false>;
 
   public:
     ExactlyOneUsageVisitor(const ParmVarDecl *ParamDecl)
