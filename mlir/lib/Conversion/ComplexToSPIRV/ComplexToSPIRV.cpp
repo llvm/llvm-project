@@ -27,7 +27,7 @@ using namespace mlir;
 namespace {
 
 struct ConstantOpPattern final : OpConversionPattern<complex::ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(complex::ConstantOp constOp, OpAdaptor adaptor,
@@ -46,7 +46,7 @@ struct ConstantOpPattern final : OpConversionPattern<complex::ConstantOp> {
 };
 
 struct CreateOpPattern final : OpConversionPattern<complex::CreateOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(complex::CreateOp createOp, OpAdaptor adaptor,
@@ -63,7 +63,7 @@ struct CreateOpPattern final : OpConversionPattern<complex::CreateOp> {
 };
 
 struct ReOpPattern final : OpConversionPattern<complex::ReOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(complex::ReOp reOp, OpAdaptor adaptor,
@@ -79,7 +79,7 @@ struct ReOpPattern final : OpConversionPattern<complex::ReOp> {
 };
 
 struct ImOpPattern final : OpConversionPattern<complex::ImOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(complex::ImOp imOp, OpAdaptor adaptor,

@@ -20,6 +20,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 
 namespace scudo {
 

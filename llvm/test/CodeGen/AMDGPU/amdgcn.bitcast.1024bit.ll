@@ -159246,7 +159246,7 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v37, 24, v61
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v50, 8, v61
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v56, 16, v60
-; GFX9-NEXT:    v_mov_b32_e32 v33, v60
+; GFX9-NEXT:    v_lshrrev_b32_e32 v55, 8, v60
 ; GFX9-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:416 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:420 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:408 ; 4-byte Folded Reload
@@ -159259,7 +159259,6 @@ define <128 x i8> @bitcast_v64bf16_to_v128i8(<64 x bfloat> %a, i32 %b) {
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v48, 8, v48
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v36, 16, v58
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v58, 8, v58
-; GFX9-NEXT:    v_lshrrev_b32_e32 v55, 8, v33
 ; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v34, 16, v61
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)

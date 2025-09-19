@@ -1498,6 +1498,8 @@ def HasVendorXqcicm
     : Predicate<"Subtarget->hasVendorXqcicm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicm),
                          "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
+def NoVendorXqcicm
+    : Predicate<"!Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcics
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Select Extension">;
@@ -1505,11 +1507,6 @@ def HasVendorXqcics
     : Predicate<"Subtarget->hasVendorXqcics()">,
       AssemblerPredicate<(all_of FeatureVendorXqcics),
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
-def NoVendorXqcics
-    : Predicate<"!Subtarget->hasVendorXqcics()">;
-
-def HasVendorXqcicsOrXqcicm
-    : Predicate<"Subtarget->hasVendorXqcics() || Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;

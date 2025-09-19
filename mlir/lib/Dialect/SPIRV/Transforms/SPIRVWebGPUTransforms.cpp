@@ -168,7 +168,7 @@ using ExpandUMulExtendedPattern =
     ExpandMulExtendedPattern<UMulExtendedOp, false>;
 
 struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
-  using OpRewritePattern<IAddCarryOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IAddCarryOp op,
                                 PatternRewriter &rewriter) const override {
@@ -205,7 +205,7 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
 };
 
 struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IsInfOp op,
                                 PatternRewriter &rewriter) const override {
@@ -217,7 +217,7 @@ struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
 };
 
 struct ExpandIsNanPattern final : OpRewritePattern<IsNanOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IsNanOp op,
                                 PatternRewriter &rewriter) const override {
