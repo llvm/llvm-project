@@ -144,12 +144,6 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
-# If we are targeting a GPU architecture in a runtimes build we want to ignore
-# all the standard flag handling.
-if(LLVM_RUNTIMES_GPU_BUILD)
-  return()
-endif()
-
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   # When LLVM_ENABLE_EXPENSIVE_CHECKS is ON, LLVM will intercept errors
   # using assert(). An explicit check is performed here.
