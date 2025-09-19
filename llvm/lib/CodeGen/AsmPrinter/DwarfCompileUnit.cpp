@@ -247,13 +247,6 @@ void DwarfCompileUnit::addLocationAttribute(
   DIELoc *Loc = nullptr;
   std::optional<unsigned> NVPTXAddressSpace;
   std::unique_ptr<DIEDwarfExpression> DwarfExpr;
-
-  // Check if this variable is of boolean type
-  bool isBoolean = false;
-  if (GV && GV->getType())
-    if (auto *BasicType = dyn_cast<DIBasicType>(GV->getType()))
-      isBoolean = BasicType->getEncoding() == dwarf::DW_ATE_boolean;
-
   for (const auto &GE : GlobalExprs) {
     const GlobalVariable *Global = GE.Var;
     const DIExpression *Expr = GE.Expr;
@@ -264,17 +257,11 @@ void DwarfCompileUnit::addLocationAttribute(
     // DW_AT_const_value(X).
     if (GlobalExprs.size() == 1 && Expr && Expr->isConstant()) {
       addToAccelTable = true;
-
-      // Determine the value to use, normalizing booleans to 0 or 1
-      int64_t valueToUse = Expr->getElement(1);
-      if (isBoolean)
-        valueToUse = valueToUse ? 1 : 0;
-
       addConstantValue(
           *VariableDIE,
           DIExpression::SignedOrUnsignedConstant::UnsignedConstant ==
               *Expr->isConstant(),
-          valueToUse);
+          Expr->getElement(1));
       break;
     }
 
@@ -835,22 +822,6 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
   }
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
-
-    // Helper function to handle boolean constant values with type safety
-    auto addConstantValueWithBooleanNormalization =
-        [&](DIE &VariableDie, uint64_t intValue, const DIType *Type) {
-          if (auto *BasicType = dyn_cast_or_null<DIBasicType>(Type)) {
-            if (BasicType->getEncoding() == dwarf::DW_ATE_boolean) {
-              // Normalize boolean values: any non-zero becomes 1, zero stays 0
-              uint64_t normalizedBoolValue = (intValue) ? 1 : 0;
-              addConstantValue(VariableDie, normalizedBoolValue, Type);
-              return;
-            }
-          }
-          // For non-boolean types, use the original constant value
-          addConstantValue(VariableDie, intValue, Type);
-        };
-
     if (Entry->isLocation()) {
       addVariableAddress(DV, VariableDie, Entry->getLoc());
     } else if (Entry->isInt()) {
@@ -867,8 +838,7 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
           addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset,
                   dwarf::DW_FORM_data1, *DwarfExpr.TagOffset);
       } else
-        addConstantValueWithBooleanNormalization(VariableDie, Entry->getInt(),
-                                                 DV.getType());
+        addConstantValue(VariableDie, Entry->getInt(), DV.getType());
     } else if (Entry->isConstantFP()) {
       addConstantFPValue(VariableDie, Entry->getConstantFP());
     } else if (Entry->isConstantInt()) {
