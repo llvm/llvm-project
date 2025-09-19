@@ -145,7 +145,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     Val >>= ShiftAmount;
 
     // If the remaining bits don't fit in 12 bits, we might be able to reduce
-    // the // shift amount in order to use LUI which will zero the lower 12
+    // the shift amount in order to use LUI which will zero the lower 12
     // bits.
     if (ShiftAmount > 12 && !isInt<12>(Val)) {
       if (isInt<32>((uint64_t)Val << 12)) {
