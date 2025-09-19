@@ -1732,7 +1732,7 @@ TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getTargetPtr() {
 
 bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
                                                PtrLikeTypeInterface src) {
-  return isa<MemRefType>(tgt) &&
+  return isa<BaseMemRefType>(tgt) &&
          tgt.clonePtrWith(src.getMemorySpace(), std::nullopt) == src;
 }
 

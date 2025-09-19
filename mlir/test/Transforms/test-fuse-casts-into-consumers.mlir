@@ -32,6 +32,23 @@ func.func @load_store_unfoldable(%arg0: memref<?xf32, 1>, %arg1: index) {
   return
 }
 
+// CHECK-LABEL:   func.func @cast(
+// CHECK-SAME:                    %[[ARG0:.*]]: memref<2xf32, 1>,
+// CHECK-SAME:                    %[[ARG1:.*]]: memref<*xf32, 1>) -> (memref<*xf32>, memref<3x2xf32>) {
+// CHECK:           %[[VAL_0:.*]] = memref.cast %[[ARG0]] : memref<2xf32, 1> to memref<*xf32, 1>
+// CHECK:           %[[VAL_1:.*]] = memref.memory_space_cast %[[VAL_0]] : memref<*xf32, 1> to memref<*xf32>
+// CHECK:           %[[VAL_2:.*]] = memref.cast %[[ARG1]] : memref<*xf32, 1> to memref<3x2xf32, 1>
+// CHECK:           %[[VAL_3:.*]] = memref.memory_space_cast %[[VAL_2]] : memref<3x2xf32, 1> to memref<3x2xf32>
+// CHECK:           return %[[VAL_1]], %[[VAL_3]] : memref<*xf32>, memref<3x2xf32>
+// CHECK:         }
+func.func @cast(%arg0: memref<2xf32, 1>, %arg1: memref<*xf32, 1>) -> (memref<*xf32>, memref<3x2xf32>) {
+  %memspacecast = memref.memory_space_cast %arg0 : memref<2xf32, 1> to memref<2xf32>
+  %1 = memref.cast %memspacecast : memref<2xf32> to memref<*xf32>
+  %memspacecast_1 = memref.memory_space_cast %arg1 : memref<*xf32, 1> to memref<*xf32>
+  %2 = memref.cast %memspacecast_1 : memref<*xf32> to memref<3x2xf32>
+  return %1, %2 : memref<*xf32>, memref<3x2xf32>
+}
+
 // CHECK-LABEL:   func.func @view(
 // CHECK-SAME:                    %[[ARG0:.*]]: memref<?xi8, 1>,
 // CHECK-SAME:                    %[[ARG1:.*]]: index, %[[ARG2:.*]]: index) -> memref<?x?xi8> {
@@ -63,8 +80,8 @@ func.func @subview(%arg0: memref<?x?xf32, 1>, %arg1: index) -> memref<8x2xf32, s
 // CHECK-LABEL:   func.func @reinterpret_cast(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xf32, 1>,
 // CHECK-SAME:      %[[ARG1:.*]]: index) -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_0:.*]] = arith.constant 10 : index
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_2:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: {{\[}}%[[VAL_1]]], sizes: [10, %[[VAL_0]]], strides: {{\[}}%[[VAL_0]], 1] : memref<?xf32, 1> to memref<10x?xf32, strided<[?, 1], offset: ?>, 1>
 // CHECK:           %[[VAL_3:.*]] = memref.memory_space_cast %[[VAL_2]] : memref<10x?xf32, strided<[?, 1], offset: ?>, 1> to memref<10x?xf32, strided<[?, 1], offset: ?>>
 // CHECK:           return %[[VAL_3]] : memref<10x?xf32, strided<[?, 1], offset: ?>>
@@ -155,8 +172,8 @@ func.func @assume_alignment(%arg0: memref<?xf32, 1>) -> memref<?xf32> {
 // CHECK-SAME:      %[[ARG0:.*]]: memref<4x4xf32, 1>,
 // CHECK-SAME:      %[[ARG1:.*]]: index,
 // CHECK-SAME:      %[[ARG2:.*]]: f32) -> memref<16xf32> {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 4 : index
-// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_0:.*]] = arith.constant 4 : index
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_2:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32, 1> into memref<4x2x2xf32, 1>
 // CHECK:           %[[VAL_3:.*]] = memref.collapse_shape %[[VAL_2]] {{\[\[}}0, 1, 2]] : memref<4x2x2xf32, 1> into memref<16xf32, 1>
 // CHECK:           %[[VAL_4:.*]] = memref.memory_space_cast %[[VAL_3]] : memref<16xf32, 1> to memref<16xf32>
@@ -225,8 +242,8 @@ func.func @vector_load_store(%arg0: memref<?xf32, 1>, %arg1: index) {
 // CHECK-LABEL:   func.func @masked_load_store(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xf32, 1>,
 // CHECK-SAME:      %[[ARG1:.*]]: index) {
-// CHECK:           %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
-// CHECK:           %[[VAL_1:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
+// CHECK-DAG:       %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
 // CHECK:           %[[VAL_2:.*]] = vector.maskedload %[[ARG0]]{{\[}}%[[ARG1]]], %[[VAL_1]], %[[VAL_0]] : memref<?xf32, 1>, vector<4xi1>, vector<4xf32> into vector<4xf32>
 // CHECK:           vector.maskedstore %[[ARG0]]{{\[}}%[[ARG1]]], %[[VAL_1]], %[[VAL_2]] : memref<?xf32, 1>, vector<4xi1>, vector<4xf32>
 // CHECK:           return
@@ -243,10 +260,10 @@ func.func @masked_load_store(%arg0: memref<?xf32, 1>, %arg1: index) {
 // CHECK-LABEL:   func.func @gather_scatter(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xf32, 1>,
 // CHECK-SAME:      %[[ARG1:.*]]: index) {
-// CHECK:           %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
-// CHECK:           %[[VAL_1:.*]] = arith.constant dense<true> : vector<4xi1>
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant dense<true> : vector<4xi1>
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = vector.gather %[[ARG0]]{{\[}}%[[VAL_3]]] {{\[}}%[[VAL_2]]], %[[VAL_1]], %[[VAL_0]] : memref<?xf32, 1>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
 // CHECK:           vector.scatter %[[ARG0]]{{\[}}%[[VAL_3]]] {{\[}}%[[VAL_2]]], %[[VAL_1]], %[[VAL_4]] : memref<?xf32, 1>, vector<4xindex>, vector<4xi1>, vector<4xf32>
 // CHECK:           return
@@ -265,8 +282,8 @@ func.func @gather_scatter(%arg0: memref<?xf32, 1>, %arg1: index) {
 // CHECK-LABEL:   func.func @expandload_compressstore(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xf32, 1>,
 // CHECK-SAME:      %[[ARG1:.*]]: index) {
-// CHECK:           %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
-// CHECK:           %[[VAL_1:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
+// CHECK-DAG:       %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
 // CHECK:           %[[VAL_2:.*]] = vector.expandload %[[ARG0]]{{\[}}%[[ARG1]]], %[[VAL_1]], %[[VAL_0]] : memref<?xf32, 1>, vector<4xi1>, vector<4xf32> into vector<4xf32>
 // CHECK:           vector.compressstore %[[ARG0]]{{\[}}%[[ARG1]]], %[[VAL_1]], %[[VAL_2]] : memref<?xf32, 1>, vector<4xi1>, vector<4xf32>
 // CHECK:           return

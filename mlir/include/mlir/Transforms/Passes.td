@@ -589,9 +589,10 @@ def FuseMemorySpaceCastsIntoConsumers :
     Pass<"fuse-memory-space-casts-into-consumers"> {
   let summary = "Fuses memory-space cast operations into consumers.";
   let description = [{
-    This pass tries to fuse all possible memory-space cast operations into their consumers.
-    It does this by looking for `FuseMemorySpaceCastConsumerOpInterface`
-    operations, and invoking the interface methods to perform the fusion.
+    This pass tries to iteratively fuse all possible memory-space cast
+    operations into their consumers. It does this by looking for
+    `FuseMemorySpaceCastConsumerOpInterface` operations, and invoking the
+    interface methods to perform the fusion.
 
     Example:
 
