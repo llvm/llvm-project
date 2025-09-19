@@ -90,10 +90,7 @@ def main(argv):
                 logging.info(f'Running {pretty}')
                 continue
 
-            if subprocess.call(test_cmd) != 0:
-                logging.error(f'Failed to run the tests for commit {commit}, skipping')
-                continue
-
+            subprocess.call(test_cmd)
             output_file.parent.mkdir(parents=True, exist_ok=True)
             consolidate_cmd = [(PARENT_DIR / 'consolidate-benchmarks'), build_dir, '--output', output_file]
             subprocess.check_call(consolidate_cmd)

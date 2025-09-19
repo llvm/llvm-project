@@ -2795,7 +2795,11 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     return MadeChange;
   }
 
-  assert(getOperator()->isSubClassOf("SDNodeXForm") && "Unknown node type!");
+  if (!getOperator()->isSubClassOf("SDNodeXForm")) {
+    TP.error("unknown node type '" + getOperator()->getName() +
+             "' in input pattern");
+    return false;
+  }
 
   // Node transforms always take one operand.
   if (getNumChildren() != 1) {
