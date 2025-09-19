@@ -1353,7 +1353,7 @@ def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
 def ScaleSel : NamedIntOperand<"scale_sel"> {
-  let Validator = "isUInt<3>";
+  let Validator = "isUInt<4>";
 }
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
@@ -1969,6 +1969,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
   !cond(!eq(VT, i1)     : SSrc_i1,
         !eq(VT, i16)    : !if (IsFake16, VCSrc_b16, VCSrcT_b16),
+        !eq(VT, i64)    : VCSrc_b64,
         !eq(VT, f16)    : !if (IsFake16, VCSrc_f16, VCSrcT_f16),
         !eq(VT, bf16)   : !if (IsFake16, VCSrc_bf16, VCSrcT_bf16),
         !eq(VT, v2i16)  : VCSrc_v2b16,

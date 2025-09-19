@@ -18,6 +18,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 DEFINE_PPC_REGCLASSES
 

@@ -945,6 +945,7 @@ namespace {
     }
 
     ASTContext &getASTContext() const override { return Ctx; }
+    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -11926,6 +11927,33 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_blendpd:
+  case X86::BI__builtin_ia32_blendpd256:
+  case X86::BI__builtin_ia32_blendps:
+  case X86::BI__builtin_ia32_blendps256:
+  case X86::BI__builtin_ia32_pblendw128:
+  case X86::BI__builtin_ia32_pblendw256:
+  case X86::BI__builtin_ia32_pblendd128:
+  case X86::BI__builtin_ia32_pblendd256: {
+    APValue SourceF, SourceT, SourceC;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceF) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceT) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceC))
+      return false;
+
+    const APInt &C = SourceC.getInt();
+    unsigned SourceLen = SourceF.getVectorLength();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen);
+    for (unsigned EltNum = 0; EltNum != SourceLen; ++EltNum) {
+      const APValue &F = SourceF.getVectorElt(EltNum);
+      const APValue &T = SourceT.getVectorElt(EltNum);
+      ResultElements.push_back(C[EltNum % 8] ? T : F);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
   case X86::BI__builtin_ia32_blendvps:
@@ -12100,6 +12128,51 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256: {
+    APValue SourceDst, SourceSub;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceDst) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceSub))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    assert(SourceDst.isVector() && SourceSub.isVector());
+    unsigned DstLen = SourceDst.getVectorLength();
+    unsigned SubLen = SourceSub.getVectorLength();
+    assert(SubLen != 0 && DstLen != 0 && (DstLen % SubLen) == 0);
+    unsigned NumLanes = DstLen / SubLen;
+    unsigned LaneIdx = (Imm.getZExtValue() % NumLanes) * SubLen;
+
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    for (unsigned EltNum = 0; EltNum < DstLen; ++EltNum) {
+      if (EltNum >= LaneIdx && EltNum < LaneIdx + SubLen)
+        ResultElements.push_back(SourceSub.getVectorElt(EltNum - LaneIdx));
+      else
+        ResultElements.push_back(SourceDst.getVectorElt(EltNum));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
@@ -12160,6 +12233,9 @@ static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
 }
 
 bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  // FIXME: Unary shuffle with mask not currently supported.
+  if (E->getNumSubExprs() == 2)
+    return Error(E);
   APValue VecVal1;
   const Expr *Vec1 = E->getExpr(0);
   if (!EvaluateAsRValue(Info, Vec1, VecVal1))
@@ -14071,6 +14147,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(Result, E);
     }
     }
+    llvm_unreachable("Fully covered switch above");
   }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
@@ -17731,6 +17808,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                                  bool IsConstantInitialization) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
+  assert(VD && "Need a valid VarDecl");
 
   llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [&] {
     std::string Name;
@@ -17833,14 +17911,12 @@ bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
          !hasUnacceptableSideEffect(Result, SEK);
 }
 
-APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
-                    SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
+APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
-  EVResult.Diag = Diag;
   EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 

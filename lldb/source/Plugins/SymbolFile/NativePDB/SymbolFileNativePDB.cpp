@@ -551,10 +551,18 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
   TpiStream &stream = m_index->tpi();
 
   std::string name;
+
+  if ((mr.Modifiers & ModifierOptions::Const) != ModifierOptions::None)
+    name += "const ";
+  if ((mr.Modifiers & ModifierOptions::Volatile) != ModifierOptions::None)
+    name += "volatile ";
+  if ((mr.Modifiers & ModifierOptions::Unaligned) != ModifierOptions::None)
+    name += "__unaligned ";
+
   if (mr.ModifiedType.isSimple())
-    name = std::string(GetSimpleTypeName(mr.ModifiedType.getSimpleKind()));
+    name += GetSimpleTypeName(mr.ModifiedType.getSimpleKind());
   else
-    name = computeTypeName(stream.typeCollection(), mr.ModifiedType);
+    name += computeTypeName(stream.typeCollection(), mr.ModifiedType);
   Declaration decl;
   lldb::TypeSP modified_type = GetOrCreateType(mr.ModifiedType);
 
@@ -1685,7 +1693,8 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
   return count;
 }
 
-void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                       bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -1693,7 +1702,7 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->GetNativePDBParser()->Dump(s, filter);
+  clang->GetNativePDBParser()->Dump(s, filter, show_color);
 }
 
 void SymbolFileNativePDB::CacheGlobalBaseNames() {

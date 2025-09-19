@@ -41567,6 +41567,17 @@ static SDValue combineX86ShufflesRecursively(
     resolveTargetShuffleInputsAndMask(Ops, Mask);
   }
 
+  // Handle the all undef/zero/ones cases.
+  if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
+    return DAG.getUNDEF(RootVT);
+  if (all_of(Mask, [](int Idx) { return Idx < 0; }))
+    return getZeroVector(RootVT, Subtarget, DAG, DL);
+  if (Ops.size() == 1 && ISD::isBuildVectorAllOnes(Ops[0].getNode()) &&
+      !llvm::is_contained(Mask, SM_SentinelZero))
+    return getOnesVector(RootVT, DAG, DL);
+
+  assert(!Ops.empty() && "Shuffle with no inputs detected");
+
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {
     // Minor canonicalization of the accumulated shuffle mask to make it easier

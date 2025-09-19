@@ -11,6 +11,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTConsumers.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -8532,7 +8533,24 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
+namespace {
+struct ScopedASTColor {
+  ScopedASTColor(clang::ASTContext &ast, bool show_colors)
+      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
+    ast.getDiagnostics().setShowColors(show_colors);
+  }
+
+  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+
+  clang::ASTContext &ast;
+  const bool old_show_colors;
+};
+} // namespace
+
+void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                           bool show_color) {
+  ScopedASTColor colored(getASTContext(), show_color);
+
   auto consumer =
       clang::CreateASTDumper(output, filter,
                              /*DumpDecls=*/true,
@@ -9675,10 +9693,10 @@ GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
 }
 
 void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
-                                  llvm::StringRef filter) {
+                                  llvm::StringRef filter, bool show_color) {
   // First dump the main scratch AST.
   output << "State of scratch Clang type system:\n";
-  TypeSystemClang::Dump(output, filter);
+  TypeSystemClang::Dump(output, filter, show_color);
 
   // Now sort the isolated sub-ASTs.
   typedef std::pair<IsolatedASTKey, TypeSystem *> KeyAndTS;
@@ -9693,7 +9711,7 @@ void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
         static_cast<ScratchTypeSystemClang::IsolatedASTKind>(a.first);
     output << "State of scratch Clang type subsystem "
            << GetNameForIsolatedASTKind(kind) << ":\n";
-    a.second->Dump(output, filter);
+    a.second->Dump(output, filter, show_color);
   }
 }
 

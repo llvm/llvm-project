@@ -121,6 +121,12 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
+static cl::opt<bool> RunSIVRoutinesOnly(
+    "da-run-siv-routines-only", cl::init(false), cl::ReallyHidden,
+    cl::desc("Run only SIV routines and disable others (ZIV, RDIV, and MIV). "
+             "The purpose is mainly to exclude the influence of those routines "
+             "in regression tests for SIV routines."));
+
 //===----------------------------------------------------------------------===//
 // basics
 
@@ -1980,6 +1986,8 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
                                    const Loop *SrcLoop, const Loop *DstLoop,
                                    FullDependence &Result) const {
+  if (RunSIVRoutinesOnly)
+    return false;
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
@@ -2124,6 +2132,8 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
                                       const SCEV *C1, const SCEV *C2,
                                       const Loop *Loop1,
                                       const Loop *Loop2) const {
+  if (RunSIVRoutinesOnly)
+    return false;
   ++SymbolicRDIVapplications;
   LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    A1 = " << *A1);
@@ -2433,6 +2443,8 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // to "a common divisor".
 bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
                                 FullDependence &Result) const {
+  if (RunSIVRoutinesOnly)
+    return false;
   LLVM_DEBUG(dbgs() << "starting gcd\n");
   ++GCDapplications;
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
@@ -2599,6 +2611,8 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
+  if (RunSIVRoutinesOnly)
+    return false;
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
   ++BanerjeeApplications;
   LLVM_DEBUG(dbgs() << "    Src = " << *Src << '\n');
@@ -3698,8 +3712,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
-  Pair[0].Src = SrcSCEV;
-  Pair[0].Dst = DstSCEV;
+  Pair[0].Src = SrcEv;
+  Pair[0].Dst = DstEv;
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
@@ -3709,6 +3723,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
+    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
+    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
@@ -4111,8 +4127,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   SmallVector<Subscript, 2> Pair(Pairs);
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  Pair[0].Src = SrcSCEV;
-  Pair[0].Dst = DstSCEV;
+  Pair[0].Src = SE->removePointerBase(SrcSCEV);
+  Pair[0].Dst = SE->removePointerBase(DstSCEV);
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
@@ -4122,6 +4138,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
+    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
+    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);

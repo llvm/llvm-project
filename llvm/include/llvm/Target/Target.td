@@ -1415,9 +1415,9 @@ def PREALLOCATED_ARG : StandardPseudoInstruction {
 def LOCAL_ESCAPE : StandardPseudoInstruction {
   // This instruction is really just a label. It has to be part of the chain so
   // that it doesn't get dropped from the DAG, but it produces nothing and has
-  // no side effects.
+  // no side effects. Symbol operand is expected to be a label.
   let OutOperandList = (outs);
-  let InOperandList = (ins ptr_rc:$symbol, i32imm:$id);
+  let InOperandList = (ins unknown:$symbol, i32imm:$id);
   let hasSideEffects = false;
   let hasCtrlDep = true;
 }

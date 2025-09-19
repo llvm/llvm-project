@@ -5525,8 +5525,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
       APInt InVecDemandedElts = DemandedElts;
       InVecDemandedElts.clearBit(IndexC->getZExtValue());
       if (!!InVecDemandedElts &&
-          !isGuaranteedNotToBeUndefOrPoison(InVec, InVecDemandedElts,
-                                            PoisonOnly, Depth + 1))
+          !isGuaranteedNotToBeUndefOrPoison(
+              peekThroughInsertVectorElt(InVec, InVecDemandedElts),
+              InVecDemandedElts, PoisonOnly, Depth + 1))
         return false;
       return true;
     }
@@ -8247,23 +8248,42 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF, except
     // for scalable vectors where we will generate appropriate code to
     // deal with out-of-bounds cases correctly.
-    if (N3C && N1.getValueType().isFixedLengthVector() &&
-        N3C->getZExtValue() >= N1.getValueType().getVectorNumElements())
+    if (N3C && VT.isFixedLengthVector() &&
+        N3C->getZExtValue() >= VT.getVectorNumElements())
       return getUNDEF(VT);
 
     // Undefined index can be assumed out-of-bounds, so that's UNDEF too.
     if (N3.isUndef())
       return getUNDEF(VT);
 
-    // If the inserted element is an UNDEF, just use the input vector.
-    if (N2.isUndef())
+    // If inserting poison, just use the input vector.
+    if (N2.getOpcode() == ISD::POISON)
       return N1;
 
+    // Inserting undef into undef/poison is still undef.
+    if (N2.getOpcode() == ISD::UNDEF && N1.isUndef())
+      return getUNDEF(VT);
+
+    // If the inserted element is an UNDEF, just use the input vector.
+    // But not if skipping the insert could make the result more poisonous.
+    if (N2.isUndef()) {
+      if (N3C && VT.isFixedLengthVector()) {
+        APInt EltMask =
+            APInt::getOneBitSet(VT.getVectorNumElements(), N3C->getZExtValue());
+        if (isGuaranteedNotToBePoison(N1, EltMask))
+          return N1;
+      } else if (isGuaranteedNotToBePoison(N1))
+        return N1;
+    }
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // Inserting undef into undef is still undef.
-    if (N1.isUndef() && N2.isUndef())
+    // If inserting poison, just use the input vector,
+    if (N2.getOpcode() == ISD::POISON)
+      return N1;
+
+    // Inserting undef into undef/poison is still undef.
+    if (N2.getOpcode() == ISD::UNDEF && N1.isUndef())
       return getUNDEF(VT);
 
     EVT N2VT = N2.getValueType();
@@ -8292,11 +8312,37 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (VT == N2VT)
       return N2;
 
-    // If this is an insert of an extracted vector into an undef vector, we
-    // can just use the input to the extract.
+    // If this is an insert of an extracted vector into an undef/poison vector,
+    // we can just use the input to the extract. But not if skipping the
+    // extract+insert could make the result more poisonous.
     if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
-      return N2.getOperand(0);
+        N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT) {
+      if (N1.getOpcode() == ISD::POISON)
+        return N2.getOperand(0);
+      if (VT.isFixedLengthVector() && N2VT.isFixedLengthVector()) {
+        unsigned LoBit = N3->getAsZExtVal();
+        unsigned HiBit = LoBit + N2VT.getVectorNumElements();
+        APInt EltMask =
+            APInt::getBitsSet(VT.getVectorNumElements(), LoBit, HiBit);
+        if (isGuaranteedNotToBePoison(N2.getOperand(0), ~EltMask))
+          return N2.getOperand(0);
+      } else if (isGuaranteedNotToBePoison(N2.getOperand(0)))
+        return N2.getOperand(0);
+    }
+
+    // If the inserted subvector is UNDEF, just use the input vector.
+    // But not if skipping the insert could make the result more poisonous.
+    if (N2.isUndef()) {
+      if (VT.isFixedLengthVector()) {
+        unsigned LoBit = N3->getAsZExtVal();
+        unsigned HiBit = LoBit + N2VT.getVectorNumElements();
+        APInt EltMask =
+            APInt::getBitsSet(VT.getVectorNumElements(), LoBit, HiBit);
+        if (isGuaranteedNotToBePoison(N1, EltMask))
+          return N1;
+      } else if (isGuaranteedNotToBePoison(N1))
+        return N1;
+    }
     break;
   }
   case ISD::BITCAST:
@@ -8554,7 +8600,7 @@ static bool isMemSrcFromConstant(SDValue Src, ConstantDataArraySlice &Slice) {
   GlobalAddressSDNode *G = nullptr;
   if (Src.getOpcode() == ISD::GlobalAddress)
     G = cast<GlobalAddressSDNode>(Src);
-  else if (Src.getOpcode() == ISD::ADD &&
+  else if (Src->isAnyAdd() &&
            Src.getOperand(0).getOpcode() == ISD::GlobalAddress &&
            Src.getOperand(1).getOpcode() == ISD::Constant) {
     G = cast<GlobalAddressSDNode>(Src.getOperand(0));
@@ -9053,6 +9099,18 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
+static bool isInTailCallPositionWrapper(const CallInst *CI,
+                                        const SelectionDAG *SelDAG,
+                                        bool AllowReturnsFirstArg) {
+  if (!CI || !CI->isTailCall())
+    return false;
+  // TODO: Fix "returns-first-arg" determination so it doesn't depend on which
+  // helper symbol we lower to.
+  return isInTailCallPosition(*CI, SelDAG->getTarget(),
+                              AllowReturnsFirstArg &&
+                                  funcReturnsFirstArgOfCall(*CI));
+}
+
 std::pair<SDValue, SDValue>
 SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
                         SDValue Mem1, SDValue Size, const CallInst *CI) {
@@ -9067,10 +9125,8 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
       {Size, getDataLayout().getIntPtrType(*getContext())}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall = false;
-  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-  IsTailCall = CI && CI->isTailCall() &&
-               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
@@ -9148,10 +9204,7 @@ SDValue SelectionDAG::getMemcpy(
     IsTailCall = *OverrideTailCall;
   } else {
     bool LowersToMemcpy = StringRef(MemCpyName) == StringRef("memcpy");
-    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-    IsTailCall = CI && CI->isTailCall() &&
-                 isInTailCallPosition(*CI, getTarget(),
-                                      ReturnsFirstArg && LowersToMemcpy);
+    IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemcpy);
   }
 
   CLI.setDebugLoc(dl)
@@ -9255,10 +9308,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     bool LowersToMemmove =
         TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
-    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-    IsTailCall = CI && CI->isTailCall() &&
-                 isInTailCallPosition(*CI, getTarget(),
-                                      ReturnsFirstArg && LowersToMemmove);
+    IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemmove);
   }
 
   CLI.setDebugLoc(dl)
@@ -12771,6 +12821,23 @@ SDValue llvm::peekThroughOneUseBitcasts(SDValue V) {
 SDValue llvm::peekThroughExtractSubvectors(SDValue V) {
   while (V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
     V = V.getOperand(0);
+  return V;
+}
+
+SDValue llvm::peekThroughInsertVectorElt(SDValue V, const APInt &DemandedElts) {
+  while (V.getOpcode() == ISD::INSERT_VECTOR_ELT) {
+    SDValue InVec = V.getOperand(0);
+    SDValue EltNo = V.getOperand(2);
+    EVT VT = InVec.getValueType();
+    auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
+    if (IndexC && VT.isFixedLengthVector() &&
+        IndexC->getAPIntValue().ult(VT.getVectorNumElements()) &&
+        !DemandedElts[IndexC->getZExtValue()]) {
+      V = InVec;
+      continue;
+    }
+    break;
+  }
   return V;
 }
 
