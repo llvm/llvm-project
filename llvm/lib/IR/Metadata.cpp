@@ -986,10 +986,15 @@ static T *uniquifyImpl(T *N, DenseSet<T *, InfoT> &Store) {
 }
 
 template <class NodeTy> struct MDNode::HasCachedHash {
-  template <class U>
-  using check = decltype(static_cast<void (U::*)(unsigned)>(&U::setHash));
+  using Yes = char[1];
+  using No = char[2];
+  template <class U, U Val> struct SFINAE {};
 
-  static constexpr bool value = is_detected<check, NodeTy>::value;
+  template <class U>
+  static Yes &check(SFINAE<void (U::*)(unsigned), &U::setHash> *);
+  template <class U> static No &check(...);
+
+  static const bool value = sizeof(check<NodeTy>(nullptr)) == sizeof(Yes);
 };
 
 MDNode *MDNode::uniquify() {
