@@ -1306,6 +1306,15 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
     auto right =
         genDesignateWithTriplets(firBuilder, loc, rightEntity, triplets, shape);
     hlfir::AssignOp::create(firBuilder, loc, left, right);
+  } else {
+    // Copy scalar derived type.
+    // The temporary_lhs flag allows indicating that user defined assignments
+    // should not be called while copying components, and that the LHS and RHS
+    // are known to not alias since the LHS is a created object.
+    hlfir::AssignOp::create(
+        builder, loc, recipe.getCopyRegion().getArgument(0),
+        recipe.getCopyRegion().getArgument(1), /*realloc=*/false,
+        /*keep_lhs_length_if_realloc=*/false, /*temporary_lhs=*/true);
   }
 
   mlir::acc::TerminatorOp::create(builder, loc);

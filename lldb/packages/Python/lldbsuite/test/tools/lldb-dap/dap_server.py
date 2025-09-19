@@ -216,6 +216,7 @@ class DebugCommunication(object):
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
         self.invalidated_event: Optional[Event] = None
+        self.memory_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
         self.module_events: List[Dict] = []
         self.sequence: int = 1
@@ -443,6 +444,8 @@ class DebugCommunication(object):
             self.capabilities.update(body["capabilities"])
         elif event == "invalidated":
             self.invalidated_event = packet
+        elif event == "memory":
+            self.memory_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -1018,6 +1021,7 @@ class DebugCommunication(object):
                 "supportsStartDebuggingRequest": True,
                 "supportsProgressReporting": True,
                 "supportsInvalidatedEvent": True,
+                "supportsMemoryEvent": True,
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
@@ -1039,6 +1043,7 @@ class DebugCommunication(object):
         disableSTDIO=False,
         shellExpandArguments=False,
         console: Optional[str] = None,
+        stdio: Optional[list[str]] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -1090,6 +1095,8 @@ class DebugCommunication(object):
             args_dict["sourceMap"] = sourceMap
         if console:
             args_dict["console"] = console
+        if stdio:
+            args_dict["stdio"] = stdio
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:

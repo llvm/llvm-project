@@ -17,7 +17,8 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZvfbfmin], Constraints = "@earlyclobber $vd",
+let Predicates = [HasStdExtZvfbfminOrZvfofp8min],
+    Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
 let RVVConstraint = WidenCvt, DestEEW = EEWSEWx2 in
 defm VFWCVTBF16_F_F_V : VWCVTF_FV_VS2<"vfwcvtbf16.f.f.v", 0b010010, 0b01101>;
@@ -30,4 +31,69 @@ let Predicates = [HasStdExtZvfbfwma],
     RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true,
     DestEEW = EEWSEWx2 in {
 defm VFWMACCBF16_V : VWMAC_FV_V_F<"vfwmaccbf16", 0b111011>;
+}
+
+//===----------------------------------------------------------------------===//
+// Pseudo instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
+  defm PseudoVFWCVTBF16_F_F : VPseudoVWCVTD_V;
+  defm PseudoVFNCVTBF16_F_F : VPseudoVNCVTD_W_RM;
+}
+
+let mayRaiseFPException = true, Predicates = [HasStdExtZvfbfwma] in
+  defm PseudoVFWMACCBF16 : VPseudoVWMAC_VV_VF_BF_RM;
+
+//===----------------------------------------------------------------------===//
+// Patterns
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
+  defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
+                                "PseudoVFWCVTBF16_F_F", isSEWAware=1>;
+  defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
+                                   "PseudoVFNCVTBF16_F_F", isSEWAware=1>;
+
+  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = [HasVInstructionsBF16Minimal] in
+    def : Pat<(fwti.Vector (any_riscv_fpextend_vl
+                               (fvti.Vector fvti.RegClass:$rs1),
+                               (fvti.Mask VMV0:$vm),
+                               VLOpFrag)),
+              (!cast<Instruction>("PseudoVFWCVTBF16_F_F_V_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                  (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                  (fvti.Mask VMV0:$vm),
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
+
+    let Predicates = [HasVInstructionsBF16Minimal] in
+      def : Pat<(fvti.Vector (any_riscv_fpround_vl
+                                 (fwti.Vector fwti.RegClass:$rs1),
+                                 (fwti.Mask VMV0:$vm), VLOpFrag)),
+                (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                    (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                    (fwti.Mask VMV0:$vm),
+                    // Value to indicate no rounding mode change in
+                    // RISCVInsertReadWriteCSR
+                    FRM_DYN,
+                    GPR:$vl, fvti.Log2SEW, TA_MA)>;
+    let Predicates = [HasVInstructionsBF16Minimal] in
+    def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
+              (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
+                  (fvti.Vector (IMPLICIT_DEF)),
+                  fwti.RegClass:$rs1,
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  fvti.AVL, fvti.Log2SEW, TA_MA)>;
+  }
+}
+
+let Predicates = [HasStdExtZvfbfwma] in {
+  defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
+                               AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+  defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
+                                      AllWidenableBFloatToFloatVectors>;
+  defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
+                                          AllWidenableBFloatToFloatVectors>;
 }

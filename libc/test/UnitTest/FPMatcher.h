@@ -125,6 +125,7 @@ public:
 
   bool match(T actualValue) {
     actual = actualValue;
+#ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return matchComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
@@ -134,14 +135,18 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return matchComplex<float16>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return matchComplex<float128>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT128
+#else  // LIBC_COMPILER_IS_MSVC
+    return true;
+#endif // LIBC_COMPILER_IS_MSVC
   }
 
   void explainError() override {
+#ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return explainErrorComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
@@ -151,11 +156,12 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return explainErrorComplex<float16>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return explainErrorComplex<float128>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT128
+#endif // LIBC_COMPILER_IS_MSVC
   }
 };
 
@@ -177,7 +183,8 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
   static constexpr T aNaN = FPBits::quiet_nan(Sign::POS).get_val();
   static constexpr T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();
-  static constexpr T sNaN = FPBits::signaling_nan().get_val();
+  // TODO: make this static constexpr
+  const T sNaN = FPBits::signaling_nan().get_val();
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
