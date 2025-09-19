@@ -11,8 +11,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: define void @test_widen(
 ; TFNONE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; TFNONE-NEXT:  [[ENTRY:.*]]:
-; TFNONE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; TFNONE-NEXT:  [[ENTRY:.*:]]
+; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
@@ -30,12 +30,11 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
-; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH:.*]]
 ; TFNONE:       [[SCALAR_PH]]:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; TFNONE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TFNONE:       [[FOR_BODY]]:
-; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[N_VEC]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; TFNONE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR4:[0-9]+]]
@@ -132,8 +131,8 @@ for.cond.cleanup:
 define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: define void @test_if_then(
 ; TFNONE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
-; TFNONE-NEXT:  [[ENTRY:.*]]:
-; TFNONE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; TFNONE-NEXT:  [[ENTRY:.*:]]
+; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
@@ -153,12 +152,11 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
-; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH:.*]]
 ; TFNONE:       [[SCALAR_PH]]:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; TFNONE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TFNONE:       [[FOR_BODY]]:
-; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END:.*]] ], [ [[N_VEC]], %[[SCALAR_PH]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    [[TMP12:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP12]], 50
@@ -281,8 +279,8 @@ for.cond.cleanup:
 define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: define void @test_widen_if_then_else(
 ; TFNONE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
-; TFNONE-NEXT:  [[ENTRY:.*]]:
-; TFNONE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; TFNONE-NEXT:  [[ENTRY:.*:]]
+; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
@@ -304,12 +302,11 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
-; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH:.*]]
 ; TFNONE:       [[SCALAR_PH]]:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; TFNONE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TFNONE:       [[FOR_BODY]]:
-; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[IF_END:.*]] ], [ [[N_VEC]], %[[SCALAR_PH]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    [[TMP13:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP13]], 50
@@ -447,8 +444,8 @@ for.cond.cleanup:
 define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: define void @test_widen_nomask(
 ; TFNONE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
-; TFNONE-NEXT:  [[ENTRY:.*]]:
-; TFNONE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; TFNONE-NEXT:  [[ENTRY:.*:]]
+; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
@@ -466,12 +463,11 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
-; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH:.*]]
 ; TFNONE:       [[SCALAR_PH]]:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; TFNONE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TFNONE:       [[FOR_BODY]]:
-; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[N_VEC]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; TFNONE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR6:[0-9]+]]
@@ -572,8 +568,8 @@ for.cond.cleanup:
 define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: define void @test_widen_optmask(
 ; TFNONE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
-; TFNONE-NEXT:  [[ENTRY:.*]]:
-; TFNONE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; TFNONE-NEXT:  [[ENTRY:.*:]]
+; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
@@ -591,12 +587,11 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
-; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH:.*]]
 ; TFNONE:       [[SCALAR_PH]]:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; TFNONE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TFNONE:       [[FOR_BODY]]:
-; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[N_VEC]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
 ; TFNONE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR7:[0-9]+]]
@@ -718,8 +713,8 @@ for.cond.cleanup:
 define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, double %m) #4 {
 ; TFNONE-LABEL: define double @test_widen_fmuladd_and_call(
 ; TFNONE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], double [[M:%.*]]) #[[ATTR0]] {
-; TFNONE-NEXT:  [[ENTRY:.*]]:
-; TFNONE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; TFNONE-NEXT:  [[ENTRY:.*:]]
+; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
@@ -743,14 +738,12 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFNONE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
-; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; TFNONE-NEXT:    br i1 false, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH:.*]]
 ; TFNONE:       [[SCALAR_PH]]:
-; TFNONE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; TFNONE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; TFNONE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TFNONE:       [[FOR_BODY]]:
-; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; TFNONE-NEXT:    [[FMA_SUM:%.*]] = phi double [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
+; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[N_VEC]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TFNONE-NEXT:    [[FMA_SUM:%.*]] = phi double [ [[TMP11]], %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
 ; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8
 ; TFNONE-NEXT:    [[MULADD]] = tail call double @llvm.fmuladd.f64(double [[LOAD]], double [[M]], double [[FMA_SUM]])
