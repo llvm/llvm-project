@@ -11708,6 +11708,10 @@ def err_omp_threadprivate_incomplete_type : Error<
   "threadprivate variable with incomplete type %0">;
 def err_omp_no_dsa_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes">;
+def err_omp_groupprivate_incomplete_type : Error<
+  "groupprivate variable with incomplete type %0">;
+def err_omp_groupprivate_with_initializer : Error<
+  "variable %0 with initializer cannot appear in groupprivate directive">;
 def err_omp_defaultmap_no_attr_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes, data mapping attributes, or in an is_device_ptr clause">;
 def note_omp_default_dsa_none : Note<
@@ -13219,6 +13223,8 @@ def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
+def err_hlsl_assign_to_global_resource: Error<
+  "assignment to global resource variable %0 is not allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

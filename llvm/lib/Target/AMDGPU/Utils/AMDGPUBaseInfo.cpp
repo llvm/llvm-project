@@ -3157,6 +3157,34 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+  switch (Type) {
+  default:
+    break;
+  case OPERAND_REG_IMM_BF16:
+  case OPERAND_REG_IMM_FP16:
+  case OPERAND_REG_INLINE_C_BF16:
+  case OPERAND_REG_INLINE_C_FP16:
+    return Imm & 0xffff;
+  case OPERAND_INLINE_SPLIT_BARRIER_INT32:
+  case OPERAND_REG_IMM_FP32:
+  case OPERAND_REG_IMM_INT32:
+  case OPERAND_REG_IMM_V2BF16:
+  case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V2FP32:
+  case OPERAND_REG_IMM_V2INT16:
+  case OPERAND_REG_IMM_V2INT32:
+  case OPERAND_REG_INLINE_AC_FP32:
+  case OPERAND_REG_INLINE_AC_INT32:
+  case OPERAND_REG_INLINE_C_FP32:
+  case OPERAND_REG_INLINE_C_INT32:
+    return Lo_32(Imm);
+  case OPERAND_REG_IMM_FP64:
+    return Hi_32(Imm);
+  }
+  return Imm;
+}
+
 bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 

@@ -3793,21 +3793,23 @@ void SITargetLowering::passSpecialInputs(
   // in the same location as the input.
   // clang-format off
   static constexpr std::pair<AMDGPUFunctionArgInfo::PreloadedValue,
-                              StringLiteral> ImplicitAttrs[] = {
-     {AMDGPUFunctionArgInfo::DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
-     {AMDGPUFunctionArgInfo::QUEUE_PTR, "amdgpu-no-queue-ptr" },
-     {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, "amdgpu-no-implicitarg-ptr"},
-     {AMDGPUFunctionArgInfo::DISPATCH_ID, "amdgpu-no-dispatch-id"},
-     {AMDGPUFunctionArgInfo::WORKGROUP_ID_X, "amdgpu-no-workgroup-id-x"},
-     {AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,"amdgpu-no-workgroup-id-y"},
-     {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,"amdgpu-no-workgroup-id-z"},
-     {AMDGPUFunctionArgInfo::LDS_KERNEL_ID,"amdgpu-no-lds-kernel-id"},
-   };
+      std::array<StringLiteral, 2>> ImplicitAttrs[] = {
+    {AMDGPUFunctionArgInfo::DISPATCH_PTR, {"amdgpu-no-dispatch-ptr", ""}},
+    {AMDGPUFunctionArgInfo::QUEUE_PTR, {"amdgpu-no-queue-ptr", ""}},
+    {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, {"amdgpu-no-implicitarg-ptr", ""}},
+    {AMDGPUFunctionArgInfo::DISPATCH_ID, {"amdgpu-no-dispatch-id", ""}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_X, {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Y, {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z, {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"}},
+    {AMDGPUFunctionArgInfo::LDS_KERNEL_ID, {"amdgpu-no-lds-kernel-id", ""}},
+  };
   // clang-format on
 
-  for (auto [InputID, Attr] : ImplicitAttrs) {
+  for (auto [InputID, Attrs] : ImplicitAttrs) {
     // If the callee does not use the attribute value, skip copying the value.
-    if (CLI.CB->hasFnAttr(Attr))
+    if (all_of(Attrs, [&](StringRef Attr) {
+          return Attr.empty() || CLI.CB->hasFnAttr(Attr);
+        }))
       continue;
 
     const auto [OutgoingArg, ArgRC, ArgTy] =
@@ -8159,25 +8161,14 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
     // it returns a wrong value (all zeroes?). The real value is in the upper 32
     // bits.
     //
-    // To work around the issue, directly emit a 64 bit mov from this register
+    // To work around the issue, emit a 64 bit copy from this register
     // then extract the high bits. Note that this shouldn't even result in a
     // shift being emitted and simply become a pair of registers (e.g.):
     //    s_mov_b64 s[6:7], src_shared_base
     //    v_mov_b32_e32 v1, s7
-    //
-    // FIXME: It would be more natural to emit a CopyFromReg here, but then copy
-    // coalescing would kick in and it would think it's okay to use the "HI"
-    // subregister directly (instead of extracting the HI 32 bits) which is an
-    // artificial (unusable) register.
-    //  Register TableGen definitions would need an overhaul to get rid of the
-    //  artificial "HI" aperture registers and prevent this kind of issue from
-    //  happening.
-    SDNode *Mov = DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64,
-                                     DAG.getRegister(ApertureRegNo, MVT::i64));
-    return DAG.getNode(
-        ISD::TRUNCATE, DL, MVT::i32,
-        DAG.getNode(ISD::SRL, DL, MVT::i64,
-                    {SDValue(Mov, 0), DAG.getConstant(32, DL, MVT::i64)}));
+    SDValue Copy =
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, ApertureRegNo, MVT::v2i32);
+    return DAG.getExtractVectorElt(DL, MVT::i32, Copy, 1);
   }
 
   // For code object version 5, private_base and shared_base are passed through
@@ -15213,13 +15204,36 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return V;
   }
 
+  // EXTRACT_VECTOR_ELT (v2i32 bitcast (i64/f64:k), Idx)
+  //   =>
+  // i32:Lo(k) if Idx == 0, or
+  // i32:Hi(k) if Idx == 1
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (Vec.getOpcode() == ISD::BITCAST && VecVT == MVT::v2i32 && Idx) {
+    SDLoc SL(N);
+    SDValue PeekThrough = Vec.getOperand(0);
+    auto *KImm = dyn_cast<ConstantSDNode>(PeekThrough);
+    if (KImm && KImm->getValueType(0).getSizeInBits() == 64) {
+      uint64_t KImmValue = KImm->getZExtValue();
+      return DAG.getConstant(
+          (KImmValue >> (32 * Idx->getZExtValue())) & 0xffffffff, SL, MVT::i32);
+    }
+    auto *KFPImm = dyn_cast<ConstantFPSDNode>(PeekThrough);
+    if (KFPImm && KFPImm->getValueType(0).getSizeInBits() == 64) {
+      uint64_t KFPImmValue =
+          KFPImm->getValueAPF().bitcastToAPInt().getZExtValue();
+      return DAG.getConstant((KFPImmValue >> (32 * Idx->getZExtValue())) &
+                                 0xffffffff,
+                             SL, MVT::i32);
+    }
+  }
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
-  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
       VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);

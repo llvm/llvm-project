@@ -1742,9 +1742,9 @@ nb::object integerOrBoolAttributeCaster(PyAttribute &pyAttribute) {
     return nb::cast(PyBoolAttribute(pyAttribute));
   if (PyIntegerAttribute::isaFunction(pyAttribute))
     return nb::cast(PyIntegerAttribute(pyAttribute));
-  std::string msg =
-      std::string("Can't cast unknown element type DenseArrayAttr (") +
-      nb::cast<std::string>(nb::repr(nb::cast(pyAttribute))) + ")";
+  std::string msg = std::string("Can't cast unknown attribute type Attr (") +
+                    nb::cast<std::string>(nb::repr(nb::cast(pyAttribute))) +
+                    ")";
   throw nb::type_error(msg.c_str());
 }
 

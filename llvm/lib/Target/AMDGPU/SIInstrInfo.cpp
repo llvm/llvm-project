@@ -913,7 +913,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (!AMDGPU::SReg_64RegClass.contains(SrcReg)) {
+    if (!AMDGPU::SReg_64_EncodableRegClass.contains(SrcReg)) {
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -1932,8 +1932,9 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               unsigned Quantity) const {
   DebugLoc DL = MBB.findDebugLoc(MI);
+  unsigned MaxSNopCount = 1u << ST.getSNopBits();
   while (Quantity > 0) {
-    unsigned Arg = std::min(Quantity, 8u);
+    unsigned Arg = std::min(Quantity, MaxSNopCount);
     Quantity -= Arg;
     BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg - 1);
   }
@@ -6370,13 +6371,6 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
     return;
   }
 
-  // No VOP2 instructions support AGPRs.
-  if (Src0.isReg() && RI.isAGPR(MRI, Src0.getReg()))
-    legalizeOpWithMove(MI, Src0Idx);
-
-  if (Src1.isReg() && RI.isAGPR(MRI, Src1.getReg()))
-    legalizeOpWithMove(MI, Src1Idx);
-
   // Special case: V_FMAC_F32 and V_FMAC_F16 have src2.
   if (Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F16_e32) {
     int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
@@ -6517,12 +6511,6 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
       continue;
     }
 
-    if (RI.hasAGPRs(RI.getRegClassForReg(MRI, MO.getReg())) &&
-        !isOperandLegal(MI, Idx, &MO)) {
-      legalizeOpWithMove(MI, Idx);
-      continue;
-    }
-
     if (!RI.isSGPRClass(RI.getRegClassForReg(MRI, MO.getReg())))
       continue; // VGPRs are legal
 
@@ -6545,21 +6533,6 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
-
-  if (isWMMA(MI)) {
-    // scale_src has a register class restricted to low 256 VGPRs, we may need
-    // to insert a copy to the restricted VGPR class.
-    int ScaleSrc0Idx =
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
-    if (ScaleSrc0Idx != -1) {
-      int ScaleSrc1Idx =
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
-      if (!isOperandLegal(MI, ScaleSrc0Idx))
-        legalizeOpWithMove(MI, ScaleSrc0Idx);
-      if (!isOperandLegal(MI, ScaleSrc1Idx))
-        legalizeOpWithMove(MI, ScaleSrc1Idx);
-    }
-  }
 
   // Fix the register class of packed FP32 instructions on gfx12+. See
   // SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more information.
@@ -8992,7 +8965,10 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo)))
+    const TargetRegisterClass *OpRC = getOpRegClass(UseMI, OpNo);
+    MRI.constrainRegClass(DstReg, OpRC);
+
+    if (!RI.hasVectorRegisters(OpRC))
       Worklist.insert(&UseMI);
     else
       // Legalization could change user list.

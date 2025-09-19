@@ -9,7 +9,7 @@ define void @loop_guard_on_assume_needed_to_prove_dereferenceable_ptr_arg_nounde
 ; CHECK-NEXT:    [[C_X:%.*]] = icmp uge i64 [[X]], 128
 ; CHECK-NEXT:    br i1 [[C_X]], label %[[LOOP_HEADER_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -27,7 +27,7 @@ define void @loop_guard_on_assume_needed_to_prove_dereferenceable_ptr_arg_nounde
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br [[EXIT_LOOPEXIT:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %A, i64 4), "dereferenceable"(ptr %A, i64 %x) ]
@@ -66,7 +66,7 @@ define void @loop_guard_on_assume_needed_to_prove_dereferenceable(i64 %x, ptr no
 ; CHECK-NEXT:    [[C_X:%.*]] = icmp uge i64 [[X]], 128
 ; CHECK-NEXT:    br i1 [[C_X]], label %[[LOOP_HEADER_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -81,10 +81,10 @@ define void @loop_guard_on_assume_needed_to_prove_dereferenceable(i64 %x, ptr no
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br [[EXIT_LOOPEXIT:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 entry:
   call void @llvm.assume(i1 true) [ "noundef"(ptr %A), "align"(ptr %A, i64 4), "dereferenceable"(ptr %A, i64 %x) ]
@@ -142,7 +142,7 @@ define void @loop_guard_on_trip_count_needed_to_prove_dereferenceable(i32 %x, pt
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_EXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT_LOOPEXIT:label %.*]], label %[[SCALAR_PH]]

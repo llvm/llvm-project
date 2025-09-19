@@ -391,10 +391,14 @@ public:
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) {
+    // Making sure that we canonicalize the defines before we create the deep
+    // copy to avoid unnecessary variants in the scanner and in the resulting
+    // explicit command lines.
+    if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+      canonicalizeDefines(Invocation->getPreprocessorOpts());
+
     // Make a deep copy of the original Clang invocation.
     CompilerInvocation OriginalInvocation(*Invocation);
-    if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
-      canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
       // Scanning runs once for the first -cc1 invocation in a chain of driver
@@ -414,11 +418,12 @@ public:
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
     ScanInstance.setBuildingModule(false);
 
+    ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
+
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
     assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
-    ScanInstance.createDiagnostics(*FS, DiagConsumer,
-                                   /*ShouldOwnClient=*/false);
+    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
 
@@ -439,23 +444,19 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
 
-    // Support for virtual file system overlays.
-    FS = createVFSFromCompilerInvocation(ScanInstance.getInvocation(),
-                                         ScanInstance.getDiagnostics(),
-                                         std::move(FS));
-
     // Create a new FileManager to match the invocation's FileSystemOptions.
-    auto *FileMgr = ScanInstance.createFileManager(FS);
+    auto *FileMgr = ScanInstance.createFileManager();
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      SmallString<256> ModulesCachePath;
-      normalizeModuleCachePath(
-          *FileMgr, ScanInstance.getHeaderSearchOpts().ModuleCachePath,
-          ModulesCachePath);
       DepFS->resetBypassedPathPrefix();
-      if (!ModulesCachePath.empty())
+      if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty()) {
+        SmallString<256> ModulesCachePath;
+        normalizeModuleCachePath(
+            *FileMgr, ScanInstance.getHeaderSearchOpts().ModuleCachePath,
+            ModulesCachePath);
         DepFS->setBypassedPathPrefix(ModulesCachePath);
+      }
 
       ScanInstance.setDependencyDirectivesGetter(
           std::make_unique<ScanningDependencyDirectivesGetter>(*FileMgr));
