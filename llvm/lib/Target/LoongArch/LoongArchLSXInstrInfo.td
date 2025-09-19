@@ -1598,10 +1598,12 @@ def : Pat<(and (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
 // VORI_B
 def : Pat<(or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VORI_B LSX128:$vj, uimm8:$imm)>;
-
 // VXORI_B
 def : Pat<(xor (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VXORI_B LSX128:$vj, uimm8:$imm)>;
+// VNORI_B
+def : Pat<(vnot (or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm)))),
+          (VNORI_B LSX128:$vj, uimm8:$imm)>;
 
 // VBSLL_V
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,
