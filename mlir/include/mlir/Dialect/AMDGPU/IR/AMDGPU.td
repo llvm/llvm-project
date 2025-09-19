@@ -112,6 +112,54 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
+def IsValidBlockSize: AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == 16 || ::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == 32">,
+    "whose value is 16 or 32">;
+
+def AMDGPU_ScaledExtPacked816Op
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure]>,
+      Arguments<(
+          ins AnyTypeOf<[VectorOfLengthAndType<[8], [F4E2M1FN,F8E4M3FN,F8E5M2]>,
+                         VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>]>:$source,
+          FixedVectorOfLengthAndType<[4], [F8E8M0FNU]>:$scale,
+          ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2>]>:$firstScaleByte)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfLengthAndType<[8], [F32]>,
+                          FixedVectorOfLengthAndType<[8], [F16]>,
+                          FixedVectorOfLengthAndType<[8], [BF16]>,
+                          FixedVectorOfLengthAndType<[16], [F32]>,
+                          FixedVectorOfLengthAndType<[16], [F16]>,
+                          FixedVectorOfLengthAndType<[16], [BF16]>]>:$res)> {
+
+  let summary = "Extend a vector of packed floating point values";
+
+  let description = [{
+    The scales applied to the input microfloats are stored in two bytes which
+    come from the `scales` input provided in a *half* of the wave identified
+    by `firstScaleLane`. The pair of bytes used is selected by
+    `firstScaleByte`. The 16 vectors in consecutive lanes starting from
+    `firstScaleLane` (which we'll call the scale vectors) will be used by both
+    halves of the wave (with lane L reading from L % 16'th scale vector), but
+    each half will use a different byte.
+
+    When the block size is 32, `firstScaleByte` can be either 0 or 2,
+    selecting halves of the scale vectors. Lanes 0-15 will read from
+    `firstScaleByte` and lanes 16-31 will read from `firstScaleByte` + 1.
+
+    However, when the block size is 16, `firstScaleByte` can be 0 or 1.
+    Lanes 0-15 read from the `firstScaleByte`th element of the scale vectors,
+    while lanes 16-31 read from `firstScaleByte` + 2.
+
+    Note: the layout for the scales generally mirrors how the WMMA
+    instructions use for matix scales. These selection operands allows
+    one to choose portions of the matrix to convert.
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 def AMDGPU_ScaledExtPackedOp
     : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
       Arguments<(
@@ -860,7 +908,7 @@ def AMDGPU_MFMAOp :
     based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
     types of the source and destination arguments.
 
-    For information on the layouts of the input and output matrces (which are stored
+    For information on the layouts of the input and output matrices (which are stored
     in `sourceA`, `sourceB`, `destC`, and `destD`), see the CDNA ISA documentation.
 
     The `cbsz`, `abid`, and `blgp` parameters control how the lanes of the wave

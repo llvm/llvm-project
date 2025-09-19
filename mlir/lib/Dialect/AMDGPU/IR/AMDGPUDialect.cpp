@@ -339,6 +339,76 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledExtPacked816Op
+//===----------------------------------------------------------------------===//
+mlir::ParseResult ScaledExtPacked816Op::parse(mlir::OpAsmParser &parser,
+                                              mlir::OperationState &result) {
+  // Parse attributes
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  // Parse source operand
+  OpAsmParser::UnresolvedOperand source;
+  if (parser.parseOperand(source))
+    return failure();
+
+  if (parser.parseKeyword("scale") || parser.parseLParen())
+    return failure();
+  OpAsmParser::UnresolvedOperand scale;
+  if (parser.parseOperand(scale) || parser.parseRParen())
+    return failure();
+
+  // Parse attributes
+  IntegerAttr blockSize, firstScaleLane, firstScaleByte;
+  if (parser.parseKeyword("blockSize") || parser.parseLParen() ||
+      parser.parseAttribute(blockSize, parser.getBuilder().getI32Type()) ||
+      parser.parseRParen())
+    return failure();
+
+  if (parser.parseKeyword("firstScaleLane") || parser.parseLParen() ||
+      parser.parseAttribute(firstScaleLane, parser.getBuilder().getI32Type()) ||
+      parser.parseRParen())
+    return failure();
+
+  if (parser.parseKeyword("firstScaleByte") || parser.parseLParen() ||
+      parser.parseAttribute(firstScaleByte, parser.getBuilder().getI32Type()) ||
+      parser.parseRParen())
+    return failure();
+
+  Type sourceType, resultType;
+  if (parser.parseColon() || parser.parseType(sourceType) ||
+      parser.parseKeyword("to") || parser.parseType(resultType))
+    return failure();
+
+  // Resolve operands with types
+  Type scaleType =
+      VectorType::get({4}, Float8E8M0FNUType::get(parser.getContext()));
+  if (parser.resolveOperand(source, sourceType, result.operands) ||
+      parser.resolveOperand(scale, scaleType, result.operands))
+    return failure();
+
+  result.addAttribute("blockSize", blockSize);
+  result.addAttribute("firstScaleLane", firstScaleLane);
+  result.addAttribute("firstScaleByte", firstScaleByte);
+
+  result.addTypes(resultType);
+  return success();
+}
+
+void ScaledExtPacked816Op::print(OpAsmPrinter &p) {
+  p << " ";
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elideAttrs=*/{"blockSize", "firstScaleLane", "firstScaleByte"});
+  p << " " << getSource();
+  p << " scale(" << getScale() << ")";
+  p << " blockSize(" << getBlockSize() << ")";
+  p << " firstScaleLane(" << getFirstScaleLane() << ")";
+  p << " firstScaleByte(" << getFirstScaleByte() << ")";
+  p << " : " << getSource().getType() << " to " << getRes().getType();
+}
+
+//===----------------------------------------------------------------------===//
 // WMMAOp
 //===----------------------------------------------------------------------===//
 LogicalResult WMMAOp::verify() {
