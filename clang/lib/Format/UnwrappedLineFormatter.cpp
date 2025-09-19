@@ -647,7 +647,8 @@ private:
           Line->Last->is(tok::l_brace) && NextLine->First->is(tok::r_brace);
 
       if ((IsEmptyBlock && !Style.BraceWrapping.SplitEmptyRecord) ||
-          Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always) {
+          (!IsEmptyBlock &&
+           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always)) {
         return tryMergeSimpleBlock(I, E, Limit);
       }
     }
