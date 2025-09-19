@@ -10,61 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-/*
- * A note on implementation:
- *
- * As per the C++ standard, constraints are normalized [temp.constr.normal]
- * and the normal form is used both for subsumption, and constraint checking.
- * Both depend on a parameter mapping that substitutes lazily. In particular,
- * we should not substitute in unused arguments.
- *
- * Clang follows the order of operations prescribed by the standard.
- *
- * Normalization happens prior to satisfaction and subsumption
- * and is handled by `NormalizedConstraint`.
- *
- * Clang preserves in the normalized form intermediate concept-ids
- * (ConceptIdConstraint) This is used for diagnostics only and no substitution
- * happens in a ConceptIdConstraint if its expression is satisfied.
- *
- * The normal form of the associated constraints of a declaration is cached in
- * Sema::NormalizationCache such that it is only computed once.
- *
- * a `NormalizedConstraint` is a recursive data structure, where each node
- * contains a parameter mapping, represented by the indexes of all parameter
- * being used.
- *
- * Checking satisfaction is done by ConstraintSatisfactionChecker, recursively
- * walking NormalizedConstraint. At each level, we substitute the outermost
- * level of the template arguments referenced in the parameter mapping of a
- * normalized expression (MultiLevelTemplateArgumentList).
- *
- * template <typename T>
- * concept A = __is_same(T, int);
- *
- * template <typename U>
- * concept B = A<U> && __is_same(U, int);
- *
- * The normal form of B is is `__is_same(T, int) /T->U, innermost level/
- *                          && __is_same(U, int) {U->U} /T->U, outermost most
- * level/
- *                            `
- *
- * After substitution in the mapping, we substitute in the constraint expression
- * using that copy of the MultiLevelTemplateArgumentList, and then evaluate it.
- *
- * Because this is excruciatingly slow, it is cached in
- * `UnsubstitutedConstraintSatisfactionCache`.
- *
- * Any error during satisfaction is recorded in ConstraintSatisfaction.
- * for nested requirements, ConstraintSatisfaction is stored (including
- * diagnostics) in the AST, which is something we might want to improve.
- *
- * When an atomic constraint is not satified, we try to substitute into any
- * enclosing concept-id using the same mechanism described above, for
- * diagnostics purpose, and inject that in the ConstraintSatisfaction.
- */
-
 #include "clang/Sema/SemaConcept.h"
 #include "TreeTransform.h"
 #include "clang/AST/ASTConcept.h"
