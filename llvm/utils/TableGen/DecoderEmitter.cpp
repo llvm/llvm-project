@@ -1886,8 +1886,7 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(EncodingDef,
-                           &Target.getInstruction(InstDef));
+    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 
