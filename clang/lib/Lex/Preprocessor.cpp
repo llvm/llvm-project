@@ -1199,12 +1199,22 @@ bool Preprocessor::HandleModuleContextualKeyword(
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
+  // The next token may be an angled string literal after import keyword.
+  llvm::SaveAndRestore<bool> SavedParsingFilemame(
+      CurPPLexer->ParsingFilename,
+      Result.getIdentifierInfo()->isModulesImport());
+
+  std::optional<Token> NextTok =
+      CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
+  if (!NextTok)
+    return false;
+
+  if (NextTok->is(tok::raw_identifier))
+    LookUpIdentifierInfo(*NextTok);
+
   if (Result.getIdentifierInfo()->isModulesImport()) {
-    // The next token may be an angled string literal.
-    llvm::SaveAndRestore<bool> SavedParsingFilemame(CurPPLexer->ParsingFilename,
-                                                    true);
-    if (isNextPPTokenOneOf(tok::raw_identifier, tok::less, tok::string_literal,
-                           tok::colon, tok::header_name)) {
+    if (NextTok->isOneOf(tok::identifier, tok::less, tok::string_literal,
+                         tok::colon, tok::header_name)) {
       Result.setKind(tok::kw_import);
       ModuleImportLoc = Result.getLocation();
       IsAtImport = false;
@@ -1213,7 +1223,7 @@ bool Preprocessor::HandleModuleContextualKeyword(
   }
 
   if (Result.getIdentifierInfo()->isModulesDeclaration() &&
-      isNextPPTokenOneOf(tok::raw_identifier, tok::colon, tok::semi)) {
+      NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
     Result.setKind(tok::kw_module);
     ModuleDeclLoc = Result.getLocation();
     return true;

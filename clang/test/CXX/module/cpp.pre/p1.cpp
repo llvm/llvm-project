@@ -22,6 +22,8 @@
 // RUN: %clang_cc1 -std=c++20 %t/not_import.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/import_spaceship.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/leading_empty_macro.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/operator_keyword_and.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/operator_keyword_and2.cpp -fsyntax-only -verify
 
 
 //--- hash.cpp
@@ -88,3 +90,15 @@ export module M;
 typedef int import;
 #define EMP
 EMP import m; // The phase 7 grammar should see import as a typedef-name.
+
+//--- operator_keyword_and.cpp
+// expected-no-diagnostics
+typedef int import;
+extern
+import and x;
+
+//--- operator_keyword_and2.cpp
+// expected-no-diagnostics
+typedef int module;
+extern
+module and x;
