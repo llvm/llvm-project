@@ -5,8 +5,8 @@
 #
 # RUN: not %{lit} %t
 #
-# RUN: echo "RUN: false" > %t/new-fail.txt
-# RUN: echo "RUN: true"  > %t/new-pass.txt
+# RUN: echo "RUN: false" > %t%{fs-sep}new-fail.txt
+# RUN: echo "RUN: true"  > %t%{fs-sep}new-pass.txt
 #
 # RUN: not %{lit} --filter-failed %t | FileCheck %s
 
