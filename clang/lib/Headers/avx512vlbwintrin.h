@@ -312,28 +312,28 @@
 #define _mm256_mask_cmpneq_epu16_mask(k, A, B) \
     _mm256_mask_cmp_epu16_mask((k), (A), (B), _MM_CMPINT_NE)
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_add_epi8(__m256i __W, __mmask32 __U, __m256i __A, __m256i __B){
   return (__m256i)__builtin_ia32_selectb_256((__mmask32)__U,
                                              (__v32qi)_mm256_add_epi8(__A, __B),
                                              (__v32qi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_add_epi8(__mmask32 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectb_256((__mmask32)__U,
                                              (__v32qi)_mm256_add_epi8(__A, __B),
                                              (__v32qi)_mm256_setzero_si256());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_add_epi16(__m256i __W, __mmask16 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
                                              (__v16hi)_mm256_add_epi16(__A, __B),
                                              (__v16hi)__W);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_add_epi16(__mmask16 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectw_256((__mmask16)__U,
                                              (__v16hi)_mm256_add_epi16(__A, __B),
