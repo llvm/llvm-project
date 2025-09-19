@@ -1803,7 +1803,6 @@ nb::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
 } // namespace
 
 void mlir::python::populateIRAttributes(nb::module_ &m) {
-
   PyAffineMapAttribute::bind(m);
   PyDenseBoolArrayAttribute::bind(m);
   PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);
