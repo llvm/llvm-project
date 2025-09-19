@@ -36,12 +36,12 @@ defm VFWMACCBF16_V : VWMAC_FV_V_F<"vfwmaccbf16", 0b111011>;
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvfbfmin] in {
-  defm PseudoVFWCVTBF16_F_F :  VPseudoVWCVTD_V;
-  defm PseudoVFNCVTBF16_F_F :  VPseudoVNCVTD_W_RM;
+  defm PseudoVFWCVTBF16_F_F : VPseudoVWCVTD_V;
+  defm PseudoVFNCVTBF16_F_F : VPseudoVNCVTD_W_RM;
 }
 
 let mayRaiseFPException = true, Predicates = [HasStdExtZvfbfwma] in
-  defm PseudoVFWMACCBF16  : VPseudoVWMAC_VV_VF_BF_RM;
+  defm PseudoVFWMACCBF16 : VPseudoVWMAC_VV_VF_BF_RM;
 
 //===----------------------------------------------------------------------===//
 // Patterns
@@ -90,7 +90,7 @@ let Predicates = [HasStdExtZvfbfmin] in {
 
 let Predicates = [HasStdExtZvfbfwma] in {
   defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
-                                AllWidenableBFloatToFloatVectors, isSEWAware=1>;
+                               AllWidenableBFloatToFloatVectors, isSEWAware=1>;
   defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACCBF16",
                                       AllWidenableBFloatToFloatVectors>;
   defm : VPatWidenFPMulAccSDNode_VV_VF_RM<"PseudoVFWMACCBF16",
