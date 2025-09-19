@@ -353,14 +353,11 @@ const char *const Runtimes = R"(
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
 createJITTargetMachineBuilder(const std::string &TT) {
   if (TT == llvm::sys::getProcessTriple())
-    // This fails immediately if the target backend is not registered
     return llvm::orc::JITTargetMachineBuilder::detectHost();
 
-  // If the target backend is not registered, LLJITBuilder::create() will fail
   return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
 }
 
-// 5. Update outOfProcessJITBuilder to work with the new system
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
 Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
@@ -435,8 +432,6 @@ llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
   llvm::Error Err = llvm::Error::success();
 
-  // Auto-discover ORC runtime path if not provided and out-of-process is
-  // enabled
   if (Config.IsOutOfProcess && !Config.OrcRuntimePath) {
     const TargetInfo &TI = CI->getTarget();
     const llvm::Triple &Triple = TI.getTriple();
@@ -463,8 +458,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-  if (Config.IsOutOfProcess ||
-      /* other conditions where we need custom builder */) {
+  if (Config.IsOutOfProcess) {
     auto JBOrErr = Config.MakeJITBuilder(Config);
     if (!JBOrErr)
       return JBOrErr.takeError();
@@ -802,10 +796,7 @@ Interpreter::JITConfig::makeDefaultJITBuilder(const JITConfig &Config) {
     }
   }
 
-  // Handle in-process JIT case
-  // This would typically extract the target triple from somewhere accessible
-  // For now, we'll assume it's passed via some mechanism or use process triple
-  std::string TT = llvm::sys::getProcessTriple(); // This might need adjustment
+  std::string TT = llvm::sys::getProcessTriple();
   auto JTMB = createJITTargetMachineBuilder(TT);
   if (!JTMB)
     return JTMB.takeError();
