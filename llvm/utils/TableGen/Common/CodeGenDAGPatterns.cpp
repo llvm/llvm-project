@@ -2797,7 +2797,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
 
   if (!getOperator()->isSubClassOf("SDNodeXForm")) {
     TP.error("unknown node type '" + getOperator()->getName() +
-             " in input pattern");
+             "' in input pattern");
     return false;
   }
 
