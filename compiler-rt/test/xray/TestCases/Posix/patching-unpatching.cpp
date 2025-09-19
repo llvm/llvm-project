@@ -35,7 +35,7 @@ int main() {
   always_instrument();
   // CHECK: called: {{.*}}, type=0
   // CHECK: always instrumented called
-  // CHECK: called: {{.*}}, type=1
+  // CHECK-NEXT: called: {{.*}}, type=1
   status = __xray_unpatch();
   printf("patching status: %d\n", static_cast<int32_t>(status));
   // CHECK: patching status: 1
