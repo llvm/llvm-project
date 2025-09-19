@@ -1500,40 +1500,32 @@ private:
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
       Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
 
-  /// Categories of loops encountered during semantic OpenMP loop
-  /// analysis.
-  ///
-  /// This enumeration identifies the structural category of a loop or sequence
-  /// of loops analyzed in the context of OpenMP transformations and directives.
-  /// This categorization helps differentiate between original source loops
-  /// and the structures resulting from applying OpenMP loop transformations.
-  enum class OMPLoopCategory {
-    /// @var OMPLoopCategory::RegularLoop
-    /// Represents a standard canonical loop nest found in the
-    /// original source code or an intact loop after transformations
-    /// (i.e Post/Pre loops of a loopranged fusion).
-    RegularLoop,
-
-    /// @var OMPLoopCategory::TransformSingleLoop
-    /// Represents the resulting loop structure when an OpenMP loop
-    /// transformation, generates a single, top-level loop.
-    TransformSingleLoop,
-  };
-
   /// Holds the result of the analysis of a (possibly canonical) loop.
   struct LoopAnalysis {
-    /// Category of the analyzed loop.
-    OMPLoopCategory Category;
+    /// The analyzed loop or loop transformation.
+    Stmt *AStmt;
     /// Loop analyses results.
     OMPLoopBasedDirective::HelperExprs HelperExprs;
-    /// The for-statement of the loop.
+    /// The for-statement of the loop. ForStmt equals AStmt only when the latter
+    /// is a canonical loop (i.e. not a loop transformation).
     Stmt *ForStmt;
     /// Initialization statements before transformations.
     SmallVector<Stmt *> OriginalInits;
     /// Initialization statements required after transformation of this loop.
     SmallVector<Stmt *> TransformsPreInits;
 
-    explicit LoopAnalysis(OMPLoopCategory Category) : Category(Category) {}
+    explicit LoopAnalysis(Stmt *S) : AStmt(S) {}
+
+    bool isRegularLoop() const { return isRegularLoop(AStmt); }
+    bool isLoopTransformation() const { return isLoopTransformation(AStmt); }
+
+    // Convenience functions used when building LoopSequenceAnalysis.
+    static bool isRegularLoop(Stmt *S) {
+      return isa<clang::ForStmt, CXXForRangeStmt>(S);
+    }
+    static bool isLoopTransformation(Stmt *S) {
+      return isa<OMPLoopTransformationDirective>(S);
+    }
   };
 
   /// Holds the result of the analysis of a (possibly canonical) loop sequence.
@@ -1544,6 +1536,12 @@ private:
     SmallVector<LoopAnalysis, 2> Loops;
     /// Additional code required before entering the transformed loop sequence.
     SmallVector<Stmt *> LoopSequencePreInits;
+
+    // Convenience function used when building the LoopSequenceAnalysis.
+    static bool isLoopSequenceDerivation(Stmt *S) {
+      return LoopAnalysis::isRegularLoop(S) ||
+             LoopAnalysis::isLoopTransformation(S);
+    }
   };
 
   /// The main recursive process of `checkTransformableLoopSequence` that

@@ -14613,7 +14613,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     // Vast majority: (Tile, Unroll, Stripe, Reverse, Interchange, Fuse all)
     // Process the transformed loop statement
     LoopAnalysis &NewTransformedSingleLoop =
-        SeqAnalysis.Loops.emplace_back(OMPLoopCategory::TransformSingleLoop);
+        SeqAnalysis.Loops.emplace_back(Child);
     unsigned IsCanonical = checkOpenMPLoop(
         Kind, nullptr, nullptr, TransformedStmt, SemaRef, *DSAStack, TmpDSA,
         NewTransformedSingleLoop.HelperExprs);
@@ -14630,8 +14630,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
 
   // Modularized code for handling regular canonical loops.
   auto AnalyzeRegularLoop = [&](Stmt *Child) {
-    LoopAnalysis &NewRegularLoop =
-        SeqAnalysis.Loops.emplace_back(OMPLoopCategory::RegularLoop);
+    LoopAnalysis &NewRegularLoop = SeqAnalysis.Loops.emplace_back(Child);
     unsigned IsCanonical =
         checkOpenMPLoop(Kind, nullptr, nullptr, Child, SemaRef, *DSAStack,
                         TmpDSA, NewRegularLoop.HelperExprs);
@@ -14645,21 +14644,12 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     return true;
   };
 
-  // Helper functions to validate loop sequence grammar derivations.
-  auto IsLoopSequenceDerivation = [](auto *Child) {
-    return isa<ForStmt, CXXForRangeStmt, OMPLoopTransformationDirective>(Child);
-  };
-  // Helper functions to validate loop generating grammar derivations.
-  auto IsLoopGeneratingStmt = [](auto *Child) {
-    return isa<OMPLoopTransformationDirective>(Child);
-  };
-
   // High level grammar validation.
   for (Stmt *Child : LoopSeqStmt->children()) {
     if (!Child)
       continue;
     // Skip over non-loop-sequence statements.
-    if (!IsLoopSequenceDerivation(Child)) {
+    if (!LoopSequenceAnalysis::isLoopSequenceDerivation(Child)) {
       Child = Child->IgnoreContainers();
       // Ignore empty compound statement.
       if (!Child)
@@ -14674,8 +14664,8 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
       }
     }
     // Regular loop sequence handling.
-    if (IsLoopSequenceDerivation(Child)) {
-      if (IsLoopGeneratingStmt(Child)) {
+    if (LoopSequenceAnalysis::isLoopSequenceDerivation(Child)) {
+      if (LoopAnalysis::isLoopTransformation(Child)) {
         if (!AnalyzeLoopGeneration(Child))
           return false;
         // AnalyzeLoopGeneration updates SeqAnalysis.LoopSeqSize accordingly.
@@ -16173,17 +16163,16 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // looprange section
   unsigned int TransformIndex = 0;
   for (unsigned I : llvm::seq<unsigned>(FirstVal - 1)) {
-    if (SeqAnalysis.Loops[I].Category == OMPLoopCategory::TransformSingleLoop)
+    if (SeqAnalysis.Loops[I].isLoopTransformation())
       ++TransformIndex;
   }
 
   for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
-    if (SeqAnalysis.Loops[I].Category == OMPLoopCategory::RegularLoop) {
+    if (SeqAnalysis.Loops[I].isRegularLoop()) {
       addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
                       SeqAnalysis.Loops[I].ForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
-    } else if (SeqAnalysis.Loops[I].Category ==
-               OMPLoopCategory::TransformSingleLoop) {
+    } else if (SeqAnalysis.Loops[I].isLoopTransformation()) {
       // For transformed loops, insert both pre-inits and original inits.
       // Order matters: pre-inits may define variables used in the original
       // inits such as upper bounds...
@@ -16452,8 +16441,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       if (I >= FirstVal - 1 && I < FirstVal + CountVal - 1) {
         // Update the Transformation counter to skip already treated
         // loop transformations
-        if (SeqAnalysis.Loops[I].Category !=
-            OMPLoopCategory::TransformSingleLoop)
+        if (!SeqAnalysis.Loops[I].isLoopTransformation())
           ++TransformIndex;
         continue;
       }
@@ -16462,8 +16450,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       // Regular loops: they are kept intact as-is.
       // Loop-sequence-generating transformations: already handled earlier.
       // Only TransformSingleLoop requires inserting pre-inits here
-      if (SeqAnalysis.Loops[I].Category ==
-          OMPLoopCategory::TransformSingleLoop) {
+      if (SeqAnalysis.Loops[I].isRegularLoop()) {
         const auto &TransformPreInit =
             SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
         if (!TransformPreInit.empty())
