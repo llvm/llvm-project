@@ -101,6 +101,17 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Returns the VPValue representing the uncountable exit comparison used by
+/// AnyOf if the recipes it depends on can be traced back to live-ins and
+/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
+/// generating the values for the comparison. The recipes are stored in
+/// \p Recipes, and recipes forming an address for a load are also added to
+/// \p GEPs.
+std::optional<VPValue *>
+getRecipesForUncountableExit(VPlan &Plan,
+                             SmallVectorImpl<VPRecipeBase *> &Recipes,
+                             SmallVectorImpl<VPRecipeBase *> &GEPs);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

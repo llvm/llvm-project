@@ -574,6 +574,19 @@ def : Pat<(XLenVT (and GPR:$r, BCLRIANDIMask:$i)),
                  (BCLRITwoBitsMaskHigh BCLRIANDIMask:$i))>;
 } // Predicates = [HasStdExtZbs]
 
+let Predicates = [HasStdExtZbs, IsRV64] in {
+// If the original code was setting, clearing, or inverting bit 31 of an i32,
+// type legalization might have sign extended the constant so it doesn't have a
+// single 0 or 1 bit. If the upper 32 bits aren't used by later instructions we
+// can still use bseti/bclri.
+def : Pat<(binop_allwusers<and> GPR:$rs1, (XLenVT 2147483647)),
+          (BCLRI GPR:$rs1, 31)>;
+def : Pat<(binop_allwusers<or> GPR:$rs1, (XLenVT -2147483648)),
+          (BSETI GPR:$rs1, 31)>;
+def : Pat<(binop_allwusers<xor> GPR:$rs1, (XLenVT -2147483648)),
+          (BINVI GPR:$rs1, 31)>;
+}
+
 let Predicates = [HasStdExtZbb] in
 def : PatGpr<riscv_orc_b, ORC_B>;
 
