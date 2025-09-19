@@ -5602,8 +5602,7 @@ static bool FindAllMemoryUses(
       if (!TLI.getAddrModeArguments(II, PtrOps, AccessTy))
         return true;
 
-      auto PtrVal = U.get();
-      if (!find(PtrOps, PtrVal))
+      if (!find(PtrOps, U.get()))
         return true;
 
       MemoryUses.push_back({&U, AccessTy});
