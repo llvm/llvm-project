@@ -3691,6 +3691,10 @@ def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
 // gfx1250 intrinsics
 // ===----------------------------------------------------------------------===//
 
+// Vanilla cluster sync-barrier
+def int_amdgcn_s_cluster_barrier : ClangBuiltin<"__builtin_amdgcn_s_cluster_barrier">,
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
 // Async waits decrement ASYNCcnt and tensor waits decrement TENSORcnt which is
 // modeled as InaccessibleMem.
 class AMDGPUWaitAsyncIntrinsic :

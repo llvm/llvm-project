@@ -36,7 +36,7 @@ def InstB : TestInstruction {
 // CHECK:      /* 0 */       OPC_CheckField, 250, 3, 4, 0,
 // CHECK-NEXT: /* 5 */       OPC_Scope, 9, 0, // end scope at 17
 // CHECK-NEXT: /* 8 */       OPC_CheckField, 248, 3, 2, 0,
-// CHECK-NEXT: /* 13 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
+// CHECK-NEXT: /* 13 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0,
 // CHECK-NEXT: /* 17 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: 1
 // CHECK-NEXT: };
 
@@ -46,7 +46,7 @@ def InstB : TestInstruction {
 // CHECK-LARGE:      /* 0 */       OPC_CheckField, 250, 3, 4, 0,
 // CHECK-LARGE-NEXT: /* 5 */       OPC_Scope, 9, 0, 0, // end scope at 18
 // CHECK-LARGE-NEXT: /* 9 */       OPC_CheckField, 248, 3, 2, 0,
-// CHECK-LARGE-NEXT: /* 14 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
+// CHECK-LARGE-NEXT: /* 14 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0,
 // CHECK-LARGE-NEXT: /* 18 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: 1
 // CHECK-LARGE-NEXT: };
 
