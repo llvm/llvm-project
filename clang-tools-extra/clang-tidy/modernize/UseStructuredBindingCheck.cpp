@@ -97,8 +97,7 @@ AST_MATCHER_P2(Stmt, hasPreTwoVarDecl, ast_matchers::internal::Matcher<VarDecl>,
   if (!C)
     return false;
 
-  const auto I =
-      llvm::find(llvm::make_range(C->body_rbegin(), C->body_rend()), &Node);
+  const auto I = llvm::find(llvm::reverse(C->body()), &Node);
   assert(I != C->body_rend() && "C is parent of Node");
   if ((I + 1) == C->body_rend())
     return false;
