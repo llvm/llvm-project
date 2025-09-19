@@ -52,7 +52,7 @@ namespace {
 class ArithConstantOpConversionPattern
     : public OpConversionPattern<arith::ConstantOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ConstantOp arithConst,
@@ -94,7 +94,7 @@ Value adaptValueType(Value val, ConversionPatternRewriter &rewriter, Type ty) {
 
 class CmpFOpConversion : public OpConversionPattern<arith::CmpFOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
@@ -248,7 +248,7 @@ private:
 
 class CmpIOpConversion : public OpConversionPattern<arith::CmpIOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   bool needsUnsignedCmp(arith::CmpIPredicate pred) const {
     switch (pred) {
@@ -314,7 +314,7 @@ public:
 
 class NegFOpConversion : public OpConversionPattern<arith::NegFOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::NegFOp op, OpAdaptor adaptor,
@@ -647,7 +647,7 @@ class UnsignedShiftOpConversion final
 
 class SelectOpConversion : public OpConversionPattern<arith::SelectOp> {
 public:
-  using OpConversionPattern<arith::SelectOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::SelectOp selectOp, OpAdaptor adaptor,
