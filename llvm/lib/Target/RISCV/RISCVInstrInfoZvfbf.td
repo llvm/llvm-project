@@ -36,7 +36,7 @@ defm VFWMACCBF16_V : VWMAC_FV_V_F<"vfwmaccbf16", 0b111011>;
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvfbfmin] in {
+let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
   defm PseudoVFWCVTBF16_F_F : VPseudoVWCVTD_V;
   defm PseudoVFNCVTBF16_F_F : VPseudoVNCVTD_W_RM;
 }
@@ -47,7 +47,7 @@ let mayRaiseFPException = true, Predicates = [HasStdExtZvfbfwma] in
 //===----------------------------------------------------------------------===//
 // Patterns
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvfbfmin] in {
+let Predicates = [HasStdExtZvfbfminOrZvfofp8min] in {
   defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
                                 "PseudoVFWCVTBF16_F_F", isSEWAware=1>;
   defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
