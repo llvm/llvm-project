@@ -10,13 +10,13 @@
 #define LLVM_MC_MCCODEEMITTER_H
 
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 
 class MCFixup;
 class MCInst;
 class MCSubtargetInfo;
-class raw_ostream;
 template<typename T> class SmallVectorImpl;
 
 /// MCCodeEmitter - Generic instruction encoding interface.
@@ -36,6 +36,12 @@ public:
   virtual void encodeInstruction(const MCInst &Inst, SmallVectorImpl<char> &CB,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const = 0;
+
+protected:
+  // Helper function used by CodeEmitterGen for error reporting.
+  [[noreturn]] static void
+  ReportFatalError(const MCInst &Inst,
+                   std::optional<unsigned> OpNum = std::nullopt);
 };
 
 } // end namespace llvm
