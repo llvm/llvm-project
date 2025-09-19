@@ -643,7 +643,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   mlir::Type elementType = arrayTy.getElementType();
 
   // This might be a multi-dimensional array. Find the innermost element type.
-  while(auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
+  while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
     elementType = maybeArrayTy.getElementType();
   cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
