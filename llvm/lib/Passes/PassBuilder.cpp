@@ -145,6 +145,7 @@
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ProcessImplicitDefs.h"
+#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
