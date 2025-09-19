@@ -197,11 +197,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
 }
 
 /// Check whether a pointer is accessible from a device.
-/// the functionality is available in OpenMP 5.1 and later
-/// OpenMP 5.1
-/// omp_target_is_accessible checks whether a host pointer is accessible from a
-/// device OpenMP 6.0 removes restriction on pointer, allowing any pointer
-/// interpreted as a pointer in the address space of the given device.
+/// Returns true when accessibility is guaranteed otherwise returns false.
 EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
                                     int DeviceNum) {
   TIMESCOPE();
@@ -220,7 +216,7 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
     return true;
   }
 
-  // the device number must refer to a valid device
+  // The device number must refer to a valid device
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
