@@ -304,10 +304,24 @@ static bool isNoopPtrIntCastPair(const Operator *I2P, const DataLayout &DL,
          (P2IOp0AS == I2PAS || TTI->isNoopAddrSpaceCast(P2IOp0AS, I2PAS));
 }
 
+// Returns true if every user of a given GV are "simple" loads or stores in the
+// same function, with the store actually writing to GV.
+static bool isLocallyAccessedBySimpleLoadsStores(const GlobalVariable *GV,
+                                                 const Function *F) {
+  return all_of(GV->users(), [=](const User *U) {
+    if (const auto *SI = dyn_cast<StoreInst>(U))
+      return SI->getPointerOperand() == GV && SI->getFunction() == F;
+    if (const auto *LI = dyn_cast<LoadInst>(U))
+      return LI->getFunction() == F;
+    return false;
+  });
+}
+
 // Returns true if V is an address expression.
 // TODO: Currently, we only consider:
 //   - arguments
 //   - phi, bitcast, addrspacecast, and getelementptr operators
+//   - load
 static bool isAddressExpression(const Value &V, const DataLayout &DL,
                                 const TargetTransformInfo *TTI) {
 
@@ -335,6 +349,16 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
   }
   case Instruction::IntToPtr:
     return isNoopPtrIntCastPair(Op, DL, TTI);
+  case Instruction::Load: {
+    const auto *LI = cast<LoadInst>(Op);
+    if (LI->getType()->isPtrOrPtrVectorTy()) {
+      // Heuristic: treat load-of-GV as an address expression only if the GV is
+      // locally accessed by load and store.
+      if (const auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand()))
+        return isLocallyAccessedBySimpleLoadsStores(GV, LI->getFunction());
+    }
+    return TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
+  }
   default:
     // That value is an address expression if it has an assumed address space.
     return TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
@@ -342,6 +366,8 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
 }
 
 // Returns the pointer operands of V.
+// If V is a load from a global variable G, also collect the pointer values
+// stored into G.
 //
 // Precondition: V is an address expression.
 static SmallVector<Value *, 2>
@@ -372,6 +398,20 @@ getPointerOperands(const Value &V, const DataLayout &DL,
     assert(isNoopPtrIntCastPair(&Op, DL, TTI));
     auto *P2I = cast<Operator>(Op.getOperand(0));
     return {P2I->getOperand(0)};
+  }
+  case Instruction::Load: {
+    assert(V.getType()->isPtrOrPtrVectorTy());
+    if (const auto *GV = cast<GlobalVariable>(Op.getOperand(0))) {
+      assert(isLocallyAccessedBySimpleLoadsStores(
+          GV, cast<LoadInst>(&V)->getFunction()));
+      SmallVector<Value *, 2> PtrOps;
+      for (const auto *U : GV->users())
+        if (const auto *SI = dyn_cast<StoreInst>(U);
+            SI && SI->getPointerOperand() == GV)
+          PtrOps.push_back(cast<Operator>(U)->getOperand(0));
+      return PtrOps;
+    }
+    return {};
   }
   default:
     llvm_unreachable("Unexpected instruction type.");
@@ -561,9 +601,11 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
       PushPtrOperand(GEP->getPointerOperand());
     } else if (auto *LI = dyn_cast<LoadInst>(&I))
       PushPtrOperand(LI->getPointerOperand());
-    else if (auto *SI = dyn_cast<StoreInst>(&I))
+    else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (SI->getValueOperand()->getType()->isPtrOrPtrVectorTy())
+        PushPtrOperand(SI->getValueOperand());
       PushPtrOperand(SI->getPointerOperand());
-    else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+    } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
       PushPtrOperand(RMW->getPointerOperand());
     else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
       PushPtrOperand(CmpX->getPointerOperand());
@@ -755,6 +797,10 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // back.
     return new AddrSpaceCastInst(Src, NewPtrType);
   }
+  case Instruction::Load:
+    if (I->getType()->isPtrOrPtrVectorTy())
+      return new AddrSpaceCastInst(I, NewPtrType);
+    return nullptr;
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -866,7 +912,7 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
         I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
     if (Instruction *NewI = dyn_cast_or_null<Instruction>(NewV)) {
       if (NewI->getParent() == nullptr) {
-        NewI->insertBefore(I->getIterator());
+        NewI->insertAfter(I->getIterator());
         NewI->takeName(I);
         NewI->setDebugLoc(I->getDebugLoc());
       }
