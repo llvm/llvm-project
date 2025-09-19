@@ -90,7 +90,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
-// CHECK-HOST-WINDOWS:      define internal void @"??$kernel_single_task@V<lambda_1>@lambda@?0??main@@9@V12?0??3@9@@@YAXV<lambda_1>@lambda@?0??main@@9@@Z"(i32 %kernelFunc.coerce) #{{[0-9]+}} {
+// CHECK-HOST-WINDOWS:      define internal void @"??$kernel_single_task@V<lambda_1>@?0??main@@9@V1?0??2@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %kernelFunc.coerce) #{{[0-9]+}} {
 // CHECK-HOST-WINDOWS-NEXT: entry:
 // CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %class.anon, align 4
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
