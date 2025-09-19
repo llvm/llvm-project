@@ -31,6 +31,7 @@
 
 using namespace llvm;
 using namespace lldb_private;
+using namespace lldb_private::transport;
 using testing::_;
 using testing::HasSubstr;
 using testing::InSequence;
@@ -292,7 +293,7 @@ public:
   }
 };
 
-class TestTransportBinder : public testing::Test {
+class TransportBinderTest : public testing::Test {
 protected:
   SubsystemRAII<FileSystem> subsystems;
 
@@ -321,41 +322,36 @@ protected:
 
 } // namespace
 
-namespace lldb_private {
+namespace lldb_private::transport {
 
 using namespace test_protocol;
 
 template <>
-inline test_protocol::Req MakeRequest(int id, llvm::StringRef method,
-                                      std::optional<json::Value> params) {
+test_protocol::Req MakeRequest(int id, llvm::StringRef method,
+                               std::optional<json::Value> params) {
   return test_protocol::Req{id, method.str(), params};
 }
-template <> inline Resp MakeResponse(const Req &req, llvm::Error error) {
+template <> Resp MakeResponse(const Req &req, llvm::Error error) {
   llvm::consumeError(std::move(error));
   return Resp{req.id, std::nullopt};
 }
-template <> inline Resp MakeResponse(const Req &req, json::Value result) {
+template <> Resp MakeResponse(const Req &req, json::Value result) {
   return Resp{req.id, std::move(result)};
 }
 template <>
-inline Evt MakeEvent(llvm::StringRef method,
-                     std::optional<json::Value> params) {
+Evt MakeEvent(llvm::StringRef method, std::optional<json::Value> params) {
   return Evt{method.str(), params};
 }
-template <> inline llvm::Expected<json::Value> GetResult(const Resp &resp) {
+template <> llvm::Expected<json::Value> GetResult(const Resp &resp) {
   return resp.result;
 }
-template <> inline int GetId(const Resp &resp) { return resp.id; }
-template <> inline llvm::StringRef GetMethod(const Req &req) {
-  return req.name;
-}
-template <> inline llvm::StringRef GetMethod(const Evt &evt) {
-  return evt.name;
-}
-template <> inline json::Value GetParams(const Req &req) { return req.params; }
-template <> inline json::Value GetParams(const Evt &evt) { return evt.params; }
+template <> int GetId(const Resp &resp) { return resp.id; }
+template <> llvm::StringRef GetMethod(const Req &req) { return req.name; }
+template <> llvm::StringRef GetMethod(const Evt &evt) { return evt.name; }
+template <> json::Value GetParams(const Req &req) { return req.params; }
+template <> json::Value GetParams(const Evt &evt) { return evt.params; }
 
-} // namespace lldb_private
+} // namespace lldb_private::transport
 
 // Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
 #ifndef _WIN32
@@ -603,46 +599,156 @@ TEST_F(JSONRPCTransportTest, InvalidTransport) {
 }
 
 // Out-bound binding request handler.
-TEST_F(TestTransportBinder, OutBoundRequests) {
-  auto addFn = binder->bind<MyFnResult, MyFnParams>("add");
-  addFn(MyFnParams{1, 2}, [](Expected<MyFnResult> result) {
+TEST_F(TransportBinderTest, OutBoundRequests) {
+  OutgoingRequest<MyFnResult, MyFnParams> addFn =
+      binder->Bind<MyFnResult, MyFnParams>("add");
+  bool replied = false;
+  addFn(MyFnParams{1, 2}, [&](Expected<MyFnResult> result) {
     EXPECT_THAT_EXPECTED(result, Succeeded());
     EXPECT_EQ(result->c, 3);
+    replied = true;
   });
   EXPECT_CALL(remote, Received(Req{1, "add", MyFnParams{1, 2}}));
-  // Queue a reply that will be sent during 'Run'.
   EXPECT_THAT_ERROR(from_remote->Send(Resp{1, toJSON(MyFnResult{3})}),
                     Succeeded());
   Run();
+  EXPECT_TRUE(replied);
+}
+
+TEST_F(TransportBinderTest, OutBoundRequestsVoidParams) {
+  OutgoingRequest<MyFnResult, void> voidParamFn =
+      binder->Bind<MyFnResult, void>("voidParam");
+  bool replied = false;
+  voidParamFn([&](Expected<MyFnResult> result) {
+    EXPECT_THAT_EXPECTED(result, Succeeded());
+    EXPECT_EQ(result->c, 3);
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "voidParam", std::nullopt}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, toJSON(MyFnResult{3})}),
+                    Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
+}
+
+TEST_F(TransportBinderTest, OutBoundRequestsVoidResult) {
+  OutgoingRequest<void, MyFnParams> voidResultFn =
+      binder->Bind<void, MyFnParams>("voidResult");
+  bool replied = false;
+  voidResultFn(MyFnParams{4, 5}, [&](llvm::Error error) {
+    EXPECT_THAT_ERROR(std::move(error), Succeeded());
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "voidResult", MyFnParams{4, 5}}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, std::nullopt}), Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
+}
+
+TEST_F(TransportBinderTest, OutBoundRequestsVoidParamsAndVoidResult) {
+  OutgoingRequest<void, void> voidParamAndResultFn =
+      binder->Bind<void, void>("voidParamAndResult");
+  bool replied = false;
+  voidParamAndResultFn([&](llvm::Error error) {
+    EXPECT_THAT_ERROR(std::move(error), Succeeded());
+    replied = true;
+  });
+  EXPECT_CALL(remote, Received(Req{1, "voidParamAndResult", std::nullopt}));
+  EXPECT_THAT_ERROR(from_remote->Send(Resp{1, std::nullopt}), Succeeded());
+  Run();
+  EXPECT_TRUE(replied);
 }
 
 // In-bound binding request handler.
-TEST_F(TestTransportBinder, InBoundRequests) {
-  binder->bind<MyFnResult, MyFnParams>(
+TEST_F(TransportBinderTest, InBoundRequests) {
+  bool called = false;
+  binder->Bind<MyFnResult, MyFnParams>(
       "add",
-      [](const int captured_param,
-         const MyFnParams &params) -> Expected<MyFnResult> {
+      [&](const int captured_param,
+          const MyFnParams &params) -> Expected<MyFnResult> {
+        called = true;
         return MyFnResult{params.a + params.b + captured_param};
       },
       2);
-  EXPECT_THAT_ERROR(from_remote->Send(Req{2, "add", MyFnParams{3, 4}}),
+  EXPECT_THAT_ERROR(from_remote->Send(Req{1, "add", MyFnParams{3, 4}}),
                     Succeeded());
-  EXPECT_CALL(remote, Received(Resp{2, MyFnResult{9}}));
+
+  EXPECT_CALL(remote, Received(Resp{1, MyFnResult{9}}));
   Run();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(TransportBinderTest, InBoundRequestsVoidParams) {
+  bool called = false;
+  binder->Bind<MyFnResult, void>(
+      "voidParam",
+      [&](const int captured_param) -> Expected<MyFnResult> {
+        called = true;
+        return MyFnResult{captured_param};
+      },
+      2);
+  EXPECT_THAT_ERROR(from_remote->Send(Req{2, "voidParam", std::nullopt}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Resp{2, MyFnResult{2}}));
+  Run();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(TransportBinderTest, InBoundRequestsVoidResult) {
+  bool called = false;
+  binder->Bind<void, MyFnParams>(
+      "voidResult",
+      [&](const int captured_param, const MyFnParams &params) -> llvm::Error {
+        called = true;
+        EXPECT_EQ(captured_param, 2);
+        EXPECT_EQ(params.a, 3);
+        EXPECT_EQ(params.b, 4);
+        return llvm::Error::success();
+      },
+      2);
+  EXPECT_THAT_ERROR(from_remote->Send(Req{3, "voidResult", MyFnParams{3, 4}}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Resp{3, std::nullopt}));
+  Run();
+  EXPECT_TRUE(called);
+}
+TEST_F(TransportBinderTest, InBoundRequestsVoidParamsAndResult) {
+  bool called = false;
+  binder->Bind<void, void>(
+      "voidParamAndResult",
+      [&](const int captured_param) -> llvm::Error {
+        called = true;
+        EXPECT_EQ(captured_param, 2);
+        return llvm::Error::success();
+      },
+      2);
+  EXPECT_THAT_ERROR(
+      from_remote->Send(Req{4, "voidParamAndResult", std::nullopt}),
+      Succeeded());
+  EXPECT_CALL(remote, Received(Resp{4, std::nullopt}));
+  Run();
+  EXPECT_TRUE(called);
 }
 
 // Out-bound binding event handler.
-TEST_F(TestTransportBinder, OutBoundEvents) {
-  auto emitEvent = binder->bind<MyFnParams>("evt");
+TEST_F(TransportBinderTest, OutBoundEvents) {
+  OutgoingEvent<MyFnParams> emitEvent = binder->Bind<MyFnParams>("evt");
   emitEvent(MyFnParams{1, 2});
   EXPECT_CALL(remote, Received(Evt{"evt", MyFnParams{1, 2}}));
   Run();
 }
 
+TEST_F(TransportBinderTest, OutBoundEventsVoidParams) {
+  OutgoingEvent<void> emitEvent = binder->Bind<void>("evt");
+  emitEvent();
+  EXPECT_CALL(remote, Received(Evt{"evt", std::nullopt}));
+  Run();
+}
+
 // In-bound binding event handler.
-TEST_F(TestTransportBinder, InBoundEvents) {
+TEST_F(TransportBinderTest, InBoundEvents) {
   bool called = false;
-  binder->bind<MyFnParams>(
+  binder->Bind<MyFnParams>(
       "evt",
       [&](const int captured_arg, const MyFnParams &params) {
         EXPECT_EQ(captured_arg, 42);
@@ -653,6 +759,20 @@ TEST_F(TestTransportBinder, InBoundEvents) {
       42);
   EXPECT_THAT_ERROR(from_remote->Send(Evt{"evt", MyFnParams{3, 4}}),
                     Succeeded());
+  Run();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(TransportBinderTest, InBoundEventsVoidParams) {
+  bool called = false;
+  binder->Bind<void>(
+      "evt",
+      [&](const int captured_arg) {
+        EXPECT_EQ(captured_arg, 42);
+        called = true;
+      },
+      42);
+  EXPECT_THAT_ERROR(from_remote->Send(Evt{"evt", std::nullopt}), Succeeded());
   Run();
   EXPECT_TRUE(called);
 }

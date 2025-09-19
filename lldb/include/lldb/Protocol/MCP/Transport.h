@@ -17,7 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
-namespace lldb_private {
+namespace lldb_private::transport {
 /// Specializations of the JSONTransport protocol functions for MCP.
 /// @{
 template <>
@@ -30,15 +30,13 @@ template <>
 inline lldb_protocol::mcp::Response
 MakeResponse(const lldb_protocol::mcp::Request &req, llvm::Error error) {
   lldb_protocol::mcp::Error protocol_error;
-  llvm::handleAllErrors(
-      std::move(error),
-      [&](const lldb_protocol::mcp::MCPError &err) {
-        protocol_error = err.toProtocolError();
-      },
-      [&](const llvm::ErrorInfoBase &err) {
-        protocol_error.code = lldb_protocol::mcp::MCPError::kInternalError;
-        protocol_error.message = err.message();
-      });
+  llvm::handleAllErrors(std::move(error), [&](const llvm::ErrorInfoBase &err) {
+    std::error_code cerr = err.convertToErrorCode();
+    protocol_error.code = cerr == llvm::inconvertibleErrorCode()
+                              ? lldb_protocol::mcp::eErrorCodeInternalError
+                              : cerr.value();
+    protocol_error.message = err.message();
+  });
 
   return lldb_protocol::mcp::Response{req.id, std::move(protocol_error)};
 }
@@ -83,21 +81,22 @@ GetParams(const lldb_protocol::mcp::Notification &evt) {
 }
 /// @}
 
-} // end namespace lldb_private
+} // namespace lldb_private::transport
 
 namespace lldb_protocol::mcp {
 
 /// Generic transport that uses the MCP protocol.
 using MCPTransport =
-    lldb_private::JSONTransport<int64_t, Request, Response, Notification>;
+    lldb_private::transport::JSONTransport<int64_t, Request, Response,
+                                           Notification>;
 
 /// Generic logging callback, to allow the MCP server / client / transport layer
 /// to be independent of the lldb log implementation.
 using LogCallback = llvm::unique_function<void(llvm::StringRef message)>;
 
 class Transport final
-    : public lldb_private::JSONRPCTransport<int64_t, Request, Response,
-                                            Notification> {
+    : public lldb_private::transport::JSONRPCTransport<int64_t, Request,
+                                                       Response, Notification> {
 public:
   Transport(lldb::IOObjectSP in, lldb::IOObjectSP out,
             LogCallback log_callback = {});

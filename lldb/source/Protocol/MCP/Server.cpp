@@ -129,17 +129,17 @@ void Server::AddResourceProvider(
 MCPTransport::BinderUP Server::Bind(MCPTransport &transport) {
   MCPTransport::BinderUP binder =
       std::make_unique<MCPTransport::Binder>(transport);
-  binder->bind<InitializeResult, InitializeParams>(
+  binder->Bind<InitializeResult, InitializeParams>(
       "initialize", &Server::InitializeHandler, this);
-  binder->bind<ListToolsResult, void>("tools/list", &Server::ToolsListHandler,
+  binder->Bind<ListToolsResult, void>("tools/list", &Server::ToolsListHandler,
                                       this);
-  binder->bind<CallToolResult, CallToolParams>("tools/call",
+  binder->Bind<CallToolResult, CallToolParams>("tools/call",
                                                &Server::ToolsCallHandler, this);
-  binder->bind<ListResourcesResult, void>("resources/list",
+  binder->Bind<ListResourcesResult, void>("resources/list",
                                           &Server::ResourcesListHandler, this);
-  binder->bind<ReadResourceResult, ReadResourceParams>(
+  binder->Bind<ReadResourceResult, ReadResourceParams>(
       "resources/read", &Server::ResourcesReadHandler, this);
-  binder->bind<void>("notifications/initialized",
+  binder->Bind<void>("notifications/initialized",
                      [this]() { Log("MCP initialization complete"); });
   return binder;
 }
@@ -147,10 +147,13 @@ MCPTransport::BinderUP Server::Bind(MCPTransport &transport) {
 llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {
   MCPTransport::BinderUP binder = Bind(*transport);
   MCPTransport *transport_ptr = transport.get();
-  binder->disconnected([this, transport_ptr]() {
+  binder->OnDisconnect([this, transport_ptr]() {
     assert(m_instances.find(transport_ptr) != m_instances.end() &&
            "Client not found in m_instances");
     m_instances.erase(transport_ptr);
+  });
+  binder->OnError([this](llvm::Error err) {
+    Logv("Transport error: {0}", llvm::toString(std::move(err)));
   });
 
   auto handle = transport->RegisterMessageHandler(loop, *binder);

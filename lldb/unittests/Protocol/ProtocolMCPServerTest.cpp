@@ -30,12 +30,13 @@
 #include <future>
 #include <memory>
 #include <optional>
+#include <system_error>
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::transport;
 using namespace lldb_protocol::mcp;
-using testing::_;
 
 namespace {
 
@@ -101,7 +102,9 @@ public:
   using Tool::Tool;
 
   llvm::Expected<CallToolResult> Call(const ToolArguments &args) override {
-    return llvm::createStringError("error");
+    return llvm::createStringError(
+        std::error_code(eErrorCodeInternalError, std::generic_category()),
+        "error");
   }
 };
 
@@ -160,7 +163,7 @@ public:
     binder = server_up->Bind(*to_client);
     auto server_handle = to_server->RegisterMessageHandler(loop, *binder);
     EXPECT_THAT_EXPECTED(server_handle, Succeeded());
-    binder->error([](llvm::Error error) {
+    binder->OnError([](llvm::Error error) {
       llvm::errs() << formatv("Server transport error: {0}", error);
     });
     handles[0] = std::move(*server_handle);

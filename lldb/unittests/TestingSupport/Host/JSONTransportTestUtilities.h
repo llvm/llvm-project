@@ -23,10 +23,11 @@
 
 template <typename Id, typename Req, typename Resp, typename Evt>
 class TestTransport final
-    : public lldb_private::JSONTransport<Id, Req, Resp, Evt> {
+    : public lldb_private::transport::JSONTransport<Id, Req, Resp, Evt> {
 public:
   using MessageHandler =
-      typename lldb_private::JSONTransport<Id, Req, Resp, Evt>::MessageHandler;
+      typename lldb_private::transport::JSONTransport<Id, Req, Resp,
+                                                      Evt>::MessageHandler;
 
   static std::pair<std::unique_ptr<TestTransport<Id, Req, Resp, Evt>>,
                    std::unique_ptr<TestTransport<Id, Req, Resp, Evt>>>
@@ -100,7 +101,8 @@ private:
 
 template <typename Id, typename Req, typename Resp, typename Evt>
 class MockMessageHandler final
-    : public lldb_private::JSONTransport<Id, Req, Resp, Evt>::MessageHandler {
+    : public lldb_private::transport::JSONTransport<Id, Req, Resp,
+                                                    Evt>::MessageHandler {
 public:
   MOCK_METHOD(void, Received, (const Req &), (override));
   MOCK_METHOD(void, Received, (const Resp &), (override));
