@@ -1439,7 +1439,7 @@ def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
 def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
 def HasVendorXMIPSEXECTL
-    : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
+    : Predicate<"Subtarget->hasVendorXMIPSEXECTL()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
                          "'Xmipsexectl' (MIPS execution control)">;
 
