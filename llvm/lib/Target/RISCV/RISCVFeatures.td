@@ -721,7 +721,7 @@ def HasStdExtZfhOrZvfh
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
 def FeatureStdExtZvfofp8min
-    : RISCVExperimentalExtension<0, 21,
+    : RISCVExperimentalExtension<0, 2,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfofp8min
     : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
