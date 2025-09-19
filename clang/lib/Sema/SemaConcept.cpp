@@ -1864,33 +1864,6 @@ NormalizedConstraint::getFoldExpandedConstraint() const {
 // ------------------------ Subsumption -----------------------------------
 //
 //
-
-template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-
-  static FoldingSetNodeID getEmptyKey() {
-    FoldingSetNodeID ID;
-    ID.AddInteger(std::numeric_limits<unsigned>::max());
-    return ID;
-  }
-
-  static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID ID;
-    for (unsigned I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
-      ID.AddInteger(std::numeric_limits<unsigned>::max());
-    }
-    return ID;
-  }
-
-  static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
-  }
-
-  static bool isEqual(const FoldingSetNodeID &LHS,
-                      const FoldingSetNodeID &RHS) {
-    return LHS == RHS;
-  }
-};
-
 SubsumptionChecker::SubsumptionChecker(Sema &SemaRef,
                                        SubsumptionCallable Callable)
     : SemaRef(SemaRef), Callable(Callable), NextID(1) {}
