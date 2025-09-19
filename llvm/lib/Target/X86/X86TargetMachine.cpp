@@ -402,7 +402,7 @@ char X86ExecutionDomainFix::ID;
 
 INITIALIZE_PASS_BEGIN(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(X86ExecutionDomainFix, "x86-execution-domain-fix",
   "X86 Execution Domain Fix", false, false)
 
