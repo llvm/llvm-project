@@ -18,6 +18,7 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/standalone_pybind11.py
     dialects/standalone_nanobind.py
+    _mlir_libs/_standaloneDialectsNanobind/py.typed
   DIALECT_NAME standalone)
 
 
