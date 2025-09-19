@@ -279,6 +279,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsRISCVXMIPSTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsRISCVXMIPS.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsX86BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsX86Base.td"],
     includes = ["include"],
@@ -358,6 +364,7 @@ gentbl_cc_library(
         ":BuiltinsBaseTdFiles",
         ":BuiltinsRISCVXAndesTdFiles",
         ":BuiltinsRISCVXCVTdFiles",
+        ":BuiltinsRISCVXMIPSTdFiles",
     ],
 )
 

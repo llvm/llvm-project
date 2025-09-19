@@ -183,7 +183,8 @@ m_scev_PtrToInt(const Op0_t &Op0) {
 }
 
 /// Match a binary SCEV.
-template <typename SCEVTy, typename Op0_t, typename Op1_t>
+template <typename SCEVTy, typename Op0_t, typename Op1_t,
+          bool Commutable = false>
 struct SCEVBinaryExpr_match {
   Op0_t Op0;
   Op1_t Op1;
@@ -192,15 +193,18 @@ struct SCEVBinaryExpr_match {
 
   bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
-    return E && E->getNumOperands() == 2 && Op0.match(E->getOperand(0)) &&
-           Op1.match(E->getOperand(1));
+    return E && E->getNumOperands() == 2 &&
+           ((Op0.match(E->getOperand(0)) && Op1.match(E->getOperand(1))) ||
+            (Commutable && Op0.match(E->getOperand(1)) &&
+             Op1.match(E->getOperand(0))));
   }
 };
 
-template <typename SCEVTy, typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t>
+template <typename SCEVTy, typename Op0_t, typename Op1_t,
+          bool Commutable = false>
+inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, Commutable>
 m_scev_Binary(const Op0_t &Op0, const Op1_t &Op1) {
-  return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t>(Op0, Op1);
+  return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, Commutable>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -213,6 +217,12 @@ template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t>
 m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVMulExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, true>
+m_scev_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, true>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

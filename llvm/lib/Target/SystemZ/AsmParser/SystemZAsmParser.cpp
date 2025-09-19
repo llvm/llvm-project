@@ -1339,7 +1339,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
     MatchClassKind Kind = Entry->OperandKinds[I];
 
     // Verify operand.
-    unsigned Res = validateOperandClass(Operand, Kind);
+    unsigned Res = validateOperandClass(Operand, Kind, *STI);
     if (Res != Match_Success)
       return Error(Operand.getStartLoc(), "unexpected operand type");
 

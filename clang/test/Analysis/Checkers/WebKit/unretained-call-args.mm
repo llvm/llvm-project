@@ -279,7 +279,7 @@ namespace cxx_member_func {
 
   void foo() {
     [provide() doWork];
-    // expected-warning@-1{{Reciever is unretained and unsafe}}
+    // expected-warning@-1{{Receiver is unretained and unsafe}}
     [protectedProvide().get() doWork];
 
     CFArrayAppendValue(provide_cf(), nullptr);

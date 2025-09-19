@@ -54,6 +54,13 @@ extern volatile int CppCoreGuidelinesModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CppCoreGuidelinesModuleAnchorDestination =
     CppCoreGuidelinesModuleAnchorSource;
 
+#if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
+// This anchor is used to force the linker to link the CustomModule.
+extern volatile int CustomModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED CustomModuleAnchorDestination =
+    CustomModuleAnchorSource;
+#endif
+
 // This anchor is used to force the linker to link the DarwinModule.
 extern volatile int DarwinModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED DarwinModuleAnchorDestination =

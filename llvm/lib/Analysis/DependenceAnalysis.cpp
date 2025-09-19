@@ -1170,6 +1170,15 @@ const SCEVConstant *DependenceInfo::collectConstantUpperBound(const Loop *L,
   return nullptr;
 }
 
+/// Returns \p A - \p B if it guaranteed not to signed wrap. Otherwise returns
+/// nullptr. \p A and \p B must have the same integer type.
+static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
+                                             ScalarEvolution &SE) {
+  if (SE.willNotOverflow(Instruction::Sub, /*Signed=*/true, A, B))
+    return SE.getMinusSCEV(A, B);
+  return nullptr;
+}
+
 // testZIV -
 // When we have a pair of subscripts of the form [c1] and [c2],
 // where c1 and c2 are both loop invariant, we attack it using
@@ -1626,7 +1635,9 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
   Result.Consistent = false;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   NewConstraint.setLine(SrcCoeff, SE->getNegativeSCEV(DstCoeff), Delta,
                         CurLoop);
@@ -1716,6 +1727,7 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   // explore directions
   unsigned NewDirection = Dependence::DVEntry::NONE;
   APInt LowerDistance, UpperDistance;
+  // TODO: Overflow check may be needed.
   if (TA.sgt(TB)) {
     LowerDistance = (TY - TX) + (TA - TB) * TL;
     UpperDistance = (TY - TX) + (TA - TB) * TU;

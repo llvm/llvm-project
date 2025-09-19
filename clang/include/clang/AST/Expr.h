@@ -6908,6 +6908,21 @@ public:
            getOp() == AO__scoped_atomic_compare_exchange_n;
   }
 
+  bool hasVal1Operand() const {
+    switch (getOp()) {
+    case AO__atomic_load_n:
+    case AO__scoped_atomic_load_n:
+    case AO__c11_atomic_load:
+    case AO__opencl_atomic_load:
+    case AO__hip_atomic_load:
+    case AO__atomic_test_and_set:
+    case AO__atomic_clear:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   bool isOpenCL() const {
     return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
            getOp() <= AO__opencl_atomic_store;

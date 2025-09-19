@@ -559,7 +559,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
 std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
-    if (STI.getTargetTriple().getArch() == Triple::x86_64) {
+    if (STI.getTargetTriple().isX86_64()) {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
@@ -1286,7 +1286,7 @@ public:
   DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
                       const MCSubtargetInfo &STI)
       : X86AsmBackend(T, STI), MRI(MRI), TT(STI.getTargetTriple()),
-        Is64Bit(TT.isArch64Bit()) {
+        Is64Bit(TT.isX86_64()) {
     memset(SavedRegs, 0, sizeof(SavedRegs));
     OffsetSize = Is64Bit ? 8 : 4;
     MoveInstrSize = Is64Bit ? 3 : 2;

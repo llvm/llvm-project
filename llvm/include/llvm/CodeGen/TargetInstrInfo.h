@@ -113,9 +113,16 @@ struct ExtAddrMode {
 ///
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
+  /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables
+  /// (i.e. the table for the active HwMode). This should be indexed by
+  /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
+  const int16_t *const RegClassByHwMode;
+
   TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
-                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u)
-      : CallFrameSetupOpcode(CFSetupOpcode),
+                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u,
+                  const int16_t *const RegClassByHwModeTable = nullptr)
+      : RegClassByHwMode(RegClassByHwModeTable),
+        CallFrameSetupOpcode(CFSetupOpcode),
         CallFrameDestroyOpcode(CFDestroyOpcode), CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
 
@@ -131,6 +138,18 @@ public:
   static bool isGenericAtomicRMWOpcode(unsigned Opc) {
     return Opc >= TargetOpcode::GENERIC_ATOMICRMW_OP_START &&
            Opc <= TargetOpcode::GENERIC_ATOMICRMW_OP_END;
+  }
+
+  /// \returns the subtarget appropriate RegClassID for \p OpInfo
+  ///
+  /// Note this shadows a version of getOpRegClassID in MCInstrInfo which takes
+  /// an additional argument for the subtarget's HwMode, since TargetInstrInfo
+  /// is owned by a subtarget in CodeGen but MCInstrInfo is a TargetMachine
+  /// constant.
+  int16_t getOpRegClassID(const MCOperandInfo &OpInfo) const {
+    if (OpInfo.isLookupRegClassByHwMode())
+      return RegClassByHwMode[OpInfo.RegClass];
+    return OpInfo.RegClass;
   }
 
   /// Given a machine instruction descriptor, returns the register

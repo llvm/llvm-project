@@ -3706,7 +3706,9 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCRegister TmpReg = DstReg;
 
   const MCInstrDesc &Desc = MII.get(OpCode);
-  int16_t DstRegClass = Desc.operands()[StartOp].RegClass;
+  int16_t DstRegClass =
+      MII.getOpRegClassID(Desc.operands()[StartOp],
+                          STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
@@ -3834,7 +3836,10 @@ void MipsAsmParser::expandMem9Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   MCRegister TmpReg = DstReg;
 
   const MCInstrDesc &Desc = MII.get(OpCode);
-  int16_t DstRegClass = Desc.operands()[StartOp].RegClass;
+  int16_t DstRegClass =
+      MII.getOpRegClassID(Desc.operands()[StartOp],
+                          STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||

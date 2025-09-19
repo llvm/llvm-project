@@ -159,14 +159,6 @@ static DecodeStatus DecodeI64RegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeIntRegsRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
-// This is used for the type "ptr_rc", which is either IntRegs or I64Regs
-// depending on SparcRegisterInfo::getPointerRegClass.
-static DecodeStatus DecodePointerLikeRegClass0(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  return DecodeIntRegsRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
 static DecodeStatus DecodeFPRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder) {
