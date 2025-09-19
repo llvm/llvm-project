@@ -5324,17 +5324,14 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
                              invertPermutationVector(outerDimsPerm));
   }
   for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
-    if (ShapedType::isDynamic(inputShape[pos]))
+    if (ShapedType::isDynamic(inputShape[pos]) ||
+        ShapedType::isDynamic(outputTileSizes[pos]))
       return true;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-
-    if (!constantTile) {
-      if (ShapedType::isStatic(outputTileSizes[pos]) &&
-          (inputShape[pos] % outputTileSizes[pos] != 0))
-        return true;
-    } else if (inputShape[pos] % (*constantTile) != 0) {
+    if (!constantTile)
       return true;
-    }
+    if (inputShape[pos] % (*constantTile) != 0)
+      return true;
   }
   return false;
 }
