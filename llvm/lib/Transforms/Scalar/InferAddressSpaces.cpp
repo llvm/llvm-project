@@ -1041,7 +1041,7 @@ bool InferAddressSpacesImpl::updateAddressSpace(
         break;
     }
     if (NewAS != FlatAddrSpace && NewAS != UninitializedAddressSpace) {
-      if (any_of(ConstantPtrOps, [&](Constant *C) {
+      if (any_of(ConstantPtrOps, [=](Constant *C) {
             return !isSafeToCastConstAddrSpace(C, NewAS);
           }))
         NewAS = FlatAddrSpace;
