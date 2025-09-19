@@ -2082,11 +2082,11 @@ def : Pat<(i64 (bitconvert (f64 (vector_extract v2f64:$vj, uimm1:$imm)))),
           (VPICKVE2GR_D v2f64:$vj, uimm1:$imm)>;
 
 // Vector extraction with constant index.
-def : Pat<(i64 (vector_extract v16i8:$vj, uimm4:$imm)),
+def : Pat<(GRLenVT (vector_extract v16i8:$vj, uimm4:$imm)),
           (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
-def : Pat<(i64 (vector_extract v8i16:$vj, uimm3:$imm)),
+def : Pat<(GRLenVT (vector_extract v8i16:$vj, uimm3:$imm)),
           (VPICKVE2GR_H v8i16:$vj, uimm3:$imm)>;
-def : Pat<(i64 (vector_extract v4i32:$vj, uimm2:$imm)),
+def : Pat<(GRLenVT (vector_extract v4i32:$vj, uimm2:$imm)),
           (VPICKVE2GR_W v4i32:$vj, uimm2:$imm)>;
 def : Pat<(i64 (vector_extract v2i64:$vj, uimm1:$imm)),
           (VPICKVE2GR_D v2i64:$vj, uimm1:$imm)>;
@@ -2096,28 +2096,28 @@ def : Pat<(f64 (vector_extract v2f64:$vj, uimm1:$imm)),
           (f64 (EXTRACT_SUBREG (VREPLVEI_D v2f64:$vj, uimm1:$imm), sub_64))>;
 
 // Vector extraction with variable index.
-def : Pat<(i64 (vector_extract v16i8:$vj, i64:$rk)),
+def : Pat<(GRLenVT (vector_extract v16i8:$vj, GRLenVT:$rk)),
           (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_B v16i8:$vj,
-                                                                    i64:$rk),
+                                                                    GRLenVT:$rk),
                                                          sub_32)),
-                                    GPR), (i64 24))>;
-def : Pat<(i64 (vector_extract v8i16:$vj, i64:$rk)),
+                                    GPR), (GRLenVT 24))>;
+def : Pat<(GRLenVT (vector_extract v8i16:$vj, GRLenVT:$rk)),
           (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_H v8i16:$vj,
-                                                                    i64:$rk),
+                                                                    GRLenVT:$rk),
                                                          sub_32)),
-                                    GPR), (i64 16))>;
-def : Pat<(i64 (vector_extract v4i32:$vj, i64:$rk)),
-          (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, i64:$rk),
+                                    GPR), (GRLenVT 16))>;
+def : Pat<(GRLenVT (vector_extract v4i32:$vj, GRLenVT:$rk)),
+          (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, GRLenVT:$rk),
                                                  sub_32)),
                             GPR)>;
 def : Pat<(i64 (vector_extract v2i64:$vj, i64:$rk)),
           (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, i64:$rk),
                                                  sub_64)),
                             GPR)>;
-def : Pat<(f32 (vector_extract v4f32:$vj, i64:$rk)),
-          (f32 (EXTRACT_SUBREG (VREPLVE_W v4f32:$vj, i64:$rk), sub_32))>;
-def : Pat<(f64 (vector_extract v2f64:$vj, i64:$rk)),
-          (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, i64:$rk), sub_64))>;
+def : Pat<(f32 (vector_extract v4f32:$vj, GRLenVT:$rk)),
+          (f32 (EXTRACT_SUBREG (VREPLVE_W v4f32:$vj, GRLenVT:$rk), sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, GRLenVT:$rk)),
+          (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, GRLenVT:$rk), sub_64))>;
 
 // vselect
 def : Pat<(v16i8 (vselect LSX128:$vd, (v16i8 (SplatPat_uimm8 uimm8:$imm)),
