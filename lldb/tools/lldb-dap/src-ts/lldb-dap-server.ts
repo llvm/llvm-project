@@ -123,25 +123,17 @@ export class LLDBDapServer implements vscode.Disposable {
       return true;
     }
 
-    // Check if the server has changed. If so, generate message and detail for user prompt.
-    const messageAndDetail = (() => {
-      if (this.serverFileChanged) {
-        return {
-          message:
-            "The lldb-dap binary has changed. Would you like to restart the server?",
-          detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with an old binary.
+    const changeTLDR = [];
+    const changeDetails = [];
 
-Restarting the server will interrupt any existing debug sessions and start a new server.`,
-        };
-      }
+    if (this.serverFileChanged) {
+      changeTLDR.push("an old binary");
+    }
 
-      const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
-      if (!isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
-        return {
-          message:
-            "The arguments to lldb-dap have changed. Would you like to restart the server?",
-          detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with different arguments.
-
+    const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
+    if (!isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
+      changeTLDR.push("different arguments");
+      changeDetails.push(`
 The previous lldb-dap server was started with:
 
 ${this.serverSpawnInfo.join(" ")}
@@ -149,26 +141,23 @@ ${this.serverSpawnInfo.join(" ")}
 The new lldb-dap server will be started with:
 
 ${newSpawnInfo.join(" ")}
-
-Restarting the server will interrupt any existing debug sessions and start a new server.`,
-        };
-      }
-
-      return null;
-    })();
+`
+      );
+    }
 
     // If the server hasn't changed, continue startup without killing it.
-    if (messageAndDetail === null) {
+    if (changeTLDR.length === 0) {
       return true;
     }
 
     // The server has changed. Prompt the user to restart it.
-    const { message, detail } = messageAndDetail;
     const userInput = await vscode.window.showInformationMessage(
-      message,
+      "The lldb-dap server has changed. Would you like to restart the server?",
       {
         modal: true,
-        detail,
+        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with ${changeTLDR.map(s => `*${s}*`).join(" and ")}.
+${changeDetails.join("\n")}
+Restarting the server will interrupt any existing debug sessions and start a new server.`,
       },
       "Restart",
       "Use Existing",
