@@ -6371,13 +6371,6 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
     return;
   }
 
-  // No VOP2 instructions support AGPRs.
-  if (Src0.isReg() && RI.isAGPR(MRI, Src0.getReg()))
-    legalizeOpWithMove(MI, Src0Idx);
-
-  if (Src1.isReg() && RI.isAGPR(MRI, Src1.getReg()))
-    legalizeOpWithMove(MI, Src1Idx);
-
   // Special case: V_FMAC_F32 and V_FMAC_F16 have src2.
   if (Opc == AMDGPU::V_FMAC_F32_e32 || Opc == AMDGPU::V_FMAC_F16_e32) {
     int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
@@ -6514,12 +6507,6 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
 
       --LiteralLimit;
       --ConstantBusLimit;
-      legalizeOpWithMove(MI, Idx);
-      continue;
-    }
-
-    if (RI.hasAGPRs(RI.getRegClassForReg(MRI, MO.getReg())) &&
-        !isOperandLegal(MI, Idx, &MO)) {
       legalizeOpWithMove(MI, Idx);
       continue;
     }
