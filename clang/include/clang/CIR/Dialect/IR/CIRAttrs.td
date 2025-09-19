@@ -811,8 +811,10 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
     ```
   }];
 
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        CIR_IntOrGlobalViewArrayAttr:$data);
+  let parameters = (ins
+    AttributeSelfTypeParameter<"">:$type,
+    CIR_IntOrGlobalViewArrayAttr:$data
+  );
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,

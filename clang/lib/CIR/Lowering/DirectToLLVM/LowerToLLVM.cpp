@@ -523,12 +523,12 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
 }
 
 // TypeInfoAttr visitor.
-mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeinfoAttr) {
-  mlir::Type llvmTy = converter->convertType(typeinfoAttr.getType());
+mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeInfoAttr) {
+  mlir::Type llvmTy = converter->convertType(typeInfoAttr.getType());
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
-  for (auto [idx, elt] : llvm::enumerate(typeinfoAttr.getData())) {
+  for (auto [idx, elt] : llvm::enumerate(typeInfoAttr.getData())) {
     mlir::Value init = visit(elt);
     result =
         mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);

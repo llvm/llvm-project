@@ -2745,9 +2745,9 @@ LogicalResult cir::AtomicCmpXchg::verify() {
 
 LogicalResult cir::TypeInfoAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-    ::mlir::Type type, ::mlir::ArrayAttr typeinfoData) {
+    ::mlir::Type type, ::mlir::ArrayAttr typeInfoData) {
 
-  if (cir::ConstRecordAttr::verify(emitError, type, typeinfoData).failed())
+  if (cir::ConstRecordAttr::verify(emitError, type, typeInfoData).failed())
     return failure();
 
   return success();
