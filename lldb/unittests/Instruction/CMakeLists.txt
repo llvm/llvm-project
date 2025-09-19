@@ -2,9 +2,11 @@ add_lldb_unittest(EmulatorTests
   ARM64/TestAArch64Emulator.cpp
   LoongArch/TestLoongArchEmulator.cpp
   RISCV/TestRISCVEmulator.cpp
+  RISCV/TestRiscvInstEmulation.cpp
 
   LINK_COMPONENTS
     Support
+    ${LLVM_TARGETS_TO_BUILD}
   LINK_LIBS
     lldbCore
     lldbSymbol
@@ -12,4 +14,7 @@ add_lldb_unittest(EmulatorTests
     lldbPluginInstructionARM64
     lldbPluginInstructionLoongArch
     lldbPluginInstructionRISCV
+    lldbPluginDisassemblerLLVMC
+    lldbPluginUnwindAssemblyInstEmulation
+    lldbPluginProcessUtility
   )
