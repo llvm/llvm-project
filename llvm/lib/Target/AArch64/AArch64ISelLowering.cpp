@@ -1923,6 +1923,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
+  // Handle floating-point partial reduction
+  if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+    static const unsigned FMLAOps[] = {ISD::PARTIAL_REDUCE_FMLA};
+    setPartialReduceMLAAction(FMLAOps, MVT::nxv4f32, MVT::nxv8f16, Legal);
+  }
+
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
