@@ -121,7 +121,6 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-
 define void @f_ssub(ptr nocapture %a) {
 ; CHECK-LABEL: @f_ssub(
 entry:
