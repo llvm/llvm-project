@@ -337,9 +337,9 @@ void ExecutionDomainFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
     }
     // Sorted insertion.
     // Enables giving priority to the latest domains during merging.
-    const int Def = RDA->getReachingDef(mi, RC->getRegister(rx));
+    const int Def = RDI->getReachingDef(mi, RC->getRegister(rx));
     auto I = partition_point(Regs, [&](int I) {
-      return RDA->getReachingDef(mi, RC->getRegister(I)) <= Def;
+      return RDI->getReachingDef(mi, RC->getRegister(I)) <= Def;
     });
     Regs.insert(I, rx);
   }
@@ -435,7 +435,7 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
   if (!anyregs)
     return false;
 
-  RDA = &getAnalysis<ReachingDefAnalysis>();
+  RDI = &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
 
   // Initialize the AliasMap on the first use.
   if (AliasMap.empty()) {
