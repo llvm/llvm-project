@@ -1646,6 +1646,7 @@ cc_library(
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -3720,6 +3721,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":Support",
         ":TransformUtils",
@@ -12175,6 +12177,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
@@ -12523,6 +12526,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ComplexDialect",
         ":DialectUtils",
         ":IR",
         ":MathDialect",

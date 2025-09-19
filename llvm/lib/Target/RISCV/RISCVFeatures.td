@@ -695,9 +695,6 @@ def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
-def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
-                        AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
-                            "'Zvfbfmin' (Vector BF16 Converts)">;
 
 def FeatureStdExtZvfbfwma
     : RISCVExtension<1, 0, "Vector BF16 widening mul-add",
@@ -722,6 +719,22 @@ def HasStdExtZfhOrZvfh
       AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZvfh),
                          "'Zfh' (Half-Precision Floating-Point) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
+
+def FeatureStdExtZvfofp8min
+    : RISCVExperimentalExtension<0, 2,
+                                 "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
+def HasStdExtZvfofp8min
+    : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfofp8min),
+                         "'Zvfofp8min' (Vector OFP8 Converts)">;
+
+def HasStdExtZvfbfminOrZvfofp8min
+    : Predicate<"Subtarget->hasStdExtZvfbfmin() ||"
+                "Subtarget->hasStdExtZvfofp8min()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvfbfmin,
+                             FeatureStdExtZvfofp8min),
+                         "'Zvfbfmin' (Vector BF16 Converts) or "
+                         "'Zvfofp8min' (Vector OFP8 Converts)">;
 
 // Vector Cryptography and Bitmanip Extensions
 
@@ -1498,6 +1511,8 @@ def HasVendorXqcicm
     : Predicate<"Subtarget->hasVendorXqcicm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicm),
                          "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
+def NoVendorXqcicm
+    : Predicate<"!Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcics
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Select Extension">;
@@ -1505,11 +1520,6 @@ def HasVendorXqcics
     : Predicate<"Subtarget->hasVendorXqcics()">,
       AssemblerPredicate<(all_of FeatureVendorXqcics),
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
-def NoVendorXqcics
-    : Predicate<"!Subtarget->hasVendorXqcics()">;
-
-def HasVendorXqcicsOrXqcicm
-    : Predicate<"Subtarget->hasVendorXqcics() || Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;

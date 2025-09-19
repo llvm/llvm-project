@@ -9,7 +9,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: define i32 @sudot(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
@@ -47,13 +47,13 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 ; CHECK-NOI8MM-LABEL: define i32 @sudot(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NOI8MM-NEXT:  entry:
-; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NOI8MM-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NOI8MM-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
@@ -91,7 +91,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NOI8MM-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[BIN_RDX]])
 ; CHECK-NOI8MM-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NOI8MM-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NOI8MM-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-NOI8MM:       scalar.ph:
 ;
 entry:
@@ -120,7 +120,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: define i32 @usdot(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
@@ -158,13 +158,13 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 ; CHECK-NOI8MM-LABEL: define i32 @usdot(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NOI8MM-NEXT:  entry:
-; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NOI8MM-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NOI8MM-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
@@ -202,7 +202,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NOI8MM-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[BIN_RDX]])
 ; CHECK-NOI8MM-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NOI8MM-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NOI8MM-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK-NOI8MM:       scalar.ph:
 ;
 entry:
@@ -231,7 +231,7 @@ define i32 @sudot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-LABEL: define i32 @sudot_neon(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -266,7 +266,7 @@ define i32 @sudot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NOI8MM-LABEL: define i32 @sudot_neon(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NOI8MM-NEXT:  entry:
-; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NOI8MM-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-NOI8MM:       vector.body:
@@ -324,7 +324,7 @@ define i32 @usdot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-LABEL: define i32 @usdot_neon(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -359,7 +359,7 @@ define i32 @usdot_neon(ptr %a, ptr %b) #1 {
 ; CHECK-NOI8MM-LABEL: define i32 @usdot_neon(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NOI8MM-NEXT:  entry:
-; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NOI8MM-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-NOI8MM:       vector.body:

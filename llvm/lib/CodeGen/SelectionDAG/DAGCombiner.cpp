@@ -16892,6 +16892,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   bool AllowMultipleMaybePoisonOperands =
       N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
       N0.getOpcode() == ISD::BUILD_VECTOR ||
+      N0.getOpcode() == ISD::INSERT_SUBVECTOR ||
       N0.getOpcode() == ISD::BUILD_PAIR ||
       N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
       N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
@@ -23363,6 +23364,13 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       InVec == InVal.getOperand(0) && EltNo == InVal.getOperand(1))
     return InVec;
 
+  // Remove insert of UNDEF/POISON elements.
+  if (InVal.isUndef()) {
+    if (InVal.getOpcode() == ISD::POISON || InVec.getOpcode() == ISD::UNDEF)
+      return InVec;
+    return DAG.getFreeze(InVec);
+  }
+
   if (!IndexC) {
     // If this is variable insert to undef vector, it might be better to splat:
     // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
@@ -27852,18 +27860,34 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   SDValue N2 = N->getOperand(2);
   uint64_t InsIdx = N->getConstantOperandVal(2);
 
-  // If inserting an UNDEF, just return the original vector.
-  if (N1.isUndef())
-    return N0;
+  // Remove insert of UNDEF/POISON.
+  if (N1.isUndef()) {
+    if (N1.getOpcode() == ISD::POISON || N0.getOpcode() == ISD::UNDEF)
+      return N0;
+    return DAG.getFreeze(N0);
+  }
 
-  // If this is an insert of an extracted vector into an undef vector, we can
-  // just use the input to the extract if the types match, and can simplify
+  // If this is an insert of an extracted vector into an undef/poison vector, we
+  // can just use the input to the extract if the types match, and can simplify
   // in some cases even if they don't.
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(1) == N2) {
+    EVT N1VT = N1.getValueType();
     EVT SrcVT = N1.getOperand(0).getValueType();
-    if (SrcVT == VT)
-      return N1.getOperand(0);
+    if (SrcVT == VT) {
+      // Need to ensure that result isn't more poisonous if skipping both the
+      // extract+insert.
+      if (N0.getOpcode() == ISD::POISON)
+        return N1.getOperand(0);
+      if (VT.isFixedLengthVector() && N1VT.isFixedLengthVector()) {
+        unsigned SubVecNumElts = N1VT.getVectorNumElements();
+        APInt EltMask = APInt::getBitsSet(VT.getVectorNumElements(), InsIdx,
+                                          InsIdx + SubVecNumElts);
+        if (DAG.isGuaranteedNotToBePoison(N1.getOperand(0), ~EltMask))
+          return N1.getOperand(0);
+      } else if (DAG.isGuaranteedNotToBePoison(N1.getOperand(0)))
+        return N1.getOperand(0);
+    }
     // TODO: To remove the zero check, need to adjust the offset to
     // a multiple of the new src type.
     if (isNullConstant(N2)) {

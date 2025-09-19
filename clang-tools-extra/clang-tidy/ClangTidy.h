@@ -56,16 +56,15 @@ private:
 /// Fills the list of check names that are enabled when the provided
 /// filters are applied.
 std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
-                                       bool AllowEnablingAnalyzerAlphaCheckers,
-                                       bool ExperimentalCustomChecks);
+                                       bool AllowEnablingAnalyzerAlphaCheckers);
 
 struct ChecksAndOptions {
   llvm::StringSet<> Checks;
   llvm::StringSet<> Options;
 };
 
-ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
-                                        bool ExperimentalCustomChecks);
+ChecksAndOptions
+getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers = true);
 
 /// Returns the effective check-specific options.
 ///
@@ -75,8 +74,7 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
 /// Options.
 ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
-                bool AllowEnablingAnalyzerAlphaCheckers,
-                bool ExperimentalCustomChecks);
+                bool AllowEnablingAnalyzerAlphaCheckers);
 
 /// Filters CheckOptions in \p Options to only include options specified in
 /// the \p EnabledChecks which is a sorted vector.
