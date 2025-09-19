@@ -500,6 +500,33 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = GPRValueMapping;
     break;
   }
+  case TargetOpcode::G_INTRINSIC: {
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+    if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+            RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+      unsigned ScalarIdx = -1;
+      if (II->hasScalarOperand()) {
+        ScalarIdx = II->ScalarOperand + 2;
+      }
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
+          continue;
+        LLT Ty = MRI.getType(MO.getReg());
+        if (Ty.isVector()) {
+          OpdsMapping[Idx] =
+              getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+        } else if (II->IsFPIntrinsic && ScalarIdx == Idx) {
+          // Chose the right FPR for scalar operand of RVV intrinsics.
+          OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
+        } else {
+          OpdsMapping[Idx] = GPRValueMapping;
+        }
+      }
+    }
+    break;
+  }
   default:
     // By default map all scalars to GPR.
     for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
