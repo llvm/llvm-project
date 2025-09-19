@@ -83,13 +83,12 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
   for (GlobalIFunc &IFunc : M.ifuncs()) {
     NumIFuncs++;
     LLVM_DEBUG(dbgs() << "doing ifunc " << IFunc.getName() << "\n");
-    // @update_foo = internal global { ptr @foo, ptr @foo_resolver }, section
-    // "ifunc_sec", align 8
+    // @__update_foo = private global { ptr @foo, ptr @foo_resolver },
+    //   section "ifunc_sec"
     std::string Name = (Twine(IFuncUpdatePrefix) + IFunc.getName()).str();
     auto *GV = new GlobalVariable(M, IFuncPairType, /*isConstant*/ false,
                                   GlobalValue::PrivateLinkage, nullptr, Name);
     GV->setAlignment(DL.getPointerPrefAlignment());
-    GV->setVisibility(GlobalValue::DefaultVisibility);
     GV->setSection(IFuncUpdateSectionName);
 
     // Note that on AIX, the address of a function is the address of it's

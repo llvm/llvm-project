@@ -3413,7 +3413,8 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
 
-static bool TOCRestoreNeeded(const GlobalIFunc &GI) {
+
+static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
   auto IsLocalFunc = [&](const Value *V) {
     if (!isa<Function>(V))
       return false;
@@ -3487,10 +3488,11 @@ static bool TOCRestoreNeeded(const GlobalIFunc &GI) {
  *   .vbyte  4, 0
  *   .csect .foo[PR],5
  *   .ref ifunc_sec.foo[RW]
- *   lwz 12, L..C3(2)
- *   lwz 12, 0(12)
+ *   ld 12, L..foo_desc(2)                   # load foo's descriptor address
+ *   ld 11, 16(12)                           # load the env pointer if target might be a non-C/C++ function, otherwise this load is omitted
+ *   ld 12, 0(12)                            # load foo.addr
  *   mtctr 12
- *   bctr
+ *   bctr                                    # branch to CR without setting LR so that callee returns to the caller of .foo
  *                                              # -- End function
  */
 void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
@@ -3565,15 +3567,16 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // ^^^^^^ TEMPORARY ^^^^^
 
   // generate the code for .foo now:
-  if (TOCRestoreNeeded(GI)) {
+  if (TOCRestoreNeededForCallToImplementation(GI)) {
     reportFatalUsageError(
-        "unimplmented: TOC register save/restore needed for function " +
+        "unimplemented: TOC register save/restore needed for function " +
         Twine(GI.getName()) +
-        ", check if -mllvm -ifunc-local=... applies to your case");
+        ", because couldn't prove all candidates are static or hidden/protected"
+        " visibility definitions");
     return;
   }
 
-  //  lwz 12, L..C3(2)
+  //  lwz 12, L..foo_desc(2)
   auto FnDescTOCEntryType = getTOCEntryTypeForLinkage(GI.getLinkage());
   auto *FnDescTOCEntrySym =
       lookUpOrCreateTOCEntry(CurrentFnDescSym, FnDescTOCEntryType);
@@ -3585,7 +3588,12 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
                                    .addExpr(Exp)
                                    .addReg(PPC::X2),
                                *Subtarget);
-
+  //  lwz 11, 8(12)
+  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                   .addReg(PPC::X11)
+                                   .addImm(IsPPC64 ? 16 : 8)
+                                   .addReg(PPC::X12),
+                               *Subtarget);
   //  lwz 12, 0(12)
   OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
                                    .addReg(PPC::X12)
