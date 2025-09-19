@@ -70,7 +70,7 @@ public:
 
   const int16_t *getRegClassByHwModeTable(unsigned ModeId) const {
     assert(RegClassByHwModeTables && NumRegClassByHwModes != 0 &&
-        "MCInstrInfo not properly initialized");
+          "MCInstrInfo not properly initialized");
     return &RegClassByHwModeTables[ModeId * NumRegClassByHwModes];
   }
 
