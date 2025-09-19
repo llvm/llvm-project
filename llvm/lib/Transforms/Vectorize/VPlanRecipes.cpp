@@ -2813,7 +2813,6 @@ VPExpressionRecipe::VPExpressionRecipe(
         continue;
       addOperand(Op);
       auto *Tmp = new VPValue();
-      Tmp->setUnderlyingValue(Op->getUnderlyingValue());
       LiveInPlaceholders.push_back(Tmp);
       // Only modify this recipe's operands if it's the last time it occurs in
       // the recipe list
