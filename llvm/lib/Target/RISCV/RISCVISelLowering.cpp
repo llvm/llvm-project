@@ -434,8 +434,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (!Subtarget.useCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov() &&
-      !Subtarget.hasVendorXqcicm() && !Subtarget.hasVendorXqcics())
+  if (!Subtarget.useCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
@@ -2506,6 +2505,14 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = ISD::SETGE;
         return;
       }
+      if ((Subtarget.hasVendorXqcicm() || Subtarget.hasVendorXqcicli()) &&
+          C != INT64_MAX && isInt<5>(C + 1)) {
+        // We have a conditional move instruction for SETGE but not SETGT.
+        // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
+        RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
+        CC = ISD::SETGE;
+        return;
+      }
       if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isInt<16>(C + 1)) {
         // We have a branch immediate instruction for SETGE but not SETGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit signed immediate.
@@ -2524,6 +2531,14 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
       }
       break;
     case ISD::SETUGT:
+      if ((Subtarget.hasVendorXqcicm() || Subtarget.hasVendorXqcicli()) &&
+          C != INT64_MAX && isUInt<5>(C + 1)) {
+        // We have a conditional move instruction for SETUGE but not SETUGT.
+        // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
+        RHS = DAG.getConstant(C + 1, DL, RHS.getValueType());
+        CC = ISD::SETUGE;
+        return;
+      }
       if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isUInt<16>(C + 1)) {
         // We have a branch immediate instruction for SETUGE but not SETUGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit unsigned
@@ -10718,7 +10733,7 @@ static SDValue lowerCttzElts(SDNode *N, SelectionDAG &DAG,
   return DAG.getSelect(DL, XLenVT, Setcc, VL, Res);
 }
 
-static inline void promoteVCIXScalar(const SDValue &Op,
+static inline void promoteVCIXScalar(SDValue Op,
                                      SmallVectorImpl<SDValue> &Operands,
                                      SelectionDAG &DAG) {
   const RISCVSubtarget &Subtarget =
@@ -10754,7 +10769,7 @@ static inline void promoteVCIXScalar(const SDValue &Op,
   }
 }
 
-static void processVCIXOperands(SDValue &OrigOp,
+static void processVCIXOperands(SDValue OrigOp,
                                 SmallVectorImpl<SDValue> &Operands,
                                 SelectionDAG &DAG) {
   promoteVCIXScalar(OrigOp, Operands, DAG);
@@ -11017,7 +11032,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
 }
 
-static inline SDValue getVCIXISDNodeWCHAIN(SDValue &Op, SelectionDAG &DAG,
+static inline SDValue getVCIXISDNodeWCHAIN(SDValue Op, SelectionDAG &DAG,
                                            unsigned Type) {
   SDLoc DL(Op);
   SmallVector<SDValue> Operands{Op->op_values()};
@@ -11054,7 +11069,7 @@ static inline SDValue getVCIXISDNodeWCHAIN(SDValue &Op, SelectionDAG &DAG,
   return NewNode;
 }
 
-static inline SDValue getVCIXISDNodeVOID(SDValue &Op, SelectionDAG &DAG,
+static inline SDValue getVCIXISDNodeVOID(SDValue Op, SelectionDAG &DAG,
                                          unsigned Type) {
   SmallVector<SDValue> Operands{Op->op_values()};
   Operands.erase(Operands.begin() + 1);
@@ -23449,7 +23464,6 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
 
   // Stores the assignment of the return value to a location.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -23484,8 +23498,8 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Register RegLo = VA.getLocReg();
       Register RegHi = RVLocs[++i].getLocReg();
 
-      if (STI.isRegisterReservedByUser(RegLo) ||
-          STI.isRegisterReservedByUser(RegHi))
+      if (Subtarget.isRegisterReservedByUser(RegLo) ||
+          Subtarget.isRegisterReservedByUser(RegHi))
         MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
             MF.getFunction(),
             "Return value register required, but has been reserved."});
@@ -23501,7 +23515,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Val = convertValVTToLocVT(DAG, Val, VA, DL, Subtarget);
       Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Glue);
 
-      if (STI.isRegisterReservedByUser(VA.getLocReg()))
+      if (Subtarget.isRegisterReservedByUser(VA.getLocReg()))
         MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
             MF.getFunction(),
             "Return value register required, but has been reserved."});
@@ -23538,11 +23552,11 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     if (Kind == "supervisor")
       RetOpc = RISCVISD::SRET_GLUE;
     else if (Kind == "rnmi") {
-      assert(STI.hasFeature(RISCV::FeatureStdExtSmrnmi) &&
+      assert(Subtarget.hasFeature(RISCV::FeatureStdExtSmrnmi) &&
              "Need Smrnmi extension for rnmi");
       RetOpc = RISCVISD::MNRET_GLUE;
     } else if (Kind == "qci-nest" || Kind == "qci-nonest") {
-      assert(STI.hasFeature(RISCV::FeatureVendorXqciint) &&
+      assert(Subtarget.hasFeature(RISCV::FeatureVendorXqciint) &&
              "Need Xqciint for qci-(no)nest");
       RetOpc = RISCVISD::QC_C_MILEAVERET_GLUE;
     } else
@@ -23556,10 +23570,9 @@ void RISCVTargetLowering::validateCCReservedRegs(
     const SmallVectorImpl<std::pair<llvm::Register, llvm::SDValue>> &Regs,
     MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
 
-  if (llvm::any_of(Regs, [&STI](auto Reg) {
-        return STI.isRegisterReservedByUser(Reg.first);
+  if (llvm::any_of(Regs, [this](auto Reg) {
+        return Subtarget.isRegisterReservedByUser(Reg.first);
       }))
     F.getContext().diagnose(DiagnosticInfoUnsupported{
         F, "Argument register required, but has been reserved."});
