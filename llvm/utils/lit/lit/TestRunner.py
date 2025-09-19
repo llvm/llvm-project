@@ -735,7 +735,11 @@ def _expandLateSubstitutions(cmd, arguments, cwd):
                 with open(filePath) as fileHandle:
                     return fileHandle.read()
             except FileNotFoundError:
-                raise InternalShellError(cmd, "File does not exist: %s" % filePath)
+                raise InternalShellError(
+                    cmd,
+                    "File specified in readfile substitution does not exist: %s"
+                    % filePath,
+                )
 
         arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
 
@@ -2414,12 +2418,14 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         status, output, attempts=i + 1, max_allowed_attempts=attempts
     )
 
+
 def _expandLateSubstitutionsExternal(commandLine):
     filePaths = []
+
     def _replaceReadFile(match):
         filePath = match.group(1)
         filePaths.append(filePath)
-        return "$(cat %s)" % filePath
+        return "$(cat %s)" % shlex.quote(filePath)
 
     commandLine = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, commandLine)
     # Add test commands before the command to check if the file exists as

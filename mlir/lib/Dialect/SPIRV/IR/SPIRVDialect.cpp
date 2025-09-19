@@ -251,10 +251,18 @@ static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (!llvm::isa<ImageType>(type)) {
+  auto imageType = dyn_cast<ImageType>(type);
+  if (!imageType) {
     parser.emitError(typeLoc,
                      "sampled image must be composed using image type, got ")
         << type;
+    return Type();
+  }
+
+  if (llvm::is_contained({Dim::SubpassData, Dim::Buffer}, imageType.getDim())) {
+    parser.emitError(
+        typeLoc, "sampled image Dim must not be SubpassData or Buffer, got ")
+        << stringifyDim(imageType.getDim());
     return Type();
   }
 

@@ -1561,13 +1561,12 @@ def VectorIndexHOperand : AsmVectorIndex<0, 7>;
 def VectorIndexSOperand : AsmVectorIndex<0, 3>;
 def VectorIndexDOperand : AsmVectorIndex<0, 1>;
 
-let OperandNamespace = "AArch64" in {
-  let OperandType = "OPERAND_IMPLICIT_IMM_0" in {
-    defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
-                                [{ return ((uint64_t)Imm) == 0; }]>;
-    defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
-                                [{ return ((uint32_t)Imm) == 0; }]>;
-  }
+let OperandNamespace = "AArch64", OperandType = "OPERAND_IMPLICIT_IMM_0",
+    DecoderMethod = "DecodeZeroImm" in {
+  defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
+                                  [{ return ((uint64_t)Imm) == 0; }]>;
+  defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
+                                     [{ return ((uint32_t)Imm) == 0; }]>;
 }
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
                                 [{ return ((uint64_t)Imm) == 1; }]>;
@@ -1620,6 +1619,7 @@ def sme_elm_idx0_0 : Operand<i32>, TImmLeaf<i32, [{
   let PrintMethod = "printMatrixIndex";
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
+  let DecoderMethod = "DecodeZeroImm";
 }
 def sme_elm_idx0_1 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) <= 1;
@@ -1683,6 +1683,7 @@ def uimm0s2range : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm0s2RangeOperand;
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
+  let DecoderMethod = "DecodeZeroImm";
 }
 
 def uimm0s4range : Operand<i64>, ImmLeaf<i64,
@@ -1691,6 +1692,7 @@ def uimm0s4range : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm0s4RangeOperand;
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
+  let DecoderMethod = "DecodeZeroImm";
 }
 
 def uimm1s2range : Operand<i64>, ImmLeaf<i64,
@@ -8220,18 +8222,23 @@ multiclass SMov {
   // streaming mode.
   let Predicates = [HasNEONandIsStreamingSafe] in {
     def vi8to32_idx0 : SIMDSMov<0, ".b", GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00001;
     }
     def vi8to64_idx0 : SIMDSMov<1, ".b", GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00001;
     }
     def vi16to32_idx0 : SIMDSMov<0, ".h", GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00010;
     }
     def vi16to64_idx0 : SIMDSMov<1, ".h", GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00010;
     }
     def vi32to64_idx0 : SIMDSMov<1, ".s", GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00100;
     }
   }
@@ -8267,15 +8274,19 @@ multiclass UMov {
   // streaming mode.
   let Predicates = [HasNEONandIsStreamingSafe] in {
     def vi8_idx0 : SIMDUMov<0, ".b", v16i8, GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00001;
     }
     def vi16_idx0 : SIMDUMov<0, ".h", v8i16, GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00010;
     }
     def vi32_idx0 : SIMDUMov<0, ".s", v4i32, GPR32, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b00100;
     }
     def vi64_idx0 : SIMDUMov<1, ".d", v2i64, GPR64, VectorIndex0> {
+      bits<0> idx;
       let Inst{20-16} = 0b01000;
     }
     def : SIMDMovAlias<"mov", ".s",

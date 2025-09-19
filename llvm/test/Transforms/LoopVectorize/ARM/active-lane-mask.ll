@@ -10,7 +10,7 @@ define void @f0(ptr noalias %dst, ptr readonly %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[VAL:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[VAL]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 31
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 32
@@ -36,7 +36,7 @@ define void @f0(ptr noalias %dst, ptr readonly %src, i64 %n) #0 {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
@@ -81,5 +81,7 @@ attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; CHECK: [[META4]] = !{!"llvm.loop.vectorize.width", i32 16}
+; CHECK: [[META5]] = !{!"llvm.loop.interleave.count", i32 2}
 ;.
