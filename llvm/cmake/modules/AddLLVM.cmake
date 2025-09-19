@@ -1888,15 +1888,10 @@ endfunction()
 # use it and can't be in a lit module. Use with make_paths_relative().
 string(CONCAT LLVM_LIT_PATH_FUNCTION
   "# Allow generated file to be relocatable.\n"
-  "import os\n"
-  "import platform\n"
+  "from pathlib import Path\n"
   "def path(p):\n"
   "    if not p: return ''\n"
-  "    # Follows lit.util.abs_path_preserve_drive, which cannot be imported here.\n"
-  "    if platform.system() == 'Windows':\n"
-  "        return os.path.abspath(os.path.join(os.path.dirname(__file__), p))\n"
-  "    else:\n"
-  "        return os.path.realpath(os.path.join(os.path.dirname(__file__), p))\n"
+  "    return str((Path(__file__).parent / p).resolve())\n"
   )
 
 # This function provides an automatic way to 'configure'-like generate a file
