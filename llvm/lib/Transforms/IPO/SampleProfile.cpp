@@ -2238,7 +2238,8 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
   return retval;
 }
 
-bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager &AM) {
+bool SampleProfileLoader::runOnFunction(Function &F,
+                                        ModuleAnalysisManager &AM) {
   LLVM_DEBUG(dbgs() << "\n\nProcessing Function " << F.getName() << "\n");
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
@@ -2290,9 +2291,8 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager &AM) 
   if (!F.getEntryCount())
     F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
-  auto &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
-          .getManager();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+                  .getManager();
   ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   if (FunctionSamples::ProfileIsCS)
