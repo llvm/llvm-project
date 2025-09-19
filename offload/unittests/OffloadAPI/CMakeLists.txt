@@ -35,6 +35,7 @@ add_offload_unittest("platform"
 
 add_offload_unittest("program"
     program/olCreateProgram.cpp
+    program/olIsValidBinary.cpp
     program/olDestroyProgram.cpp)
 
 add_offload_unittest("queue"

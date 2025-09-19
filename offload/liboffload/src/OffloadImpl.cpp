@@ -887,7 +887,6 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
 
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
-  // Make a copy of the program binary in case it is released by the caller.
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
   Expected<plugin::DeviceImageTy *> Res =
       Device->Device->loadBinary(Device->Device->Plugin, Buffer);
@@ -896,6 +895,14 @@ Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
   assert(*Res && "loadBinary returned nullptr");
 
   *Program = new ol_program_impl_t(*Res, (*Res)->getMemoryBuffer());
+  return Error::success();
+}
+
+Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
+                           size_t ProgDataSize, bool *IsValid) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+  *IsValid = Device->Device->Plugin.isDeviceCompatible(
+      Device->Device->getDeviceId(), Buffer);
   return Error::success();
 }
 
