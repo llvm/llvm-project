@@ -2978,7 +2978,6 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
       BLane = B.elem<T>(I).toAPSInt();
       CLane = C.elem<T>(I).toAPSInt();
     });
-
     unsigned BitWidth = ALane.getBitWidth();
     APInt RLane(BitWidth, 0);
     bool DstUnsigned = ALane.isUnsigned();
