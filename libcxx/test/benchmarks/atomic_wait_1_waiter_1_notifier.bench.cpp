@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// This benchmark is very expensive and we don't want to run it on a regular basis,
+// only to ensure the code doesn't rot.
+// REQUIRES: enable-benchmarks=dry-run
+
 #include "atomic_wait_helper.h"
 
 #include <atomic>

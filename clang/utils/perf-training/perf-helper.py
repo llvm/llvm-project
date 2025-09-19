@@ -238,6 +238,7 @@ def get_cc1_command_for_args(cmd, env):
             or ln.startswith("LLVM Profile Note")
             or ln.startswith(" (in-process)")
             or ln.startswith("Configuration file:")
+            or ln.startswith("Build config:")
             or " version " in ln
         ):
             continue

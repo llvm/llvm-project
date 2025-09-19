@@ -6,8 +6,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
-@skipIf(archs=no_match(["arm64", "arm64e"]))
+# On AArch64 systems, unused top bits of pointers can be used for other things.
+@skipIf(archs=no_match(["aarch64", "arm64", "arm64e"]))
+# Only run this test on systems where Top Byte Ignore is known to be enabled
+# and widely available (FreeBSD has support but only since recently).
+@skipUnlessPlatform(["linux"] + lldbplatformutil.getDarwinOSTriples())
 class TestArmPointerMetadataStripping(TestBase):
     # Use extra_symbols.json as a template to add a new symbol whose address
     # contains non-zero high order bits set.
