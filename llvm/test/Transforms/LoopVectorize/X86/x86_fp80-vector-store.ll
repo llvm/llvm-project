@@ -67,61 +67,18 @@ exit:
 define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; COST-LABEL: define void @test_replicating_store_x86_fp80_cost(
 ; COST-SAME: i32 [[N:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
-; COST-NEXT:  [[ENTRY:.*:]]
-; COST-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 2
-; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
-; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; COST:       [[VECTOR_SCEVCHECK]]:
-; COST-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
-; COST-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; COST-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], 4294967295
-; COST-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
-; COST:       [[VECTOR_PH]]:
-; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 8
-; COST-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
-; COST-NEXT:    br label %[[VECTOR_BODY:.*]]
-; COST:       [[VECTOR_BODY]]:
-; COST-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
-; COST-NEXT:    [[STEP_ADD_2:%.*]] = add <2 x i32> [[STEP_ADD]], splat (i32 2)
-; COST-NEXT:    [[STEP_ADD_3:%.*]] = add <2 x i32> [[STEP_ADD_2]], splat (i32 2)
-; COST-NEXT:    [[TMP4:%.*]] = zext <2 x i32> [[VEC_IND]] to <2 x i64>
-; COST-NEXT:    [[TMP5:%.*]] = zext <2 x i32> [[STEP_ADD]] to <2 x i64>
-; COST-NEXT:    [[TMP6:%.*]] = zext <2 x i32> [[STEP_ADD_2]] to <2 x i64>
-; COST-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[STEP_ADD_3]] to <2 x i64>
-; COST-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; COST-NEXT:    [[TMP9:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP8]]
-; COST-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; COST-NEXT:    [[TMP11:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP10]]
-; COST-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
-; COST-NEXT:    [[TMP13:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP12]]
-; COST-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
-; COST-NEXT:    [[TMP15:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP14]]
-; COST-NEXT:    [[TMP16:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
-; COST-NEXT:    [[TMP17:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP16]]
-; COST-NEXT:    [[TMP18:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
-; COST-NEXT:    [[TMP19:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP18]]
-; COST-NEXT:    [[TMP20:%.*]] = extractelement <2 x i64> [[TMP7]], i32 0
-; COST-NEXT:    [[TMP21:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP20]]
-; COST-NEXT:    [[TMP22:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
+; COST-NEXT:  [[ENTRY:.*]]:
+; COST-NEXT:    br label %[[LOOP:.*]]
+; COST:       [[LOOP]]:
+; COST-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COST-NEXT:    [[TMP22:%.*]] = zext i32 [[IV]] to i64
 ; COST-NEXT:    [[TMP23:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP22]]
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP9]], align 16
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP11]], align 16
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP13]], align 16
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP15]], align 16
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP17]], align 16
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP19]], align 16
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP21]], align 16
 ; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP23]], align 16
-; COST-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; COST-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD_3]], splat (i32 2)
-; COST-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; COST-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; COST:       [[MIDDLE_BLOCK]]:
-; COST-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
-; COST-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
-; COST:       [[SCALAR_PH]]:
+; COST-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; COST-NEXT:    [[EC:%.*]] = icmp ugt i32 [[IV]], [[N]]
+; COST-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; COST:       [[EXIT]]:
+; COST-NEXT:    ret void
 ;
 ; FORCED-LABEL: define void @test_replicating_store_x86_fp80_cost(
 ; FORCED-SAME: i32 [[N:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
