@@ -343,7 +343,7 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
         case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX:
           llvm::SmallVector<llvm::StringRef, 4> Parts;
           DescStrRef.split(Parts, '\0', /* MaxSplit = */ 4,
-                           /* KeepEmpty = */ false);
+                           /* KeepEmpty = */ true);
 
           // Ignore records with less than 4 strings.
           if (Parts.size() != 4) {
