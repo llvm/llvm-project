@@ -713,10 +713,11 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
 /// The array cannot be zero-length.
 ///
 /// \param begin - a type* denoting the first element of the array
-/// \param end - a type* denoting one past the end of the array
+/// \param numElements - the number of elements in the array
 /// \param elementType - the element type of the array
 /// \param destroyer - the function to call to destroy elements
-void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
+void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
+                                      mlir::Value numElements,
                                       QualType elementType,
                                       CharUnits elementAlign,
                                       Destroyer *destroyer) {
@@ -727,9 +728,24 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
   mlir::Type cirElementType = convertTypeForMem(elementType);
   cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
 
+  uint64_t size = 0;
+
+  // Optimize for a constant array size.
+  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
+    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>())
+      size = constIntAttr.getUInt();
+  } else {
+    cgm.errorNYI(begin.getDefiningOp()->getLoc(),
+                 "dynamic-length array expression");
+  }
+
+  auto arrayTy = cir::ArrayType::get(cirElementType, size);
+  mlir::Value arrayOp = builder.createPtrBitcast(begin, arrayTy);
+
   // Emit the dtor call that will execute for every array element.
   cir::ArrayDtor::create(
-      builder, *currSrcLoc, begin, [&](mlir::OpBuilder &b, mlir::Location loc) {
+      builder, *currSrcLoc, arrayOp,
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
         Address curAddr = Address(arg, cirElementType, elementAlign);
         assert(!cir::MissingFeatures::dtorCleanups());
@@ -772,8 +788,7 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
     return;
 
   mlir::Value begin = addr.getPointer();
-  mlir::Value end; // This will be used for future non-constant counts.
-  emitArrayDestroy(begin, end, type, elementAlign, destroyer);
+  emitArrayDestroy(begin, length, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
   if (constantCount.use_empty())
