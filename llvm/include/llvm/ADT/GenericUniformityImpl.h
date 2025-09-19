@@ -51,6 +51,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
@@ -406,6 +407,11 @@ public:
 
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
                                 const CycleT *);
+  /// @brief Uniformity of any instruction operands.
+  /// @param I instruction.
+  /// @return vector containing boolean value for corrosponding operands.
+  llvm::SmallVector<InstructionUniformity>
+  getOperandUniformities(const Instruction &I) const;
 
 protected:
   /// \brief Value/block pair representing a single phi input.

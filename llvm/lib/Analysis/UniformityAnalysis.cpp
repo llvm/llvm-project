@@ -29,6 +29,35 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
   return markDivergent(cast<Value>(&Instr));
 }
 
+template <>
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
+    const Use &U) const {
+  const auto *V = U.get();
+  if (isDivergent(V))
+    return true;
+  if (const auto *DefInstr = dyn_cast<Instruction>(V)) {
+    const auto *UseInstr = cast<Instruction>(U.getUser());
+    return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
+  }
+  return false;
+}
+
+template <>
+llvm::SmallVector<InstructionUniformity>
+llvm::GenericUniformityAnalysisImpl<SSAContext>::getOperandUniformities(
+    const Instruction &I) const {
+  SmallVector<InstructionUniformity> OperandUniformities;
+  for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
+    if (!isa<Instruction>(I.getOperand(i)) && !isa<Argument>(I.getOperand(i)))
+      continue;
+    const Use &U = I.getOperandUse(i);
+    OperandUniformities.push_back(isDivergentUse(U)
+                                      ? InstructionUniformity::Default
+                                      : InstructionUniformity::Uniform);
+  }
+  return OperandUniformities;
+}
+
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   for (auto &I : instructions(F)) {
     if (TTI->isSourceOfDivergence(&I))
@@ -47,9 +76,21 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
   for (const auto *User : V->users()) {
-    if (const auto *UserInstr = dyn_cast<const Instruction>(User)) {
+    const auto *UserInstr = dyn_cast<const Instruction>(User);
+    if (!UserInstr)
+      continue;
+
+    if (!TTI) {
       markDivergent(*UserInstr);
+      continue;
     }
+
+    auto Uniformity = TTI->getInstructionUniformity(
+        *UserInstr, getOperandUniformities(*UserInstr));
+    if (!Uniformity || *Uniformity == InstructionUniformity::Default)
+      markDivergent(*UserInstr); // fallback: conservative
+    else if (*Uniformity == InstructionUniformity::Uniform)
+      addUniformOverride(*UserInstr);
   }
 }
 
@@ -86,19 +127,6 @@ void llvm::GenericUniformityAnalysisImpl<
     markDivergent(*UserInstr);
     recordTemporalDivergence(&I, UserInstr, &DefCycle);
   }
-}
-
-template <>
-bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
-    const Use &U) const {
-  const auto *V = U.get();
-  if (isDivergent(V))
-    return true;
-  if (const auto *DefInstr = dyn_cast<Instruction>(V)) {
-    const auto *UseInstr = cast<Instruction>(U.getUser());
-    return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
-  }
-  return false;
 }
 
 // This ensures explicit instantiation of

@@ -23,7 +23,11 @@ enum class InstructionUniformity {
   AlwaysUniform,
 
   /// The result values can never be assumed to be uniform.
-  NeverUniform
+  NeverUniform,
+
+  /// The result value is uniform because one or more of its operand are
+  /// uniform.
+  Uniform
 };
 
 } // namespace llvm
