@@ -90,7 +90,7 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
         Returns whether the memory-space cast is lossless. A lossless
         memory-space cast must not lose any information encoded in the memory
         space. An example of such cast, is any conversion to the generic memory
-        space. 
+        space.
       }],
       "bool", "isLosslessCast"
     >
