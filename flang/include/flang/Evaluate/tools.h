@@ -380,7 +380,7 @@ const Symbol *IsArrayElement(const Expr<T> &expr, bool intoSubstring = true,
     bool skipComponents = false) {
   if (auto dataRef{ExtractDataRef(expr, intoSubstring)}) {
     for (const DataRef *ref{&*dataRef}; ref;) {
-      if (const Component * component{std::get_if<Component>(&ref->u)}) {
+      if (const Component *component{std::get_if<Component>(&ref->u)}) {
         ref = skipComponents ? &component->base() : nullptr;
       } else if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
         ref = &coarrayRef->base();
@@ -436,7 +436,7 @@ struct ExtractCoindexedObjectHelper {
     return common::visit(*this, dataRef.u);
   }
   std::optional<CoarrayRef> operator()(const NamedEntity &named) const {
-    if (const Component * component{named.UnwrapComponent()}) {
+    if (const Component *component{named.UnwrapComponent()}) {
       return (*this)(*component);
     } else {
       return std::nullopt;
@@ -969,7 +969,7 @@ template <typename A> const Symbol *GetLastSymbol(const A &x) {
 // its set of attributes, otherwise the empty set.  Also works on variables that
 // are pointer results of functions.
 template <typename A> semantics::Attrs GetAttrs(const A &x) {
-  if (const Symbol * symbol{GetLastSymbol(x)}) {
+  if (const Symbol *symbol{GetLastSymbol(x)}) {
     return symbol->attrs();
   } else {
     return {};
@@ -980,7 +980,7 @@ template <>
 inline semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
   if (IsVariable(x)) {
     if (const auto *procRef{UnwrapProcedureRef(x)}) {
-      if (const Symbol * interface{procRef->proc().GetInterfaceSymbol()}) {
+      if (const Symbol *interface{procRef->proc().GetInterfaceSymbol()}) {
         if (const auto *details{
                 interface->detailsIf<semantics::SubprogramDetails>()}) {
           if (details->isFunction() &&
@@ -992,7 +992,7 @@ inline semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
       }
     }
   }
-  if (const Symbol * symbol{GetLastSymbol(x)}) {
+  if (const Symbol *symbol{GetLastSymbol(x)}) {
     return symbol->attrs();
   } else {
     return {};
@@ -1543,6 +1543,8 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);

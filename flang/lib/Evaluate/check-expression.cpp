@@ -132,7 +132,7 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
-    } else if (proc.IsPure()) {
+    } else if (proc.IsPure() || proc.IsSimple()) {
       std::size_t j{0};
       for (const auto &arg : call.arguments()) {
         if (const auto *dataDummy{j < proc.dummyArguments.size()
@@ -320,7 +320,7 @@ public:
     return (*this)(x.left());
   }
   bool operator()(const ProcedureRef &x) const {
-    if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
+    if (const SpecificIntrinsic *intrinsic{x.proc().GetSpecificIntrinsic()}) {
       return intrinsic->characteristics.value().attrs.test(
                  characteristics::Procedure::Attr::NullPointer) ||
           intrinsic->characteristics.value().attrs.test(
@@ -1091,7 +1091,7 @@ public:
         upperIsLen = len && *upper >= *len;
       } else if (const auto *inquiry{
                      UnwrapConvertedExpr<DescriptorInquiry>(*upperExpr)};
-                 inquiry && inquiry->field() == DescriptorInquiry::Field::Len) {
+          inquiry && inquiry->field() == DescriptorInquiry::Field::Len) {
         upperIsLen =
             &parentDataRef.GetLastSymbol() == &inquiry->base().GetLastSymbol();
       }
@@ -1400,7 +1400,7 @@ public:
     }
   }
   Result operator()(const ProcedureDesignator &proc) const {
-    if (const Symbol * symbol{proc.GetSymbol()}) {
+    if (const Symbol *symbol{proc.GetSymbol()}) {
       const Symbol &ultimate{symbol->GetUltimate()};
       if (const auto *subp{
               ultimate.detailsIf<semantics::SubprogramDetails>()}) {

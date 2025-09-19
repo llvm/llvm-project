@@ -99,7 +99,7 @@ public:
   }
 
   const Symbol *GetAssumedTypeDummy() const {
-    if (const AssumedType * aType{std::get_if<AssumedType>(&u_)}) {
+    if (const AssumedType *aType{std::get_if<AssumedType>(&u_)}) {
       return &aType->symbol();
     } else {
       return nullptr;
@@ -219,6 +219,7 @@ struct ProcedureDesignator {
   int Rank() const;
   bool IsElemental() const;
   bool IsPure() const;
+  bool IsSimple() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
