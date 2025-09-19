@@ -1,3 +1,4 @@
+import { FSWatcher, watch as chokidarWatch } from 'chokidar';
 import * as child_process from "node:child_process";
 import * as path from "path";
 import { isDeepStrictEqual } from "util";
@@ -14,7 +15,7 @@ export class LLDBDapServer implements vscode.Disposable {
   private serverInfo?: Promise<{ host: string; port: number }>;
   private serverSpawnInfo?: string[];
   // Detects changes to the lldb-dap executable file since the server's startup.
-  private serverFileWatcher?: vscode.FileSystemWatcher;
+  private serverFileWatcher?: FSWatcher;
   // Indicates whether the lldb-dap executable file has changed since the server's startup.
   private serverFileChanged?: boolean;
 
@@ -91,15 +92,10 @@ export class LLDBDapServer implements vscode.Disposable {
       this.serverFileChanged = false;
       // Cannot do `createFileSystemWatcher(dapPath)` for a single file. Have to use `RelativePattern`.
       // See https://github.com/microsoft/vscode/issues/141011#issuecomment-1016772527
-      this.serverFileWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(
-          vscode.Uri.file(path.dirname(dapPath)),
-          path.basename(dapPath),
-        ),
-      );
-      this.serverFileWatcher.onDidChange(() => {
-        this.serverFileChanged = true;
-      });
+      this.serverFileWatcher = chokidarWatch(dapPath);
+      this.serverFileWatcher
+        .on('change', () => this.serverFileChanged = true)
+        .on('unlink', () => this.serverFileChanged = true);
     });
     return this.serverInfo;
   }
@@ -204,7 +200,7 @@ Restarting the server will interrupt any existing debug sessions and start a new
       this.serverProcess = undefined;
       this.serverInfo = undefined;
       this.serverSpawnInfo = undefined;
-      this.serverFileWatcher?.dispose();
+      this.serverFileWatcher?.close();
       this.serverFileWatcher = undefined;
       this.serverFileChanged = undefined;
     }
