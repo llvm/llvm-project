@@ -194,33 +194,14 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 
 const TargetRegisterClass *
 X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  switch (Kind) {
-  default: llvm_unreachable("Unexpected Kind in getPointerRegClass!");
-  case 0: // Normal GPRs.
-    if (IsTarget64BitLP64)
-      return &X86::GR64RegClass;
-    // If the target is 64bit but we have been told to use 32bit addresses,
-    // we can still use 64-bit register as long as we know the high bits
-    // are zeros.
-    // Reflect that in the returned register class.
-    return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
-  case 1: // Normal GPRs except the stack pointer (for encoding reasons).
-    if (IsTarget64BitLP64)
-      return &X86::GR64_NOSPRegClass;
-    // NOSP does not contain RIP, so no special case here.
-    return &X86::GR32_NOSPRegClass;
-  case 2: // NOREX GPRs.
-    if (IsTarget64BitLP64)
-      return &X86::GR64_NOREXRegClass;
-    return &X86::GR32_NOREXRegClass;
-  case 3: // NOREX GPRs except the stack pointer (for encoding reasons).
-    if (IsTarget64BitLP64)
-      return &X86::GR64_NOREX_NOSPRegClass;
-    // NOSP does not contain RIP, so no special case here.
-    return &X86::GR32_NOREX_NOSPRegClass;
-  case 4: // Available for tailcall (not callee-saved GPRs).
-    return Is64Bit ? &X86::GR64_TCRegClass : &X86::GR32_TCRegClass;
-  }
+  assert(Kind == 0 && "this should only be used for default cases");
+  if (IsTarget64BitLP64)
+    return &X86::GR64RegClass;
+  // If the target is 64bit but we have been told to use 32bit addresses,
+  // we can still use 64-bit register as long as we know the high bits
+  // are zeros.
+  // Reflect that in the returned register class.
+  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
 }
 
 const TargetRegisterClass *
