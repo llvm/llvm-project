@@ -17,7 +17,8 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZvfbfmin], Constraints = "@earlyclobber $vd",
+let Predicates = [HasStdExtZvfbfminOrZvfofp8min],
+    Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
 let RVVConstraint = WidenCvt, DestEEW = EEWSEWx2 in
 defm VFWCVTBF16_F_F_V : VWCVTF_FV_VS2<"vfwcvtbf16.f.f.v", 0b010010, 0b01101>;
