@@ -88,7 +88,7 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "unexpected end of file");
     }
-    bool hasArgs = Arg->getKind() != clang::tok::r_paren;
+    const bool hasArgs = Arg->getKind() != clang::tok::r_paren;
 
     Expected<CharSourceRange> BuilderRange = Builder(Result);
     if (!BuilderRange)
@@ -110,7 +110,7 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
                         ? "*this"
                         : llvm::formatv("*{}", BuilderText).str();
     }
-    StringRef OpType = GetText(CharSourceRange::getTokenRange(
+    const StringRef OpType = GetText(CharSourceRange::getTokenRange(
         LessToken->getEndLoc(), EndToken->getLastLoc()));
     Replace.Replacement = llvm::formatv("{}::create({}{}", OpType, BuilderText,
                                         hasArgs ? ", " : "");
