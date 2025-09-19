@@ -10,7 +10,6 @@
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
 #include "src/__support/arg_list.h"
-#include "src/stdio/printf.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
