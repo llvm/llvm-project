@@ -536,6 +536,15 @@ TEST(CommandMangler, StdLatestFlag) {
   EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
 }
 
+TEST(CommandMangler, StdLatestFlag_Inference) {
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+  Mangler(Cmd, "/Users/foo.hpp");
+  // Check that the /std:c++latest flag is not dropped during inference
+  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
