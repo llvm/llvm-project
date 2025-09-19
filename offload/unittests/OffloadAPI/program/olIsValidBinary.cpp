@@ -27,9 +27,23 @@ TEST_P(olIsValidBinaryTest, Success) {
   ASSERT_SUCCESS(
       olIsValidBinary(Device, DeviceBin->getBufferStart(), 0, &IsValid));
   ASSERT_FALSE(IsValid);
+}
 
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_NULL_POINTER,
-      olIsValidBinary(Device, nullptr, DeviceBin->getBufferSize(), &IsValid));
+TEST_P(olIsValidBinaryTest, Invalid) {
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  bool IsValid = false;
+  ASSERT_SUCCESS(
+      olIsValidBinary(Device, DeviceBin->getBufferStart(), 0, &IsValid));
+  ASSERT_FALSE(IsValid);
+}
+
+TEST_P(olIsValidBinaryTest, NullPointer) {
+  bool IsValid = false;
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olIsValidBinary(Device, nullptr, 42, &IsValid));
   ASSERT_FALSE(IsValid);
 }
