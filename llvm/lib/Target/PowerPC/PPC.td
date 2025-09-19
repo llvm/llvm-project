@@ -394,6 +394,12 @@ def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
 def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
 def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar PPC32 = DefaultMode;
+def PPC64 : HwMode<[In64BitMode]>;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
