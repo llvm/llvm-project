@@ -131,15 +131,16 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
                 ZeroReg);
       }
 
-      MachineInstr *NewMI =
-          BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
-                  TII->get(X86::INSERT_SUBREG), ZExt->getOperand(0).getReg())
-              .addReg(ZeroReg)
-              .addReg(Reg0)
-              .addImm(X86::sub_8bit);
-      // Copy the debug info instr-ref number from the zext to its replacement.
+      BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
+              TII->get(X86::INSERT_SUBREG), ZExt->getOperand(0).getReg())
+          .addReg(ZeroReg)
+          .addReg(Reg0)
+          .addImm(X86::sub_8bit);
+
       if (unsigned InstrNum = ZExt->peekDebugInstrNum())
-        NewMI->setDebugInstrNum(InstrNum);
+        ZExt->getParent()->getParent()->makeDebugValueSubstitution(
+            {InstrNum, 0}, {MI.getDebugInstrNum(), 0});
+
       ToErase.push_back(ZExt);
     }
   }

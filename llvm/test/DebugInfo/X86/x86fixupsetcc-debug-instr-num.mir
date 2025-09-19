@@ -3,8 +3,13 @@
 ## Check the debug-isntr-number transfers from MOVZX32rr8
 ## to its replacement INSERT_SUBREG.
 
-# CHECK: %[[#]]:gr32 = INSERT_SUBREG %[[#]], %[[#]], %subreg.sub_8bit,  debug-instr-number 1
-# CHECK-NEXT: DBG_INSTR_REF !4, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+# CHECK: debugValueSubstitutions:
+# CHECK:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+
+# CHECK: %[[#]]:gr8 = SETCCr 15, implicit $eflags,  debug-instr-number 2
+# CHECK: INSERT_SUBREG
+# CHECK-NOT: debug-instr-number
+# CHECK-NEXT: DBG_INSTR_REF ![[#]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 
 --- |
   source_filename = "reduced.ll"
