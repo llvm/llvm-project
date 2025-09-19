@@ -2863,8 +2863,7 @@ parsed constructs.
 Concept Satisfaction Checking and Subsumption
 ---------------------------------------------
 
-As per the C++ standard, constraints are
- `normalized <https://eel.is/c++draft/temp.constr.normal>`_
+As per the C++ standard, constraints are `normalized <https://eel.is/c++draft/temp.constr.normal>`_
 and the normal form is used both for subsumption, and constraint checking.
 Both depend on a parameter mapping that substitutes lazily. In particular,
 we should not substitute in unused arguments.
