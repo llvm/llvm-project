@@ -1516,6 +1516,7 @@ enum NodeType {
   PARTIAL_REDUCE_SMLA,  // sext, sext
   PARTIAL_REDUCE_UMLA,  // zext, zext
   PARTIAL_REDUCE_SUMLA, // sext, zext
+  PARTIAL_REDUCE_FMLA,  // fpext, fpext
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
@@ -1767,7 +1768,7 @@ LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
-         Opcode == ISD::SIGN_EXTEND;
+         Opcode == ISD::SIGN_EXTEND || Opcode == ISD::FP_EXTEND;
 }
 
 inline bool isExtVecInRegOpcode(unsigned Opcode) {
