@@ -15613,6 +15613,16 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
       SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
       return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
     }
+
+    // Optimization: Fold i128 equality/inequality compares of two loads into a
+    // vectorized compare using vcmpequb.p when VSX is available.
+    //
+    // Rationale:
+    //   A scalar i128 SETCC (eq/ne) normally lowers to multiple scalar ops.
+    //   On VSX-capable subtargets, we can instead reinterpret the i128 loads
+    //   as v16i8 vectors and use the Altivec/VSX vcmpequb.p instruction to
+    //   perform a full 128-bit equality check in a single vector compare.
+
     if (Subtarget.hasVSX()) {
       if (LHS.getOpcode() == ISD::LOAD && RHS.getOpcode() == ISD::LOAD &&
           LHS.hasOneUse() && RHS.hasOneUse() &&
@@ -15647,8 +15657,25 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
         if (LA->getExtensionType() != ISD::NON_EXTLOAD ||
             LB->getExtensionType() != ISD::NON_EXTLOAD)
           return SDValue();
-        // Build new v16i8 loads using the same chain/base/MMO (no extra memory
-        // op).
+
+        // Following code transforms the DAG
+        // t0: ch,glue = EntryToken
+        // t2: i64,ch = CopyFromReg t0, Register:i64 %0
+        // t3: i128,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
+        // undef:i64 t4: i64,ch = CopyFromReg t0, Register:i64 %1 t5: i128,ch =
+        // load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64 t6: i1 =
+        // setcc t3, t5, setne:ch
+        //
+        //  ---->
+        //
+        // t0: ch,glue = EntryToken
+        // t2: i64,ch = CopyFromReg t0, Register:i64 %0
+        // t3: v16i8,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
+        // undef:i64 t4: i64,ch = CopyFromReg t0, Register:i64 %1 t5: v16i8,ch =
+        // load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64 t6: i32 =
+        // llvm.ppc.altivec.vcmpequb.p TargetConstant:i32<10505>,
+        // Constant:i32<2>, t3, t5 t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
+
         SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(),
                                      LA->getBasePtr(), LA->getMemOperand());
         SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(),
@@ -15659,9 +15686,8 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                   Subtarget.isPPC64() ? MVT::i64 : MVT::i32);
         SDValue CRSel =
             DAG.getConstant(2, DL, MVT::i32); // which CR6 predicate field
-        SDValue Ops[] = {IntrID, CRSel, LHSVec, RHSVec};
-        SDValue PredResult =
-            DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, Ops);
+        SDValue PredResult = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                                         IntrID, CRSel, LHSVec, RHSVec);
 
         // ppc_altivec_vcmpequb_p returns 1 when two vectors are the same,
         // so we need to invert the CC opcode.
