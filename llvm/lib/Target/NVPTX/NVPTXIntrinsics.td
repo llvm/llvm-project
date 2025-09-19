@@ -1782,11 +1782,32 @@ def : Pat<(int_nvvm_ff2bf16x2_rn_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, C
 def : Pat<(int_nvvm_ff2bf16x2_rz f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRZ)>;
 def : Pat<(int_nvvm_ff2bf16x2_rz_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRZ_RELU)>;
 
+let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+def : Pat<(int_nvvm_ff2bf16x2_rs f32:$a, f32:$b, i32:$c),
+          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2bf16x2_rs_relu f32:$a, f32:$b, i32:$c),
+          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
+def : Pat<(int_nvvm_ff2bf16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
+          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2bf16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c),  
+          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
+}
+
 def : Pat<(int_nvvm_ff2f16x2_rn f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRN)>;
 def : Pat<(int_nvvm_ff2f16x2_rn_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRN_RELU)>;
 def : Pat<(int_nvvm_ff2f16x2_rz f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRZ)>;
 def : Pat<(int_nvvm_ff2f16x2_rz_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRZ_RELU)>;
 
+let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+def : Pat<(int_nvvm_ff2f16x2_rs f32:$a, f32:$b, i32:$c),
+          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2f16x2_rs_relu f32:$a, f32:$b, i32:$c),
+          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
+def : Pat<(int_nvvm_ff2f16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
+          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
+def : Pat<(int_nvvm_ff2f16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c), 
+          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
+}
 def : Pat<(int_nvvm_f2bf16_rn f32:$a),      (CVT_bf16_f32 $a, CvtRN)>;
 def : Pat<(int_nvvm_f2bf16_rn_relu f32:$a), (CVT_bf16_f32 $a, CvtRN_RELU)>;
 def : Pat<(int_nvvm_f2bf16_rz f32:$a),      (CVT_bf16_f32 $a, CvtRZ)>;
@@ -1927,6 +1948,45 @@ let Predicates = [hasPTX<86>, hasSM<100>, hasArchAccelFeatures] in {
 
   def : Pat<(int_nvvm_ue8m0x2_to_bf16x2 i16:$a),
             (CVT_bf16x2_ue8m0x2 $a)>;
+}
+
+// RS rounding mode conversions
+let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
+// FP8x4 conversions
+def : Pat<(int_nvvm_ff_to_e4m3x4_rs_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e4m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
+def : Pat<(int_nvvm_ff_to_e4m3x4_rs_relu_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e4m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+def : Pat<(int_nvvm_ff_to_e5m2x4_rs_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e5m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
+def : Pat<(int_nvvm_ff_to_e5m2x4_rs_relu_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e5m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+
+// FP6x4 conversions
+def : Pat<(int_nvvm_ff_to_e2m3x4_rs_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e2m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
+def : Pat<(int_nvvm_ff_to_e2m3x4_rs_relu_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e2m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+def : Pat<(int_nvvm_ff_to_e3m2x4_rs_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e3m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
+def : Pat<(int_nvvm_ff_to_e3m2x4_rs_relu_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e3m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+
+// FP4x4 conversions
+def : Pat<(int_nvvm_ff_to_e2m1x4_rs_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e2m1x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
+def : Pat<(int_nvvm_ff_to_e2m1x4_rs_relu_satfinite
+             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
+          (CVT_e2m1x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
 }
 
 //
