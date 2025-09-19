@@ -17489,9 +17489,18 @@ struct CombineResult {
       Passthru = DAG.getUNDEF(Root->getValueType(0));
       break;
     }
-    return DAG.getNode(TargetOpcode, SDLoc(Root), Root->getValueType(0),
-                       LHS.getOrCreateExtendedOp(Root, DAG, Subtarget, LHSExt),
-                       RHS.getOrCreateExtendedOp(Root, DAG, Subtarget, RHSExt),
+    SDValue L = LHS.getOrCreateExtendedOp(Root, DAG, Subtarget, LHSExt);
+    SDValue R = RHS.getOrCreateExtendedOp(Root, DAG, Subtarget, RHSExt);
+    // Return SDValue() if the instructions are not reduced.
+    if (L->getOpcode() == Root->getOperand(0).getOpcode() &&
+        (R->getOpcode() == RISCVISD::VZEXT_VL ||
+         R->getOpcode() == RISCVISD::VSEXT_VL) &&
+        (R->getOperand(0).getOpcode() != ISD::SPLAT_VECTOR &&
+         R->getOperand(0).getOpcode() != RISCVISD::VMV_V_X_VL &&
+         R->getOperand(0).getOpcode() != ISD::INSERT_SUBVECTOR))
+      return SDValue();
+
+    return DAG.getNode(TargetOpcode, SDLoc(Root), Root->getValueType(0), L, R,
                        Passthru, Mask, VL);
   }
 };
@@ -17740,6 +17749,30 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
   if (!NodeExtensionHelper::isSupportedRoot(N, Subtarget))
     return SDValue();
 
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  unsigned Opc0 = Op0.getOpcode();
+  unsigned Opc1 = Op1.getOpcode();
+  // Do not combine to the 'vw' instructions if the number of extended
+  // instructions cannot be reduced.
+  // vx and vi, if v is ext_mf4/ext_mf8
+  // vv, if op0 is ext_mf4/ext_mf8 and op1 is ext_mf8(except: imm and scalar)
+  if ((Opc0 == RISCVISD::VZEXT_VL || Opc0 == RISCVISD::VSEXT_VL ||
+       Opc0 == ISD::ZERO_EXTEND || Opc0 == ISD::SIGN_EXTEND) &&
+      (N->getValueType(0).getScalarSizeInBits() >
+       Op0.getOperand(0)->getValueType(0).getScalarSizeInBits() * 2) &&
+      (Opc1 == ISD::SPLAT_VECTOR || Opc1 == RISCVISD::VMV_V_X_VL ||
+       Opc1 == ISD::INSERT_SUBVECTOR ||
+       ((Opc1 == RISCVISD::VZEXT_VL || Opc1 == RISCVISD::VSEXT_VL ||
+         Opc1 == ISD::ZERO_EXTEND || Opc1 == ISD::SIGN_EXTEND) &&
+        Op1.getOperand(0).getOpcode() != ISD::SPLAT_VECTOR &&
+        Op1.getOperand(0).getOpcode() != RISCVISD::VMV_V_X_VL &&
+        Op1.getOperand(0).getOpcode() != ISD::INSERT_SUBVECTOR &&
+        Op1->getValueType(0).getScalarSizeInBits() >
+            Op1.getOperand(0)->getValueType(0).getScalarSizeInBits() * 4))) {
+    return SDValue();
+  }
+
   SmallVector<SDNode *> Worklist;
   SmallPtrSet<SDNode *, 8> Inserted;
   Worklist.push_back(N);
@@ -17817,6 +17850,9 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
   ValuesToReplace.reserve(CombinesToApply.size());
   for (CombineResult Res : CombinesToApply) {
     SDValue NewValue = Res.materialize(DAG, Subtarget);
+    if (!NewValue)
+      return SDValue();
+
     if (!InputRootReplacement) {
       assert(Res.Root == N &&
              "First element is expected to be the current node");

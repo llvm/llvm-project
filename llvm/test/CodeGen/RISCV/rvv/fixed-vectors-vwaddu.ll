@@ -869,12 +869,9 @@ define <4 x i64> @crash(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vsext.vf4 v8, v11
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v11, v10
-; CHECK-NEXT:    vwaddu.wv v8, v8, v11
+; CHECK-NEXT:    vsext.vf4 v10, v8
+; CHECK-NEXT:    vzext.vf4 v12, v9
+; CHECK-NEXT:    vadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %a = sext <4 x i16> %x to <4 x i64>
   %b = zext <4 x i16> %y to <4 x i64>

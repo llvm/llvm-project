@@ -716,10 +716,10 @@ define <4 x i64> @vwsll_vv_v4i64_v4i8_zext(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v4i64_v4i8_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf4 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf4 v11, v9
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v10, v11
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vzext.vf8 v10, v8
+; CHECK-ZVBB-NEXT:    vzext.vf8 v12, v9
+; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i8> %a to <4 x i64>
   %y = zext <4 x i8> %b to <4 x i64>
@@ -917,9 +917,9 @@ define <4 x i64> @vwsll_vi_v4i64_v4i8(<4 x i8> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v4i64_v4i8:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf4 v10, v8
-; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vzext.vf8 v10, v8
+; CHECK-ZVBB-NEXT:    vsll.vi v8, v10, 2
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i8> %a to <4 x i64>
   %z = shl <4 x i64> %x, splat (i64 2)
