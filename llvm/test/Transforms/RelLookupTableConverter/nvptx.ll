@@ -3,6 +3,8 @@
 ; REQUIRES: nvptx-registered-target
 target triple = "nvptx64-nvidia-cuda"
 
+; Do not produce relative lookup table for nvptx target.
+
 @a1 = internal constant i32 0, align 4
 @b1 = internal constant i32 0, align 4
 @c1 = internal constant i32 0, align 4
@@ -15,19 +17,16 @@ target triple = "nvptx64-nvidia-cuda"
 ; CHECK: @b1 = internal constant i32 0, align 4
 ; CHECK: @c1 = internal constant i32 0, align 4
 ; CHECK: @d1 = internal constant i32 0, align 4
-; CHECK: @switch.table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a1 to i64), i64 ptrtoint (ptr @switch.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b1 to i64), i64 ptrtoint (ptr @switch.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c1 to i64), i64 ptrtoint (ptr @switch.table.rel to i64)) to i32)], align 4
+; CHECK: @switch.table = private unnamed_addr constant [3 x ptr] [ptr @a1, ptr @b1, ptr @c1], align 8
 ;.
 define ptr @internal_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @internal_linkage(
 ; CHECK-SAME: i32 [[COND:%.*]]) {
-; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.rel, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x ptr], ptr @switch.table, i32 0, i32 [[COND]]
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
 ;
   %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table, i32 0, i32 %cond
   %switch.load = load ptr, ptr %switch.gep, align 8
   ret ptr %switch.load
 }
-;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-;.
