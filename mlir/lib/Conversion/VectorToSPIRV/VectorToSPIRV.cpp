@@ -57,7 +57,7 @@ static int getNumBits(Type type) {
 namespace {
 
 struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ShapeCastOp shapeCastOp, OpAdaptor adaptor,
@@ -83,7 +83,7 @@ struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
 // `vector.broadcast` to SPIRV via other patterns.
 struct VectorSplatToBroadcast final
     : public OpConversionPattern<vector::SplatOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -95,7 +95,7 @@ struct VectorSplatToBroadcast final
 
 struct VectorBitcastConvert final
     : public OpConversionPattern<vector::BitCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::BitCastOp bitcastOp, OpAdaptor adaptor,
@@ -128,7 +128,7 @@ struct VectorBitcastConvert final
 
 struct VectorBroadcastConvert final
     : public OpConversionPattern<vector::BroadcastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::BroadcastOp castOp, OpAdaptor adaptor,
@@ -180,7 +180,7 @@ static Value sanitizeDynamicIndex(ConversionPatternRewriter &rewriter,
 
 struct VectorExtractOpConvert final
     : public OpConversionPattern<vector::ExtractOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
@@ -217,7 +217,7 @@ struct VectorExtractOpConvert final
 
 struct VectorExtractStridedSliceOpConvert final
     : public OpConversionPattern<vector::ExtractStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
@@ -254,7 +254,7 @@ struct VectorExtractStridedSliceOpConvert final
 
 template <class SPIRVFMAOp>
 struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::FMAOp fmaOp, OpAdaptor adaptor,
@@ -270,7 +270,7 @@ struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
 
 struct VectorFromElementsOpConvert final
     : public OpConversionPattern<vector::FromElementsOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::FromElementsOp op, OpAdaptor adaptor,
@@ -296,7 +296,7 @@ struct VectorFromElementsOpConvert final
 
 struct VectorInsertOpConvert final
     : public OpConversionPattern<vector::InsertOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
@@ -337,7 +337,7 @@ struct VectorInsertOpConvert final
 
 struct VectorInsertStridedSliceOpConvert final
     : public OpConversionPattern<vector::InsertStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::InsertStridedSliceOp insertOp, OpAdaptor adaptor,
@@ -419,7 +419,7 @@ FailureOr<ReductionRewriteInfo> static getReductionInfo(
 template <typename SPIRVUMaxOp, typename SPIRVUMinOp, typename SPIRVSMaxOp,
           typename SPIRVSMinOp>
 struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp reduceOp, OpAdaptor adaptor,
@@ -476,7 +476,7 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 template <typename SPIRVFMaxOp, typename SPIRVFMinOp>
 struct VectorReductionFloatMinMax final
     : OpConversionPattern<vector::ReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp reduceOp, OpAdaptor adaptor,
@@ -516,7 +516,7 @@ struct VectorReductionFloatMinMax final
 class VectorScalarBroadcastPattern final
     : public OpConversionPattern<vector::BroadcastOp> {
 public:
-  using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::BroadcastOp op, OpAdaptor adaptor,
@@ -543,7 +543,7 @@ public:
 
 struct VectorShuffleOpConvert final
     : public OpConversionPattern<vector::ShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
@@ -609,7 +609,7 @@ struct VectorShuffleOpConvert final
 
 struct VectorInterleaveOpConvert final
     : public OpConversionPattern<vector::InterleaveOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::InterleaveOp interleaveOp, OpAdaptor adaptor,
@@ -650,7 +650,7 @@ struct VectorInterleaveOpConvert final
 
 struct VectorDeinterleaveOpConvert final
     : public OpConversionPattern<vector::DeinterleaveOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::DeinterleaveOp deinterleaveOp, OpAdaptor adaptor,
@@ -712,7 +712,7 @@ struct VectorDeinterleaveOpConvert final
 
 struct VectorLoadOpConverter final
     : public OpConversionPattern<vector::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
@@ -778,7 +778,7 @@ struct VectorLoadOpConverter final
 
 struct VectorStoreOpConverter final
     : public OpConversionPattern<vector::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
@@ -933,7 +933,7 @@ private:
 
 struct VectorReductionToFPDotProd final
     : OpConversionPattern<vector::ReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp op, OpAdaptor adaptor,
@@ -989,7 +989,7 @@ struct VectorReductionToFPDotProd final
 };
 
 struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
@@ -1028,7 +1028,7 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 
 struct VectorToElementOpConvert final
     : OpConversionPattern<vector::ToElementsOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
