@@ -124,13 +124,6 @@ cl::opt<bool> ClCoverReplaceableNew("alloc-token-cover-replaceable-new",
                                     cl::desc("Cover replaceable operator new"),
                                     cl::Hidden, cl::init(true));
 
-// strdup-family functions only operate on strings, covering them does not make
-// sense in most cases.
-cl::opt<bool>
-    ClCoverStrdup("alloc-token-cover-strdup",
-                  cl::desc("Cover strdup-family allocation functions"),
-                  cl::Hidden, cl::init(false));
-
 cl::opt<uint64_t> ClFallbackToken(
     "alloc-token-fallback",
     cl::desc("The default fallback token where none could be determined"),
@@ -139,7 +132,7 @@ cl::opt<uint64_t> ClFallbackToken(
 //===--- Statistics -------------------------------------------------------===//
 
 STATISTIC(NumFunctionsInstrumented, "Functions instrumented");
-STATISTIC(NumAllocations, "Allocations found");
+STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 
 //===----------------------------------------------------------------------===//
 
@@ -220,12 +213,13 @@ protected:
       return {N, xxHash64(S->getString())};
     }
     // Fallback.
-    remarkNoHint(CB, ORE);
+    remarkNoMetadata(CB, ORE);
     return {nullptr, ClFallbackToken};
   }
 
   /// Remark that there was no precise type information.
-  void remarkNoHint(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+  static void remarkNoMetadata(const CallBase &CB,
+                               OptimizationRemarkEmitter &ORE) {
     ORE.emit([&] {
       ore::NV FuncNV("Function", CB.getParent()->getParent());
       const Function *Callee = CB.getCalledFunction();
@@ -258,12 +252,12 @@ public:
 };
 
 // Apply opt overrides.
-AllocTokenOptions &&transformOptionsFromCl(AllocTokenOptions &&Opts) {
+AllocTokenOptions transformOptionsFromCl(AllocTokenOptions Opts) {
   if (!Opts.MaxTokens.has_value())
     Opts.MaxTokens = ClMaxTokens;
   Opts.FastABI |= ClFastABI;
   Opts.Extended |= ClExtended;
-  return std::move(Opts);
+  return Opts;
 }
 
 class AllocToken {
@@ -301,7 +295,7 @@ private:
 
   /// Replace a call/invoke with a call/invoke to the allocation function
   /// with token ID.
-  void replaceAllocationCall(CallBase *CB, LibFunc Func,
+  bool replaceAllocationCall(CallBase *CB, LibFunc Func,
                              OptimizationRemarkEmitter &ORE,
                              const TargetLibraryInfo &TLI);
 
@@ -365,15 +359,13 @@ bool AllocToken::instrumentFunction(Function &F) {
     }
   }
 
-  if (AllocCalls.empty())
-    return false;
-
+  bool Modified = false;
   for (auto &[CB, Func] : AllocCalls)
-    replaceAllocationCall(CB, Func, ORE, TLI);
-  NumAllocations += AllocCalls.size();
-  NumFunctionsInstrumented++;
+    Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
 
-  return true;
+  if (Modified)
+    NumFunctionsInstrumented++;
+  return Modified;
 }
 
 bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const Value *V,
@@ -424,24 +416,26 @@ bool AllocToken::ignoreInstrumentableLibFunc(LibFunc Func) {
   case LibFunc_dunder_strdup:
   case LibFunc_strndup:
   case LibFunc_dunder_strndup:
-    return !ClCoverStrdup;
+    return true;
   default:
     return false;
   }
 }
 
-void AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
+bool AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
                                        OptimizationRemarkEmitter &ORE,
                                        const TargetLibraryInfo &TLI) {
   uint64_t TokenID = getToken(*CB, ORE);
 
   FunctionCallee TokenAlloc = getTokenAllocFunction(*CB, TokenID, Func);
   if (!TokenAlloc)
-    return;
+    return false;
+  NumAllocationsInstrumented++;
+
   if (Options.FastABI) {
     assert(TokenAlloc.getFunctionType()->getNumParams() == CB->arg_size());
     CB->setCalledFunction(TokenAlloc);
-    return;
+    return true;
   }
 
   IRBuilder<> IRB(CB);
@@ -467,6 +461,7 @@ void AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
   // Replace all uses and delete the old call.
   CB->replaceAllUsesWith(NewCall);
   CB->eraseFromParent();
+  return true;
 }
 
 FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
