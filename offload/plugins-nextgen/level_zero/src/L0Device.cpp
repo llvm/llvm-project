@@ -393,9 +393,9 @@ int32_t L0DeviceTy::retrieveData(void *HstPtr, const void *TgtPtr, int64_t Size,
 }
 
 Expected<DeviceImageTy *>
-L0DeviceTy::loadBinaryImpl(const __tgt_device_image *TgtImage,
+L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                            int32_t ImageId) {
-  auto *PGM = getProgramFromImage(TgtImage);
+  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef());
   if (PGM) {
     // Program already exists
     return PGM;
@@ -403,14 +403,7 @@ L0DeviceTy::loadBinaryImpl(const __tgt_device_image *TgtImage,
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
        "Device %" PRId32 ": Loading binary from " DPxMOD "\n", getDeviceId(),
-       DPxPTR(TgtImage->ImageStart));
-
-  const size_t NumEntries =
-      (size_t)(TgtImage->EntriesEnd - TgtImage->EntriesBegin);
-
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Expecting to have %zu entries defined\n", NumEntries);
-  (void)NumEntries; // silence warning
+       DPxPTR(TgtImage->getBufferStart()));
 
   const auto &Options = getPlugin().getOptions();
   std::string CompilationOptions(Options.CompilationOptions);
@@ -421,7 +414,7 @@ L0DeviceTy::loadBinaryImpl(const __tgt_device_image *TgtImage,
 
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
-  auto &Program = addProgram(ImageId, TgtImage);
+  auto &Program = addProgram(ImageId, std::move(TgtImage));
 
   int32_t RC = Program.buildModules(CompilationOptions);
   if (RC != OFFLOAD_SUCCESS)

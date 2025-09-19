@@ -30,10 +30,8 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                                      GlobalTy &DeviceGlobal) {
   const char *GlobalName = DeviceGlobal.getName().data();
 
-  L0DeviceTy &l0Device = static_cast<L0DeviceTy &>(Device);
-  const L0ProgramTy *Program =
-      l0Device.getProgramFromImage(Image.getTgtImage());
-  void *Addr = Program->getOffloadVarDeviceAddr(GlobalName);
+  L0ProgramTy &Program = L0ProgramTy::makeL0Program(Image);
+  void *Addr = Program.getOffloadVarDeviceAddr(GlobalName);
 
   // Save the pointer to the symbol allowing nullptr.
   DeviceGlobal.setPtr(Addr);
@@ -65,18 +63,9 @@ void L0ProgramTy::setLibModule() {
 #if _WIN32
   return;
 #else
-  const auto *Image = getTgtImage();
-  const size_t NumEntries =
-      static_cast<size_t>(Image->EntriesEnd - Image->EntriesBegin);
-  for (size_t I = 0; I < NumEntries; I++) {
-    const auto &Entry = Image->EntriesBegin[I];
-    // Image contains a kernel, so it is not compiled as a library module
-    if (Entry.SymbolName && Entry.Size == 0)
-      return;
-  }
   // Check if the image belongs to a dynamic library
   Dl_info DLI{nullptr};
-  if (dladdr(Image->ImageStart, &DLI) && DLI.dli_fname) {
+  if (dladdr(getStart(), &DLI) && DLI.dli_fname) {
     std::vector<uint8_t> FileBin;
     auto Size = readFile(DLI.dli_fname, FileBin);
     if (Size) {
@@ -277,32 +266,18 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   return Res;
 }
 
-static StringRef getImageStringRef(const __tgt_device_image *Image) {
-  const char *ImgBegin = reinterpret_cast<char *>(Image->ImageStart);
-  const char *ImgEnd = reinterpret_cast<char *>(Image->ImageEnd);
-  const size_t ImgSize = ImgEnd - ImgBegin;
-  return StringRef(ImgBegin, ImgSize);
-}
-
-bool isValidOneOmpImage(const __tgt_device_image *Image, uint64_t &MajorVer,
-                        uint64_t &MinorVer) {
-  return isValidOneOmpImage(getImageStringRef(Image), MajorVer, MinorVer);
-}
-
 int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
   auto &l0Device = getL0Device();
-  auto *Image = getTgtImage();
-  if (identify_magic(getImageStringRef(Image)) == file_magic::spirv_object) {
+  auto Image = getMemoryBuffer();
+  if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
     // Handle legacy plain SPIR-V image.
-    uint8_t *ImgBegin = reinterpret_cast<uint8_t *>(Image->ImageStart);
-    uint8_t *ImgEnd = reinterpret_cast<uint8_t *>(Image->ImageEnd);
-    size_t ImgSize = ImgEnd - ImgBegin;
-    return addModule(ImgSize, ImgBegin, BuildOptions,
+    const uint8_t *ImgBegin = reinterpret_cast<const uint8_t *>(getStart());
+    return addModule(getSize(), ImgBegin, BuildOptions,
                      ZE_MODULE_FORMAT_IL_SPIRV);
   }
 
   uint64_t MajorVer, MinorVer;
-  if (!isValidOneOmpImage(Image, MajorVer, MinorVer)) {
+  if (!isValidOneOmpImage(Image.getBuffer(), MajorVer, MinorVer)) {
     DP("Warning: image is not a valid oneAPI OpenMP image.\n");
     return OFFLOAD_FAIL;
   }
@@ -326,11 +301,8 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
   };
   std::unordered_map<uint64_t, V1ImageInfo> AuxInfo;
 
-  auto MB = MemoryBuffer::getMemBuffer(getImageStringRef(Image),
-                                       /*BufferName=*/"",
-                                       /*RequiresNullTerminator=*/false);
   auto ExpectedNewE =
-      ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
+      ELFObjectFileBase::createELFObjectFile(Image);
   assert(ExpectedNewE &&
          "isValidOneOmpImage() returns true for invalid ELF image");
   auto processELF = [&](auto *EObj) {

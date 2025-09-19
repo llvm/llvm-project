@@ -346,9 +346,9 @@ public:
   }
   auto getGlobalModulesArray() { return GlobalModules.data(); }
 
-  L0ProgramTy *getProgramFromImage(const __tgt_device_image *Image) {
+  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
     for (auto &PGM : Programs)
-      if (PGM.getTgtImage() == Image)
+      if (PGM.getMemoryBuffer() == Image)
         return &PGM;
     return nullptr;
   }
@@ -363,8 +363,8 @@ public:
   }
 
   // add a new program to the device. Return a reference to the new program
-  auto &addProgram(int32_t ImageId, const __tgt_device_image *Image) {
-    Programs.emplace_back(ImageId, *this, Image);
+  auto &addProgram(int32_t ImageId, std::unique_ptr<MemoryBuffer> &&Image) {
+    Programs.emplace_back(ImageId, *this, std::move(Image));
     return Programs.back();
   }
 
@@ -575,7 +575,7 @@ public:
   int32_t makeMemoryResident(void *Mem, size_t Size);
 
   // Generic device interface implementation
-  Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
+  Expected<DeviceImageTy *> loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                                            int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
   void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) override;

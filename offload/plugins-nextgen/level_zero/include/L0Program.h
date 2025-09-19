@@ -72,8 +72,8 @@ public:
   L0ProgramTy() = delete;
 
   L0ProgramTy(int32_t ImageId, GenericDeviceTy &Device,
-              const __tgt_device_image *Image)
-      : DeviceImageTy(ImageId, Device, Image) {}
+               std::unique_ptr<MemoryBuffer> Image)
+      : DeviceImageTy(ImageId, Device, std::move(Image)) {}
 
   ~L0ProgramTy();
 
@@ -128,8 +128,6 @@ struct L0GlobalHandlerTy final : public GenericGlobalHandlerTy {
                                     GlobalTy &DeviceGlobal) override;
 };
 
-bool isValidOneOmpImage(const __tgt_device_image *Image, uint64_t &MajorVer,
-                        uint64_t &MinorVer);
 bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
                         uint64_t &MinorVer);
 } // namespace llvm::omp::target::plugin
