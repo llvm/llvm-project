@@ -27,7 +27,11 @@
   "categories": [
     "Debuggers"
   ],
+  "dependencies": {
+    "fs-extra": "^11.0.4"
+  },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
     "@types/vscode": "1.75.0",

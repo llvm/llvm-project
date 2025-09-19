@@ -1,3 +1,4 @@
+import * as fs from 'fs-extra';
 import * as child_process from "node:child_process";
 import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
@@ -54,7 +55,7 @@ export class LLDBDapServer implements vscode.Disposable {
       return this.serverInfo;
     }
 
-    this.serverInfo = new Promise((resolve, reject) => {
+    this.serverInfo = new Promise(async (resolve, reject) => {
       const process = child_process.spawn(dapPath, dapArgs, options);
       process.on("error", (error) => {
         reject(error);
@@ -82,7 +83,7 @@ export class LLDBDapServer implements vscode.Disposable {
         }
       });
       this.serverProcess = process;
-      this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
+      this.serverSpawnInfo = await this.getSpawnInfo(dapPath, dapArgs, options?.env);
     });
     return this.serverInfo;
   }
@@ -104,13 +105,13 @@ export class LLDBDapServer implements vscode.Disposable {
       return true;
     }
 
-    const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
+    const newSpawnInfo = await this.getSpawnInfo(dapPath, args, env);
     if (isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
       return true;
     }
 
     const userInput = await vscode.window.showInformationMessage(
-      "The arguments to lldb-dap have changed. Would you like to restart the server?",
+      "The lldb-dap binary and/or the arguments to it have changed. Would you like to restart the server?",
       {
         modal: true,
         detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with different arguments.
@@ -131,8 +132,7 @@ Restarting the server will interrupt any existing debug sessions and start a new
     switch (userInput) {
       case "Restart":
         this.serverProcess.kill();
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.cleanUp(this.serverProcess);
         return true;
       case "Use Existing":
         return true;
@@ -149,27 +149,40 @@ Restarting the server will interrupt any existing debug sessions and start a new
     this.cleanUp(this.serverProcess);
   }
 
-  cleanUp(process: child_process.ChildProcessWithoutNullStreams) {
+  private cleanUp(process: child_process.ChildProcessWithoutNullStreams) {
     // If the following don't equal, then the fields have already been updated
     // (either a new process has started, or the fields were already cleaned
     // up), and so the cleanup should be skipped.
     if (this.serverProcess === process) {
       this.serverProcess = undefined;
       this.serverInfo = undefined;
+      this.serverSpawnInfo = undefined;
     }
   }
 
-  getSpawnInfo(
+  private async getSpawnInfo(
     path: string,
     args: string[],
     env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
-  ): string[] {
+  ): Promise<string[]> {
     return [
       path,
       ...args,
       ...Object.entries(env ?? {}).map(
         (entry) => String(entry[0]) + "=" + String(entry[1]),
       ),
+      `(${await this.getFileModifiedTimestamp(path)})`,
     ];
+  }
+
+  private async getFileModifiedTimestamp(file: string): Promise<string | null> {
+    try {
+      if (!(await fs.pathExists(file))) {
+        return null;
+      }
+      return (await fs.promises.stat(file)).mtime.toLocaleString();
+    } catch (error) {
+      return null;
+    }
   }
 }
