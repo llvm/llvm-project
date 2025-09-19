@@ -94,6 +94,7 @@ define void @test_chr_dynamic_alloca(ptr %i) !prof !14 {
 ; CHECK-NEXT:    br i1 false, label [[BB1:%.*]], label [[BB0:%.*]], !prof [[PROF17]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    store ptr [[TEST]], ptr [[I]], align 8
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb4.split.nonchr:
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP1]], i64 0, i64 4, !prof [[PROF16]]
@@ -102,15 +103,18 @@ define void @test_chr_dynamic_alloca(ptr %i) !prof !14 {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB0_NONCHR:%.*]], label [[BB1]], !prof [[PROF16]]
 ; CHECK:       bb0.nonchr:
 ; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    store ptr [[TEST_NONCHR]], ptr [[I]], align 8
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TEST]], [[BB0]] ], [ [[TEST]], [[BB4_SPLIT]] ], [ [[TEST_NONCHR]], [[BB0_NONCHR]] ], [ [[TEST_NONCHR]], [[BB4_SPLIT_NONCHR]] ]
+; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    store ptr [[TMP8]], ptr [[I]], align 8
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi ptr [ [[TMP10:%.*]], [[BB2]] ], [ null, [[BB1]] ]
 ; CHECK-NEXT:    [[TMP10]] = getelementptr i8, ptr [[TMP9]], i64 24
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq ptr [[TMP9]], [[I]]
+; CHECK-NEXT:    [[TEST5:%.*]] = load ptr, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq ptr [[TMP9]], [[TEST5]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[BB3]], label [[BB2]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -144,6 +148,7 @@ bb2:
   %4 = phi ptr [ %5, %bb2 ], [ null, %bb1 ]
   %5 = getelementptr i8, ptr %4, i64 24
   %test5 = load ptr, ptr %test
+  call void @llvm.lifetime.end.p0(ptr %test)
   %6 = icmp eq ptr %4, %test5
   br i1 %6, label %bb3, label %bb2
 
@@ -170,9 +175,4 @@ bb3:
 
 !14 = !{!"function_entry_count", i64 100}
 !15 = !{!"branch_weights", i32 0, i32 1}
-!16 = !{!"branch_weights", i32 1, i32 1}
-!17 = !{!"branch_weights", i32 0, i32 0}
 ; CHECK: !15 = !{!"branch_weights", i32 1000, i32 0}
-; CHECK: !16 = !{!"branch_weights", i32 0, i32 1}
-; CHECK: !17 = !{!"branch_weights", i32 1, i32 1}
-; CHECK: !18 = !{!"branch_weights", i32 1, i32 0}

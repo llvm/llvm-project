@@ -1610,7 +1610,7 @@ static void insertTrivialPHIs(CHRScope *Scope,
         }
         // Erase any leftover lifetime annotations for a dynamic alloca.
         if (FoundLifetimeAnnotation) {
-          for (User *U : I.users()) {
+          for (User *U : make_early_inc_range(I.users())) {
             if (auto *UI = dyn_cast<Instruction>(U))
               if(UI->isLifetimeStartOrEnd())
                 UI->eraseFromParent();

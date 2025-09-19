@@ -2678,65 +2678,6 @@ bb6:
   ret void
 }
 
-; Test that when we create phi nodes for allocas, we drop lifetime annotations
-; that would otherwise be illegally referring to a phi node.
-declare void @baz(i64)
-declare void @llvm.lifetime.start.p0(ptr captures(none))
-define void @test_chr_with_lifetimes(ptr %i) !prof !14 {
-; CHECK-LABEL: @test_chr_with_lifetimes(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
-; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i32 [[TMP0]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[DOTFR]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label [[ENTRY_SPLIT_NONCHR:%.*]], label [[ENTRY_SPLIT:%.*]], !prof [[PROF21:![0-9]+]]
-; CHECK:       entry.split:
-; CHECK-NEXT:    [[TEST:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    call void @baz(i64 0)
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label [[BB1:%.*]]
-; CHECK:       entry.split.nonchr:
-; CHECK-NEXT:    [[TEST_NONCHR:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    call void @baz(i64 4)
-; CHECK-NEXT:    br label [[BB1]]
-; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[TEST]], [[ENTRY_SPLIT]] ], [ [[TEST_NONCHR]], [[ENTRY_SPLIT_NONCHR]] ]
-; CHECK-NEXT:    store ptr [[TMP1]], ptr [[I]], align 8
-; CHECK-NEXT:    br label [[BB2:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[TMP3:%.*]], [[BB2]] ], [ null, [[BB1]] ]
-; CHECK-NEXT:    [[TMP3]] = getelementptr i8, ptr [[TMP2]], i64 24
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[TMP2]], [[I]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[BB3:%.*]], label [[BB2]]
-; CHECK:       bb3:
-; CHECK-NEXT:    ret void
-;
-entry:
-  %1 = load i32, ptr %i
-  %2 = icmp eq i32 %1, 0
-  %3 = select i1 %2, i64 4, i64 0, !prof !15
-  %test = alloca i32, align 8
-  call void @baz(i64 %3)
-  br i1 %2, label %bb1, label %bb0, !prof !15
-
-bb0:
-  call void @foo()
-  br label %bb1
-
-bb1:
-  call void @llvm.lifetime.start.p0(ptr %test)
-  store ptr %test, ptr %i, align 8
-  br label %bb2
-
-bb2:
-  %4 = phi ptr [ %5, %bb2 ], [ null, %bb1 ]
-  %5 = getelementptr i8, ptr %4, i64 24
-  %6 = icmp eq ptr %4, %i
-  br i1 %6, label %bb3, label %bb2
-
-bb3:
-  ret void
-}
-
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
