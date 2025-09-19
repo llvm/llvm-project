@@ -679,8 +679,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
     Known = Known.abs();
-    Known.Zero.setHighBits(
-        computeNumSignBits(SrcReg, DemandedElts, Depth + 1) - 1);
+    Known.Zero.setHighBits(computeNumSignBits(SrcReg, DemandedElts, Depth + 1) -
+                           1);
     break;
   }
   }
@@ -1765,7 +1765,7 @@ static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
 }
 
 unsigned GISelValueTracking::computeNumSignBits(Register R,
-						const APInt &DemandedElts,
+                                                const APInt &DemandedElts,
                                                 unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
@@ -2028,8 +2028,8 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     if (FirstAnswer == 1)
       break;
     if (!!DemandedRHS) {
-      unsigned Tmp2 = 
-	computeNumSignBits(MI.getOperand(2).getReg(), DemandedRHS, Depth + 1);
+      unsigned Tmp2 =
+          computeNumSignBits(MI.getOperand(2).getReg(), DemandedRHS, Depth + 1);
       FirstAnswer = std::min(FirstAnswer, Tmp2);
     }
     break;
