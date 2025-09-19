@@ -1,7 +1,7 @@
 # Checks that --filter-failed only runs tests that previously failed.
 
 # RUN: rm -rf %t
-# RUN: cp -r %{inputs}/filter-failed %t
+# RUN: cp -r %{inputs}%{fs-sep}filter-failed %t
 #
 # RUN: not %{lit} %t
 #
