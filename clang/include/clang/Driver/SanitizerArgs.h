@@ -13,6 +13,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -75,6 +76,8 @@ class SanitizerArgs {
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
 
   std::string MemtagMode;
+  bool AllocTokenFastABI = false;
+  bool AllocTokenExtended = false;
 
 public:
   /// Parses the sanitizer arguments from an argument list.

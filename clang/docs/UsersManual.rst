@@ -2194,6 +2194,8 @@ are listed below.
       protection against stack-based memory corruption errors.
    -  ``-fsanitize=realtime``: :doc:`RealtimeSanitizer`,
       a real-time safety checker.
+   -  ``-fsanitize=alloc-token``: :doc:`AllocToken`,
+      allocation token instrumentation (requires compatible allocator).
 
    There are more fine-grained checks available: see
    the :ref:`list <ubsan-checks>` of specific kinds of

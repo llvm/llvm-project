@@ -1272,6 +1272,21 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
+void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
+  assert(SanOpts.has(SanitizerKind::AllocToken) &&
+         "Only needed with -fsanitize=alloc-token");
+
+  PrintingPolicy Policy(CGM.getContext().getLangOpts());
+  Policy.SuppressTagKeyword = true;
+  Policy.FullyQualifiedName = true;
+  std::string TypeName = AllocType.getCanonicalType().getAsString(Policy);
+  auto *TypeMDS = llvm::MDString::get(CGM.getLLVMContext(), TypeName);
+
+  // Format: !{<type-name>}
+  auto *MDN = llvm::MDNode::get(CGM.getLLVMContext(), {TypeMDS});
+  CB->setMetadata(llvm::LLVMContext::MD_alloc_token, MDN);
+}
+
 CodeGenFunction::ComplexPairTy CodeGenFunction::
 EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
                          bool isInc, bool isPre) {
