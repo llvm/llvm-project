@@ -21,6 +21,7 @@ namespace llvm {
 
 class BitsInit;
 class CodeGenInstruction;
+class CodeGenTarget;
 class Record;
 class RecordVal;
 class VarLenInst;
@@ -91,7 +92,7 @@ class InstructionEncoding {
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const Record *EncodingDef,
+  InstructionEncoding(const CodeGenTarget &Target, const Record *EncodingDef,
                       const CodeGenInstruction *Inst);
 
   /// Returns the Record this encoding originates from.
@@ -137,12 +138,20 @@ public:
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
+  /// \returns the effective value of the DecoderMethod field. If DecoderMethod
+  /// is an explictly set value, return false for second.
+  static std::pair<std::string, bool>
+  findOperandDecoderMethod(const CodeGenTarget &Target, const Record *Record);
+
+  static OperandInfo getOpInfo(const CodeGenTarget &Target,
+                               const Record *TypeRecord);
+
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);
   void parseFixedLenEncoding(const BitsInit &RecordInstBits);
 
-  void parseVarLenOperands(const VarLenInst &VLI);
-  void parseFixedLenOperands(const BitsInit &Bits);
+  void parseVarLenOperands(const CodeGenTarget &Target, const VarLenInst &VLI);
+  void parseFixedLenOperands(const CodeGenTarget &Target, const BitsInit &Bits);
 };
 
 } // namespace llvm

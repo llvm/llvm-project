@@ -14,7 +14,9 @@
 
 using namespace llvm;
 
-static std::string findOperandDecoderMethod(const Record *Record) {
+std::pair<std::string, bool>
+InstructionEncoding::findOperandDecoderMethod(const CodeGenTarget &Target,
+                                              const Record *Record) {
   std::string Decoder;
 
   const RecordVal *DecoderString = Record->getValue("DecoderMethod");
@@ -23,24 +25,27 @@ static std::string findOperandDecoderMethod(const Record *Record) {
   if (String) {
     Decoder = String->getValue().str();
     if (!Decoder.empty())
-      return Decoder;
+      return {Decoder, false};
   }
 
   if (Record->isSubClassOf("RegisterOperand"))
     // Allows use of a DecoderMethod in referenced RegisterClass if set.
-    return findOperandDecoderMethod(Record->getValueAsDef("RegClass"));
+    return findOperandDecoderMethod(Target, Record->getValueAsDef("RegClass"));
 
   if (Record->isSubClassOf("RegisterClass")) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
+  } else if (Record->isSubClassOf("RegClassByHwMode")) {
+    Decoder = "Decode" + Record->getName().str() + "RegClassByHwMode";
   } else if (Record->isSubClassOf("PointerLikeRegClass")) {
     Decoder = "DecodePointerLikeRegClass" +
               utostr(Record->getValueAsInt("RegClassKind"));
   }
 
-  return Decoder;
+  return {Decoder, true};
 }
 
-static OperandInfo getOpInfo(const Record *TypeRecord) {
+OperandInfo InstructionEncoding::getOpInfo(const CodeGenTarget &Target,
+                                           const Record *TypeRecord) {
   const RecordVal *HasCompleteDecoderVal =
       TypeRecord->getValue("hasCompleteDecoder");
   const BitInit *HasCompleteDecoderBit =
@@ -50,7 +55,8 @@ static OperandInfo getOpInfo(const Record *TypeRecord) {
   bool HasCompleteDecoder =
       HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
 
-  return OperandInfo(findOperandDecoderMethod(TypeRecord), HasCompleteDecoder);
+  return OperandInfo(findOperandDecoderMethod(Target, TypeRecord).first,
+                     HasCompleteDecoder);
 }
 
 void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
@@ -171,15 +177,16 @@ void InstructionEncoding::parseFixedLenEncoding(
   }
 }
 
-void InstructionEncoding::parseVarLenOperands(const VarLenInst &VLI) {
+void InstructionEncoding::parseVarLenOperands(const CodeGenTarget &Target,
+                                              const VarLenInst &VLI) {
   SmallVector<int> TiedTo;
 
   for (const auto &[Idx, Op] : enumerate(Inst->Operands)) {
     if (Op.MIOperandInfo && Op.MIOperandInfo->getNumArgs() > 0)
       for (auto *Arg : Op.MIOperandInfo->getArgs())
-        Operands.push_back(getOpInfo(cast<DefInit>(Arg)->getDef()));
+        Operands.push_back(getOpInfo(Target, cast<DefInit>(Arg)->getDef()));
     else
-      Operands.push_back(getOpInfo(Op.Rec));
+      Operands.push_back(getOpInfo(Target, Op.Rec));
 
     int TiedReg = Op.getTiedRegister();
     TiedTo.push_back(-1);
@@ -314,7 +321,8 @@ static void addOneOperandFields(const Record *EncodingDef,
   }
 }
 
-void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
+void InstructionEncoding::parseFixedLenOperands(const CodeGenTarget &Target,
+                                                const BitsInit &Bits) {
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
   std::map<StringRef, StringRef> TiedNames;
@@ -340,7 +348,7 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   for (const CGIOperandList::OperandInfo &Op : Inst->Operands) {
     // Lookup the decoder method and construct a new OperandInfo to hold our
     // result.
-    OperandInfo OpInfo = getOpInfo(Op.Rec);
+    OperandInfo OpInfo = getOpInfo(Target, Op.Rec);
 
     // If we have named sub-operands...
     if (Op.MIOperandInfo && !Op.SubOpNames[0].empty()) {
@@ -359,7 +367,7 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
       for (auto [SubOpName, SubOp] :
            zip_equal(Op.SubOpNames, Op.MIOperandInfo->getArgs())) {
         const Record *SubOpRec = cast<DefInit>(SubOp)->getDef();
-        OperandInfo SubOpInfo = getOpInfo(SubOpRec);
+        OperandInfo SubOpInfo = getOpInfo(Target, SubOpRec);
         addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpRec, SubOpName,
                             SubOpInfo);
         Operands.push_back(std::move(SubOpInfo));
@@ -387,7 +395,8 @@ void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {
   }
 }
 
-InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
+InstructionEncoding::InstructionEncoding(const CodeGenTarget &Target,
+                                         const Record *EncodingDef,
                                          const CodeGenInstruction *Inst)
     : EncodingDef(EncodingDef), Inst(Inst) {
   const Record *InstDef = Inst->TheDef;
@@ -408,13 +417,13 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
     parseVarLenEncoding(VLI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
-      parseVarLenOperands(VLI);
+      parseVarLenOperands(Target, VLI);
   } else {
     const auto *BI = cast<BitsInit>(InstField->getValue());
     parseFixedLenEncoding(*BI);
     // If the encoding has a custom decoder, don't bother parsing the operands.
     if (DecoderMethod.empty())
-      parseFixedLenOperands(*BI);
+      parseFixedLenOperands(Target, *BI);
   }
 
   if (DecoderMethod.empty()) {
