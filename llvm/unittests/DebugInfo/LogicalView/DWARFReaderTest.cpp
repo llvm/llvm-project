@@ -163,13 +163,12 @@ void checkUnspecifiedParameters(LVReader *Reader) {
   LVPublicNames::const_iterator IterNames = PublicNames.cbegin();
   LVScope *Function = (*IterNames).first;
   EXPECT_EQ(Function->getName(), "foo_printf");
-  const LVElements *Elements = Function->getChildren();
-  ASSERT_NE(Elements, nullptr);
+  const auto Elements = Function->getChildren();
   // foo_printf is a variadic function whose prototype is
   // `int foo_printf(const char *, ...)`, where the '...' is represented by a
   // DW_TAG_unspecified_parameters, i.e. we expect to find at least one child
   // for which getIsUnspecified() returns true.
-  EXPECT_TRUE(llvm::any_of(*Elements, [](const LVElement *elt) {
+  EXPECT_TRUE(llvm::any_of(Elements, [](const LVElement *elt) {
     return elt->getIsSymbol() &&
            static_cast<const LVSymbol *>(elt)->getIsUnspecified();
   }));
@@ -183,10 +182,9 @@ void checkScopeModule(LVReader *Reader) {
   EXPECT_EQ(Root->getFileFormatName(), "Mach-O 64-bit x86-64");
   EXPECT_EQ(Root->getName(), DwarfClangModule);
 
-  ASSERT_NE(CompileUnit->getChildren(), nullptr);
-  LVElement *FirstChild = *(CompileUnit->getChildren()->begin());
-  EXPECT_EQ(FirstChild->getIsScope(), 1);
-  LVScopeModule *Module = static_cast<LVScopeModule *>(FirstChild);
+  ASSERT_NE(CompileUnit->getScopes(), nullptr);
+  LVElement *FirstScope = *(CompileUnit->getScopes()->begin());
+  LVScopeModule *Module = static_cast<LVScopeModule *>(FirstScope);
   EXPECT_EQ(Module->getIsModule(), 1);
   EXPECT_EQ(Module->getName(), "DebugModule");
 }
