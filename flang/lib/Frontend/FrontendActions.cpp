@@ -738,6 +738,8 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
+  config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);
 
   if (auto vsr = getVScaleRange(ci)) {

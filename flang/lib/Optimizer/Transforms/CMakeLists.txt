@@ -35,6 +35,7 @@ add_flang_library(FIRTransforms
   GenRuntimeCallsForTest.cpp
   SimplifyFIROperations.cpp
   OptimizeArrayRepacking.cpp
+  ConvertComplexPow.cpp
 
   DEPENDS
   CUFAttrs

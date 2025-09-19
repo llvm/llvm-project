@@ -69,6 +69,7 @@ end program
 ! CHECK-NEXT: SCFToControlFlow
 ! CHECK-NEXT: Canonicalizer
 ! CHECK-NEXT: SimplifyRegionLite
+! CHECK-NEXT: ConvertComplexPow
 ! CHECK-NEXT: CSE
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
