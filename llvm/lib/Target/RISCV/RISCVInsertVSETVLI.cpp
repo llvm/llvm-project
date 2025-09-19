@@ -261,7 +261,7 @@ struct DemandedFields {
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
     OS << "MaskPolicy=" << MaskPolicy << ", ";
-    OS << "VILL=" << VILL;
+    OS << "VILL=" << VILL << ", ";
     OS << "UseAltFmt=" << UseAltFmt << ", ";
     OS << "UseTWiden=" << UseTWiden;
     OS << "}";
@@ -858,9 +858,9 @@ public:
        << "SEW=e" << (unsigned)SEW << ", "
        << "TailAgnostic=" << (bool)TailAgnostic << ", "
        << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
-       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
-    OS << "TWiden=" << (unsigned)TWiden << ", ";
-    OS << "AltFmt=" << (bool)AltFmt << "}";
+       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
+       << "TWiden=" << (unsigned)TWiden << ", "
+       << "AltFmt=" << (bool)AltFmt << "}";
   }
 #endif
 };
