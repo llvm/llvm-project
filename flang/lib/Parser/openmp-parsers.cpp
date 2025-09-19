@@ -1862,17 +1862,21 @@ TYPE_PARSER( //
 #undef MakeBlockConstruct
 
 // OMP SECTIONS Directive
-TYPE_PARSER(construct<OmpSectionsDirective>(first(
-    "SECTIONS" >> pure(llvm::omp::Directive::OMPD_sections),
-    "PARALLEL SECTIONS" >> pure(llvm::omp::Directive::OMPD_parallel_sections))))
+static constexpr DirectiveSet GetSectionsDirectives() {
+  using Directive = llvm::omp::Directive;
+  constexpr DirectiveSet sectionsDirectives{
+      unsigned(Directive::OMPD_sections),
+      unsigned(Directive::OMPD_parallel_sections),
+  };
+  return sectionsDirectives;
+}
 
 // OMP BEGIN and END SECTIONS Directive
-TYPE_PARSER(sourced(construct<OmpBeginSectionsDirective>(
-    sourced(Parser<OmpSectionsDirective>{}), Parser<OmpClauseList>{})))
-TYPE_PARSER(
-    startOmpLine >> sourced(construct<OmpEndSectionsDirective>(
-                        sourced("END"_tok >> Parser<OmpSectionsDirective>{}),
-                        Parser<OmpClauseList>{})))
+TYPE_PARSER(construct<OmpBeginSectionsDirective>(
+    OmpBeginDirectiveParser(GetSectionsDirectives())))
+
+TYPE_PARSER(construct<OmpEndSectionsDirective>(
+    OmpEndDirectiveParser(GetSectionsDirectives())))
 
 static constexpr auto sectionDir{
     startOmpLine >> (predicated(OmpDirectiveNameParser{},
