@@ -67,7 +67,7 @@ public:
       }
 
       bool TraverseClassTemplateDecl(ClassTemplateDecl *CTD) {
-        if (isRetainPtr(safeGetName(CTD)))
+        if (isRetainPtrOrOSPtr(safeGetName(CTD)))
           return true; // Skip the contents of RetainPtr.
         return Base::TraverseClassTemplateDecl(CTD);
       }
@@ -305,7 +305,7 @@ public:
     if (!Cls)
       return;
 
-    if (!isRetainPtr(safeGetName(Cls)) || !CE->getNumArgs())
+    if (!isRetainPtrOrOSPtr(safeGetName(Cls)) || !CE->getNumArgs())
       return;
 
     // Ignore RetainPtr construction inside adoptNS, adoptCF, and retainPtr.
@@ -492,7 +492,7 @@ public:
         return IsOwnedResult::NotOwned;
       if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
         auto QT = DRE->getType();
-        if (isRetainPtrType(QT))
+        if (isRetainPtrOrOSPtrType(QT))
           return IsOwnedResult::NotOwned;
         QT = QT.getCanonicalType();
         if (RTC.isUnretained(QT, true /* ignoreARC */))
@@ -531,12 +531,13 @@ public:
           if (auto *CD = dyn_cast<CXXConversionDecl>(MD)) {
             auto QT = CD->getConversionType().getCanonicalType();
             auto *ResultType = QT.getTypePtrOrNull();
-            if (isRetainPtr(safeGetName(Cls)) && ResultType &&
+            if (isRetainPtrOrOSPtr(safeGetName(Cls)) && ResultType &&
                 (ResultType->isPointerType() || ResultType->isReferenceType() ||
                  ResultType->isObjCObjectPointerType()))
               return IsOwnedResult::NotOwned;
           }
-          if (safeGetName(MD) == "leakRef" && isRetainPtr(safeGetName(Cls)))
+          if (safeGetName(MD) == "leakRef" &&
+              isRetainPtrOrOSPtr(safeGetName(Cls)))
             return IsOwnedResult::Owned;
         }
       }
@@ -554,7 +555,7 @@ public:
             continue;
           }
           auto RetType = Callee->getReturnType();
-          if (isRetainPtrType(RetType))
+          if (isRetainPtrOrOSPtrType(RetType))
             return IsOwnedResult::NotOwned;
           if (isCreateOrCopyFunction(Callee)) {
             CreateOrCopyFnCall.insert(CE);

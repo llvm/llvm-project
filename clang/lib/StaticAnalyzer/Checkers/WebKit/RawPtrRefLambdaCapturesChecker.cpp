@@ -490,7 +490,7 @@ public:
   }
 
   virtual bool isPtrType(const std::string &Name) const final {
-    return isRetainPtr(Name);
+    return isRetainPtrOrOSPtr(Name);
   }
 
   const char *ptrKind(QualType QT) const final { return "unretained"; }
