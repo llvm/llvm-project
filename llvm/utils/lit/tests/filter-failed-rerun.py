@@ -1,5 +1,5 @@
 # Checks that --filter-failed won't re-run tests that have passed
-# since the last time --filter-failed has run.
+# since the last time --filter-failed was run.
 
 # RUN: rm -rf %t
 # RUN: cp -r %{inputs}/filter-failed %t

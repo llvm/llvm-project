@@ -7,8 +7,10 @@
 # RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-FIRST
 #
 # RUN: rm %t/fail.txt
-# RUN: not %{lit} --filter-failed %t | FileCheck %s --check-prefix=CHECK-RERUN
+# RUN: not %{lit} --filter-failed %t | FileCheck %s --check-prefix=CHECK-SECOND
 
+# CHECK-FIRST: Testing: 5 tests
 # CHECK-FIRST: FAIL: filter-failed :: fail.txt
 
-# CHECK-RERUN-NOT: filter-failed :: fail.txt
+# CHECK-SECOND: Testing: 2 of 4 tests
+# CHECK-SECOND-NOT: filter-failed :: fail.txt
