@@ -10,7 +10,6 @@
 #include "FormatToken.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
-#include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 
