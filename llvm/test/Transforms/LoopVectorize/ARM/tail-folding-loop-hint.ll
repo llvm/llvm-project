@@ -78,7 +78,9 @@ for.body:
 ; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
 ; CHECK-NEXT: [[VEC_LOOP2]] = distinct !{[[VEC_LOOP2]], [[MD_IS_VEC]], [[MD_RT_UNROLL_DIS]]}
-; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
+; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[ORIG_PRED_ENABLED:!.+]], [[ORIG_VEC_ENABLED:!.+]]}
+; CHECK-NEXT: [[ORIG_PRED_ENABLED]] = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+; CHECK-NEXT: [[ORIG_VEC_ENABLED]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
