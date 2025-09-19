@@ -10100,6 +10100,13 @@ define <3 x bfloat> @v_fadd_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_alignbit_b32 v1, s0, v1, 16
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1250-LABEL: v_fadd_v3bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:   s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:   s_wait_kmcnt 0x0
+; GFX1250-NEXT:   v_pk_add_bf16 v0, v0, v2
+; GFX1250-NEXT:   v_pk_add_bf16 v1, v1, v3
+; GFX1250-NEXT:   s_set_pc_i64 s[30:31]
   %op = fadd <3 x bfloat> %a, %b
   ret <3 x bfloat> %op
 }
@@ -11974,6 +11981,19 @@ define <16 x bfloat> @v_fadd_v16bf16(<16 x bfloat> %a, <16 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v4, v4, v13, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1250-LABEL:  v_fadd_v16bf16:
+; GFX1250          ; %bb.0:
+; GFX1250-NEXT     s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT     s_wait_kmcnt 0x0
+; GFX1250-NEXT     v_pk_add_bf16 v0, v0, v8
+; GFX1250-NEXT     v_pk_add_bf16 v1, v1, v9
+; GFX1250-NEXT     v_pk_add_bf16 v2, v2, v10
+; GFX1250-NEXT     v_pk_add_bf16 v3, v3, v11
+; GFX1250-NEXT     v_pk_add_bf16 v4, v4, v12
+; GFX1250-NEXT     v_pk_add_bf16 v5, v5, v13
+; GFX1250-NEXT     v_pk_add_bf16 v6, v6, v14
+; GFX1250-NEXT     v_pk_add_bf16 v7, v7, v15
+; GFX1250-NEXT     s_set_pc_i64 s[30:31]
   %op = fadd <16 x bfloat> %a, %b
   ret <16 x bfloat> %op
 }
@@ -15637,6 +15657,14 @@ define <3 x bfloat> @v_fmul_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_alignbit_b32 v1, s0, v1, 16
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1250-LABEL:     v_fmul_v3bf16:
+; GFX1250:           ; %bb.0:
+; GFX1250-NEXT:        s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:        s_wait_kmcnt 0x0
+; GFX1250-NEXT:        v_pk_mul_bf16 v0, v0, v2
+; GFX1250-NEXT:        v_pk_mul_bf16 v1, v1, v3
+; GFX1250-NEXT:        s_set_pc_i64 s[30:31]
+.Lfunc_end0:
   %op = fmul <3 x bfloat> %a, %b
   ret <3 x bfloat> %op
 }
@@ -17511,6 +17539,19 @@ define <16 x bfloat> @v_fmul_v16bf16(<16 x bfloat> %a, <16 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v4, v4, v13, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1250-LABEL:     v_fmul_v16bf16:
+; GFX1250:           ; %bb.0:
+; GFX1250-NEXT:        s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:        s_wait_kmcnt 0x0
+; GFX1250-NEXT:        v_pk_mul_bf16 v0, v0, v8
+; GFX1250-NEXT:        v_pk_mul_bf16 v1, v1, v9
+; GFX1250-NEXT:        v_pk_mul_bf16 v2, v2, v10
+; GFX1250-NEXT:        v_pk_mul_bf16 v3, v3, v11
+; GFX1250-NEXT:        v_pk_mul_bf16 v4, v4, v12
+; GFX1250-NEXT:        v_pk_mul_bf16 v5, v5, v13
+; GFX1250-NEXT:        v_pk_mul_bf16 v6, v6, v14
+; GFX1250-NEXT:        v_pk_mul_bf16 v7, v7, v15
+; GFX1250-NEXT:        s_set_pc_i64 s[30:31]
   %op = fmul <16 x bfloat> %a, %b
   ret <16 x bfloat> %op
 }
@@ -46543,6 +46584,13 @@ define <3 x bfloat> @v_fma_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, <3 x bfloat>
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11FAKE16-NEXT:    v_alignbit_b32 v1, s0, v3, 16
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX1250-LABEL:     v_fma_v3bf16:
+; GFX1250:           %bb.0:
+; GFX1250-NEXT:        s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:        s_wait_kmcnt 0x0
+; GFX1250-NEXT:        v_pk_fma_bf16 v0, v0, v2, v4
+; GFX1250-NEXT:        v_pk_fma_bf16 v1, v1, v3, v5
+; GFX1250-NEXT:        s_set_pc_i64 s[30:31]
   %op = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, <3 x bfloat> %c)
   ret <3 x bfloat> %op
 }
