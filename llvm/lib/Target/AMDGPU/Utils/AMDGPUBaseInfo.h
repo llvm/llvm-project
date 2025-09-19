@@ -1718,6 +1718,9 @@ bool isInlinableLiteralV2F16(uint32_t Literal);
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
+LLVM_READNONE
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type);
+
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);

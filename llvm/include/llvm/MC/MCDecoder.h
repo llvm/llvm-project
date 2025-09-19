@@ -58,20 +58,6 @@ uint64_t fieldFromInstruction(const std::bitset<N> &Insn, unsigned StartBit,
   return ((Insn >> StartBit) & Mask).to_ullong();
 }
 
-// Helper function for inserting bits extracted from an encoded instruction into
-// an integer-typed field.
-template <typename IntType>
-static std::enable_if_t<std::is_integral_v<IntType>, void>
-insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
-  // Check that no bit beyond numBits is set, so that a simple bitwise |
-  // is sufficient.
-  assert((~(((IntType)1 << numBits) - 1) & bits) == 0 &&
-         "bits has more than numBits bits set");
-  assert(startBit + numBits <= sizeof(IntType) * 8);
-  (void)numBits;
-  field |= bits << startBit;
-}
-
 } // namespace llvm::MCD
 
 #endif // LLVM_MC_MCDECODER_H
