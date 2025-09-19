@@ -589,6 +589,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         br i1 %[[VAL_50]], label %[[VAL_51:.*]], label %[[VAL_52:.*]]
 // CHECK:       omp.type.alloc:                                   ; preds = %[[VAL_41]]
 // CHECK:         %[[VAL_53:.*]] = and i64 %[[VAL_48]], -4
+// CHECK:         %[[VAL_53_OR:.*]] = or i64 %[[VAL_53]], {{[0-9]+}}
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.alloc.else:                              ; preds = %[[VAL_41]]
 // CHECK:         %[[VAL_54:.*]] = icmp eq i64 %[[VAL_49]], 1
@@ -603,7 +604,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_60:.*]] = and i64 %[[VAL_48]], -2
 // CHECK:         br label %[[VAL_42]]
 // CHECK:       omp.type.end:                                     ; preds = %[[VAL_59]], %[[VAL_56]], %[[VAL_55]], %[[VAL_51]]
-// CHECK:         %[[VAL_61:.*]] = phi i64 [ %[[VAL_53]], %[[VAL_51]] ], [ %[[VAL_57]], %[[VAL_55]] ], [ %[[VAL_60]], %[[VAL_59]] ], [ %[[VAL_48]], %[[VAL_56]] ]
+// CHECK:         %[[VAL_61:.*]] = phi i64 [ %[[VAL_53_OR]], %[[VAL_51]] ], [ %[[VAL_57]], %[[VAL_55]] ], [ %[[VAL_60]], %[[VAL_59]] ], [ %[[VAL_48]], %[[VAL_56]] ]
 // CHECK:         call void @__tgt_push_mapper_component(ptr %[[VAL_37]], ptr %[[VAL_43]], ptr %[[VAL_45]], i64 4, i64 %[[VAL_61]], ptr @2)
 // CHECK:         %[[VAL_44]] = getelementptr %[[VAL_18]], ptr %[[VAL_43]], i32 1
 // CHECK:         %[[VAL_62:.*]] = icmp eq ptr %[[VAL_44]], %[[VAL_17]]

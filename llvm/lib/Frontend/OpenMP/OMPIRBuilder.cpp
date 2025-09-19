@@ -8887,7 +8887,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     BasicBlock *EndBB = BasicBlock::Create(M.getContext(), "omp.type.end");
     Value *IsAlloc = Builder.CreateIsNull(LeftToFrom);
     Builder.CreateCondBr(IsAlloc, AllocBB, AllocElseBB);
-    // In case of alloc, clear OMP_MAP_TO and OMP_MAP_FROM.
+    // In case of alloc, clear OMP_MAP_TO and OMP_MAP_FROM, then re-OR any
+    // explicit child TO/FROM intent from the mapper-declared type to avoid
+    // losing copy semantics when the parent map-type is alloc (partial maps).
     emitBlock(AllocBB, MapperFn);
     Value *AllocMapType = Builder.CreateAnd(
         MemberMapType,
@@ -8895,6 +8897,12 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
             ~static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
                 OpenMPOffloadMappingFlags::OMP_MAP_TO |
                 OpenMPOffloadMappingFlags::OMP_MAP_FROM)));
+    Value *TFMaskAlloc = Builder.getInt64(
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_TO |
+            OpenMPOffloadMappingFlags::OMP_MAP_FROM));
+    Value *ChildTFAlloc = Builder.CreateAnd(OriMapType, TFMaskAlloc);
+    AllocMapType = Builder.CreateOr(AllocMapType, ChildTFAlloc);
     Builder.CreateBr(EndBB);
     emitBlock(AllocElseBB, MapperFn);
     Value *IsTo = Builder.CreateICmpEQ(

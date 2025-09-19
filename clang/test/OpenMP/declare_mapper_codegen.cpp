@@ -133,6 +133,7 @@ public:
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK0-DAG: [[ALLOC]]
 // CK0-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK0-DAG: [[ALLOCTYPE_TF0:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK0-DAG: br label %[[TYEND:[^,]+]]
 // CK0-DAG: [[ALLOCELSE]]
 // CK0-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -147,7 +148,7 @@ public:
 // CK0-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
-// CK0-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK0-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE_TF0]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 [[CUSIZE]], i64 [[PHITYPE0]], {{.*}})
 // 281474976710659 == 0x1,000,000,003
 // CK0-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710659, [[SHIPRESIZE]]
@@ -156,6 +157,7 @@ public:
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK0-DAG: [[ALLOC]]
 // CK0-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK0-DAG: [[ALLOCTYPE_TF1:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK0-DAG: br label %[[TYEND:[^,]+]]
 // CK0-DAG: [[ALLOCELSE]]
 // CK0-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -170,8 +172,8 @@ public:
 // CK0-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
-// CK0-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[TYPE1]], {{.*}})
+// CK0-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE_TF1]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 %{{.*}}, {{.*}})
 // 281474976710675 == 0x1,000,000,013
 // CK0-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710675, [[SHIPRESIZE]]
 // CK0-DAG: [[TYPETF:%.+]] = and i64 [[TYPE]], 3
@@ -179,6 +181,7 @@ public:
 // CK0-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK0-DAG: [[ALLOC]]
 // CK0-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK0-DAG: [[ALLOCTYPE_TF2:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK0-DAG: br label %[[TYEND:[^,]+]]
 // CK0-DAG: [[ALLOCELSE]]
 // CK0-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -193,8 +196,8 @@ public:
 // CK0-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK0-DAG: br label %[[TYEND]]
 // CK0-DAG: [[TYEND]]
-// CK0-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
-// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 16, i64 [[TYPE2]], {{.*}})
+// CK0-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE_TF2]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK0: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 16, i64 %{{.*}}, {{.*}})
 // CK0: [[PTRNEXT]] = getelementptr %class.C, ptr [[PTR]], i32 1
 // CK0: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
 // CK0: br i1 [[ISDONE]], label %[[LEXIT:[^,]+]], label %[[LBODY]]
@@ -624,6 +627,7 @@ public:
 // CK1-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK1-DAG: [[ALLOC]]
 // CK1-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK1-DAG: [[ALLOCTYPE_TF:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK1-DAG: br label %[[TYEND:[^,]+]]
 // CK1-DAG: [[ALLOCELSE]]
 // CK1-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -638,7 +642,7 @@ public:
 // CK1-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK1-DAG: br label %[[TYEND]]
 // CK1-DAG: [[TYEND]]
-// CK1-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK1-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE_TF]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK1: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[TYPE1]], {{.*}})
 // CK1: [[PTRNEXT]] = getelementptr %class.C, ptr [[PTR]], i32 1
 // CK1: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
@@ -734,6 +738,7 @@ public:
 // CK2-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK2-DAG: [[ALLOC]]
 // CK2-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK2-DAG: [[ALLOCTYPE_TF:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK2-DAG: br label %[[TYEND:[^,]+]]
 // CK2-DAG: [[ALLOCELSE]]
 // CK2-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -748,7 +753,7 @@ public:
 // CK2-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK2-DAG: br label %[[TYEND]]
 // CK2-DAG: [[TYEND]]
-// CK2-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK2-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE_TF]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK2: call void [[BMPRFUNC]](ptr [[HANDLE]], ptr [[PTR]], ptr [[BBEGIN]], i64 8, i64 [[TYPE1]], {{.*}})
 // CK2: [[PTRNEXT]] = getelementptr %class.C, ptr [[PTR]], i32 1
 // CK2: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
@@ -939,6 +944,7 @@ public:
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK4-DAG: [[ALLOC]]
 // CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK4-DAG: [[ALLOCTYPE_TF0:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK4-DAG: br label %[[TYEND:[^,]+]]
 // CK4-DAG: [[ALLOCELSE]]
 // CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -953,7 +959,7 @@ public:
 // CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
-// CK4-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4-DAG: [[PHITYPE0:%.+]] = phi i64 [ [[ALLOCTYPE_TF0]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 [[CUSIZE]], i64 [[PHITYPE0]], {{.*}})
 // 281474976710659 == 0x1,000,000,003
 // CK4-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710659, [[SHIPRESIZE]]
@@ -962,6 +968,7 @@ public:
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK4-DAG: [[ALLOC]]
 // CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK4-DAG: [[ALLOCTYPE_TF1:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK4-DAG: br label %[[TYEND:[^,]+]]
 // CK4-DAG: [[ALLOCELSE]]
 // CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -976,7 +983,7 @@ public:
 // CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
-// CK4-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE_TF1]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 4, i64 [[TYPE1]], {{.*}})
 // 281474976710675 == 0x1,000,000,013
 // CK4-DAG: [[MEMBERTYPE:%.+]] = add nuw i64 281474976710675, [[SHIPRESIZE]]
@@ -985,6 +992,7 @@ public:
 // CK4-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK4-DAG: [[ALLOC]]
 // CK4-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK4-DAG: [[ALLOCTYPE_TF2:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK4-DAG: br label %[[TYEND:[^,]+]]
 // CK4-DAG: [[ALLOCELSE]]
 // CK4-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -999,7 +1007,7 @@ public:
 // CK4-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK4-DAG: br label %[[TYEND]]
 // CK4-DAG: [[TYEND]]
-// CK4-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK4-DAG: [[TYPE2:%.+]] = phi i64 [ [[ALLOCTYPE_TF2]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK4: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[BBEGIN]], ptr [[BARRBEGINGEP]], i64 16, i64 [[TYPE2]], {{.*}})
 // CK4: [[PTRNEXT]] = getelementptr %class.C, ptr [[PTR]], i32 1
 // CK4: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
@@ -1120,6 +1128,7 @@ void foo(){
 // CK5-DAG: br i1 [[ISALLOC]], label %[[ALLOC:[^,]+]], label %[[ALLOCELSE:[^,]+]]
 // CK5-DAG: [[ALLOC]]
 // CK5-DAG: [[ALLOCTYPE:%.+]] = and i64 [[MEMBERTYPE]], -4
+// CK5-DAG: [[ALLOCTYPE_TF:%.+]] = or i64 [[ALLOCTYPE]], {{[-]?[0-9]+}}
 // CK5-DAG: br label %[[TYEND:[^,]+]]
 // CK5-DAG: [[ALLOCELSE]]
 // CK5-DAG: [[ISTO:%.+]] = icmp eq i64 [[TYPETF]], 1
@@ -1134,7 +1143,7 @@ void foo(){
 // CK5-DAG: [[FROMTYPE:%.+]] = and i64 [[MEMBERTYPE]], -2
 // CK5-DAG: br label %[[TYEND]]
 // CK5-DAG: [[TYEND]]
-// CK5-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
+// CK5-DAG: [[TYPE1:%.+]] = phi i64 [ [[ALLOCTYPE_TF]], %[[ALLOC]] ], [ [[TOTYPE]], %[[TO]] ], [ [[FROMTYPE]], %[[FROM]] ], [ [[MEMBERTYPE]], %[[TOELSE]] ]
 // CK5: call void @__tgt_push_mapper_component(ptr [[HANDLE]], ptr [[PTR]], ptr [[ABEGIN]], i64 {{.*}}, i64 [[TYPE1]], {{.*}})
 // CK5: [[PTRNEXT]] = getelementptr %struct.myvec, ptr [[PTR]], i32 1
 // CK5: [[ISDONE:%.+]] = icmp eq ptr [[PTRNEXT]], [[PTREND]]
