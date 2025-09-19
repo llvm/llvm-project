@@ -634,7 +634,7 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
     Expected<StringRef> NameOrErr = Child.getName();
     if (!NameOrErr)
       continue;
-    if (*NameOrErr == sys::path::filename(MemberName)) {
+    if (*NameOrErr == MemberName) {
       Expected<std::unique_ptr<object::Binary>> MemberOrErr =
           Child.getAsBinary();
       if (!MemberOrErr)
