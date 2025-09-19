@@ -415,8 +415,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; RV32-NEXT:    mul a4, a4, a5
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 16
-; RV32-NEXT:    vl8r.v v24, (a4) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vmv4r.v v8, v24
+; RV32-NEXT:    vl8r.v v8, (a4) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    csrr a4, vlenb
 ; RV32-NEXT:    slli a4, a4, 4
 ; RV32-NEXT:    add a4, sp, a4
@@ -726,8 +725,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; RV64-NEXT:    mul a4, a4, a5
 ; RV64-NEXT:    add a4, sp, a4
 ; RV64-NEXT:    addi a4, a4, 32
-; RV64-NEXT:    vl8r.v v24, (a4) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vmv4r.v v8, v24
+; RV64-NEXT:    vl8r.v v8, (a4) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    csrr a4, vlenb
 ; RV64-NEXT:    slli a4, a4, 4
 ; RV64-NEXT:    add a4, sp, a4
