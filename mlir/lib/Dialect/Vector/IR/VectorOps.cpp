@@ -5087,12 +5087,12 @@ void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<TransferReadAfterWriteToBroadcast>(context);
 }
 
-FailureOr<SmallVector<Value>>
-TransferReadOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+FailureOr<std::pair<SmallVector<Value>, bool>>
+TransferReadOp::bubbleDownCasts(OpBuilder &builder) {
   if (!hasPureBufferSemantics())
     return failure();
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), getResult(), modifiedInPlace);
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5582,12 +5582,12 @@ void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<FoldWaw, SwapExtractSliceOfTransferWrite>(context);
 }
 
-FailureOr<SmallVector<Value>>
-TransferWriteOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+FailureOr<std::pair<SmallVector<Value>, bool>>
+TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
   if (!hasPureBufferSemantics())
     return failure();
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), ValueRange(), modifiedInPlace);
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5644,10 +5644,10 @@ std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
-FailureOr<SmallVector<Value>> LoadOp::fuseCastOperands(OpBuilder &builder,
-                                                       bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), getResult(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+LoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5689,10 +5689,10 @@ std::optional<SmallVector<int64_t, 4>> StoreOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
-FailureOr<SmallVector<Value>> StoreOp::fuseCastOperands(OpBuilder &builder,
-                                                        bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), ValueRange(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+StoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5749,10 +5749,10 @@ OpFoldResult MaskedLoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-FailureOr<SmallVector<Value>>
-MaskedLoadOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), getResult(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+MaskedLoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5805,10 +5805,10 @@ LogicalResult MaskedStoreOp::fold(FoldAdaptor adaptor,
   return memref::foldMemRefCast(*this);
 }
 
-FailureOr<SmallVector<Value>>
-MaskedStoreOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), ValueRange(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+MaskedStoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5914,10 +5914,10 @@ void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<GatherFolder, FoldContiguousGather>(context);
 }
 
-FailureOr<SmallVector<Value>>
-GatherOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), getResult(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+GatherOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5982,10 +5982,10 @@ void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ScatterFolder, FoldContiguousScatter>(context);
 }
 
-FailureOr<SmallVector<Value>>
-ScatterOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), ValueRange(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+ScatterOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -6036,10 +6036,10 @@ void ExpandLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ExpandLoadFolder>(context);
 }
 
-FailureOr<SmallVector<Value>>
-ExpandLoadOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), getResult(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+ExpandLoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -6088,10 +6088,10 @@ void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<CompressStoreFolder>(context);
 }
 
-FailureOr<SmallVector<Value>>
-CompressStoreOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
-  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-      getBaseMutable(), ValueRange(), modifiedInPlace);
+FailureOr<std::pair<SmallVector<Value>, bool>>
+CompressStoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//

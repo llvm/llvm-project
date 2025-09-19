@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --fuse-memory-space-casts-into-consumers | FileCheck %s
+// RUN: mlir-opt %s --bubble-down-memory-space-casts | FileCheck %s
 
 #map = affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>
 

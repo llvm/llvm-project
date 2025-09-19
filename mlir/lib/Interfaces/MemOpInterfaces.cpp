@@ -55,19 +55,19 @@ LogicalResult mlir::detail::verifyMemorySpaceCastOpInterface(Operation *op) {
   return success();
 }
 
-FailureOr<SmallVector<Value>> mlir::detail::fuseInPlaceMemorySpaceCastImpl(
-    OpOperand &operand, ValueRange results, bool &modifiedInPlace) {
+FailureOr<std::pair<SmallVector<Value>, bool>>
+mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(OpOperand &operand,
+                                                   ValueRange results) {
   MemorySpaceCastOpInterface castOp =
-      MemorySpaceCastOpInterface::getIfFusableCast(operand.get());
+      MemorySpaceCastOpInterface::getIfLosslessCast(operand.get());
 
-  // Bail if the src is not produced by a `MemorySpaceCastOpInterface`.
+  // Bail if the src is not valid.
   if (!castOp)
     return failure();
 
   // Modify the op.
-  modifiedInPlace = true;
   operand.set(castOp.getSourcePtr());
-  return llvm::to_vector_of<Value>(results);
+  return std::make_pair(llvm::to_vector_of<Value>(results), true);
 }
 
 #include "mlir/Interfaces/MemOpInterfaces.cpp.inc"

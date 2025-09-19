@@ -585,14 +585,13 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
   ];
 }
 
-def FuseMemorySpaceCastsIntoConsumers :
-    Pass<"fuse-memory-space-casts-into-consumers"> {
-  let summary = "Fuses memory-space cast operations into consumers.";
+def BubbleDownMemorySpaceCasts :
+    Pass<"bubble-down-memory-space-casts"> {
+  let summary = "Bubbles down memory-space cast operations.";
   let description = [{
-    This pass tries to iteratively fuse all possible memory-space cast
-    operations into their consumers. It does this by looking for
-    `FuseMemorySpaceCastConsumerOpInterface` operations, and invoking the
-    interface methods to perform the fusion.
+    This pass tries to iteratively bubble down all possible memory-space cast
+    operations. It does this by looking for `MemorySpaceCastConsumerOpInterface`
+    operations, and invoking the interface methods to perform the bubbling down.
 
     Example:
 
@@ -609,7 +608,7 @@ def FuseMemorySpaceCastsIntoConsumers :
       %atomic_result = memref.atomic_rmw addf %arg2, %collapsed[%c4] : (f32, memref<16xf32>) -> f32
       return %collapsed : memref<16xf32>
     }
-    // mlir-opt --fuse-casts-into-consumers
+    // mlir-opt --bubble-down-memory-space-casts
     func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
       %c4 = arith.constant 4 : index
       %c0 = arith.constant 0 : index

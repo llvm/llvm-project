@@ -1,4 +1,4 @@
-//===- FuseMemorySpaceCastsIntoConsumers.cpp - Fuse casts transform -------===//
+//===- BubbleDownMemorySpaceCasts.cpp - Bubble down casts transform -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/FuseMemorySpaceCastsIntoConsumers.h"
+#include "mlir/Transforms/BubbleDownMemorySpaceCasts.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/MemOpInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -17,57 +17,53 @@
 using namespace mlir;
 
 namespace mlir {
-#define GEN_PASS_DEF_FUSEMEMORYSPACECASTSINTOCONSUMERS
+#define GEN_PASS_DEF_BUBBLEDOWNMEMORYSPACECASTS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
 namespace {
 //===----------------------------------------------------------------------===//
-// FuseCastsPattern pattern
+// BubbleDownCastsPattern pattern
 //===----------------------------------------------------------------------===//
-/// Pattern to fuse casts into consumer operations.
-struct FuseCastsPattern
-    : public OpInterfaceRewritePattern<FuseMemorySpaceCastConsumerOpInterface> {
+/// Pattern to bubble down casts into consumer operations.
+struct BubbleDownCastsPattern
+    : public OpInterfaceRewritePattern<MemorySpaceCastConsumerOpInterface> {
   using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(FuseMemorySpaceCastConsumerOpInterface op,
+  LogicalResult matchAndRewrite(MemorySpaceCastConsumerOpInterface op,
                                 PatternRewriter &rewriter) const override {
-    bool modifiedInPlace = false;
-    FailureOr<SmallVector<Value>> results =
-        op.fuseCastOperands(rewriter, modifiedInPlace);
-    assert((!failed(results) || !modifiedInPlace) &&
-           "expected `modifiedInPlace` to be false on fusion failure");
+    FailureOr<std::pair<SmallVector<Value>, bool>> results =
+        op.bubbleDownCasts(rewriter);
     if (failed(results))
       return failure();
-    if (modifiedInPlace) {
+    if (results->second) {
       rewriter.modifyOpInPlace(op, []() {});
       return success();
     }
-    rewriter.replaceOp(op, *results);
+    rewriter.replaceOp(op, results->first);
     return success();
   }
 };
 
 //===----------------------------------------------------------------------===//
-// FuseMemorySpaceCastsIntoConsumers pass
+// BubbleDownMemorySpaceCasts pass
 //===----------------------------------------------------------------------===//
 
-struct FuseMemorySpaceCastsIntoConsumers
-    : public impl::FuseMemorySpaceCastsIntoConsumersBase<
-          FuseMemorySpaceCastsIntoConsumers> {
-  using impl::FuseMemorySpaceCastsIntoConsumersBase<
-      FuseMemorySpaceCastsIntoConsumers>::FuseMemorySpaceCastsIntoConsumersBase;
+struct BubbleDownMemorySpaceCasts
+    : public impl::BubbleDownMemorySpaceCastsBase<BubbleDownMemorySpaceCasts> {
+  using impl::BubbleDownMemorySpaceCastsBase<
+      BubbleDownMemorySpaceCasts>::BubbleDownMemorySpaceCastsBase;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateFuseMemorySpaceCastIntoConsumersPatterns(patterns);
+    populateBubbleDownMemorySpaceCastPatterns(patterns, PatternBenefit());
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-void mlir::populateFuseMemorySpaceCastIntoConsumersPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<FuseCastsPattern>(patterns.getContext());
+void mlir::populateBubbleDownMemorySpaceCastPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<BubbleDownCastsPattern>(patterns.getContext(), benefit);
 }

@@ -16,27 +16,26 @@
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def FuseMemorySpaceCastConsumerOpInterface :
-    OpInterface<"FuseMemorySpaceCastConsumerOpInterface"> {
+def MemorySpaceCastConsumerOpInterface :
+    OpInterface<"MemorySpaceCastConsumerOpInterface"> {
   let description = [{
-    An interface to fuse memory-space cast operands into a consumer operation.
-    It is the responsibility of the interface to determine which casts can be
-    fused into the operation.
+    An interface for operations that can consume memory-space cast-like
+    operations.
   }];
   let cppNamespace = "::mlir";
   let methods = [
     InterfaceMethod<[{
-        Attempt to fuse the incoming cast-like operands. Returns `success`
-        and any new results on fusion success, otherwise it returns failure.
+        Attempt to bubble-down the incoming cast-like operands. On success
+        returns any new results, and whether the operation was modified in
+        place, otherwise it returns failure.
         If new results are produced, these must be compatible with the original
         operation results.
 
-        The `modifiedInPlace` parameter indicates whether the operation was
-        modified in place. If `false` and the fusion succeeded, then the
-        interface guarantees it is valid to erase the original operation.
-        If `true`, then the interface must guarantee no operations were created
-        by the method, and that no further IR modification is necessary. It is
-        considered an error if `modifiedInPlace` is true and the fusion failed.
+        If the operation was not modified in place, then the interface
+        guarantees it is valid to erase the original operation.
+        If the operation was modified in place, then the interface must
+        guarantee no operations were created by the method, and that no further
+        IR modification is necessary.
 
         Any implementations of this method must not erase/replace the original
         operation, instead it is the caller responsibility to erase or replace
@@ -45,8 +44,9 @@ def FuseMemorySpaceCastConsumerOpInterface :
         Finally, any implementations of this method have to guarantee that the
         IR remains valid at all times.
       }],
-      "::llvm::FailureOr<::llvm::SmallVector<::mlir::Value>>", "fuseCastOperands",
-      (ins "::mlir::OpBuilder &":$builder, "bool &":$modifiedInPlace)
+      "::llvm::FailureOr<std::pair<::llvm::SmallVector<::mlir::Value>, bool>>",
+      "bubbleDownCasts",
+      (ins "::mlir::OpBuilder &":$builder)
     >,
   ];
 }
@@ -83,13 +83,16 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
         Clones the memory space cast op with the given source and target type.
       }],
       "::mlir::MemorySpaceCastOpInterface", "cloneMemorySpaceCastOp",
-      (ins "::mlir::OpBuilder &":$builder, "::mlir::Type":$tgt,
+      (ins "::mlir::OpBuilder &":$builder, "::mlir::PtrLikeTypeInterface":$tgt,
            "::mlir::Value":$src)
     >,
     InterfaceMethod<[{
-        Returns whether the cast allows to be fused.
+        Returns whether the memory-space cast is lossless. A lossless
+        memory-space cast must not lose any information encoded in the memory
+        space. An example of such cast, is any conversion to the generic memory
+        space. 
       }],
-      "bool", "isFusableMemorySpaceCast"
+      "bool", "isLosslessCast"
     >
   ];
   let verify = [{
@@ -99,12 +102,12 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
   let extraClassDeclaration = [{
     /// Returns the underlying `MemorySpaceCastOpInterface` op if `value`
     /// is produced by a `MemorySpaceCastOpInterface` op, and
-    /// `isFusableMemorySpaceCast` returns true, otherwise it returns null.
+    /// `isLosslessCast` returns true, otherwise it returns null.
     static ::mlir::MemorySpaceCastOpInterface
-    getIfFusableCast(::mlir::Value value) {
+    getIfLosslessCast(::mlir::Value value) {
       auto op = ::llvm::dyn_cast_or_null<::mlir::MemorySpaceCastOpInterface>(
         value.getDefiningOp());
-      if (!op || !op.isFusableMemorySpaceCast())
+      if (!op || !op.isLosslessCast())
         return nullptr;
       return op;
     }
