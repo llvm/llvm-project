@@ -482,7 +482,8 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
                                                VectorType::get(1, inType), in);
     // TODO: replace this with non-packed ScaledExtOp
     Value scaleExt = amdgpu::ScaledExtPackedOp::create(
-        rewriter, loc, extScaleResultType, inCast, scale, 0);
+        rewriter, loc, extScaleResultType, inCast, scale,
+        rewriter.getI32IntegerAttr(0), nullptr);
     scaleExt = rewriter.replaceOpWithNewOp<vector::ExtractOp>(op, scaleExt, 0);
     return success();
   }
@@ -539,7 +540,7 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
         // TODO: replace this with non-packed ScaledExtOp for sliceWidth == 1
         Value scaleExt = amdgpu::ScaledExtPackedOp::create(
             rewriter, loc, extScaleResultType, inSlice, uniformScale,
-            j / opOutWidth);
+            rewriter.getI32IntegerAttr(j / opOutWidth), nullptr);
         if (outSliceWidth < opOutWidth) {
           scaleExt = vector::ExtractStridedSliceOp::create(
               rewriter, loc, scaleExt, 0, outSliceWidth, 1);

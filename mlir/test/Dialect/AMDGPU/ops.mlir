@@ -221,58 +221,58 @@ func.func @scaled_ext_scalar_f4e2m1_bf16(%v: vector<2xf4E2M1FN>, %scale: f32) ->
   func.return %ret : vector<2xbf16>
 }
 
-// CHECK-LABEL: func.func @scaled_ext_packed8_fp4
+// CHECK-LABEL: func.func @scaled_ext_packed8_fp
 func.func @scaled_ext_packed8_fp4(%v: vector<8xf4E2M1FN>, %scale: f32) -> (vector<8xf16>, vector<8xbf16>, vector<8xf32>) {
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret0 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf4E2M1FN> to vector<8xf16>
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret1 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf4E2M1FN> to vector<8xbf16>
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret2 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf4E2M1FN> to vector<8xf32>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret0 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf4E2M1FN> to vector<8xf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret1 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf4E2M1FN> to vector<8xbf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret2 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf4E2M1FN> to vector<8xf32>
   func.return %ret0, %ret1, %ret2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
 }
 
-// CHECK-LABEL: func.func @scaled_ext_packed8_fp8
+// CHECK-LABEL: func.func @scaled_ext_packed8_fp
 func.func @scaled_ext_packed8_fp8(%v: vector<8xf8E4M3FN>, %scale: f32) -> (vector<8xf16>, vector<8xbf16>, vector<8xf32>) {
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret0 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf8E4M3FN> to vector<8xf16>
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret1 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf8E4M3FN> to vector<8xbf16>
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret2 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf8E4M3FN> to vector<8xf32>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret0 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf8E4M3FN> to vector<8xf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret1 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf8E4M3FN> to vector<8xbf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret2 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf8E4M3FN> to vector<8xf32>
   func.return %ret0, %ret1, %ret2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
 }
 
-// CHECK-LABEL: func.func @scaled_ext_packed8_bf8
+// CHECK-LABEL: func.func @scaled_ext_packed8_bf
 func.func @scaled_ext_packed8_bf8(%v: vector<8xf8E5M2>, %scale: f32) -> (vector<8xf16>, vector<8xbf16>, vector<8xf32>) {
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret0 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf8E5M2> to vector<8xf16>
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret1 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf8E5M2> to vector<8xbf16>
-  // CHECK: amdgpu.scaled_ext_packed8
-  %ret2 = amdgpu.scaled_ext_packed8 %v, %scale[0] : vector<8xf8E5M2> to vector<8xf32>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret0 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf8E5M2> to vector<8xf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret1 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf8E5M2> to vector<8xbf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret2 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<8xf8E5M2> to vector<8xf32>
   func.return %ret0, %ret1, %ret2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
 }
 
 // CHECK-LABEL: func.func @scaled_ext_packed16_fp6
 func.func @scaled_ext_packed16_fp6(%v: vector<16xf6E2M3FN>, %scale: f32) -> (vector<16xf16>, vector<16xbf16>, vector<16xf32>) {
-  // CHECK: amdgpu.scaled_ext_packed16
-  %ret0 = amdgpu.scaled_ext_packed16 %v, %scale[0] : vector<16xf6E2M3FN> to vector<16xf16>
-  // CHECK: amdgpu.scaled_ext_packed16
-  %ret1 = amdgpu.scaled_ext_packed16 %v, %scale[0] : vector<16xf6E2M3FN> to vector<16xbf16>
-  // CHECK: amdgpu.scaled_ext_packed16
-  %ret2 = amdgpu.scaled_ext_packed16 %v, %scale[0] : vector<16xf6E2M3FN> to vector<16xf32>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret0 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<16xf6E2M3FN> to vector<16xf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret1 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<16xf6E2M3FN> to vector<16xbf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret2 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<16xf6E2M3FN> to vector<16xf32>
   func.return %ret0, %ret1, %ret2 : vector<16xf16>, vector<16xbf16>, vector<16xf32>
 }
 
 // CHECK-LABEL: func.func @scaled_ext_packed16_bf16
 func.func @scaled_ext_packed16_bf16(%v: vector<16xf6E3M2FN>, %scale: f32) -> (vector<16xf16>, vector<16xbf16>, vector<16xf32>) {
-  // CHECK: amdgpu.scaled_ext_packed16
-  %ret0 = amdgpu.scaled_ext_packed16 %v, %scale[0] : vector<16xf6E3M2FN> to vector<16xf16>
-  // CHECK: amdgpu.scaled_ext_packed16
-  %ret1 = amdgpu.scaled_ext_packed16 %v, %scale[0] : vector<16xf6E3M2FN> to vector<16xbf16>
-  // CHECK: amdgpu.scaled_ext_packed16
-  %ret2 = amdgpu.scaled_ext_packed16 %v, %scale[0] : vector<16xf6E3M2FN> to vector<16xf32>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret0 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<16xf6E3M2FN> to vector<16xf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret1 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<16xf6E3M2FN> to vector<16xbf16>
+  // CHECK: amdgpu.scaled_ext_packed
+  %ret2 = amdgpu.scaled_ext_packed %v, %scale[0] : vector<16xf6E3M2FN> to vector<16xf32>
   func.return %ret0, %ret1, %ret2 : vector<16xf16>, vector<16xbf16>, vector<16xf32>
 }
 
