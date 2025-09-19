@@ -754,6 +754,11 @@ AST_MATCHER(FunctionDecl, isMain) {
   return Node.isMain();
 }
 
+// Matches variable declarations that represent local variables.
+AST_MATCHER(VarDecl, isLocal) { 
+    return Node.isLocalVarDecl(); 
+}
+
 /// Matches the specialized template of a specialization declaration.
 ///
 /// Given
