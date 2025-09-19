@@ -472,11 +472,8 @@ int main(int argc, char **argv) {
   }
 
   // Handle features passed to target/subtarget.
-  if (MAttrs.size()) {
-    for (unsigned i = 0; i != MAttrs.size(); ++i)
-      Features.AddFeature(MAttrs[i]);
-  }
-
+  for (unsigned i = 0; i != MAttrs.size(); ++i)
+    Features.AddFeature(MAttrs[i]);
   FeaturesStr = Features.getString();
 
   std::unique_ptr<MCSubtargetInfo> STI(
