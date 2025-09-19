@@ -119,10 +119,11 @@ public:
     auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
     if (!Desugared)
       return nullptr;
-    auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared);
-    if (!ObjCType)
-      return nullptr;
-    return ObjCType->getDecl();
+    if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
+      return ObjCType->getDecl();
+    if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
+      return ObjCType->getInterface();
+    return nullptr;
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
@@ -369,7 +370,7 @@ public:
   const char *typeName() const final { return "retainable type"; }
 
   const char *invariant() const final {
-    return "member variables must be a RetainPtr";
+    return "member variables must be a RetainPtr or OSObjectPtr";
   }
 
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,

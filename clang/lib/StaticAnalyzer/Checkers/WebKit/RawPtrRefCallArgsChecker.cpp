@@ -465,11 +465,11 @@ public:
   }
 
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
 
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
 
   bool isSafeExpr(const Expr *E) const final {
