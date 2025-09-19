@@ -929,7 +929,7 @@ class PointerLikeRegClass<int Kind> {
 }
 
 /// RegClassByHwMode - Operands that change the register class based
-/// on the subtarget are derived from this derived from this. TableGen
+/// on the subtarget are derived from this. TableGen
 /// treats the register class as having a symbolic kind that it
 /// doesn't know, and resolves the actual regclass to use by using the
 /// a mapping in TargetInstrInfo at codegen time. This can be used to
