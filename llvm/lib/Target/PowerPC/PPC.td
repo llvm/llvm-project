@@ -793,6 +793,8 @@ def PPCAsmParserVariant : AsmParserVariant {
   string BreakCharacters = ".";
 }
 
+defm : RemapAllTargetPseudoPointerOperands<ppc_ptr_rc>;
+
 def PPC : Target {
   // Information about the instructions.
   let InstructionSet = PPCInstrInfo;

@@ -869,6 +869,10 @@ def PPCRegGxRCNoR0Operand : AsmOperandClass {
   let Name = "RegGxRCNoR0"; let PredicateMethod = "isRegNumber";
 }
 
+def ppc_ptr_rc : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC, G8RC]>;
+
 def ptr_rc_nor0_by_hwmode : RegClassByHwMode<
   [PPC32, PPC64],
   [GPRC_NOR0, G8RC_NOX0]>;
