@@ -509,7 +509,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
       //  future, to serialize the proper PartialDiagnostic as serializing
       //  it as a string defeats the purpose of the diagnostic mechanism.
       Satisfaction.Details.emplace_back(
-          new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
+          new (S.Context) ConstraintSubstitutionDiagnostic{
               SubstDiag.first,
               allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
       Satisfaction.IsSatisfied = false;
@@ -641,7 +641,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
 
     PartialDiagnostic Msg = S.PDiag(diag::note_constraint_references_error);
     Satisfaction.Details.emplace_back(
-        new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
+        new (S.Context) ConstraintSubstitutionDiagnostic{
             SubstitutedAtomicExpr.get()->getBeginLoc(),
             allocateStringFromConceptDiagnostic(S, Msg)});
     return SubstitutedAtomicExpr;
@@ -897,7 +897,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     //  it as a string defeats the purpose of the diagnostic mechanism.
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
-        new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
+        new (S.Context) ConstraintSubstitutionDiagnostic{
             SubstDiag.first,
             allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
     return ExprError();
@@ -1839,8 +1839,9 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag = Record.template dyn_cast<
-                   ConstraintSatisfaction::SubstitutionDiagnostic *>()) {
+  if (auto *Diag =
+          Record
+              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;

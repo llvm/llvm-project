@@ -33,13 +33,14 @@ class Expr;
 class NamedDecl;
 struct PrintingPolicy;
 
-/// Pairs of unsatisfied atomic constraint expressions along with the
-/// substituted constraint expr, if the template arguments could be
+/// Unsatisfied constraint expressions if the template arguments could be
 /// substituted into them, or a diagnostic if substitution resulted in
 /// an invalid expression.
+///
+using ConstraintSubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
 using UnsatisfiedConstraintRecord =
     llvm::PointerUnion<const Expr *, const ConceptReference *,
-                       std::pair<SourceLocation, StringRef> *>;
+                       const ConstraintSubstitutionDiagnostic *>;
 
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
@@ -56,8 +57,6 @@ public:
   ConstraintSatisfaction(const NamedDecl *ConstraintOwner,
                          ArrayRef<TemplateArgument> TemplateArgs)
       : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
-
-  using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
 
   bool IsSatisfied = false;
   bool ContainsErrors = false;
@@ -77,7 +76,7 @@ public:
 
   bool HasSubstitutionFailure() {
     for (const auto &Detail : Details)
-      if (Detail.dyn_cast<SubstitutionDiagnostic *>())
+      if (Detail.dyn_cast<const ConstraintSubstitutionDiagnostic *>())
         return true;
     return false;
   }

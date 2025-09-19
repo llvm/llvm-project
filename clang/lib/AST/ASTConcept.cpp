@@ -33,9 +33,9 @@ CreateUnsatisfiedConstraintRecord(const ASTContext &C,
     new (TrailingObject) UnsatisfiedConstraintRecord(Concept);
   else {
     auto &SubstitutionDiagnostic =
-        *cast<std::pair<SourceLocation, StringRef> *>(Detail);
+        *cast<const clang::ConstraintSubstitutionDiagnostic *>(Detail);
     StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
-    auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
+    auto *NewSubstDiag = new (C) clang::ConstraintSubstitutionDiagnostic(
         SubstitutionDiagnostic.first, Message);
     new (TrailingObject) UnsatisfiedConstraintRecord(NewSubstDiag);
   }

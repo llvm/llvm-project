@@ -1075,16 +1075,16 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
       } else {
-        auto Pair = Record->dyn_cast<std::pair<SourceLocation, StringRef> *>();
+        auto Pair =
+            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
           return ToPairFirst.takeError();
         StringRef ToPairSecond = ImportASTStringRef(Pair->second);
-        ToSat.Details.emplace_back(
-            new (Importer.getToContext())
-                ConstraintSatisfaction::SubstitutionDiagnostic{
-                    ToPairFirst.get(), ToPairSecond});
+        ToSat.Details.emplace_back(new (Importer.getToContext())
+                                       ConstraintSubstitutionDiagnostic{
+                                           ToPairFirst.get(), ToPairSecond});
       }
     }
   }
