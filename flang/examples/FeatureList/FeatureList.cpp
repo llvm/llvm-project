@@ -485,7 +485,6 @@ public:
   READ_FEATURE(OmpLinearClause::Modifier)
   READ_FEATURE(OmpLinearModifier)
   READ_FEATURE(OmpLinearModifier::Value)
-  READ_FEATURE(OmpLoopDirective)
   READ_FEATURE(OmpMapClause)
   READ_FEATURE(OmpMapClause::Modifier)
   READ_FEATURE(OmpNumTasksClause)
