@@ -136,7 +136,8 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       // blocks of parentOp, which are not technically backward unless they flow
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
-        if (parentOp->getNumRegions() == 1 &&
+        if (!parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+            parentOp->getNumRegions() == 1 &&
             parentOp->getRegion(0).hasOneBlock()) {
           return getBackwardSliceImpl(parentOp, visited, backwardSlice,
                                       options);
