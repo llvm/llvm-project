@@ -24,12 +24,6 @@ runs:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@22e9f909d35b50bd1181709564bfe816eaeaae81 # main
    
-    - name: Setup Windows
-      if: startsWith(runner.os, 'Windows')
-      uses: llvm/actions/setup-windows@main
-      with:
-        arch: amd64
-
     - name: Set Build Prefix
       id: build-prefix
       shell: bash
