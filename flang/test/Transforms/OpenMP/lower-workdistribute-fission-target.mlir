@@ -42,10 +42,10 @@
 // CHECK:             fir.store %[[VAL_26]] to %[[VAL_17]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_30]] to %[[VAL_20]] : !fir.ref<!fir.heap<index>>
 // CHECK:             omp.target map_entries(%[[VAL_7]] -> %[[VAL_31:.*]], %[[VAL_8]] -> %[[VAL_32:.*]], %[[VAL_9]] -> %[[VAL_33:.*]], %[[VAL_10]] -> %[[VAL_34:.*]], %[[VAL_13]] -> %[[VAL_35:.*]], %[[VAL_16]] -> %[[VAL_36:.*]], %[[VAL_19]] -> %[[VAL_37:.*]], %[[VAL_22]] -> %[[VAL_38:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
-// CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_35]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_40:.*]] = fir.load %[[VAL_36]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_37]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.llvm_ptr<!fir.heap<index>>
+// CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_35]] : !fir.ref<index>
+// CHECK:               %[[VAL_40:.*]] = fir.load %[[VAL_36]] : !fir.ref<index>
+// CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_37]] : !fir.ref<index>
+// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.ref<!fir.heap<index>>
 // CHECK:               %[[VAL_43:.*]] = arith.addi %[[VAL_40]], %[[VAL_40]] : index
 // CHECK:               omp.teams {
 // CHECK:                 omp.parallel {
@@ -76,6 +76,7 @@
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
 func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {

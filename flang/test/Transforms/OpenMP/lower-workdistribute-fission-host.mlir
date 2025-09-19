@@ -42,10 +42,10 @@
 // CHECK:             fir.store %[[VAL_26]] to %[[VAL_17]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_30]] to %[[VAL_20]] : !fir.ref<!fir.heap<index>>
 // CHECK:             omp.target host_eval(%[[VAL_24]] -> %[[VAL_31:.*]], %[[VAL_25]] -> %[[VAL_32:.*]], %[[VAL_26]] -> %[[VAL_33:.*]] : index, index, index) map_entries(%[[VAL_7]] -> %[[VAL_34:.*]], %[[VAL_8]] -> %[[VAL_35:.*]], %[[VAL_9]] -> %[[VAL_36:.*]], %[[VAL_10]] -> %[[VAL_37:.*]], %[[VAL_13]] -> %[[VAL_38:.*]], %[[VAL_16]] -> %[[VAL_39:.*]], %[[VAL_19]] -> %[[VAL_40:.*]], %[[VAL_22]] -> %[[VAL_41:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
-// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_43:.*]] = fir.load %[[VAL_39]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_44:.*]] = fir.load %[[VAL_40]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_45:.*]] = fir.load %[[VAL_41]] : !fir.llvm_ptr<!fir.heap<index>>
+// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.ref<index>
+// CHECK:               %[[VAL_43:.*]] = fir.load %[[VAL_39]] : !fir.ref<index>
+// CHECK:               %[[VAL_44:.*]] = fir.load %[[VAL_40]] : !fir.ref<index>
+// CHECK:               %[[VAL_45:.*]] = fir.load %[[VAL_41]] : !fir.ref<!fir.heap<index>>
 // CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_43]], %[[VAL_43]] : index
 // CHECK:               omp.teams {
 // CHECK:                 omp.parallel {
