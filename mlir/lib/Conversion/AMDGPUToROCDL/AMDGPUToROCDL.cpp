@@ -1510,31 +1510,31 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
 
   if (isa<Float8E5M2Type>(sourceElemType) && destElemType.isF32())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkF32Bf8Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float8E5M2Type>(sourceElemType) && destElemType.isF16())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkF16Bf8Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float8E5M2Type>(sourceElemType) && destElemType.isBF16())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkBf16Bf8Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float8E4M3FNType>(sourceElemType) && destElemType.isF32())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkF32Fp8Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float8E4M3FNType>(sourceElemType) && destElemType.isF16())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkF16Fp8Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float8E4M3FNType>(sourceElemType) && destElemType.isBF16())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkBf16Fp8Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float4E2M1FNType>(sourceElemType) && destElemType.isF32())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkF32Fp4Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float4E2M1FNType>(sourceElemType) && destElemType.isF16())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkF16Fp4Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else if (isa<Float4E2M1FNType>(sourceElemType) && destElemType.isBF16())
     rewriter.replaceOpWithNewOp<ROCDL::CvtScaleF32PkBf16Fp4Op>(
-        op, destVecType, i32Source, scale, *op.getIndex());
+        op, destVecType, i32Source, scale, op.getIndex());
   else
     return failure();
 
