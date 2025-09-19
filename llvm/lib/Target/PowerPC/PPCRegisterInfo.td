@@ -869,14 +869,13 @@ def PPCRegGxRCNoR0Operand : AsmOperandClass {
   let Name = "RegGxRCNoR0"; let PredicateMethod = "isRegNumber";
 }
 
-def ptr_rc_nor0 : RegClassByHwMode<
+def ptr_rc_nor0_by_hwmode : RegClassByHwMode<
   [PPC32, PPC64],
   [GPRC_NOR0, G8RC_NOX0]>;
 
-def PtrOpNoR0 : RegisterOperand<ptr_rc_nor0> {
+def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCNoR0Operand;
 }
-
 
 // New addressing modes with 34 bit immediates.
 def PPCDispRI34Operand : AsmOperandClass {
@@ -895,7 +894,7 @@ def dispRI34_pcrel : Operand<iPTR> {
 }
 def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34";
-  let MIOperandInfo = (ops dispRI34:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
 }
 // memri, imm is a 34-bit value for pc-relative instructions where
 // base register is set to zero.
@@ -908,10 +907,11 @@ def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
 def PPCRegGxRCOperand : AsmOperandClass {
   let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_idx : RegClassByHwMode<[PPC32, PPC64],
-                                  [GPRC, G8RC]>;
 
-def PtrRCIdxOp : RegisterOperand<ptr_rc_idx> {
+def ptr_rc_idx_by_hwmode : RegClassByHwMode<[PPC32, PPC64],
+                                            [GPRC, G8RC]>;
+
+def ptr_rc_idx : RegisterOperand<ptr_rc_idx_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCOperand;
 }
 
@@ -981,43 +981,43 @@ def dispSPE2 : Operand<iPTR> {
 
 def memri : Operand<iPTR> {
   let PrintMethod = "printMemRegImm";
-  let MIOperandInfo = (ops dispRI:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispRI:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 def memrr : Operand<iPTR> {
   let PrintMethod = "printMemRegReg";
-  let MIOperandInfo = (ops PtrOpNoR0:$ptrreg, PtrRCIdxOp:$offreg);
+  let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg, ptr_rc_idx:$offreg);
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
   let PrintMethod = "printMemRegImm";
-  let MIOperandInfo = (ops dispRIX:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispRIX:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 def memrihash : Operand<iPTR> {
   // memrihash 8-aligned for ROP Protection Instructions.
   let PrintMethod = "printMemRegImmHash";
-  let MIOperandInfo = (ops dispRIHash:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispRIHash:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix16 : Operand<iPTR> { // memri, imm is 16-aligned, 12-bit, Inst{16:27}
   let PrintMethod = "printMemRegImm";
-  let MIOperandInfo = (ops dispRIX16:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispRIX16:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 def spe8dis : Operand<iPTR> {   // SPE displacement where the imm is 8-aligned.
   let PrintMethod = "printMemRegImm";
-  let MIOperandInfo = (ops dispSPE8:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispSPE8:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 def spe4dis : Operand<iPTR> {   // SPE displacement where the imm is 4-aligned.
   let PrintMethod = "printMemRegImm";
-  let MIOperandInfo = (ops dispSPE4:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispSPE4:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 def spe2dis : Operand<iPTR> {   // SPE displacement where the imm is 2-aligned.
   let PrintMethod = "printMemRegImm";
-  let MIOperandInfo = (ops dispSPE2:$imm, PtrOpNoR0:$reg);
+  let MIOperandInfo = (ops dispSPE2:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
 
@@ -1025,7 +1025,7 @@ def spe2dis : Operand<iPTR> {   // SPE displacement where the imm is 2-aligned.
 // pseudo-instructions which translates to LD/LWZ.  These instructions requires
 // G8RC_NOX0 registers.
 def memr : Operand<iPTR> {
-  let MIOperandInfo = (ops PtrOpNoR0:$ptrreg);
+  let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg);
   let OperandType = "OPERAND_MEMORY";
 }
 def PPCTLSRegOperand : AsmOperandClass {
