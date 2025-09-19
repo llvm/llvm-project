@@ -55,6 +55,9 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   else
     FS = "-64bit-mode,-32bit-mode,+16bit-mode";
 
+  if (TT.isX32())
+    FS += ",+x32";
+
   return FS;
 }
 
