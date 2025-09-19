@@ -1219,7 +1219,7 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
     return IsTupleLike::Error;
 
   E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser);
-  if (E.isInvalid())
+  if (E.isInvalid() || Size.isNegative())
     return IsTupleLike::Error;
 
   return IsTupleLike::TupleLike;
