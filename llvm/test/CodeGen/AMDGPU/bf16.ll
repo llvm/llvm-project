@@ -49641,6 +49641,7 @@ define <3 x bfloat> @v_fma_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, <3 x bfloat>
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11FAKE16-NEXT:    v_alignbit_b32 v1, s0, v3, 16
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+<<<<<<< HEAD
 ;
 ; GFX1250-LABEL: v_fma_v3bf16:
 ; GFX1250:       ; %bb.0:
@@ -49649,6 +49650,15 @@ define <3 x bfloat> @v_fma_v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, <3 x bfloat>
 ; GFX1250-NEXT:    v_pk_fma_bf16 v0, v0, v2, v4
 ; GFX1250-NEXT:    v_pk_fma_bf16 v1, v1, v3, v5
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+=======
+; GFX1250-LABEL:     v_fma_v3bf16:
+; GFX1250:           %bb.0:
+; GFX1250-NEXT:        s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:        s_wait_kmcnt 0x0
+; GFX1250-NEXT:        v_pk_fma_bf16 v0, v0, v2, v4
+; GFX1250-NEXT:        v_pk_fma_bf16 v1, v1, v3, v5
+; GFX1250-NEXT:        s_set_pc_i64 s[30:31]
+>>>>>>> cc3762e87c75 (Add testing coverage - part I)
   %op = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, <3 x bfloat> %c)
   ret <3 x bfloat> %op
 }
