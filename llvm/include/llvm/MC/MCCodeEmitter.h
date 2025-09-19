@@ -10,7 +10,6 @@
 #define LLVM_MC_MCCODEEMITTER_H
 
 #include "llvm/Support/Compiler.h"
-#include <optional>
 
 namespace llvm {
 
