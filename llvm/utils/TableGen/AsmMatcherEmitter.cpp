@@ -1386,20 +1386,19 @@ void AsmMatcherInfo::buildRegisterClasses(
 
   unsigned RegClassByHwModeIndex = 0;
   for (const Record *ClassByHwMode : Target.getAllRegClassByHwMode()) {
-    Classes.emplace_front();
-    ClassInfo *CI = &Classes.front();
-    CI->Kind = ClassInfo::RegisterClassByHwMode0 + RegClassByHwModeIndex;
+    ClassInfo &CI = Classes.emplace_front();
+    CI.Kind = ClassInfo::RegisterClassByHwMode0 + RegClassByHwModeIndex;
 
-    CI->ClassName = "RegByHwMode_" + ClassByHwMode->getName().str();
-    CI->Name = "MCK_" + CI->ClassName;
-    CI->ValueName = ClassByHwMode->getName();
-    CI->RenderMethod = "addRegOperands";
+    CI.ClassName = "RegByHwMode_" + ClassByHwMode->getName().str();
+    CI.Name = "MCK_" + CI.ClassName;
+    CI.ValueName = ClassByHwMode->getName();
+    CI.RenderMethod = "addRegOperands";
     //  FIXME: Set diagnostic type.
     ++RegClassByHwModeIndex;
 
-    assert(CI->isRegisterClassByHwMode());
+    assert(CI.isRegisterClassByHwMode());
 
-    RegisterClassClasses.try_emplace(ClassByHwMode, CI);
+    RegisterClassClasses.try_emplace(ClassByHwMode, &CI);
   }
 
   // Populate the map for individual registers.
