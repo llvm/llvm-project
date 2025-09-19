@@ -3793,21 +3793,23 @@ void SITargetLowering::passSpecialInputs(
   // in the same location as the input.
   // clang-format off
   static constexpr std::pair<AMDGPUFunctionArgInfo::PreloadedValue,
-                              StringLiteral> ImplicitAttrs[] = {
-     {AMDGPUFunctionArgInfo::DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
-     {AMDGPUFunctionArgInfo::QUEUE_PTR, "amdgpu-no-queue-ptr" },
-     {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, "amdgpu-no-implicitarg-ptr"},
-     {AMDGPUFunctionArgInfo::DISPATCH_ID, "amdgpu-no-dispatch-id"},
-     {AMDGPUFunctionArgInfo::WORKGROUP_ID_X, "amdgpu-no-workgroup-id-x"},
-     {AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,"amdgpu-no-workgroup-id-y"},
-     {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,"amdgpu-no-workgroup-id-z"},
-     {AMDGPUFunctionArgInfo::LDS_KERNEL_ID,"amdgpu-no-lds-kernel-id"},
-   };
+      std::array<StringLiteral, 2>> ImplicitAttrs[] = {
+    {AMDGPUFunctionArgInfo::DISPATCH_PTR, {"amdgpu-no-dispatch-ptr", ""}},
+    {AMDGPUFunctionArgInfo::QUEUE_PTR, {"amdgpu-no-queue-ptr", ""}},
+    {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, {"amdgpu-no-implicitarg-ptr", ""}},
+    {AMDGPUFunctionArgInfo::DISPATCH_ID, {"amdgpu-no-dispatch-id", ""}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_X, {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Y, {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z, {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"}},
+    {AMDGPUFunctionArgInfo::LDS_KERNEL_ID, {"amdgpu-no-lds-kernel-id", ""}},
+  };
   // clang-format on
 
-  for (auto [InputID, Attr] : ImplicitAttrs) {
+  for (auto [InputID, Attrs] : ImplicitAttrs) {
     // If the callee does not use the attribute value, skip copying the value.
-    if (CLI.CB->hasFnAttr(Attr))
+    if (all_of(Attrs, [&](StringRef Attr) {
+          return Attr.empty() || CLI.CB->hasFnAttr(Attr);
+        }))
       continue;
 
     const auto [OutgoingArg, ArgRC, ArgTy] =
@@ -8159,25 +8161,14 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
     // it returns a wrong value (all zeroes?). The real value is in the upper 32
     // bits.
     //
-    // To work around the issue, directly emit a 64 bit mov from this register
+    // To work around the issue, emit a 64 bit copy from this register
     // then extract the high bits. Note that this shouldn't even result in a
     // shift being emitted and simply become a pair of registers (e.g.):
     //    s_mov_b64 s[6:7], src_shared_base
     //    v_mov_b32_e32 v1, s7
-    //
-    // FIXME: It would be more natural to emit a CopyFromReg here, but then copy
-    // coalescing would kick in and it would think it's okay to use the "HI"
-    // subregister directly (instead of extracting the HI 32 bits) which is an
-    // artificial (unusable) register.
-    //  Register TableGen definitions would need an overhaul to get rid of the
-    //  artificial "HI" aperture registers and prevent this kind of issue from
-    //  happening.
-    SDNode *Mov = DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64,
-                                     DAG.getRegister(ApertureRegNo, MVT::i64));
-    return DAG.getNode(
-        ISD::TRUNCATE, DL, MVT::i32,
-        DAG.getNode(ISD::SRL, DL, MVT::i64,
-                    {SDValue(Mov, 0), DAG.getConstant(32, DL, MVT::i64)}));
+    SDValue Copy =
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, ApertureRegNo, MVT::v2i32);
+    return DAG.getExtractVectorElt(DL, MVT::i32, Copy, 1);
   }
 
   // For code object version 5, private_base and shared_base are passed through
@@ -11307,7 +11298,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue VOffset;
     // Try to split SAddr and VOffset. Global and LDS pointers share the same
     // immediate offset, so we cannot use a regular SelectGlobalSAddr().
-    if (Addr->isDivergent() && Addr.getOpcode() == ISD::ADD) {
+    if (Addr->isDivergent() && Addr->isAnyAdd()) {
       SDValue LHS = Addr.getOperand(0);
       SDValue RHS = Addr.getOperand(1);
 
@@ -11483,6 +11474,11 @@ static bool isNoUnsignedWrap(SDValue Addr) {
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
   return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
+}
+
+bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,
+                                                       EVT PtrVT) const {
+  return true;
 }
 
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
@@ -12925,8 +12921,7 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N, unsigned AddrSpace,
 
   // We only do this to handle cases where it's profitable when there are
   // multiple uses of the add, so defer to the standard combine.
-  if ((N0.getOpcode() != ISD::ADD && N0.getOpcode() != ISD::OR) ||
-      N0->hasOneUse())
+  if ((!N0->isAnyAdd() && N0.getOpcode() != ISD::OR) || N0->hasOneUse())
     return SDValue();
 
   const ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N1);
@@ -12965,6 +12960,8 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N, unsigned AddrSpace,
       N->getFlags().hasNoUnsignedWrap() &&
       (N0.getOpcode() == ISD::OR || N0->getFlags().hasNoUnsignedWrap()));
 
+  // Use ISD::ADD even if the original operation was ISD::PTRADD, since we can't
+  // be sure that the new left operand is a proper base pointer.
   return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset, Flags);
 }
 
@@ -15213,13 +15210,36 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return V;
   }
 
+  // EXTRACT_VECTOR_ELT (v2i32 bitcast (i64/f64:k), Idx)
+  //   =>
+  // i32:Lo(k) if Idx == 0, or
+  // i32:Hi(k) if Idx == 1
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (Vec.getOpcode() == ISD::BITCAST && VecVT == MVT::v2i32 && Idx) {
+    SDLoc SL(N);
+    SDValue PeekThrough = Vec.getOperand(0);
+    auto *KImm = dyn_cast<ConstantSDNode>(PeekThrough);
+    if (KImm && KImm->getValueType(0).getSizeInBits() == 64) {
+      uint64_t KImmValue = KImm->getZExtValue();
+      return DAG.getConstant(
+          (KImmValue >> (32 * Idx->getZExtValue())) & 0xffffffff, SL, MVT::i32);
+    }
+    auto *KFPImm = dyn_cast<ConstantFPSDNode>(PeekThrough);
+    if (KFPImm && KFPImm->getValueType(0).getSizeInBits() == 64) {
+      uint64_t KFPImmValue =
+          KFPImm->getValueAPF().bitcastToAPInt().getZExtValue();
+      return DAG.getConstant((KFPImmValue >> (32 * Idx->getZExtValue())) &
+                                 0xffffffff,
+                             SL, MVT::i32);
+    }
+  }
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
-  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
       VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
@@ -16125,64 +16145,17 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
       return Folded;
   }
 
-  if (N0.getOpcode() == ISD::PTRADD && N1.getOpcode() == ISD::Constant) {
-    // Fold (ptradd (ptradd GA, v), c) -> (ptradd (ptradd GA, c) v) with
-    // global address GA and constant c, such that c can be folded into GA.
-    SDValue GAValue = N0.getOperand(0);
-    if (const GlobalAddressSDNode *GA =
-            dyn_cast<GlobalAddressSDNode>(GAValue)) {
-      if (DCI.isBeforeLegalizeOps() && isOffsetFoldingLegal(GA)) {
-        // If both additions in the original were NUW, reassociation preserves
-        // that.
-        SDNodeFlags Flags =
-            (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
-        SDValue Inner = DAG.getMemBasePlusOffset(GAValue, N1, DL, Flags);
-        DCI.AddToWorklist(Inner.getNode());
-        return DAG.getMemBasePlusOffset(Inner, N0.getOperand(1), DL, Flags);
-      }
-    }
-  }
-
   if (N1.getOpcode() != ISD::ADD || !N1.hasOneUse())
     return SDValue();
 
-  // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
-  //    y is not, and (add y, z) is used only once.
-  // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
-  //    z is not, and (add y, z) is used only once.
-  // The goal is to move constant offsets to the outermost ptradd, to create
-  // more opportunities to fold offsets into memory instructions.
-  // Together with the generic combines in DAGCombiner.cpp, this also
-  // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
-  //
-  // This transform is here instead of in the general DAGCombiner as it can
-  // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
-  // AArch64's CPA.
   SDValue X = N0;
   SDValue Y = N1.getOperand(0);
   SDValue Z = N1.getOperand(1);
   bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
   bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
 
-  // If both additions in the original were NUW, reassociation preserves that.
-  SDNodeFlags ReassocFlags =
-      (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
-
-  if (ZIsConstant != YIsConstant) {
-    if (YIsConstant)
-      std::swap(Y, Z);
-    SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
-    DCI.AddToWorklist(Inner.getNode());
-    return DAG.getMemBasePlusOffset(Inner, Z, DL, ReassocFlags);
-  }
-
-  // If one of Y and Z is constant, they have been handled above. If both were
-  // constant, the addition would have been folded in SelectionDAG::getNode
-  // already. This ensures that the generic DAG combines won't undo the
-  // following reassociation.
-  assert(!YIsConstant && !ZIsConstant);
-
-  if (!X->isDivergent() && Y->isDivergent() != Z->isDivergent()) {
+  if (!YIsConstant && !ZIsConstant && !X->isDivergent() &&
+      Y->isDivergent() != Z->isDivergent()) {
     // Reassociate (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if x and
     // y are uniform and z isn't.
     // Reassociate (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if x and
@@ -16193,6 +16166,9 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
     // reassociate.
     if (Y->isDivergent())
       std::swap(Y, Z);
+    // If both additions in the original were NUW, reassociation preserves that.
+    SDNodeFlags ReassocFlags =
+        (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
     SDValue UniformInner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
     DCI.AddToWorklist(UniformInner.getNode());
     return DAG.getMemBasePlusOffset(UniformInner, Z, DL, ReassocFlags);

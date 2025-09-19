@@ -2199,6 +2199,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
   case FunctionNameRepresentation::eName:
     return false;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 bool CPlusPlusLanguage::HandleFrameFormatVariable(

@@ -56,6 +56,7 @@ CodeGen/AMDGPU/global_atomics_optimizer_fp_no_rtn.ll
 CodeGen/AMDGPU/GlobalISel/atomic_optimizations_mul_one.ll
 CodeGen/AMDGPU/lower-buffer-fat-pointers-mem-transfer.ll
 CodeGen/AMDGPU/lower-ctor-dtor.ll
+CodeGen/AMDGPU/lower-intrinsics-cluster-barrier.ll
 CodeGen/AMDGPU/lower-mem-intrinsics.ll
 CodeGen/AMDGPU/lower-mem-intrinsics-threshold.ll
 CodeGen/AMDGPU/opencl-printf-and-hostcall.ll
@@ -1231,6 +1232,7 @@ Transforms/LoopVectorize/AArch64/single-early-exit-interleave.ll
 Transforms/LoopVectorize/AArch64/smallest-and-widest-types.ll
 Transforms/LoopVectorize/AArch64/store-costs-sve.ll
 Transforms/LoopVectorize/AArch64/strict-fadd.ll
+Transforms/LoopVectorize/AArch64/struct-return-cost.ll
 Transforms/LoopVectorize/AArch64/sve2-histcnt-epilogue.ll
 Transforms/LoopVectorize/AArch64/sve-basic-vec.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-inloop-reductions.ll
@@ -1369,6 +1371,7 @@ Transforms/LoopVectorize/outer-loop-wide-phis.ll
 Transforms/LoopVectorize/phi-cost.ll
 Transforms/LoopVectorize/pointer-induction.ll
 Transforms/LoopVectorize/PowerPC/exit-branch-cost.ll
+Transforms/LoopVectorize/PowerPC/large-loop-rdx.ll
 Transforms/LoopVectorize/PowerPC/optimal-epilog-vectorization.ll
 Transforms/LoopVectorize/PowerPC/optimal-epilog-vectorization-profitability.ll
 Transforms/LoopVectorize/PowerPC/small-loop-rdx.ll
@@ -1570,6 +1573,7 @@ Transforms/LoopVectorize/X86/outer_loop_test1_no_explicit_vect_width.ll
 Transforms/LoopVectorize/X86/pr109581-unused-blend.ll
 Transforms/LoopVectorize/X86/pr141968-instsimplifyfolder.ll
 Transforms/LoopVectorize/X86/pr23997.ll
+Transforms/LoopVectorize/X86/pr47437.ll
 Transforms/LoopVectorize/X86/pr51366-sunk-instruction-used-outside-of-loop.ll
 Transforms/LoopVectorize/X86/pr54634.ll
 Transforms/LoopVectorize/X86/pr55096-scalarize-add.ll

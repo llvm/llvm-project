@@ -6,9 +6,9 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 define void @foo(ptr %h) !dbg !4 {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[H:%.*]]) !dbg [[DBG4:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:      #dbg_value(i64 0, [[META11:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !dbg [[DBG21:![0-9]+]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]], !dbg [[DBG21:![0-9]+]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]], !dbg [[DBG21]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -33,12 +33,11 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG21]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !dbg [[DBG21]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]], !dbg [[DBG21]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]], !dbg [[DBG21]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 20, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]], !dbg [[DBG21]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
-; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC13:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
+; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ 20, %[[SCALAR_PH]] ], [ [[INC13:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
 ; CHECK-NEXT:      #dbg_value(i64 [[I_023]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    br label %[[FOR_COND5_PREHEADER:.*]], !dbg [[DBG29]]
 ; CHECK:       [[FOR_COND5_PREHEADER]]:
