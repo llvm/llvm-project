@@ -594,6 +594,25 @@ func.func @testMatchMixedVaradicOptional(%arg0: i32, %arg1: i32, %arg2: i32, %ar
   return
 }
 
+// CHECK-LABEL: @replaceOneResultWithNSuffixArgMatch
+func.func @replaceOneResultWithNSuffixArgMatch() -> (f32) {
+  // CHECK: %0:2 = "test.two_result2"() : () -> (f32, f32)
+  %0:2 = "test.two_result2"() : () -> (f32, f32)
+  %1 = "test.one_result4"(%0#1) : (f32) -> (f32)
+  // CHECK: return %0#0 : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @replaceOneResultWithNSuffixArgNoMatch
+func.func @replaceOneResultWithNSuffixArgNoMatch() -> (f32) {
+  // CHECK: %0:2 = "test.two_result2"() : () -> (f32, f32)
+  %0:2 = "test.two_result2"() : () -> (f32, f32)
+  // CHECK: %1 = "test.one_result4"(%0#0) : (f32) -> f32
+  %1 = "test.one_result4"(%0#0) : (f32) -> (f32)
+  // CHECK: return %1 : f32
+  return %1 : f32
+}
+
 //===----------------------------------------------------------------------===//
 // Test patterns that operate on properties
 //===----------------------------------------------------------------------===//

@@ -1660,6 +1660,16 @@ def OneResultOp3 : TEST_Op<"one_result3"> {
   let results = (outs I32:$result1);
 }
 
+def OneResultOp4 : TEST_Op<"one_result4"> {
+  let arguments = (ins F32);
+  let results = (outs F32);
+}
+
+def TwoResultOp2 : TEST_Op<"two_result2"> {
+  let arguments = (ins);
+  let results = (outs F32, F32);
+}
+
 // Test using multi-result op as a whole
 def : Pat<(ThreeResultOp MultiResultOpKind1:$kind),
           (AnotherThreeResultOp $kind)>;
@@ -1695,6 +1705,12 @@ def : Pattern<
         (OneResultOp3 $interm__1),
         (AnotherTwoResultOp $kind)
     ]>;
+
+// Test referencing a one-param op whose
+// param comes from the first result of a two-result op.
+def : Pat<
+  (OneResultOp4 (TwoResultOp2:$a__1)),
+  (replaceWithValue $a__0)>;
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Variadic Ops)
