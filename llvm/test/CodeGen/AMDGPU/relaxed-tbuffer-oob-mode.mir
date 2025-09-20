@@ -19,7 +19,8 @@
     ret float %res
   }
 
-  attributes #0 = {"amdgpu-relaxed-tbuffer-oob-mod"}
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 4, !"amdgpu.oob.mode", i32 2}
 ...
 ---
 name:            relaxed-tbuffer-oob-mode

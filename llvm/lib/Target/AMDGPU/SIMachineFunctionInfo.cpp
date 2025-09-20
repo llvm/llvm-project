@@ -198,7 +198,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
   ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
 
-  if (F.hasFnAttribute("amdgpu-relaxed-tbuffer-oob-mod"))
+  // Enable relaxed TBUFFER OOB mode if amdgpu.oob.mode has bit 0x2 set.
+  if (const auto *CI = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("amdgpu.oob.mode"));
+      CI && (CI->getZExtValue() & 0x2))
     setRelaxedTBufferOOBMode(true);
 }
 
