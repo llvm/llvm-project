@@ -63,15 +63,15 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
 #ifdef OFFLOAD_ENABLE_EMISSARY_APIS
   case ALT_LIBC_MALLOC: {
     Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
-      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
-          Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(
+          Device.allocate(Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE));
     });
     break;
   }
   case ALT_LIBC_FREE: {
     Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
       Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
+                  TARGET_ALLOC_DEVICE);
     });
     break;
   }
