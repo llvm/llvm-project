@@ -31,58 +31,58 @@
 
 namespace llvm::orc {
 
-LibraryResolver::LibraryResolver(const LibraryResolver::Setup &setup)
-    : m_cache(setup.cache ? setup.cache : std::make_shared<LibraryPathCache>()),
-      m_PathResolver(setup.resolver ? setup.resolver
-                                    : std::make_shared<PathResolver>(m_cache)),
-      m_scanH(setup.basePaths, m_cache, m_PathResolver),
-      FB(setup.filterBuilder), m_libMgr(),
-      m_shouldScan(setup.shouldScan ? setup.shouldScan
-                                    : [](StringRef) { return true; }),
-      scanBatchSize(setup.scanBatchSize) {
+LibraryResolver::LibraryResolver(const LibraryResolver::Setup &S)
+    : LibPathCache(S.Cache ? S.Cache : std::make_shared<LibraryPathCache>()),
+      LibPathResolver(S.PResolver
+                          ? S.PResolver
+                          : std::make_shared<PathResolver>(LibPathCache)),
+      ScanHelper(S.BasePaths, LibPathCache, LibPathResolver),
+      FB(S.FilterBuilder), LibMgr(),
+      ShouldScanCall(S.ShouldScanCall ? S.ShouldScanCall
+                                      : [](StringRef) -> bool { return true; }),
+      scanBatchSize(S.ScanBatchSize) {
 
-  if (m_scanH.getAllUnits().empty()) {
+  if (ScanHelper.getAllUnits().empty()) {
     LLVM_DEBUG(dbgs() << "Warning: No base paths provided for scanning.\n");
   }
 }
 
 std::unique_ptr<LibraryResolutionDriver>
-LibraryResolutionDriver::create(const LibraryResolver::Setup &setup) {
-  auto loader = std::make_unique<LibraryResolver>(setup);
+LibraryResolutionDriver::create(const LibraryResolver::Setup &S) {
+  auto LR = std::make_unique<LibraryResolver>(S);
   return std::unique_ptr<LibraryResolutionDriver>(
-      new LibraryResolutionDriver(std::move(loader)));
+      new LibraryResolutionDriver(std::move(LR)));
 }
 
-void LibraryResolutionDriver::addScanPath(const std::string &path,
-                                          PathType kind) {
-  Loader->m_scanH.addBasePath(path, kind);
+void LibraryResolutionDriver::addScanPath(const std::string &Path, PathType K) {
+  LR->ScanHelper.addBasePath(Path, K);
 }
 
-bool LibraryResolutionDriver::markLibraryLoaded(StringRef path) {
-  auto lib = Loader->m_libMgr.getLibrary(path);
-  if (!lib)
+bool LibraryResolutionDriver::markLibraryLoaded(StringRef Path) {
+  auto Lib = LR->LibMgr.getLibrary(Path);
+  if (!Lib)
     return false;
 
-  lib->setState(LibraryManager::State::Loaded);
+  Lib->setState(LibraryManager::LibState::Loaded);
 
   return true;
 }
 
-bool LibraryResolutionDriver::markLibraryUnLoaded(StringRef path) {
-  auto lib = Loader->m_libMgr.getLibrary(path);
-  if (!lib)
+bool LibraryResolutionDriver::markLibraryUnLoaded(StringRef Path) {
+  auto Lib = LR->LibMgr.getLibrary(Path);
+  if (!Lib)
     return false;
 
-  lib->setState(LibraryManager::State::Unloaded);
+  Lib->setState(LibraryManager::LibState::Unloaded);
 
   return true;
 }
 
 void LibraryResolutionDriver::resolveSymbols(
-    std::vector<std::string> symbols,
+    std::vector<std::string> Syms,
     LibraryResolver::OnSearchComplete OnCompletion,
-    const SearchConfig &config) {
-  Loader->searchSymbolsInLibraries(symbols, std::move(OnCompletion), config);
+    const SearchConfig &Config) {
+  LR->searchSymbolsInLibraries(Syms, std::move(OnCompletion), Config);
 }
 
 static bool shouldIgnoreSymbol(const object::SymbolRef &Sym,
@@ -118,9 +118,12 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
 
   auto ObjOrErr = ObjLoader.getObjectFile();
   if (!ObjOrErr) {
-    handleAllErrors(ObjOrErr.takeError(), [&](const ErrorInfoBase &EIB) {
-      errs() << "Error loading object: " << EIB.message() << "\n";
-    });
+    std::string ErrMsg;
+    handleAllErrors(ObjOrErr.takeError(),
+                    [&](const ErrorInfoBase &EIB) { ErrMsg = EIB.message(); });
+
+    LLVM_DEBUG(dbgs() << "Failed loading object file: " << Path
+                      << "\nError: " << ErrMsg << "\n");
     return false;
   }
 
@@ -180,26 +183,26 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
 
 class SymbolSearchContext {
 public:
-  SymbolSearchContext(SymbolQuery &Q) : m_query(Q) {}
+  SymbolSearchContext(SymbolQuery &Q) : Q(Q) {}
 
-  bool hasSearched(LibraryInfo *lib) const { return m_searched.count(lib); }
+  bool hasSearched(LibraryInfo *Lib) const { return Searched.count(Lib); }
 
-  void markSearched(LibraryInfo *lib) { m_searched.insert(lib); }
+  void markSearched(LibraryInfo *Lib) { Searched.insert(Lib); }
 
-  inline bool allResolved() const { return m_query.allResolved(); }
+  inline bool allResolved() const { return Q.allResolved(); }
 
-  SymbolQuery &query() { return m_query; }
+  SymbolQuery &query() { return Q; }
 
 private:
-  SymbolQuery &m_query;
-  DenseSet<LibraryInfo *> m_searched;
+  SymbolQuery &Q;
+  DenseSet<LibraryInfo *> Searched;
 };
 
 void LibraryResolver::resolveSymbolsInLibrary(
-    LibraryInfo &lib, SymbolQuery &unresolvedSymbols,
+    LibraryInfo &Lib, SymbolQuery &UnresolvedSymbols,
     const SymbolEnumeratorOptions &Opts) {
   LLVM_DEBUG(dbgs() << "Checking unresolved symbols "
-                    << " in library : " << lib.getFileName() << "\n";);
+                    << " in library : " << Lib.getFileName() << "\n";);
   StringSet<> discoveredSymbols;
   bool hasEnumerated = false;
 
@@ -209,10 +212,10 @@ void LibraryResolver::resolveSymbolsInLibrary(
 
     hasEnumerated = true;
 
-    LLVM_DEBUG(dbgs() << "Enumerating symbols in library: " << lib.getFullPath()
+    LLVM_DEBUG(dbgs() << "Enumerating symbols in library: " << Lib.getFullPath()
                       << "\n";);
     SymbolEnumerator::enumerateSymbols(
-        lib.getFullPath(),
+        Lib.getFullPath(),
         [&](StringRef sym) {
           discoveredSymbols.insert(sym);
           return EnumerateResult::Continue;
@@ -220,8 +223,8 @@ void LibraryResolver::resolveSymbolsInLibrary(
         Opts);
   };
 
-  if (!unresolvedSymbols.hasUnresolved()) {
-    LLVM_DEBUG(dbgs() << "Skipping library: " << lib.getFullPath()
+  if (!UnresolvedSymbols.hasUnresolved()) {
+    LLVM_DEBUG(dbgs() << "Skipping library: " << Lib.getFullPath()
                       << " — unresolved symbols exist.\n";);
     return;
   }
@@ -230,13 +233,13 @@ void LibraryResolver::resolveSymbolsInLibrary(
 
   if (discoveredSymbols.empty()) {
     LLVM_DEBUG(dbgs() << "  No symbols and remove library : "
-                      << lib.getFullPath() << "\n";);
-    m_libMgr.removeLibrary(lib.getFullPath());
+                      << Lib.getFullPath() << "\n";);
+    LibMgr.removeLibrary(Lib.getFullPath());
     return;
   }
 
-  if (!lib.hasFilter()) {
-    LLVM_DEBUG(dbgs() << "Building filter for library: " << lib.getFullPath()
+  if (!Lib.hasFilter()) {
+    LLVM_DEBUG(dbgs() << "Building filter for library: " << Lib.getFullPath()
                       << "\n";);
 
     SmallVector<StringRef> SymbolVec;
@@ -244,7 +247,7 @@ void LibraryResolver::resolveSymbolsInLibrary(
     for (const auto &KV : discoveredSymbols)
       SymbolVec.push_back(KV.first());
 
-    lib.ensureFilterBuilt(FB, SymbolVec);
+    Lib.ensureFilterBuilt(FB, SymbolVec);
     LLVM_DEBUG({
       dbgs() << "discoveredSymbols : " << discoveredSymbols.size() << "\n";
       for (const auto &KV : discoveredSymbols)
@@ -252,49 +255,49 @@ void LibraryResolver::resolveSymbolsInLibrary(
     });
   }
 
-  const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
+  const auto &Unresolved = UnresolvedSymbols.getUnresolvedSymbols();
   bool hadAnySym = false;
-  LLVM_DEBUG(dbgs() << "Total unresolved symbols : " << unresolved.size()
+  LLVM_DEBUG(dbgs() << "Total unresolved symbols : " << Unresolved.size()
                     << "\n";);
-  for (const auto &symbol : unresolved) {
-    if (lib.mayContain(symbol)) {
-      LLVM_DEBUG(dbgs() << "Checking symbol '" << symbol
-                        << "' in library: " << lib.getFullPath() << "\n";);
-      if (discoveredSymbols.count(symbol) > 0) {
-        LLVM_DEBUG(dbgs() << "  Resolved symbol: " << symbol
-                          << " in library: " << lib.getFullPath() << "\n";);
-        unresolvedSymbols.resolve(symbol, lib.getFullPath());
+  for (const auto &Sym : Unresolved) {
+    if (Lib.mayContain(Sym)) {
+      LLVM_DEBUG(dbgs() << "Checking symbol '" << Sym
+                        << "' in library: " << Lib.getFullPath() << "\n";);
+      if (discoveredSymbols.count(Sym) > 0) {
+        LLVM_DEBUG(dbgs() << "  Resolved symbol: " << Sym
+                          << " in library: " << Lib.getFullPath() << "\n";);
+        UnresolvedSymbols.resolve(Sym, Lib.getFullPath());
         hadAnySym = true;
       }
     }
   }
 
-  using LibraryState = LibraryManager::State;
-  if (hadAnySym && lib.getState() != LibraryState::Loaded)
-    lib.setState(LibraryState::Queried);
+  using LibraryState = LibraryManager::LibState;
+  if (hadAnySym && Lib.getState() != LibraryState::Loaded)
+    Lib.setState(LibraryState::Queried);
 }
 
 void LibraryResolver::searchSymbolsInLibraries(
-    std::vector<std::string> &symbolList, OnSearchComplete onComplete,
-    const SearchConfig &config) {
-  SymbolQuery query(symbolList);
+    std::vector<std::string> &SymbolList, OnSearchComplete OnComplete,
+    const SearchConfig &Config) {
+  SymbolQuery Q(SymbolList);
 
-  using LibraryState = LibraryManager::State;
+  using LibraryState = LibraryManager::LibState;
   using LibraryType = PathType;
   auto tryResolveFrom = [&](LibraryState S, LibraryType K) {
     LLVM_DEBUG(dbgs() << "Trying resolve from state=" << static_cast<int>(S)
                       << " type=" << static_cast<int>(K) << "\n";);
 
-    SymbolSearchContext Ctx(query);
+    SymbolSearchContext Ctx(Q);
     while (!Ctx.allResolved()) {
 
-      for (auto &lib : m_libMgr.getView(S, K)) {
-        if (Ctx.hasSearched(lib.get()))
+      for (auto &Lib : LibMgr.getView(S, K)) {
+        if (Ctx.hasSearched(Lib.get()))
           continue;
 
         // can use Async here?
-        resolveSymbolsInLibrary(*lib, Ctx.query(), config.options);
-        Ctx.markSearched(lib.get());
+        resolveSymbolsInLibrary(*Lib, Ctx.query(), Config.Options);
+        Ctx.markSearched(Lib.get());
 
         if (Ctx.allResolved())
           return;
@@ -303,67 +306,67 @@ void LibraryResolver::searchSymbolsInLibraries(
       if (Ctx.allResolved())
         return;
 
-      if (!scanLibrariesIfNeeded(K))
+      if (!scanLibrariesIfNeeded(K, scanBatchSize))
         break; // no more new libs to scan
     }
   };
 
-  for (const auto &[state, type] : config.policy.plan) {
-    tryResolveFrom(state, type);
-    if (query.allResolved())
+  for (const auto &[St, Ty] : Config.Policy.Plan) {
+    tryResolveFrom(St, Ty);
+    if (Q.allResolved())
       break;
   }
 
   // done:
   LLVM_DEBUG({
     dbgs() << "Search complete.\n";
-    for (const auto &r : query.getAllResults())
+    for (const auto &r : Q.getAllResults())
       dbgs() << "Resolved Symbol:" << r->Name << " -> " << r->ResolvedLibPath
              << "\n";
   });
 
-  onComplete(query);
+  OnComplete(Q);
 }
 
-bool LibraryResolver::scanLibrariesIfNeeded(PathType PK) {
+bool LibraryResolver::scanLibrariesIfNeeded(PathType PK, size_t BatchSize) {
   LLVM_DEBUG(dbgs() << "LibraryResolver::scanLibrariesIfNeeded: Scanning for "
                     << (PK == PathType::User ? "User" : "System")
                     << " libraries\n";);
-  if (!m_scanH.leftToScan(PK))
+  if (!ScanHelper.leftToScan(PK))
     return false;
 
-  LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);
-  Scanner.scanNext(PK, scanBatchSize);
+  LibraryScanner Scanner(ScanHelper, LibMgr, ShouldScanCall);
+  Scanner.scanNext(PK, BatchSize);
   return true;
 }
 
-bool LibraryResolver::symbolExistsInLibrary(
-    const LibraryInfo &lib, StringRef symbolName,
-    std::vector<std::string> *allSymbols) {
-  SymbolEnumeratorOptions opts;
-  return symbolExistsInLibrary(lib, symbolName, allSymbols, opts);
+bool LibraryResolver::symbolExistsInLibrary(const LibraryInfo &Lib,
+                                            StringRef SymName,
+                                            std::vector<std::string> *AllSyms) {
+  SymbolEnumeratorOptions Opts;
+  return symbolExistsInLibrary(Lib, SymName, AllSyms, Opts);
 }
 
 bool LibraryResolver::symbolExistsInLibrary(
-    const LibraryInfo &lib, StringRef symbolName,
-    std::vector<std::string> *allSymbols, const SymbolEnumeratorOptions &opts) {
-  bool found = false;
+    const LibraryInfo &Lib, StringRef SymName,
+    std::vector<std::string> *AllSyms, const SymbolEnumeratorOptions &Opts) {
+  bool Found = false;
 
   SymbolEnumerator::enumerateSymbols(
-      lib.getFullPath(),
-      [&](StringRef sym) {
-        if (allSymbols)
-          allSymbols->emplace_back(sym.str());
+      Lib.getFullPath(),
+      [&](StringRef Sym) {
+        if (AllSyms)
+          AllSyms->emplace_back(Sym.str());
 
-        if (sym == symbolName) {
-          found = true;
+        if (Sym == SymName) {
+          Found = true;
         }
 
         return EnumerateResult::Continue;
       },
-      opts);
+      Opts);
 
-  return found;
+  return Found;
 }
 
 } // end namespace llvm::orc
