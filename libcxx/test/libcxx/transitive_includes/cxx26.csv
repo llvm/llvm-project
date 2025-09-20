@@ -1106,6 +1106,7 @@ unordered_set cstring
 unordered_set initializer_list
 unordered_set limits
 unordered_set optional
+unordered_set stdexcept
 unordered_set tuple
 unordered_set version
 utility compare
