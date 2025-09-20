@@ -13480,7 +13480,10 @@ def err_bounds_safety_ptrauth_on_indexable_pointer : Error<
 
 def err_bounds_safety_auto_dynamic_bound : Error<
   "passing %select{'__counted_by'|'__sized_by'|'__counted_by_or_null'|'__sized_by_or_null'|'__ended_by'|end}0 pointer "
-  "as __auto_type initializer is not yet supported">;
+  "as %select{'auto'|'decltype(auto)'|'__auto_type'}1 initializer is not yet supported">;
+def warn_bounds_safety_auto_dynamic_bound : Warning<
+  err_bounds_safety_auto_dynamic_bound.Summary>,
+  InGroup<DiagGroup<"bounds-safety-auto-bounds-attributed">>;
 
 def err_bounds_safety_unsupported_address_of_incomplete_array : Error<
   "cannot take address of incomplete __counted_by array">;

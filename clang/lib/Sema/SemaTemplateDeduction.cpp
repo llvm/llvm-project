@@ -5167,6 +5167,44 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   return false;
 }
 
+// TO_UPSTREAM(BoundsSafety) ON
+static bool CheckAutoCanInferTypeFromBoundsAttributed(Sema &S,
+                                                      const AutoType *AT,
+                                                      Expr *Init,
+                                                      QualType &Result) {
+  if (!S.getLangOpts().BoundsSafetyAttributes)
+    return true;
+
+  QualType InitTy = Init->getType();
+  const auto *BATy = InitTy->getAs<BoundsAttributedType>();
+  if (!BATy)
+    return true;
+
+  QualType DesugaredTy;
+  unsigned Kind;
+  if (const auto *CATy = dyn_cast<CountAttributedType>(BATy)) {
+    DesugaredTy = CATy->desugar();
+    Kind = CATy->getKind();
+  } else {
+    const auto *DRPTy = cast<DynamicRangePointerType>(BATy);
+    DesugaredTy = DRPTy->desugar();
+    Kind = DRPTy->getEndPointer() ? /* ended_by() */ 4 : /* end */ 5;
+  }
+
+  if (S.getLangOpts().BoundsSafety) {
+    S.Diag(Init->getExprLoc(), diag::err_bounds_safety_auto_dynamic_bound)
+        << Kind << (int)AT->getKeyword();
+    return false;
+  }
+
+  // Drop the sugar and emit a warning.
+  S.Diag(Init->getExprLoc(), diag::warn_bounds_safety_auto_dynamic_bound)
+      << Kind << (int)AT->getKeyword();
+  Result = DesugaredTy;
+  return true;
+}
+// TO_UPSTREAM(BoundsSafety) OFF
+
 TemplateDeductionResult
 Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
                      TemplateDeductionInfo &Info, bool DependentDeduction,
@@ -5247,6 +5285,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
 
     DeducedType = getDecltypeForExpr(Init);
     assert(!DeducedType.isNull());
+
+    // TO_UPSTREAM(BoundsSafety) ON
+    if (!CheckAutoCanInferTypeFromBoundsAttributed(*this, AT, Init,
+                                                   DeducedType))
+      return DeductionFailed(TemplateDeductionResult::AlreadyDiagnosed);
+    // TO_UPSTREAM(BoundsSafety) OFF
   } else {
     LocalInstantiationScope InstScope(*this);
 
@@ -5311,27 +5355,16 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
         return DeductionFailed(TDK);
     }
 
-    /* TO_UPSTREAM(BoundsSafety) ON*/
-    if (getLangOpts().BoundsSafetyAttributes &&
-        Init->getType()->isBoundsAttributedType()) {
-      unsigned ErrIdx;
-      QualType Ty = Init->getType();
-      if (auto *DCPTy = Ty->getAs<CountAttributedType>()) {
-        ErrIdx = DCPTy->getKind();
-      } else {
-        auto *DRPTy = Ty->getAs<DynamicRangePointerType>();
-        assert(DRPTy);
-        ErrIdx = DRPTy->getEndPointer() ? 4 : 5;
-      }
-      Diag(Loc, diag::err_bounds_safety_auto_dynamic_bound) << ErrIdx;
-      return DeductionFailed(TemplateDeductionResult::AlreadyDiagnosed);
-    }
-    /* TO_UPSTREAM(BoundsSafety) OFF*/
-
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
       return DeductionFailed(TemplateDeductionResult::Incomplete);
     DeducedType = Deduced[0].getAsType();
+
+    // TO_UPSTREAM(BoundsSafety) ON
+    if (!CheckAutoCanInferTypeFromBoundsAttributed(*this, AT, Init,
+                                                   DeducedType))
+      return DeductionFailed(TemplateDeductionResult::AlreadyDiagnosed);
+    // TO_UPSTREAM(BoundsSafety) OFF
 
     if (InitList) {
       DeducedType = BuildStdInitializerList(DeducedType, Loc);
