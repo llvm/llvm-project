@@ -12,6 +12,11 @@
 ; RUN: llc -mtriple=mips64-elf -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS64R6
 ; RUN: llc -mtriple=mips64el-elf -O0 -mcpu=mips64r2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS64EL
 ; RUN: llc -mtriple=mips64el-elf -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS64ELR6
+;
+; // mips2 does not test i16 and i8.
+; RUN: sed -e '/define.*@\(test_max_16\|test_umax_16\|test_min_16\|test_umin_16\)/,/^}$/d' \
+; RUN:     -e '/define.*@\(test_max_8\|test_umax_8\|test_min_8\|test_umin_8\)/,/^}$/d' %s > %t.filtered.ll
+; RUN: llc -mtriple=mipsel-elf -O0 -mcpu=mips2 -verify-machineinstrs %t.filtered.ll -o - | FileCheck %s --check-prefix=MIPS2
 
 define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-LABEL: test_max_32:
@@ -30,6 +35,33 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_max_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB0_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    slt $3, $2, $5
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:    beqz $3, $BB0_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS2-NEXT:    j $BB0_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB0_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:  $BB0_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB0_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_max_32:
 ; MIPSR6:       # %bb.0: # %entry
@@ -251,6 +283,33 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_min_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB1_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    slt $3, $2, $5
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:    beqz $3, $BB1_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS2-NEXT:    j $BB1_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB1_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:  $BB1_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB1_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_min_32:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    sync
@@ -471,6 +530,33 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
 ;
+; MIPS2-LABEL: test_umax_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB2_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    sltu $3, $2, $5
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:    beqz $3, $BB2_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS2-NEXT:    j $BB2_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB2_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:  $BB2_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB2_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
 ; MIPSR6-LABEL: test_umax_32:
 ; MIPSR6:       # %bb.0: # %entry
 ; MIPSR6-NEXT:    sync
@@ -690,6 +776,33 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-NEXT:    sync
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    nop
+;
+; MIPS2-LABEL: test_umin_32:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:  $BB3_1: # %entry
+; MIPS2-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS2-NEXT:    ll $2, 0($4)
+; MIPS2-NEXT:    sltu $3, $2, $5
+; MIPS2-NEXT:    move $1, $2
+; MIPS2-NEXT:    beqz $3, $BB3_3
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.2: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS2-NEXT:    j $BB3_4
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  $BB3_3: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS2-NEXT:    move $1, $5
+; MIPS2-NEXT:  $BB3_4: # %entry
+; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS2-NEXT:    sc $1, 0($4)
+; MIPS2-NEXT:    beqz $1, $BB3_1
+; MIPS2-NEXT:    nop
+; MIPS2-NEXT:  # %bb.5: # %entry
+; MIPS2-NEXT:    sync
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
 ;
 ; MIPSR6-LABEL: test_umin_32:
 ; MIPSR6:       # %bb.0: # %entry
