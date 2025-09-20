@@ -63,6 +63,13 @@ void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
   (void)Ctx;
 }
 
+const MCSymbol *PPCMCPlusBuilder::getTargetSymbol(const MCInst &Inst,
+                                                  unsigned OpNum) const {
+  (void)Inst;
+  (void)OpNum;
+  return nullptr;
+}
+
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
     MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
     const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,

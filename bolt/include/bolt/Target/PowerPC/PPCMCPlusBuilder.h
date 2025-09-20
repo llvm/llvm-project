@@ -20,6 +20,9 @@ public:
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override;
 
+  const MCSymbol *getTargetSymbol(const MCInst &Inst,
+                                  unsigned OpNum = 0) const override;
+
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
                         InstructionIterator End, const unsigned PtrSize,
