@@ -1470,3 +1470,11 @@ let AddedComplexity = 20 in {
 let AdditionalPredicates = [NotInMicroMips] in {
   def : DSPInstAlias<"wrdsp $rt", (WRDSP GPR32Opnd:$rt, 0x1F), 1>;
 }
+
+def RDDSP_Pseudo : Pseudo<(outs GPR32Opnd:$rd), (ins uimm10:$mask), []> {
+  let usesCustomInserter = 1;
+}
+
+def WRDSP_Pseudo : Pseudo<(outs), (ins GPR32Opnd:$rs, uimm10:$mask), []> {
+  let usesCustomInserter = 1;
+}
