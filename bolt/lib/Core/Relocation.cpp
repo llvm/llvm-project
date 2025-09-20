@@ -538,6 +538,62 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
   }
 }
 
+static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
+                                  uint64_t PC) {
+  switch (Type) {
+  default:
+    errs() << object::getELFRelocationTypeName(ELF::EM_PPC64, Type) << '\n';
+    llvm_unreachable("unsupported relocation type");
+  case ELF::R_PPC64_ADDR16:
+  case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_ADDR32:
+  case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_ADDR16_DS:
+  case ELF::R_PPC64_ADDR16_LO_DS:
+  case ELF::R_PPC64_TOC:
+  case ELF::R_PPC64_TOC16:
+  case ELF::R_PPC64_TOC16_LO:
+  case ELF::R_PPC64_TOC16_HI:
+  case ELF::R_PPC64_TOC16_HA:
+  case ELF::R_PPC64_DTPREL16:
+  case ELF::R_PPC64_DTPREL16_LO:
+  case ELF::R_PPC64_DTPREL16_HI:
+  case ELF::R_PPC64_DTPREL16_HA:
+  case ELF::R_PPC64_DTPREL64:
+  case ELF::R_PPC64_GOT16:
+  case ELF::R_PPC64_GOT16_LO:
+  case ELF::R_PPC64_GOT16_HI:
+  case ELF::R_PPC64_GOT16_HA:
+    return Contents;
+    // Generic 32-bit PC-relative addend (not branch)
+  case ELF::R_PPC64_REL32: {
+    int64_t disp = SignExtend64<32>(static_cast<uint32_t>(Contents));
+    return static_cast<uint64_t>(static_cast<int64_t>(PC) + disp);
+  }
+
+  // Branch (24-bit field in bits 6..29, with implicit low two zero bits)
+  case ELF::R_PPC64_REL24: {
+    uint64_t li26 =
+        Contents & 0x03FFFFFCULL; // mask bits 6..29 plus the two low zeros
+    int64_t disp = SignExtend64<26>(li26); // sign-extend the 26-bit value
+    return static_cast<uint64_t>(static_cast<int64_t>(PC) + disp);
+  }
+
+  // Conditional branch (14-bit field in bits 16..29, plus two zero bits)
+  case ELF::R_PPC64_REL14: {
+    uint64_t bd16 =
+        Contents & 0x0000FFFCULL;         // bits 16..29 and the two low zeros
+    int64_t disp = SignExtend64<16>(bd16); // sign-extend 16 (14+2 zeros)
+    return static_cast<uint64_t>(static_cast<int64_t>(PC) + disp);
+  }
+
+  case ELF::R_PPC64_NONE:
+    return 0;
+  }
+}
+
 static uint64_t extractUImmRISCV(uint32_t Contents) {
   return SignExtend64<32>(Contents & 0xfffff000);
 }
@@ -857,6 +913,9 @@ uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
     return encodeValueRISCV(Type, Value, PC);
   case Triple::x86_64:
     return encodeValueX86(Type, Value, PC);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return Value;
   }
 }
 
@@ -869,6 +928,9 @@ bool Relocation::canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
   case Triple::riscv64:
     return canEncodeValueRISCV(Type, Value, PC);
   case Triple::x86_64:
+    return true;
+  case Triple::ppc64:
+  case Triple::ppc64le:
     return true;
   }
 }
@@ -884,6 +946,9 @@ uint64_t Relocation::extractValue(uint32_t Type, uint64_t Contents,
     return extractValueRISCV(Type, Contents, PC);
   case Triple::x86_64:
     return extractValueX86(Type, Contents, PC);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return extractValuePPC64(Type, Contents, PC);
   }
 }
 
@@ -897,6 +962,9 @@ bool Relocation::isGOT(uint32_t Type) {
     return isGOTRISCV(Type);
   case Triple::x86_64:
     return isGOTX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return false;
   }
 }
 
