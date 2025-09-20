@@ -41,6 +41,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -52,6 +53,10 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
+
+#if !_WIN32
+#include <sys/mman.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -287,7 +292,7 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
 struct DeferredFile {
   StringRef path;
   bool isLazy;
-  MemoryBufferRef buffer;
+  std::optional<MemoryBufferRef> buffer;
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
@@ -334,29 +339,37 @@ public:
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(DeferredFiles &deferred) {
+  using namespace std::chrono;
   static const size_t pageSize = Process::getPageSizeEstimate();
   static const size_t largeArchive = 10 * 1024 * 1024;
-#ifndef NDEBUG
-  using namespace std::chrono;
-  std::atomic_int numDeferedFilesTouched = 0;
   static std::atomic_uint64_t totalBytes = 0;
+  std::atomic_int numDeferedFilesAdvised = 0;
   auto t0 = high_resolution_clock::now();
-#endif
 
-  auto preloadDeferredFile = [&](const DeferredFile &deferredFile) {
-    const StringRef &buff = deferredFile.buffer.getBuffer();
+  auto preloadDeferredFile = [&](DeferredFile &deferredFile) {
+    if (!deferredFile.buffer.has_value())
+      deferredFile.buffer = *readFile(deferredFile.path);
+    const StringRef &buff = (*deferredFile.buffer).getBuffer();
     if (buff.size() > largeArchive)
       return;
-#ifndef NDEBUG
-    totalBytes += buff.size();
-    numDeferedFilesTouched += 1;
-#endif
 
+    totalBytes += buff.size();
+    numDeferedFilesAdvised += 1;
+
+#if _WIN32
     // Reference all file's mmap'd pages to load them into memory.
     for (const char *page = buff.data(), *end = page + buff.size(); page < end;
          page += pageSize)
       LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+#else
+#define DEBUG_TYPE "lld-madvise"
+    auto aligned = llvm::alignAddr(buff.data(), Align(pageSize));
+    if (madvise((void *)aligned, buff.size(), MADV_WILLNEED) < 0)
+      LLVM_DEBUG(llvm::dbgs() << "madvise error: " << strerror(errno) << "\n");
+#undef DEBUG_TYPE
+#endif
   };
+
 #if LLVM_ENABLE_THREADS
   { // Create scope for waiting for the taskGroup
     std::atomic_size_t index = 0;
@@ -371,22 +384,21 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         }
       });
   }
+#else
+  for (const auto &file : deferred)
+    preloadDeferredFile(file);
 #endif
-#ifndef NDEBUG
+
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
-                 << numDeferedFilesTouched << "/" << deferred.size() << "/"
+                 << numDeferedFilesAdvised << "/" << deferred.size() << "/"
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
-#endif
 }
 
-static void multiThreadedPageIn(const DeferredFiles &deferred) {
+static void multiThreadedPageIn(DeferredFiles &deferred) {
   static SerialBackgroundQueue pageInQueue;
-  pageInQueue.queueWork([=]() {
-    DeferredFiles files = deferred;
-    multiThreadedPageInBackground(files);
-  });
+  pageInQueue.queueWork([&]() { multiThreadedPageInBackground(deferred); });
 }
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
@@ -561,13 +573,12 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 }
 
 static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
+  if (config->readWorkers)
+    return deferred.push_back({path, isLazy, std::nullopt});
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
-  if (config->readWorkers)
-    deferred.push_back({path, isLazy, *buffer});
-  else
-    processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
+  processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
@@ -1352,7 +1363,8 @@ static void createFiles(const InputArgList &args) {
   bool isLazy = false;
   // If we've processed an opening --start-lib, without a matching --end-lib
   bool inLib = false;
-  DeferredFiles deferredFiles;
+  static DeferredFiles deferredFiles;
+  deferredFiles.clear();
 
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
@@ -1431,9 +1443,13 @@ static void createFiles(const InputArgList &args) {
   if (config->readWorkers) {
     multiThreadedPageIn(deferredFiles);
 
-    DeferredFiles archiveContents;
+    static DeferredFiles archiveContents;
     std::vector<ArchiveFile *> archives;
+    archiveContents.clear();
+
     for (auto &file : deferredFiles) {
+      if (!file.buffer.has_value())
+        file.buffer = readFile(file.path);
       auto inputFile = processFile(file.buffer, &archiveContents, file.path,
                                    LoadType::CommandLine, file.isLazy);
       if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
