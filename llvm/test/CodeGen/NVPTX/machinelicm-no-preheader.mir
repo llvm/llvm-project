@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_20 -run-pass=early-machinelicm %s -verify-machineinstrs -o - | FileCheck %s
+
+# This test checks that the early-machineLICM pass successfully creates a new
+# loop preheader by splitting the critical edge and hoisting the loop invariant
+# value `%18` to the preheader.
+# Since the critical edge successor is a loop header, the splitting does not
+# break the structured CFG, which is a requirement for the NVPTX target.
+
+---
+name:            test_hoist
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 1, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 4, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 5, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 6, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 7, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 8, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 9, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 10, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 11, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 12, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 13, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 14, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 15, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 16, class: b1, preferred-register: '', flags: [  ] }
+  - { id: 17, class: b1, preferred-register: '', flags: [  ] }
+  - { id: 18, class: b32, preferred-register: '', flags: [  ] }
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+
+    %8:b32 = LD_i32 0, 0, 101, 3, 32, &test_hoist_param_2, 0 :: (dereferenceable invariant load (s32), addrspace 101)
+    %7:b32 = LD_i32 0, 0, 101, 3, 32, &test_hoist_param_1, 0 :: (dereferenceable invariant load (s32), addrspace 101)
+    %9:b64 = LD_i64 0, 0, 101, 3, 64, &test_hoist_param_0, 0 :: (dereferenceable invariant load (s64), addrspace 101)
+    %10:b32 = INT_PTX_SREG_CTAID_x
+    %11:b32 = INT_PTX_SREG_NTID_x
+    %12:b32 = INT_PTX_SREG_TID_x
+    %13:b64 = CVT_u64_u32 killed %12, 0
+    %14:b64 = nuw MAD_WIDE_U32rrr killed %11, killed %10, killed %13
+    %15:b64 = nuw nsw SHL64_ri killed %14, 2
+    %0:b64 = nuw ADD64rr killed %9, killed %15
+    %1:b32 = LD_i32 0, 0, 1, 3, 32, %0, 0
+    %16:b1 = SETP_i32ri %8, 0, 0
+    CBranch killed %16, %bb.2
+    GOTO %bb.1
+
+  ; CHECK: bb.3:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   %18:b32 = ADD32ri %7, -1
+  ; CHECK: bb.1:
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %2:b32 = PHI %8, %bb.0, %5, %bb.1
+    %3:b32 = PHI %1, %bb.0, %4, %bb.1
+    %18:b32 = ADD32ri %7, -1
+    %4:b32 = SREM32rr %3, %18
+    %5:b32 = ADD32ri %2, -1
+    %17:b1 = SETP_i32ri %5, 0, 1
+    CBranch killed %17, %bb.1
+    GOTO %bb.2
+
+  bb.2:
+    %6:b32 = PHI %1, %bb.0, %4, %bb.1
+    ST_i32 %6, 0, 0, 1, 32, %0, 0
+    Return
+...
