@@ -200,8 +200,8 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto &AA = getAAResults(*F);
 
   // Check basic results
-  EXPECT_EQ(AA.getModRefInfo(Store1, MemoryLocation()), ModRefInfo::Mod);
-  EXPECT_EQ(AA.getModRefInfo(Store1, std::nullopt), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(Store1, MemoryLocation()), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, std::nullopt), ModRefInfo::ModRef);
   EXPECT_EQ(AA.getModRefInfo(Load1, MemoryLocation()), ModRefInfo::Ref);
   EXPECT_EQ(AA.getModRefInfo(Load1, std::nullopt), ModRefInfo::Ref);
   EXPECT_EQ(AA.getModRefInfo(Add1, MemoryLocation()), ModRefInfo::NoModRef);
