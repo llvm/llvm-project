@@ -456,11 +456,28 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/UBOps.td
+  SOURCES dialects/ub.py
+  DIALECT_NAME ub
+)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/VectorOps.td
   SOURCES dialects/vector.py
   DIALECT_NAME vector
   GEN_ENUM_BINDINGS_TD_FILE
     "dialects/VectorAttributes.td")
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/IRDLOps.td
+  SOURCES dialects/irdl.py
+  DIALECT_NAME irdl
+  GEN_ENUM_BINDINGS
+)
 
 ################################################################################
 # Python extensions.
@@ -635,6 +652,20 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.IRDL.Pybind
+  MODULE_NAME _mlirDialectsIRDL
+  ADD_TO_PARENT MLIRPythonSources.Dialects.irdl
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
+  SOURCES
+    DialectIRDL.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIIRDL
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
@@ -847,4 +878,3 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-

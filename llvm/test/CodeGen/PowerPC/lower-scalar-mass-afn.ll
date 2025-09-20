@@ -81,7 +81,7 @@ declare double @__log10_finite (double);
 declare double @__pow_finite (double, double);
 declare double @__sinh_finite (double);
 
-define float @acosf_f32(float %a) #0 {
+define float @acosf_f32(float %a) {
 ; CHECK-LABEL: acosf_f32
 ; CHECK: __xl_acosf
 ; CHECK: blr
@@ -90,7 +90,7 @@ entry:
   ret float %call
 }
 
-define float @acoshf_f32(float %a) #0 {
+define float @acoshf_f32(float %a) {
 ; CHECK-LABEL: acoshf_f32
 ; CHECK: __xl_acoshf
 ; CHECK: blr
@@ -99,7 +99,7 @@ entry:
   ret float %call
 }
 
-define float @asinf_f32(float %a) #0 {
+define float @asinf_f32(float %a) {
 ; CHECK-LABEL: asinf_f32
 ; CHECK: __xl_asinf
 ; CHECK: blr
@@ -108,7 +108,7 @@ entry:
   ret float %call
 }
 
-define float @asinhf_f32(float %a) #0 {
+define float @asinhf_f32(float %a) {
 ; CHECK-LABEL: asinhf_f32
 ; CHECK: __xl_asinhf
 ; CHECK: blr
@@ -117,7 +117,7 @@ entry:
   ret float %call
 }
 
-define float @atan2f_f32(float %a, float %b) #0 {
+define float @atan2f_f32(float %a, float %b) {
 ; CHECK-LABEL: atan2f_f32
 ; CHECK: __xl_atan2f
 ; CHECK: blr
@@ -126,7 +126,7 @@ entry:
   ret float %call
 }
 
-define float @atanf_f32(float %a) #0 {
+define float @atanf_f32(float %a) {
 ; CHECK-LABEL: atanf_f32
 ; CHECK: __xl_atanf
 ; CHECK: blr
@@ -135,7 +135,7 @@ entry:
   ret float %call
 }
 
-define float @atanhf_f32(float %a) #0 {
+define float @atanhf_f32(float %a) {
 ; CHECK-LABEL: atanhf_f32
 ; CHECK: __xl_atanhf
 ; CHECK: blr
@@ -144,7 +144,7 @@ entry:
   ret float %call
 }
 
-define float @cbrtf_f32(float %a) #0 {
+define float @cbrtf_f32(float %a) {
 ; CHECK-LABEL: cbrtf_f32
 ; CHECK: __xl_cbrtf
 ; CHECK: blr
@@ -153,7 +153,7 @@ entry:
   ret float %call
 }
 
-define float @copysignf_f32(float %a, float %b) #0 {
+define float @copysignf_f32(float %a, float %b) {
 ; CHECK-LABEL: copysignf_f32
 ; CHECK: copysignf
 ; CHECK: blr
@@ -162,7 +162,7 @@ entry:
   ret float %call
 }
 
-define float @cosf_f32(float %a) #0 {
+define float @cosf_f32(float %a) {
 ; CHECK-LABEL: cosf_f32
 ; CHECK: __xl_cosf
 ; CHECK: blr
@@ -171,7 +171,7 @@ entry:
   ret float %call
 }
 
-define float @coshf_f32(float %a) #0 {
+define float @coshf_f32(float %a) {
 ; CHECK-LABEL: coshf_f32
 ; CHECK: __xl_coshf
 ; CHECK: blr
@@ -180,7 +180,7 @@ entry:
   ret float %call
 }
 
-define float @erfcf_f32(float %a) #0 {
+define float @erfcf_f32(float %a) {
 ; CHECK-LABEL: erfcf_f32
 ; CHECK: __xl_erfcf
 ; CHECK: blr
@@ -189,7 +189,7 @@ entry:
   ret float %call
 }
 
-define float @erff_f32(float %a) #0 {
+define float @erff_f32(float %a) {
 ; CHECK-LABEL: erff_f32
 ; CHECK: __xl_erff
 ; CHECK: blr
@@ -198,7 +198,7 @@ entry:
   ret float %call
 }
 
-define float @expf_f32(float %a) #0 {
+define float @expf_f32(float %a) {
 ; CHECK-LABEL: expf_f32
 ; CHECK: __xl_expf
 ; CHECK: blr
@@ -207,7 +207,7 @@ entry:
   ret float %call
 }
 
-define float @expm1f_f32(float %a) #0 {
+define float @expm1f_f32(float %a) {
 ; CHECK-LABEL: expm1f_f32
 ; CHECK: __xl_expm1f
 ; CHECK: blr
@@ -216,7 +216,7 @@ entry:
   ret float %call
 }
 
-define float @hypotf_f32(float %a, float %b) #0 {
+define float @hypotf_f32(float %a, float %b) {
 ; CHECK-LABEL: hypotf_f32
 ; CHECK: __xl_hypotf
 ; CHECK: blr
@@ -225,7 +225,7 @@ entry:
   ret float %call
 }
 
-define float @lgammaf_f32(float %a) #0 {
+define float @lgammaf_f32(float %a) {
 ; CHECK-LABEL: lgammaf_f32
 ; CHECK: __xl_lgammaf
 ; CHECK: blr
@@ -234,7 +234,7 @@ entry:
   ret float %call
 }
 
-define float @log10f_f32(float %a) #0 {
+define float @log10f_f32(float %a) {
 ; CHECK-LABEL: log10f_f32
 ; CHECK: __xl_log10f
 ; CHECK: blr
@@ -243,7 +243,7 @@ entry:
   ret float %call
 }
 
-define float @log1pf_f32(float %a) #0 {
+define float @log1pf_f32(float %a) {
 ; CHECK-LABEL: log1pf_f32
 ; CHECK: __xl_log1pf
 ; CHECK: blr
@@ -252,7 +252,7 @@ entry:
   ret float %call
 }
 
-define float @logf_f32(float %a) #0 {
+define float @logf_f32(float %a) {
 ; CHECK-LABEL: logf_f32
 ; CHECK: __xl_logf
 ; CHECK: blr
@@ -261,7 +261,7 @@ entry:
   ret float %call
 }
 
-define float @powf_f32(float %a, float %b) #0 {
+define float @powf_f32(float %a, float %b) {
 ; CHECK-LABEL: powf_f32
 ; CHECK: __xl_powf
 ; CHECK: blr
@@ -270,7 +270,7 @@ entry:
   ret float %call
 }
 
-define float @rintf_f32(float %a) #0 {
+define float @rintf_f32(float %a) {
 ; CHECK-LABEL: rintf_f32
 ; CHECK-NOT: __xl_rintf
 ; CHECK: blr
@@ -279,7 +279,7 @@ entry:
   ret float %call
 }
 
-define float @sinf_f32(float %a) #0 {
+define float @sinf_f32(float %a) {
 ; CHECK-LABEL: sinf_f32
 ; CHECK: __xl_sinf
 ; CHECK: blr
@@ -288,7 +288,7 @@ entry:
   ret float %call
 }
 
-define float @sinhf_f32(float %a) #0 {
+define float @sinhf_f32(float %a) {
 ; CHECK-LABEL: sinhf_f32
 ; CHECK: __xl_sinhf
 ; CHECK: blr
@@ -297,7 +297,7 @@ entry:
   ret float %call
 }
 
-define float @tanf_f32(float %a) #0 {
+define float @tanf_f32(float %a) {
 ; CHECK-LABEL: tanf_f32
 ; CHECK: __xl_tanf
 ; CHECK: blr
@@ -306,7 +306,7 @@ entry:
   ret float %call
 }
 
-define float @tanhf_f32(float %a) #0 {
+define float @tanhf_f32(float %a) {
 ; CHECK-LABEL: tanhf_f32
 ; CHECK: __xl_tanhf
 ; CHECK: blr
@@ -315,7 +315,7 @@ entry:
   ret float %call
 }
 
-define double @acos_f64(double %a) #0 {
+define double @acos_f64(double %a) {
 ; CHECK-LABEL: acos_f64
 ; CHECK: __xl_acos
 ; CHECK: blr
@@ -324,7 +324,7 @@ entry:
   ret double %call
 }
 
-define double @acosh_f64(double %a) #0 {
+define double @acosh_f64(double %a) {
 ; CHECK-LABEL: acosh_f64
 ; CHECK: __xl_acosh
 ; CHECK: blr
@@ -333,7 +333,7 @@ entry:
   ret double %call
 }
 
-define double @anint_f64(double %a) #0 {
+define double @anint_f64(double %a) {
 ; CHECK-LABEL: anint_f64
 ; CHECK-NOT: __xl_anint
 ; CHECK: blr
@@ -342,7 +342,7 @@ entry:
   ret double %call
 }
 
-define double @asin_f64(double %a) #0 {
+define double @asin_f64(double %a) {
 ; CHECK-LABEL: asin_f64
 ; CHECK: __xl_asin
 ; CHECK: blr
@@ -351,7 +351,7 @@ entry:
   ret double %call
 }
 
-define double @asinh_f64(double %a) #0 {
+define double @asinh_f64(double %a) {
 ; CHECK-LABEL: asinh_f64
 ; CHECK: __xl_asinh
 ; CHECK: blr
@@ -360,7 +360,7 @@ entry:
   ret double %call
 }
 
-define double @atan_f64(double %a) #0 {
+define double @atan_f64(double %a) {
 ; CHECK-LABEL: atan_f64
 ; CHECK: __xl_atan
 ; CHECK: blr
@@ -369,7 +369,7 @@ entry:
   ret double %call
 }
 
-define double @atan2_f64(double %a, double %b) #0 {
+define double @atan2_f64(double %a, double %b) {
 ; CHECK-LABEL: atan2_f64
 ; CHECK: __xl_atan2
 ; CHECK: blr
@@ -378,7 +378,7 @@ entry:
   ret double %call
 }
 
-define double @atanh_f64(double %a) #0 {
+define double @atanh_f64(double %a) {
 ; CHECK-LABEL: atanh_f64
 ; CHECK: __xl_atanh
 ; CHECK: blr
@@ -387,7 +387,7 @@ entry:
   ret double %call
 }
 
-define double @cbrt_f64(double %a) #0 {
+define double @cbrt_f64(double %a) {
 ; CHECK-LABEL: cbrt_f64
 ; CHECK: __xl_cbrt
 ; CHECK: blr
@@ -396,7 +396,7 @@ entry:
   ret double %call
 }
 
-define double @copysign_f64(double %a, double %b) #0 {
+define double @copysign_f64(double %a, double %b) {
 ; CHECK-LABEL: copysign_f64
 ; CHECK: copysign
 ; CHECK: blr
@@ -405,7 +405,7 @@ entry:
   ret double %call
 }
 
-define double @cos_f64(double %a) #0 {
+define double @cos_f64(double %a) {
 ; CHECK-LABEL: cos_f64
 ; CHECK: __xl_cos
 ; CHECK: blr
@@ -414,7 +414,7 @@ entry:
   ret double %call
 }
 
-define double @cosh_f64(double %a) #0 {
+define double @cosh_f64(double %a) {
 ; CHECK-LABEL: cosh_f64
 ; CHECK: __xl_cosh
 ; CHECK: blr
@@ -423,7 +423,7 @@ entry:
   ret double %call
 }
 
-define double @cosisin_f64(double %a) #0 {
+define double @cosisin_f64(double %a) {
 ; CHECK-LABEL: cosisin_f64
 ; CHECK-NOT: __xl_cosisin
 ; CHECK: blr
@@ -432,7 +432,7 @@ entry:
   ret double %call
 }
 
-define double @dnint_f64(double %a) #0 {
+define double @dnint_f64(double %a) {
 ; CHECK-LABEL: dnint_f64
 ; CHECK-NOT: __xl_dnint
 ; CHECK: blr
@@ -441,7 +441,7 @@ entry:
   ret double %call
 }
 
-define double @erf_f64(double %a) #0 {
+define double @erf_f64(double %a) {
 ; CHECK-LABEL: erf_f64
 ; CHECK: __xl_erf
 ; CHECK: blr
@@ -450,7 +450,7 @@ entry:
   ret double %call
 }
 
-define double @erfc_f64(double %a) #0 {
+define double @erfc_f64(double %a) {
 ; CHECK-LABEL: erfc_f64
 ; CHECK: __xl_erfc
 ; CHECK: blr
@@ -459,7 +459,7 @@ entry:
   ret double %call
 }
 
-define double @exp_f64(double %a) #0 {
+define double @exp_f64(double %a) {
 ; CHECK-LABEL: exp_f64
 ; CHECK: __xl_exp
 ; CHECK: blr
@@ -468,7 +468,7 @@ entry:
   ret double %call
 }
 
-define double @expm1_f64(double %a) #0 {
+define double @expm1_f64(double %a) {
 ; CHECK-LABEL: expm1_f64
 ; CHECK: __xl_expm1
 ; CHECK: blr
@@ -477,7 +477,7 @@ entry:
   ret double %call
 }
 
-define double @hypot_f64(double %a, double %b) #0 {
+define double @hypot_f64(double %a, double %b) {
 ; CHECK-LABEL: hypot_f64
 ; CHECK: __xl_hypot
 ; CHECK: blr
@@ -486,7 +486,7 @@ entry:
   ret double %call
 }
 
-define double @lgamma_f64(double %a) #0 {
+define double @lgamma_f64(double %a) {
 ; CHECK-LABEL: lgamma_f64
 ; CHECK: __xl_lgamma
 ; CHECK: blr
@@ -495,7 +495,7 @@ entry:
   ret double %call
 }
 
-define double @log_f64(double %a) #0 {
+define double @log_f64(double %a) {
 ; CHECK-LABEL: log_f64
 ; CHECK: __xl_log
 ; CHECK: blr
@@ -504,7 +504,7 @@ entry:
   ret double %call
 }
 
-define double @log10_f64(double %a) #0 {
+define double @log10_f64(double %a) {
 ; CHECK-LABEL: log10_f64
 ; CHECK: __xl_log10
 ; CHECK: blr
@@ -513,7 +513,7 @@ entry:
   ret double %call
 }
 
-define double @log1p_f64(double %a) #0 {
+define double @log1p_f64(double %a) {
 ; CHECK-LABEL: log1p_f64
 ; CHECK: __xl_log1p
 ; CHECK: blr
@@ -522,7 +522,7 @@ entry:
   ret double %call
 }
 
-define double @pow_f64(double %a, double %b) #0 {
+define double @pow_f64(double %a, double %b) {
 ; CHECK-LABEL: pow_f64
 ; CHECK: __xl_pow
 ; CHECK: blr
@@ -531,7 +531,7 @@ entry:
   ret double %call
 }
 
-define double @rsqrt_f64(double %a) #0 {
+define double @rsqrt_f64(double %a) {
 ; CHECK-LABEL: rsqrt_f64
 ; CHECK: __xl_rsqrt
 ; CHECK: blr
@@ -540,7 +540,7 @@ entry:
   ret double %call
 }
 
-define double @sin_f64(double %a) #0 {
+define double @sin_f64(double %a) {
 ; CHECK-LABEL: sin_f64
 ; CHECK: __xl_sin
 ; CHECK: blr
@@ -549,7 +549,7 @@ entry:
   ret double %call
 }
 
-define double @sincos_f64(double %a) #0 {
+define double @sincos_f64(double %a) {
 ; CHECK-LABEL: sincos_f64
 ; CHECK-NOT: __xl_sincos
 ; CHECK: blr
@@ -558,7 +558,7 @@ entry:
   ret double %call
 }
 
-define double @sinh_f64(double %a) #0 {
+define double @sinh_f64(double %a) {
 ; CHECK-LABEL: sinh_f64
 ; CHECK: __xl_sinh
 ; CHECK: blr
@@ -567,7 +567,7 @@ entry:
   ret double %call
 }
 
-define double @sqrt_f64(double %a) #0 {
+define double @sqrt_f64(double %a) {
 ; CHECK-LABEL: sqrt_f64
 ; CHECK: __xl_sqrt
 ; CHECK: blr
@@ -576,7 +576,7 @@ entry:
   ret double %call
 }
 
-define double @tan_f64(double %a) #0 {
+define double @tan_f64(double %a) {
 ; CHECK-LABEL: tan_f64
 ; CHECK: __xl_tan
 ; CHECK: blr
@@ -585,7 +585,7 @@ entry:
   ret double %call
 }
 
-define double @tanh_f64(double %a) #0 {
+define double @tanh_f64(double %a) {
 ; CHECK-LABEL: tanh_f64
 ; CHECK: __xl_tanh
 ; CHECK: blr
@@ -594,7 +594,7 @@ entry:
   ret double %call
 }
 
-define float @__acosf_finite_f32(float %a) #0 {
+define float @__acosf_finite_f32(float %a) {
 ; CHECK-LABEL: __acosf_finite_f32
 ; CHECK: __xl_acosf
 ; CHECK: blr
@@ -603,7 +603,7 @@ entry:
   ret float %call
 }
 
-define float @__acoshf_finite_f32(float %a) #0 {
+define float @__acoshf_finite_f32(float %a) {
 ; CHECK-LABEL: __acoshf_finite_f32
 ; CHECK: __xl_acoshf
 ; CHECK: blr
@@ -612,7 +612,7 @@ entry:
   ret float %call
 }
 
-define float @__asinf_finite_f32(float %a) #0 {
+define float @__asinf_finite_f32(float %a) {
 ; CHECK-LABEL: __asinf_finite_f32
 ; CHECK: __xl_asinf
 ; CHECK: blr
@@ -621,7 +621,7 @@ entry:
   ret float %call
 }
 
-define float @__atan2f_finite_f32(float %a, float %b) #0 {
+define float @__atan2f_finite_f32(float %a, float %b) {
 ; CHECK-LABEL: __atan2f_finite_f32
 ; CHECK: __xl_atan2f
 ; CHECK: blr
@@ -630,7 +630,7 @@ entry:
   ret float %call
 }
 
-define float @__atanhf_finite_f32(float %a) #0 {
+define float @__atanhf_finite_f32(float %a) {
 ; CHECK-LABEL: __atanhf_finite_f32
 ; CHECK: __xl_atanhf
 ; CHECK: blr
@@ -639,7 +639,7 @@ entry:
   ret float %call
 }
 
-define float @__coshf_finite_f32(float %a) #0 {
+define float @__coshf_finite_f32(float %a) {
 ; CHECK-LABEL: __coshf_finite_f32
 ; CHECK: __xl_coshf
 ; CHECK: blr
@@ -647,7 +647,7 @@ entry:
   %call = tail call afn float @__coshf_finite(float %a)
   ret float %call
 }
-define float @__expf_finite_f32(float %a) #0 {
+define float @__expf_finite_f32(float %a) {
 ; CHECK-LABEL: __expf_finite_f32
 ; CHECK: __xl_expf
 ; CHECK: blr
@@ -655,7 +655,7 @@ entry:
   %call = tail call afn float @__expf_finite(float %a)
   ret float %call
 }
-define float @__logf_finite_f32(float %a) #0 {
+define float @__logf_finite_f32(float %a) {
 ; CHECK-LABEL: __logf_finite_f32
 ; CHECK: __xl_logf
 ; CHECK: blr
@@ -663,7 +663,7 @@ entry:
   %call = tail call afn float @__logf_finite(float %a)
   ret float %call
 }
-define float @__log10f_finite_f32(float %a) #0 {
+define float @__log10f_finite_f32(float %a) {
 ; CHECK-LABEL: __log10f_finite_f32
 ; CHECK: __xl_log10f
 ; CHECK: blr
@@ -671,7 +671,7 @@ entry:
   %call = tail call afn float @__log10f_finite(float %a)
   ret float %call
 }
-define float @__powf_finite_f32(float %a, float %b) #0 {
+define float @__powf_finite_f32(float %a, float %b) {
 ; CHECK-LABEL: __powf_finite_f32
 ; CHECK: __xl_powf
 ; CHECK: blr
@@ -679,7 +679,7 @@ entry:
   %call = tail call afn float @__powf_finite(float %a, float %b)
   ret float %call
 }
-define float @__sinhf_finite_f32(float %a) #0 {
+define float @__sinhf_finite_f32(float %a) {
 ; CHECK-LABEL: __sinhf_finite_f32
 ; CHECK: __xl_sinhf
 ; CHECK: blr
@@ -688,7 +688,7 @@ entry:
   ret float %call
 }
 
-define double @__acos_finite_f64(double %a) #0 {
+define double @__acos_finite_f64(double %a) {
 ; CHECK-LABEL: __acos_finite_f64
 ; CHECK: __xl_acos
 ; CHECK: blr
@@ -697,7 +697,7 @@ entry:
   ret double %call
 }
 
-define double @__acosh_finite_f64(double %a) #0 {
+define double @__acosh_finite_f64(double %a) {
 ; CHECK-LABEL: __acosh_finite_f64
 ; CHECK: __xl_acosh
 ; CHECK: blr
@@ -706,7 +706,7 @@ entry:
   ret double %call
 }
 
-define double @__asin_finite_f64(double %a) #0 {
+define double @__asin_finite_f64(double %a) {
 ; CHECK-LABEL: __asin_finite_f64
 ; CHECK: __xl_asin
 ; CHECK: blr
@@ -715,7 +715,7 @@ entry:
   ret double %call
 }
 
-define double @__atan2_finite_f64(double %a, double %b) #0 {
+define double @__atan2_finite_f64(double %a, double %b) {
 ; CHECK-LABEL: __atan2_finite_f64
 ; CHECK: __xl_atan2
 ; CHECK: blr
@@ -724,7 +724,7 @@ entry:
   ret double %call
 }
 
-define double @__atanh_finite_f64(double %a) #0 {
+define double @__atanh_finite_f64(double %a) {
 ; CHECK-LABEL: __atanh_finite_f64
 ; CHECK: __xl_atanh
 ; CHECK: blr
@@ -733,7 +733,7 @@ entry:
   ret double %call
 }
 
-define double @__cosh_finite_f64(double %a) #0 {
+define double @__cosh_finite_f64(double %a) {
 ; CHECK-LABEL: __cosh_finite_f64
 ; CHECK: __xl_cosh
 ; CHECK: blr
@@ -742,7 +742,7 @@ entry:
   ret double %call
 }
 
-define double @__exp_finite_f64(double %a) #0 {
+define double @__exp_finite_f64(double %a) {
 ; CHECK-LABEL: __exp_finite_f64
 ; CHECK: __xl_exp
 ; CHECK: blr
@@ -751,7 +751,7 @@ entry:
   ret double %call
 }
 
-define double @__log_finite_f64(double %a) #0 {
+define double @__log_finite_f64(double %a) {
 ; CHECK-LABEL: __log_finite_f64
 ; CHECK: __xl_log
 ; CHECK: blr
@@ -760,7 +760,7 @@ entry:
   ret double %call
 }
 
-define double @__log10_finite_f64(double %a) #0 {
+define double @__log10_finite_f64(double %a) {
 ; CHECK-LABEL: __log10_finite_f64
 ; CHECK: __xl_log10
 ; CHECK: blr
@@ -769,7 +769,7 @@ entry:
   ret double %call
 }
 
-define double @__pow_finite_f64(double %a, double %b) #0 {
+define double @__pow_finite_f64(double %a, double %b) {
 ; CHECK-LABEL: __pow_finite_f64
 ; CHECK: __xl_pow
 ; CHECK: blr
@@ -778,7 +778,7 @@ entry:
   ret double %call
 }
 
-define double @__sinh_finite_f64(double %a) #0 {
+define double @__sinh_finite_f64(double %a) {
 ; CHECK-LABEL: __sinh_finite_f64
 ; CHECK: __xl_sinh
 ; CHECK: blr
@@ -786,5 +786,3 @@ entry:
   %call = tail call afn double @__sinh_finite(double %a)
   ret double %call
 }
-
-attributes #0 = { "approx-func-fp-math"="true" }

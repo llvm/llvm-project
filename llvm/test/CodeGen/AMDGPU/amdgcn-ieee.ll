@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}kernel_ieee_mode_default:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]

@@ -236,6 +236,8 @@ public:
 
     eCore_wasm32,
 
+    eCore_nvsass,
+
     kNumCores,
 
     kCore_invalid,
@@ -282,8 +284,10 @@ public:
     kCore_mips64el_last = eCore_mips64r6el,
 
     kCore_mips_first = eCore_mips32,
-    kCore_mips_last = eCore_mips64r6el
+    kCore_mips_last = eCore_mips64r6el,
 
+    kCore_nvsass_first = eCore_nvsass,
+    kCore_nvsass_last = eCore_nvsass,
   };
 
   /// Default constructor.
@@ -326,6 +330,11 @@ public:
   ///
   ///  \return a boolean value.
   bool IsMIPS() const;
+
+  /// If NVPTX architecture return true.
+  ///
+  ///  \return a boolean value.
+  bool IsNVPTX() const;
 
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
@@ -564,6 +573,7 @@ protected:
 /// \return true if \a lhs is less than \a rhs
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
+bool operator!=(const ArchSpec &lhs, const ArchSpec &rhs);
 
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 

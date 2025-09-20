@@ -166,6 +166,9 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyDisableLangRuntimeUnwindPlans,
+        [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
 
   m_experimental_properties_up =
@@ -278,6 +281,15 @@ void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
   const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
   SetPropertyAtIndex(idx, disable);
   m_process->Flush();
+}
+
+void ProcessProperties::DisableLanguageRuntimeUnwindPlansCallback() {
+  if (!m_process)
+    return;
+  for (auto thread_sp : m_process->Threads()) {
+    thread_sp->ClearStackFrames();
+    thread_sp->DiscardThreadPlans(/*force*/ true);
+  }
 }
 
 bool ProcessProperties::GetDetachKeepsStopped() const {
@@ -4256,6 +4268,14 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         // will know to wait for the running event and reflect that state
         // appropriately. We also need to stop processing actions, since they
         // aren't expecting the target to be running.
+
+        // Clear the selected frame which may have been set as part of utility
+        // expressions that have been run as part of this stop. If we didn't
+        // clear this, then StopInfo::GetSuggestedStackFrameIndex would not
+        // take affect when we next called SelectMostRelevantFrame.
+        // PerformAction should not be the one setting a selected frame, instead
+        // this should be done via GetSuggestedStackFrameIndex.
+        thread_sp->ClearSelectedFrameIndex();
 
         // FIXME: we might have run.
         if (stop_info_sp->HasTargetRunSinceMe()) {

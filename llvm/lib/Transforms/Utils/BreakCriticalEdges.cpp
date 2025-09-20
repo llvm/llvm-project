@@ -111,15 +111,14 @@ BasicBlock *
 llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                              const CriticalEdgeSplittingOptions &Options,
                              const Twine &BBName) {
-  assert(!isa<IndirectBrInst>(TI) &&
-         "Cannot split critical edge from IndirectBrInst");
-
   BasicBlock *TIBB = TI->getParent();
   BasicBlock *DestBB = TI->getSuccessor(SuccNum);
 
-  // Splitting the critical edge to a pad block is non-trivial. Don't do
-  // it in this generic function.
-  if (DestBB->isEHPad()) return nullptr;
+  // Splitting the critical edge to a pad block is non-trivial.
+  // And we cannot split block with IndirectBr as a terminator.
+  // Don't do it in this generic function.
+  if (DestBB->isEHPad() || isa<IndirectBrInst>(TI))
+    return nullptr;
 
   if (Options.IgnoreUnreachableDests &&
       isa<UnreachableInst>(DestBB->getFirstNonPHIOrDbgOrLifetime()))

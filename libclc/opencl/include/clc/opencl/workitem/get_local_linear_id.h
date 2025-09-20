@@ -11,6 +11,6 @@
 
 #include <clc/opencl/opencl-base.h>
 
-_CLC_OVERLOAD _CLC_DECL size_t get_local_linear_id();
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t get_local_linear_id();
 
 #endif // __CLC_OPENCL_WORKITEM_GET_LOCAL_LINEAR_ID_H__

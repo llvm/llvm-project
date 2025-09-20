@@ -1007,8 +1007,7 @@ MDNode *MDNode::uniquify() {
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   case CLASS##Kind: {                                                          \
     CLASS *SubclassThis = cast<CLASS>(this);                                   \
-    std::integral_constant<bool, HasCachedHash<CLASS>::value>                  \
-        ShouldRecalculateHash;                                                 \
+    std::bool_constant<HasCachedHash<CLASS>::value> ShouldRecalculateHash;     \
     dispatchRecalculateHash(SubclassThis, ShouldRecalculateHash);              \
     return uniquifyImpl(SubclassThis, getContext().pImpl->CLASS##s);           \
   }
@@ -1065,7 +1064,7 @@ void MDNode::storeDistinctInContext() {
     llvm_unreachable("Invalid subclass of MDNode");
 #define HANDLE_MDNODE_LEAF(CLASS)                                              \
   case CLASS##Kind: {                                                          \
-    std::integral_constant<bool, HasCachedHash<CLASS>::value> ShouldResetHash; \
+    std::bool_constant<HasCachedHash<CLASS>::value> ShouldResetHash;           \
     dispatchResetHash(cast<CLASS>(this), ShouldResetHash);                     \
     break;                                                                     \
   }
@@ -1796,6 +1795,7 @@ AAMDNodes Instruction::getAAMetadata() const {
     Result.TBAAStruct = Info.lookup(LLVMContext::MD_tbaa_struct);
     Result.Scope = Info.lookup(LLVMContext::MD_alias_scope);
     Result.NoAlias = Info.lookup(LLVMContext::MD_noalias);
+    Result.NoAliasAddrSpace = Info.lookup(LLVMContext::MD_noalias_addrspace);
   }
   return Result;
 }
@@ -1805,6 +1805,7 @@ void Instruction::setAAMetadata(const AAMDNodes &N) {
   setMetadata(LLVMContext::MD_tbaa_struct, N.TBAAStruct);
   setMetadata(LLVMContext::MD_alias_scope, N.Scope);
   setMetadata(LLVMContext::MD_noalias, N.NoAlias);
+  setMetadata(LLVMContext::MD_noalias_addrspace, N.NoAliasAddrSpace);
 }
 
 void Instruction::setNoSanitizeMetadata() {

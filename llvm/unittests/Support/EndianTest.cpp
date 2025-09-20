@@ -201,26 +201,26 @@ TEST(Endian, WriteBitAligned) {
 
 TEST(Endian, Write) {
   unsigned char data[5];
-  endian::write<int32_t, llvm::endianness::big, unaligned>(data, -1362446643);
+  endian::write<int32_t, unaligned>(data, -1362446643, llvm::endianness::big);
   EXPECT_EQ(data[0], 0xAE);
   EXPECT_EQ(data[1], 0xCA);
   EXPECT_EQ(data[2], 0xB6);
   EXPECT_EQ(data[3], 0xCD);
-  endian::write<int32_t, llvm::endianness::big, unaligned>(data + 1,
-                                                           -1362446643);
+  endian::write<int32_t, unaligned>(data + 1, -1362446643,
+                                    llvm::endianness::big);
   EXPECT_EQ(data[1], 0xAE);
   EXPECT_EQ(data[2], 0xCA);
   EXPECT_EQ(data[3], 0xB6);
   EXPECT_EQ(data[4], 0xCD);
 
-  endian::write<int32_t, llvm::endianness::little, unaligned>(data,
-                                                              -1362446643);
+  endian::write<int32_t, unaligned>(data, -1362446643,
+                                    llvm::endianness::little);
   EXPECT_EQ(data[0], 0xCD);
   EXPECT_EQ(data[1], 0xB6);
   EXPECT_EQ(data[2], 0xCA);
   EXPECT_EQ(data[3], 0xAE);
-  endian::write<int32_t, llvm::endianness::little, unaligned>(data + 1,
-                                                              -1362446643);
+  endian::write<int32_t, unaligned>(data + 1, -1362446643,
+                                    llvm::endianness::little);
   EXPECT_EQ(data[1], 0xCD);
   EXPECT_EQ(data[2], 0xB6);
   EXPECT_EQ(data[3], 0xCA);

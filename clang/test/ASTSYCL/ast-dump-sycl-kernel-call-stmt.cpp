@@ -64,10 +64,10 @@ void skep2<KN<2>>(K<2>);
 
 // CHECK-NEXT: | `-FunctionDecl {{.*}} skep2 'void (K<2>)' explicit_instantiation_definition
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<2>'
-// CHECK-NEXT: |   | `-RecordType {{.*}} 'KN<2>'
+// CHECK-NEXT: |   | `-RecordType {{.*}} 'KN<2>' canonical
 // CHECK-NEXT: |   |   `-ClassTemplateSpecialization {{.*}} 'KN'
 // CHECK-NEXT: |   |-TemplateArgument type 'K<2>'
-// CHECK-NEXT: |   | `-RecordType {{.*}} 'K<2>'
+// CHECK-NEXT: |   | `-RecordType {{.*}} 'K<2>' canonical
 // CHECK-NEXT: |   |   `-ClassTemplateSpecialization {{.*}} 'K'
 // CHECK-NEXT: |   |-ParmVarDecl {{.*}} k 'K<2>'
 // CHECK-NEXT: |   |-SYCLKernelCallStmt {{.*}}
@@ -110,10 +110,10 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | `-Function {{.*}} 'skep3' 'void (K<3>)'
 // CHECK-NEXT: |-FunctionDecl {{.*}} skep3 'void (K<3>)' explicit_specialization
 // CHECK-NEXT: | |-TemplateArgument type 'KN<3>'
-// CHECK-NEXT: | | `-RecordType {{.*}} 'KN<3>'
+// CHECK-NEXT: | | `-RecordType {{.*}} 'KN<3>' canonical
 // CHECK-NEXT: | |   `-ClassTemplateSpecialization {{.*}} 'KN'
 // CHECK-NEXT: | |-TemplateArgument type 'K<3>'
-// CHECK-NEXT: | | `-RecordType {{.*}} 'K<3>'
+// CHECK-NEXT: | | `-RecordType {{.*}} 'K<3>' canonical
 // CHECK-NEXT: | |   `-ClassTemplateSpecialization {{.*}} 'K'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} k 'K<3>'
 // CHECK-NEXT: | |-SYCLKernelCallStmt {{.*}}

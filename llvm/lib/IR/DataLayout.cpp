@@ -152,7 +152,6 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
          HasUnstableRepresentation == Other.HasUnstableRepresentation &&
-         HasNonIntegralRepresentation == Other.HasNonIntegralRepresentation &&
          HasExternalState == Other.HasExternalState;
 }
 
@@ -174,22 +173,9 @@ struct LessPointerAddrSpace {
 };
 } // namespace
 
-const char *DataLayout::getManglingComponent(const Triple &T) {
-  if (T.isOSBinFormatGOFF())
-    return "-m:l";
-  if (T.isOSBinFormatMachO())
-    return "-m:o";
-  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
-    return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
-  if (T.isOSBinFormatXCOFF())
-    return "-m:a";
-  return "-m:e";
-}
-
 // Default primitive type specifications.
 // NOTE: These arrays must be sorted by type bit width.
 constexpr DataLayout::PrimitiveSpec DefaultIntSpecs[] = {
-    {1, Align::Constant<1>(), Align::Constant<1>()},  // i1:8:8
     {8, Align::Constant<1>(), Align::Constant<1>()},  // i8:8:8
     {16, Align::Constant<2>(), Align::Constant<2>()}, // i16:16:16
     {32, Align::Constant<4>(), Align::Constant<4>()}, // i32:32:32
@@ -209,8 +195,7 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
 // Default pointer type specifications.
 constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
     // p0:64:64:64:64
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false, false,
-     false},
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false, false},
 };
 
 DataLayout::DataLayout()
@@ -423,14 +408,11 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
   unsigned AddrSpace = 0;
   bool ExternalState = false;
   bool UnstableRepr = false;
-  bool NonIntegralRepr = false;
   StringRef AddrSpaceStr = Components[0];
   while (!AddrSpaceStr.empty()) {
     char C = AddrSpaceStr.front();
     if (C == 'e') {
       ExternalState = true;
-    } else if (C == 'n') {
-      NonIntegralRepr = true;
     } else if (C == 'u') {
       UnstableRepr = true;
     } else if (isAlpha(C)) {
@@ -444,12 +426,9 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
   if (!AddrSpaceStr.empty())
     if (Error Err = parseAddrSpace(AddrSpaceStr, AddrSpace))
       return Err; // Failed to parse the remaining characters as a number
-  if (AddrSpace == 0 && (NonIntegralRepr || UnstableRepr))
+  if (AddrSpace == 0 && (ExternalState || UnstableRepr))
     return createStringError(
-        "address space 0 cannot be non-integral or unstable");
-  if (ExternalState && !NonIntegralRepr)
-    return createStringError(
-        "pointers with external state must be non-integral");
+        "address space 0 cannot be unstable or have external state");
 
   // Size. Required, cannot be zero.
   unsigned BitWidth;
@@ -482,8 +461,12 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
+  if (ExternalState && BitWidth == IndexBitWidth)
+    return createStringError(
+        "pointers with external state must be non-integral");
+
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 UnstableRepr, NonIntegralRepr, ExternalState);
+                 UnstableRepr, ExternalState);
   return Error::success();
 }
 
@@ -659,7 +642,7 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   true, true, false);
+                   true, false);
   }
 
   return Error::success();
@@ -708,13 +691,12 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
                                 uint32_t IndexBitWidth, bool HasUnstableRepr,
-                                bool HasNonIntegralRepr,
                                 bool HasExternalState) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
                                        IndexBitWidth, HasUnstableRepr,
-                                       HasNonIntegralRepr, HasExternalState});
+                                       HasExternalState});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
@@ -722,13 +704,17 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
     I->IndexBitWidth = IndexBitWidth;
     I->HasUnstableRepresentation = HasUnstableRepr;
     I->HasExternalState = HasExternalState;
-    I->HasNonIntegralRepresentation = HasNonIntegralRepr;
   }
 }
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = lower_bound(IntSpecs, BitWidth, LessPrimitiveBitWidth());
+  auto I = IntSpecs.begin();
+  for (; I != IntSpecs.end(); ++I) {
+    if (I->BitWidth >= BitWidth)
+      break;
+  }
+
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
@@ -873,6 +859,44 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
 }
 
+TypeSize DataLayout::getTypeAllocSize(Type *Ty) const {
+  switch (Ty->getTypeID()) {
+  case Type::ArrayTyID: {
+    // The alignment of the array is the alignment of the element, so there
+    // is no need for further adjustment.
+    auto *ATy = cast<ArrayType>(Ty);
+    return ATy->getNumElements() * getTypeAllocSize(ATy->getElementType());
+  }
+  case Type::StructTyID: {
+    const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
+    TypeSize Size = Layout->getSizeInBytes();
+
+    if (cast<StructType>(Ty)->isPacked())
+      return Size;
+
+    Align A = std::max(StructABIAlignment, Layout->getAlignment());
+    return alignTo(Size, A.value());
+  }
+  case Type::IntegerTyID: {
+    unsigned BitWidth = Ty->getIntegerBitWidth();
+    TypeSize Size = TypeSize::getFixed(divideCeil(BitWidth, 8));
+    Align A = getIntegerAlignment(BitWidth, /*ABI=*/true);
+    return alignTo(Size, A.value());
+  }
+  case Type::PointerTyID: {
+    unsigned AS = Ty->getPointerAddressSpace();
+    TypeSize Size = TypeSize::getFixed(getPointerSize(AS));
+    return alignTo(Size, getPointerABIAlignment(AS).value());
+  }
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getTypeAllocSize(LayoutTy);
+  }
+  default:
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
+  }
+}
+
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
 }
@@ -960,12 +984,13 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
     return APInt::getZero(BitWidth);
   }
 
-  APInt Index = Offset.sdiv(ElemSize);
-  Offset -= Index * ElemSize;
+  uint64_t FixedElemSize = ElemSize.getFixedValue();
+  APInt Index = Offset.sdiv(FixedElemSize);
+  Offset -= Index * FixedElemSize;
   if (Offset.isNegative()) {
     // Prefer a positive remaining offset to allow struct indexing.
     --Index;
-    Offset += ElemSize;
+    Offset += FixedElemSize;
     assert(Offset.isNonNegative() && "Remaining offset shouldn't be negative");
   }
   return Index;

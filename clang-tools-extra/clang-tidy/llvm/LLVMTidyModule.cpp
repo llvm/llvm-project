@@ -1,4 +1,4 @@
-//===--- LLVMTidyModule.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,8 @@
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "TwineLocalCheck.h"
+#include "UseNewMLIROpBuilderCheck.h"
+#include "UseRangesCheck.h"
 
 namespace clang::tidy {
 namespace llvm_check {
@@ -40,6 +42,9 @@ public:
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
+    CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
+        "llvm-use-new-mlir-op-builder");
+    CheckFactories.registerCheck<UseRangesCheck>("llvm-use-ranges");
   }
 
   ClangTidyOptions getModuleOptions() override {

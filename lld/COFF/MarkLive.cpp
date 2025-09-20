@@ -49,7 +49,10 @@ void markLive(COFFLinkerContext &ctx) {
       addSym(file->impchkThunk->exitThunk);
   };
 
-  addSym = [&](Symbol *b) {
+  addSym = [&](Symbol *s) {
+    Defined *b = s->getDefined();
+    if (!b)
+      return;
     if (auto *sym = dyn_cast<DefinedRegular>(b)) {
       enqueue(sym->getChunk());
     } else if (auto *sym = dyn_cast<DefinedImportData>(b)) {

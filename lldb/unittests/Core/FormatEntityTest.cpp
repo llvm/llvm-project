@@ -117,6 +117,7 @@ constexpr llvm::StringRef lookupStrings[] = {
     "${frame.no-debug}",
     "${frame.reg.*}",
     "${frame.is-artificial}",
+    "${frame.kind}",
     "${function.id}",
     "${function.name}",
     "${function.name-without-args}",

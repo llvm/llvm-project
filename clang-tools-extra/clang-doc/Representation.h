@@ -121,6 +121,10 @@ struct Reference {
   Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
             StringRef Path = StringRef())
       : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path) {}
+  Reference(SymbolID USR, StringRef Name, InfoType IT, StringRef QualName,
+            StringRef Path, SmallString<16> DocumentationFileName)
+      : USR(USR), Name(Name), QualName(QualName), RefType(IT), Path(Path),
+        DocumentationFileName(DocumentationFileName) {}
 
   bool operator==(const Reference &Other) const {
     return std::tie(USR, Name, QualName, RefType) ==
@@ -155,6 +159,7 @@ struct Reference {
   // Path of directory where the clang-doc generated file will be saved
   // (possibly unresolved)
   llvm::SmallString<128> Path;
+  SmallString<16> DocumentationFileName;
 };
 
 // Holds the children of a record or namespace.
@@ -330,6 +335,11 @@ struct Info {
   std::vector<CommentInfo> Description; // Comment description of this decl.
   llvm::SmallString<128> Path;          // Path of directory where the clang-doc
                                         // generated file will be saved
+
+  // The name used for the file that this info is documented in.
+  // In the JSON generator, infos are documented in files with mangled names.
+  // Thus, we keep track of the physical filename for linking purposes.
+  SmallString<16> DocumentationFileName;
 
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);

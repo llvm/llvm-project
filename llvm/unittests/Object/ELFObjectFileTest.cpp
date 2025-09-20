@@ -295,7 +295,7 @@ TEST(ELFObjectFileTest, CheckOSAndTriple) {
       {ELF::EM_X86_64, ELF::ELFOSABI_AIX, "x86_64--aix"},
       {ELF::EM_X86_64, ELF::ELFOSABI_FREEBSD, "x86_64--freebsd"},
       {ELF::EM_X86_64, ELF::ELFOSABI_OPENBSD, "x86_64--openbsd"},
-      {ELF::EM_CUDA, ELF::ELFOSABI_CUDA, "nvptx64-nvidia-cuda"}};
+      {ELF::EM_CUDA, ELF::ELFOSABI_CUDA, "nvsass-nvidia-cuda"}};
   for (auto [Machine, OS, Triple] : Formats) {
     const DataForTest D(ELF::ELFCLASS64, ELF::ELFDATA2LSB, Machine, OS,
                         ELF::EF_AMDGPU_MACH_AMDGCN_LAST);
@@ -680,7 +680,7 @@ Sections:
               - AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 ]
+                CallsiteEndOffsets: [ 0x1 ]
 )";
 
   {
@@ -713,7 +713,7 @@ Sections:
                 AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 , 0x1 ]
+                CallsiteEndOffsets: [ 0x1 , 0x1 ]
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1

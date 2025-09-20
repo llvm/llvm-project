@@ -102,7 +102,7 @@ void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm);
 void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,
                       llvm::OptimizationLevel optLevel,
-                      llvm::StringRef inputFilename);
+                      llvm::StringRef inputFilename, int32_t dwarfVersion);
 
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config);
@@ -119,13 +119,16 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
                                            MLIRToLLVMPassPipelineConfig &pc);
 
+/// Select which mode to enable OpenMP support in.
+enum class EnableOpenMP { None, Simd, Full };
+
 /// Create a pass pipeline for lowering from HLFIR to FIR
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
 void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, bool enableOpenMP,
+    mlir::PassManager &pm, EnableOpenMP enableOpenMP,
     llvm::OptimizationLevel optLevel = defaultOptLevel);
 
 struct OpenMPFIRPassPipelineOpts {
@@ -155,7 +158,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 void createDebugPasses(mlir::PassManager &pm,
                        llvm::codegenoptions::DebugInfoKind debugLevel,
                        llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename);
+                       llvm::StringRef inputFilename, int32_t dwarfVersion);
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
