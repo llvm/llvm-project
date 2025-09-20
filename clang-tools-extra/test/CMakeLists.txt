@@ -66,6 +66,12 @@ endforeach()
 if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
   llvm_add_library(
       CTTestTidyModule
+      LINK_LIBS
+      clangAST
+      clangASTMatchers
+      clangTooling
+      clangBasic
+      clangTidy
       MODULE clang-tidy/CTTestTidyModule.cpp
       PLUGIN_TOOL clang-tidy)
 endif()
