@@ -33,13 +33,11 @@ define void @inc(i32 %n) nounwind uwtable noinline ssp {
   ret void
 }
 
-; Can't vectorize this loop because the access to A[X] is non-linear.
-;
 ;  for (i = 0; i < n; ++i) {
 ;    A[B[i]]++;
 ;
 ;CHECK-LABEL: @histogram(
-;CHECK-NOT: <4 x i32>
+;CHECK:  call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %{{.*}}, i32 1, <4 x i1> splat (i1 true))
 ;CHECK: ret i32
 define i32 @histogram(ptr nocapture noalias %A, ptr nocapture noalias %B, i32 %n) nounwind uwtable ssp {
 entry:
