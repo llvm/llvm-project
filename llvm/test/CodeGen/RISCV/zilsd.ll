@@ -7,10 +7,9 @@
 define i64 @load(ptr %a) nounwind {
 ; CHECK-LABEL: load:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld a2, 80(a0)
-; CHECK-NEXT:    ld zero, 0(a0)
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    ld a0, 80(a0)
+; CHECK-NEXT:    ld zero, 0(a2)
 ; CHECK-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 10
   %2 = load i64, ptr %1
@@ -122,12 +121,12 @@ define void @large_offset(ptr nocapture %p, i64 %d) nounwind {
 ; CHECK-LABEL: large_offset:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 4
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ld a2, -384(a0)
-; CHECK-NEXT:    addi a2, a2, 1
-; CHECK-NEXT:    seqz a1, a2
-; CHECK-NEXT:    add a3, a3, a1
-; CHECK-NEXT:    sd a2, -384(a0)
+; CHECK-NEXT:    add a2, a0, a1
+; CHECK-NEXT:    ld a0, -384(a2)
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    seqz a3, a0
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    sd a0, -384(a2)
 ; CHECK-NEXT:    ret
 entry:
   %add.ptr = getelementptr inbounds i64, ptr %p, i64 2000
