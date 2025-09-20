@@ -38,6 +38,7 @@ import platform
 import plistlib
 import re
 import shlex
+import stat
 import string
 import subprocess
 import sys
@@ -320,9 +321,9 @@ class CrashLog(symbolication.Symbolicator):
                 or self.path.startswith("/usr/lib/")
             )
 
-        def find_matching_slice(self):
+        def find_matching_slice(self, path):
             dwarfdump_cmd_output = subprocess.check_output(
-                'dwarfdump --uuid "%s"' % self.path, shell=True
+                'dwarfdump --uuid "%s"' % path, shell=True
             ).decode("utf-8")
             self_uuid = self.get_uuid()
             for line in dwarfdump_cmd_output.splitlines():
@@ -331,7 +332,7 @@ class CrashLog(symbolication.Symbolicator):
                     dwarf_uuid_str = match.group(1)
                     dwarf_uuid = uuid.UUID(dwarf_uuid_str)
                     if self_uuid == dwarf_uuid:
-                        self.resolved_path = self.path
+                        self.resolved_path = path
                         self.arch = match.group(2)
                         return True
             if not self.resolved_path:
@@ -340,10 +341,106 @@ class CrashLog(symbolication.Symbolicator):
                     print(
                         (
                             "error\n    error: unable to locate '%s' with UUID %s"
-                            % (self.path, self.get_normalized_uuid_string())
+                            % (path, self.get_normalized_uuid_string())
                         )
                     )
                 return False
+
+        def patch_binary_search_path(self):
+            home = os.path.expanduser("~")
+
+            patched_search_path = self.path.replace("/Users/USER", home)
+
+            if "*" in patched_search_path:
+                patched_search_path = patched_search_path[
+                    : patched_search_path.index("*")
+                ]
+
+            if not os.path.isdir(patched_search_path):
+                patched_search_path = os.path.dirname(patched_search_path)
+
+            return patched_search_path
+
+        def find_binary_with_speculative_path(self, target_uuid):
+            search_path = self.patch_binary_search_path()
+
+            target_uuid = target_uuid.lower()
+            stop_flag = threading.Event()
+
+            with print_lock:
+                print(
+                    "Scanning for '%s' for '%s' ... (ˆC to interrupt)"
+                    % (search_path, os.path.basename(self.path))
+                )
+
+            def is_executable(path):
+                try:
+                    st = os.stat(path)
+                    return stat.S_ISREG(st.st_mode) and (
+                        st.st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+                    )
+                except:
+                    return False
+
+            def check_uuid(path, target_uuid):
+                try:
+                    output = subprocess.check_output(
+                        ["dwarfdump", "--uuid", path],
+                        text=True,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    for line in output.splitlines():
+                        if target_uuid in line.lower():
+                            return path
+                except:
+                    return None
+                return None
+
+            def scan_directory_recursive(dirpath, target_uuid, stop_flag):
+                for root, _, files in os.walk(dirpath):
+                    if stop_flag.is_set():
+                        break
+                    for name in files:
+                        path = os.path.join(root, name)
+                        if stop_flag.is_set():
+                            break
+                        if is_executable(path):
+                            result = check_uuid(path, target_uuid)
+                            if result:
+                                stop_flag.set()
+                                return result
+                return None
+
+            subdirs = []
+            try:
+                for d in os.listdir(search_path):
+                    dir_path = os.path.join(search_path, d)
+                    try:
+                        if os.path.isdir(dir_path):
+                            subdirs.append(dir_path)
+                    except (PermissionError, FileNotFoundError):
+                        continue
+            except (PermissionError, FileNotFoundError):
+                pass
+
+            # Include root itself in case it contains files
+            subdirs.insert(0, search_path)
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = {
+                    executor.submit(
+                        scan_directory_recursive, d, target_uuid, stop_flag
+                    ): d
+                    for d in subdirs
+                }
+                for fut in concurrent.futures.as_completed(futures):
+                    result = fut.result()
+                    if result:
+                        print("Found:", result)
+                        return result
+
+            print("No match found.")
+            return None
 
         def locate_module_and_debug_symbols(self):
             # Don't load a module twice...
@@ -397,7 +494,15 @@ class CrashLog(symbolication.Symbolicator):
                                     if not os.path.exists(source_path):
                                         unavailable_source_paths.add(source_path)
             if not self.resolved_path and os.path.exists(self.path):
-                if not self.find_matching_slice():
+                if not self.find_matching_slice(self.path):
+                    return False
+            speculative_path = self.find_binary_with_speculative_path(uuid_str)
+            if (
+                not self.resolved_path
+                and speculative_path
+                and os.path.exists(speculative_path)
+            ):
+                if not self.find_matching_slice(speculative_path):
                     return False
             if not self.resolved_path and not os.path.exists(self.path):
                 try:
