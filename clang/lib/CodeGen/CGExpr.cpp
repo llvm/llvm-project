@@ -4559,6 +4559,97 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   }
 }
 
+/// Emit array bounds constraints using llvm.assume for optimization hints.
+///
+/// C Standard (ISO/IEC 9899:2011 - C11)
+/// Section J.2 (Undefined behavior): An array subscript is out of range, even
+/// if an object is apparently accessible with the given subscript (as in the
+/// lvalue expression a[1][7] given the declaration int a[4][5]) (6.5.6).
+///
+/// Section 6.5.6 (Additive operators): If both the pointer operand and the
+/// result point to elements of the same array object, or one past the last
+/// element of the array object, the evaluation shall not produce an overflow;
+/// otherwise, the behavior is undefined.
+///
+/// C++ Standard (ISO/IEC 14882 - 2017)
+/// Section 8.7 (Additive operators):
+/// 4 When an expression that has integral type is added to or subtracted from a
+///   pointer, the result has the type of the pointer operand. If the expression
+///   P points to element x[i] of an array object x with n elements,^86 the
+///   expressions P + J and J + P (where J has the value j) point to the
+///   (possibly-hypothetical) element x[i + j] if 0 ≤ i + j ≤ n; otherwise, the
+///   behavior is undefined. Likewise, the expression P - J points to the
+///   (possibly-hypothetical) element x[i − j] if 0 ≤ i − j ≤ n; otherwise, the
+///   behavior is undefined.
+/// ^86 A pointer past the last element of an array x of n elements is
+///     considered to be equivalent to a pointer to a hypothetical element x[n]
+///     for this purpose; see 6.9.2.
+///
+/// This function emits llvm.assume statements to inform the optimizer that
+/// array subscripts are within bounds, enabling better optimization without
+/// duplicating side effects from the subscript expression. The IndexVal
+/// parameter should be the already-emitted index value to avoid re-evaluation.
+void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
+                                                 llvm::Value *IndexVal) {
+  const Expr *Base = E->getBase();
+  const Expr *Idx = E->getIdx();
+  QualType BaseType = Base->getType();
+
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(Base)) {
+    if (ICE->getCastKind() == CK_ArrayToPointerDecay) {
+      BaseType = ICE->getSubExpr()->getType();
+    }
+  }
+
+  // For now: only handle constant array types.
+  const ConstantArrayType *CAT = getContext().getAsConstantArrayType(BaseType);
+  if (!CAT)
+    return;
+
+  llvm::APInt ArraySize = CAT->getSize();
+  if (ArraySize == 0)
+    return;
+
+  QualType IdxType = Idx->getType();
+  llvm::Type *IndexType = ConvertType(IdxType);
+  llvm::Value *Zero = llvm::ConstantInt::get(IndexType, 0);
+
+  uint64_t ArraySizeValue = ArraySize.getLimitedValue();
+  llvm::Value *ArraySizeVal = llvm::ConstantInt::get(IndexType, ArraySizeValue);
+
+  // Use the provided IndexVal to avoid duplicating side effects.
+  // The caller has already emitted the index expression once.
+  if (!IndexVal)
+    return;
+
+  // Ensure index value has the same type as our constants.
+  if (IndexVal->getType() != IndexType) {
+    bool IsSigned = IdxType->isSignedIntegerOrEnumerationType();
+    IndexVal = Builder.CreateIntCast(IndexVal, IndexType, IsSigned, "idx.cast");
+  }
+
+  // Create bounds constraint: 0 <= index && index < size.
+  // C arrays are 0-based, so valid indices are [0, size-1].
+  // This enforces the C18 standard requirement that array subscripts
+  // must be "greater than or equal to zero and less than the size of the
+  // array."
+  llvm::Value *LowerBound, *UpperBound;
+  if (IdxType->isSignedIntegerOrEnumerationType()) {
+    // For signed indices: index >= 0 && index < size.
+    LowerBound = Builder.CreateICmpSGE(IndexVal, Zero, "idx.ge.zero");
+    UpperBound = Builder.CreateICmpSLT(IndexVal, ArraySizeVal, "idx.lt.size");
+  } else {
+    // For unsigned indices: index < size (>= 0 is implicit).
+    LowerBound = Builder.getTrue();
+    UpperBound = Builder.CreateICmpULT(IndexVal, ArraySizeVal, "idx.lt.size");
+  }
+
+  llvm::Value *BoundsConstraint =
+      Builder.CreateAnd(LowerBound, UpperBound, "bounds.constraint");
+  llvm::Function *AssumeIntrinsic = CGM.getIntrinsic(llvm::Intrinsic::assume);
+  Builder.CreateCall(AssumeIntrinsic, BoundsConstraint);
+}
+
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -4588,6 +4679,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   };
   IdxPre = nullptr;
 
+  // Array bounds constraints will be emitted after index evaluation to avoid
+  // duplicating side effects from the index expression.
+
   // If the base is a vector type, then we are forming a vector element lvalue
   // with this subscript.
   if (E->getBase()->getType()->isSubscriptableVectorType() &&
@@ -4595,6 +4689,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // Emit the vector as an lvalue to get its address.
     LValue LHS = EmitLValue(E->getBase());
     auto *Idx = EmitIdxAfterBase(/*Promote*/false);
+
+    // Emit array bounds constraints for vector subscripts.
+    EmitArrayBoundsConstraints(E, Idx);
+
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
     return LValue::MakeVectorElt(LHS.getAddress(), Idx, E->getBase()->getType(),
                                  LHS.getBaseInfo(), TBAAAccessInfo());
@@ -4635,6 +4733,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
+    // Emit array bounds constraints for VLA access (though VLAs typically don't
+    // have constant bounds).
+    EmitArrayBoundsConstraints(E, Idx);
+
     // The element count here is the total number of non-VLA elements.
     llvm::Value *numElements = getVLASize(vla).NumElts;
 
@@ -4658,6 +4760,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // Emit the base pointer.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+
+    // Emit array bounds constraints for ObjC interface access.
+    EmitArrayBoundsConstraints(E, Idx);
 
     CharUnits InterfaceSize = getContext().getTypeSizeInChars(OIT);
     llvm::Value *InterfaceSizeVal =
@@ -4693,6 +4798,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     else
       ArrayLV = EmitLValue(Array);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+
+    // Emit array bounds constraints for optimization.
+    EmitArrayBoundsConstraints(E, Idx);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
       EmitCountedByBoundsChecking(Array, Idx, ArrayLV.getAddress(),
@@ -4737,6 +4845,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     Address BaseAddr =
         EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+
+    // Emit array bounds constraints for pointer-based array access.
+    EmitArrayBoundsConstraints(E, Idx);
+
     QualType ptrType = E->getBase()->getType();
     Addr = emitArraySubscriptGEP(*this, BaseAddr, Idx, E->getType(),
                                  !getLangOpts().PointerOverflowDefined,
