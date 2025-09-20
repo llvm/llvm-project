@@ -6605,6 +6605,18 @@ the configuration (without a prefix: ``Auto``).
      int a [5];                    vs.      int a[5];
      int a [5][5];                 vs.      int a[5][5];
 
+.. _SpaceBetweenUnderscoreParens:
+
+**SpaceBetweenUnderscoreParens** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <SpaceBetweenUnderscoreParens>`
+  If ``false``, spaces will be removed between underscore and an opening
+  parenthesis. This is specifically for the gettext macro ``_()`` commonly
+  used in GNU projects.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     _ (message);                   vs.     _(message);
+
 .. _SpaceInEmptyBlock:
 
 **SpaceInEmptyBlock** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpaceInEmptyBlock>`

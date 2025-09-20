@@ -4901,6 +4901,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Handle builtins like identifiers.
     if (Line.Type != LT_PreprocessorDirective &&
         (Left.Tok.getIdentifierInfo() || Left.is(tok::r_paren))) {
+      // Check for special case: single underscore token (gettext macro).
+      if (Left.Tok.getIdentifierInfo() && !Style.SpaceBetweenUnderscoreParens &&
+          Left.TokenText == "_") {
+        return false;
+      }
       return spaceRequiredBeforeParens(Right);
     }
     return false;

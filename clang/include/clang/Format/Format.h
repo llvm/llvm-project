@@ -4896,6 +4896,16 @@ struct FormatStyle {
   /// \version 10
   // bool SpaceInEmptyBlock;
 
+  /// If ``false``, spaces will be removed between underscore and an opening
+  /// parenthesis. This is specifically for the gettext macro ``_()`` commonly
+  /// used in GNU projects.
+  /// \code
+  ///    true:                                  false:
+  ///    _ (message);                   vs.     _(message);
+  /// \endcode
+  /// \version 19
+  bool SpaceBetweenUnderscoreParens;
+
   /// Style of when to insert a space in empty braces.
   enum SpaceInEmptyBracesStyle : int8_t {
     /// Always insert a space in empty braces.
