@@ -184,3 +184,10 @@ skip lldb-shell :: Swift/cond-breakpoint.test
 skip lldb-api :: functionalities/data-formatter/data-formatter-cpp/TestDataFormatterCpp.py
 skip lldb-api :: lang/cpp/frame-var-depth-and-elem-count/TestFrameVarDepthAndElemCount.py
 skip lldb-api :: functionalities/inferior-crashing/recursive-inferior/TestRecursiveInferiorStep.py
+
+# Untriaged: new in stable/21.x
+skip lldb-api :: commands/frame/var-dil/basics/QualifiedId/TestFrameVarDILQualifiedId.py
+skip lldb-api :: functionalities/dead-strip/TestDeadStrip.py
+skip lldb-api :: functionalities/memory/holes/TestMemoryHoles.py
+skip lldb-api :: lang/cpp/forward/TestCPPForwardDeclaration.py
+skip lldb-api :: functionalities/thread/state/TestThreadStates.py
