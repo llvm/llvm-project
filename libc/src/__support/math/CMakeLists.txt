@@ -474,6 +474,14 @@ add_header_library(
 )
 
 add_header_library(
+  dsqrtl
+  HDRS
+    dsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
   erff
   HDRS
     erff.h
