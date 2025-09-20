@@ -539,11 +539,13 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
 }
 
 static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
-                                  uint64_t PC) {
+                                  uint64_t /*PC*/) {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_PPC64, Type) << '\n';
     llvm_unreachable("unsupported relocation type");
+
+  // Data / address / TOC / GOT / TLS classes → return the RELA addend (often 0)
   case ELF::R_PPC64_ADDR16:
   case ELF::R_PPC64_ADDR16_LO:
   case ELF::R_PPC64_ADDR16_HI:
@@ -567,10 +569,13 @@ static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
   case ELF::R_PPC64_GOT16_HI:
   case ELF::R_PPC64_GOT16_HA:
     return Contents;
+
+  // Code relocs: for the verifier, return the ELF RELA addend (usually 0)
   case ELF::R_PPC64_REL32:
   case ELF::R_PPC64_REL24:
   case ELF::R_PPC64_REL14:
     return Contents;
+
   case ELF::R_PPC64_NONE:
     return 0;
   }
@@ -1050,7 +1055,7 @@ uint32_t Relocation::getPC32() {
     return ELF::R_X86_64_PC32;
   case Triple::ppc64:
   case Triple::ppc64le:
-    return ELF::R_PPC64_REL24;
+    return ELF::R_PPC64_REL32;
   }
 }
 
