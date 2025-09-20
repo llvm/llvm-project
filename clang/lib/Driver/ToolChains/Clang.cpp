@@ -2744,42 +2744,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-static void EmitComplexRangeDiag(const Driver &D, StringRef LastOpt,
-                                 LangOptions::ComplexRangeKind Range,
-                                 StringRef NewOpt,
-                                 LangOptions::ComplexRangeKind NewRange) {
-  //  Do not emit a warning if NewOpt overrides LastOpt in the following cases.
-  //
-  // | LastOpt               | NewOpt                |
-  // |-----------------------|-----------------------|
-  // | -fcx-limited-range    | -fno-cx-limited-range |
-  // | -fno-cx-limited-range | -fcx-limited-range    |
-  // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
-  // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
-  // | -ffast-math           | -fno-fast-math        |
-  // | -ffp-model=           | -ffast-math           |
-  // | -ffp-model=           | -fno-fast-math        |
-  // | -ffp-model=           | -ffp-model=           |
-  // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
-  if (LastOpt == NewOpt || NewOpt.empty() || LastOpt.empty() ||
-      (LastOpt == "-fcx-limited-range" && NewOpt == "-fno-cx-limited-range") ||
-      (LastOpt == "-fno-cx-limited-range" && NewOpt == "-fcx-limited-range") ||
-      (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
-      (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
-      (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
-      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
-      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
-      (LastOpt.starts_with("-ffp-model=") &&
-       NewOpt.starts_with("-ffp-model=")) ||
-      (LastOpt.starts_with("-fcomplex-arithmetic=") &&
-       NewOpt.starts_with("-fcomplex-arithmetic=")))
-    return;
-
-  D.Diag(clang::diag::warn_drv_overriding_complex_range)
-      << LastOpt << NewOpt << complexRangeKindToStr(Range)
-      << complexRangeKindToStr(NewRange);
-}
-
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
@@ -2836,27 +2800,18 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   std::string ComplexRangeStr;
   StringRef LastComplexRangeOption;
 
-  auto setComplexRange = [&](StringRef NewOption,
-                             LangOptions::ComplexRangeKind NewRange) {
-    // Warn if user overrides the previously set complex number
-    // multiplication/division option.
-    if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
-      EmitComplexRangeDiag(D, LastComplexRangeOption, Range, NewOption,
-                           NewRange);
-    LastComplexRangeOption = NewOption;
-    Range = NewRange;
-  };
-
   // Lambda to set fast-math options. This is also used by -ffp-model=fast
   auto applyFastMath = [&](bool Aggressive, StringRef CallerOption) {
     if (Aggressive) {
       HonorINFs = false;
       HonorNaNs = false;
-      setComplexRange(CallerOption, LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(D, LastComplexRangeOption, Range, CallerOption,
+                      LangOptions::ComplexRangeKind::CX_Basic);
     } else {
       HonorINFs = true;
       HonorNaNs = true;
-      setComplexRange(CallerOption, LangOptions::ComplexRangeKind::CX_Promoted);
+      setComplexRange(D, LastComplexRangeOption, Range, CallerOption,
+                      LangOptions::ComplexRangeKind::CX_Promoted);
     }
     MathErrno = false;
     AssociativeMath = true;
@@ -2908,18 +2863,20 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     default: continue;
 
     case options::OPT_fcx_limited_range:
-      setComplexRange(A->getSpelling(),
+      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_Basic);
       break;
     case options::OPT_fno_cx_limited_range:
-      setComplexRange(A->getSpelling(), LangOptions::ComplexRangeKind::CX_Full);
+      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Full);
       break;
     case options::OPT_fcx_fortran_rules:
-      setComplexRange(A->getSpelling(),
+      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_Improved);
       break;
     case options::OPT_fno_cx_fortran_rules:
-      setComplexRange(A->getSpelling(), LangOptions::ComplexRangeKind::CX_Full);
+      setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Full);
       break;
     case options::OPT_fcomplex_arithmetic_EQ: {
       LangOptions::ComplexRangeKind RangeVal;
@@ -2937,7 +2894,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             << A->getSpelling() << Val;
         break;
       }
-      setComplexRange(Args.MakeArgString(A->getSpelling() + Val), RangeVal);
+      setComplexRange(D, LastComplexRangeOption, Range,
+                      Args.MakeArgString(A->getSpelling() + Val), RangeVal);
       break;
     }
     case options::OPT_ffp_model_EQ: {
@@ -2977,7 +2935,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         FPModel = Val;
         FPContract = "on";
         LastFpContractOverrideOption = "-ffp-model=precise";
-        setComplexRange(Args.MakeArgString(A->getSpelling() + Val),
+        setComplexRange(D, LastComplexRangeOption, Range,
+                        Args.MakeArgString(A->getSpelling() + Val),
                         LangOptions::ComplexRangeKind::CX_Full);
       } else if (Val == "strict") {
         StrictFPModel = true;
@@ -2987,7 +2946,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
         RoundingFPMath = true;
-        setComplexRange(Args.MakeArgString(A->getSpelling() + Val),
+        setComplexRange(D, LastComplexRangeOption, Range,
+                        Args.MakeArgString(A->getSpelling() + Val),
                         LangOptions::ComplexRangeKind::CX_Full);
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
@@ -3195,7 +3155,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SignedZeros = true;
       restoreFPContractState();
       if (Range != LangOptions::ComplexRangeKind::CX_Full)
-        setComplexRange(A->getSpelling(),
+        setComplexRange(D, LastComplexRangeOption, Range, A->getSpelling(),
                         LangOptions::ComplexRangeKind::CX_None);
       else
         Range = LangOptions::ComplexRangeKind::CX_None;
