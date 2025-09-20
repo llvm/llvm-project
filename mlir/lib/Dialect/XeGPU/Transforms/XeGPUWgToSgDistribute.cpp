@@ -1027,6 +1027,69 @@ struct WgToSgVectorShapeCastOp
   }
 };
 
+/// Pattern for lowering vector.multi_reduction op to subgroup level.
+/// Current limitation: only support 2D->1D reduction with single reduction
+/// dimension, and the sg_layout in the reduced dimension being 1
+/// so that reduction is local to subgroup & no cross-subgroup communication is
+/// needed.
+/// TODO: Add cases to handle more general situations which require SLM access.
+struct WgToSgMultiDimReductionOp
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType srcType = op.getSourceVectorType();
+    VectorType dstType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!dstType)
+      return failure();
+
+    SmallVector<int64_t> srcShape(srcType.getShape().begin(),
+                                  srcType.getShape().end());
+    SmallVector<int64_t> dstShape(dstType.getShape().begin(),
+                                  dstType.getShape().end());
+    if (srcShape.size() != 2 || dstShape.size() != 1)
+      return failure();
+
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getDistributeLayoutAttr(op.getResult());
+    if (!layout || !layout.isForWorkgroup())
+      return failure();
+
+    SmallVector<int64_t> reductionDims(op.getReductionDims().begin(),
+                                       op.getReductionDims().end());
+    if (reductionDims.size() != 1)
+      return failure();
+
+    SmallVector<int64_t> sgLayout = llvm::cast<xegpu::SliceAttr>(layout)
+                                        .getParent()
+                                        .getEffectiveSgLayoutAsInt();
+    // Check that the sgLayout in the reduced dimension is 1.
+    if (sgLayout[reductionDims[0]] != 1)
+      return failure();
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
+
+    VectorType newDstType =
+        VectorType::get({sgShape}, dstType.getElementType());
+
+    SmallVector<Value> newReductions;
+    for (auto [sgSrc, sgAcc] :
+         llvm::zip(adaptor.getSource(), adaptor.getAcc())) {
+      auto newOp = vector::MultiDimReductionOp::create(
+          rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc, sgAcc,
+          op.getReductionDims());
+      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+          !layout.getEffectiveInstDataAsInt().empty())
+        xegpu::setDistributeLayoutAttr(newOp->getResult(0),
+                                       layout.dropSgLayoutAndData());
+      newReductions.push_back(newOp.getResult());
+    }
+    rewriter.replaceOpWithMultiple(op, {newReductions});
+    return success();
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -1040,8 +1103,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
            WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
-           WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp>(
-          patterns.getContext());
+           WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
+           WgToSgMultiDimReductionOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -1192,6 +1255,11 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::BroadcastOp>(
       [=](vector::BroadcastOp op) -> bool {
+        return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
+      });
+
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [=](vector::MultiDimReductionOp op) -> bool {
         return isLegal(xegpu::getDistributeLayoutAttr(op.getResult()));
       });
 
