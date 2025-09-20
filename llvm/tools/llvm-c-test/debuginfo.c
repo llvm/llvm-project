@@ -54,6 +54,12 @@ int llvm_test_dibuilder(void) {
                               "/test/include/llvm-c-test.h", 27,
                               "", 0);
 
+  const char VerStr[] = "Version 1.0";
+  LLVMMetadataRef VerMD =
+      LLVMMDStringInContext2(LLVMGetModuleContext(M), VerStr, strlen(VerStr));
+  LLVMValueRef StrMD = LLVMMetadataAsValue(LLVMGetModuleContext(M), VerMD);
+  LLVMAddNamedMetadataOperand(M, "llvm.ident", StrMD);
+
   LLVMMetadataRef OtherModule =
     LLVMDIBuilderCreateModule(DIB, CompileUnit,
                               "llvm-c-test-import", 18,
