@@ -365,7 +365,7 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
                                      PropSizeRet);
 }
 
-Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
+Error olGetDeviceInfoImplDetail(const ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
   assert(Device != OffloadContext::get().HostDevice());
@@ -503,7 +503,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   }
 }
 
-Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
+Error olGetDeviceInfoImplDetailHost(const ol_device_handle_t Device,
                                     ol_device_info_t PropName, size_t PropSize,
                                     void *PropValue, size_t *PropSizeRet) {
   assert(Device == OffloadContext::get().HostDevice());
@@ -572,8 +572,9 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   return Error::success();
 }
 
-Error olGetDeviceInfo_impl(ol_device_handle_t Device, ol_device_info_t PropName,
-                           size_t PropSize, void *PropValue) {
+Error olGetDeviceInfo_impl(const ol_device_handle_t Device,
+                           ol_device_info_t PropName, size_t PropSize,
+                           void *PropValue) {
   if (Device == OffloadContext::get().HostDevice())
     return olGetDeviceInfoImplDetailHost(Device, PropName, PropSize, PropValue,
                                          nullptr);
@@ -581,7 +582,7 @@ Error olGetDeviceInfo_impl(ol_device_handle_t Device, ol_device_info_t PropName,
                                    nullptr);
 }
 
-Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
+Error olGetDeviceInfoSize_impl(const ol_device_handle_t Device,
                                ol_device_info_t PropName, size_t *PropSizeRet) {
   if (Device == OffloadContext::get().HostDevice())
     return olGetDeviceInfoImplDetailHost(Device, PropName, 0, nullptr,
@@ -730,7 +731,7 @@ Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
   return Error::success();
 }
 
-Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
+Error olGetQueueInfoImplDetail(const ol_queue_handle_t Queue,
                                ol_queue_info_t PropName, size_t PropSize,
                                void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
@@ -752,14 +753,15 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
   return Error::success();
 }
 
-Error olGetQueueInfo_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
-                          size_t PropSize, void *PropValue) {
+Error olGetQueueInfo_impl(const ol_queue_handle_t Queue,
+                          ol_queue_info_t PropName, size_t PropSize,
+                          void *PropValue) {
   return olGetQueueInfoImplDetail(Queue, PropName, PropSize, PropValue,
                                   nullptr);
 }
 
-Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
-                              size_t *PropSizeRet) {
+Error olGetQueueInfoSize_impl(const ol_queue_handle_t Queue,
+                              ol_queue_info_t PropName, size_t *PropSizeRet) {
   return olGetQueueInfoImplDetail(Queue, PropName, 0, nullptr, PropSizeRet);
 }
 
@@ -782,7 +784,7 @@ Error olDestroyEvent_impl(ol_event_handle_t Event) {
   return olDestroy(Event);
 }
 
-Error olGetEventInfoImplDetail(ol_event_handle_t Event,
+Error olGetEventInfoImplDetail(const ol_event_handle_t Event,
                                ol_event_info_t PropName, size_t PropSize,
                                void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
@@ -810,15 +812,16 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
   return Error::success();
 }
 
-Error olGetEventInfo_impl(ol_event_handle_t Event, ol_event_info_t PropName,
-                          size_t PropSize, void *PropValue) {
+Error olGetEventInfo_impl(const ol_event_handle_t Event,
+                          ol_event_info_t PropName, size_t PropSize,
+                          void *PropValue) {
 
   return olGetEventInfoImplDetail(Event, PropName, PropSize, PropValue,
                                   nullptr);
 }
 
-Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
-                              size_t *PropSizeRet) {
+Error olGetEventInfoSize_impl(const ol_event_handle_t Event,
+                              ol_event_info_t PropName, size_t *PropSizeRet) {
   return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
 }
 
@@ -918,8 +921,8 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
-                                       ol_symbol_handle_t Kernel,
+Error olCalculateOptimalOccupancy_impl(const ol_device_handle_t Device,
+                                       const ol_symbol_handle_t Kernel,
                                        size_t DynamicMemSize,
                                        size_t *GroupSize) {
   if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
@@ -1026,7 +1029,7 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
   }
 }
 
-Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
+Error olGetSymbolInfoImplDetail(const ol_symbol_handle_t Symbol,
                                 ol_symbol_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
@@ -1061,14 +1064,15 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   return Error::success();
 }
 
-Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
-                           size_t PropSize, void *PropValue) {
+Error olGetSymbolInfo_impl(const ol_symbol_handle_t Symbol,
+                           ol_symbol_info_t PropName, size_t PropSize,
+                           void *PropValue) {
 
   return olGetSymbolInfoImplDetail(Symbol, PropName, PropSize, PropValue,
                                    nullptr);
 }
 
-Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
+Error olGetSymbolInfoSize_impl(const ol_symbol_handle_t Symbol,
                                ol_symbol_info_t PropName, size_t *PropSizeRet) {
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
 }
