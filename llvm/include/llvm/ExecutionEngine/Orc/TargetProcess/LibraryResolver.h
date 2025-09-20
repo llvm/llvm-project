@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_DYNAMICLOADER_H
-#define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_DYNAMICLOADER_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_LIBRARYRESOLVER_H
+#define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_LIBRARYRESOLVER_H
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolFilter.h"
@@ -34,66 +34,66 @@ namespace orc {
 /// Thread-safe for concurrent access.
 class LibraryManager {
 public:
-  enum class State : uint8_t { Unloaded = 0, Loaded = 1, Queried = 2 };
+  enum class LibState : uint8_t { Unloaded = 0, Loaded = 1, Queried = 2 };
 
   class LibraryInfo {
   public:
     LibraryInfo(const LibraryInfo &) = delete;
     LibraryInfo &operator=(const LibraryInfo &) = delete;
 
-    LibraryInfo(std::string filePath, State s, PathType k,
-                std::optional<BloomFilter> filter = std::nullopt)
-        : filePath(std::move(filePath)), state(s), kind(k),
-          filter(std::move(filter)) {}
+    LibraryInfo(std::string FilePath, LibState S, PathType K,
+                std::optional<BloomFilter> Filter = std::nullopt)
+        : FilePath(std::move(FilePath)), S(S), K(K), Filter(std::move(Filter)) {
+    }
 
-    StringRef getBasePath() const { return sys::path::parent_path(filePath); }
-    StringRef getFileName() const { return sys::path::filename(filePath); }
+    StringRef getBasePath() const { return sys::path::parent_path(FilePath); }
+    StringRef getFileName() const { return sys::path::filename(FilePath); }
 
-    std::string getFullPath() const { return filePath; }
+    std::string getFullPath() const { return FilePath; }
 
     bool setFilter(BloomFilter F) {
-      std::lock_guard<std::shared_mutex> lock(mutex);
-      if (filter)
+      std::lock_guard<std::shared_mutex> Lock(Mtx);
+      if (Filter)
         return false;
-      filter.emplace(std::move(F));
+      Filter.emplace(std::move(F));
       return true;
     }
 
     bool ensureFilterBuilt(const BloomFilterBuilder &FB,
                            ArrayRef<StringRef> Symbols) {
-      std::lock_guard<std::shared_mutex> lock(mutex);
-      if (filter)
+      std::lock_guard<std::shared_mutex> Lock(Mtx);
+      if (Filter)
         return false;
-      filter.emplace(FB.build(Symbols));
+      Filter.emplace(FB.build(Symbols));
       return true;
     }
 
-    bool mayContain(StringRef symbol) const {
+    bool mayContain(StringRef Symbol) const {
       assert(hasFilter());
-      std::shared_lock<std::shared_mutex> lock(mutex);
-      return filter->mayContain(symbol);
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
+      return Filter->mayContain(Symbol);
     }
 
     bool hasFilter() const {
-      std::shared_lock<std::shared_mutex> lock(mutex);
-      return filter.has_value();
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
+      return Filter.has_value();
     }
 
-    State getState() const { return state.load(); }
-    PathType getKind() const { return kind; }
+    LibState getState() const { return S.load(); }
+    PathType getKind() const { return K; }
 
-    void setState(State s) { state.store(s); }
+    void setState(LibState s) { S.store(s); }
 
     bool operator==(const LibraryInfo &other) const {
-      return filePath == other.filePath;
+      return FilePath == other.FilePath;
     }
 
   private:
-    std::string filePath;
-    std::atomic<State> state;
-    PathType kind;
-    std::optional<BloomFilter> filter;
-    mutable std::shared_mutex mutex;
+    std::string FilePath;
+    std::atomic<LibState> S;
+    PathType K;
+    std::optional<BloomFilter> Filter;
+    mutable std::shared_mutex Mtx;
   };
 
   /// A read-only view of libraries filtered by state and kind.
@@ -106,8 +106,8 @@ public:
     using Iterator = typename Map::const_iterator;
     class FilterIterator {
     public:
-      FilterIterator(Iterator _it, Iterator _end, State s, PathType k)
-          : it(_it), end(_end), state(s), kind(k) {
+      FilterIterator(Iterator _it, Iterator _end, LibState S, PathType K)
+          : it(_it), end(_end), S(S), K(K) {
         advance();
       }
 
@@ -128,15 +128,15 @@ public:
     private:
       void advance() {
         for (; it != end; ++it)
-          if (it->second->getState() == state && it->second->getKind() == kind)
+          if (it->second->getState() == S && it->second->getKind() == K)
             break;
       }
       Iterator it;
       Iterator end;
-      State state;
-      PathType kind;
+      LibState S;
+      PathType K;
     };
-    FilteredView(Iterator begin, Iterator end, State s, PathType k)
+    FilteredView(Iterator begin, Iterator end, LibState s, PathType k)
         : begin_(begin), end_(end), state_(s), kind_(k) {}
 
     FilterIterator begin() const {
@@ -150,13 +150,13 @@ public:
   private:
     Iterator begin_;
     Iterator end_;
-    State state_;
+    LibState state_;
     PathType kind_;
   };
 
 private:
-  StringMap<std::shared_ptr<LibraryInfo>> libraries;
-  mutable std::shared_mutex mutex;
+  StringMap<std::shared_ptr<LibraryInfo>> Libraries;
+  mutable std::shared_mutex Mtx;
 
 public:
   using LibraryVisitor = std::function<bool(const LibraryInfo &)>;
@@ -164,102 +164,102 @@ public:
   LibraryManager() = default;
   ~LibraryManager() = default;
 
-  bool addLibrary(std::string path, PathType kind,
-                  std::optional<BloomFilter> filter = std::nullopt) {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    if (libraries.count(path) > 0)
+  bool addLibrary(std::string Path, PathType Kind,
+                  std::optional<BloomFilter> Filter = std::nullopt) {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    if (Libraries.count(Path) > 0)
       return false;
-    libraries.insert({std::move(path),
-                      std::make_shared<LibraryInfo>(path, State::Unloaded, kind,
-                                                    std::move(filter))});
+    Libraries.insert({std::move(Path),
+                      std::make_shared<LibraryInfo>(Path, LibState::Unloaded,
+                                                    Kind, std::move(Filter))});
     return true;
   }
 
-  bool hasLibrary(StringRef path) const {
-    std::shared_lock<std::shared_mutex> lock(mutex);
-    if (libraries.count(path) > 0)
+  bool hasLibrary(StringRef Path) const {
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
+    if (Libraries.count(Path) > 0)
       return true;
     return false;
   }
 
-  bool removeLibrary(StringRef path) {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    auto I = libraries.find(path);
-    if (I == libraries.end())
+  bool removeLibrary(StringRef Path) {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    auto I = Libraries.find(Path);
+    if (I == Libraries.end())
       return false;
-    libraries.erase(I);
+    Libraries.erase(I);
     return true;
   }
 
-  void markLoaded(StringRef path) {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path); it != libraries.end())
-      it->second->setState(State::Loaded);
+  void markLoaded(StringRef Path) {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    if (auto It = Libraries.find(Path); It != Libraries.end())
+      It->second->setState(LibState::Loaded);
   }
 
-  void markQueried(StringRef path) {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path); it != libraries.end())
-      it->second->setState(State::Queried);
+  void markQueried(StringRef Path) {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    if (auto It = Libraries.find(Path); It != Libraries.end())
+      It->second->setState(LibState::Queried);
   }
 
-  std::shared_ptr<LibraryInfo> getLibrary(StringRef path) {
-    std::shared_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path); it != libraries.end())
-      return it->second;
+  std::shared_ptr<LibraryInfo> getLibrary(StringRef Path) {
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
+    if (auto It = Libraries.find(Path); It != Libraries.end())
+      return It->second;
     return nullptr;
   }
 
-  FilteredView getView(State s, PathType k) const {
-    std::shared_lock<std::shared_mutex> lock(mutex);
-    return FilteredView(libraries.begin(), libraries.end(), s, k);
+  FilteredView getView(LibState S, PathType K) const {
+    std::shared_lock<std::shared_mutex> Lock(Mtx);
+    return FilteredView(Libraries.begin(), Libraries.end(), S, K);
   }
 
   void forEachLibrary(const LibraryVisitor &visitor) const {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    for (const auto &[_, entry] : libraries) {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    for (const auto &[_, entry] : Libraries) {
       if (!visitor(*entry))
         break;
     }
   }
 
-  bool isLoaded(StringRef path) const {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path.str()); it != libraries.end())
-      return it->second->getState() == State::Loaded;
+  bool isLoaded(StringRef Path) const {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    if (auto It = Libraries.find(Path.str()); It != Libraries.end())
+      return It->second->getState() == LibState::Loaded;
     return false;
   }
 
-  bool isQueried(StringRef path) const {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    if (auto it = libraries.find(path.str()); it != libraries.end())
-      return it->second->getState() == State::Queried;
+  bool isQueried(StringRef Path) const {
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    if (auto It = Libraries.find(Path.str()); It != Libraries.end())
+      return It->second->getState() == LibState::Queried;
     return false;
   }
 
   void clear() {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    libraries.clear();
+    std::unique_lock<std::shared_mutex> Lock(Mtx);
+    Libraries.clear();
   }
 };
 
 using LibraryInfo = LibraryManager::LibraryInfo;
 
 struct SearchPlanEntry {
-  LibraryManager::State state; // Loaded, Queried, Unloaded
-  PathType type;               // User, System
+  LibraryManager::LibState State; // Loaded, Queried, Unloaded
+  PathType Type;                  // User, System
 };
 
 struct SearchPolicy {
-  std::vector<SearchPlanEntry> plan;
+  std::vector<SearchPlanEntry> Plan;
 
   static SearchPolicy defaultPlan() {
-    return {{{LibraryManager::State::Loaded, PathType::User},
-             {LibraryManager::State::Queried, PathType::User},
-             {LibraryManager::State::Unloaded, PathType::User},
-             {LibraryManager::State::Loaded, PathType::System},
-             {LibraryManager::State::Queried, PathType::System},
-             {LibraryManager::State::Unloaded, PathType::System}}};
+    return {{{LibraryManager::LibState::Loaded, PathType::User},
+             {LibraryManager::LibState::Queried, PathType::User},
+             {LibraryManager::LibState::Unloaded, PathType::User},
+             {LibraryManager::LibState::Loaded, PathType::System},
+             {LibraryManager::LibState::Queried, PathType::System},
+             {LibraryManager::LibState::Unloaded, PathType::System}}};
   }
 };
 
@@ -281,12 +281,12 @@ struct SymbolEnumeratorOptions {
 };
 
 struct SearchConfig {
-  SearchPolicy policy;
-  SymbolEnumeratorOptions options;
+  SearchPolicy Policy;
+  SymbolEnumeratorOptions Options;
 
   SearchConfig()
-      : policy(SearchPolicy::defaultPlan()), // default plan
-        options(SymbolEnumeratorOptions::defaultOptions()) {}
+      : Policy(SearchPolicy::defaultPlan()), // default plan
+        Options(SymbolEnumeratorOptions::defaultOptions()) {}
 };
 
 /// Scans libraries and resolves Symbols across user and system paths.
@@ -322,7 +322,7 @@ public:
     };
 
   private:
-    mutable std::shared_mutex mtx;
+    mutable std::shared_mutex Mtx;
     StringMap<Result> Results;
     std::atomic<size_t> ResolvedCount = 0;
 
@@ -336,7 +336,7 @@ public:
 
     SmallVector<StringRef> getUnresolvedSymbols() const {
       SmallVector<StringRef> Unresolved;
-      std::shared_lock<std::shared_mutex> lock(mtx);
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
       for (const auto &[name, res] : Results) {
         if (res.ResolvedLibPath.empty())
           Unresolved.push_back(name);
@@ -344,11 +344,11 @@ public:
       return Unresolved;
     }
 
-    void resolve(StringRef symbol, const std::string &libPath) {
-      std::unique_lock<std::shared_mutex> lock(mtx);
-      auto it = Results.find(symbol);
+    void resolve(StringRef Sym, const std::string &LibPath) {
+      std::unique_lock<std::shared_mutex> Lock(Mtx);
+      auto it = Results.find(Sym);
       if (it != Results.end() && it->second.ResolvedLibPath.empty()) {
-        it->second.ResolvedLibPath = libPath;
+        it->second.ResolvedLibPath = LibPath;
         ResolvedCount.fetch_add(1, std::memory_order_relaxed);
       }
     }
@@ -361,105 +361,107 @@ public:
       return ResolvedCount.load(std::memory_order_relaxed) < Results.size();
     }
 
-    std::optional<StringRef> getResolvedLib(StringRef symbol) const {
-      std::shared_lock<std::shared_mutex> lock(mtx);
-      auto it = Results.find(symbol);
-      if (it != Results.end() && !it->second.ResolvedLibPath.empty())
-        return StringRef(it->second.ResolvedLibPath);
+    std::optional<StringRef> getResolvedLib(StringRef Sym) const {
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
+      auto It = Results.find(Sym);
+      if (It != Results.end() && !It->second.ResolvedLibPath.empty())
+        return StringRef(It->second.ResolvedLibPath);
       return std::nullopt;
     }
 
-    bool isResolved(StringRef symbol) const {
-      std::shared_lock<std::shared_mutex> lock(mtx);
-      auto it = Results.find(symbol.str());
-      return it != Results.end() && !it->second.ResolvedLibPath.empty();
+    bool isResolved(StringRef Sym) const {
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
+      auto It = Results.find(Sym.str());
+      return It != Results.end() && !It->second.ResolvedLibPath.empty();
     }
 
     std::vector<const Result *> getAllResults() const {
-      std::shared_lock<std::shared_mutex> lock(mtx);
-      std::vector<const Result *> out;
-      out.reserve(Results.size());
+      std::shared_lock<std::shared_mutex> Lock(Mtx);
+      std::vector<const Result *> Out;
+      Out.reserve(Results.size());
       for (const auto &[_, res] : Results)
-        out.push_back(&res);
-      return out;
+        Out.push_back(&res);
+      return Out;
     }
   };
 
   struct Setup {
-    std::vector<std::string> basePaths;
-    std::shared_ptr<LibraryPathCache> cache;
-    std::shared_ptr<PathResolver> resolver;
+    std::vector<std::string> BasePaths;
+    std::shared_ptr<LibraryPathCache> Cache;
+    std::shared_ptr<PathResolver> PResolver;
 
-    size_t scanBatchSize = 1;
+    size_t ScanBatchSize = 0;
 
-    LibraryScanner::shouldScanFn shouldScan = [](StringRef) { return true; };
+    LibraryScanner::ShouldScanFn ShouldScanCall = [](StringRef) {
+      return true;
+    };
 
-    BloomFilterBuilder filterBuilder = BloomFilterBuilder();
+    BloomFilterBuilder FilterBuilder = BloomFilterBuilder();
 
     static Setup
-    create(std::vector<std::string> basePaths,
+    create(std::vector<std::string> BasePaths,
            std::shared_ptr<LibraryPathCache> existingCache = nullptr,
            std::shared_ptr<PathResolver> existingResolver = nullptr,
-           LibraryScanner::shouldScanFn customShouldScan = nullptr) {
-      Setup setup;
-      setup.basePaths = std::move(basePaths);
+           LibraryScanner::ShouldScanFn customShouldScan = nullptr) {
+      Setup S;
+      S.BasePaths = std::move(BasePaths);
 
-      setup.cache =
+      S.Cache =
           existingCache ? existingCache : std::make_shared<LibraryPathCache>();
 
-      setup.resolver = existingResolver
-                           ? existingResolver
-                           : std::make_shared<PathResolver>(setup.cache);
+      S.PResolver = existingResolver ? existingResolver
+                                     : std::make_shared<PathResolver>(S.Cache);
 
       if (customShouldScan)
-        setup.shouldScan = std::move(customShouldScan);
+        S.ShouldScanCall = std::move(customShouldScan);
 
-      return setup;
+      return S;
     }
   };
 
   LibraryResolver() = delete;
-  explicit LibraryResolver(const Setup &setup);
+  explicit LibraryResolver(const Setup &S);
   ~LibraryResolver() = default;
 
   using OnSearchComplete = unique_function<void(SymbolQuery &)>;
 
   void dump() {
     int i = 0;
-    m_libMgr.forEachLibrary([&](const LibraryInfo &lib) -> bool {
-      dbgs() << ++i << ". Library Path : " << lib.getFullPath() << " -> \n\t\t:"
+    LibMgr.forEachLibrary([&](const LibraryInfo &Lib) -> bool {
+      dbgs() << ++i << ". Library Path : " << Lib.getFullPath() << " -> \n\t\t:"
              << " ({Type : ("
-             << (lib.getKind() == PathType::User ? "User" : "System")
+             << (Lib.getKind() == PathType::User ? "User" : "System")
              << ") }, { State : "
-             << (lib.getState() == LibraryManager::State::Loaded ? "Loaded"
-                                                                 : "Unloaded")
+             << (Lib.getState() == LibraryManager::LibState::Loaded
+                     ? "Loaded"
+                     : "Unloaded")
              << "})\n";
       return true;
     });
   }
 
-  void searchSymbolsInLibraries(std::vector<std::string> &symbolNames,
-                                OnSearchComplete callback,
-                                const SearchConfig &config = SearchConfig());
+  void searchSymbolsInLibraries(std::vector<std::string> &SymList,
+                                OnSearchComplete OnComplete,
+                                const SearchConfig &Config = SearchConfig());
 
 private:
-  bool scanLibrariesIfNeeded(PathType K);
-  void resolveSymbolsInLibrary(LibraryInfo &library, SymbolQuery &query,
+  bool scanLibrariesIfNeeded(PathType K, size_t BatchSize = 0);
+  void resolveSymbolsInLibrary(LibraryInfo &Lib, SymbolQuery &Q,
                                const SymbolEnumeratorOptions &Opts);
   bool
-  symbolExistsInLibrary(const LibraryInfo &library, StringRef symbol,
-                        std::vector<std::string> *matchedSymbols = nullptr);
+  symbolExistsInLibrary(const LibraryInfo &Lib, StringRef Sym,
+                        std::vector<std::string> *MatchedSymbols = nullptr);
 
-  bool symbolExistsInLibrary(const LibraryInfo &lib, StringRef symbolName,
-                             std::vector<std::string> *allSymbols,
-                             const SymbolEnumeratorOptions &opts);
+  bool symbolExistsInLibrary(const LibraryInfo &Lib, StringRef SymName,
+                             std::vector<std::string> *AllSymbols,
+                             const SymbolEnumeratorOptions &Opts);
 
-  std::shared_ptr<LibraryPathCache> m_cache;
-  std::shared_ptr<PathResolver> m_PathResolver;
-  LibraryScanHelper m_scanH;
+  std::shared_ptr<LibraryPathCache> LibPathCache;
+  std::shared_ptr<PathResolver> LibPathResolver;
+  LibraryScanHelper ScanHelper;
   BloomFilterBuilder FB;
-  LibraryManager m_libMgr;
-  LibraryScanner::shouldScanFn m_shouldScan;
+  LibraryManager LibMgr;
+  LibraryScanner::ShouldScanFn ShouldScanCall;
   size_t scanBatchSize;
 };
 
@@ -470,28 +472,44 @@ using EnumerateResult = SymbolEnumerator::EnumerateResult;
 class LibraryResolutionDriver {
 public:
   static std::unique_ptr<LibraryResolutionDriver>
-  create(const LibraryResolver::Setup &setup);
+  create(const LibraryResolver::Setup &S);
 
-  void addScanPath(const std::string &path, PathType Kind);
-  bool markLibraryLoaded(StringRef path);
-  bool markLibraryUnLoaded(StringRef path);
-  bool isLibraryLoaded(StringRef path) const {
-    return Loader->m_libMgr.isLoaded(path);
+  void addScanPath(const std::string &Path, PathType Kind);
+  bool markLibraryLoaded(StringRef Path);
+  bool markLibraryUnLoaded(StringRef Path);
+  bool isLibraryLoaded(StringRef Path) const {
+    return LR->LibMgr.isLoaded(Path);
   }
+
+  void resetAll() {
+    LR->LibMgr.clear();
+    LR->ScanHelper.resetToScan();
+    LR->LibPathCache->clear();
+  }
+
+  void scanAll(size_t BatchSize = 0) {
+    LR->scanLibrariesIfNeeded(PathType::User, BatchSize);
+    LR->scanLibrariesIfNeeded(PathType::System, BatchSize);
+  }
+
+  void scan(PathType PK, size_t BatchSize = 0) {
+    LR->scanLibrariesIfNeeded(PK, BatchSize);
+  }
+
   void resolveSymbols(std::vector<std::string> Symbols,
                       LibraryResolver::OnSearchComplete OnCompletion,
-                      const SearchConfig &config = SearchConfig());
+                      const SearchConfig &Config = SearchConfig());
 
   ~LibraryResolutionDriver() = default;
 
 private:
-  LibraryResolutionDriver(std::unique_ptr<LibraryResolver> loader)
-      : Loader(std::move(loader)) {}
+  LibraryResolutionDriver(std::unique_ptr<LibraryResolver> L)
+      : LR(std::move(L)) {}
 
-  std::unique_ptr<LibraryResolver> Loader;
+  std::unique_ptr<LibraryResolver> LR;
 };
 
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_DYNAMICLOADER_H
+#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_LIBRARYRESOLVER_H
