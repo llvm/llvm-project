@@ -47,6 +47,14 @@ bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
   }
 }
 
+bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst & /*I*/) const {
+  return false;
+}
+
+int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
+  return -1;
+}
+
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
     MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
     const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
