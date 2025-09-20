@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
+#include "ByteCode/FixedPoint.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
 #include "InterpBuiltinBitCast.h"
@@ -2604,6 +2605,51 @@ static bool interp__builtin_elementwise_int_binop(
   return true;
 }
 
+static bool interp__builtin_x86_pack(
+    InterpState &S, CodePtr, const CallExpr *E,
+    llvm::function_ref<APSInt(const APSInt &)> narrowElement) {
+  const auto *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
+  const auto *VT1 = E->getArg(1)->getType()->castAs<VectorType>();
+  assert(VT0 && VT1 && "pack builtin VT0 and VT1 must be VectorType");
+  assert(VT0->getElementType() == VT1->getElementType() &&
+         VT0->getNumElements() == VT1->getNumElements() &&
+         "pack builtin VT0 and VT1 ElementType must be same");
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  const unsigned SrcBits = ASTCtx.getIntWidth(VT0->getElementType());
+  const unsigned LHSVecLen = VT0->getNumElements();
+  const unsigned VectorBits = LHSVecLen * SrcBits;
+  const unsigned SrcPerLane = VectorBits >= 128 ? (128 / SrcBits) : LHSVecLen;
+  const unsigned Lanes = VectorBits >= 128 ? (VectorBits / 128) : 1;
+
+  PrimType SrcT = *S.getContext().classify(VT0->getElementType());
+  PrimType DstT = *S.getContext().classify(getElemType(Dst));
+
+  for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
+    const unsigned BaseSrc = Lane * SrcPerLane;
+    const unsigned BaseDst = Lane * (2 * SrcPerLane);
+
+    for (unsigned I = 0; I != SrcPerLane; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(SrcT, {
+        APSInt A = LHS.elem<T>(BaseSrc + I).toAPSInt();
+        APSInt B = RHS.elem<T>(BaseSrc + I).toAPSInt();
+        APSInt AO = narrowElement(A);
+        APSInt BO = narrowElement(B);
+
+        assignInteger(S, Dst.atIndex(BaseDst + I), DstT, AO);
+        assignInteger(S, Dst.atIndex(BaseDst + SrcPerLane + I), DstT, BO);
+      });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
                                                const CallExpr *Call,
                                                unsigned BuiltinID) {
@@ -3477,6 +3523,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           }
           return LHS.lshr(RHS.getZExtValue());
         });
+  case clang::X86::BI__builtin_ia32_packsswb128:
+  case clang::X86::BI__builtin_ia32_packsswb256:
+  case clang::X86::BI__builtin_ia32_packsswb512:
+  case clang::X86::BI__builtin_ia32_packssdw128:
+  case clang::X86::BI__builtin_ia32_packssdw256:
+  case clang::X86::BI__builtin_ia32_packssdw512:
+    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+      APInt Value = APSInt(Src).truncSSat(Src.getBitWidth() / 2);
+      return APSInt(Value, /*isUnsigned=*/false);
+    });
+  case clang::X86::BI__builtin_ia32_packusdw128:
+  case clang::X86::BI__builtin_ia32_packusdw256:
+  case clang::X86::BI__builtin_ia32_packusdw512:
+  case clang::X86::BI__builtin_ia32_packuswb128:
+  case clang::X86::BI__builtin_ia32_packuswb256:
+  case clang::X86::BI__builtin_ia32_packuswb512:
+    return interp__builtin_x86_pack(S, OpPC, Call, [](const APSInt &Src) {
+      unsigned DstBits = Src.getBitWidth() / 2;
+      if (Src.isNegative())
+        return APSInt(APInt::getZero(DstBits), /*isUnsigned=*/true);
+      if (Src.isIntN(DstBits))
+        return APSInt(Src.trunc(DstBits), /*isUnsigned=*/true);
+      return APSInt(APInt::getAllOnes(DstBits), /*isUnsigned=*/true);
+    });
 
   case clang::X86::BI__builtin_ia32_vprotbi:
   case clang::X86::BI__builtin_ia32_vprotdi:
