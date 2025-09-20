@@ -1130,7 +1130,14 @@ TSAN_INTERCEPTOR(int, pthread_create,
 
 TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+  Tid tid;
+  if (!ThreadConsumeTid(thr, pc, (uptr)th, &tid)) {
+    Report(
+        "ThreadSanitizer: pthread_join was called on thread %d but it is "
+        "dead.\n",
+        thr->tid);
+    return -errno_EINVAL;
+  }
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_join)(th, ret);
   ThreadIgnoreEnd(thr);
@@ -1155,7 +1162,14 @@ int internal_pthread_join(void *th, void **ret) {
 
 TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
   SCOPED_INTERCEPTOR_RAW(pthread_detach, th);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+  Tid tid;
+  if (!ThreadConsumeTid(thr, pc, (uptr)th, &tid)) {
+    Report(
+        "ThreadSanitizer: pthread_detach was called on thread %d but it is "
+        "dead.\n",
+        thr->tid);
+    return -errno_EINVAL;
+  }
   int res = REAL(pthread_detach)(th);
   if (res == 0) {
     ThreadDetach(thr, pc, tid);
@@ -1176,7 +1190,14 @@ TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_tryjoin_np, th, ret);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+  Tid tid;
+  if (!ThreadConsumeTid(thr, pc, (uptr)th, &tid)) {
+    Report(
+        "ThreadSanitizer: pthread_tryjoin_np was called on thread %d but it is "
+        "dead.\n",
+        thr->tid);
+    return -errno_EINVAL;
+  }
   ThreadIgnoreBegin(thr, pc);
   int res = REAL(pthread_tryjoin_np)(th, ret);
   ThreadIgnoreEnd(thr);
@@ -1190,7 +1211,14 @@ TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
 TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
                  const struct timespec *abstime) {
   SCOPED_INTERCEPTOR_RAW(pthread_timedjoin_np, th, ret, abstime);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+  Tid tid;
+  if (!ThreadConsumeTid(thr, pc, (uptr)th, &tid)) {
+    Report(
+        "ThreadSanitizer: pthread_timedjoin_np was called on thread %d but it "
+        "is dead.\n",
+        thr->tid);
+    return -errno_EINVAL;
+  }
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
   ThreadIgnoreEnd(thr);
