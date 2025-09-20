@@ -516,7 +516,9 @@ def executeBuiltinRm(cmd, cmd_shenv):
         if force and not os.path.exists(path):
             continue
         try:
-            if os.path.isdir(path):
+            if os.path.islink(path):
+                os.remove(path)
+            elif os.path.isdir(path):
                 if not recursive:
                     stderr.write("Error: %s is a directory\n" % path)
                     exitCode = 1

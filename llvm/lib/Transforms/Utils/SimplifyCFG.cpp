@@ -875,8 +875,7 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
   if (CV) {
     if (PtrToIntInst *PTII = dyn_cast<PtrToIntInst>(CV)) {
       Value *Ptr = PTII->getPointerOperand();
-      if (DL.hasUnstableRepresentation(
-              Ptr->getType()->getPointerAddressSpace()))
+      if (DL.hasUnstableRepresentation(Ptr->getType()))
         return CV;
       if (PTII->getType() == DL.getIntPtrType(Ptr->getType()))
         CV = Ptr;
@@ -5256,7 +5255,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   Builder.SetInsertPoint(BI);
   // Convert pointer to int before we switch.
   if (CompVal->getType()->isPointerTy()) {
-    assert(!DL.shouldAvoidPtrToInt(CompVal->getType()) &&
+    assert(!DL.hasUnstableRepresentation(CompVal->getType()) &&
            "Should not end up here with unstable pointers");
     CompVal = Builder.CreatePtrToInt(
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");

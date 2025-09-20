@@ -101,8 +101,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
-  /// The allocation will not block on other streams.
-  TARGET_ALLOC_DEVICE_NON_BLOCKING,
 };
 
 inline KernelArgsTy CTorDTorKernelArgs = {
