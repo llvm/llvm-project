@@ -944,6 +944,24 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Normalize
+//===----------------------------------------------------------------------===//
+def Normalize : Pass<"normalize", "ModuleOp"> {
+  let summary = "normalize.";
+  let description = [{
+    just normalize bro
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "cf::ControlFlowDialect",
+    "func::FuncDialect",
+    "scf::SCFDialect",
+    "vector::VectorDialect",
+    "LLVM::LLVMDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVMToLLVM
 //===----------------------------------------------------------------------===//
 
