@@ -2418,6 +2418,38 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::COPY_LANEMASK: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    const MachineOperand &LaneMaskOp = MI->getOperand(2);
+    const Register SrcReg = SrcOp.getReg();
+    const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
+    LaneBitmask SrcMaxLanemask = LaneBitmask::getAll();
+
+    if (DstOp.getSubReg())
+      report("COPY_LANEMASK must not use a subregister index", &DstOp, 0);
+
+    if (SrcOp.getSubReg())
+      report("COPY_LANEMASK must not use a subregister index", &SrcOp, 1);
+
+    if (LaneMask.none())
+      report("COPY_LANEMASK must read at least one lane", MI);
+
+    if (SrcReg.isPhysical()) {
+      const TargetRegisterClass *SrcRC = TRI->getMinimalPhysRegClass(SrcReg);
+      if (SrcRC)
+        SrcMaxLanemask = SrcRC->getLaneMask();
+    } else {
+      SrcMaxLanemask = MRI->getMaxLaneMaskForVReg(SrcReg);
+    }
+
+    // If LaneMask is equal to OR greater than the SrcMaxLanemask, it
+    // impliess COPY_LANEMASK is trying to copy all lanes.
+    if (SrcMaxLanemask <= LaneMask)
+      report("COPY_LANEMASK cannot read all lanes", MI);
+
+    break;
+  }
   case TargetOpcode::STATEPOINT: {
     StatepointOpers SO(MI);
     if (!MI->getOperand(SO.getIDPos()).isImm() ||
