@@ -197,6 +197,22 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv32: {
     ArchName = TheTriple.getArchName();
+  }
+  case llvm::Triple::ppc64:
+    if (Features)
+      return createFatalBOLTError(
+          "PowerPC target does not use SubtargetFeatures");
+    ArchName = "ppc64";
+    FeaturesStr = "";
+    break;
+  case llvm::Triple::ppc64le:
+    if (Features)
+      return createFatalBOLTError(
+          "PowerPC target does not use SubtargetFeatures");
+    ArchName = "ppc64le";
+    FeaturesStr = "";
+    break;
+
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
