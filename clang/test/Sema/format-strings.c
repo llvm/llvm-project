@@ -207,9 +207,9 @@ void check_invalid_specifier(FILE* fp, char *buf)
 
 void check_null_char_string(char* b)
 {
-  printf("\0this is bogus%d",1); // expected-warning {{string contains '\0'}}
-  snprintf(b,10,"%%%%%d\0%d",1,2); // expected-warning {{string contains '\0'}}
-  printf("%\0d",1); // expected-warning {{string contains '\0'}}
+  printf("\0this is bogus%d",1); // expected-warning {{string contains '\0'}} expected-warning {{data argument not used by format string}}
+  snprintf(b,10,"%%%%%d\0%d",1,2); // expected-warning {{string contains '\0'}} expected-warning {{data argument not used by format string}}
+  printf("%\0d",1); // expected-warning {{string contains '\0'}} expected-warning {{data argument not used by format string}}
 }
 
 void check_empty_format_string(char* buf, ...)
@@ -297,7 +297,7 @@ void test10(int x, float f, int i, long long lli) {
   printf("%W%d\n", x, x); // expected-warning{{invalid conversion specifier 'W'}}  expected-warning {{data argument not used by format string}}
   printf("%"); // expected-warning{{incomplete format specifier}}
   printf("%.d", x); // no-warning
-  printf("%.", x);  // expected-warning{{incomplete format specifier}}
+  printf("%.", x);  // expected-warning{{incomplete format specifier}} expected-warning {{data argument not used by format string}}
   printf("%f", 4); // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
   printf("%qd", lli); // no-warning
   printf("%qd", x); // expected-warning{{format specifies type 'long long' but the argument has type 'int'}}
@@ -390,8 +390,8 @@ void test_unicode_conversions(wchar_t *s) {
 // This is an IEEE extension (IEEE Std 1003.1).
 // FIXME: This is probably not portable everywhere.
 void test_positional_arguments(void) {
-  printf("%0$", (int)2); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}}
-  printf("%1$*0$d", (int) 2); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}}
+  printf("%0$", (int)2); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}} expected-warning{{data argument not used by format string}}
+  printf("%1$*0$d", (int) 2); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}} expected-warning{{data argument not used by format string}}
   printf("%1$d", (int) 2); // no-warning
   printf("%1$d", (int) 2, 2); // expected-warning{{data argument not used by format string}}
   printf("%1$d%1$f", (int) 2); // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
@@ -595,16 +595,16 @@ void pr9751(void) {
   printf("%y", 5); // expected-warning{{invalid conversion specifier 'y'}}
 
   const char kFormat5[] = "%."; // expected-note{{format string is defined here}}
-  printf(kFormat5, 5); // expected-warning{{incomplete format specifier}}
-  printf("%.", 5); // expected-warning{{incomplete format specifier}}
+  printf(kFormat5, 5); // expected-warning{{incomplete format specifier}} expected-warning{{data argument not used by format string}}
+  printf("%.", 5); // expected-warning{{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 
   const char kFormat6[] = "%s"; // expected-note{{format string is defined here}}
   printf(kFormat6, 5); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
   printf("%s", 5); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
 
   const char kFormat7[] = "%0$"; // expected-note{{format string is defined here}}
-  printf(kFormat7, 5); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}}
-  printf("%0$", 5); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}}
+  printf(kFormat7, 5); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}} expected-warning{{data argument not used by format string}}
+  printf("%0$", 5); // expected-warning{{position arguments in format strings start counting at 1 (not 0)}} expected-warning{{data argument not used by format string}}
 
   const char kFormat8[] = "%1$d %d"; // expected-note{{format string is defined here}}
   printf(kFormat8, 4, 4); // expected-warning{{cannot mix positional and non-positional arguments in format string}}
@@ -615,8 +615,8 @@ void pr9751(void) {
   printf("", 4, 4); // expected-warning{{format string is empty}}
 
   const char kFormat10[] = "\0%d"; // expected-note{{format string is defined here}}
-  printf(kFormat10, 4); // expected-warning{{format string contains '\0' within the string body}}
-  printf("\0%d", 4); // expected-warning{{format string contains '\0' within the string body}}
+  printf(kFormat10, 4); // expected-warning{{format string contains '\0' within the string body}} expected-warning{{data argument not used by format string}}
+  printf("\0%d", 4); // expected-warning{{format string contains '\0' within the string body}} expected-warning{{data argument not used by format string}}
 
   const char kFormat11[] = "%*d"; // expected-note{{format string is defined here}}
   printf(kFormat11); // expected-warning{{'*' specified field width is missing a matching 'int' argument}}
@@ -720,8 +720,8 @@ extern void test14_bar(const char *, const char *, ...)
      __attribute__((__format__(__printf__, 1, 3)));
 
 void test14_zed(int *p) {
-  test14_foo("%", "%d", p); // expected-warning{{incomplete format specifier}}
-  test14_bar("%", "%d", p); // expected-warning{{incomplete format specifier}}
+  test14_foo("%", "%d", p); // expected-warning{{incomplete format specifier}} expected-warning{{data argument not used by format string}}
+  test14_bar("%", "%d", p); // expected-warning{{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 }
 
 #if !defined(__ANDROID__) && !defined(__Fuchsia__)
