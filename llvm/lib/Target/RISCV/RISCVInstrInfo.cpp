@@ -2974,6 +2974,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           else
             Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
           break;
+        case RISCVOp::OPERAND_XSFMM_VTYPE:
+          Ok = RISCVVType::isValidXSfmmVType(Imm);
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
@@ -3637,6 +3640,11 @@ std::string RISCVInstrInfo::createMIROperandComment(
   case RISCVOp::OPERAND_VTYPEI11: {
     unsigned Imm = Op.getImm();
     RISCVVType::printVType(Imm, OS);
+    break;
+  }
+  case RISCVOp::OPERAND_XSFMM_VTYPE: {
+    unsigned Imm = Op.getImm();
+    RISCVVType::printXSfmmVType(Imm, OS);
     break;
   }
   case RISCVOp::OPERAND_SEW:
