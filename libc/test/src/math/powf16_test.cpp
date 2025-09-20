@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "src/math/powf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -97,8 +96,7 @@ TEST_F(LlvmLibcPowF16Test, InFloat16Range) {
     if (fails || (count < cc)) {
       tlog << " powf16 failed: " << fails << "/" << count << "/" << cc
            << " tests.\n"
-           << "   Max ULPs is at most: " << static_cast<uint64_t>(tol)
-           << ".\n";
+           << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     }
     if (fails) {
       mpfr::BinaryInput<float16> inputs{mx, my};
@@ -118,5 +116,3 @@ TEST_F(LlvmLibcPowF16Test, InFloat16Range) {
   tlog << " Test Rounding Toward Zero...\n";
   test(mpfr::RoundingMode::TowardZero);
 }
-
-
