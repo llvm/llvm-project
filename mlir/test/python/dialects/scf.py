@@ -5,7 +5,7 @@ from mlir.dialects import arith
 from mlir.dialects import func
 from mlir.dialects import memref
 from mlir.dialects import scf
-from mlir.passmanager import PassManager
+from mlir.dialects import tensor
 
 
 def constructAndPrintInModule(f):
@@ -14,6 +14,7 @@ def constructAndPrintInModule(f):
         module = Module.create()
         with InsertionPoint(module.body):
             f()
+        assert module.operation.verify()
         print(module)
     return f
 
@@ -36,6 +37,179 @@ def testSimpleForall():
             loop.terminator()
         # The verifier will check that the regions have been created properly.
         assert loop.verify()
+
+
+# CHECK-LABEL: TEST: test_forall_insert_slice_no_region_with_for
+@constructAndPrintInModule
+def test_forall_insert_slice_no_region_with_for():
+    i32 = IntegerType.get_signless(32)
+    f32 = F32Type.get()
+    ten = tensor.empty([10, 10], i32)
+
+    for i, j, shared_outs in scf.forall([1, 1], [2, 2], [3, 3], shared_outs=[ten]):
+        one = arith.constant(f32, 1.0)
+
+        scf.parallel_insert_slice(
+            ten,
+            shared_outs,
+            offsets=[i, j],
+            sizes=[10, 10],
+            strides=[1, 1],
+        )
+
+    # CHECK:  %[[VAL_0:.*]] = tensor.empty() : tensor<10x10xi32>
+    # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_2:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_3:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_4:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_5:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_7:.*]] = scf.forall (%[[VAL_8:.*]], %[[VAL_9:.*]]) = (%[[VAL_1]], %[[VAL_2]]) to (%[[VAL_3]], %[[VAL_4]]) step (%[[VAL_5]], %[[VAL_6]]) shared_outs(%[[VAL_10:.*]] = %[[VAL_0]]) -> (tensor<10x10xi32>) {
+    # CHECK:    %[[VAL_11:.*]] = arith.constant 1.000000e+00 : f32
+    # CHECK:    scf.forall.in_parallel {
+    # CHECK:      tensor.parallel_insert_slice %[[VAL_0]] into %[[VAL_10]]{{\[}}%[[VAL_8]], %[[VAL_9]]] [10, 10] [1, 1] : tensor<10x10xi32> into tensor<10x10xi32>
+    # CHECK:    }
+    # CHECK:  }
+
+    for ii, jj, shared_outs_1 in scf.forall([1, 1], [2, 2], [3, 3], shared_outs=[ten]):
+        ten_dynamic = tensor.empty([ii, 10], i32)
+        scf.parallel_insert_slice(
+            ten_dynamic,
+            shared_outs_1,
+            offsets=[ii, 0],
+            sizes=[ii, 10],
+            strides=[ii, 1],
+        )
+
+    # CHECK:  %[[VAL_12:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_13:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_14:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_15:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_16:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_17:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_18:.*]] = scf.forall (%[[VAL_19:.*]], %[[VAL_20:.*]]) = (%[[VAL_12]], %[[VAL_13]]) to (%[[VAL_14]], %[[VAL_15]]) step (%[[VAL_16]], %[[VAL_17]]) shared_outs(%[[VAL_21:.*]] = %[[VAL_0]]) -> (tensor<10x10xi32>) {
+    # CHECK:    %[[VAL_22:.*]] = tensor.empty(%[[VAL_19]]) : tensor<?x10xi32>
+    # CHECK:    scf.forall.in_parallel {
+    # CHECK:      tensor.parallel_insert_slice %[[VAL_22]] into %[[VAL_21]]{{\[}}%[[VAL_19]], 0] {{\[}}%[[VAL_19]], 10] {{\[}}%[[VAL_19]], 1] : tensor<?x10xi32> into tensor<10x10xi32>
+    # CHECK:    }
+    # CHECK:  }
+
+
+# CHECK-LABEL: TEST: test_parange_inits_with_for
+@constructAndPrintInModule
+def test_parange_inits_with_for():
+    i32 = IntegerType.get_signless(32)
+    f32 = F32Type.get()
+    tensor_type = RankedTensorType.get([10, 10], f32)
+    ten = tensor.empty([10, 10], i32)
+
+    for i, j in scf.parallel([1, 1], [2, 2], [3, 3], inits=[ten]):
+        one = arith.constant(f32, 1.0)
+        ten2 = tensor.empty([10, 10], i32)
+
+        @scf.reduce(ten2)
+        def res(lhs: tensor_type, rhs: tensor_type):
+            return arith.addi(lhs, rhs)
+
+    # CHECK:  %[[VAL_0:.*]] = tensor.empty() : tensor<10x10xi32>
+    # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_2:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_3:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_4:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_5:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_7:.*]] = scf.parallel (%[[VAL_8:.*]], %[[VAL_9:.*]]) = (%[[VAL_1]], %[[VAL_2]]) to (%[[VAL_3]], %[[VAL_4]]) step (%[[VAL_5]], %[[VAL_6]]) init (%[[VAL_0]]) -> tensor<10x10xi32> {
+    # CHECK:    %[[VAL_10:.*]] = arith.constant 1.000000e+00 : f32
+    # CHECK:    %[[VAL_11:.*]] = tensor.empty() : tensor<10x10xi32>
+    # CHECK:    scf.reduce(%[[VAL_11]] : tensor<10x10xi32>) {
+    # CHECK:    ^bb0(%[[VAL_12:.*]]: tensor<10x10xi32>, %[[VAL_13:.*]]: tensor<10x10xi32>):
+    # CHECK:      %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : tensor<10x10xi32>
+    # CHECK:      scf.reduce.return %[[VAL_14]] : tensor<10x10xi32>
+    # CHECK:    }
+    # CHECK:  }
+
+
+# CHECK-LABEL: TEST: test_parange_inits_with_for_with_two_reduce
+@constructAndPrintInModule
+def test_parange_inits_with_for_with_two_reduce():
+    index_type = IndexType.get()
+    one = arith.constant(index_type, 1)
+
+    for i, j in scf.parallel([1, 1], [2, 2], [3, 3], inits=[one, one]):
+
+        @scf.reduce(i, j, num_reductions=2)
+        def res1(lhs: index_type, rhs: index_type):
+            return arith.addi(lhs, rhs)
+
+        @scf.another_reduce(res1)
+        def res2(lhs: index_type, rhs: index_type):
+            return arith.addi(lhs, rhs)
+
+    # CHECK:  %[[VAL_0:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_2:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_3:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_4:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_5:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_7:.*]]:2 = scf.parallel (%[[VAL_8:.*]], %[[VAL_9:.*]]) = (%[[VAL_1]], %[[VAL_2]]) to (%[[VAL_3]], %[[VAL_4]]) step (%[[VAL_5]], %[[VAL_6]]) init (%[[VAL_0]], %[[VAL_0]]) -> (index, index) {
+    # CHECK:    scf.reduce(%[[VAL_8]], %[[VAL_9]] : index, index) {
+    # CHECK:    ^bb0(%[[VAL_10:.*]]: index, %[[VAL_11:.*]]: index):
+    # CHECK:      %[[VAL_12:.*]] = arith.addi %[[VAL_10]], %[[VAL_11]] : index
+    # CHECK:      scf.reduce.return %[[VAL_12]] : index
+    # CHECK:    }, {
+    # CHECK:    ^bb0(%[[VAL_13:.*]]: index, %[[VAL_14:.*]]: index):
+    # CHECK:      %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] : index
+    # CHECK:      scf.reduce.return %[[VAL_15]] : index
+    # CHECK:    }
+    # CHECK:  }
+
+
+# CHECK-LABEL: TEST: test_parange_inits_with_for_with_three_reduce
+@constructAndPrintInModule
+def test_parange_inits_with_for_with_three_reduce():
+    index_type = IndexType.get()
+    one = arith.constant(index_type, 1)
+
+    for i, j, k in scf.parallel([1, 1, 1], [2, 2, 2], [3, 3, 3], inits=[one, one, one]):
+
+        @scf.reduce(i, j, k, num_reductions=3)
+        def res1(lhs: index_type, rhs: index_type):
+            return arith.addi(lhs, rhs)
+
+        @scf.another_reduce(res1)
+        def res2(lhs: index_type, rhs: index_type):
+            return arith.addi(lhs, rhs)
+
+        @scf.another_reduce(res2)
+        def res3(lhs: index_type, rhs: index_type):
+            return arith.addi(lhs, rhs)
+
+    # CHECK:  %[[VAL_0:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_2:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_4:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_5:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_6:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_7:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_8:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_10:.*]]:3 = scf.parallel (%[[VAL_11:.*]], %[[VAL_12:.*]], %[[VAL_13:.*]]) = (%[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) to (%[[VAL_4]], %[[VAL_5]], %[[VAL_6]]) step (%[[VAL_7]], %[[VAL_8]], %[[VAL_9]]) init (%[[VAL_0]], %[[VAL_0]], %[[VAL_0]]) -> (index, index, index) {
+    # CHECK:    scf.reduce(%[[VAL_11]], %[[VAL_12]], %[[VAL_13]] : index, index, index) {
+    # CHECK:    ^bb0(%[[VAL_14:.*]]: index, %[[VAL_15:.*]]: index):
+    # CHECK:      %[[VAL_16:.*]] = arith.addi %[[VAL_14]], %[[VAL_15]] : index
+    # CHECK:      scf.reduce.return %[[VAL_16]] : index
+    # CHECK:    }, {
+    # CHECK:    ^bb0(%[[VAL_17:.*]]: index, %[[VAL_18:.*]]: index):
+    # CHECK:      %[[VAL_19:.*]] = arith.addi %[[VAL_17]], %[[VAL_18]] : index
+    # CHECK:      scf.reduce.return %[[VAL_19]] : index
+    # CHECK:    }, {
+    # CHECK:    ^bb0(%[[VAL_20:.*]]: index, %[[VAL_21:.*]]: index):
+    # CHECK:      %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] : index
+    # CHECK:      scf.reduce.return %[[VAL_22]] : index
+    # CHECK:    }
+    # CHECK:  }
 
 
 # CHECK-LABEL: TEST: testSimpleLoop
