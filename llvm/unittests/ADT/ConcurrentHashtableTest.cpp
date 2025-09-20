@@ -19,6 +19,277 @@ using namespace llvm;
 using namespace parallel;
 
 namespace {
+
+TEST(ConcurrentHashTableTest, AddIntEntries) {
+  ConcurrentHashTable<uint32_t, uint32_t> HashTable(10);
+
+  std::function<uint32_t(uint32_t)> InsertionFunc =
+      [&](uint32_t Key) -> uint32_t { return Key; };
+
+  std::pair<uint32_t, bool> res1 = HashTable.insert(1, InsertionFunc);
+  // Check entry is inserted.
+  EXPECT_TRUE(res1.first == 1);
+  EXPECT_TRUE(res1.second);
+
+  std::pair<uint32_t, bool> res2 = HashTable.insert(2, InsertionFunc);
+  // Check old entry is still valid.
+  EXPECT_TRUE(res1.first == 1);
+  // Check new entry is inserted.
+  EXPECT_TRUE(res2.first == 2);
+  EXPECT_TRUE(res2.second);
+  // Check new and old entries use different memory.
+  EXPECT_TRUE(res1.first != res2.first);
+
+  std::pair<uint32_t, bool> res3 = HashTable.insert(3, InsertionFunc);
+  // Check one more entry is inserted.
+  EXPECT_TRUE(res3.first == 3);
+  EXPECT_TRUE(res3.second);
+
+  std::pair<uint32_t, bool> res4 = HashTable.insert(1, InsertionFunc);
+  // Check duplicated entry is inserted.
+  EXPECT_TRUE(res4.first == 1);
+  EXPECT_FALSE(res4.second);
+  // Check duplicated entry uses the same memory.
+  EXPECT_TRUE(res1.first == res4.first);
+
+  // Check first entry is still valid.
+  EXPECT_TRUE(res1.first == 1);
+
+  // Check statistic.
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 3\n") !=
+              std::string::npos);
+}
+
+TEST(ConcurrentHashTableTest, AddIntMultiplueEntries) {
+  const size_t NumElements = 10000;
+  ConcurrentHashTable<uint32_t, uint32_t> HashTable;
+
+  std::function<uint32_t(uint32_t)> InsertionFunc =
+      [&](uint32_t Key) -> uint32_t { return Key; };
+
+  // Check insertion.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 10000\n") !=
+              std::string::npos);
+
+  // Check insertion of duplicates.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_FALSE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  // Check statistic.
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 10000\n") !=
+              std::string::npos);
+}
+
+TEST(ConcurrentHashTableTest, AddIntMultiplueEntriesWithClearance) {
+  const size_t NumElements = 100;
+  ConcurrentHashTable<uint32_t, uint32_t> HashTable;
+
+  std::function<uint32_t(uint32_t)> InsertionFunc =
+      [&](uint32_t Key) -> uint32_t { return Key; };
+
+  // Check insertion.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 100\n") !=
+              std::string::npos);
+
+  HashTable.clear();
+
+  // Check insertion of duplicates.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  // Check statistic.
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 100\n") !=
+              std::string::npos);
+}
+
+TEST(ConcurrentHashTableTest, AddIntMultiplueEntriesWithResize) {
+  const size_t NumElements = 20000;
+  ConcurrentHashTable<uint32_t, uint32_t> HashTable(10);
+
+  std::function<uint32_t(uint32_t)> InsertionFunc =
+      [&](uint32_t Key) -> uint32_t { return Key; };
+
+  // Check insertion.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 20000\n") !=
+              std::string::npos);
+
+  // Check insertion of duplicates.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_FALSE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  // Check statistic.
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 20000\n") !=
+              std::string::npos);
+}
+
+TEST(ConcurrentHashTableTest, AddIntEntriesParallel) {
+  const size_t NumElements = 10000;
+  ConcurrentHashTable<uint32_t, uint32_t> HashTable;
+
+  std::function<uint32_t(uint32_t)> InsertionFunc =
+      [&](uint32_t Key) -> uint32_t { return Key * 100; };
+
+  // Check parallel insertion.
+  parallelFor(0, NumElements, [&](size_t I) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I * 100);
+  });
+
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 10000\n") !=
+              std::string::npos);
+
+  // Check parallel insertion of duplicates.
+  parallelFor(0, NumElements, [&](size_t I) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_FALSE(Entry.second);
+    EXPECT_TRUE(Entry.first == I * 100);
+  });
+
+  // Check statistic.
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 10000\n") !=
+              std::string::npos);
+}
+
+TEST(ConcurrentHashTableTest, AddIntEntriesParallelWithResize) {
+  const size_t NumElements = 20000;
+  ConcurrentHashTable<uint64_t, uint64_t> HashTable(100);
+
+  std::function<uint64_t(uint64_t)> InsertionFunc =
+      [&](uint64_t Key) -> uint64_t { return Key * 100; };
+
+  // Check parallel insertion.
+  parallelFor(0, NumElements, [&](size_t I) {
+    std::pair<uint64_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I * 100);
+  });
+
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 20000\n") !=
+              std::string::npos);
+
+  // Check parallel insertion of duplicates.
+  parallelFor(0, NumElements, [&](size_t I) {
+    std::pair<uint64_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_FALSE(Entry.second);
+    EXPECT_TRUE(Entry.first == I * 100);
+  });
+
+  // Check statistic.
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 20000\n") !=
+              std::string::npos);
+}
+
+TEST(ConcurrentHashTableTest, AddIntEntriesNoThreads) {
+  const size_t NumElements = 500;
+  ConcurrentHashTable<uint32_t, uint32_t, ConcurrentHashTableInfo<uint32_t>,
+                      void>
+      HashTable;
+
+  std::function<uint32_t(uint32_t)> InsertionFunc =
+      [&](uint32_t Key) -> uint32_t { return Key; };
+
+  // Check insertion.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_TRUE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  std::string StatisticString;
+  raw_string_ostream StatisticStream(StatisticString);
+  HashTable.printStatistic(StatisticStream);
+
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 500\n") !=
+              std::string::npos);
+
+  // Check insertion of duplicates.
+  for (uint32_t I = 0; I < NumElements; I++) {
+    std::pair<uint32_t, bool> Entry = HashTable.insert(I, InsertionFunc);
+    EXPECT_FALSE(Entry.second);
+    EXPECT_TRUE(Entry.first == I);
+  }
+
+  // Check statistic.
+  // Verifying that the table contains exactly the number of elements we
+  // inserted.
+  EXPECT_TRUE(StatisticString.find("Overall number of entries = 500\n") !=
+              std::string::npos);
+}
+
 class String {
 public:
   String() {}
