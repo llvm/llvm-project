@@ -4,11 +4,11 @@
 define protected amdgpu_kernel void @InferNothing(i32 %a, ptr %b, double %c) {
 ; CHECK-LABEL: InferNothing:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x24
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_lshl_b64 s[2:3], s[6:7], 3
 ; CHECK-NEXT:    s_add_u32 s0, s2, s0
@@ -31,11 +31,11 @@ entry:
 define protected amdgpu_kernel void @InferFadd(i32 %a, ptr addrspace(1) %b, double %c) {
 ; CHECK-LABEL: InferFadd:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x24
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s3
 ; CHECK-NEXT:    s_lshl_b64 s[2:3], s[6:7], 3
 ; CHECK-NEXT:    s_add_u32 s0, s0, s2
