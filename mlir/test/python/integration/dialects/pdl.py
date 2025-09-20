@@ -112,7 +112,7 @@ def load_myint_dialect():
                 irdl.operands_(
                     [i32, i32],
                     ["lhs", "rhs"],
-                    [irdl.Variadicity.single, irdl.Variadicity.single]
+                    [irdl.Variadicity.single, irdl.Variadicity.single],
                 )
                 irdl.results_([i32], ["res"], [irdl.Variadicity.single])
 
@@ -125,11 +125,12 @@ def load_myint_dialect():
 # where constant2 = constant0 + constant1.
 def get_pdl_pattern_fold():
     m = Module.create()
+    i32 = IntegerType.get_signless(32)
     with InsertionPoint(m.body):
 
         @pdl.pattern(benefit=1, sym_name="myint_add_fold")
         def pat():
-            t = pdl.TypeOp(IntegerType.get_signless(32))
+            t = pdl.TypeOp(i32)
             a0 = pdl.AttributeOp()
             a1 = pdl.AttributeOp()
             c0 = pdl.OperationOp(
@@ -153,8 +154,7 @@ def get_pdl_pattern_fold():
                 pdl.ReplaceOp(op0, with_op=newOp)
 
     def add_fold(rewriter, results, values):
-        a0, a1 = [i.get() for i in values]
-        i32 = IntegerType.get_signless(32)
+        a0, a1 = values
         results.push_back(IntegerAttr.get(i32, a0.value + a1.value))
         return True
 

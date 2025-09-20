@@ -39,6 +39,23 @@ public:
   }
   MlirPDLPatternModule get() { return module; }
 
+  static nb::object fromPDLValue(MlirPDLValue value) {
+    if (mlirPDLValueIsValue(value)) {
+      return nb::cast(mlirPDLValueAsValue(value));
+    }
+    if (mlirPDLValueIsOperation(value)) {
+      return nb::cast(mlirPDLValueAsOperation(value));
+    }
+    if (mlirPDLValueIsAttribute(value)) {
+      return nb::cast(mlirPDLValueAsAttribute(value));
+    }
+    if (mlirPDLValueIsType(value)) {
+      return nb::cast(mlirPDLValueAsType(value));
+    }
+
+    throw std::runtime_error("unsupported PDL value type");
+  }
+
   void registerRewriteFunction(const std::string &name,
                                const nb::callable &fn) {
     mlirPDLPatternModuleRegisterRewriteFunction(
@@ -47,8 +64,12 @@ public:
            size_t nValues, MlirPDLValue *values,
            void *userData) -> MlirLogicalResult {
           auto f = nb::handle(static_cast<PyObject *>(userData));
-          auto valueVec = std::vector<MlirPDLValue>(values, values + nValues);
-          return nb::cast<bool>(f(rewriter, results, valueVec))
+          std::vector<nb::object> args;
+          args.reserve(nValues);
+          for (size_t i = 0; i < nValues; ++i) {
+            args.push_back(fromPDLValue(values[i]));
+          }
+          return nb::cast<bool>(f(rewriter, results, args))
                      ? mlirLogicalResultSuccess()
                      : mlirLogicalResultFailure();
         },
@@ -97,25 +118,9 @@ private:
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   nb::class_<MlirPatternRewriter>(m, "PatternRewriter");
   //----------------------------------------------------------------------------
-  // Mapping of the PDLModule
+  // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  nb::class_<MlirPDLValue>(m, "PDLValue").def("get", [](MlirPDLValue value) {
-    if (mlirPDLValueIsValue(value)) {
-      return nb::cast(mlirPDLValueAsValue(value));
-    }
-    if (mlirPDLValueIsOperation(value)) {
-      return nb::cast(mlirPDLValueAsOperation(value));
-    }
-    if (mlirPDLValueIsAttribute(value)) {
-      return nb::cast(mlirPDLValueAsAttribute(value));
-    }
-    if (mlirPDLValueIsType(value)) {
-      return nb::cast(mlirPDLValueAsType(value));
-    }
-
-    throw std::runtime_error("unsupported PDL value type");
-  });
   nb::class_<MlirPDLResultList>(m, "PDLResultList")
       .def("push_back",
            [](MlirPDLResultList results, const PyValue &value) {
