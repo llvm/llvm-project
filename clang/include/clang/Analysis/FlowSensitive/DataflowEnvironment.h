@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
@@ -359,8 +360,32 @@ public:
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
+  /// If you want to look up the storage location for a specific `CXXThisExpr`,
+  /// use the overload that takes a `CXXThisExpr`.
   RecordStorageLocation *getThisPointeeStorageLocation() const {
     return ThisPointeeLoc;
+  }
+
+  /// Returns the storage location assigned to the `this` pointee in the
+  /// environment given a specific `CXXThisExpr`. Returns null if the `this`
+  /// pointee has no assigned storage location in the environment.
+  /// Note that `this` can be used in a non-member context, e.g.:
+  ///
+  /// \code
+  ///   struct S {
+  ///     int x;
+  ///     int y = this->x;
+  ///   };
+  ///   int foo() {
+  ///     return S{10}.y;  // will have a `this` for initializing `S::y`.
+  ///   }
+  /// \endcode
+  RecordStorageLocation *
+  getThisPointeeStorageLocation(const CXXThisExpr &ThisExpr) const {
+    auto It = ThisExprOverrides->find(&ThisExpr);
+    if (It == ThisExprOverrides->end())
+      return ThisPointeeLoc;
+    return It->second;
   }
 
   /// Sets the storage location assigned to the `this` pointee in the
@@ -692,6 +717,8 @@ public:
 private:
   using PrValueToResultObject =
       llvm::DenseMap<const Expr *, RecordStorageLocation *>;
+  using ThisExprOverridesMap =
+      llvm::DenseMap<const CXXThisExpr *, RecordStorageLocation *>;
 
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
@@ -755,6 +782,15 @@ private:
                        RecordStorageLocation *ThisPointeeLoc,
                        RecordStorageLocation *LocForRecordReturnVal);
 
+  static ThisExprOverridesMap
+  buildThisExprOverridesMap(const FunctionDecl *FuncDecl,
+                            RecordStorageLocation *ThisPointeeLoc,
+                            const PrValueToResultObject &ResultObjectMap);
+
+  static ThisExprOverridesMap
+  buildThisExprOverridesMap(Stmt *S, RecordStorageLocation *ThisPointeeLoc,
+                            const PrValueToResultObject &ResultObjectMap);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
@@ -800,6 +836,11 @@ private:
   // The storage location of the `this` pointee. Should only be null if the
   // analysis target is not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
+
+  // Maps from `CXXThisExpr`s to their storage locations, if it should be
+  // different from `ThisPointeeLoc` (for example, CXXThisExpr that are
+  // under a CXXDefaultInitExpr under an InitListExpr).
+  std::shared_ptr<ThisExprOverridesMap> ThisExprOverrides;
 
   // Maps from declarations and glvalue expression to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
