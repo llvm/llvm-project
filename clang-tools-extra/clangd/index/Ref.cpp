@@ -75,8 +75,10 @@ RefSlab RefSlab::BuilderExpectUnique::build() && {
   // We'll reuse the arena, as it only has unique strings and we need them all.
   // We need to group refs by symbol and form contiguous arrays on the arena.
   // Group by SymbolID.
-  std::sort(Entries.begin(), Entries.end());
-  Entries.erase(std::unique(Entries.begin(), Entries.end()), Entries.end());
+  llvm::sort(Entries);
+  assert(std::adjacent_find(Entries.cbegin(), Entries.cend()) ==
+             Entries.cend() &&
+         "Entries are expected to be unique");
   std::vector<Ref> Refs;
   // Loop over symbols, copying refs for each onto the arena.
   for (auto I = Entries.begin(), End = Entries.end(); I != End;) {
