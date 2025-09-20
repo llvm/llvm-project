@@ -9032,15 +9032,107 @@ static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
   return false;
 }
 
+/// This helper function returns element type if QT is a multidimentional array
+static std::optional<QualType> getMultiDimentionalArrayType(Sema const *S,
+                                                            QualType QT) {
+  const ArrayType *AT = S->Context.getAsArrayType(QT);
+  if (AT) {
+    const ConstantArrayType *CAT = llvm::dyn_cast<ConstantArrayType>(AT);
+    if (CAT) {
+      QualType ElementType = CAT->getElementType();
+      while (CAT) {
+        llvm::APInt Size = CAT->getSize();
+        // Zero sized array are no good.
+        if (Size == 0)
+          return std::optional<QualType>();
+        ElementType = CAT->getElementType();
+        CAT = llvm::dyn_cast<ConstantArrayType>(ElementType);
+      }
+      return std::optional<QualType>(
+          QualType(std::get<const Type *>(ElementType.split().asPair()), 0));
+    }
+  }
+  return std::optional<QualType>();
+}
+
+/// This helper function return AssignConvertType if pointers are not
+/// compatible
+static std::optional<AssignConvertType> checkPointerAssignmentCompatibility(
+    Sema &S, const Type *lhptee, const Type *rhptee, QualType ltrans,
+    QualType rtrans, QualType LHSType, QualType RHSType,
+    AssignConvertType ConvTy) {
+  if (!S.Context.typesAreCompatible(ltrans, rtrans)) {
+    // Check if the pointee types are compatible ignoring the sign.
+    // We explicitly check for char so that we catch "char" vs
+    // "unsigned char" on systems where "char" is unsigned.
+    if (lhptee->isCharType())
+      ltrans = S.Context.UnsignedCharTy;
+    else if (lhptee->hasSignedIntegerRepresentation())
+      ltrans = S.Context.getCorrespondingUnsignedType(ltrans);
+
+    if (rhptee->isCharType())
+      rtrans = S.Context.UnsignedCharTy;
+    else if (rhptee->hasSignedIntegerRepresentation())
+      rtrans = S.Context.getCorrespondingUnsignedType(rtrans);
+
+    if (ltrans == rtrans) {
+      // Types are compatible ignoring the sign. Qualifier incompatibility
+      // takes priority over sign incompatibility because the sign
+      // warning can be disabled.
+      if (!S.IsAssignConvertCompatible(ConvTy))
+        return ConvTy;
+
+      return AssignConvertType::IncompatiblePointerSign;
+    }
+
+    // If we are a multi-level pointer, it's possible that our issue is simply
+    // one of qualification - e.g. char ** -> const char ** is not allowed. If
+    // the eventual target type is the same and the pointers have the same
+    // level of indirection, this must be the issue.
+    if (isa<PointerType>(lhptee) && isa<PointerType>(rhptee)) {
+      Qualifiers lhq, rhq;
+      do {
+        std::tie(lhptee, lhq) =
+            cast<PointerType>(lhptee)->getPointeeType().split().asPair();
+        std::tie(rhptee, rhq) =
+            cast<PointerType>(rhptee)->getPointeeType().split().asPair();
+
+        // Inconsistent address spaces at this point is invalid, even if the
+        // address spaces would be compatible.
+        // FIXME: This doesn't catch address space mismatches for pointers of
+        // different nesting levels, like:
+        //   __local int *** a;
+        //   int ** b = a;
+        // It's not clear how to actually determine when such pointers are
+        // invalidly incompatible.
+        if (lhq.getAddressSpace() != rhq.getAddressSpace())
+          return AssignConvertType::
+              IncompatibleNestedPointerAddressSpaceMismatch;
+
+      } while (isa<PointerType>(lhptee) && isa<PointerType>(rhptee));
+
+      if (lhptee == rhptee)
+        return AssignConvertType::IncompatibleNestedPointerQualifiers;
+    }
+
+    // General pointer incompatibility takes priority over qualifiers.
+    if (RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType())
+      return AssignConvertType::IncompatibleFunctionPointer;
+
+    // Return pointers as incompatible
+    return AssignConvertType::IncompatiblePointer;
+  }
+  return std::optional<AssignConvertType>();
+}
+
 // checkPointerTypesForAssignment - This is a very tricky routine (despite
 // being closely modeled after the C99 spec:-). The odd characteristic of this
 // routine is it effectively iqnores the qualifiers on the top level pointee.
 // This circumvents the usual type rules specified in 6.2.7p1 & 6.7.5.[1-3].
 // FIXME: add a couple examples in this comment.
-static AssignConvertType checkPointerTypesForAssignment(Sema &S,
-                                                        QualType LHSType,
-                                                        QualType RHSType,
-                                                        SourceLocation Loc) {
+static AssignConvertType
+checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
+                               QualType OrigRHSType, SourceLocation Loc) {
   assert(LHSType.isCanonical() && "LHS not canonicalized!");
   assert(RHSType.isCanonical() && "RHS not canonicalized!");
 
@@ -9128,65 +9220,26 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
 
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
   // unqualified versions of compatible types, ...
-  QualType ltrans = QualType(lhptee, 0), rtrans = QualType(rhptee, 0);
-  if (!S.Context.typesAreCompatible(ltrans, rtrans)) {
-    // Check if the pointee types are compatible ignoring the sign.
-    // We explicitly check for char so that we catch "char" vs
-    // "unsigned char" on systems where "char" is unsigned.
-    if (lhptee->isCharType())
-      ltrans = S.Context.UnsignedCharTy;
-    else if (lhptee->hasSignedIntegerRepresentation())
-      ltrans = S.Context.getCorrespondingUnsignedType(ltrans);
-
-    if (rhptee->isCharType())
-      rtrans = S.Context.UnsignedCharTy;
-    else if (rhptee->hasSignedIntegerRepresentation())
-      rtrans = S.Context.getCorrespondingUnsignedType(rtrans);
-
-    if (ltrans == rtrans) {
-      // Types are compatible ignoring the sign. Qualifier incompatibility
-      // takes priority over sign incompatibility because the sign
-      // warning can be disabled.
-      if (!S.IsAssignConvertCompatible(ConvTy))
-        return ConvTy;
-
-      return AssignConvertType::IncompatiblePointerSign;
-    }
-
-    // If we are a multi-level pointer, it's possible that our issue is simply
-    // one of qualification - e.g. char ** -> const char ** is not allowed. If
-    // the eventual target type is the same and the pointers have the same
-    // level of indirection, this must be the issue.
-    if (isa<PointerType>(lhptee) && isa<PointerType>(rhptee)) {
-      do {
-        std::tie(lhptee, lhq) =
-          cast<PointerType>(lhptee)->getPointeeType().split().asPair();
-        std::tie(rhptee, rhq) =
-          cast<PointerType>(rhptee)->getPointeeType().split().asPair();
-
-        // Inconsistent address spaces at this point is invalid, even if the
-        // address spaces would be compatible.
-        // FIXME: This doesn't catch address space mismatches for pointers of
-        // different nesting levels, like:
-        //   __local int *** a;
-        //   int ** b = a;
-        // It's not clear how to actually determine when such pointers are
-        // invalidly incompatible.
-        if (lhq.getAddressSpace() != rhq.getAddressSpace())
-          return AssignConvertType::
-              IncompatibleNestedPointerAddressSpaceMismatch;
-
-      } while (isa<PointerType>(lhptee) && isa<PointerType>(rhptee));
-
-      if (lhptee == rhptee)
-        return AssignConvertType::IncompatibleNestedPointerQualifiers;
-    }
-
-    // General pointer incompatibility takes priority over qualifiers.
-    if (RHSType->isFunctionPointerType() && LHSType->isFunctionPointerType())
-      return AssignConvertType::IncompatibleFunctionPointer;
-    return AssignConvertType::IncompatiblePointer;
+  QualType ltrans = QualType(lhptee, 0);
+  QualType rtrans;
+  std::optional<AssignConvertType> CvtT;
+  std::optional<QualType> ArrET = getMultiDimentionalArrayType(&S, OrigRHSType);
+  if (ArrET) {
+    rtrans = ArrET.value();
+    CvtT = checkPointerAssignmentCompatibility(
+        S, lhptee, rhptee, ltrans, rtrans, LHSType, RHSType, ConvTy);
+    if (CvtT && CvtT.value() != AssignConvertType::IncompatiblePointer)
+      return CvtT.value();
   }
+  if (!ArrET ||
+      (CvtT && CvtT.value() == AssignConvertType::IncompatiblePointer)) {
+    rtrans = QualType(rhptee, 0);
+    CvtT = checkPointerAssignmentCompatibility(
+        S, lhptee, rhptee, ltrans, rtrans, LHSType, RHSType, ConvTy);
+    if (CvtT)
+      return CvtT.value();
+  }
+
   bool DiscardingCFIUncheckedCallee, AddingCFIUncheckedCallee;
   if (!S.getLangOpts().CPlusPlus &&
       S.IsFunctionConversion(ltrans, rtrans, &DiscardingCFIUncheckedCallee,
@@ -9311,6 +9364,22 @@ static bool isVector(QualType QT, QualType ElementType) {
   if (const VectorType *VT = QT->getAs<VectorType>())
     return VT->getElementType().getCanonicalType() == ElementType;
   return false;
+}
+
+/// This helper function returns pre array-to-pointer decay type if possible
+static QualType getPreDecayType(ExprResult &RHS) {
+  QualType OrigRHSType = RHS.get()->getType();
+  ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(RHS.get());
+  if (ICE) {
+    Expr *E = ICE->getSubExpr();
+    if (E) {
+      DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
+      if (DRE) {
+        OrigRHSType = DRE->getType();
+      }
+    }
+  }
+  return OrigRHSType;
 }
 
 /// CheckAssignmentConstraints (C99 6.5.16) - This routine currently
@@ -9510,7 +9579,9 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
         Kind = CK_NoOp;
       else
         Kind = CK_BitCast;
-      return checkPointerTypesForAssignment(*this, LHSType, RHSType,
+
+      QualType OrigType = getPreDecayType(RHS);
+      return checkPointerTypesForAssignment(*this, LHSType, RHSType, OrigType,
                                             RHS.get()->getBeginLoc());
     }
 
@@ -9629,7 +9700,6 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
                               Context.getObjCClassRedefinitionType())) {
         return AssignConvertType::Compatible;
       }
-
       return AssignConvertType::IncompatiblePointer;
     }
 
@@ -9902,7 +9972,7 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
             RHS.get()->getType().getCanonicalType().getUnqualifiedType();
         QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();
         if (CanRHS->isVoidPointerType() && CanLHS->isPointerType()) {
-          Ret = checkPointerTypesForAssignment(*this, CanLHS, CanRHS,
+          Ret = checkPointerTypesForAssignment(*this, CanLHS, CanRHS, CanRHS,
                                                RHS.get()->getExprLoc());
           // Anything that's not considered perfectly compatible would be
           // incompatible in C++.
