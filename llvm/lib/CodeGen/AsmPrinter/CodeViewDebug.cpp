@@ -1051,10 +1051,10 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
   // comdat key. A section may be comdat because of -ffunction-sections or
   // because it is comdat in the IR.
   MCSectionCOFF *GVSec =
-      GVSym ? dyn_cast<MCSectionCOFF>(&GVSym->getSection()) : nullptr;
+      GVSym ? static_cast<MCSectionCOFF *>(&GVSym->getSection()) : nullptr;
   const MCSymbol *KeySym = GVSec ? GVSec->getCOMDATSymbol() : nullptr;
 
-  MCSectionCOFF *DebugSec = cast<MCSectionCOFF>(
+  auto *DebugSec = static_cast<MCSectionCOFF *>(
       CompilerInfoAsm->getObjFileLowering().getCOFFDebugSymbolsSection());
   DebugSec = OS.getContext().getAssociativeCOFFSection(DebugSec, KeySym);
 

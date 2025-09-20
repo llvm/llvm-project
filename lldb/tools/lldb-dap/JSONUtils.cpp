@@ -550,6 +550,13 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   if (frame.IsArtificial() || frame.IsHidden())
     object.try_emplace("presentationHint", "subtle");
 
+  lldb::SBModule module = frame.GetModule();
+  if (module.IsValid()) {
+    std::string uuid = module.GetUUIDString();
+    if (!uuid.empty())
+      object.try_emplace("moduleId", uuid);
+  }
+
   return llvm::json::Value(std::move(object));
 }
 
@@ -654,12 +661,17 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       } else {
         body.try_emplace("reason", "breakpoint");
       }
-      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
-      lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
-      std::string desc_str =
-          llvm::formatv("breakpoint {0}.{1}", bp_id, bp_loc_id);
-      body.try_emplace("hitBreakpointIds",
-                       llvm::json::Array{llvm::json::Value(bp_id)});
+      std::vector<lldb::break_id_t> bp_ids;
+      std::ostringstream desc_sstream;
+      desc_sstream << "breakpoint";
+      for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
+        lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
+        lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
+        bp_ids.push_back(bp_id);
+        desc_sstream << " " << bp_id << "." << bp_loc_id;
+      }
+      std::string desc_str = desc_sstream.str();
+      body.try_emplace("hitBreakpointIds", llvm::json::Array(bp_ids));
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;

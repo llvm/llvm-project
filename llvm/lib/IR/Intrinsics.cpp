@@ -740,14 +740,6 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
 
-AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
-  if (id == 0)
-    return AttributeSet();
-  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
-  uint8_t FnAttrID = PackedID >> 8;
-  return getIntrinsicFnAttributeSet(C, FnAttrID);
-}
-
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {
   // There can never be multiple globals with the same name of different types,
@@ -1132,4 +1124,28 @@ std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
   assert(NewDecl->getFunctionType() == F->getFunctionType() &&
          "Shouldn't change the signature");
   return NewDecl;
+}
+
+struct InterleaveIntrinsic {
+  Intrinsic::ID Interleave, Deinterleave;
+};
+
+static InterleaveIntrinsic InterleaveIntrinsics[] = {
+    {Intrinsic::vector_interleave2, Intrinsic::vector_deinterleave2},
+    {Intrinsic::vector_interleave3, Intrinsic::vector_deinterleave3},
+    {Intrinsic::vector_interleave4, Intrinsic::vector_deinterleave4},
+    {Intrinsic::vector_interleave5, Intrinsic::vector_deinterleave5},
+    {Intrinsic::vector_interleave6, Intrinsic::vector_deinterleave6},
+    {Intrinsic::vector_interleave7, Intrinsic::vector_deinterleave7},
+    {Intrinsic::vector_interleave8, Intrinsic::vector_deinterleave8},
+};
+
+Intrinsic::ID Intrinsic::getInterleaveIntrinsicID(unsigned Factor) {
+  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  return InterleaveIntrinsics[Factor - 2].Interleave;
+}
+
+Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
+  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }

@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(MLIR REQUIRED CONFIG)
 
+
+  # Define the default argument to use by `lit` when testing.
+  set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
+
   message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
@@ -48,9 +52,15 @@ add_subdirectory(include)
 add_subdirectory(lib)
 if(MLIR_ENABLE_BINDINGS_PYTHON)
   message(STATUS "Enabling Python API")
+  include(MLIRDetectPythonEnv)
+  mlir_configure_python_dev_packages()
+  set(MLIR_PYTHON_PACKAGE_PREFIX "mlir_standalone" CACHE STRING "" FORCE)
+  set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/standalone/mlir_standalone" CACHE STRING "" FORCE)
   add_subdirectory(python)
 endif()
 add_subdirectory(test)
 add_subdirectory(standalone-opt)
-add_subdirectory(standalone-plugin)
+if(NOT WIN32)
+  add_subdirectory(standalone-plugin)
+endif()
 add_subdirectory(standalone-translate)

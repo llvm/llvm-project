@@ -97,6 +97,12 @@ class CCIfVarArg<CCAction A> : CCIf<"State.isVarArg()", A> {}
 /// CCIfNotVarArg - If the current function is not vararg - apply the action
 class CCIfNotVarArg<CCAction A> : CCIf<"!State.isVarArg()", A> {}
 
+/// Apply the action if argument is fixed (not vararg).
+class CCIfArgFixed<CCAction A> : CCIf<"!ArgFlags.isVarArg()", A>;
+
+/// Apply the action if argument is vararg (not fixed).
+class CCIfArgVarArg<CCAction A> : CCIf<"ArgFlags.isVarArg()", A>;
+
 /// CCIfPtrAddrSpace - If the top-level parent of the current argument has
 /// pointer type in the specified address-space.
 class CCIfPtrAddrSpace<int AS, CCAction A>

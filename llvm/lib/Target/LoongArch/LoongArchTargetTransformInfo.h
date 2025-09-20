@@ -53,6 +53,8 @@ public:
   unsigned getPrefetchDistance() const override;
   bool enableWritePrefetching() const override;
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };
 

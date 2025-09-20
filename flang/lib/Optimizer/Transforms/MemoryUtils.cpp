@@ -200,30 +200,30 @@ void AllocaReplaceImpl::genIndirectDeallocation(
   // and access it indirectly in the entry points that do not dominate.
   rewriter.setInsertionPointToStart(&owningRegion.front());
   mlir::Type heapType = fir::HeapType::get(alloca.getInType());
-  mlir::Value ptrVar = rewriter.create<fir::AllocaOp>(loc, heapType);
-  mlir::Value nullPtr = rewriter.create<fir::ZeroOp>(loc, heapType);
-  rewriter.create<fir::StoreOp>(loc, nullPtr, ptrVar);
+  mlir::Value ptrVar = fir::AllocaOp::create(rewriter, loc, heapType);
+  mlir::Value nullPtr = fir::ZeroOp::create(rewriter, loc, heapType);
+  fir::StoreOp::create(rewriter, loc, nullPtr, ptrVar);
   // TODO: introducing a pointer compare op in FIR would help
   // generating less IR here.
   mlir::Type intPtrTy = fir::getIntPtrType(rewriter);
-  mlir::Value c0 = rewriter.create<mlir::arith::ConstantOp>(
-      loc, intPtrTy, rewriter.getIntegerAttr(intPtrTy, 0));
+  mlir::Value c0 = mlir::arith::ConstantOp::create(
+      rewriter, loc, intPtrTy, rewriter.getIntegerAttr(intPtrTy, 0));
 
   // Store new storage address right after its creation.
   rewriter.restoreInsertionPoint(replacementInsertPoint);
   mlir::Value castReplacement =
       fir::factory::createConvert(rewriter, loc, heapType, replacement);
-  rewriter.create<fir::StoreOp>(loc, castReplacement, ptrVar);
+  fir::StoreOp::create(rewriter, loc, castReplacement, ptrVar);
 
   // Generate conditional deallocation at every deallocation point.
   auto genConditionalDealloc = [&](mlir::Location loc) {
-    mlir::Value ptrVal = rewriter.create<fir::LoadOp>(loc, ptrVar);
+    mlir::Value ptrVal = fir::LoadOp::create(rewriter, loc, ptrVar);
     mlir::Value ptrToInt =
-        rewriter.create<fir::ConvertOp>(loc, intPtrTy, ptrVal);
-    mlir::Value isAllocated = rewriter.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::ne, ptrToInt, c0);
-    auto ifOp = rewriter.create<fir::IfOp>(loc, mlir::TypeRange{}, isAllocated,
-                                           /*withElseRegion=*/false);
+        fir::ConvertOp::create(rewriter, loc, intPtrTy, ptrVal);
+    mlir::Value isAllocated = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::ne, ptrToInt, c0);
+    auto ifOp = fir::IfOp::create(rewriter, loc, mlir::TypeRange{}, isAllocated,
+                                  /*withElseRegion=*/false);
     rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Value cast = fir::factory::createConvert(
         rewriter, loc, replacement.getType(), ptrVal);

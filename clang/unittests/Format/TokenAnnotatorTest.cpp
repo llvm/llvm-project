@@ -618,7 +618,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[20], tok::r_brace, TT_StructRBrace);
 
-  constexpr StringRef Code{"struct EXPORT StructName {};"};
+  Tokens = annotate("class Outer {\n"
+                    "  struct Inner final : Base {};\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_Unknown); // Not TT_StartOfName
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InheritanceColon);
+
+  constexpr StringRef Code("struct EXPORT StructName {};");
 
   Tokens = annotate(Code);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -1341,6 +1348,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[21], tok::r_brace, TT_Unknown);
   EXPECT_EQ(Tokens[21]->MatchingParen, Tokens[15]);
   EXPECT_TRUE(Tokens[21]->ClosesRequiresClause);
+
+  Tokens = annotate("template <typename Foo>\n"
+                    "void Fun(const Foo &F)\n"
+                    "  requires requires(Foo F) {\n"
+                    "    { F.Bar() } -> std::same_as<int>;\n"
+                    "  };");
+  ASSERT_EQ(Tokens.size(), 38u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
 
   Tokens =
       annotate("template <class A, class B> concept C ="
@@ -3958,7 +3973,7 @@ TEST_F(TokenAnnotatorTest, SplitPenalty) {
 }
 
 TEST_F(TokenAnnotatorTest, TemplateName) {
-  constexpr StringRef Code{"return Foo < A || B > (C ^ D);"};
+  constexpr StringRef Code("return Foo < A || B > (C ^ D);");
 
   auto Tokens = annotate(Code);
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
@@ -4088,6 +4103,13 @@ TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
   auto Tokens = annotate("return u8\"foo\";", getLLVMStyle(FormatStyle::LK_C));
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::utf8_string_literal, TT_Unknown);
+}
+
+TEST_F(TokenAnnotatorTest, C23DigitSeparator) {
+  auto Tokens = annotate("return 1'000;", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_EQ(Tokens[1]->TokenText, "1'000");
+  EXPECT_TOKEN(Tokens[2], tok::semi, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, IdentifierPackage) {

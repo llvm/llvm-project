@@ -296,22 +296,22 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_sqrdmlah : AdvSIMD_3IntArg_Intrinsic;
   def int_aarch64_neon_sqrdmlsh : AdvSIMD_3IntArg_Intrinsic;
 
-  // Vector Polynominal Multiply
-  def int_aarch64_neon_pmul : AdvSIMD_2VectorArg_Intrinsic;
+  let IntrProperties = [IntrNoMem, Commutative] in {
+    // Vector Polynominal Multiply
+    def int_aarch64_neon_pmul : AdvSIMD_2VectorArg_Intrinsic;
 
-  // Vector Long Multiply
-  def int_aarch64_neon_smull : AdvSIMD_2VectorArg_Long_Intrinsic;
-  def int_aarch64_neon_umull : AdvSIMD_2VectorArg_Long_Intrinsic;
-  def int_aarch64_neon_pmull : AdvSIMD_2VectorArg_Long_Intrinsic;
+    // Vector Long Multiply
+    def int_aarch64_neon_smull : AdvSIMD_2VectorArg_Long_Intrinsic;
+    def int_aarch64_neon_umull : AdvSIMD_2VectorArg_Long_Intrinsic;
+    def int_aarch64_neon_pmull : AdvSIMD_2VectorArg_Long_Intrinsic;
 
-  // 64-bit polynomial multiply really returns an i128, which is not legal. Fake
-  // it with a v16i8.
-  def int_aarch64_neon_pmull64 :
-        DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+    // 64-bit polynomial multiply really returns an i128, which is not legal.
+    // Fake it with a v16i8.
+    def int_aarch64_neon_pmull64
+      : DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_i64_ty, llvm_i64_ty]>;
 
-  // Vector Extending Multiply
-  def int_aarch64_neon_fmulx : AdvSIMD_2FloatArg_Intrinsic {
-    let IntrProperties = [IntrNoMem, Commutative];
+    // Vector Extending Multiply
+    def int_aarch64_neon_fmulx : AdvSIMD_2FloatArg_Intrinsic;
   }
 
   // Vector Saturating Doubling Long Multiply
@@ -3147,13 +3147,8 @@ let TargetPrefix = "aarch64" in {
   // Counting elements
   //
 
-  class AdvSIMD_SME_CNTSB_Intrinsic
-    : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
-
-  def int_aarch64_sme_cntsb : AdvSIMD_SME_CNTSB_Intrinsic;
-  def int_aarch64_sme_cntsh : AdvSIMD_SME_CNTSB_Intrinsic;
-  def int_aarch64_sme_cntsw : AdvSIMD_SME_CNTSB_Intrinsic;
-  def int_aarch64_sme_cntsd : AdvSIMD_SME_CNTSB_Intrinsic;
+  def int_aarch64_sme_cntsd
+      : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
 
   //
   // PSTATE Functions

@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olCreateQueue";
+def olCreateQueue : Function {
     let desc = "Create a queue for the given device.";
     let details = [];
     let params = [
@@ -21,9 +20,19 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olDestroyQueue";
+def olDestroyQueue : Function {
     let desc = "Destroy the queue and free all underlying resources.";
+    let details = [
+      "Any work previously enqueued to the queue is still performed and any events generated for this queue remain valid."
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
+    ];
+    let returns = [];
+}
+
+def olSyncQueue : Function {
+    let desc = "Block the calling thread until the enqueued work on a queue is complete.";
     let details = [];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
@@ -31,27 +40,32 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olWaitQueue";
-    let desc = "Wait for the enqueued work on a queue to complete.";
-    let details = [];
-    let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
+def olWaitEvents : Function {
+    let desc = "Make any future work submitted to this queue wait until the provided events are complete.";
+    let details = [
+      "All events in `Events` must complete before the queue is unblocked.",
+      "The input events can be from any queue on any device provided by the same platform as `Queue`.",
     ];
-    let returns = [];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"ol_event_handle_t *", "Events", "list of `NumEvents` events to wait for", PARAM_IN>,
+        Param<"size_t", "NumEvents", "size of `Events`", PARAM_IN>,
+    ];
+    let returns = [
+      Return<"OL_ERRC_INVALID_NULL_HANDLE", ["Any event handle in the list is NULL"]>,
+    ];
 }
 
-def : Enum {
-  let name = "ol_queue_info_t";
+def ol_queue_info_t : Enum {
   let desc = "Supported queue info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">
+    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">,
+    TaggedEtor<"EMPTY", "bool", "True if the queue is known to be empty. May be unconditionally false if the device does not support status queries.">,
   ];
 }
 
-def : Function {
-  let name = "olGetQueueInfo";
+def olGetQueueInfo : Function {
   let desc = "Queries the given property of the queue.";
   let details = [
     "`olGetQueueInfoSize` can be used to query the storage size "
@@ -75,8 +89,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetQueueInfoSize";
+def olGetQueueInfoSize : Function {
   let desc = "Returns the storage size of the given queue query.";
   let details = [];
   let params = [
@@ -87,4 +100,28 @@ def : Function {
   let returns = [
     Return<"OL_ERRC_INVALID_QUEUE">
   ];
+}
+
+def ol_host_function_cb_t : FptrTypedef {
+  let desc = "Host function for use by `olLaunchHostFunction`.";
+  let params = [
+    Param<"void *", "UserData", "user specified data passed into `olLaunchHostFunction`.", PARAM_IN>,
+  ];
+  let return = "void";
+}
+
+def olLaunchHostFunction : Function {
+  let desc = "Enqueue a callback function on the host.";
+  let details = [
+    "The provided function will be called from the same process as the one that called `olLaunchHostFunction`.",
+    "The callback will not run until all previous work submitted to the queue has completed.",
+    "The callback must return before any work submitted to the queue after it is started.",
+    "The callback must not call any liboffload API functions or any backend specific functions (such as Cuda or HSA library functions).",
+  ];
+  let params = [
+    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"ol_host_function_cb_t", "Callback", "the callback function to call on the host", PARAM_IN>,
+    Param<"void *", "UserData", "a pointer that will be passed verbatim to the callback function", PARAM_IN_OPTIONAL>,
+  ];
+  let returns = [];
 }

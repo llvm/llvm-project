@@ -590,7 +590,7 @@ static PrototypeAST *ParsePrototype() {
     // Read the precedence if present.
     if (CurTok == tok_number) {
       if (NumVal < 1 || NumVal > 100)
-        return ErrorP("Invalid precedecnce: must be 1..100");
+        return ErrorP("Invalid precedence: must be 1..100");
       BinaryPrecedence = (unsigned)NumVal;
       getNextToken();
     }
@@ -666,7 +666,7 @@ std::string MakeLegalFunctionName(std::string Name)
   // Start with what we have
   NewName = Name;
 
-  // Look for a numberic first character
+  // Look for a numeric first character
   if (NewName.find_first_of("0123456789") == 0) {
     NewName.insert(0, 1, 'n');
   }

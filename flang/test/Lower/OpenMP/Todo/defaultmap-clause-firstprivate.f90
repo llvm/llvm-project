@@ -3,7 +3,9 @@
 
 subroutine f00
     implicit none
-    integer :: i
+    ! NOTE: This is implemented for scalars as it is the default behaviour, so we utilise
+    ! a different data type.
+    integer, allocatable :: i
     !CHECK: not yet implemented: Firstprivate and None are currently unsupported defaultmap behaviour
     !$omp target defaultmap(firstprivate)
       i = 10

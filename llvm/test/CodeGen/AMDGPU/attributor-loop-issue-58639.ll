@@ -63,5 +63,5 @@ define amdgpu_kernel void @entry() {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
 ;.

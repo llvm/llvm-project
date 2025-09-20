@@ -672,10 +672,11 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
       !(A.existsInTarget(S.Context.getTargetInfo()) ||
         (S.Context.getLangOpts().SYCLIsDevice && Aux &&
          A.existsInTarget(*Aux)))) {
-    if (A.isRegularKeywordAttribute() || A.isDeclspecAttribute()) {
-      S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
-                             ? diag::err_keyword_not_supported_on_target
-                             : diag::warn_unhandled_ms_attribute_ignored)
+    if (A.isRegularKeywordAttribute()) {
+      S.Diag(A.getLoc(), diag::err_keyword_not_supported_on_target)
+          << A << A.getRange();
+    } else if (A.isDeclspecAttribute()) {
+      S.Diag(A.getLoc(), diag::warn_unhandled_ms_attribute_ignored)
           << A << A.getRange();
     } else {
       S.DiagnoseUnknownAttribute(A);
@@ -792,6 +793,10 @@ ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
     return ExprError();
 
   Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = ActOnFinishFullExpr(Res.get(), /*DiscardedValue=*/false);
   if (Res.isInvalid())
     return ExprError();
 

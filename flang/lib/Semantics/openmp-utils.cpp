@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "openmp-utils.h"
+#include "flang/Semantics/openmp-utils.h"
 
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
@@ -21,6 +21,7 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
@@ -37,6 +38,7 @@
 #include <vector>
 
 namespace Fortran::semantics::omp {
+using namespace Fortran::parser::omp;
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
@@ -143,6 +145,31 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   }
 }
 
+bool IsMapEnteringType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Alloc:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::To:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsMapExitingType(parser::OmpMapType::Value type) {
+  switch (type) {
+  case parser::OmpMapType::Value::Delete:
+  case parser::OmpMapType::Value::From:
+  case parser::OmpMapType::Value::Release:
+  case parser::OmpMapType::Value::Storage:
+  case parser::OmpMapType::Value::Tofrom:
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
@@ -245,28 +272,6 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   }
 };
 
-struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
-  using Base = evaluate::AnyTraverse<VariableFinder>;
-  VariableFinder(const SomeExpr &v) : Base(*this), var(v) {}
-
-  using Base::operator();
-
-  template <typename T>
-  bool operator()(const evaluate::Designator<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-  template <typename T>
-  bool operator()(const evaluate::FunctionRef<T> &x) const {
-    auto copy{x};
-    return evaluate::AsGenericExpr(std::move(copy)) == var;
-  }
-
-private:
-  const SomeExpr &var;
-};
-
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {
   return DesignatorCollector{}(expr);
 }
@@ -355,10 +360,6 @@ const SomeExpr *HasStorageOverlap(
   return nullptr;
 }
 
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
-  return VariableFinder{sub}(super);
-}
-
 // Check if the ActionStmt is actually a [Pointer]AssignmentStmt. This is
 // to separate cases where the source has something that looks like an
 // assignment, but is semantically wrong (diagnosed by general semantic
@@ -398,16 +399,21 @@ const parser::Block &GetInnermostExecPart(const parser::Block &block) {
   const parser::Block *iter{&block};
   while (iter->size() == 1) {
     const parser::ExecutionPartConstruct &ep{iter->front()};
-    if (auto *exec{std::get_if<parser::ExecutableConstruct>(&ep.u)}) {
-      using BlockConstruct = common::Indirection<parser::BlockConstruct>;
-      if (auto *bc{std::get_if<BlockConstruct>(&exec->u)}) {
-        iter = &std::get<parser::Block>(bc->value().t);
-        continue;
-      }
+    if (auto *bc{GetFortranBlockConstruct(ep)}) {
+      iter = &std::get<parser::Block>(bc->t);
+    } else {
+      break;
     }
-    break;
   }
   return *iter;
+}
+
+bool IsStrictlyStructuredBlock(const parser::Block &block) {
+  if (block.size() == 1) {
+    return GetFortranBlockConstruct(block.front()) != nullptr;
+  } else {
+    return false;
+  }
 }
 
 } // namespace Fortran::semantics::omp

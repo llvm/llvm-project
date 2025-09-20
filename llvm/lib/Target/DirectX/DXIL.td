@@ -1108,11 +1108,11 @@ def RawBufferStore : DXILOp<140, rawBufferStore> {
 def Dot2AddHalf : DXILOp<162, dot2AddHalf> {
   let Doc = "2D half dot product with accumulate to float";
   let intrinsics = [IntrinSelect<int_dx_dot2add>];
-  let arguments = [FloatTy, HalfTy, HalfTy, HalfTy, HalfTy];
-  let result = FloatTy;
-  let overloads = [Overloads<DXIL1_0, []>];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let arguments = [OverloadTy, HalfTy, HalfTy, HalfTy, HalfTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_4, [FloatTy]>];
+  let stages = [Stages<DXIL1_4, [all_stages]>];
+  let attributes = [Attributes<DXIL1_4, [ReadNone]>];
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {

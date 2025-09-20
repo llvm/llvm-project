@@ -683,6 +683,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         return std::make_unique<SPIRV64AMDGCNTargetInfo>(Triple, Opts);
       return nullptr;
     }
+    if (Triple.getVendor() == llvm::Triple::Intel)
+      return std::make_unique<SPIRV64IntelTargetInfo>(Triple, Opts);
     return std::make_unique<SPIRV64TargetInfo>(Triple, Opts);
   }
   case llvm::Triple::wasm32:
@@ -756,6 +758,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       }
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<LoongArch64TargetInfo>>(Triple,
+                                                                        Opts);
+    case llvm::Triple::OpenBSD:
+      return std::make_unique<OpenBSDTargetInfo<LoongArch64TargetInfo>>(Triple,
                                                                         Opts);
     default:
       return std::make_unique<LoongArch64TargetInfo>(Triple, Opts);

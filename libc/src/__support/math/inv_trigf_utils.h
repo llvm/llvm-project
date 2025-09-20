@@ -16,6 +16,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+namespace inv_trigf_utils_internal {
+
 // PI and PI / 2
 static constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
 static constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
@@ -174,6 +176,8 @@ LIBC_INLINE static double asin_eval(double xsq) {
                                ASIN_COEFFS[5], ASIN_COEFFS[7], ASIN_COEFFS[9]);
   return fputil::multiply_add(xsq, r2, r1);
 }
+
+} // namespace inv_trigf_utils_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -576,6 +576,11 @@ class AtomicOperandChecker {
     return AssocStmt;
   }
 
+  const Expr *IgnoreBeforeCompare(const Expr *E) {
+    return E->IgnoreParenImpCasts()->IgnoreParenNoopCasts(
+        SemaRef.getASTContext());
+  }
+
   bool CheckVarRefsSame(IDACInfo::ExprKindTy FirstKind, const Expr *FirstX,
                         IDACInfo::ExprKindTy SecondKind, const Expr *SecondX) {
     llvm::FoldingSetNodeID First_ID, Second_ID;
@@ -648,8 +653,10 @@ class AtomicOperandChecker {
         if (CheckOperandVariable(AssignRes->RHS, PD))
           return getRecoveryExpr();
 
-        if (CheckVarRefsSame(FirstExprResults.ExprKind, FirstExprResults.X_Var,
-                             IDACInfo::SimpleAssign, AssignRes->RHS))
+        if (CheckVarRefsSame(FirstExprResults.ExprKind,
+                             IgnoreBeforeCompare(FirstExprResults.X_Var),
+                             IDACInfo::SimpleAssign,
+                             IgnoreBeforeCompare(AssignRes->RHS)))
           return getRecoveryExpr();
         break;
       }
@@ -660,9 +667,10 @@ class AtomicOperandChecker {
         if (SecondExprResults.Failed)
           return getRecoveryExpr();
 
-        if (CheckVarRefsSame(FirstExprResults.ExprKind, FirstExprResults.X_Var,
+        if (CheckVarRefsSame(FirstExprResults.ExprKind,
+                             IgnoreBeforeCompare(FirstExprResults.X_Var),
                              SecondExprResults.ExprKind,
-                             SecondExprResults.X_Var))
+                             IgnoreBeforeCompare(SecondExprResults.X_Var)))
           return getRecoveryExpr();
         break;
       }

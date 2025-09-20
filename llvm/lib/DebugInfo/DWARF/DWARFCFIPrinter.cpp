@@ -8,12 +8,9 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFCFIPrinter.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"

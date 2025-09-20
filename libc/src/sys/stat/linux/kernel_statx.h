@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H
 #define LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-#include <stdint.h>
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 

@@ -669,6 +669,18 @@ Fortran::lower::ComponentReverseIterator::advanceToParentType() {
   return *currentParentType;
 }
 
+const Fortran::semantics::Symbol *
+Fortran::lower::ComponentReverseIterator::getParentComponent() const {
+  if (!currentTypeDetails->GetParentComponentName())
+    return nullptr;
+  const Fortran::semantics::Scope *scope = currentParentType->GetScope();
+  auto parentComp =
+      DEREF(scope).find(currentTypeDetails->GetParentComponentName().value());
+  if (parentComp == scope->cend())
+    return nullptr;
+  return &*parentComp->second;
+}
+
 void Fortran::lower::ComponentReverseIterator::setCurrentType(
     const Fortran::semantics::DerivedTypeSpec &derived) {
   currentParentType = &derived;

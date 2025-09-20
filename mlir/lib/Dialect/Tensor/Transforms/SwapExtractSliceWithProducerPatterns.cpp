@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -50,9 +49,9 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
                                       builder.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(sliceOp.getSourceType().getRank(),
                                       builder.getIndexAttr(1));
-    auto newSliceOp = builder.create<tensor::ExtractSliceOp>(
-        sliceOp.getLoc(), sliceOp.getType(), tiledResult->tiledValues[0],
-        offsets, sliceOp.getMixedSizes(), strides);
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        builder, sliceOp.getLoc(), sliceOp.getType(),
+        tiledResult->tiledValues[0], offsets, sliceOp.getMixedSizes(), strides);
     tiledResult->tiledValues[0] = newSliceOp;
   }
 

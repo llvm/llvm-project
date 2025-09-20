@@ -58,6 +58,14 @@ def create_parser():
             """Specify the path to sysroot. This overrides apple_sdk sysroot."""
         ),
     )
+    group.add_argument(
+        "--triple",
+        metavar="triple",
+        dest="triple",
+        help=textwrap.dedent(
+            """Specify the target triple. Used for cross compilation."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",

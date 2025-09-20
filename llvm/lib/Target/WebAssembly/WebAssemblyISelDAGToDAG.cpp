@@ -15,12 +15,14 @@
 #include "WebAssembly.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -108,7 +110,7 @@ void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
 }
 
 static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
-  assert(Tag == WebAssembly::CPP_EXCEPTION || WebAssembly::C_LONGJMP);
+  assert(Tag == WebAssembly::CPP_EXCEPTION || Tag == WebAssembly::C_LONGJMP);
   auto &MF = DAG->getMachineFunction();
   const auto &TLI = DAG->getTargetLoweringInfo();
   MVT PtrVT = TLI.getPointerTy(DAG->getDataLayout());
@@ -116,6 +118,60 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
                             ? MF.createExternalSymbolName("__cpp_exception")
                             : MF.createExternalSymbolName("__c_longjmp");
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
+}
+
+static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
+                                     SmallVector<MVT, 4> &Returns,
+                                     SmallVector<MVT, 4> &Params) {
+  auto toWasmValType = [](MVT VT) {
+    if (VT == MVT::i32) {
+      return wasm::ValType::I32;
+    }
+    if (VT == MVT::i64) {
+      return wasm::ValType::I64;
+    }
+    if (VT == MVT::f32) {
+      return wasm::ValType::F32;
+    }
+    if (VT == MVT::f64) {
+      return wasm::ValType::F64;
+    }
+    if (VT == MVT::externref) {
+      return wasm::ValType::EXTERNREF;
+    }
+    if (VT == MVT::funcref) {
+      return wasm::ValType::FUNCREF;
+    }
+    if (VT == MVT::exnref) {
+      return wasm::ValType::EXNREF;
+    }
+    LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT
+                      << "\n");
+    llvm_unreachable("Unhandled type for llvm.wasm.ref.test.func");
+  };
+  auto NParams = Params.size();
+  auto NReturns = Returns.size();
+  auto BitWidth = (NParams + NReturns + 2) * 64;
+  auto Sig = APInt(BitWidth, 0);
+
+  // Annoying special case: if getSignificantBits() <= 64 then InstrEmitter will
+  // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
+  // always emit a CImm. So xor NParams with 0x7ffffff to ensure
+  // getSignificantBits() > 64
+  Sig |= NReturns ^ 0x7ffffff;
+  for (auto &Return : Returns) {
+    auto V = toWasmValType(Return);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  Sig <<= 64;
+  Sig |= NParams;
+  for (auto &Param : Params) {
+    auto V = toWasmValType(Param);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  return Sig;
 }
 
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
@@ -187,6 +243,58 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
           GlobalGetIns, DL, PtrVT,
           CurDAG->getTargetExternalSymbol("__tls_align", PtrVT));
       ReplaceNode(Node, TLSAlign);
+      return;
+    }
+    case Intrinsic::wasm_ref_test_func: {
+      // First emit the TABLE_GET instruction to convert function pointer ==>
+      // funcref
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      auto PtrVT = MVT::getIntegerVT(MF.getDataLayout().getPointerSizeInBits());
+      MCSymbol *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue FuncPtr = Node->getOperand(1);
+      if (Subtarget->hasAddr64() && FuncPtr.getValueType() == MVT::i64) {
+        // table.get expects an i32 but on 64 bit platforms the function pointer
+        // is an i64. In that case, i32.wrap_i64 to convert.
+        FuncPtr = SDValue(CurDAG->getMachineNode(WebAssembly::I32_WRAP_I64, DL,
+                                                 MVT::i32, FuncPtr),
+                          0);
+      }
+      SDValue FuncRef =
+          SDValue(CurDAG->getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
+                                         MVT::funcref, TableSym, FuncPtr),
+                  0);
+
+      // Encode the signature information into the type index placeholder.
+      // This gets decoded and converted into the actual type signature in
+      // WebAssemblyMCInstLower.cpp.
+      SmallVector<MVT, 4> Params;
+      SmallVector<MVT, 4> Returns;
+
+      bool IsParam = false;
+      // Operand 0 is the return register, Operand 1 is the function pointer.
+      // The remaining operands encode the type of the function we are testing
+      // for.
+      for (unsigned I = 2, E = Node->getNumOperands(); I < E; ++I) {
+        MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
+        if (VT == MVT::Untyped) {
+          IsParam = true;
+          continue;
+        }
+        if (IsParam) {
+          Params.push_back(VT);
+        } else {
+          Returns.push_back(VT);
+        }
+      }
+      auto Sig = encodeFunctionSignature(CurDAG, DL, Returns, Params);
+
+      auto SigOp = CurDAG->getTargetConstant(
+          Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));
+      MachineSDNode *RefTestNode = CurDAG->getMachineNode(
+          WebAssembly::REF_TEST_FUNCREF, DL, MVT::i32, {SigOp, FuncRef});
+      ReplaceNode(Node, RefTestNode);
       return;
     }
     }

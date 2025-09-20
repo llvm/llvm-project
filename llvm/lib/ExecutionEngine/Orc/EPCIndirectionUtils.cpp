@@ -169,7 +169,7 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     std::vector<tpctypes::UInt64Write> PtrUpdates;
     for (auto &SI : StubInits)
       PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
-                            static_cast<uint64_t>(SI.second.first.getValue())});
+                            SI.second.first.getValue()});
     return MemAccess.writeUInt64s(PtrUpdates);
   }
   default:

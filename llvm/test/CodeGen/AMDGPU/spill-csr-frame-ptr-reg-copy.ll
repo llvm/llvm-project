@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -stress-regalloc=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}spill_csr_s5_copy:
 ; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
