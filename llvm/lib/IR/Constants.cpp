@@ -2864,7 +2864,7 @@ uint64_t ConstantDataSequential::getNumElements() const {
 }
 
 uint64_t ConstantDataSequential::getElementByteSize() const {
-  return getElementType()->getPrimitiveSizeInBits() / 8;
+  return getElementType()->getPrimitiveSizeInBits().getFixedValue() / 8;
 }
 
 /// Return the start of the specified element.
