@@ -20,7 +20,9 @@ namespace rootsig {
 
 bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-bool verifyVersion(uint32_t Version) { return (Version == 1 || Version == 2); }
+bool verifyVersion(uint32_t Version) {
+  return (Version == 1 || Version == 2 || Version == 3);
+}
 
 bool verifyRegisterValue(uint32_t RegisterValue) {
   return RegisterValue != ~0U;

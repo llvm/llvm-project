@@ -245,6 +245,15 @@ uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
   return Flags;
 }
 
+uint32_t DXContainerYAML::StaticSamplerYamlDesc::getEncodedFlags() const {
+  uint64_t Flags = 0;
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  if (Enum)                                                                    \
+    Flags |= (uint32_t)dxbc::StaticSamplerFlags::Enum;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flags;
+}
+
 uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
   uint64_t Flag = 0;
 #define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
@@ -512,6 +521,9 @@ void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
   IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
+  IO.mapOptional(#Flag, S.Enum, false);
+#include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
