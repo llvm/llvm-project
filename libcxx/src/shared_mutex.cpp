@@ -14,12 +14,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Shared Mutex Base
-__shared_mutex_base::__shared_mutex_base() : __state_(0) {}
-
-// Exclusive ownership
-
-void __shared_mutex_base::lock() {
+// Dual condition_variable implementaiton of shared_mutex
+//
+// These methods are defined here because they're only called from the dylib,
+// but they are not part of the library's ABI.
+_LIBCPP_HIDE_FROM_ABI void __dual_cv_shared_mutex::lock() {
   unique_lock<mutex> lk(__mut_);
   while (__state_ & __write_entered_)
     __gate1_.wait(lk);
@@ -28,7 +27,7 @@ void __shared_mutex_base::lock() {
     __gate2_.wait(lk);
 }
 
-bool __shared_mutex_base::try_lock() {
+_LIBCPP_HIDE_FROM_ABI bool __dual_cv_shared_mutex::try_lock() {
   unique_lock<mutex> lk(__mut_);
   if (__state_ == 0) {
     __state_ = __write_entered_;
@@ -37,7 +36,7 @@ bool __shared_mutex_base::try_lock() {
   return false;
 }
 
-void __shared_mutex_base::unlock() {
+_LIBCPP_HIDE_FROM_ABI void __dual_cv_shared_mutex::unlock() {
   {
     lock_guard<mutex> _(__mut_);
     __state_ = 0;
@@ -45,9 +44,7 @@ void __shared_mutex_base::unlock() {
   __gate1_.notify_all();
 }
 
-// Shared ownership
-
-void __shared_mutex_base::lock_shared() {
+_LIBCPP_HIDE_FROM_ABI void __dual_cv_shared_mutex::lock_shared() {
   unique_lock<mutex> lk(__mut_);
   while ((__state_ & __write_entered_) || (__state_ & __n_readers_) == __n_readers_)
     __gate1_.wait(lk);
@@ -56,7 +53,7 @@ void __shared_mutex_base::lock_shared() {
   __state_ |= num_readers;
 }
 
-bool __shared_mutex_base::try_lock_shared() {
+_LIBCPP_HIDE_FROM_ABI bool __dual_cv_shared_mutex::try_lock_shared() {
   unique_lock<mutex> lk(__mut_);
   unsigned num_readers = __state_ & __n_readers_;
   if (!(__state_ & __write_entered_) && num_readers != __n_readers_) {
@@ -68,7 +65,7 @@ bool __shared_mutex_base::try_lock_shared() {
   return false;
 }
 
-void __shared_mutex_base::unlock_shared() {
+_LIBCPP_HIDE_FROM_ABI void __dual_cv_shared_mutex::unlock_shared() {
   unique_lock<mutex> lk(__mut_);
   unsigned num_readers = (__state_ & __n_readers_) - 1;
   __state_ &= ~__n_readers_;
@@ -85,6 +82,23 @@ void __shared_mutex_base::unlock_shared() {
     }
   }
 }
+
+// Shared Mutex Base
+__shared_mutex_base::__shared_mutex_base() {}
+
+// Exclusive ownership
+void __shared_mutex_base::lock() { __impl_.lock(); }
+
+bool __shared_mutex_base::try_lock() { return __impl_.try_lock(); }
+
+void __shared_mutex_base::unlock() { __impl_.unlock(); }
+
+// Shared ownership
+void __shared_mutex_base::lock_shared() { __impl_.lock_shared(); }
+
+bool __shared_mutex_base::try_lock_shared() { return __impl_.try_lock_shared(); }
+
+void __shared_mutex_base::unlock_shared() { __impl_.unlock_shared(); }
 
 // Shared Timed Mutex
 // These routines are here for ABI stability
