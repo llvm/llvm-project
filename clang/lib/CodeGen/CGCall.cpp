@@ -2559,6 +2559,22 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
+
+    for (auto Attr : TargetDecl->specific_attrs<LLVMFuncAttrAttr>()) {
+      auto name = Attr->getLLVMAttrName();
+      auto value = Attr->getLLVMAttrValue();
+
+      llvm::Attribute LLAttr;
+      auto EnumAttr = llvm::Attribute::getAttrKindFromName(name);
+      if (EnumAttr == llvm::Attribute::None)
+        LLAttr = llvm::Attribute::get(getLLVMContext(), name, value);
+      else {
+        assert(value.size() == 0 &&
+               "enum attribute does not support value yet");
+        LLAttr = llvm::Attribute::get(getLLVMContext(), EnumAttr);
+      }
+      FuncAttrs.addAttribute(LLAttr);
+    }
   }
 
   // Attach "no-builtins" attributes to:
