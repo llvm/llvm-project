@@ -976,6 +976,9 @@ uint32_t Relocation::getNone() {
     return ELF::R_RISCV_NONE;
   case Triple::x86_64:
     return ELF::R_X86_64_NONE;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_NONE;
   }
 }
 
@@ -989,6 +992,9 @@ uint32_t Relocation::getPC32() {
     return ELF::R_RISCV_32_PCREL;
   case Triple::x86_64:
     return ELF::R_X86_64_PC32;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_REL24;
   }
 }
 
@@ -1002,6 +1008,9 @@ uint32_t Relocation::getPC64() {
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_PC64;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_REL64;
   }
 }
 
@@ -1022,6 +1031,7 @@ bool Relocation::isPCRelative(uint32_t Type) {
   case Triple::x86_64:
     return isPCRelativeX86(Type);
   case Triple::ppc64:
+  case Triple::ppc64le:
     return isPCRelativePPC64(Type);
   }
 }
@@ -1036,6 +1046,9 @@ uint32_t Relocation::getAbs64() {
     return ELF::R_RISCV_64;
   case Triple::x86_64:
     return ELF::R_X86_64_64;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_ADDR64;
   }
 }
 
@@ -1049,6 +1062,9 @@ uint32_t Relocation::getRelative() {
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_RELATIVE;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_RELATIVE;
   }
 }
 
