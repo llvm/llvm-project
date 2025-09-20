@@ -360,17 +360,35 @@ struct TransferOpReduceRank
     SmallVector<bool> newScalableDims(
         originalVecType.getScalableDims().take_back(reducedShapeRank));
 
-    VectorType newReadType = VectorType::get(
-        newShape, originalVecType.getElementType(), newScalableDims);
-    ArrayAttr newInBoundsAttr =
-        op.getInBounds()
-            ? rewriter.getArrayAttr(
-                  op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
-            : ArrayAttr();
-    Value newRead = vector::TransferReadOp::create(
-        rewriter, op.getLoc(), newReadType, op.getBase(), op.getIndices(),
-        AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
-        newInBoundsAttr);
+    Value newRead;
+    if (newShape.size() == 0 && newScalableDims.size() == 0) {
+      // Handle the scalar case.
+      // Convert
+      //   %val = vector.transfer_read %base[] : memref<dtype> to
+      //                                         vector<d0 x d1 x dtype>
+      // into
+      //   %scalar = memref.load %base[] : memref<dtype>
+      //   %val = vector.broadcast %scalar : dtype to vector<d0 x d1 x dtype>
+      Type baseType = op.getBase().getType();
+      if (isa<MemRefType>(baseType)) {
+        newRead = memref::LoadOp::create(rewriter, op.getLoc(), op.getBase(),
+                                         op.getIndices());
+      }
+    }
+
+    if (!newRead) {
+      VectorType newReadType = VectorType::get(
+          newShape, originalVecType.getElementType(), newScalableDims);
+      ArrayAttr newInBoundsAttr =
+          op.getInBounds()
+              ? rewriter.getArrayAttr(
+                    op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
+              : ArrayAttr();
+      newRead = vector::TransferReadOp::create(
+          rewriter, op.getLoc(), newReadType, op.getBase(), op.getIndices(),
+          AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
+          newInBoundsAttr);
+    }
     return vector::BroadcastOp::create(rewriter, op.getLoc(), originalVecType,
                                        newRead)
         .getVector();
