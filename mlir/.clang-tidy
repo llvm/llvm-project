@@ -56,5 +56,7 @@ CheckOptions:
     value:           camelBack
   - key:             readability-identifier-naming.ParameterCase
     value:           camelBack
+  - key:             readability-identifier-naming.ConstantParameterCase
+    value:           camelBack  
   - key:             readability-identifier-naming.VariableCase
     value:           camelBack
