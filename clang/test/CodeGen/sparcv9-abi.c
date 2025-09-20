@@ -259,6 +259,17 @@ int f_variable(char *f, ...) {
   case 'm':
     s += *va_arg(ap, struct medium).a;
     break;
+
+// CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
+// CHECK-DAG: %[[NXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
+// CHECK-DAG: store ptr %[[NXT]], ptr %ap
+// CHECK-DAG: %[[ADR:[^ ]+]] = load ptr, ptr %[[CUR]]
+// CHECK-DAG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 {{.*}}, ptr align 16 %[[ADR]], i64 32, i1 false)
+// CHECK: br
+  case 'M':
+    s += *va_arg(ap, struct medium_aligned).a;
+    break;
   }
+
   return s;
 }
