@@ -541,8 +541,8 @@ static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
   if (isa<ConstantPointerNull>(V))
     return ConstantInt::get(IntPtrTy, 0);
 
-  // IntToPtr const int, we can look through this unless the semantics of
-  // inttoptr for this address space aren't a simple (truncating) bitcast.
+  // IntToPtr const int, we can look through this if the semantics of
+  // inttoptr for this address space are a simple (truncating) bitcast.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == Instruction::IntToPtr)
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
