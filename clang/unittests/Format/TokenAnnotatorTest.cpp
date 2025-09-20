@@ -4159,6 +4159,29 @@ TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
   EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
+TEST_F(TokenAnnotatorTest, KeywordedFunctionLikeMacro) {
+  auto Style = getLLVMStyle();
+  Style.AllowBreakBeforeQtProperty = true;
+
+  auto Tokens = annotate(
+      "Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)",
+      Style);
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_QtProperty);
+
+  Tokens = annotate(
+      "struct S {\n"
+      "  Q_OBJECT Q_PROPERTY(int value READ value WRITE setValue NOTIFY foo)\n"
+      "};",
+      Style);
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[12], tok::identifier, TT_QtProperty);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

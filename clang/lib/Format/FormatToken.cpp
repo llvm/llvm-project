@@ -33,6 +33,18 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
+static SmallVector<StringRef> QtPropertyKeywords = {
+    "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
+    "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
+    "SCRIPTABLE", "STORED",   "USER",       "WRITE",
+};
+
+bool FormatToken::isQtProperty() const {
+  assert(llvm::is_sorted(QtPropertyKeywords));
+  return std::binary_search(QtPropertyKeywords.begin(),
+                            QtPropertyKeywords.end(), TokenText);
+}
+
 // Sorted common C++ non-keyword types.
 static SmallVector<StringRef> CppNonKeywordTypes = {
     "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
@@ -329,6 +341,8 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
     return true;
   }
   if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
+  if (Current.is(TT_QtProperty))
     return true;
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||
