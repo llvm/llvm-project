@@ -3158,6 +3158,7 @@ private:
         "UIImage",
         "UIView",
     };
+    assert(llvm::is_sorted(FoundationIdentifiers));
 
     for (auto *Line : AnnotatedLines) {
       if (Line->First && (Line->First->TokenText.starts_with("#") ||
