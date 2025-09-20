@@ -55,6 +55,14 @@ int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
   return -1;
 }
 
+void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+                                           MCContext *Ctx) const {
+  // TODO: Implement PPC branch target replacement
+  (void)Inst;
+  (void)TBB;
+  (void)Ctx;
+}
+
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
     MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
     const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
