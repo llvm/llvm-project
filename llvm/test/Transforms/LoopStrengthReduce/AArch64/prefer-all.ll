@@ -119,8 +119,6 @@ for.end:
 ; We can't use postindex addressing on the conditional load of qval and can't
 ; convert the loop condition to a compare with zero, so we should instead use
 ; offset addressing.
-; FIXME: Currently we don't notice the load of qval is conditional, and attempt
-; postindex addressing anyway.
 define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-LABEL: define i32 @conditional_load(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[N:%.*]]) {
@@ -128,7 +126,6 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], %[[FOR_INC:.*]] ], [ [[P]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_INC]] ], [ [[Q]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[RET_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[LSR_IV1]], align 4
@@ -136,6 +133,8 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IDX]], 2
+; CHECK-NEXT:    [[LSR_IV:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[QVAL:%.*]] = load i32, ptr [[LSR_IV]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RET]], [[QVAL]]
 ; CHECK-NEXT:    br label %[[FOR_INC]]
@@ -143,7 +142,6 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[RET_NEXT]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[RET]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
 ; CHECK-NEXT:    [[NVAL:%.*]] = load volatile i64, ptr [[N]], align 8
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IDX_NEXT]], [[NVAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
