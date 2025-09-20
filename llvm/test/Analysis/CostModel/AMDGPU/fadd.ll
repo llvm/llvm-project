@@ -2,9 +2,11 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF16,GFX90A-FASTF64 %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=NOPACKEDF32,FASTF16,FASTF64 %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=NOPACKEDF32,SLOWF64 %s
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250 %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF16-SIZE,GFX90A-FASTF64-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=NOPACKEDF32-SIZE,FASTF16-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=NOPACKEDF32-SIZE,SLOWF64-SIZE %s
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250-SIZE %s
 ; END.
 
 define amdgpu_kernel void @fadd_f32() #0 {
@@ -155,6 +157,35 @@ define amdgpu_kernel void @fadd_f16() #0 {
   %v5f16 = fadd <5 x half> undef, undef
   %v16f16 = fadd <16 x half> undef, undef
   %v17f16 = fadd <17 x half> undef, undef
+  ret void
+}
+
+define amdgpu_kernel void @fadd_bf16() #0 {
+; GFX1250-LABEL: 'fadd_bf16'
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %bf16 = fadd bfloat undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %v2bf16 = fadd <2 x bfloat> undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v3bf16 = fadd <3 x bfloat> undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v4bf16 = fadd <4 x bfloat> undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v5bf16 = fadd <5 x bfloat> undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v16bf16 = fadd <16 x bfloat> undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 4 for instruction:   %v17bf16 = fadd <17 x bfloat> undef, undef
+; GFX1250-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   ret void
+; GFX1250-SIZE-LABEL: 'fadd_bf16'
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %bf16 = fadd bfloat undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v2bf16 = fadd <2 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v3bf16 = fadd <3 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v4bf16 = fadd <4 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v5bf16 = fadd <5 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v16bf16 = fadd <16 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %v17bf16 = fadd <17 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   ret void
+  %bf16 = fadd bfloat undef, undef
+  %v2bf16 = fadd <2 x bfloat> undef, undef
+  %v3bf16 = fadd <3 x bfloat> undef, undef
+  %v4bf16 = fadd <4 x bfloat> undef, undef
+  %v5bf16 = fadd <5 x bfloat> undef, undef
+  %v16bf16 = fadd <16 x bfloat> undef, undef
+  %v17bf16 = fadd <17 x bfloat> undef, undef
   ret void
 }
 

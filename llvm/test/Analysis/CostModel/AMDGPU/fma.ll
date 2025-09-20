@@ -2,10 +2,12 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1010 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FAST %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FAST %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=SLOW %s
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250 %s
 
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1010 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FAST-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FAST-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=SLOW-SIZE %s
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250-SIZE %s
 
 
 define void @fma_f16() {
@@ -100,6 +102,24 @@ define void @fma_bf16() {
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+; GFX1250-LABEL: 'fma_bf16'
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; GFX1250-SIZE-LABEL: 'fma_bf16'
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
   %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
   %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
   %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
