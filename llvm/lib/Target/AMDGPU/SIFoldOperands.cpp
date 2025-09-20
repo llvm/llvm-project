@@ -1121,38 +1121,9 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
-  MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
-  }
-
-  // TODO: Verify the following code handles subregisters correctly.
-  // TODO: Handle extract of global reference
-  if (UseOp.getSubReg())
-    return false;
-
-  if (!OpToFold.isReg())
-    return false;
-
-  Register UseReg = OpToFold.getReg();
-  if (!UseReg.isVirtual())
-    return false;
-
-  // Maybe it is just a COPY of an immediate itself.
-
-  // FIXME: Remove this handling. There is already special case folding of
-  // immediate into copy in foldOperand. This is looking for the def of the
-  // value the folding started from in the first place.
-  MachineInstr *Def = MRI->getVRegDef(UseReg);
-  if (Def && TII->isFoldableCopy(*Def)) {
-    MachineOperand &DefOp = Def->getOperand(1);
-    if (DefOp.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &DefOp)) {
-      FoldableDef FoldableImm(DefOp.getImm(), OpToFold.DefRC,
-                              OpToFold.DefSubReg);
-      appendFoldCandidate(FoldList, UseMI, UseOpIdx, FoldableImm);
-      return true;
-    }
   }
 
   return false;
