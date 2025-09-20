@@ -133,6 +133,9 @@ PPKEYWORD(pragma)
 // C23 & C++26 #embed
 PPKEYWORD(embed)
 
+// C++20 Module Directive
+PPKEYWORD(module)
+
 // GNU Extensions.
 PPKEYWORD(import)
 PPKEYWORD(include_next)

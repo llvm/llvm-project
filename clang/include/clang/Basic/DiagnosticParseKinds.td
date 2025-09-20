@@ -1782,10 +1782,20 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_unexpected_module_decl : Error<
-  "module declaration can only appear at the top level">;
+def err_invalid_module_or_import_directive : Error<
+  "the %select{module|import}0 directive is ill-formed, "
+  "%select{module contextual keyword must be immediately "
+  "followed on the same line by an identifier, "
+  "or a ';' after being at the start of a line, or preceded by "
+  "an export keyword at the start of a line|"
+  "import contextual keyword must be immediately followed "
+  "on the same line by an identifier, '<', '\"', or ':', but not '::', "
+  "after being at the start of a line or preceded by an export at "
+  "the start of the line}0">;
+def err_unexpected_module_or_import_decl : Error<
+  "%select{module|import}0 declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
-  "expected a module name after '%select{module|import}0'">;
+  "expected %select{identifier after '.' in |}0module name">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_keyword_not_module_attr : Error<
@@ -1796,6 +1806,8 @@ def err_keyword_not_import_attr : Error<
   "%0 cannot be applied to a module import">;
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
+def err_expected_semi_after_module_or_import
+  : Error<"'%0' directive must end with a ';' on the same line">;
 def err_global_module_introducer_not_at_start : Error<
   "'module;' introducing a global module fragment can appear only "
   "at the start of the translation unit">;

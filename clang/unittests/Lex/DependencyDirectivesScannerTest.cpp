@@ -639,8 +639,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(" @ import  A;\n", Out));
   EXPECT_STREQ("@import A;\n", Out.data());
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
-  EXPECT_STREQ("@import A\n;\n", Out.data());
+  ASSERT_TRUE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
+  EXPECT_STREQ("@import A;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A.B;\n", Out));
   EXPECT_STREQ("@import A.B;\n", Out.data());
@@ -685,18 +685,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ImportFailures) {
       minimizeSourceToDependencyDirectives("@import MACRO(A);\n", Out));
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import \" \";\n", Out));
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("import <Foo.h>;\n"
                                                     "@import Foo;",
                                                     Out));
-  EXPECT_STREQ("@import Foo;\n", Out.data());
+  EXPECT_STREQ("import<Foo.h>;\n@import Foo;\n", Out.data());
 
   ASSERT_FALSE(
-      minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+      minimizeSourceToDependencyDirectives("import <Foo.h>;\n"
                                            "#import <Foo.h>\n"
                                            "@;\n"
                                            "#pragma clang module import Foo",
                                            Out));
-  EXPECT_STREQ("#import <Foo.h>\n"
+  EXPECT_STREQ("import<Foo.h>;\n"
+               "#import <Foo.h>\n"
                "#pragma clang module import Foo\n",
                Out.data());
 }
