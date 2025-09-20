@@ -116,14 +116,23 @@ def AMDGPU_ScaledExtPackedOp
     : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
       Arguments<(
           ins AnyTypeOf<[VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2, F8E4M3FN]>,
-                         VectorOfLengthAndType<[1, 2, 3, 4, 5, 6, 7, 8],
-                                               [F4E2M1FN]>]>:$source,
+                         VectorOfLengthAndType<[1, 2, 3, 4, 5, 6, 7, 8],[F4E2M1FN]>,
+                         VectorOfLengthAndType<[8],[F4E2M1FN, F8E4M3FN, F8E5M2]>,
+                         VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>]>:$source,
           F32:$scale,
-          ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index)>,
+          OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>>:$index,
+          OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>>:$scaleSel)>,
       Results<(
           outs AnyTypeOf<[FixedVectorOfLengthAndType<[2], [F32]>,
                           FixedVectorOfLengthAndType<[2], [F16]>,
-                          FixedVectorOfLengthAndType<[2], [BF16]>]>:$res)> {
+                          FixedVectorOfLengthAndType<[2], [BF16]>,
+                          FixedVectorOfLengthAndType<[8], [F32]>,
+                          FixedVectorOfLengthAndType<[8], [F16]>,
+                          FixedVectorOfLengthAndType<[8], [BF16]>,
+                          FixedVectorOfLengthAndType<[16], [F32]>,
+                          FixedVectorOfLengthAndType<[16], [F16]>,
+                          FixedVectorOfLengthAndType<[16], [BF16]>]>:$res)> {
+
   let summary = "Extend a vector of packed floating point values";
 
   let description = [{
@@ -139,8 +148,9 @@ def AMDGPU_ScaledExtPackedOp
     the remaining values in the <2 x i8> will be filled with
     undefined values as needed.
   }];
+
   let assemblyFormat = [{
-    attr-dict $source `[` $index `]` `,` $scale `:` type($source) `to` type($res)
+    attr-dict $source ( `[` $index^ `]` )? `,` $scale ( `[` $scaleSel^ `]` )? `:` type($source) `to` type($res)
   }];
 }
 
