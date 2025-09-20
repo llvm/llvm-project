@@ -260,6 +260,18 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.push_back('I');
         }
 
+        // If there is a direction vector with all entries being '*', we cannot
+        // prove the legality of the interchange for arbitrary pairs of loops.
+        // Exit early in this case to save compile time.
+        if (all_of(Dep, [](char C) { return C == '*'; })) {
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "Dependence",
+                                            L->getStartLoc(), L->getHeader())
+                   << "All loops have dependencies in all directions.";
+          });
+          return false;
+        }
+
         // Test whether the dependency is forward or not.
         bool IsKnownForward = true;
         if (Src->getParent() != Dst->getParent()) {
