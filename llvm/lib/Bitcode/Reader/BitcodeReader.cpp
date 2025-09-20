@@ -2203,6 +2203,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
     return Attribute::SanitizeRealtimeBlocking;
+  case bitc::ATTR_KIND_SANITIZE_ALLOC_TOKEN:
+    return Attribute::SanitizeAllocToken;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
