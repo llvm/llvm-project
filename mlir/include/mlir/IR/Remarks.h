@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -60,22 +61,27 @@ struct RemarkOpts {
   StringRef categoryName;    // Category name (subject to regex filtering)
   StringRef subCategoryName; // Subcategory name
   StringRef functionName;    // Function name if available
+  bool postponed = false;    // Postpone showing the remark
 
   // Construct RemarkOpts from a remark name.
   static constexpr RemarkOpts name(StringRef n) {
-    return RemarkOpts{n, {}, {}, {}};
+    return RemarkOpts{n, {}, {}, {}, false};
   }
   /// Return a copy with the category set.
   constexpr RemarkOpts category(StringRef v) const {
-    return {remarkName, v, subCategoryName, functionName};
+    return {remarkName, v, subCategoryName, functionName, postponed};
   }
   /// Return a copy with the subcategory set.
   constexpr RemarkOpts subCategory(StringRef v) const {
-    return {remarkName, categoryName, v, functionName};
+    return {remarkName, categoryName, v, functionName, postponed};
   }
   /// Return a copy with the function name set.
   constexpr RemarkOpts function(StringRef v) const {
-    return {remarkName, categoryName, subCategoryName, v};
+    return {remarkName, categoryName, subCategoryName, v, postponed};
+  }
+  /// Return a copy with the postponed flag set.
+  constexpr RemarkOpts postpone() const {
+    return {remarkName, categoryName, subCategoryName, functionName, true};
   }
 };
 
@@ -92,7 +98,7 @@ public:
          RemarkOpts opts)
       : remarkKind(remarkKind), functionName(opts.functionName), loc(loc),
         categoryName(opts.categoryName), subCategoryName(opts.subCategoryName),
-        remarkName(opts.remarkName) {
+        remarkName(opts.remarkName), postponed(opts.postponed) {
     if (!categoryName.empty() && !subCategoryName.empty()) {
       (llvm::Twine(categoryName) + ":" + subCategoryName)
           .toStringRef(fullCategoryName);
@@ -168,6 +174,8 @@ public:
 
   StringRef getRemarkTypeString() const;
 
+  bool isPostponed() const { return postponed; }
+
 protected:
   /// Keeps the MLIR diagnostic kind, which is used to determine the
   /// diagnostic kind in the LLVM remark streamer.
@@ -190,6 +198,9 @@ protected:
 
   /// Args collected via the streaming interface.
   SmallVector<Arg, 4> args;
+
+  /// Whether the remark is postponed (to be shown later).
+  bool postponed = false;
 
 private:
   /// Convert the MLIR diagnostic severity to LLVM diagnostic severity.
@@ -344,6 +355,10 @@ public:
 
 class RemarkEngine {
 private:
+  /// Postponed remarks. They are deferred to the end of the pipeline, where the
+  /// user can intercept them for custom processing, otherwise they will be
+  /// reported on engine destruction.
+  llvm::SmallVector<Remark, 8> postponedRemarks;
   /// Regex that filters missed optimization remarks: only matching one are
   /// reported.
   std::optional<llvm::Regex> missFilter;
@@ -392,6 +407,12 @@ private:
   InFlightRemark emitIfEnabled(Location loc, RemarkOpts opts,
                                bool (RemarkEngine::*isEnabled)(StringRef)
                                    const);
+  /// Emit all postponed remarks.
+  void emitPostponedRemarks();
+
+  /// Report a remark. When `forcePrintPostponedRemarks` is true, the remark
+  /// will be printed even if it is postponed.
+  void reportImpl(const Remark &remark);
 
 public:
   /// Default constructor is deleted, use the other constructor.
@@ -411,7 +432,7 @@ public:
                            std::string *errMsg);
 
   /// Report a remark.
-  void report(const Remark &&remark);
+  void report(const Remark &remark);
 
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
@@ -428,6 +449,12 @@ public:
   /// Report an analysis remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemarkAnalysis(Location loc, RemarkOpts opts);
+
+  /// Get the postponed remarks.
+  ArrayRef<Remark> getPostponedRemarks() const { return postponedRemarks; }
+
+  /// Clear the postponed remarks.
+  void clearPostponedRemarks() { postponedRemarks.clear(); }
 };
 
 template <typename Fn, typename... Args>
