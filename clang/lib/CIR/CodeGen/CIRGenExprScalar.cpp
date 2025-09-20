@@ -2125,12 +2125,13 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
              "Invalid UnaryOp kind for ComplexType Real or Imag");
 
   Expr *op = e->getSubExpr();
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
   if (op->getType()->isAnyComplexType()) {
     // If it's an l-value, load through the appropriate subobject l-value.
     // Note that we have to ask `e` because `op` might be an l-value that
     // this won't work for, e.g. an Obj-C property.
     if (e->isGLValue()) {
-      mlir::Location loc = cgf.getLoc(e->getExprLoc());
       mlir::Value complex = cgf.emitComplexExpr(op);
       if (!promotionTy.isNull()) {
         complex = cgf.emitPromotedValue(complex, promotionTy);
@@ -2147,11 +2148,23 @@ mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
     return {};
   }
 
-  // __real or __imag on a scalar returns zero. Emit the subexpr to ensure side
+  if (e->getOpcode() == UO_Real) {
+    return promotionTy.isNull() ? Visit(op)
+                                : cgf.emitPromotedScalarExpr(op, promotionTy);
+  }
+
+  // __imag on a scalar returns zero. Emit the subexpr to ensure side
   // effects are evaluated, but not the actual value.
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   "VisitRealImag __real or __imag on a scalar");
-  return {};
+  if (op->isGLValue())
+    cgf.emitLValue(op);
+  else if (!promotionTy.isNull())
+    cgf.emitPromotedScalarExpr(op, promotionTy);
+  else
+    cgf.emitScalarExpr(op);
+
+  mlir::Type valueTy =
+      cgf.convertType(promotionTy.isNull() ? e->getType() : promotionTy);
+  return builder.getNullValue(valueTy, loc);
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

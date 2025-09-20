@@ -1001,3 +1001,86 @@ void foo36() {
 // OGCG: %[[A_IMAG_F32:.*]] = fpext half %[[A_IMAG]] to float
 // OGCG: %[[A_IMAG_F16:.*]] = fptrunc float %[[A_IMAG_F32]] to half
 // OGCG: store half %[[A_IMAG_F16]], ptr %[[IMAG_ADDR]], align 2
+
+void foo38() {
+  float a;
+  float b = __real__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM: %[[A_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load float, ptr %[[A_ADDR]], align 4
+// LLVM: store float %[[TMP_A]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca float, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca float, align 4
+// OGCG: %[[TMP_A:.*]] = load float, ptr %[[A_ADDR]], align 4
+// OGCG: store float %[[TMP_A]], ptr %[[B_ADDR]], align 4
+
+void foo39() {
+  float a;
+  float b = __imag__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[CONST_ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
+// CIR: cir.store{{.*}} %[[CONST_ZERO]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM: %[[A_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: store float 0.000000e+00, ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca float, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca float, align 4
+// OGCG: store float 0.000000e+00, ptr %[[B_ADDR]], align 4
+
+void foo40() {
+  _Float16 a;
+  _Float16 b = __real__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
+// CIR: %[[TMP_A_F32:.*]] = cir.cast(floating, %[[TMP_A]] : !cir.f16), !cir.float
+// CIR: %[[TMP_A_F16:.*]] = cir.cast(floating, %[[TMP_A_F32]] : !cir.float), !cir.f16
+// CIR: cir.store{{.*}} %[[TMP_A_F16]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
+
+// LLVM: %[[A_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM: %[[B_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM: %[[TMP_A:.*]] = load half, ptr %[[A_ADDR]], align 2
+// LLVM: %[[TMP_A_F32:.*]] = fpext half %[[TMP_A]] to float
+// LLVM: %[[TMP_A_F16:.*]] = fptrunc float %[[TMP_A_F32]] to half
+// LLVM: store half %[[TMP_A_F16]], ptr %[[B_ADDR]], align 2
+
+// OGCG: %[[A_ADDR:.*]] = alloca half, align 2
+// OGCG: %[[B_ADDR:.*]] = alloca half, align 2
+// OGCG: %[[TMP_A:.*]] = load half, ptr %[[A_ADDR]], align 2
+// OGCG: %[[TMP_A_F32:.*]] = fpext half %[[TMP_A]] to float
+// OGCG: %[[TMP_A_F16:.*]] = fptrunc float %[[TMP_A_F32]] to half
+// OGCG: store half %[[TMP_A_F16]], ptr %[[B_ADDR]], align 2
+
+void foo41() {
+  _Float16 a;
+  _Float16 b = __imag__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CIR: %[[CONST_ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
+// CIR: %[[CONST_ZERO_F16:.*]] = cir.cast(floating, %[[CONST_ZERO]] : !cir.float), !cir.f16
+// CIR: cir.store{{.*}} %[[CONST_ZERO_F16]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
+
+// LLVM: %[[A_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM: %[[B_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM: store half 0xH0000, ptr %[[B_ADDR]], align 2
+
+// OGCG: %[[A_ADDR:.*]] = alloca half, align 2
+// OGCG: %[[B_ADDR:.*]] = alloca half, align 2
+// OGCG: store half 0xH0000, ptr %[[B_ADDR]], align 2
