@@ -22606,7 +22606,7 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
 
   // Skip this combine for non-vector types and for <1 x ty> vectors, as they
   // will be scalarized later.
-  if (!VT.isVector() || VT.getVectorNumElements() == 1)
+  if (!VT.isVector() || VT.isScalableVector() || VT.getVectorNumElements() == 1)
     return SDValue();
 
   unsigned AddrSpace = Store->getAddressSpace();
