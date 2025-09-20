@@ -233,6 +233,56 @@ break; \
   return QC.apply(Context, QT);
 }
 
+/// Try to convert an overflow behavior type to a terse diagnostic string
+/// representation using shorthand forms (__wrap, __no_wrap) instead of full
+/// attribute syntax. Preserve qualifiers and pointer notations.
+static void
+TryConvertOverflowBehaviorTypeToDiagnosticString(ASTContext &Context,
+                                                 QualType Ty, std::string &S) {
+  const OverflowBehaviorType *OBTy = nullptr;
+  StringRef Suffix = "";
+
+  if (const auto *OBT = Ty->getAs<OverflowBehaviorType>())
+    OBTy = OBT;
+  else if (const auto *PtrTy = Ty->getAs<PointerType>()) {
+    if (const auto *OBT =
+            PtrTy->getPointeeType()->getAs<OverflowBehaviorType>()) {
+      OBTy = OBT;
+      Suffix = " *";
+    }
+  }
+
+  if (!OBTy)
+    return;
+
+  std::string TerseSpelling;
+  llvm::raw_string_ostream OS(TerseSpelling);
+
+  StringRef KindName;
+  switch (OBTy->getBehaviorKind()) {
+  case OverflowBehaviorType::OverflowBehaviorKind::Wrap:
+    KindName = "__wrap";
+    break;
+  case OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
+    KindName = "__no_wrap";
+    break;
+  }
+
+  std::string UnderlyingStr =
+      OBTy->getUnderlyingType().getAsString(Context.getPrintingPolicy());
+
+  Qualifiers Quals = Ty.getQualifiers();
+  if (Quals.hasQualifiers()) {
+    std::string QualStr = Quals.getAsString();
+    if (!QualStr.empty()) {
+      UnderlyingStr += " " + QualStr;
+    }
+  }
+
+  OS << KindName << " " << UnderlyingStr << Suffix;
+  S = TerseSpelling;
+}
+
 /// Convert the given type to a string suitable for printing as part of
 /// a diagnostic.
 ///
@@ -339,6 +389,8 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
          << "' " << Values << ")";
       return DecoratedString;
     }
+
+    TryConvertOverflowBehaviorTypeToDiagnosticString(Context, Ty, S);
   }
 
   S = "'" + S + "'";
