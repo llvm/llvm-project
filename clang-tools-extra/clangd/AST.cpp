@@ -142,7 +142,7 @@ std::string getQualification(ASTContext &Context,
   // Go over the declarations in reverse order, since we stored inner-most
   // parent first.
   NestedNameSpecifier Qualifier = std::nullopt;
-  bool IsFirst = true;
+  bool isFirst = true;
   for (const auto *CurD : llvm::reverse(Parents)) {
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurD)) {
       QualType T;
@@ -157,7 +157,7 @@ std::string getQualification(ASTContext &Context,
         T = Context.getTemplateSpecializationType(
             ElaboratedTypeKeyword::None,
             Context.getQualifiedTemplateName(
-                Qualifier, /*TemplateKeyword=*/!IsFirst, TemplateName(CTD)),
+                Qualifier, /*TemplateKeyword=*/!isFirst, TemplateName(CTD)),
             Args, /*CanonicalArgs=*/{}, Context.getCanonicalTagType(RD));
       } else {
         T = Context.getTagType(ElaboratedTypeKeyword::None, Qualifier, TD,
@@ -168,7 +168,7 @@ std::string getQualification(ASTContext &Context,
       Qualifier =
           NestedNameSpecifier(Context, cast<NamespaceDecl>(CurD), Qualifier);
     }
-    IsFirst = false;
+    isFirst = false;
   }
   if (!Qualifier)
     return "";
