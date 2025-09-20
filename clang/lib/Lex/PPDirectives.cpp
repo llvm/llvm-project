@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -2310,7 +2311,6 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SmallString<1024> RelativePath;
   // We get the raw path only if we have 'Callbacks' to which we later pass
   // the path.
-  ModuleMap::KnownHeader SuggestedModule;
   SourceLocation FilenameLoc = FilenameTok.getLocation();
   StringRef LookupFilename = Filename;
 
@@ -2325,10 +2325,48 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     BackslashStyle = llvm::sys::path::Style::windows;
   }
 
-  OptionalFileEntryRef File = LookupHeaderIncludeOrImport(
-      &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
-      IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
-      LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
+  ModuleMap::KnownHeader SuggestedModule;
+  OptionalFileEntryRef File;
+
+  bool IsHeaderUnit = false;
+  if (N2978::managerCompiler) {
+
+    std::string FilePath;
+
+    auto &Responses = N2978::managerCompiler->responses;
+    if (auto it = Responses.find(std::string(Filename));
+        it == Responses.end() ||
+        it->second.type == N2978::ResponseType::MODULE ||
+        (it->second.type == N2978::ResponseType::HEADER_FILE && IsImportDecl)) {
+      N2978::CTBNonModule CTBNonMod;
+      CTBNonMod.isHeaderUnit = IsImportDecl;
+      CTBNonMod.logicalName = Filename.str();
+      if (const auto &Result =
+              N2978::managerCompiler->receiveBTCNonModule(std::move(CTBNonMod));
+          Result) {
+        FilePath = Result->filePath;
+        IsHeaderUnit = Result->isHeaderUnit;
+      } else {
+        // receive failed
+      }
+    } else {
+      FilePath = it->second.file.filePath;
+      IsHeaderUnit = it->second.type == N2978::ResponseType::HEADER_UNIT;
+    }
+
+    File = getFileManager().getOptionalFileRef(FilePath);
+
+    if (IsHeaderUnit) {
+      IsImportDecl = true;
+      SuggestedModule = {getModuleLoader().loadIPCReceivedHeaderUnit(FilePath),
+                         ModuleMap::NormalHeader};
+    }
+  } else {
+    File = LookupHeaderIncludeOrImport(
+        &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
+        IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
+        LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
+  }
 
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
     if (File && isPCHThroughHeader(&File->getFileEntry()))
@@ -2368,8 +2406,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   Module *ModuleToImport = SuggestedModule.getModule();
 
-  bool MaybeTranslateInclude = Action == Enter && File && ModuleToImport &&
-                               !ModuleToImport->isForBuilding(getLangOpts());
+  bool MaybeTranslateInclude =
+      Action == Enter && File && ModuleToImport &&
+      (!ModuleToImport->isForBuilding(getLangOpts()) || IsHeaderUnit);
 
   // Maybe a usable Header Unit
   bool UsableHeaderUnit = false;
@@ -2529,9 +2568,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   }
 
   // Issue a diagnostic if the name of the file on disk has a different case
-  // than the one we're about to open.
+  // than the one we're about to open. Not checked if it is an IPC received
+  // module.
   const bool CheckIncludePathPortability =
-      !IsMapped && !File->getFileEntry().tryGetRealPathName().empty();
+      !IsHeaderUnit && !IsMapped &&
+      !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
     StringRef Name = LookupFilename;

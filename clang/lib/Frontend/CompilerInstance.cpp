@@ -31,6 +31,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -1844,6 +1845,36 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   if (M)
     checkConfigMacros(getPreprocessor(), M, ImportLoc);
 
+  if (N2978::managerCompiler) {
+    // in case of noScanIPC, PrebuiltModuleFiles is empty, so we initialize it
+    // from the build-system here, so the selectModuleSource() call
+    // later-on will return ModuleSource::MS_PrebuiltModulePath.
+    std::string f{ModuleName};
+    if (IsInclusionDirective)
+      f = f.substr(2, f.size() - 2);
+
+    auto &Responses = N2978::managerCompiler->responses;
+    if (const auto it = Responses.find(f);
+        it == Responses.end() || it->second.type != (IsInclusionDirective ? N2978::ResponseType::HEADER_UNIT : N2978::ResponseType::MODULE)) {
+      N2978::CTBModule Mod;
+      Mod.moduleName = ModuleName;
+      if (const auto &r =
+              N2978::managerCompiler->receiveBTCModule(std::move(Mod));
+          r) {
+        auto &[requested, user, deps] = r.value();
+        const_cast<std::map<std::string, std::string, std::less<>> &>(
+            HS.getHeaderSearchOpts().PrebuiltModuleFiles)
+            .emplace(ModuleName, std::move(requested.filePath));
+      } else {
+        // receive failed
+      }
+    } else {
+      const_cast<std::map<std::string, std::string, std::less<>> &>(
+          HS.getHeaderSearchOpts().PrebuiltModuleFiles)
+          .emplace(ModuleName, std::move(it->second.file.filePath));
+    }
+  }
+
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
   ModuleSource Source =
@@ -2338,6 +2369,20 @@ CompilerInstance::lookupMissingImports(StringRef Name,
 
   return false;
 }
+
+Module *CompilerInstance::loadIPCReceivedHeaderUnit(const StringRef FileName) {
+  serialization::ModuleFile *f =
+      getASTReader()->getModuleManager().lookupByFileName(FileName);
+  if (!f)
+    loadModuleFile(FileName, f);
+
+  f->Kind = serialization::MK_PrebuiltModule;
+  const serialization::SubmoduleID Id = getASTReader()->getGlobalSubmoduleID(
+      *f, serialization::NUM_PREDEF_SUBMODULE_IDS);
+
+  return getASTReader()->getSubmodule(Id);
+}
+
 void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 
 void CompilerInstance::setExternalSemaSource(
