@@ -3275,10 +3275,30 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   // Otherwise, a phi node for the scalar value is needed.
   if (State.hasVectorValue(getOperand(0))) {
     Value *VectorValue = State.get(getOperand(0));
-    InsertElementInst *IEI = cast<InsertElementInst>(VectorValue);
-    PHINode *VPhi = State.Builder.CreatePHI(IEI->getType(), 2);
-    VPhi->addIncoming(IEI->getOperand(0), PredicatingBB); // Unmodified vector.
-    VPhi->addIncoming(IEI, PredicatedBB); // New vector with inserted element.
+    
+    // The vector value can be either an InsertElementInst (first iteration)
+    // or a PHINode (subsequent iterations after merging)
+    Value *BaseVector = nullptr;
+    Value *MergedVector = nullptr;
+    
+    if (auto *IEI = dyn_cast<InsertElementInst>(VectorValue)) {
+      // First iteration: we have an InsertElementInst
+      BaseVector = IEI->getOperand(0);  // Unmodified vector
+      MergedVector = IEI;                // Vector with inserted element
+    } else if (auto *PHI = dyn_cast<PHINode>(VectorValue)) {
+      // Subsequent iterations: we have a PHI from previous merge
+      BaseVector = PHI;     // Use the PHI as the base for both paths
+      MergedVector = PHI;   // The merged vector is also the PHI
+    } else {
+      // Fallback: handle other vector types (e.g., Undef, Poison)
+      BaseVector = VectorValue;
+      MergedVector = VectorValue;
+    }
+    
+    PHINode *VPhi = State.Builder.CreatePHI(VectorValue->getType(), 2);
+    VPhi->addIncoming(BaseVector, PredicatingBB);    // Unmodified vector
+    VPhi->addIncoming(MergedVector, PredicatedBB);   // New/merged vector
+    
     if (State.hasVectorValue(this))
       State.reset(this, VPhi);
     else
