@@ -563,8 +563,12 @@ public:
   /// Atomic code-generation options.
   /// These flags are set directly from the command-line options.
   bool AtomicRemoteMemory = false;
+  bool AtomicRemoteMemorySpecified = false;
   bool AtomicFineGrainedMemory = false;
+  bool AtomicFineGrainedMemorySpecified = false;
   bool AtomicIgnoreDenormalMode = false;
+  bool AtomicIgnoreDenormalModeSpecified = false;
+  bool AtomicBackwardCompatible = true;
 
   LangOptions();
 
@@ -1047,20 +1051,36 @@ enum class AtomicOptionKind {
 };
 
 struct AtomicOptions {
-  // Bitfields for each option.
-  unsigned remote_memory : 1;
-  unsigned fine_grained_memory : 1;
-  unsigned ignore_denormal_mode : 1;
+  // Tri-state for each option: unset / true / false.
+  std::optional<bool> remote_memory;
+  std::optional<bool> fine_grained_memory;
+  std::optional<bool> ignore_denormal_mode;
 
-  AtomicOptions()
-      : remote_memory(0), fine_grained_memory(0), ignore_denormal_mode(0) {}
+  // Default constructs with everything unset.
+  AtomicOptions() = default;
 
+  // Construct with all values explicitly set from LangOptions (used when you
+  // want a fully-specified options set, e.g., to compute effective values).
   AtomicOptions(const LangOptions &LO)
       : remote_memory(LO.AtomicRemoteMemory),
         fine_grained_memory(LO.AtomicFineGrainedMemory),
         ignore_denormal_mode(LO.AtomicIgnoreDenormalMode) {}
 
-  bool getOption(AtomicOptionKind Kind) const {
+  // Whether an option was explicitly set (true/false) vs. unset.
+  bool hasOption(AtomicOptionKind Kind) const {
+    switch (Kind) {
+    case AtomicOptionKind::RemoteMemory:
+      return remote_memory.has_value();
+    case AtomicOptionKind::FineGrainedMemory:
+      return fine_grained_memory.has_value();
+    case AtomicOptionKind::IgnoreDenormalMode:
+      return ignore_denormal_mode.has_value();
+    }
+    llvm_unreachable("Invalid AtomicOptionKind");
+  }
+
+  // Get the tri-state value (std::optional<bool>) of an option.
+  std::optional<bool> getTri(AtomicOptionKind Kind) const {
     switch (Kind) {
     case AtomicOptionKind::RemoteMemory:
       return remote_memory;
@@ -1072,7 +1092,8 @@ struct AtomicOptions {
     llvm_unreachable("Invalid AtomicOptionKind");
   }
 
-  void setOption(AtomicOptionKind Kind, bool Value) {
+  // Set or clear (unset) an option explicitly.
+  void setOption(AtomicOptionKind Kind, std::optional<bool> Value) {
     switch (Kind) {
     case AtomicOptionKind::RemoteMemory:
       remote_memory = Value;
@@ -1088,9 +1109,15 @@ struct AtomicOptions {
   }
 
   LLVM_DUMP_METHOD void dump() const {
-    llvm::errs() << "\n remote_memory: " << remote_memory
-                 << "\n fine_grained_memory: " << fine_grained_memory
-                 << "\n ignore_denormal_mode: " << ignore_denormal_mode << "\n";
+    auto TriStr = [](const std::optional<bool> &v) -> const char * {
+      if (!v.has_value())
+        return "Unset";
+      return *v ? "1" : "0";
+    };
+    llvm::errs() << "\n remote_memory: " << TriStr(remote_memory)
+                 << "\n fine_grained_memory: " << TriStr(fine_grained_memory)
+                 << "\n ignore_denormal_mode: " << TriStr(ignore_denormal_mode)
+                 << "\n";
   }
 };
 
