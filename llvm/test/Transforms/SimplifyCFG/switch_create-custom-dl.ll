@@ -33,6 +33,8 @@ F:              ; preds = %0
   ret void
 }
 
+; We need to use finer-grained DataLayout properties for non-integral pointers
+; FIXME: Should be using a switch here
 define void @test1_ptr(ptr %V) {
 ; CHECK-LABEL: @test1_ptr(
 ; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint ptr [[V:%.*]] to i40

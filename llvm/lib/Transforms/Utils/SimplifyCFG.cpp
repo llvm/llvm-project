@@ -525,28 +525,32 @@ static bool dominatesMergePoint(
 static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
   // Normal constant int.
   ConstantInt *CI = dyn_cast<ConstantInt>(V);
-  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy() ||
-      DL.isNonIntegralPointerType(V->getType()))
+  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
     return CI;
 
   // This is some kind of pointer constant. Turn it into a pointer-sized
   // ConstantInt if possible.
-  IntegerType *PtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
+  IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
 
   // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
   if (isa<ConstantPointerNull>(V))
-    return ConstantInt::get(PtrTy, 0);
+    return ConstantInt::get(IntPtrTy, 0);
 
-  // IntToPtr const int.
+  // IntToPtr const int, we can look through this unless the semantics of
+  // inttoptr for this address space aren't a simple bitcast.
+  // TODO: should this be relaxed to hasUnstableRepresentation? The
+  // transformation made here should also be safe for CHERI.
+  if (DL.shouldAvoidIntToPtr(V->getType()))
+    return nullptr;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == Instruction::IntToPtr)
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
         // The constant is very likely to have the right type already.
-        if (CI->getType() == PtrTy)
+        if (CI->getType() == IntPtrTy)
           return CI;
         else
           return cast<ConstantInt>(
-              ConstantFoldIntegerCast(CI, PtrTy, /*isSigned=*/false, DL));
+              ConstantFoldIntegerCast(CI, IntPtrTy, /*isSigned=*/false, DL));
       }
   return nullptr;
 }
