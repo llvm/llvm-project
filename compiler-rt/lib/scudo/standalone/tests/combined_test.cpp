@@ -151,12 +151,8 @@ void TestAllocator<Config>::operator delete(void *ptr) {
 }
 
 template <class TypeParam> struct ScudoCombinedTest : public Test {
-  ScudoCombinedTest() {
-    Allocator = std::make_unique<AllocatorT>();
-  }
-  ~ScudoCombinedTest() {
-    Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-  }
+  ScudoCombinedTest() { Allocator = std::make_unique<AllocatorT>(); }
+  ~ScudoCombinedTest() { Allocator->releaseToOS(scudo::ReleaseToOS::Force); }
 
   void RunTest();
 
