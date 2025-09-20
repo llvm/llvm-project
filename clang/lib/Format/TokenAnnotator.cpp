@@ -6035,11 +6035,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // FIXME: Not covered by tests.
     if (Right.isNot(TT_FunctionLBrace)) {
       return Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Never &&
-                 (Line.startsWith(tok::kw_class) &&
-                  Style.BraceWrapping.AfterClass) ||
-             (Line.startsWith(tok::kw_struct) &&
-              Style.BraceWrapping.AfterStruct) ||
-             (Line.startsWith(tok::kw_union) && Style.BraceWrapping.AfterUnion);
+             ((Line.startsWith(tok::kw_class) &&
+               Style.BraceWrapping.AfterClass) ||
+              (Line.startsWith(tok::kw_struct) &&
+               Style.BraceWrapping.AfterStruct) ||
+              (Line.startsWith(tok::kw_union) &&
+               Style.BraceWrapping.AfterUnion));
     }
   }
 
