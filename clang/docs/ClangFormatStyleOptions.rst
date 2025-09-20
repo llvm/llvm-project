@@ -3565,6 +3565,21 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakFunctionDeclarationParameters:
+
+**BreakFunctionDeclarationParameters** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakFunctionDeclarationParameters>`
+  If ``true``, clang-format will always break before function declaration
+  parameters.
+
+  .. code-block:: c++
+
+     true:
+     void functionDeclaration(
+              int A, int B);
+
+     false:
+     void functionDeclaration(int A, int B);
+
 .. _BreakFunctionDefinitionParameters:
 
 **BreakFunctionDefinitionParameters** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <BreakFunctionDefinitionParameters>`
