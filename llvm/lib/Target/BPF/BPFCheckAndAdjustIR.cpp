@@ -55,6 +55,7 @@ private:
   bool sinkMinMax(Module &M);
   bool removeGEPBuiltins(Module &M);
   bool insertASpaceCasts(Module &M);
+  bool renameCallTableGlobal(Module &M);
 };
 } // End anonymous namespace
 
@@ -527,12 +528,53 @@ bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
   return Changed;
 }
 
+static bool isAllFunctionInCA(ConstantArray *CA) {
+  for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
+    if (!dyn_cast<Function>(CA->getOperand(i)))
+      return false;
+  }
+  return true;
+}
+
+bool BPFCheckAndAdjustIR::renameCallTableGlobal(Module &M) {
+  bool Changed = false;
+  for (GlobalVariable &Global : M.globals()) {
+    if (Global.getLinkage() != GlobalValue::PrivateLinkage &&
+        Global.getLinkage() != GlobalValue::InternalLinkage &&
+        Global.getLinkage() != GlobalValue::ExternalLinkage)
+      continue;
+    if (Global.getLinkage() == GlobalValue::PrivateLinkage &&
+        !Global.isConstant())
+      continue;
+    if (!Global.hasInitializer())
+      continue;
+
+    Constant *CV = dyn_cast<Constant>(Global.getInitializer());
+    if (!CV)
+      continue;
+    ConstantArray *CA = dyn_cast<ConstantArray>(CV);
+    if (!CA)
+      continue;
+    if (!isAllFunctionInCA(CA))
+      continue;
+
+    Global.setName("BPF." + Global.getName());
+    if (Global.getLinkage() == GlobalValue::PrivateLinkage)
+      Global.setLinkage(GlobalValue::LinkageTypes::InternalLinkage);
+    Global.setSection(".calltables");
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 bool BPFCheckAndAdjustIR::adjustIR(Module &M) {
   bool Changed = removePassThroughBuiltin(M);
   Changed = removeCompareBuiltin(M) || Changed;
   Changed = sinkMinMax(M) || Changed;
   Changed = removeGEPBuiltins(M) || Changed;
   Changed = insertASpaceCasts(M) || Changed;
+  Changed = renameCallTableGlobal(M) || Changed;
   return Changed;
 }
 
