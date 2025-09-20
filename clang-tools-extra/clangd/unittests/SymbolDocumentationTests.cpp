@@ -15,7 +15,7 @@
 namespace clang {
 namespace clangd {
 
-TEST(SymbolDocumentation, UnhandledDocs) {
+TEST(SymbolDocumentation, DocToMarkup) {
 
   CommentOptions CommentOpts;
 
@@ -63,15 +63,15 @@ TEST(SymbolDocumentation, UnhandledDocs) {
       },
       {
           "foo \\ref bar baz",
-          "foo \\*\\*\\\\ref\\*\\* \\*bar\\* baz",
-          "foo **\\ref** *bar* baz",
-          "foo **\\ref** *bar* baz",
+          "foo \\*\\*\\\\ref\\*\\* `bar` baz",
+          "foo **\\ref** `bar` baz",
+          "foo **\\ref** bar baz",
       },
       {
           "foo @ref bar baz",
-          "foo \\*\\*@ref\\*\\* \\*bar\\* baz",
-          "foo **@ref** *bar* baz",
-          "foo **@ref** *bar* baz",
+          "foo \\*\\*@ref\\*\\* `bar` baz",
+          "foo **@ref** `bar` baz",
+          "foo **@ref** bar baz",
       },
       {
           "\\brief this is a \\n\nbrief description",
@@ -81,9 +81,9 @@ TEST(SymbolDocumentation, UnhandledDocs) {
       },
       {
           "\\throw exception foo",
-          "\\*\\*\\\\throw\\*\\* \\*exception\\* foo",
-          "**\\throw** *exception* foo",
-          "**\\throw** *exception* foo",
+          "\\*\\*\\\\throw\\*\\* `exception` foo",
+          "**\\throw** `exception` foo",
+          "**\\throw** exception foo",
       },
       {
           R"(\brief this is a brief description
@@ -198,6 +198,505 @@ normal text\<i>this is an italic text\</i>
           "<b>this is a bold text</b> normal text<i>this is an italic text</i> "
           "<code>this is a code block</code>",
       },
+      {"@note This is a note",
+       R"(\*\*Note:\*\*  
+This is a note)",
+       R"(**Note:**  
+This is a note)",
+       R"(**Note:**
+This is a note)"},
+      {R"(Paragraph 1
+@note This is a note
+
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+\*\*Note:\*\*  
+This is a note
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+**Note:**  
+This is a note
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+**Note:**
+This is a note
+
+Paragraph 2)"},
+      {"@warning This is a warning",
+       R"(\*\*Warning:\*\*  
+This is a warning)",
+       R"(**Warning:**  
+This is a warning)",
+       R"(**Warning:**
+This is a warning)"},
+      {R"(Paragraph 1
+@warning This is a warning
+
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+\*\*Warning:\*\*  
+This is a warning
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+---
+**Warning:**  
+This is a warning
+
+---
+Paragraph 2)",
+       R"(Paragraph 1
+
+**Warning:**
+This is a warning
+
+Paragraph 2)"},
+  };
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.docToMarkup(Doc);
+
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, RetvalCommand) {
+
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {"@retval", "", "", ""},
+      {R"(@retval MyReturnVal
+@retval MyOtherReturnVal)",
+       R"(- `MyReturnVal`
+- `MyOtherReturnVal`)",
+       R"(- `MyReturnVal`
+- `MyOtherReturnVal`)",
+       R"(- MyReturnVal
+- MyOtherReturnVal)"},
+      {R"(@retval MyReturnVal if foo
+@retval MyOtherReturnVal if bar)",
+       R"(- `MyReturnVal` - if foo
+- `MyOtherReturnVal` - if bar)",
+       R"(- `MyReturnVal` - if foo
+- `MyOtherReturnVal` - if bar)",
+       R"(- MyReturnVal - if foo
+- MyOtherReturnVal - if bar)"},
+  };
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.retvalsToMarkup(Doc);
+
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, DoxygenCodeBlocks) {
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {R"(@code
+int code() { return 0; }
+@endcode
+@code{.cpp}
+int code_lang() { return 0; }
+@endcode
+@code{.c++}
+int code_lang_plus() { return 0; }
+@endcode
+@code{.py}
+class A:
+    pass
+@endcode
+@code{nolang}
+class B:
+    pass
+@endcode)",
+       R"(```
+int code() { return 0; }
+```
+
+```cpp
+int code_lang() { return 0; }
+```
+
+```c++
+int code_lang_plus() { return 0; }
+```
+
+```py
+class A:
+    pass
+```
+
+```nolang
+class B:
+    pass
+```)",
+       R"(```
+int code() { return 0; }
+```
+
+```cpp
+int code_lang() { return 0; }
+```
+
+```c++
+int code_lang_plus() { return 0; }
+```
+
+```py
+class A:
+    pass
+```
+
+```nolang
+class B:
+    pass
+```)",
+       R"(int code() { return 0; }
+
+int code_lang() { return 0; }
+
+int code_lang_plus() { return 0; }
+
+class A:
+    pass
+
+class B:
+    pass)"},
+  };
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.docToMarkup(Doc);
+
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, MarkdownCodeBlocks) {
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {R"(```
+int backticks() { return 0; }
+```
+```cpp
+int backticks_lang() { return 0; }
+```
+```c++
+int backticks_lang_plus() { return 0; }
+```
+~~~
+int tilde() { return 0; }
+~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+int tilde_many() { return 0; }
+~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~{.c++}
+int tilde_many_lang() { return 0; }
+~~~~~~~~~~~~~~~~~~~~~~~~
+```py
+class A:
+    pass
+```
+```python
+class B:
+    pass
+```
+~~~{.python}
+class C:
+    pass
+~~~
+)",
+       R"(```
+int backticks() { return 0; }
+```
+
+```cpp
+int backticks_lang() { return 0; }
+```
+
+```c++
+int backticks_lang_plus() { return 0; }
+```
+
+```
+int tilde() { return 0; }
+```
+
+```
+int tilde_many() { return 0; }
+```
+
+```c++
+int tilde_many_lang() { return 0; }
+```
+
+```py
+class A:
+    pass
+```
+
+```python
+class B:
+    pass
+```
+
+```python
+class C:
+    pass
+```)",
+       R"(```
+int backticks() { return 0; }
+```
+
+```cpp
+int backticks_lang() { return 0; }
+```
+
+```c++
+int backticks_lang_plus() { return 0; }
+```
+
+```
+int tilde() { return 0; }
+```
+
+```
+int tilde_many() { return 0; }
+```
+
+```c++
+int tilde_many_lang() { return 0; }
+```
+
+```py
+class A:
+    pass
+```
+
+```python
+class B:
+    pass
+```
+
+```python
+class C:
+    pass
+```)",
+       R"(int backticks() { return 0; }
+
+int backticks_lang() { return 0; }
+
+int backticks_lang_plus() { return 0; }
+
+int tilde() { return 0; }
+
+int tilde_many() { return 0; }
+
+int tilde_many_lang() { return 0; }
+
+class A:
+    pass
+
+class B:
+    pass
+
+class C:
+    pass)"},
+      {R"(```
+// this code block is missing end backticks
+
+)",
+       R"(```
+// this code block is missing end backticks
+```)",
+       R"(```
+// this code block is missing end backticks
+```)",
+       R"(// this code block is missing end backticks)"},
+  };
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.docToMarkup(Doc);
+
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, MarkdownCodeBlocksSeparation) {
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {R"(@note Show that code blocks are correctly separated
+```
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; }
+```)",
+       R"(\*\*Note:\*\*  
+Show that code blocks are correctly separated
+
+---
+```
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; }
+```)",
+       R"(**Note:**  
+Show that code blocks are correctly separated
+
+---
+```
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; }
+```)",
+       R"(**Note:**
+Show that code blocks are correctly separated
+
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; })"},
+      {R"(@note Show that code blocks are correctly separated
+~~~~~~~~~
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; }
+~~~~~~~~~)",
+       R"(\*\*Note:\*\*  
+Show that code blocks are correctly separated
+
+---
+```
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; }
+```)",
+       R"(**Note:**  
+Show that code blocks are correctly separated
+
+---
+```
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; }
+```)",
+       R"(**Note:**
+Show that code blocks are correctly separated
+
+/// Without the markdown preprocessing, this line and the line above would be part of the @note paragraph.
+
+/// With preprocessing, the code block is correctly separated from the @note paragraph.
+/// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
+int function() { return 0; })"},
+  };
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
+
+    SymbolDoc.docToMarkup(Doc);
+
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+    EXPECT_EQ(Doc.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
+  }
+}
+
+TEST(SymbolDocumentation, MarkdownCodeSpans) {
+  CommentOptions CommentOpts;
+
+  struct Case {
+    llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {R"(`this is a code span with @p and \c inside`)",
+       R"(\`this is a code span with @p and \\c inside\`)",
+       R"(`this is a code span with @p and \c inside`)",
+       R"(`this is a code span with @p and \c inside`)"},
+      {R"(<escaped> `<not-escaped>`)", R"(\<escaped> \`\<not-escaped>\`)",
+       R"(\<escaped> `<not-escaped>`)", R"(<escaped> `<not-escaped>`)"},
+      {R"(<escaped> \`<escaped> doxygen commands not parsed @p, \c, @note, \warning \`)",
+       R"(\<escaped> \\\`\<escaped> doxygen commands not parsed @p, \\c, @note, \\warning \\\`)",
+       R"(\<escaped> \`\<escaped> doxygen commands not parsed @p, \c, @note, \warning \`)",
+       R"(<escaped> \`<escaped> doxygen commands not parsed @p, \c, @note, \warning \`)"},
+      {R"(`multi
+line
+\c span`)",
+       R"(\`multi
+line
+\\c span\`)",
+       R"(`multi
+line
+\c span`)",
+       R"(`multi line
+\c span`)"},
   };
   for (const auto &C : Cases) {
     markup::Document Doc;
