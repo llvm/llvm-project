@@ -49,3 +49,18 @@ SCUDO_FLAG(int, release_to_os_interval_ms, 5000,
 SCUDO_FLAG(int, allocation_ring_buffer_size, 32768,
            "Entries to keep in the allocation ring buffer for scudo. "
            "Values less or equal to zero disable the buffer.")
+
+SCUDO_FLAG(bool, delete_alignment_mismatch, true,
+           "Terminate on an alignment mismatch between a aligned-delete and "
+           "the actual "
+           "alignment of a chunk (as provided to new/new[]).")
+
+SCUDO_FLAG(bool, free_size_mismatch, true,
+           "Terminate on a size mismatch between a free_sized and the actual "
+           "size of a chunk (as provided to malloc/calloc/realloc).")
+
+SCUDO_FLAG(bool, free_alignment_mismatch, true,
+           "Terminate on an alignment mismatch between a free_aligned_sized "
+           "and the actual "
+           "alignment of a chunk (as provided to "
+           "aligned_alloc/posix_memalign/memalign).")
