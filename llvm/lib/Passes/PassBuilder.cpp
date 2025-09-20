@@ -381,6 +381,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
+#include "llvm/Transforms/Vectorize/StridedLoopUnroll.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include <optional>
 
