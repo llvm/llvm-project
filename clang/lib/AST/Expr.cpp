@@ -2544,19 +2544,18 @@ Stmt *BlockExpr::getBody() {
 //===----------------------------------------------------------------------===//
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
-namespace {
+
 /// Helper to determine wether \c E is a CXXConstructExpr constructing
 /// a DecompositionDecl. Used to skip Clang-generated calls to std::get
 /// for structured bindings.
-bool IsDecompositionDeclRefExpr(const Expr *E) {
-  const Expr *Unrwapped = E->IgnoreUnlessSpelledInSource();
-  const DeclRefExpr *Ref = llvm::dyn_cast_or_null<DeclRefExpr>(Unrwapped);
+static bool IsDecompositionDeclRefExpr(const Expr *E) {
+  const auto *Unwrapped = E->IgnoreUnlessSpelledInSource();
+  const auto *Ref = dyn_cast<DeclRefExpr>(Unwrapped);
   if (!Ref)
     return false;
 
-  return llvm::isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
+  return isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
 }
-} // namespace
 
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   // In C++11, discarded-value expressions of a certain form are special,
