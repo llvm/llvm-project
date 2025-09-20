@@ -92,7 +92,7 @@ class InstructionEncoding {
   SmallVector<OperandInfo, 16> Operands;
 
 public:
-  InstructionEncoding(const CodeGenTarget &Target, const Record *EncodingDef,
+  InstructionEncoding(const Record *EncodingDef,
                       const CodeGenInstruction *Inst);
 
   /// Returns the Record this encoding originates from.
@@ -141,17 +141,16 @@ public:
   /// \returns the effective value of the DecoderMethod field. If DecoderMethod
   /// is an explictly set value, return false for second.
   static std::pair<std::string, bool>
-  findOperandDecoderMethod(const CodeGenTarget &Target, const Record *Record);
+  findOperandDecoderMethod(const Record *Record);
 
-  static OperandInfo getOpInfo(const CodeGenTarget &Target,
-                               const Record *TypeRecord);
+  static OperandInfo getOpInfo(const Record *TypeRecord);
 
 private:
   void parseVarLenEncoding(const VarLenInst &VLI);
   void parseFixedLenEncoding(const BitsInit &RecordInstBits);
 
-  void parseVarLenOperands(const CodeGenTarget &Target, const VarLenInst &VLI);
-  void parseFixedLenOperands(const CodeGenTarget &Target, const BitsInit &Bits);
+  void parseVarLenOperands(const VarLenInst &VLI);
+  void parseFixedLenOperands(const BitsInit &Bits);
 };
 
 } // namespace llvm
