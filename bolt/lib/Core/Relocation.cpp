@@ -953,6 +953,9 @@ bool Relocation::isTLS(uint32_t Type) {
     return isTLSRISCV(Type);
   case Triple::x86_64:
     return isTLSX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return false;
   }
 }
 
