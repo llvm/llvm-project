@@ -97,9 +97,9 @@ include(config-ix)
 include(HandleOpenMPOptions)
 
 # Check for flang
-set(OPENMP_TEST_Fortran_COMPILER_default "flang")
+set(OPENMP_TEST_Fortran_COMPILER_default "")
 if (CMAKE_Fortran_COMPILER)
-    set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
+  set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
 endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
