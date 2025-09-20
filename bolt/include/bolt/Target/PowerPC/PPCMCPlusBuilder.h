@@ -15,6 +15,8 @@ public:
   bool shouldRecordCodeRelocation(unsigned Type) const override;
 
   bool hasPCRelOperand(const MCInst &I) const override;
+  int getPCRelOperandNum(const MCInst &Inst) const;
+
   int getMemoryOperandNo(const MCInst &Inst) const override;
 
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
@@ -30,6 +32,8 @@ public:
   bool isReturn(const MCInst &Inst) const override;
   bool isConditionalBranch(const MCInst &Inst) const override;
   bool isUnconditionalBranch(const MCInst &Inst) const override;
+
+  const MCInst *getConditionalTailCall(const MCInst &Inst) const;
 
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
