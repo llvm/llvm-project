@@ -4667,6 +4667,16 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeInheritanceColon;
 
+  /// If ``false``, spaces will be removed between underscore and an opening
+  /// parenthesis. This is specifically for the gettext macro ``_()`` commonly
+  /// used in GNU projects.
+  /// \code
+  ///    true:                                  false:
+  ///    _ (message);                   vs.     _(message);
+  /// \endcode
+  /// \version 19
+  bool SpaceBeforeUnderscoreParens;
+
   /// If ``true``, a space will be added before a JSON colon. For other
   /// languages, e.g. JavaScript, use ``SpacesInContainerLiterals`` instead.
   /// \code
