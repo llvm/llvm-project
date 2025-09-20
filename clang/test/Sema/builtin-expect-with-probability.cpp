@@ -57,3 +57,19 @@ void test(int x, double p) { // expected-note {{declared here}}
   dummy = __builtin_expect_with_probability(x > 0, 1, pi);
   expect_taken<S>(x);
 }
+
+namespace gh153082{
+    template <typename T> void f() {
+        (void) __builtin_expect_with_probability(0, 0, ({ 0; }));
+    }
+
+    template <typename T> void more_test_case(long a) {
+        (void)__builtin_expect_with_probability(a, 0, sizeof(T)/3.9);   // expected-error {{probability argument to __builtin_expect_with_probability is outside the range [0.0, 1.0]}} \
+                                                                        // expected-error {{probability argument}}
+    }
+
+    template void more_test_case<short>(long);
+    template void more_test_case<char>(long);
+    template void more_test_case<int>(long); // expected-note {{in instantiation of function template specialization 'gh153082::more_test_case<int>' requested here}}
+    template void more_test_case<long long>(long); // expected-note {{instantiation of function template specialization 'gh153082::more_test_case<long long>' requested here}}
+};
