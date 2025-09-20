@@ -114,9 +114,9 @@ def load_myint_dialect():
     m.operation.verify()
     irdl.load_dialects(m)
 
-# this PDL pattern is to fold constant additions,
+# This PDL pattern is to fold constant additions,
 # i.e. add(constant0, constant1) -> constant2
-# where constant2 = constant0 + constant1
+# where constant2 = constant0 + constant1.
 def get_pdl_pattern_fold():
     m = Module.create()
     with InsertionPoint(m.body):
@@ -139,12 +139,13 @@ def get_pdl_pattern_fold():
                 )
                 pdl.ReplaceOp(op0, with_op=newOp)
 
-    pdl_module = PDLModule(m)
     def add_fold(rewriter, results, values):
         a0, a1 = [i.get() for i in values]
         i32 = IntegerType.get_signless(32)
         results.push_back(IntegerAttr.get(i32, a0.value + a1.value))
         return True
+
+    pdl_module = PDLModule(m)
     pdl_module.register_rewrite_function("add_fold", add_fold)
     return pdl_module.freeze()
 
