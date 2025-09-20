@@ -100,7 +100,7 @@ static bool isPossiblyBitMask(const EnumDecl *EnumDec) {
   return NonPowOfTwoCounter >= 1 && NonPowOfTwoCounter <= 2 &&
          NonPowOfTwoCounter < EnumLen / 2 &&
          (VR.MaxVal - VR.MinVal != EnumLen - 1) &&
-         !(NonPowOfTwoCounter == 1 && isMaxValAllBitSetLiteral(EnumDec));
+         (NonPowOfTwoCounter != 1 || !isMaxValAllBitSetLiteral(EnumDec));
 }
 
 SuspiciousEnumUsageCheck::SuspiciousEnumUsageCheck(StringRef Name,
