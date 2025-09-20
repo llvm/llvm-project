@@ -998,6 +998,15 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def WaveGetLaneCount : DXILOp<112, waveGetLaneCount> {
+  let Doc = "returns the number of lanes in a wave on this architecture";
+  let intrinsics = [IntrinSelect<int_dx_wave_get_lane_count>];
+  let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let Doc = "returns true if the expression is true in any of the active lanes "
             "in the current wave";
