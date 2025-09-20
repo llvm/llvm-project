@@ -332,6 +332,10 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                               unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
