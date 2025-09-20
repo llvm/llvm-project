@@ -9,11 +9,13 @@
 #include "Rewrite.h"
 
 #include "IRModule.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir/Config/mlir-config.h"
 #include "nanobind/nanobind.h"
 
