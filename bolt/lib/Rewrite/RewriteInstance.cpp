@@ -2979,6 +2979,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                        const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
   const bool IsX86 = BC->isX86();
+  const bool IsPPC64 = BC->isPPC64();
   const bool IsFromCode = RelocatedSection.isText();
   const bool IsWritable = BinarySection(*BC, RelocatedSection).isWritable();
 
@@ -3089,23 +3090,48 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
+
+  // --- SAFE symbol->section lookup (PPC64 only) ---
   symbol_iterator SymbolIter = Rel.getSymbol();
   if (SymbolIter != InputFile->symbol_end()) {
     SymbolRef Symbol = *SymbolIter;
-    section_iterator Section =
-        cantFail(Symbol.getSection(), "cannot get symbol section");
-    if (Section != InputFile->section_end()) {
-      Expected<StringRef> SectionName = Section->getName();
+
+    section_iterator SectionIt = InputFile->section_end();
+    if (IsPPC64) {
+      auto SecOrErr = Symbol.getSection();
+      if (!SecOrErr) {
+        consumeError(SecOrErr.takeError());
+        SectionIt = InputFile->section_end();
+      } else {
+        SectionIt = *SecOrErr;
+      }
+    } else {
+      SectionIt = cantFail(Symbol.getSection(), "cannot get symbol section");
+    }
+
+    if (SectionIt != InputFile->section_end()) {
+      Expected<StringRef> SectionName = SectionIt->getName();
       if (SectionName && !SectionName->empty())
         ReferencedSection = BC->getUniqueSectionByName(*SectionName);
-    } else if (BC->isRISCV() && ReferencedSymbol && ContainingBF &&
-               (cantFail(Symbol.getFlags()) & SymbolRef::SF_Absolute)) {
-      // This might be a relocation for an ABS symbols like __global_pointer$ on
-      // RISC-V
-      ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol,
-                                  Relocation::getType(Rel), 0,
-                                  cantFail(Symbol.getValue()));
-      return;
+    } else if (BC->isRISCV() && ReferencedSymbol && ContainingBF) {
+      uint32_t SymFlags = 0;
+      if (IsPPC64) {
+        auto FOrErr = Symbol.getFlags();
+        if (!FOrErr) {
+          consumeError(FOrErr.takeError());
+          SymFlags = 0;
+        } else {
+          SymFlags = *FOrErr;
+        }
+      } else {
+        SymFlags = cantFail(Symbol.getFlags());
+      }
+      if (SymFlags & SymbolRef::SF_Absolute) {
+        ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol,
+                                    Relocation::getType(Rel), 0,
+                                    cantFail(Symbol.getValue()));
+        return;
+      }
     }
   }
 
@@ -3305,31 +3331,32 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                 BD->getSectionName().ends_with(".plt")))) &&
              "BOLT symbol names of all non-section relocations must match up "
              "with symbol names referenced in the relocation");
-
-      if (IsSectionRelocation)
-        BC->markAmbiguousRelocations(*BD, Address);
-
-      ReferencedSymbol = BD->getSymbol();
-      Addend += (SymbolAddress - BD->getAddress());
-      SymbolAddress = BD->getAddress();
-      assert(Address == SymbolAddress + Addend);
+    }
+    if (IsSectionRelocation) {
+      ReferencedSymbol = BC->getOrCreateGlobalSymbol(SymbolAddress, "SYMBOLat");
     } else {
-      // These are mostly local data symbols but undefined symbols
-      // in relocation sections can get through here too, from .plt.
-      assert(
-          (IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
-           BC->getSectionNameForAddress(SymbolAddress)->starts_with(".plt")) &&
-          "known symbols should not resolve to anonymous locals");
-
-      if (IsSectionRelocation) {
+      symbol_iterator It = Rel.getSymbol();
+      if (It == InputFile->symbol_end()) {
         ReferencedSymbol =
-            BC->getOrCreateGlobalSymbol(SymbolAddress, "SYMBOLat");
+            BC->registerNameAtAddress(NR.uniquify(SymbolName), SymbolAddress,
+                                      /*Size=*/0, /*Alignment=*/1, /*Flags=*/0);
       } else {
-        SymbolRef Symbol = *Rel.getSymbol();
-        const uint64_t SymbolSize =
-            IsAArch64 ? 0 : ELFSymbolRef(Symbol).getSize();
-        const uint64_t SymbolAlignment = IsAArch64 ? 1 : Symbol.getAlignment();
-        const uint32_t SymbolFlags = cantFail(Symbol.getFlags());
+        SymbolRef Symbol = *It;
+
+        uint64_t SymbolSize =
+            IsAArch64 ? 0 : ELFSymbolRef(Symbol).getSize(); // plain value
+        uint64_t SymbolAlignment = Symbol.getAlignment();   // plain value
+        uint32_t SymbolFlags = 0;
+
+        if (IsPPC64) {
+          if (auto FlagsOrErr = Symbol.getFlags())
+            SymbolFlags = *FlagsOrErr;
+          else
+            consumeError(FlagsOrErr.takeError());
+        } else {
+          SymbolFlags = cantFail(Symbol.getFlags());
+        }
+
         std::string Name;
         if (SymbolFlags & SymbolRef::SF_Global) {
           Name = SymbolName;
@@ -3343,13 +3370,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
         ReferencedSymbol = BC->registerNameAtAddress(
             Name, SymbolAddress, SymbolSize, SymbolAlignment, SymbolFlags);
       }
-
-      if (IsSectionRelocation) {
-        BinaryData *BD = BC->getBinaryDataByName(ReferencedSymbol->getName());
-        BC->markAmbiguousRelocations(*BD, Address);
-      }
-    }
   }
+}
 
   auto checkMaxDataRelocations = [&]() {
     ++NumDataRelocations;
