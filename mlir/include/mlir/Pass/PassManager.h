@@ -282,6 +282,11 @@ public:
   /// Add the provided instrumentation to the pass manager.
   void addInstrumentation(std::unique_ptr<PassInstrumentation> pi);
 
+  /// Enable or disable the printing of pass manager reproducer.
+  void enableGeneratePassManagerReproducer(std::string filename) {
+    generatePassManagerReproducer = std::move(filename);
+  }
+
   //===--------------------------------------------------------------------===//
   // IR Printing
 
@@ -491,6 +496,9 @@ private:
       DenseMapInfo<llvm::hash_code>::getTombstoneKey();
   llvm::hash_code pipelineInitializationKey =
       DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+
+  /// A flag that indicates if the pass manager reproducer should be generated.
+  std::string generatePassManagerReproducer;
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
