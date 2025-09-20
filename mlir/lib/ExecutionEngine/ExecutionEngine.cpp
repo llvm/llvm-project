@@ -134,7 +134,26 @@ void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
   llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
+static StringRef lookupBuiltinCRunnerNames(StringRef name) {
+  static const llvm::StringMap<StringRef> nameMap = {
+      {"alloc", "mlirAlloc"},
+      {"malloc", "mlirAlloc"},
+      {"aligned_alloc", "mlirAlignedAlloc"},
+      {"free", "mlirFree"},
+      {"aligned_free", "mlirAlignedFree"}};
+
+  auto it = nameMap.find(name);
+  if (it != nameMap.end())
+    return it->second;
+
+  return {};
+}
+
 static std::string makePackedFunctionName(StringRef name) {
+  auto cfuncName = lookupBuiltinCRunnerNames(name);
+  if (!cfuncName.empty())
+    return cfuncName.str();
+
   return "_mlir_" + name.str();
 }
 
