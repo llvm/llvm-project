@@ -365,8 +365,7 @@ public:
     return LibPathCache->hasSeenOrMark(P);
   }
 
-  std::optional<std::string> resolve(StringRef P,
-                                     std::error_code &ec) const {
+  std::optional<std::string> resolve(StringRef P, std::error_code &ec) const {
     return LibPathResolver->resolve(P.str(), ec);
   }
 
