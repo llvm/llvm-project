@@ -85,8 +85,7 @@ bool linalg::isaCopyOpInterface(LinalgOp op) {
 /// constant. If so, returns the constant value. Otherwise, returns
 /// std::nullopt.
 static std::optional<Value> isaInlinedFillOp(GenericOp op) {
-  if (!op.isAllParallelLoops() || op.getNumDpsInits() != 1 ||
-      op.getNumDpsInputs() != 0)
+  if (!op.isAllParallelLoops() || op.getNumDpsInits() != 1)
     return std::nullopt;
 
   // Init should not be referenced.
