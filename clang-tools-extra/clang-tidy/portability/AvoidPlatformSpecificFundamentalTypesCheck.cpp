@@ -157,12 +157,13 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
       diag(Loc, "avoid using platform-dependent floating point type '%0'; "
                 "consider using a type alias or fixed-width type instead")
           << TypeName;
+      return;
     }
 
     auto Diag =
         diag(Loc, "avoid using platform-dependent floating point type '%0'; "
                   "consider using '%1' instead")
-        << TypeName << Replacement;
+        << TypeName << Replacement.value();
 
     if (TypeRange.isValid())
       Diag << FixItHint::CreateReplacement(TypeRange, Replacement.value());
