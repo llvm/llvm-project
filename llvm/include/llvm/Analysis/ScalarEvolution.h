@@ -1502,12 +1502,6 @@ private:
   /// Mark predicate values currently being processed by isImpliedCond.
   SmallPtrSet<const Value *, 6> PendingLoopPredicates;
 
-  /// Mark SCEVUnknown Phis currently being processed by getRangeRef.
-  SmallPtrSet<const PHINode *, 6> PendingPhiRanges;
-
-  /// Mark SCEVUnknown Phis currently being processed by getRangeRefIter.
-  SmallPtrSet<const PHINode *, 6> PendingPhiRangesIter;
-
   // Mark SCEVUnknown Phis currently being processed by isImpliedViaMerge.
   SmallPtrSet<const PHINode *, 6> PendingMerges;
 
