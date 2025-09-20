@@ -528,6 +528,11 @@ static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
   if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
     return CI;
 
+  // It is not safe to look through inttoptr or ptrtoint when using unstable
+  // pointer types.
+  if (DL.hasUnstableRepresentation(V->getType()))
+    return nullptr;
+
   // This is some kind of pointer constant. Turn it into a pointer-sized
   // ConstantInt if possible.
   IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
@@ -537,11 +542,7 @@ static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
     return ConstantInt::get(IntPtrTy, 0);
 
   // IntToPtr const int, we can look through this unless the semantics of
-  // inttoptr for this address space aren't a simple bitcast.
-  // TODO: should this be relaxed to hasUnstableRepresentation? The
-  // transformation made here should also be safe for CHERI.
-  if (DL.shouldAvoidIntToPtr(V->getType()))
-    return nullptr;
+  // inttoptr for this address space aren't a simple (truncating) bitcast.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
     if (CE->getOpcode() == Instruction::IntToPtr)
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
@@ -870,10 +871,13 @@ Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
       }
     }
 
-  // Unwrap any lossless ptrtoint cast.
+  // Unwrap any lossless ptrtoint cast (except for unstable pointers).
   if (CV) {
     if (PtrToIntInst *PTII = dyn_cast<PtrToIntInst>(CV)) {
       Value *Ptr = PTII->getPointerOperand();
+      if (DL.hasUnstableRepresentation(
+              Ptr->getType()->getPointerAddressSpace()))
+        return CV;
       if (PTII->getType() == DL.getIntPtrType(Ptr->getType()))
         CV = Ptr;
     }
@@ -1431,6 +1435,8 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
   Builder.SetInsertPoint(PTI);
   // Convert pointer to int before we switch.
   if (CV->getType()->isPointerTy()) {
+    assert(!DL.hasUnstableRepresentation(CV->getType()) &&
+           "Should not end up here with unstable pointers");
     CV =
         Builder.CreatePtrToInt(CV, DL.getIntPtrType(CV->getType()), "magicptr");
   }
@@ -5250,6 +5256,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   Builder.SetInsertPoint(BI);
   // Convert pointer to int before we switch.
   if (CompVal->getType()->isPointerTy()) {
+    assert(!DL.shouldAvoidPtrToInt(CompVal->getType()) &&
+           "Should not end up here with unstable pointers");
     CompVal = Builder.CreatePtrToInt(
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");
   }

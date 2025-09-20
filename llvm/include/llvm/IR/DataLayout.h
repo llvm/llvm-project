@@ -404,6 +404,10 @@ public:
   bool hasUnstableRepresentation(unsigned AddrSpace) const {
     return getPointerSpec(AddrSpace).HasUnstableRepresentation;
   }
+  bool hasUnstableRepresentation(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && hasUnstableRepresentation(PTy->getPointerAddressSpace());
+  }
 
   /// Returns whether this address space has external state (implies having
   /// a non-integral pointer representation).
@@ -415,6 +419,10 @@ public:
   /// to the associated memory location.
   bool hasExternalState(unsigned AddrSpace) const {
     return getPointerSpec(AddrSpace).HasExternalState;
+  }
+  bool hasExternalState(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && hasExternalState(PTy->getPointerAddressSpace());
   }
 
   /// Returns whether passes should avoid introducing `inttoptr` instructions
