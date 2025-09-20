@@ -324,6 +324,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   MergeFunctions = EnableMergeFunctions;
   InlinerThreshold = -1;
   EagerlyInvalidateAnalyses = EnableEagerlyInvalidateAnalyses;
+  DevirtualizeSpeculatively = false;
 }
 
 namespace llvm {
@@ -1644,6 +1645,22 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (!LTOPreLink)
     MPM.addPass(RelLookupTableConverterPass());
 
+  if (PTO.DevirtualizeSpeculatively && LTOPhase == ThinOrFullLTOPhase::None) {
+    MPM.addPass(WholeProgramDevirtPass(/*ExportSummary*/ nullptr,
+                                       /*ImportSummary*/ nullptr));
+    MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
+                                   lowertypetests::DropTestKind::Assume));
+    if (EnableModuleInliner) {
+      MPM.addPass(ModuleInlinerPass(getInlineParamsFromOptLevel(Level),
+                                    UseInlineAdvisor,
+                                    ThinOrFullLTOPhase::None));
+    } else {
+      MPM.addPass(ModuleInlinerWrapperPass(
+          getInlineParamsFromOptLevel(Level),
+          /* MandatoryFirst */ true,
+          InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
+    }
+  }
   return MPM;
 }
 
