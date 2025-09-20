@@ -2430,23 +2430,45 @@ bool RewriteInstance::analyzeRelocation(
            truncateToSize(SymbolAddress + Addend - PCRelOffset, RelSize);
   };
 
-  // Skip verification for PPC64 split-immediate and TOC16 relocations.
-  // The generic verifier compares against low16(SymbolAddress), which does
-  // not match HA/HI semantics (they are the upper halves with adjustment).
-  if (IsPPC64) {
+  // Skip verification for PPC64 split-immediate, TOC and GOT/TLS forms.
+  // The generic verifier compares full (SymbolAddress + Addend - PCRelOffset)
+  // truncated to RelSize, which does not match HA/HI semantics (upper-half with
+  // carry from low 16), DS (low14<<2), TOC-relative, etc.
+  if (BC->isPPC64()) {
     switch (RType) {
+    // Split-imm
     case ELF::R_PPC64_ADDR16:
     case ELF::R_PPC64_ADDR16_LO:
     case ELF::R_PPC64_ADDR16_HI:
     case ELF::R_PPC64_ADDR16_HA:
     case ELF::R_PPC64_ADDR16_DS:
     case ELF::R_PPC64_ADDR16_LO_DS:
+
+    // TOC-relative
+    case ELF::R_PPC64_TOC:
     case ELF::R_PPC64_TOC16:
     case ELF::R_PPC64_TOC16_LO:
     case ELF::R_PPC64_TOC16_HI:
     case ELF::R_PPC64_TOC16_HA:
+
+    // GOT/TLS pointer materialization
+    case ELF::R_PPC64_GOT16:
+    case ELF::R_PPC64_GOT16_LO:
+    case ELF::R_PPC64_GOT16_HI:
+    case ELF::R_PPC64_GOT16_HA:
+    case ELF::R_PPC64_DTPREL16:
+    case ELF::R_PPC64_DTPREL16_LO:
+    case ELF::R_PPC64_DTPREL16_HI:
+    case ELF::R_PPC64_DTPREL16_HA:
+    case ELF::R_PPC64_DTPREL64:
+
+    // (Optional, benign) absolute-addr encodings that may not match verifier’s
+    // RHS
+    case ELF::R_PPC64_ADDR32:
+    case ELF::R_PPC64_ADDR64:
       SkipVerification = true;
       break;
+
     default:
       break;
     }
