@@ -36,7 +36,7 @@ __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
   using __diff_t     = __iter_diff_t<_RandomAccessIterator>;
   const __diff_t __n = __last - __first;
 
-  static const bool __assume_both_children = is_arithmetic<__iter_value_type<_RandomAccessIterator> >::value;
+  constexpr bool __assume_both_children = is_arithmetic<__iter_value_type<_RandomAccessIterator> >::value;
 
   // While it would be correct to always assume we have both children, in practice we observed this to be a performance
   // improvement only for arithmetic types.
@@ -45,11 +45,11 @@ __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
   if (__n > 1) {
     // start from the first parent, there is no need to consider children
 
-    for (__diff_t __start = (__sift_down_n - 2) / 2; __start >= 0; --__start) {
-      std::__sift_down<_AlgPolicy, __assume_both_children>(__first, __comp_ref, __sift_down_n, __start);
+    for (__diff_t __start = __sift_down_n / 2; __start != 0;) {
+      std::__sift_down<_AlgPolicy, __assume_both_children>(__first, __comp_ref, __sift_down_n, --__start);
     }
     if _LIBCPP_CONSTEXPR (__assume_both_children)
-      std::__sift_up<_AlgPolicy>(__first, __last, __comp, __n);
+      std::__sift_up<_AlgPolicy>(__first, --__last, __comp);
   }
 }
 
