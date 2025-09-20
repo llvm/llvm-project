@@ -9775,11 +9775,12 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::SUB, dl, VT, Cmp, Xor);
   }
 
-  // Similar to the branchless expansion, use the (sign-extended) usubo overflow
-  // flag if the (scalar) type is illegal as this is more likely to legalize
-  // cleanly:
-  // abdu(lhs, rhs) -> sub(xor(sub(lhs, rhs), uof(lhs, rhs)), uof(lhs, rhs))
-  if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT)) {
+  // Similar to the branchless expansion, if we don't prefer selects, use the
+  // (sign-extended) usubo overflow flag if the (scalar) type is illegal as this
+  // is more likely to legalize cleanly: abdu(lhs, rhs) -> sub(xor(sub(lhs,
+  // rhs), uof(lhs, rhs)), uof(lhs, rhs))
+  if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT) &&
+      !shouldExpandCmpUsingSelects(VT)) {
     SDValue USubO =
         DAG.getNode(ISD::USUBO, dl, DAG.getVTList(VT, MVT::i1), {LHS, RHS});
     SDValue Cmp = DAG.getNode(ISD::SIGN_EXTEND, dl, VT, USubO.getValue(1));
