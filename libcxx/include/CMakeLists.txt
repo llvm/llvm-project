@@ -734,6 +734,7 @@ set(files
   __ranges/take_view.h
   __ranges/take_while_view.h
   __ranges/to.h
+  __ranges/to_input_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
