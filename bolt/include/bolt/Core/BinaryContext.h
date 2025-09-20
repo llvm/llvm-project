@@ -866,6 +866,11 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
+  bool isPPC64() const {
+    return TheTriple->getArch() == llvm::Triple::ppc64 ||
+           TheTriple->getArch() == llvm::Triple::ppc64le;
+  }
+
   bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
 
   // AArch64-specific functions to check if symbol is used to delimit
