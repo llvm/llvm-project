@@ -1771,10 +1771,124 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
     Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
   }
 
+  // Register the indirect Vtable:
+  // This is similar to OMPTargetGlobalVarEntryIndirect, except that the
+  // size field refers to the size of memory pointed to, not the size of
+  // the pointer symbol itself (which is implicitly the size of a pointer).
   OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
       Name, Addr, CGM.GetTargetTypeStoreSize(CGM.VoidPtrTy).getQuantity(),
       llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect,
       llvm::GlobalValue::WeakODRLinkage);
+}
+
+void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                                 const VarDecl *VD) {
+  // TODO: add logic to avoid duplicate vtable registrations per
+  // translation unit; though for external linkage, this should no
+  // longer be an issue - or at least we can avoid the issue by
+  // checking for an existing offloading entry.  But, perhaps the
+  // better approach is to defer emission of the vtables and offload
+  // entries until later (by tracking a list of items that need to be
+  // emitted).
+
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+
+  // Generate a new externally visible global to point to the
+  // internally visible vtable. Doing this allows us to keep the
+  // visibility and linkage of the associated vtable unchanged while
+  // allowing the runtime to access its value.  The externally
+  // visible global var needs to be emitted with a unique mangled
+  // name that won't conflict with similarly named (internal)
+  // vtables in other translation units.
+
+  // Register vtable with source location of dynamic object in map
+  // clause.
+  llvm::TargetRegionEntryInfo EntryInfo = getEntryInfoFromPresumedLoc(
+      CGM, OMPBuilder, VD->getCanonicalDecl()->getBeginLoc(),
+      VTable->getName());
+
+  llvm::GlobalVariable *Addr = VTable;
+  size_t PointerSize = CGM.getDataLayout().getPointerSize();
+  SmallString<128> AddrName;
+  OMPBuilder.OffloadInfoManager.getTargetRegionEntryFnName(AddrName, EntryInfo);
+  AddrName.append("addr");
+
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    Addr = new llvm::GlobalVariable(
+        CGM.getModule(), VTable->getType(),
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, VTable,
+        AddrName,
+        /*InsertBefore*/ nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
+    Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+  }
+  OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      AddrName, VTable,
+      CGM.getDataLayout().getTypeAllocSize(VTable->getInitializer()->getType()),
+      llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable,
+      llvm::GlobalValue::WeakODRLinkage);
+}
+
+// Register VTable by scanning through the map clause of OpenMP target region.
+void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
+  // Get CXXRecordDecl and VarDecl from Expr.
+  auto getVTableDecl = [](const Expr *E) {
+    QualType VDTy = E->getType();
+    CXXRecordDecl *CXXRecord = nullptr;
+    if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
+      VDTy = RefType->getPointeeType();
+    if (VDTy->isPointerType())
+      CXXRecord = VDTy->getPointeeType()->getAsCXXRecordDecl();
+    else
+      CXXRecord = VDTy->getAsCXXRecordDecl();
+
+    const VarDecl *VD = nullptr;
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+      VD = cast<VarDecl>(DRE->getDecl());
+    return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
+  };
+
+  // Emit VTable and register the VTable to OpenMP offload entry recursively.
+  std::function<void(CodeGenModule &, CXXRecordDecl *, const VarDecl *)>
+      emitAndRegisterVTable = [&emitAndRegisterVTable](CodeGenModule &CGM,
+                                                       CXXRecordDecl *CXXRecord,
+                                                       const VarDecl *VD) {
+        // Register C++ VTable to OpenMP Offload Entry if it's a new
+        // CXXRecordDecl.
+        if (CXXRecord && CXXRecord->isDynamicClass() &&
+            CGM.getOpenMPRuntime().VTableDeclMap.find(CXXRecord) ==
+                CGM.getOpenMPRuntime().VTableDeclMap.end()) {
+          CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
+          CGM.EmitVTable(CXXRecord);
+          auto VTables = CGM.getVTables();
+          auto *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+          if (VTablesAddr) {
+            CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
+          }
+          // Emit VTable for all the fields containing dynamic CXXRecord
+          for (const FieldDecl *Field : CXXRecord->fields()) {
+            if (CXXRecordDecl *RecordDecl =
+                    Field->getType()->getAsCXXRecordDecl()) {
+              emitAndRegisterVTable(CGM, RecordDecl, VD);
+            }
+          }
+          // Emit VTable for all dynamic parent class
+          for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
+            if (CXXRecordDecl *BaseDecl =
+                    Base.getType()->getAsCXXRecordDecl()) {
+              emitAndRegisterVTable(CGM, BaseDecl, VD);
+            }
+          }
+        }
+      };
+
+  // Collect VTable from OpenMP map clause.
+  for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
+    for (const auto *E : C->varlist()) {
+      auto DeclPair = getVTableDecl(E);
+      emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
+    }
+  }
 }
 
 Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
@@ -6249,6 +6363,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         CGM.handleAMDGPUWavesPerEUAttr(OutlinedFn, Attr);
     }
   }
+  registerVTable(D);
 }
 
 /// Checks if the expression is constant or does not have non-trivial function
@@ -9954,6 +10069,19 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
                                                     StringRef ParentName) {
   if (!S)
     return;
+
+  // Register vtable from device for target data and target directives.
+  // Add this block here since scanForTargetRegionsFunctions ignores
+  // target data by checking if S is a executable directive (target).
+    if (isa<OMPExecutableDirective>(S) &&
+        isOpenMPTargetDataManagementDirective(
+            cast<OMPExecutableDirective>(S)->getDirectiveKind())) {
+      auto &E = *cast<OMPExecutableDirective>(S);
+      // Don't need to check if it's device compile
+      // since scanForTargetRegionsFunctions currently only called
+      // in device compilation.
+      registerVTable(E);
+    }
 
   // Codegen OMP target directives that offload compute to the device.
   bool RequiresDeviceCodegen =
