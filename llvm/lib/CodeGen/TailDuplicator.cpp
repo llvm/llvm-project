@@ -387,6 +387,16 @@ void TailDuplicator::processPHI(
     MI->eraseFromParent();
   else if (MI->getNumOperands() == 1)
     MI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+  else if (TailBB->pred_size() == 2) {
+    // According to callers implementation, PredBB has not yet been removed from
+    // TailBB predecessors list. After removal TailBB will have the only one
+    // predecessor and all phi instructions should be replaced with copies.
+    assert(PredBB->isSuccessor(TailBB));
+    BuildMI(*TailBB, MI->getIterator(), MI->getDebugLoc(),
+            TII->get(TargetOpcode::COPY), MI->getOperand(0).getReg())
+        .add(MI->getOperand(1));
+    MI->eraseFromParent();
+  }
 }
 
 /// Duplicate a TailBB instruction to PredBB and update
