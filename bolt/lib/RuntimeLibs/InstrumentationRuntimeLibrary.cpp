@@ -51,12 +51,6 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
     opts::JumpTables = JTS_MOVE;
     outs() << "BOLT-INFO: forcing -jump-tables=move for instrumentation\n";
   }
-  if (!BC.StartFunctionAddress) {
-    errs() << "BOLT-ERROR: instrumentation runtime libraries require a known "
-              "entry point of "
-              "the input binary\n";
-    exit(1);
-  }
 
   if (BC.IsStaticExecutable && !opts::InstrumentationSleepTime) {
     errs() << "BOLT-ERROR: instrumentation of static binary currently does not "
@@ -78,6 +72,13 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
 
 void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
                                                MCStreamer &Streamer) {
+  /*  if (!BC.StartFunctionAddress) {
+      errs() << "BOLT-ERROR: instrumentation runtime libraries require a known "
+                "entry point of "
+                "the input binary\n";
+      exit(1);
+    }*/
+
   MCSection *Section = BC.isELF()
                            ? static_cast<MCSection *>(BC.Ctx->getELFSection(
                                  ".bolt.instr.counters", ELF::SHT_PROGBITS,
