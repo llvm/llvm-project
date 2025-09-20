@@ -167,9 +167,12 @@ Restarting the server will interrupt any existing debug sessions and start a new
     return [
       path,
       ...args,
-      ...Object.entries(env ?? {}).map(
-        (entry) => String(entry[0]) + "=" + String(entry[1]),
-      ),
+      ...Object.entries(env ?? {})
+        // Filter and sort to avoid restarting the server just because the
+        // order of env changed or the log path changed.
+        .filter((entry) => String(entry[0]) !== "LLDBDAP_LOG")
+        .sort()
+        .map((entry) => String(entry[0]) + "=" + String(entry[1])),
     ];
   }
 }
