@@ -5946,6 +5946,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B64);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
     const DebugLoc &DL = MI.getDebugLoc();
     MachineOperand &Dest0 = MI.getOperand(0);
     MachineOperand &Dest1 = MI.getOperand(1);
@@ -5961,9 +5964,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    const TargetRegisterClass *Dest1RC = MRI.getRegClass(Dest1.getReg());
+    unsigned Dest1Size = TRI->getRegSizeInBits(*Dest1RC);
+    assert(Dest1Size == 64 || Dest1Size == 32);
+    unsigned SelOpc =
+        (Dest1Size == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(1).addImm(0);
 
     MI.eraseFromParent();
     return BB;
@@ -6081,9 +6088,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src0 = MI.getOperand(2);
     MachineOperand &Src1 = MI.getOperand(3);
     MachineOperand &Src2 = MI.getOperand(4);
-    unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO)
-                       ? AMDGPU::S_ADDC_U32
-                       : AMDGPU::S_SUBB_U32;
+
+    bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO);
+
     if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
       Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
@@ -6107,44 +6114,90 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned WaveSize = TRI->getRegSizeInBits(*Src2RC);
     assert(WaveSize == 64 || WaveSize == 32);
 
-    if (WaveSize == 64) {
-      if (ST.hasScalarCompareEq64()) {
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
-            .addReg(Src2.getReg())
-            .addImm(0);
-      } else {
-        const TargetRegisterClass *SubRC =
-            TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
-        MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
-            MII, MRI, Src2, Src2RC, AMDGPU::sub0, SubRC);
-        MachineOperand Src2Sub1 = TII->buildExtractSubRegOrImm(
-            MII, MRI, Src2, Src2RC, AMDGPU::sub1, SubRC);
-        Register Src2_32 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    unsigned SelectOpc =
+        (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+    unsigned AddcSubbOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+    unsigned AddSubOpc = IsAdd ? AMDGPU::S_ADD_I32 : AMDGPU::S_SUB_I32;
+    //  Lowering for:
+    //
+    //    S_UADDO_PSEUDO|S_ADD_CO_PSEUDO
+    //    <no SCC def code>
+    //    S_ADD_CO_PSEUDO
+    //
+    //  produces:
+    //
+    //    S_ADD_I32|S_ADDC_U32                  ; lowered from S_UADDO_PSEUDO
+    //    SREG = S_CSELECT_B32|64 [1,-1], 0     ; lowered from S_UADDO_PSEUDO
+    //    <no SCC def code>
+    //    S_CMP32|64 SREG, 0                    ; lowered from S_ADD_CO_PSEUDO
+    //    S_ADDC_U32                            ; lowered from S_ADD_CO_PSEUDO
+    //
+    //  At this point before generating the S_CMP check if it is redundant.  If
+    //  so do not recalculate it.  Subsequent optimizations will also delete the
+    //  dead S_CSELECT*.
 
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_OR_B32), Src2_32)
-            .add(Src2Sub0)
-            .add(Src2Sub1);
-
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-            .addReg(Src2_32, RegState::Kill)
-            .addImm(0);
+    bool RecalculateSCC{true};
+    MachineInstr *SelectDef = MRI.getVRegDef(Src2.getReg());
+    if (SelectDef && SelectDef->getParent() == BB &&
+        SelectDef->getOpcode() == SelectOpc &&
+        SelectDef->getOperand(1).isImm() &&
+        SelectDef->getOperand(1).getImm() != 0 &&
+        SelectDef->getOperand(2).isImm() &&
+        SelectDef->getOperand(2).getImm() == 0) {
+      auto I1 = std::next(MachineBasicBlock::reverse_iterator(SelectDef));
+      if (I1 != BB->rend() &&
+          (I1->getOpcode() == AddSubOpc || I1->getOpcode() == AddcSubbOpc)) {
+        // Ensure there are no intervening definitions of SCC between ADDs/SUBs
+        const unsigned SearchLimit = 6;
+        unsigned Count = 0;
+        for (auto I2 = std::next(MachineBasicBlock::reverse_iterator(MI));
+             Count < SearchLimit; I2++, Count++) {
+          if (I2 == I1) {
+            RecalculateSCC = false;
+            break;
+          }
+          if (I2->definesRegister(AMDGPU::SCC, TRI))
+            break;
+        }
       }
-    } else {
-      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-          .addReg(Src2.getReg())
-          .addImm(0);
     }
 
-    // clang-format off
-    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg())
+    if (RecalculateSCC) {
+      if (WaveSize == 64) {
+        if (ST.hasScalarCompareEq64()) {
+          BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
+              .addReg(Src2.getReg())
+              .addImm(0);
+        } else {
+          const TargetRegisterClass *SubRC =
+              TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
+          MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
+              MII, MRI, Src2, Src2RC, AMDGPU::sub0, SubRC);
+          MachineOperand Src2Sub1 = TII->buildExtractSubRegOrImm(
+              MII, MRI, Src2, Src2RC, AMDGPU::sub1, SubRC);
+          Register Src2_32 =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+          BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_OR_B32), Src2_32)
+              .add(Src2Sub0)
+              .add(Src2Sub1);
+
+          BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+              .addReg(Src2_32, RegState::Kill)
+              .addImm(0);
+        }
+      } else {
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+            .addReg(Src2.getReg())
+            .addImm(0);
+      }
+    }
+
+    BuildMI(*BB, MII, DL, TII->get(AddcSubbOpc), Dest.getReg())
         .add(Src0)
         .add(Src1);
-    // clang-format on
 
-    unsigned SelOpc =
-        (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
-
-    BuildMI(*BB, MII, DL, TII->get(SelOpc), CarryDest.getReg())
+    BuildMI(*BB, MII, DL, TII->get(SelectOpc), CarryDest.getReg())
         .addImm(-1)
         .addImm(0);
 
@@ -16575,6 +16628,55 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
           (CT == CRHSVal && CC == ISD::SETEQ))
         return LHS.getOperand(0);
     }
+  }
+
+  // Eliminate setcc by using carryout from add/sub instruction
+
+  // LHS = ADD i64 RHS, Z          LHSlo = UADDO       i32 RHSlo, Zlo
+  // setcc LHS ult RHS     ->      LHSHi = UADDO_CARRY i32 RHShi, Zhi
+  // similarly for subtraction
+
+  // LHS = ADD i64 Y, 1            LHSlo = UADDO       i32 Ylo, 1
+  // setcc LHS eq 0        ->      LHSHi = UADDO_CARRY i32 Yhi, 0
+
+  if (VT == MVT::i64 && ((CC == ISD::SETULT &&
+                          sd_match(LHS, m_Add(m_Specific(RHS), m_Value()))) ||
+                         (CC == ISD::SETUGT &&
+                          sd_match(LHS, m_Sub(m_Specific(RHS), m_Value()))) ||
+                         (CC == ISD::SETEQ && CRHS && CRHS->isZero() &&
+                          sd_match(LHS, m_Add(m_Value(), m_One()))))) {
+    EVT TargetType = MVT::i32;
+    EVT CarryVT = MVT::i1;
+    bool IsAdd = LHS.getOpcode() == ISD::ADD;
+
+    SDValue Op0 = LHS.getOperand(0);
+    SDValue Op1 = LHS.getOperand(1);
+
+    SDValue Op0Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op0);
+    SDValue Op1Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, Op1);
+
+    SDValue Op0Hi = getHiHalf64(Op0, DAG);
+    SDValue Op1Hi = getHiHalf64(Op1, DAG);
+
+    SDValue NodeLo =
+        DAG.getNode(IsAdd ? ISD::UADDO : ISD::USUBO, SL,
+                    DAG.getVTList(TargetType, CarryVT), {Op0Lo, Op1Lo});
+
+    SDValue CarryInHi = NodeLo.getValue(1);
+    SDValue NodeHi = DAG.getNode(IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY,
+                                 SL, DAG.getVTList(TargetType, CarryVT),
+                                 {Op0Hi, Op1Hi, CarryInHi});
+
+    SDValue ResultLo = NodeLo.getValue(0);
+    SDValue ResultHi = NodeHi.getValue(0);
+
+    SDValue JoinedResult =
+        DAG.getBuildVector(MVT::v2i32, SL, {ResultLo, ResultHi});
+
+    SDValue Result = DAG.getNode(ISD::BITCAST, SL, VT, JoinedResult);
+    SDValue Overflow = NodeHi.getValue(1);
+    DCI.CombineTo(LHS.getNode(), Result);
+    return Overflow;
   }
 
   if (VT != MVT::f32 && VT != MVT::f64 &&
