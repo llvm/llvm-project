@@ -95,6 +95,7 @@ def test_add_to_mul_with_op(module_):
 # so here we define a new dialect to workaround this.
 def load_myint_dialect():
     from mlir.dialects import irdl
+
     m = Module.create()
     with InsertionPoint(m.body):
         myint = irdl.dialect("myint")
@@ -108,11 +109,16 @@ def load_myint_dialect():
             add = irdl.operation_("add")
             with InsertionPoint(add.body):
                 i32 = irdl.is_(TypeAttr.get(IntegerType.get_signless(32)))
-                irdl.operands_([i32, i32], ["lhs", "rhs"], [irdl.Variadicity.single, irdl.Variadicity.single])
+                irdl.operands_(
+                    [i32, i32],
+                    ["lhs", "rhs"],
+                    [irdl.Variadicity.single, irdl.Variadicity.single]
+                )
                 irdl.results_([i32], ["res"], [irdl.Variadicity.single])
 
     m.operation.verify()
     irdl.load_dialects(m)
+
 
 # This PDL pattern is to fold constant additions,
 # i.e. add(constant0, constant1) -> constant2
@@ -120,20 +126,27 @@ def load_myint_dialect():
 def get_pdl_pattern_fold():
     m = Module.create()
     with InsertionPoint(m.body):
+
         @pdl.pattern(benefit=1, sym_name="myint_add_fold")
         def pat():
             t = pdl.TypeOp(IntegerType.get_signless(32))
             a0 = pdl.AttributeOp()
             a1 = pdl.AttributeOp()
-            c0 = pdl.OperationOp(name="myint.constant", attributes={"value": a0}, types=[t])
-            c1 = pdl.OperationOp(name="myint.constant", attributes={"value": a1}, types=[t])
+            c0 = pdl.OperationOp(
+                name="myint.constant", attributes={"value": a0}, types=[t]
+            )
+            c1 = pdl.OperationOp(
+                name="myint.constant", attributes={"value": a1}, types=[t]
+            )
             v0 = pdl.ResultOp(c0, 0)
             v1 = pdl.ResultOp(c1, 0)
             op0 = pdl.OperationOp(name="myint.add", args=[v0, v1], types=[t])
 
             @pdl.rewrite()
             def rew():
-                sum = pdl.apply_native_rewrite([pdl.AttributeType.get()], "add_fold", [a0, a1])
+                sum = pdl.apply_native_rewrite(
+                    [pdl.AttributeType.get()], "add_fold", [a0, a1]
+                )
                 newOp = pdl.OperationOp(
                     name="myint.constant", attributes={"value": sum}, types=[t]
                 )
