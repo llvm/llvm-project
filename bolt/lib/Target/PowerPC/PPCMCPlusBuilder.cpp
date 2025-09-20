@@ -20,6 +20,20 @@
 using namespace llvm;
 using namespace bolt;
 
+static const MCSymbol *getBranchTargetSymbol(const MCInst &I) {
+  // For B/BC the last operand is a branch target (expr)
+  if (I.getNumOperands() == 0)
+    return nullptr;
+  const MCOperand &Op = I.getOperand(I.getNumOperands() - 1);
+  if (!Op.isExpr())
+    return nullptr;
+  if (auto *SymRef = dyn_cast<MCSymbolRefExpr>(Op.getExpr()))
+    return &SymRef->getSymbol();
+  return nullptr;
+}
+
+static inline unsigned opc(const MCInst &I) { return I.getOpcode(); }
+
 // Create instructions to push two registers onto the stack
 void PPCMCPlusBuilder::createPushRegisters(MCInst &Inst1, MCInst &Inst2,
                                            MCPhysReg Reg1, MCPhysReg /*Reg2*/) {
@@ -46,6 +60,160 @@ bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
     return false;
   }
 }
+
+bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::BL:
+  case PPC::BLA:
+  case PPC::B:
+  case PPC::BA:
+  case PPC::BC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+int PPCMCPlusBuilder::getPCRelOperandNum(const MCInst &I) const {
+  return hasPCRelOperand(I) ? 0 : -1;
+}
+
+int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
+  return -1;
+}
+
+void PPCMCPlusBuilder::replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+                                           MCContext *Ctx) const {
+  // TODO: Implement PPC branch target replacement
+  (void)Inst;
+  (void)TBB;
+  (void)Ctx;
+}
+
+const MCSymbol *PPCMCPlusBuilder::getTargetSymbol(const MCInst &Inst,
+                                                  unsigned OpNum) const {
+  (void)Inst;
+  (void)OpNum;
+  return nullptr;
+}
+
+bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
+  (void)Inst;
+  return false;
+}
+
+bool PPCMCPlusBuilder::isCall(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::BL:    // branch with link (relative)
+  case PPC::BLA:   // absolute with link
+  case PPC::BCL:   // conditional with link (rare for calls, but safe)
+  case PPC::BCTRL: // branch to CTR with link (indirect call)
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool PPCMCPlusBuilder::isTailCall(const MCInst &I) const {
+  (void)I;
+  return false;
+}
+
+bool PPCMCPlusBuilder::isReturn(const MCInst & /*Inst*/) const { return false; }
+
+bool PPCMCPlusBuilder::isConditionalBranch(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::BC: // branch conditional
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool PPCMCPlusBuilder::isUnconditionalBranch(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::B:    // branch
+  case PPC::BA:   // absolute branch
+  case PPC::BCTR: // branch to CTR (no link) – often tail call
+  case PPC::BCLR: // branch to LR  (no link)
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Disable “conditional tail call” path for now.
+const MCInst *PPCMCPlusBuilder::getConditionalTailCall(const MCInst &) const {
+  return nullptr;
+}
+
+IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
+    MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
+    const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+    unsigned &IndexRegNumOut, int64_t &DispValueOut, const MCExpr *&DispExprOut,
+    MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInstr) const {
+  (void)Instruction;
+  MemLocInstrOut = nullptr;
+  BaseRegNumOut = 0;
+  IndexRegNumOut = 0;
+  DispValueOut = 0;
+  DispExprOut = nullptr;
+  PCRelBaseOut = nullptr;
+  FixedEntryLoadInstr = nullptr;
+  return IndirectBranchType::UNKNOWN;
+}
+
+bool PPCMCPlusBuilder::isNoop(const MCInst &Inst) const {
+  // NOP on PPC is encoded as "ori r0, r0, 0"
+  return Inst.getOpcode() == PPC::ORI && Inst.getOperand(0).isReg() &&
+         Inst.getOperand(0).getReg() == PPC::R0 && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(1).getReg() == PPC::R0 && Inst.getOperand(2).isImm() &&
+         Inst.getOperand(2).getImm() == 0;
+}
+
+bool PPCMCPlusBuilder::analyzeBranch(InstructionIterator Begin,
+                                     InstructionIterator End,
+                                     const MCSymbol *&Tgt,
+                                     const MCSymbol *&Fallthrough,
+                                     MCInst *&CondBr, MCInst *&UncondBr) const {
+  Tgt = nullptr;
+  Fallthrough = nullptr;
+  CondBr = nullptr;
+  UncondBr = nullptr;
+
+  if (Begin == End)
+    return false;
+
+  // Look at the last instruction (canonical BOLT pattern)
+  InstructionIterator I = End;
+  --I;
+  const MCInst &Last = *I;
+
+  // Return (blr) → no branch terminator
+  if (Last.getOpcode() == PPC::BLR) {
+    return false;
+  }
+
+  if (isUnconditionalBranch(Last)) {
+    UncondBr = const_cast<MCInst *>(&Last);
+    Tgt = getBranchTargetSymbol(Last);
+    // with an unconditional branch, there's no fall-through
+    return false;
+  }
+
+  if (isConditionalBranch(Last)) {
+    CondBr = const_cast<MCInst *>(&Last);
+    Tgt = getBranchTargetSymbol(Last);
+    // Assume the block has a fallthrough if no following unconditional branch.
+    // (BOLT will compute actual fallthrough later once CFG is built.)
+    return false;
+  }
+
+  // Otherwise: not a branch terminator (let caller treat as fallthrough/ret)
+  return false;
+}
+
+bool PPCMCPlusBuilder::lowerTailCall(MCInst &Inst) { return false; }
 
 namespace llvm {
 namespace bolt {
