@@ -5854,6 +5854,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // concept ...
     if (Right.is(tok::kw_concept))
       return Style.BreakBeforeConceptDeclarations == FormatStyle::BBCDS_Always;
+    if (Right.is(TT_RequiresClause) &&
+        (Style.RequiresClausePosition == FormatStyle::RCPS_WithPreceding ||
+         Style.RequiresClausePosition == FormatStyle::RCPS_SingleLine)) {
+      return false;
+    }
     return Style.BreakTemplateDeclarations == FormatStyle::BTDS_Yes ||
            (Style.BreakTemplateDeclarations == FormatStyle::BTDS_Leave &&
             Right.NewlinesBefore > 0);
