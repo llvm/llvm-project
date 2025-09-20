@@ -16203,7 +16203,6 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   using namespace SDPatternMatch;
-
   SDValue Base, Inserted;
   APInt CMask;
   if (!sd_match(N, m_Xor(m_Value(Base),
@@ -16214,7 +16213,6 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   if (N->getValueType(0) != MVT::i32)
     return SDValue();
-
   unsigned Width, ShAmt;
   if (!CMask.isShiftedMask(ShAmt, Width))
     return SDValue();
@@ -16235,10 +16233,96 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
+static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue X;
+  APInt MaskImm;
+  if (!sd_match(N, m_Or(m_OneUse(m_Value(X)), m_ConstInt(MaskImm))))
+    return SDValue();
+
+  unsigned ShAmt, Width;
+  if (!MaskImm.isShiftedMask(ShAmt, Width) || MaskImm.isSignedIntN(12))
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  // If Zbs is enabled and it is a single bit set we can use BSETI which
+  // can be compressed to C_BSETI when Xqcibm in enabled.
+  if (Width == 1 && Subtarget.hasStdExtZbs())
+    return SDValue();
+
+  // If C1 is a shifted mask (but can't be formed as an ORI),
+  // use a bitfield insert of -1.
+  // Transform (or x, C1)
+  //        -> (qc.insbi x, -1, width, shift)
+  SDLoc DL(N);
+
+  SDValue Ops[] = {X, DAG.getSignedConstant(-1, DL, MVT::i32),
+                   DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
+// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
+// being inserted only sets known zero bits.
+static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget) {
+  // Supported only in Xqcibm for now.
+  if (!Subtarget.hasVendorXqcibm())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+
+  SDValue Inserted;
+  APInt MaskImm, OrImm;
+  if (!sd_match(
+          N, m_SpecificVT(MVT::i32, m_Or(m_OneUse(m_And(m_Value(Inserted),
+                                                        m_ConstInt(MaskImm))),
+                                         m_ConstInt(OrImm)))))
+    return SDValue();
+
+  // Compute the Known Zero for the AND as this allows us to catch more general
+  // cases than just looking for AND with imm.
+  KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
+
+  // The bits being inserted must only set those bits that are known to be
+  // zero.
+  if (!OrImm.isSubsetOf(Known.Zero)) {
+    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
+    // currently handle this case.
+    return SDValue();
+  }
+
+  unsigned ShAmt, Width;
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!Known.Zero.isShiftedMask(ShAmt, Width))
+    return SDValue();
+
+  // QC_INSB(I) dst, src, #width, #shamt.
+  SDLoc DL(N);
+
+  SDValue ImmNode =
+      DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, DL, MVT::i32);
+
+  SDValue Ops[] = {Inserted, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
+                   DAG.getConstant(ShAmt, DL, MVT::i32)};
+  return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
 
+  if (SDValue V = combineOrToBitfieldInsert(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineOrAndToBitfieldInsert(N, DAG, Subtarget))
+    return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
