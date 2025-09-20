@@ -12,6 +12,8 @@
 
 #include "bolt/Target/PowerPC/PPCMCPlusBuilder.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "bolt/Core/MCPlusBuilder.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
@@ -33,6 +35,16 @@ void PPCMCPlusBuilder::createPushRegisters(MCInst &Inst1, MCInst &Inst2,
   Inst2.addOperand(MCOperand::createReg(Reg1));    // source register
   Inst2.addOperand(MCOperand::createReg(PPC::R1)); // base (SP)
   Inst2.addOperand(MCOperand::createImm(0));       // offset
+}
+
+bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
+  switch (Type) {
+  case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
+    return true;
+  default:
+    return false;
+  }
 }
 
 namespace llvm {
