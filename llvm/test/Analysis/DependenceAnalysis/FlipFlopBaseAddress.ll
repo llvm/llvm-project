@@ -2,6 +2,8 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
 
+@test_array_100x42x42 = global [100 x [42 x [42 x i32]]] zeroinitializer
+
 ; Check that dependence analysis correctly handles flip-flop of base addresses.
 ; Bug 41488 - https://github.com/llvm/llvm-project/issues/41488
 
@@ -219,12 +221,13 @@ exit:
 ; Same as the above case, there are loop-carried dependencies between the
 ; store.
 
-define void @non_invariant_baseptr_with_identical_obj2(ptr %A) {
+define void @non_invariant_baseptr_with_identical_obj2() {
 ; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj2'
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
+  %A = getelementptr inbounds [100 x [42 x [42 x i32]]], ptr @test_array_100x42x42, i32 0, i32 0
   br label %loop.i.header
 
 loop.i.header:
