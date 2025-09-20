@@ -195,6 +195,11 @@ def NullDereferenceChecker
       HelpText<"Check for dereferences of null pointers">,
       Documentation<HasDocumentation>;
 
+def NullPointerArithmChecker
+    : Checker<"NullPointerArithm">,
+      HelpText<"Check for undefined arithmetic operations on null pointers">,
+      Documentation<HasDocumentation>;
+
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
            "arguments are references or marked with the 'nonnull' attribute">,
