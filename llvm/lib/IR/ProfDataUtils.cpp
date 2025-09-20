@@ -252,6 +252,16 @@ void setExplicitlyUnknownBranchWeights(Instruction &I, StringRef PassName) {
                    MDB.createString(PassName)}));
 }
 
+void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &New,
+                                                 Instruction &Original,
+                                                 StringRef PassName) {
+  Function *F = Original.getFunction();
+  assert(F && "instruction does not belong to a function!");
+  std::optional<Function::ProfileCount> EC = F->getEntryCount();
+  if (EC && EC->getCount() > 0)
+    setExplicitlyUnknownBranchWeights(New, PassName);
+}
+
 void setExplicitlyUnknownFunctionEntryCount(Function &F, StringRef PassName) {
   MDBuilder MDB(F.getContext());
   F.setMetadata(
