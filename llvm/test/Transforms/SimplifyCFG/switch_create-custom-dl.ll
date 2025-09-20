@@ -89,6 +89,34 @@ F:              ; preds = %0
   ret void
 }
 
+; TODO: Should we allow the transformation for pointers with external state?
+define void @test1_ptr_external_state(ptr addrspace(200) %V) {
+; CHECK-LABEL: @test1_ptr_external_state(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq ptr addrspace(200) [[V:%.*]], inttoptr (i32 4 to ptr addrspace(200))
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq ptr addrspace(200) [[V]], inttoptr (i32 17 to ptr addrspace(200))
+; CHECK-NEXT:    [[CN:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       T:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       F:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  %C1 = icmp eq ptr addrspace(200) %V, inttoptr (i32 4 to ptr addrspace(200))
+  %C2 = icmp eq ptr addrspace(200) %V, inttoptr (i32 17 to ptr addrspace(200))
+  %CN = or i1 %C1, %C2            ; <i1> [#uses=1]
+  br i1 %CN, label %T, label %F
+T:              ; preds = %0
+  call void @foo1( )
+  ret void
+F:              ; preds = %0
+  call void @foo2( )
+  ret void
+}
+
 define void @test2(i32 %V) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[T:%.*]] [
