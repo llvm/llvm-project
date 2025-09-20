@@ -392,6 +392,10 @@ public:
   bool performsCallback(unsigned ID,
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
+  /// Return true if this builtin has parameters at fixed positions
+  /// that must be non-null.
+  bool IsNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs) const;
+
   /// Return true if this function has no side effects and doesn't
   /// read memory, except for possibly errno or raising FP exceptions.
   ///
