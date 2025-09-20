@@ -649,8 +649,8 @@ body:             |
     ; LOWER-NEXT: {{  $}}
     ; LOWER-NEXT: %reg0:_(s32) = COPY $w0
     ; LOWER-NEXT: %reg1:_(s32) = COPY $w1
-    ; LOWER-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; LOWER-NEXT: %cmp:_(s32) = G_ICMP intpred(slt), %reg0(s32), [[C]]
+    ; LOWER-NEXT: %cst:_(s32) = G_CONSTANT i32 -1
+    ; LOWER-NEXT: %cmp:_(s32) = G_ICMP intpred(sle), %reg0(s32), %cst
     ; LOWER-NEXT: %select:_(s32) = G_SELECT %cmp(s32), %reg0, %reg1
     ; LOWER-NEXT: $w0 = COPY %select(s32)
     ; LOWER-NEXT: RET_ReallyLR implicit $w0
@@ -660,8 +660,8 @@ body:             |
     ; SELECT-NEXT: {{  $}}
     ; SELECT-NEXT: %reg0:gpr32common = COPY $w0
     ; SELECT-NEXT: %reg1:gpr32 = COPY $w1
-    ; SELECT-NEXT: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri %reg0, 0, 0, implicit-def $nzcv
-    ; SELECT-NEXT: %select:gpr32 = CSELWr %reg0, %reg1, 4, implicit $nzcv
+    ; SELECT-NEXT: [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri %reg0, 1, 0, implicit-def $nzcv
+    ; SELECT-NEXT: %select:gpr32 = CSELWr %reg0, %reg1, 13, implicit $nzcv
     ; SELECT-NEXT: $w0 = COPY %select
     ; SELECT-NEXT: RET_ReallyLR implicit $w0
     %reg0:_(s32) = COPY $w0
