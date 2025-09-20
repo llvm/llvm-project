@@ -328,6 +328,8 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- The `-Wnrvo` compiler flag is now ignored in C mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
