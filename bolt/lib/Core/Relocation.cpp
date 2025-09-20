@@ -567,28 +567,10 @@ static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
   case ELF::R_PPC64_GOT16_HI:
   case ELF::R_PPC64_GOT16_HA:
     return Contents;
-    // Generic 32-bit PC-relative addend (not branch)
-  case ELF::R_PPC64_REL32: {
-    int64_t disp = SignExtend64<32>(static_cast<uint32_t>(Contents));
-    return static_cast<uint64_t>(static_cast<int64_t>(PC) + disp);
-  }
-
-  // Branch (24-bit field in bits 6..29, with implicit low two zero bits)
-  case ELF::R_PPC64_REL24: {
-    uint64_t li26 =
-        Contents & 0x03FFFFFCULL; // mask bits 6..29 plus the two low zeros
-    int64_t disp = SignExtend64<26>(li26); // sign-extend the 26-bit value
-    return static_cast<uint64_t>(static_cast<int64_t>(PC) + disp);
-  }
-
-  // Conditional branch (14-bit field in bits 16..29, plus two zero bits)
-  case ELF::R_PPC64_REL14: {
-    uint64_t bd16 =
-        Contents & 0x0000FFFCULL;         // bits 16..29 and the two low zeros
-    int64_t disp = SignExtend64<16>(bd16); // sign-extend 16 (14+2 zeros)
-    return static_cast<uint64_t>(static_cast<int64_t>(PC) + disp);
-  }
-
+  case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
+    return Contents;
   case ELF::R_PPC64_NONE:
     return 0;
   }
