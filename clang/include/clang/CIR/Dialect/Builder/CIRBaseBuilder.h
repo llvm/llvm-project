@@ -223,8 +223,32 @@ public:
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
                            mlir::Type type, llvm::StringRef name,
+                           mlir::IntegerAttr alignment,
+                           mlir::Value dynAllocSize) {
+    return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment,
+                                 dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment,
+                           mlir::Value dynAllocSize) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    return createAlloca(loc, addrType, type, name, alignmentAttr, dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
     return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment);
+  }
+
+  /// Get constant address of a global variable as an MLIR attribute.
+  /// This wrapper infers the attribute type through the global op.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::GlobalOp globalOp,
+                                        mlir::ArrayAttr indices = {}) {
+    cir::PointerType type = getPointerTo(globalOp.getSymType());
+    return getGlobalViewAttr(type, globalOp, indices);
   }
 
   /// Get constant address of a global variable as an MLIR attribute.
@@ -243,6 +267,11 @@ public:
 
   mlir::Value createGetGlobal(cir::GlobalOp global) {
     return createGetGlobal(global.getLoc(), global);
+  }
+
+  /// Create a copy with inferred length.
+  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,

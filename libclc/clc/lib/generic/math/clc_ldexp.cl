@@ -14,9 +14,7 @@
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 
-#define _CLC_DEF_ldexp _CLC_DEF __attribute__((weak))
-
-_CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
+_CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
   if (!__clc_fp32_subnormals_supported()) {
     // This treats subnormals as zeros
@@ -89,7 +87,7 @@ _CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_DEF_ldexp _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
+_CLC_DEF _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
   long l = __clc_as_ulong(x);
   int e = (l >> 52) & 0x7ff;
   long s = l & 0x8000000000000000;
@@ -124,14 +122,13 @@ _CLC_DEF_ldexp _CLC_OVERLOAD double __clc_ldexp(double x, int n) {
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-_CLC_OVERLOAD _CLC_DEF_ldexp half __clc_ldexp(half x, int n) {
+_CLC_OVERLOAD _CLC_DEF half __clc_ldexp(half x, int n) {
   return (half)__clc_ldexp((float)x, n);
 }
 
 #endif
 
 #define __CLC_FUNCTION __clc_ldexp
-#define __CLC_DEF_SPEC _CLC_DEF_ldexp
 #define __CLC_ARG2_TYPE int
 #define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
 #include <clc/math/gentype.inc>

@@ -37,7 +37,8 @@ public:
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false,
                                  bool DestroyToplevelScope = false);
-  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+  EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
+                                 bool CheckFullyInitialized);
   /// Interpret the given Expr to a Pointer.
   EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
   /// Interpret the given expression as if it was in the body of the given
@@ -59,7 +60,8 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
-  virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                                  bool ConstantContext) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;

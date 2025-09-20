@@ -772,7 +772,7 @@ The elementwise intrinsics ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
 ``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
 ``__builtin_elementwise_min``, ``__builtin_elementwise_abs``,
-``__builtin_elementwise_ctlz``, ``__builtin_elementwise_cttz``, and
+``__builtin_elementwise_clzg``, ``__builtin_elementwise_ctzg``, and
 ``__builtin_elementwise_fma`` can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
@@ -875,18 +875,20 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 for the comparison.
 T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
                                                 significant bits of the wide value), the combined value is shifted
-                                                left by z, and the most significant bits are extracted to produce
+                                                left by z (modulo the bit width of the original arguments),
+                                                and the most significant bits are extracted to produce
                                                 a result that is the same size as the original arguments.
 
 T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
                                                 significant bits of the wide value), the combined value is shifted
-                                                right by z, and the least significant bits are extracted to produce
+                                                right by z (modulo the bit width of the original arguments),
+                                                and the least significant bits are extracted to produce
                                                 a result that is the same size as the original arguments.
- T __builtin_elementwise_ctlz(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
+ T __builtin_elementwise_clzg(T x[, T y])       return the number of leading 0 bits in the first argument. If          integer types
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. It is undefined behaviour if the
                                                 first argument is 0 and no second argument is provided.
- T __builtin_elementwise_cttz(T x[, T y])       return the number of trailing 0 bits in the first argument. If         integer types
+ T __builtin_elementwise_ctzg(T x[, T y])       return the number of trailing 0 bits in the first argument. If         integer types
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. It is undefined behaviour if the
                                                 first argument is 0 and no second argument is provided.

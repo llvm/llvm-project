@@ -75,21 +75,21 @@ void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,
   *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_fp6(src3, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk16_f32_fp6' must be a constant integer}}
   *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_bf6(src3, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk16_f32_bf6' must be a constant integer}}
 
-  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_bf8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_bf8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp4(src1, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp4(src1, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_fp8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_bf8(src2, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_fp4(src1, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outh16 = __builtin_amdgcn_cvt_scale_pk16_f16_fp6(src3, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy16 = __builtin_amdgcn_cvt_scale_pk16_bf16_fp6(src3, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outh16 = __builtin_amdgcn_cvt_scale_pk16_f16_bf6(src3, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outy16 = __builtin_amdgcn_cvt_scale_pk16_bf16_bf6(src3, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_fp6(src3, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
-  *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_bf6(src3, scale, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp8(src2, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp8(src2, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_bf8(src2, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_bf8(src2, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp4(src1, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp4(src1, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_fp8(src2, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_bf8(src2, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_fp4(src1, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outh16 = __builtin_amdgcn_cvt_scale_pk16_f16_fp6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outy16 = __builtin_amdgcn_cvt_scale_pk16_bf16_fp6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outh16 = __builtin_amdgcn_cvt_scale_pk16_f16_bf6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outy16 = __builtin_amdgcn_cvt_scale_pk16_bf16_bf6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_fp6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_bf6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
 }
 
 void test_amdgcn_load_monitor(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
@@ -113,6 +113,11 @@ void test_amdgcn_cluster_load(global int* addr32, global v2i* addr64, global v4i
 void test_amdgcn_async_load_store_lds_offset(global char* gaddr8, global int *gaddr32, global v2i* gaddr64, global v4i* gaddr128, local char* laddr8,
                                              local int *laddr32, local v2i* laddr64, local v4i* laddr128, int offset, int mask)
 {
+  __builtin_amdgcn_cluster_load_async_to_lds_b8(gaddr8, laddr8, offset, 0, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b8' must be a constant integer}}
+  __builtin_amdgcn_cluster_load_async_to_lds_b32(gaddr32, laddr32, offset, 0, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b32' must be a constant integer}}
+  __builtin_amdgcn_cluster_load_async_to_lds_b64(gaddr64, laddr64, offset, 0, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b64' must be a constant integer}}
+  __builtin_amdgcn_cluster_load_async_to_lds_b128(gaddr128, laddr128, offset, 0, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b128' must be a constant integer}}
+
   __builtin_amdgcn_global_load_async_to_lds_b8(gaddr8, laddr8, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b8' must be a constant integer}}
   __builtin_amdgcn_global_load_async_to_lds_b32(gaddr32, laddr32, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b32' must be a constant integer}}
   __builtin_amdgcn_global_load_async_to_lds_b64(gaddr64, laddr64, offset, 0); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b64' must be a constant integer}}
@@ -127,6 +132,11 @@ void test_amdgcn_async_load_store_lds_offset(global char* gaddr8, global int *ga
 void test_amdgcn_async_load_store_lds_cpol(global char* gaddr8, global int *gaddr32, global v2i* gaddr64, global v4i* gaddr128, local char* laddr8,
                                            local int *laddr32, local v2i* laddr64, local v4i* laddr128, int cpol, int mask)
 {
+  __builtin_amdgcn_cluster_load_async_to_lds_b8(gaddr8, laddr8, 16, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b8' must be a constant integer}}
+  __builtin_amdgcn_cluster_load_async_to_lds_b32(gaddr32, laddr32, 16, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b32' must be a constant integer}}
+  __builtin_amdgcn_cluster_load_async_to_lds_b64(gaddr64, laddr64, 16, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b64' must be a constant integer}}
+  __builtin_amdgcn_cluster_load_async_to_lds_b128(gaddr128, laddr128, 16, cpol, mask); // expected-error {{'__builtin_amdgcn_cluster_load_async_to_lds_b128' must be a constant integer}}
+
   __builtin_amdgcn_global_load_async_to_lds_b8(gaddr8, laddr8, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b8' must be a constant integer}}
   __builtin_amdgcn_global_load_async_to_lds_b32(gaddr32, laddr32, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b32' must be a constant integer}}
   __builtin_amdgcn_global_load_async_to_lds_b64(gaddr64, laddr64, 16, cpol); // expected-error {{'__builtin_amdgcn_global_load_async_to_lds_b64' must be a constant integer}}
