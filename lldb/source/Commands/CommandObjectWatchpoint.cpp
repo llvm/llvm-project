@@ -1097,8 +1097,7 @@ protected:
     }
 
     Status error;
-    WatchpointSP watch_sp;
-    watch_sp =
+    WatchpointSP watch_sp =
         target.CreateWatchpointByAddress(addr, size, &compiler_type, watch_type,
                                          m_option_watchpoint.watch_mode, error);
     if (!watch_sp) {

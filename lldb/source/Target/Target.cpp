@@ -949,7 +949,8 @@ static bool IsModifyWatchpointKind(uint32_t kind) {
 
 static bool CheckSoftwareWatchpointParameters(uint32_t kind, Status &error) {
   if (!IsModifyWatchpointKind(kind)) {
-    error.FromErrorString("software watchpoint can be only \"modify\" type");
+    error = Status::FromErrorString(
+        "software watchpoint can be only \"modify\" type");
     return false;
   }
   return true;
@@ -958,12 +959,14 @@ static bool CheckSoftwareWatchpointParameters(uint32_t kind, Status &error) {
 static bool CheckCommonWatchpointParameters(uint32_t kind, size_t size,
                                             Status &error) {
   if (!LLDB_WATCH_TYPE_IS_VALID(kind)) {
-    error.FromErrorStringWithFormat("invalid watchpoint type: %d", kind);
+    error =
+        Status::FromErrorStringWithFormat("invalid watchpoint type: %d", kind);
     return false;
   }
 
   if (size == 0) {
-    error.FromErrorString("cannot set a watchpoint with watch_size of 0");
+    error =
+        Status::FromErrorString("cannot set a watchpoint with watch_size of 0");
     return false;
   }
 
@@ -1015,7 +1018,7 @@ static WatchpointSP CheckMatchedWatchpoint(Target &target, lldb::addr_t addr,
     return wp_sp;
   }
 
-  error.FromErrorStringWithFormat(
+  error = Status::FromErrorStringWithFormat(
       "Address 0x%lx is already monitored by Watchpoint %u with "
       "diffrent size(%zu), type(%s%s%s) or mode(%s).\n"
       "Multiple watchpoints on the same address are not supported. "

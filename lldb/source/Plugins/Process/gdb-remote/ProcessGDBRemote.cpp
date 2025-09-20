@@ -3458,7 +3458,7 @@ Status ProcessGDBRemote::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
 
   wp_sp->SetEnabled(false, notify);
   if (!disabled_all)
-    Status::FromErrorString(
+    error = Status::FromErrorString(
         "Failure disabling one of the watchpoint locations");
 
   return error;

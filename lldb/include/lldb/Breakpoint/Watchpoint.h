@@ -59,8 +59,9 @@ public:
     const WatchpointEventData &operator=(const WatchpointEventData &) = delete;
   };
 
-  // Make sure watchpoint is properly disabled and subsequently enabled while
-  // performing watchpoint actions.
+  /// \class WatchpointSentry
+  /// \brief Make sure watchpoint is properly disabled and subsequently enabled
+  /// while performing watchpoint actions.
   class WatchpointSentry {
   public:
     WatchpointSentry(lldb::ProcessSP p_sp, lldb::WatchpointSP w_sp)
@@ -131,15 +132,15 @@ public:
   std::string GetWatchSpec() const;
   void SetWatchSpec(const std::string &str);
 
-  // This function determines whether we should report a watchpoint value
-  // change. Specifically, it checks the watchpoint condition (if present),
-  // ignore count and so on.
-  //
-  // \param[in] exe_ctx This should represent the current execution context
-  // where execution stopped. It's used only for watchpoint condition
-  // evaluation.
-  //
-  // \return Returns true if we should report a watchpoint hit.
+  /// \brief This function determines whether we should report a watchpoint
+  /// value change. Specifically, it checks the watchpoint condition (if
+  /// present), ignore count and so on.
+  ///
+  /// \param[in] exe_ctx This should represent the current execution context
+  /// where execution stopped. It's used only for watchpoint condition
+  /// evaluation.
+  ///
+  /// \return Returns true if we should report a watchpoint hit.
   bool WatchedValueReportable(const ExecutionContext &exe_ctx);
 
   // Snapshot management interface.
@@ -257,15 +258,15 @@ private:
 
   bool CheckWatchpointCondition(const ExecutionContext &exe_ctx) const;
 
-  // This class facilitates retrieving a watchpoint's watched value.
-  //
-  // It's used by both hardware and software watchpoints to access
-  // values stored in the process memory.
-  //
-  // To retrieve the value located in the memory, the value's memory address
-  // and its CompilerType are required. ExecutionContext in this case should
-  // contain information about current process, so CalculateWatchedValue
-  // function first of all create ExecutionContext from the process of m_target.
+  /// \brief This class facilitates retrieving a watchpoint's watched value.
+  ///
+  /// \details It's used by both hardware and software watchpoints to access
+  /// values stored in the process memory.
+  /// To retrieve the value located in the memory, the value's memory address
+  /// and its CompilerType are required. ExecutionContext in this case should
+  /// contain information about current process, so CalculateWatchedValue
+  /// function first of all create ExecutionContext from the process of
+  /// m_target.
   class AddressWatchpointCalculateStrategy {
   public:
     AddressWatchpointCalculateStrategy(Target &target, lldb::addr_t addr,
