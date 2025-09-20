@@ -20,6 +20,8 @@
 using namespace llvm;
 using namespace bolt;
 
+static inline unsigned opc(const MCInst &I) { return I.getOpcode(); }
+
 // Create instructions to push two registers onto the stack
 void PPCMCPlusBuilder::createPushRegisters(MCInst &Inst1, MCInst &Inst2,
                                            MCPhysReg Reg1, MCPhysReg /*Reg2*/) {
@@ -47,8 +49,21 @@ bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
   }
 }
 
-bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst & /*I*/) const {
-  return false;
+bool PPCMCPlusBuilder::hasPCRelOperand(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::BL:
+  case PPC::BLA:
+  case PPC::B:
+  case PPC::BA:
+  case PPC::BC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+int PPCMCPlusBuilder::getPCRelOperandNum(const MCInst &I) const {
+  return hasPCRelOperand(I) ? 0 : -1;
 }
 
 int PPCMCPlusBuilder::getMemoryOperandNo(const MCInst & /*Inst*/) const {
@@ -75,20 +90,49 @@ bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
   return false;
 }
 
-bool PPCMCPlusBuilder::isCall(const MCInst & /*Inst*/) const { return false; }
+bool PPCMCPlusBuilder::isCall(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::BL:    // branch with link (relative)
+  case PPC::BLA:   // absolute with link
+  case PPC::BCL:   // conditional with link (rare for calls, but safe)
+  case PPC::BCTRL: // branch to CTR with link (indirect call)
+    return true;
+  default:
+    return false;
+  }
+}
 
-bool PPCMCPlusBuilder::isTailCall(const MCInst & /*Inst*/) const {
+bool PPCMCPlusBuilder::isTailCall(const MCInst &I) const {
+  (void)I;
   return false;
 }
 
 bool PPCMCPlusBuilder::isReturn(const MCInst & /*Inst*/) const { return false; }
 
-bool PPCMCPlusBuilder::isConditionalBranch(const MCInst & /*Inst*/) const {
-  return false;
+bool PPCMCPlusBuilder::isConditionalBranch(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::BC: // branch conditional
+    return true;
+  default:
+    return false;
+  }
 }
 
-bool PPCMCPlusBuilder::isUnconditionalBranch(const MCInst & /*Inst*/) const {
-  return false;
+bool PPCMCPlusBuilder::isUnconditionalBranch(const MCInst &I) const {
+  switch (opc(I)) {
+  case PPC::B:    // branch
+  case PPC::BA:   // absolute branch
+  case PPC::BCTR: // branch to CTR (no link) – often tail call
+  case PPC::BCLR: // branch to LR  (no link)
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Disable “conditional tail call” path for now.
+const MCInst *PPCMCPlusBuilder::getConditionalTailCall(const MCInst &) const {
+  return nullptr;
 }
 
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
