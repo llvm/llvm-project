@@ -70,6 +70,11 @@ const MCSymbol *PPCMCPlusBuilder::getTargetSymbol(const MCInst &Inst,
   return nullptr;
 }
 
+bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
+  (void)Inst;
+  return false;
+}
+
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
     MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
     const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
