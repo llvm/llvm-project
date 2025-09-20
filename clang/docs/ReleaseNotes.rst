@@ -142,8 +142,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
-- A new family of builtins ``__builtin_*_synthesises_from_spaceship`` has been added. These can be queried to know
-  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesised from a
+- A new family of builtins ``__builtin_*_synthesizes_from_spaceship`` has been added. These can be queried to know
+  whether the ``<`` (``lt``), ``>`` (``gt``), ``<=`` (``le``), or ``>=`` (``ge``) operators are synthesized from a
   ``<=>``. This makes it possible to optimize certain facilities by using the ``<=>`` operation directly instead of
   doing multiple comparisons.
 
