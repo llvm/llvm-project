@@ -23,6 +23,8 @@ public:
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override;
 
+  bool convertJmpToTailCall(MCInst &Inst) override;
+
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
                         InstructionIterator End, const unsigned PtrSize,
