@@ -116,7 +116,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractPenultimateElement: {
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ExtractLastActive: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
       return VecTy->getElementType();
@@ -309,7 +310,11 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           })
           .Case<VPExpressionRecipe>([this](const auto *R) {
             return inferScalarType(R->getOperandOfResultType());
-          });
+          })
+          .Case<VPWidenSelectVectorRecipe>(
+              [this](const VPWidenSelectVectorRecipe *R) {
+                return inferScalarType(R->getOperand(1));
+              });
 
   assert(ResultTy && "could not infer type for the given VPValue");
   CachedTypes[V] = ResultTy;
