@@ -2314,11 +2314,47 @@ bool RewriteInstance::analyzeRelocation(
     IsSectionRelocation = false;
   } else {
     const SymbolRef &Symbol = *SymbolIter;
-    SymbolName = std::string(cantFail(Symbol.getName()));
-    SymbolAddress = cantFail(Symbol.getAddress());
-    SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
-    // Section symbols are marked as ST_Debug.
-    IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
+
+    if (IsPPC64) {
+      // --- Safe guarded path for PPC64 ---
+      auto NameOrErr = Symbol.getName();
+      if (!NameOrErr) {
+        consumeError(NameOrErr.takeError());
+        SymbolName = "<unknown>";
+        SymbolAddress = 0;
+        IsSectionRelocation = false;
+        SkipVerification = true;
+        return true;
+      }
+      SymbolName = std::string(*NameOrErr);
+
+      auto AddrOrErr = Symbol.getAddress();
+      if (!AddrOrErr) {
+        consumeError(AddrOrErr.takeError());
+        SymbolAddress = 0;
+        IsSectionRelocation = false;
+        SkipVerification = true;
+        return true;
+      }
+      SymbolAddress = *AddrOrErr;
+
+      auto TypeOrErr = Symbol.getType();
+      if (!TypeOrErr) {
+        consumeError(TypeOrErr.takeError());
+        IsSectionRelocation = false;
+        SkipVerification = true;
+      } else {
+        SkipVerification |= (*TypeOrErr == SymbolRef::ST_Other);
+        IsSectionRelocation = (*TypeOrErr == SymbolRef::ST_Debug);
+      }
+    } else {
+      // --- Original fast path for other arches ---
+      SymbolName = std::string(cantFail(Symbol.getName()));
+      SymbolAddress = cantFail(Symbol.getAddress());
+      SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
+      // Section symbols are marked as ST_Debug.
+      IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
+    }
     // Check for PLT entry registered with symbol name
     if (!SymbolAddress && !IsWeakReference(Symbol) &&
         (IsAArch64 || BC->isRISCV())) {
