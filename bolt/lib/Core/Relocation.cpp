@@ -134,6 +134,39 @@ static bool isSupportedRISCV(uint32_t Type) {
   }
 }
 
+static bool isSupportedPPC64(uint32_t Type) {
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_PPC64_ADDR16:
+  case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_ADDR32:
+  case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_ADDR16_DS:
+  case ELF::R_PPC64_ADDR16_LO_DS:
+  case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
+  case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_TOC16:
+  case ELF::R_PPC64_TOC16_LO:
+  case ELF::R_PPC64_TOC16_HI:
+  case ELF::R_PPC64_TOC16_HA:
+  case ELF::R_PPC64_TOC:
+  case ELF::R_PPC64_DTPREL16:
+  case ELF::R_PPC64_DTPREL16_LO:
+  case ELF::R_PPC64_DTPREL16_HI:
+  case ELF::R_PPC64_DTPREL16_HA:
+  case ELF::R_PPC64_DTPREL64:
+  case ELF::R_PPC64_GOT16:
+  case ELF::R_PPC64_GOT16_LO:
+  case ELF::R_PPC64_GOT16_HI:
+  case ELF::R_PPC64_GOT16_HA:
+    return true;
+  }
+}
+
 static size_t getSizeForTypeX86(uint32_t Type) {
   switch (Type) {
   default:
@@ -243,6 +276,42 @@ static size_t getSizeForTypeRISCV(uint32_t Type) {
   }
 }
 
+static size_t getSizeForTypePPC64(uint32_t Type) {
+  switch (Type) {
+  default:
+    errs() << object::getELFRelocationTypeName(ELF::EM_PPC64, Type) << '\n';
+    llvm_unreachable("unsupported relocation type");
+  case ELF::R_PPC64_ADDR16:
+  case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_TOC16:
+  case ELF::R_PPC64_TOC16_LO:
+  case ELF::R_PPC64_TOC16_HI:
+  case ELF::R_PPC64_TOC16_HA:
+  case ELF::R_PPC64_DTPREL16:
+  case ELF::R_PPC64_DTPREL16_LO:
+  case ELF::R_PPC64_DTPREL16_HI:
+  case ELF::R_PPC64_DTPREL16_HA:
+  case ELF::R_PPC64_GOT16:
+  case ELF::R_PPC64_GOT16_LO:
+  case ELF::R_PPC64_GOT16_HI:
+  case ELF::R_PPC64_GOT16_HA:
+    return 2;
+  case ELF::R_PPC64_REL14:
+    return 2;
+  case ELF::R_PPC64_ADDR32:
+  case ELF::R_PPC64_REL24:
+    return 4;
+  case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_TOC:
+    return 8;
+  case ELF::R_PPC64_NONE:
+    return 0;
+  }
+}
+
 static bool skipRelocationTypeX86(uint32_t Type) {
   return Type == ELF::R_X86_64_NONE;
 }
@@ -264,6 +333,21 @@ static bool skipRelocationTypeRISCV(uint32_t Type) {
     return false;
   case ELF::R_RISCV_NONE:
   case ELF::R_RISCV_RELAX:
+    return true;
+  }
+}
+
+static bool skipRelocationTypePPC64(uint32_t Type) {
+  return Type == ELF::R_PPC64_NONE;
+}
+
+static bool isPCRelativePPC64(uint32_t Type) {
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
     return true;
   }
 }
@@ -459,6 +543,49 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
     // Immediate goes in bits 20:5
     Contents = (Contents >> 5) & 0xffff;
     return Contents << (16 * Shift);
+  }
+}
+
+static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
+                                  uint64_t /*PC*/) {
+  switch (Type) {
+  default:
+    errs() << object::getELFRelocationTypeName(ELF::EM_PPC64, Type) << '\n';
+    llvm_unreachable("unsupported relocation type");
+
+  // Data / address / TOC / GOT / TLS classes → return the RELA addend (often 0)
+  case ELF::R_PPC64_ADDR16:
+  case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_ADDR32:
+  case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_ADDR16_DS:
+  case ELF::R_PPC64_ADDR16_LO_DS:
+  case ELF::R_PPC64_TOC:
+  case ELF::R_PPC64_TOC16:
+  case ELF::R_PPC64_TOC16_LO:
+  case ELF::R_PPC64_TOC16_HI:
+  case ELF::R_PPC64_TOC16_HA:
+  case ELF::R_PPC64_DTPREL16:
+  case ELF::R_PPC64_DTPREL16_LO:
+  case ELF::R_PPC64_DTPREL16_HI:
+  case ELF::R_PPC64_DTPREL16_HA:
+  case ELF::R_PPC64_DTPREL64:
+  case ELF::R_PPC64_GOT16:
+  case ELF::R_PPC64_GOT16_LO:
+  case ELF::R_PPC64_GOT16_HI:
+  case ELF::R_PPC64_GOT16_HA:
+    return Contents;
+
+  // Code relocs: for the verifier, return the ELF RELA addend (usually 0)
+  case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
+    return Contents;
+
+  case ELF::R_PPC64_NONE:
+    return 0;
   }
 }
 
@@ -733,6 +860,9 @@ bool Relocation::isSupported(uint32_t Type) {
     return isSupportedRISCV(Type);
   case Triple::x86_64:
     return isSupportedX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return isSupportedPPC64(Type);
   }
 }
 
@@ -747,6 +877,9 @@ size_t Relocation::getSizeForType(uint32_t Type) {
     return getSizeForTypeRISCV(Type);
   case Triple::x86_64:
     return getSizeForTypeX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return getSizeForTypePPC64(Type);
   }
 }
 
@@ -761,6 +894,9 @@ bool Relocation::skipRelocationType(uint32_t Type) {
     return skipRelocationTypeRISCV(Type);
   case Triple::x86_64:
     return skipRelocationTypeX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return skipRelocationTypePPC64(Type);
   }
 }
 
@@ -775,6 +911,9 @@ uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
     return encodeValueRISCV(Type, Value, PC);
   case Triple::x86_64:
     return encodeValueX86(Type, Value, PC);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return Value;
   }
 }
 
@@ -788,6 +927,9 @@ bool Relocation::canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
   case Triple::riscv32:
     return canEncodeValueRISCV(Type, Value, PC);
   case Triple::x86_64:
+    return true;
+  case Triple::ppc64:
+  case Triple::ppc64le:
     return true;
   }
 }
@@ -804,6 +946,9 @@ uint64_t Relocation::extractValue(uint32_t Type, uint64_t Contents,
     return extractValueRISCV(Type, Contents, PC);
   case Triple::x86_64:
     return extractValueX86(Type, Contents, PC);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return extractValuePPC64(Type, Contents, PC);
   }
 }
 
@@ -818,6 +963,9 @@ bool Relocation::isGOT(uint32_t Type) {
     return isGOTRISCV(Type);
   case Triple::x86_64:
     return isGOTX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return false;
   }
 }
 
@@ -846,6 +994,9 @@ bool Relocation::isRelative(uint32_t Type) {
     return Type == ELF::R_RISCV_RELATIVE;
   case Triple::x86_64:
     return Type == ELF::R_X86_64_RELATIVE;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return Type == ELF::R_PPC64_RELATIVE;
   }
 }
 
@@ -874,6 +1025,9 @@ bool Relocation::isTLS(uint32_t Type) {
     return isTLSRISCV(Type);
   case Triple::x86_64:
     return isTLSX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return false;
   }
 }
 
@@ -901,6 +1055,9 @@ uint32_t Relocation::getNone() {
     return ELF::R_RISCV_NONE;
   case Triple::x86_64:
     return ELF::R_X86_64_NONE;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_NONE;
   }
 }
 
@@ -915,6 +1072,9 @@ uint32_t Relocation::getPC32() {
     return ELF::R_RISCV_32_PCREL;
   case Triple::x86_64:
     return ELF::R_X86_64_PC32;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_REL32;
   }
 }
 
@@ -929,6 +1089,9 @@ uint32_t Relocation::getPC64() {
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_PC64;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_REL64;
   }
 }
 
@@ -949,6 +1112,9 @@ bool Relocation::isPCRelative(uint32_t Type) {
     return isPCRelativeRISCV(Type);
   case Triple::x86_64:
     return isPCRelativeX86(Type);
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return isPCRelativePPC64(Type);
   }
 }
 
@@ -963,6 +1129,9 @@ uint32_t Relocation::getAbs64() {
     return ELF::R_RISCV_64;
   case Triple::x86_64:
     return ELF::R_X86_64_64;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_ADDR64;
   }
 }
 
@@ -977,6 +1146,9 @@ uint32_t Relocation::getRelative() {
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_RELATIVE;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    return ELF::R_PPC64_RELATIVE;
   }
 }
 
