@@ -2466,6 +2466,8 @@ bool RewriteInstance::analyzeRelocation(
     // RHS
     case ELF::R_PPC64_ADDR32:
     case ELF::R_PPC64_ADDR64:
+    case ELF::R_PPC64_REL24:
+    case ELF::R_PPC64_REL14:
       SkipVerification = true;
       break;
 
