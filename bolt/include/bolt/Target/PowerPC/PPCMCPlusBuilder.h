@@ -13,6 +13,10 @@ public:
                                   MCPhysReg Reg2);
 
   bool shouldRecordCodeRelocation(unsigned Type) const override;
+
+  bool hasPCRelOperand(const MCInst &I) const override;
+  int getMemoryOperandNo(const MCInst &Inst) const override;
+
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
                         InstructionIterator End, const unsigned PtrSize,
