@@ -54,6 +54,7 @@ class ScalarEvolution;
 class LoopSimplifyPass : public PassInfoMixin<LoopSimplifyPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Simplify each loop in a loop nest recursively.
