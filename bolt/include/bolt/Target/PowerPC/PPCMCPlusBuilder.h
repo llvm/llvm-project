@@ -42,6 +42,8 @@ public:
                         unsigned &IndexRegNumOut, int64_t &DispValueOut,
                         const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
                         MCInst *&FixedEntryLoadInstr) const override;
+
+  bool isNoop(const MCInst &Inst) const override;
 };
 
 } // namespace bolt

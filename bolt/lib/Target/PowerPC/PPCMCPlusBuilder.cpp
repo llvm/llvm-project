@@ -151,6 +151,14 @@ IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
   return IndirectBranchType::UNKNOWN;
 }
 
+bool PPCMCPlusBuilder::isNoop(const MCInst &Inst) const {
+  // NOP on PPC is encoded as "ori r0, r0, 0"
+  return Inst.getOpcode() == PPC::ORI && Inst.getOperand(0).isReg() &&
+         Inst.getOperand(0).getReg() == PPC::R0 && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(1).getReg() == PPC::R0 && Inst.getOperand(2).isImm() &&
+         Inst.getOperand(2).getImm() == 0;
+}
+
 namespace llvm {
 namespace bolt {
 
