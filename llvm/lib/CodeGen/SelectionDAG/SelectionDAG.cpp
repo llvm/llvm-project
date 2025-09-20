@@ -58,7 +58,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -3482,18 +3481,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   case ISD::VECTOR_COMPRESS: {
-    assert(!Op.getValueType().isScalableVector());
-
     SDValue Vec = Op.getOperand(0);
     SDValue PassThru = Op.getOperand(2);
-    // If PassThru is undefined, early out
-    if (PassThru.isUndef())
-      break;
 
     Known.Zero.setAllBits();
     Known.One.setAllBits();
-    Known2 = computeKnownBits(PassThru, Depth + 1);
-    Known = Known.intersectWith(Known2);
+    Known = computeKnownBits(PassThru, DemandedElts, Depth + 1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
       break;
@@ -4815,13 +4808,11 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
   case ISD::VECTOR_COMPRESS: {
     SDValue Vec = Op.getOperand(0);
-    SDValue Mask = Op.getOperand(1);
     SDValue PassThru = Op.getOperand(2);
-    // If PassThru is undefined, early out.
-    if (PassThru.isUndef())
+    Tmp = ComputeNumSignBits(PassThru, DemandedElts, Depth + 1);
+    if (Tmp == 1)
       return 1;
-    Tmp = ComputeNumSignBits(Vec, Depth + 1);
-    Tmp2 = ComputeNumSignBits(PassThru, Depth + 1);
+    Tmp2 = ComputeNumSignBits(Vec, Depth + 1);
     Tmp = std::min(Tmp, Tmp2);
     return Tmp;
   }
