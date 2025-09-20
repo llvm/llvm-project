@@ -2625,8 +2625,17 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::nvvm_d2ull_rp:
     case Intrinsic::nvvm_d2ull_rz: {
       // In float-to-integer conversion, NaN inputs are converted to 0.
-      if (U.isNaN())
-        return ConstantInt::get(Ty, 0);
+      if (U.isNaN()) {
+        // In float-to-integer conversion, NaN inputs are converted to 0
+        // when the source and destination bitwidths are both less than 64.
+        if (nvvm::FPToIntegerIntrinsicNaNZero(IntrinsicID))
+          return ConstantInt::get(Ty, 0);
+
+        // Otherwise, the most significant bit is set.
+        unsigned BitWidth = Ty->getIntegerBitWidth();
+        uint64_t Val = 1ULL << (BitWidth - 1);
+        return ConstantInt::get(Ty, APInt(BitWidth, Val, /*IsSigned=*/false));
+      }
 
       APFloat::roundingMode RMode =
           nvvm::GetFPToIntegerRoundingMode(IntrinsicID);
@@ -2636,13 +2645,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       APSInt ResInt(Ty->getIntegerBitWidth(), !IsSigned);
       auto FloatToRound = IsFTZ ? FTZPreserveSign(U) : U;
 
+      // Return max/min value for integers if the result is +/-inf or
+      // is too large to fit in the result's integer bitwidth.
       bool IsExact = false;
-      APFloat::opStatus Status =
-          FloatToRound.convertToInteger(ResInt, RMode, &IsExact);
-
-      if (Status != APFloat::opInvalidOp)
-        return ConstantInt::get(Ty, ResInt);
-      return nullptr;
+      FloatToRound.convertToInteger(ResInt, RMode, &IsExact);
+      return ConstantInt::get(Ty, ResInt);
     }
     }
 
