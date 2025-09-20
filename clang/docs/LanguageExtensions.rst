@@ -950,7 +950,8 @@ Each builtin accesses memory according to a provided boolean mask. These are
 provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
 argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
 takes an optional third vector argument that will be used for the result of the
-masked-off lanes. These builtins assume the memory is always aligned.
+masked-off lanes. These builtins assume the memory is unaligned, use
+``__builtin_assume_aligned`` if alignment is desired.
 
 The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
 builtins have the same interface but store the result in consecutive indices.
