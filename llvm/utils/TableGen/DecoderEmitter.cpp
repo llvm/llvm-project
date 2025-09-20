@@ -513,8 +513,7 @@ void DecoderEmitter::emitRegClassByHwModeDecoders(
 
   for (const Record *ClassByHwMode : RegClassByHwMode) {
     // Ignore cases that had an explicit DecoderMethod set.
-    if (!InstructionEncoding::findOperandDecoderMethod(Target, ClassByHwMode)
-             .second)
+    if (!InstructionEncoding::findOperandDecoderMethod(ClassByHwMode).second)
       continue;
 
     const HwModeSelect &ModeSelect = CGH.getHwModeSelect(ClassByHwMode);
@@ -533,8 +532,7 @@ void DecoderEmitter::emitRegClassByHwModeDecoders(
       OS << indent(2) << "case " << ModeID << ": // "
          << CGH.getModeName(ModeID, /*IncludeDefault=*/true) << '\n'
          << indent(4) << "return "
-         << InstructionEncoding::findOperandDecoderMethod(Target, RegClassRec)
-                .first
+         << InstructionEncoding::findOperandDecoderMethod(RegClassRec).first
          << "(Inst, Imm, Addr, Decoder);\n";
     }
     OS << indent(2) << R"(default:
@@ -1446,7 +1444,7 @@ void DecoderEmitter::parseInstructionEncodings() {
           continue;
         }
         unsigned EncodingID = Encodings.size();
-        Encodings.emplace_back(Target, EncodingDef, Inst);
+        Encodings.emplace_back(EncodingDef, Inst);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
       continue; // Ignore encoding specified by Instruction itself.
@@ -1458,7 +1456,7 @@ void DecoderEmitter::parseInstructionEncodings() {
     }
 
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(Target, InstDef, Inst);
+    Encodings.emplace_back(InstDef, Inst);
 
     // This instruction is encoded the same on all HwModes.
     // According to user needs, add it to all, some, or only the default HwMode.
@@ -1481,8 +1479,7 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(Target, EncodingDef,
-                           &Target.getInstruction(InstDef));
+    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 
