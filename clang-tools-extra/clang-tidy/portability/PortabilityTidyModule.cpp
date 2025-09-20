@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AvoidPlatformSpecificFundamentalTypesCheck.h"
 #include "AvoidPragmaOnceCheck.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
@@ -21,6 +22,8 @@ namespace portability {
 class PortabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidPlatformSpecificFundamentalTypesCheck>(
+        "portability-avoid-platform-specific-fundamental-types");
     CheckFactories.registerCheck<AvoidPragmaOnceCheck>(
         "portability-avoid-pragma-once");
     CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
