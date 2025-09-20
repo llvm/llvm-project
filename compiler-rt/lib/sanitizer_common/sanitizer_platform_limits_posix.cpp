@@ -72,8 +72,6 @@
 #include <malloc.h>
 #include <mntent.h>
 #include <netinet/ether.h>
-#include <sys/sysinfo.h>
-#include <sys/vt.h>
 #include <linux/cdrom.h>
 #include <linux/fd.h>
 #if SANITIZER_ANDROID
@@ -87,6 +85,10 @@
 #include <linux/utsname.h>
 #include <linux/posix_types.h>
 #include <net/if_arp.h>
+#ifndef _LINUX_SYSINFO_H
+#include <sys/sysinfo.h>
+#endif
+#include <sys/vt.h>
 #endif
 
 #if SANITIZER_IOS
@@ -133,9 +135,9 @@ typedef struct user_fpregs elf_fpregset_t;
 #      endif
 #      include <scsi/scsi.h>
 #else
+#include <linux/ppp_defs.h>
 #include <linux/if_ppp.h>
 #include <linux/kd.h>
-#include <linux/ppp_defs.h>
 #endif  // SANITIZER_GLIBC
 
 #if SANITIZER_ANDROID
