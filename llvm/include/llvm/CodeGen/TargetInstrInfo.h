@@ -174,6 +174,13 @@ public:
             isReMaterializableImpl(MI, true));
   }
 
+  bool isReMaterializable(const MachineInstr &MI) const {
+    return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
+            MI.getNumOperands() == 1) ||
+           (MI.getDesc().isRematerializable() &&
+            isReMaterializableImpl(MI, false));
+  }
+
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
   /// of instruction rematerialization or sinking.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {

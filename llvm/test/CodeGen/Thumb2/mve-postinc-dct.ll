@@ -121,11 +121,11 @@ define void @DCT_mve2(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_3 Depth 2
 ; CHECK-NEXT:    ldr r5, [sp] @ 4-byte Reload
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    add.w r10, r4, #1
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r3, r11
 ; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB1_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB1_2 Depth=1
@@ -257,16 +257,16 @@ define void @DCT_mve3(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB2_3 Depth 2
 ; CHECK-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    adds r0, r5, #2
 ; CHECK-NEXT:    adds r2, r5, #1
 ; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
-; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r4, r10
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB2_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB2_2 Depth=1
@@ -427,17 +427,17 @@ define void @DCT_mve4(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    str r0, [sp, #36] @ 4-byte Spill
 ; CHECK-NEXT:    adds r0, r6, #2
 ; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    str r0, [sp, #32] @ 4-byte Spill
 ; CHECK-NEXT:    adds r0, r6, #1
 ; CHECK-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r3, r12
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r5, r11
 ; CHECK-NEXT:    mov r4, r9
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov q3, q0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i32 q3, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB3_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB3_2 Depth=1
@@ -617,18 +617,18 @@ define void @DCT_mve5(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    adds r1, r0, #4
 ; CHECK-NEXT:    ldr r4, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r10, r0, #2
 ; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    adds r1, r0, #3
-; CHECK-NEXT:    add.w r10, r0, #2
 ; CHECK-NEXT:    add.w r11, r0, #1
 ; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    vmov q0, q1
-; CHECK-NEXT:    vmov q3, q1
-; CHECK-NEXT:    vmov q2, q1
-; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i32 q4, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB4_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB4_2 Depth=1
@@ -830,17 +830,17 @@ define void @DCT_mve6(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    adds r1, r0, #3
 ; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r11, r0, #2
+; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    adds r4, r0, #1
 ; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    mov r3, r8
-; CHECK-NEXT:    vmov q3, q1
-; CHECK-NEXT:    vmov q4, q1
-; CHECK-NEXT:    vmov q0, q1
-; CHECK-NEXT:    vmov q5, q1
-; CHECK-NEXT:    vmov q2, q1
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vmov.i32 q4, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov.i32 q5, #0x0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r7
 ; CHECK-NEXT:  .LBB5_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB5_2 Depth=1
@@ -1065,19 +1065,20 @@ define void @DCT_mve7(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    adds r1, r0, #3
 ; CHECK-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    adds r4, r0, #2
+; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r8, r0, #1
 ; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    mov r3, r9
-; CHECK-NEXT:    vmov q4, q2
-; CHECK-NEXT:    vmov q5, q2
-; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vmov q6, q2
-; CHECK-NEXT:    vmov q1, q2
+; CHECK-NEXT:    vmov.i32 q4, #0x0
+; CHECK-NEXT:    vmov.i32 q5, #0x0
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vmov.i32 q6, #0x0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    vstrw.32 q2, [sp, #56] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    dls lr, r6
 ; CHECK-NEXT:  .LBB6_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB6_2 Depth=1
@@ -1346,21 +1347,23 @@ define void @DCT_mve8(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    adds r1, r0, #4
 ; CHECK-NEXT:    ldr.w r9, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    adds r4, r0, #3
 ; CHECK-NEXT:    add.w r8, r0, #2
 ; CHECK-NEXT:    adds r1, r0, #1
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    vstrw.32 q0, [sp, #56] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov.i32 q3, #0x0
 ; CHECK-NEXT:    mov r3, r12
-; CHECK-NEXT:    vmov q5, q3
-; CHECK-NEXT:    vmov q6, q3
-; CHECK-NEXT:    vmov q4, q3
-; CHECK-NEXT:    vmov q7, q3
-; CHECK-NEXT:    vmov q2, q3
+; CHECK-NEXT:    vmov.i32 q5, #0x0
+; CHECK-NEXT:    vmov.i32 q6, #0x0
+; CHECK-NEXT:    vmov.i32 q4, #0x0
+; CHECK-NEXT:    vmov.i32 q7, #0x0
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    mov r10, r7
-; CHECK-NEXT:    vstrw.32 q3, [sp, #56] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q3, [sp, #72] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp, #72] @ 16-byte Spill
 ; CHECK-NEXT:    dls lr, r5
 ; CHECK-NEXT:  .LBB7_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB7_2 Depth=1
@@ -1379,9 +1382,9 @@ define void @DCT_mve8(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    vmov q6, q5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q7, q1, q0
-; CHECK-NEXT:    vmov q5, q3
-; CHECK-NEXT:    vmov q3, q4
-; CHECK-NEXT:    vmov q4, q2
+; CHECK-NEXT:    vmov q5, q4
+; CHECK-NEXT:    vmov q4, q3
+; CHECK-NEXT:    vmov q3, q2
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q1, [r5]
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #56] @ 16-byte Reload
@@ -1397,13 +1400,13 @@ define void @DCT_mve8(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r5]
 ; CHECK-NEXT:    adds r7, r5, r6
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #72] @ 16-byte Spill
-; CHECK-NEXT:    vmov q2, q4
-; CHECK-NEXT:    vmov q4, q3
+; CHECK-NEXT:    vmov q2, q3
+; CHECK-NEXT:    vmov q3, q4
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
 ; CHECK-NEXT:    vldrwt.u32 q1, [r7]
+; CHECK-NEXT:    vmov q4, q5
 ; CHECK-NEXT:    adds r5, r7, r6
-; CHECK-NEXT:    vmov q3, q5
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vfmat.f32 q4, q1, q0
 ; CHECK-NEXT:    vldrwt.u32 q1, [r5]
