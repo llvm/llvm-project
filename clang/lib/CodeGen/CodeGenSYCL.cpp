@@ -17,6 +17,21 @@
 using namespace clang;
 using namespace CodeGen;
 
+void CodeGenFunction::EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S) {
+  if (getLangOpts().SYCLIsDevice) {
+    // A sycl_kernel_entry_point attributed function is unlikely to be emitted
+    // during device compilation, but might be if it is ODR-used from device
+    // code that is emitted. In these cases, the function is emitted with an
+    // empty body; the original body is emitted in the offload kernel entry
+    // point and the synthesized kernel launch code is only relevant for host
+    // compilation.
+    return;
+  }
+
+  assert(getLangOpts().SYCLIsHost);
+  EmitStmt(S.getKernelLaunchStmt());
+}
+
 static void SetSYCLKernelAttributes(llvm::Function *Fn, CodeGenFunction &CGF) {
   // SYCL 2020 device language restrictions require forward progress and
   // disallow recursion.
