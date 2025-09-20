@@ -136,7 +136,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
            [](MlirPDLResultList results, const PyType &type) {
              mlirPDLResultListPushBackType(results, type);
            })
-      .def("push_back", [](MlirPDLResultList results, MlirAttribute attr) {
+      .def("push_back", [](MlirPDLResultList results, const PyAttribute &attr) {
         mlirPDLResultListPushBackAttribute(results, attr);
       });
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
