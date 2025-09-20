@@ -659,6 +659,112 @@ exit:
   ret void
 }
 
+define void @cost_scalar_load_of_address(ptr noalias %src, ptr %dst) {
+; CHECK-LABEL: define void @cost_scalar_load_of_address(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[L_EXT:%.*]] = sext i32 [[L]] to i64
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[L_EXT]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 8
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src = getelementptr i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src, align 4
+  %l.ext = sext i32 %l to i64
+  %gep.dst = getelementptr i32, ptr %dst, i64 %l.ext
+  store i32 0, ptr %gep.dst, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 8
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+%t = type { [3 x double] }
+%t.2 = type { [ 64 x double ] }
+
+define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.1, ptr %src.2) {
+; CHECK-LABEL: define double @test_scalarization_cost_for_load_of_address(
+; CHECK-SAME: ptr [[SRC_0:%.*]], ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi double [ 3.000000e+00, %[[ENTRY]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load double, ptr [[GEP_0]], align 8
+; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr i8, ptr [[GEP_0]], i64 8
+; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_8]], align 8
+; CHECK-NEXT:    [[GEP_16:%.*]] = getelementptr i8, ptr [[GEP_0]], i64 16
+; CHECK-NEXT:    [[L_2:%.*]] = load double, ptr [[GEP_16]], align 8
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul double [[L_0]], 3.000000e+00
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul double [[L_1]], 3.000000e+00
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul double [[L_2]], 3.000000e+00
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd double [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double [[ADD_0]], [[MUL_2]]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[MUL256_US:%.*]] = fmul double [[ADD_1]], [[L]]
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_72:%.*]] = getelementptr i8, ptr [[GEP_SRC_2]], i64 72
+; CHECK-NEXT:    [[L_P_2:%.*]] = load ptr, ptr [[GEP_72]], align 8
+; CHECK-NEXT:    [[LV:%.*]] = load double, ptr [[L_P_2]], align 8
+; CHECK-NEXT:    [[RED_NEXT]] = tail call double @llvm.fmuladd.f64(double [[MUL256_US]], double [[LV]], double [[RED]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi double [ [[RED_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret double [[RED_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi double [ 3.000000e+00, %entry ], [ %red.next, %loop ]
+  %gep.0 = getelementptr %t, ptr %src.0, i64 %iv
+  %l.0 = load double, ptr %gep.0, align 8
+  %gep.8 = getelementptr i8, ptr %gep.0, i64 8
+  %l.1 = load double, ptr %gep.8, align 8
+  %gep.16 = getelementptr i8, ptr %gep.0, i64 16
+  %l.2 = load double, ptr %gep.16, align 8
+  %mul.0 = fmul double %l.0, 3.000000e+00
+  %mul.1 = fmul double %l.1, 3.000000e+00
+  %mul.2 = fmul double %l.2, 3.000000e+00
+  %add.0 = fadd double %mul.0, %mul.1
+  %add.1 = fadd double %add.0, %mul.2
+  %gep.src = getelementptr double, ptr %src.1, i64 %iv
+  %l = load double, ptr %gep.src, align 8
+  %mul256.us = fmul double %add.1, %l
+  %gep.src.2 = getelementptr %t.2, ptr %src.2, i64 %iv
+  %gep.72 = getelementptr i8, ptr %gep.src.2, i64 72
+  %l.p.2 = load ptr, ptr %gep.72, align 8
+  %lv = load double, ptr %l.p.2, align 8
+  %red.next = tail call double @llvm.fmuladd.f64(double %mul256.us, double %lv, double %red)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret double  %red.next
+}
+
 attributes #0 = { "target-cpu"="neoverse-512tvb" }
 
 !0 = !{!1, !2, i64 0}
