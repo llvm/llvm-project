@@ -560,10 +560,7 @@ define float @v_mad_mix_f32_bf16lo_bf16lo_bf16lo_all_cast_from_half(half %src0, 
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v3, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_fmac_f32_e32 v0, v3, v1
+; GFX1250-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.bf16 = bitcast half %src0 to bfloat
   %src1.bf16 = bitcast half %src1 to bfloat
@@ -580,9 +577,7 @@ define float @v_mad_mix_f32_bf16lo_cast_from_half_bf16lo_bf16lo(half %src0, bflo
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v0, v1, v2 op_sel_hi:[0,1,1]
+; GFX1250-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,0,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.bf16 = bitcast half %src0 to bfloat
   %src0.ext = fpext bfloat %src0.bf16 to float
