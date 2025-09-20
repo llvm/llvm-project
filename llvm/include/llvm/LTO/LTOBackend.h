@@ -35,8 +35,8 @@ class Target;
 namespace lto {
 
 /// Runs middle-end LTO optimizations on \p Mod.
-LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task,
-                  Module &Mod, bool IsThinLTO,
+LLVM_ABI bool opt(const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                  TargetMachine *TM, unsigned Task, Module &Mod, bool IsThinLTO,
                   ModuleSummaryIndex *ExportSummary,
                   const ModuleSummaryIndex *ImportSummary,
                   const std::vector<uint8_t> &CmdArgs);
@@ -56,14 +56,14 @@ LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
 /// the backend will skip optimization and only perform code generation. If
 /// \p IRAddStream is not nullptr, it will be called just before code generation
 /// to serialize the optimized IR.
-LLVM_ABI Error
-thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
-            const ModuleSummaryIndex &CombinedIndex,
-            const FunctionImporter::ImportMapTy &ImportList,
-            const GVSummaryMapTy &DefinedGlobals,
-            MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
-            AddStreamFn IRAddStream = nullptr,
-            const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
+LLVM_ABI Error thinBackend(
+    const Config &C, IntrusiveRefCntPtr<vfs::FileSystem> FS, unsigned Task,
+    AddStreamFn AddStream, Module &M, const ModuleSummaryIndex &CombinedIndex,
+    const FunctionImporter::ImportMapTy &ImportList,
+    const GVSummaryMapTy &DefinedGlobals,
+    MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
+    AddStreamFn IRAddStream = nullptr,
+    const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
 LLVM_ABI Error
 finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile);

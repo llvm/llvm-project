@@ -236,11 +236,11 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   return TM;
 }
 
-static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
-                           unsigned OptLevel, bool IsThinLTO,
+static void runNewPMPasses(const Config &Conf,
+                           IntrusiveRefCntPtr<vfs::FileSystem> FS, Module &Mod,
+                           TargetMachine *TM, unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
@@ -362,8 +362,9 @@ static bool isEmptyModule(const Module &Mod) {
          Mod.getModuleInlineAsm().empty();
 }
 
-bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
-              bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
+bool lto::opt(const Config &Conf, IntrusiveRefCntPtr<vfs::FileSystem> FS,
+              TargetMachine *TM, unsigned Task, Module &Mod, bool IsThinLTO,
+              ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
               const std::vector<uint8_t> &CmdArgs) {
   llvm::TimeTraceScope timeScope("opt");
@@ -391,8 +392,8 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   // regular LTO combined module, with a large combined index from ThinLTO.
   if (!isEmptyModule(Mod)) {
     // FIXME: Plumb the combined index into the new pass manager.
-    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
+    runNewPMPasses(Conf, std::move(FS), Mod, TM, Conf.OptLevel, IsThinLTO,
+                   ExportSummary, ImportSummary);
   }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
@@ -563,7 +564,8 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!C.CodeGenOnly) {
-    if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
+    auto FS = vfs::getRealFileSystem();
+    if (!opt(C, FS, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
              /*CmdArgs*/ std::vector<uint8_t>()))
       return Error::success();
@@ -600,8 +602,10 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
   }
 }
 
-Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
-                       Module &Mod, const ModuleSummaryIndex &CombinedIndex,
+Error lto::thinBackend(const Config &Conf,
+                       IntrusiveRefCntPtr<vfs::FileSystem> FS, unsigned Task,
+                       AddStreamFn AddStream, Module &Mod,
+                       const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
@@ -642,7 +646,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
       [&](Module &Mod, TargetMachine *TM,
           std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
         // Perform optimization and code generation for ThinLTO.
-        if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
+        if (!opt(Conf, FS, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
                  CmdArgs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
