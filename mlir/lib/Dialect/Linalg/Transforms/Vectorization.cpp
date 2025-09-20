@@ -1771,11 +1771,6 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 
   Location loc = packOp.getLoc();
   auto padValue = packOp.getPaddingValue();
-  if (!padValue) {
-    padValue = arith::ConstantOp::create(
-        rewriter, loc,
-        rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
-  }
 
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
@@ -1798,7 +1793,8 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   for (auto [idx, size] : enumerate(innerTiles))
     inputShape[innerDimsPos[idx]] *= size;
   auto maskedRead = vector::createReadOrMaskedRead(
-      rewriter, loc, packOp.getSource(), inputShape, padValue,
+      rewriter, loc, packOp.getSource(), inputShape,
+      padValue ? std::optional<Value>(padValue) : std::nullopt,
       useInBoundsInsteadOfMasking,
       /*inputScalableVecSizes=*/{});
 
