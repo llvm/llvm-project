@@ -43,7 +43,7 @@ _Bool __aarch64_have_lse_atomics
 #elif defined(__Fuchsia__)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/fuchsia.inc"
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) && __has_include(<sys/system_properties.h>)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/android.inc"
 #elif defined(__linux__) && __has_include(<sys/auxv.h>)
@@ -73,7 +73,7 @@ struct {
 #include "aarch64/fmv/elf_aux_info.inc"
 #elif defined(__Fuchsia__)
 #include "aarch64/fmv/fuchsia.inc"
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) && __has_include(<sys/system_properties.h>)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/android.inc"
 #elif defined(__linux__) && __has_include(<sys/auxv.h>)
