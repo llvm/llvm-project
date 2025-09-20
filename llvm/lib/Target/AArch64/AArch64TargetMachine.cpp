@@ -773,8 +773,21 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
 
+  // With optimization, dead code should already be eliminated. However
+  // there is one known exception: peephole optimizations may open more
+  // opportunities for dead code. This is especially true for targets whose
+  // peephole optimizations like ARM and AArch64 where dead defs to the flag
+  // register are removed, which previously prevented CSE.
+  addPass(&MachineCSELegacyID);
+  addPass(&MachineSinkingLegacyID);
+
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64MIPeepholeOptPass());
+
+  // Clean-up any last code that can be eliminated
+  // Due to the fact that the demotion of some instructions
+  // can result in the removal of instructions previously unable to be removed
+  addPass(&DeadMachineInstructionElimID);
 }
 
 bool AArch64PassConfig::addILPOpts() {
