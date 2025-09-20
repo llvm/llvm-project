@@ -367,9 +367,7 @@ bb:
 define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK-LABEL: illegal_mfma_after_rewrite:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; CHECK-NEXT:    v_mov_b64_e32 v[8:9], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -402,49 +400,48 @@ define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[8:9], v[12:13], v[4:7]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[26:29], v[8:9], v[8:9], v[4:7]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[8:9], v[8:9], v[0:3]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[22:25], v[8:9], v[8:9], v[22:25]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[8:9], v[8:9], v[26:29]
-; CHECK-NEXT:    s_nop 5
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v23, v14
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[14:17], v[8:9], v[8:9], v[18:21]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[12:13], v[8:9], v[0:3]
-; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_accvgpr_read_b32 v19, a3
-; CHECK-NEXT:    v_accvgpr_read_b32 v18, a2
-; CHECK-NEXT:    v_mov_b64_e32 v[20:21], 0
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_accvgpr_read_b32 v17, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v16, a0
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v15, v22
+; CHECK-NEXT:    s_nop 2
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[8:9], v[8:9], v[16:19]
+; CHECK-NEXT:    global_store_short v[8:9], v14, off
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[26:29], v[8:9], v[8:9], v[4:7]
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[8:9], v[8:9], v[0:3]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[8:9], v[8:9], v[26:29]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[22:25], v[8:9], v[8:9], v[22:25]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[12:13], v[8:9], v[0:3]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[8:9], v[8:9], v[18:21]
+; CHECK-NEXT:    s_nop 4
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v14, v22
+; CHECK-NEXT:    global_store_short v[8:9], v14, off
+; CHECK-NEXT:    v_accvgpr_read_b32 v21, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v20, a2
+; CHECK-NEXT:    v_accvgpr_read_b32 v19, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v18, a0
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v12, v0
-; CHECK-NEXT:    global_store_short v[20:21], v23, off
-; CHECK-NEXT:    buffer_wbl2 sc0 sc1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_inv sc0 sc1
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[10:11], v[8:9], v[4:7]
-; CHECK-NEXT:    global_store_short v[20:21], v15, off
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v15, v16
 ; CHECK-NEXT:    buffer_wbl2 sc0 sc1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    global_store_short v[20:21], v14, off
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v14, v16
+; CHECK-NEXT:    global_store_short v[8:9], v15, off
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[18:21], v[8:9], v[8:9], v[18:21]
 ; CHECK-NEXT:    buffer_wbl2 sc0 sc1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    global_store_short v[20:21], v14, off
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CHECK-NEXT:    s_nop 2
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v14, v18
+; CHECK-NEXT:    global_store_short v[8:9], v14, off
 ; CHECK-NEXT:    buffer_wbl2 sc0 sc1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    global_store_short v[20:21], v12, off
+; CHECK-NEXT:    global_store_short v[8:9], v12, off
 ; CHECK-NEXT:    buffer_wbl2 sc0 sc1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    global_store_short v[20:21], v0, off
+; CHECK-NEXT:    global_store_short v[8:9], v0, off
 ; CHECK-NEXT:    s_endpgm
 entry:
   %k0 = call <4 x float> asm sideeffect "; def $0", "=s"()

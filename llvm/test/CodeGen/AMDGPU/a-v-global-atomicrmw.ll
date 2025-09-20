@@ -6823,26 +6823,26 @@ define void @global_atomic_fsub_f64_ret_av_av(ptr addrspace(1) %ptr) #0 {
 ; GFX950-LABEL: global_atomic_fsub_f64_ret_av_av:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:80
+; GFX950-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off offset:80
 ; GFX950-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; def v[2:3]
+; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:  .LBB130_1: ; %atomicrmw.start
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
-; GFX950-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
-; GFX950-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:80 sc0
+; GFX950-NEXT:    v_mov_b64_e32 v[8:9], v[2:3]
+; GFX950-NEXT:    v_add_f64 v[6:7], v[8:9], -v[4:5]
+; GFX950-NEXT:    global_atomic_cmpswap_x2 v[2:3], v[0:1], v[6:9], off offset:80 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cmp_eq_u64_e32 vcc, v[4:5], v[6:7]
+; GFX950-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[8:9]
 ; GFX950-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX950-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GFX950-NEXT:    s_cbranch_execnz .LBB130_1
 ; GFX950-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX950-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use v[4:5]
+; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr addrspace(1) %ptr, i64 0, i64 10
@@ -12626,26 +12626,26 @@ define void @global_atomic_fsub_f64_saddr_ret_av_av(ptr addrspace(1) inreg %ptr)
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b32_e32 v4, 0
-; GFX950-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1] offset:80
+; GFX950-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1] offset:80
 ; GFX950-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; def v[0:1]
+; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:  .LBB238_1: ; %atomicrmw.start
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_mov_b64_e32 v[8:9], v[2:3]
-; GFX950-NEXT:    v_add_f64 v[6:7], v[8:9], -v[0:1]
-; GFX950-NEXT:    global_atomic_cmpswap_x2 v[2:3], v4, v[6:9], s[0:1] offset:80 sc0
+; GFX950-NEXT:    v_mov_b64_e32 v[8:9], v[0:1]
+; GFX950-NEXT:    v_add_f64 v[6:7], v[8:9], -v[2:3]
+; GFX950-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[6:9], s[0:1] offset:80 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_cmp_eq_u64_e32 vcc, v[2:3], v[8:9]
+; GFX950-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[8:9]
 ; GFX950-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
 ; GFX950-NEXT:    s_andn2_b64 exec, exec, s[2:3]
 ; GFX950-NEXT:    s_cbranch_execnz .LBB238_1
 ; GFX950-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX950-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use v[2:3]
+; GFX950-NEXT:    ; use v[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x double], ptr addrspace(1) %ptr, i64 0, i64 10
