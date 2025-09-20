@@ -39,7 +39,7 @@ __for_each_n_segment(_SegmentedIterator __first, _Size __orig_n, _Functor __func
   using __difference_t = typename std::iterator_traits<__local_iter_t>::difference_type;
   __difference_t __n   = __orig_n;
   auto __seg           = _Traits::__segment(__first);
-  auto __local_first   = _Traits::__local(__first);
+  auto __local_first   = _Traits::__local_it(__first);
   __local_iter_t __local_last;
 
   while (__n > 0) {
