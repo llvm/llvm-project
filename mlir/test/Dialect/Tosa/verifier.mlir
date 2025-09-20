@@ -452,7 +452,19 @@ func.func @test_cond_if_wrong_terminator_op(%arg0: tensor<i1>) -> tensor<i32> {
 }
 
 // -----
-func.func @test_cond_if_missing_terminator(%arg0: tensor<i1>) -> tensor<i32> {
+func.func @test_cond_if_missing_then_terminator(%arg0: tensor<i1>) -> tensor<i32> {
+  %0 = "tosa.cond_if"(%arg0) ({
+    // expected-error@+1 {{block with no terminator}}
+    %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+  }, {
+    %2 = "tosa.const"() <{values = dense<2> : tensor<i32>}> : () -> tensor<i32>
+    "tosa.yield"(%2) : (tensor<i32>) -> ()
+  }) : (tensor<i1>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_cond_if_missing_else_terminator(%arg0: tensor<i1>) -> tensor<i32> {
   %0 = "tosa.cond_if"(%arg0) ({
     %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
     "tosa.yield"(%1) : (tensor<i32>) -> ()
