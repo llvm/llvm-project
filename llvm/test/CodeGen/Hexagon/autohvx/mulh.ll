@@ -46,7 +46,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V69-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V69-NEXT:    }
 ; V69-NEXT:    {
-; V69-NEXT:     r7 = #124
+; V69-NEXT:     r7 = #-4
 ; V69-NEXT:    }
 ; V69-NEXT:    {
 ; V69-NEXT:     v1:0 = vshuff(v1,v0,r7)
