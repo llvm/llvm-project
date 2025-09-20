@@ -2162,6 +2162,12 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: powf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
   - name: powi
     standards: llvm_libc_ext
     return_type: double
