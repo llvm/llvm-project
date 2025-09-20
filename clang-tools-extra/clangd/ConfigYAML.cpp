@@ -130,6 +130,18 @@ private:
       if (auto Values = scalarValues(N))
         F.AngledHeaders = std::move(*Values);
     });
+    Dict.handle("GetterPrefix", [&](Node &N) {
+      if (auto Value = scalarValue(N, "GetterPrefix"))
+        F.GetterPrefix = *Value;
+    });
+    Dict.handle("SetterPrefix", [&](Node &N) {
+      if (auto Value = scalarValue(N, "SetterPrefix"))
+        F.SetterPrefix = *Value;
+    });
+    Dict.handle("SetterParameterPrefix", [&](Node &N) {
+      if (auto Value = scalarValue(N, "SetterParameterPrefix"))
+        F.SetterParameterPrefix = *Value;
+    });
     Dict.parse(N);
   }
 
