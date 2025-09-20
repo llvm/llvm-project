@@ -51,17 +51,19 @@ private:
 
 } // namespace
 
-void KernelNameRestrictionCheck::registerPPCallbacks(const SourceManager &SM,
-                                                     Preprocessor *PP,
-                                                     Preprocessor *) {
+void KernelNameRestrictionCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP,
+    Preprocessor * /*ModuleExpanderPP*/) {
   PP->addPPCallbacks(
       std::make_unique<KernelNameRestrictionPPCallbacks>(*this, SM));
 }
 
 void KernelNameRestrictionPPCallbacks::InclusionDirective(
-    SourceLocation HashLoc, const Token &, StringRef FileName, bool,
-    CharSourceRange, OptionalFileEntryRef, StringRef, StringRef, const Module *,
-    bool, SrcMgr::CharacteristicKind) {
+    SourceLocation HashLoc, const Token & /*IncludeTok*/, StringRef FileName,
+    bool /*IsAngled*/, CharSourceRange /*FilenameRange*/,
+    OptionalFileEntryRef /*File*/, StringRef /*SearchPath*/,
+    StringRef /*RelativePath*/, const Module * /*SuggestedModule*/,
+    bool /*ModuleImported*/, SrcMgr::CharacteristicKind /*FileType*/) {
   IncludeDirective ID = {HashLoc, FileName};
   IncludeDirectives.push_back(std::move(ID));
 }

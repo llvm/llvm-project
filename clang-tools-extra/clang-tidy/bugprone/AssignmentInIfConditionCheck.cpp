@@ -35,13 +35,14 @@ void AssignmentInIfConditionCheck::check(
             : Check(Check) {}
 
         // Dont traverse into any lambda expressions.
-        bool TraverseLambdaExpr(LambdaExpr *, DataRecursionQueue * = nullptr) {
+        bool TraverseLambdaExpr(LambdaExpr * /*unused*/,
+                                DataRecursionQueue * /*unused*/ = nullptr) {
           return true;
         }
 
         // Dont traverse into any requires expressions.
-        bool TraverseRequiresExpr(RequiresExpr *,
-                                  DataRecursionQueue * = nullptr) {
+        bool TraverseRequiresExpr(RequiresExpr * /*unused*/,
+                                  DataRecursionQueue * /*unused*/ = nullptr) {
           return true;
         }
 

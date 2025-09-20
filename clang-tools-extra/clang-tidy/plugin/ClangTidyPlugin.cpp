@@ -53,7 +53,7 @@ public:
         std::move(Context), std::move(DiagEngine), std::move(Vec));
   }
 
-  bool ParseArgs(const CompilerInstance &,
+  bool ParseArgs(const CompilerInstance & /*CI*/,
                  const std::vector<std::string> &Args) override {
     ClangTidyGlobalOptions GlobalOptions;
     ClangTidyOptions DefaultOptions;
