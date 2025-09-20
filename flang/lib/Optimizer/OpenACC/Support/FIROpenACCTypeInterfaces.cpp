@@ -587,6 +587,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
             loops.push_back(loop);
             ivs.push_back(loop.getInductionVar());
           }
+          // Reverse IVs to match CoordinateOp's canonical index order.
+          std::reverse(ivs.begin(), ivs.end());
           auto coord = fir::CoordinateOp::create(firBuilder, loc, refTy,
                                                  declareOp.getBase(), ivs);
           fir::StoreOp::create(firBuilder, loc, initVal, coord);
