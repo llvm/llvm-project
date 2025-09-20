@@ -33,11 +33,15 @@ def olDestroyQueue : Function {
 
 def olSyncQueue : Function {
     let desc = "Block the calling thread until the enqueued work on a queue is complete.";
-    let details = [];
+    let details = [
+      "If the queue or any dependencies encounter an error, this returns early and no work after the error will be complete."
+    ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
     ];
-    let returns = [];
+    let returns = [
+      Return<"OL_ERRC_INVALID_QUEUE_ERROR", ["The queue or any of it's dependencies encountered an error"]>,
+    ];
 }
 
 def olWaitEvents : Function {
@@ -45,6 +49,7 @@ def olWaitEvents : Function {
     let details = [
       "All events in `Events` must complete before the queue is unblocked.",
       "The input events can be from any queue on any device provided by the same platform as `Queue`.",
+      "If `Event`'s queue is different from `Queue`, a dependency is created. If `Event`'s queue enters the error state, then Queue will also enter the error state.",
     ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
@@ -124,4 +129,22 @@ def olLaunchHostFunction : Function {
     Param<"void *", "UserData", "a pointer that will be passed verbatim to the callback function", PARAM_IN_OPTIONAL>,
   ];
   let returns = [];
+}
+
+def olGetQueueError : Function {
+  let desc = "Gets the error from a queue or any of its dependencies in the error state.";
+  let details = [
+    "If the queue is not in the error state, OL_SUCCESS is written",
+    "Dependencies are created using `olWaitEvents`, if any waited on queue enters the fail state then this will also be in the fail state",
+    "The error is not cleared; there is no way to recover a queue in the error state",
+  ];
+  let params = [
+    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"ol_result_t *", "Error", "output location to put the queue error", PARAM_IN>,
+    Param<"ol_queue_handle_t *", "FailingQueue", "output location to put the queue that encountered an error", PARAM_IN_OPTIONAL>,
+
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_QUEUE">
+  ];
 }
