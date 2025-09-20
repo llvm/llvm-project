@@ -12157,14 +12157,14 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (ShiftVal >= LaneBytes)
       return ZeroInitialization(E);
 
-    for (unsigned laneBase = 0; laneBase < NumElts; laneBase += LaneBytes) {
-      for (unsigned i = 0; i < LaneBytes; ++i) {
-        int src = IsLeft ? (i + ShiftVal) : (int)i - (int)ShiftVal;
+    for (unsigned LaneBase = 0; LaneBase < NumElts; LaneBase += LaneBytes) {
+      for (unsigned I = 0; I < LaneBytes; ++I) {
+        int src = IsLeft ? (I + ShiftVal) : (int)I - (int)ShiftVal;
 
         if (src >= 0 && (unsigned)src < LaneBytes)
-          Result[laneBase + i] = Vec.getVectorElt(laneBase + (unsigned)src);
+          Result[LaneBase + I] = Vec.getVectorElt(LaneBase + (unsigned)src);
         else
-          Result[laneBase + i] = APValue(0);
+          Result[LaneBase + I] = APValue(0);
       }
     }
 

@@ -267,7 +267,8 @@ let Header = "emmintrin.h", Attributes = [NoThrow, RequireDeclaration] in {
   def _mm_pause : X86LibBuiltin<"void()">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+let Features = "sse2",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def psraw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
   def psrad128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
   def psrlw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>)">;
@@ -568,7 +569,8 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def vec_set_v8si : X86Builtin<"_Vector<8, int>(_Vector<8, int>, int, _Constant int)">;
 }
 
-let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
+let Features = "avx2",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def mpsadbw256 : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, _Constant char)">;
   def packsswb256 : X86Builtin<"_Vector<32, char>(_Vector<16, short>, _Vector<16, short>)">;
   def packssdw256 : X86Builtin<"_Vector<16, short>(_Vector<8, int>, _Vector<8, int>)">;
@@ -2047,7 +2049,8 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVect
   def psravq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
+let Features = "avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def psraw512
       : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<8, short>)">;
   def psrlw512
