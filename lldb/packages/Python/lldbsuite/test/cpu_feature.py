@@ -6,7 +6,7 @@ import re
 
 
 class CPUFeature:
-    def __init__(self, linux_cpu_info_flag: str, darwin_sysctl_key: str):
+    def __init__(self, linux_cpu_info_flag: str = None, darwin_sysctl_key: str = None):
         self.cpu_info_flag = linux_cpu_info_flag
         self.sysctl_key = darwin_sysctl_key
 
@@ -27,15 +27,22 @@ class CPUFeature:
         return res
 
     def _is_supported_linux(self, cmd_runner):
+        if not self.cpu_info_flag:
+            return "Unspecified cpuinfo flag", False
+
         cmd = "cat /proc/cpuinfo"
         err, retcode, output = cmd_runner(cmd)
         if err.Fail() or retcode != 0:
-            err_msg = f"cat /proc/cpuinfo failed: {output}"
-            return err_msg, False
+            return output, False
 
+        # FIXME: simple substring match, e.g., test for 'sme' will be true if
+        # 'sme2' or 'smefa64' is present
         return None, (self.cpu_info_flag in output)
 
     def _is_supported_darwin(self, cmd_runner):
+        if not self.sysctl_key:
+            return "Unspecified sysctl key", False
+
         cmd = f"sysctl -n {self.sysctl_key}"
         err, retcode, output = cmd_runner(cmd)
         if err.Fail() or retcode != 0:
@@ -44,15 +51,18 @@ class CPUFeature:
         return None, (output.strip() == "1")
 
 
-# List of CPU features
-FPMR = CPUFeature("fpmr", "???")
-GCS = CPUFeature("gcs", "???")
-LASX = CPUFeature("lasx", "???")
-LSX = CPUFeature("lsx", "???")
-MTE = CPUFeature("mte", "???")
-MTE_STORE_ONLY = CPUFeature("mtestoreonly", "???")
-PTR_AUTH = CPUFeature("paca", "hw.optional.arm.FEAT_PAuth2")
-SME = CPUFeature("sme", "hw.optional.arm.FEAT_SME")
-SME_FA64 = CPUFeature("smefa64", "???")
-SME2 = CPUFeature("sme2", "hw.optional.arm.FEAT_SME2")
-SVE = CPUFeature("sve", "???")
+class AArch64:
+    FPMR = CPUFeature("fpmr")
+    GCS = CPUFeature("gcs")
+    MTE = CPUFeature("mte")
+    MTE_STORE_ONLY = CPUFeature("mtestoreonly")
+    PTR_AUTH = CPUFeature("paca", "hw.optional.arm.FEAT_PAuth2")
+    SME = CPUFeature("sme", "hw.optional.arm.FEAT_SME")
+    SME_FA64 = CPUFeature("smefa64")
+    SME2 = CPUFeature("sme2", "hw.optional.arm.FEAT_SME2")
+    SVE = CPUFeature("sve")
+
+
+class Loong:
+    LASX = CPUFeature("lasx")
+    LSX = CPUFeature("lsx")

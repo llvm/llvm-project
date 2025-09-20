@@ -11,8 +11,8 @@ class TestSMERegistersDarwin(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @skipUnlessFeature(cpu_feature.SME)
-    @skipUnlessFeature(cpu_feature.SME2)
+    @skipUnlessFeature(cpu_feature.AArch64.SME)
+    @skipUnlessFeature(cpu_feature.AArch64.SME2)
     # thread_set_state/thread_get_state only avail in macOS 15.4+
     @skipIf(macos_version=["<", "15.4"])
     def test(self):

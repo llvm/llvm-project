@@ -1334,14 +1334,14 @@ class Base(unittest.TestCase):
         return cpu_feature.is_supported(triple, cmd_runner)
 
     def isAArch64SVE(self):
-        return self.isAArch64() and self.isSupported(cpu_feature.SVE)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SVE)
 
     def isAArch64SME(self):
-        return self.isAArch64() and self.isSupported(cpu_feature.SME)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SME)
 
     def isAArch64SME2(self):
         # If you have sme2, you also have sme.
-        return self.isAArch64() and self.isSupported(cpu_feature.SME2)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SME2)
 
     def isAArch64SMEFA64(self):
         # smefa64 allows the use of the full A64 instruction set in streaming
@@ -1349,26 +1349,26 @@ class Base(unittest.TestCase):
         # state.
         return (
             self.isAArch64()
-            and self.isSupported(cpu_feature.SME)
-            and self.isSupported(cpu_feature.SME_FA64)
+            and self.isSupported(cpu_feature.AArch64.SME)
+            and self.isSupported(cpu_feature.AArch64.SME_FA64)
         )
 
     def isAArch64MTE(self):
-        return self.isAArch64() and self.isSupported(cpu_feature.MTE)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.MTE)
 
     def isAArch64MTEStoreOnly(self):
-        return self.isAArch64() and self.isSupported(cpu_feature.MTE_STORE_ONLY)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.MTE_STORE_ONLY)
 
     def isAArch64GCS(self):
-        return self.isAArch64() and self.isSupported(cpu_feature.GCS)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.GCS)
 
     def isAArch64PAuth(self):
         if self.getArchitecture() == "arm64e":
             return True
-        return self.isAArch64() and self.isSupported(cpu_feature.PTR_AUTH)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.PTR_AUTH)
 
     def isAArch64FPMR(self):
-        return self.isAArch64() and self.isSupported(cpu_feature.FPMR)
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
@@ -1383,10 +1383,10 @@ class Base(unittest.TestCase):
         return arch in ["loongarch64", "loongarch32"]
 
     def isLoongArchLSX(self):
-        return self.isLoongArch() and self.isSupported(cpu_feature.LSX)
+        return self.isLoongArch() and self.isSupported(cpu_feature.Loong.LSX)
 
     def isLoongArchLASX(self):
-        return self.isLoongArch() and self.isSupported(cpu_feature.LASX)
+        return self.isLoongArch() and self.isSupported(cpu_feature.Loong.LASX)
 
     def isRISCV(self):
         """Returns true if the architecture is RISCV64 or RISCV32."""
