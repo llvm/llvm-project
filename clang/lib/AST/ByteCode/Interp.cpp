@@ -1666,10 +1666,15 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
       TypePtr = TypePtr.getBase();
 
     QualType DynamicType = TypePtr.getType();
-    if (DynamicType->isPointerType() || DynamicType->isReferenceType())
+    if (DynamicType->isPointerType() || DynamicType->isReferenceType()) {
       DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
-    else
+    } else if (DynamicType->isArrayType()) {
+      const Type *ElemType = DynamicType->getPointeeOrArrayElementType();
+      assert(ElemType);
+      DynamicDecl = ElemType->getAsCXXRecordDecl();
+    } else {
       DynamicDecl = DynamicType->getAsCXXRecordDecl();
+    }
   }
   assert(DynamicDecl);
 
