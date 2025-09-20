@@ -18774,7 +18774,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 static SDValue
 performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
-  if (DCI.isBeforeLegalize())
+  if (DCI.isBeforeLegalize() && !DCI.isBeforeLegalizeOps())
     return SDValue();
 
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
@@ -18785,21 +18785,27 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())))
     return SDValue();
 
-  unsigned NumUses = N->use_size();
+  // Count the number of users which are extract_vectors
+  // The only other valid users for this combine are ptest_first
+  // and reinterpret_cast.
+  unsigned NumExts = count_if(N->users(), [](SDNode *Use) {
+    return Use->getOpcode() == ISD::EXTRACT_SUBVECTOR;
+  });
+
   auto MaskEC = N->getValueType(0).getVectorElementCount();
-  if (!MaskEC.isKnownMultipleOf(NumUses))
+  if (NumExts == 0 || !MaskEC.isKnownMultipleOf(NumExts))
     return SDValue();
 
-  ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumUses);
+  ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumExts);
   if (ExtMinEC.getKnownMinValue() < 2)
     return SDValue();
 
-  SmallVector<SDNode *> Extracts(NumUses, nullptr);
+  SmallVector<SDNode *> Extracts(NumExts, nullptr);
   for (SDNode *Use : N->users()) {
     if (Use->getOpcode() != ISD::EXTRACT_SUBVECTOR)
-      return SDValue();
+      continue;
 
-    // Ensure the extract type is correct (e.g. if NumUses is 4 and
+    // Ensure the extract type is correct (e.g. if NumExts is 4 and
     // the mask return type is nxv8i1, each extract should be nxv2i1.
     if (Use->getValueType(0).getVectorElementCount() != ExtMinEC)
       return SDValue();
@@ -18832,20 +18838,23 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
   DCI.CombineTo(Extracts[0], R.getValue(0));
   DCI.CombineTo(Extracts[1], R.getValue(1));
+  SmallVector<SDValue> Results = {R.getValue(0), R.getValue(1)};
 
-  if (NumUses == 2)
-    return SDValue(N, 0);
+  if (NumExts == 2)
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Results);
 
   auto Elts = DAG.getElementCount(DL, OpVT, ExtVT.getVectorElementCount() * 2);
-  for (unsigned I = 2; I < NumUses; I += 2) {
+  for (unsigned I = 2; I < NumExts; I += 2) {
     // After the first whilelo_x2, we need to increment the starting value.
     Idx = DAG.getNode(ISD::UADDSAT, DL, OpVT, Idx, Elts);
     R = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
     DCI.CombineTo(Extracts[I], R.getValue(0));
     DCI.CombineTo(Extracts[I + 1], R.getValue(1));
+    Results.push_back(R.getValue(0));
+    Results.push_back(R.getValue(1));
   }
 
-  return SDValue(N, 0);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Results);
 }
 
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
