@@ -75,6 +75,22 @@ bool PPCMCPlusBuilder::convertJmpToTailCall(MCInst &Inst) {
   return false;
 }
 
+bool PPCMCPlusBuilder::isCall(const MCInst & /*Inst*/) const { return false; }
+
+bool PPCMCPlusBuilder::isTailCall(const MCInst & /*Inst*/) const {
+  return false;
+}
+
+bool PPCMCPlusBuilder::isReturn(const MCInst & /*Inst*/) const { return false; }
+
+bool PPCMCPlusBuilder::isConditionalBranch(const MCInst & /*Inst*/) const {
+  return false;
+}
+
+bool PPCMCPlusBuilder::isUnconditionalBranch(const MCInst & /*Inst*/) const {
+  return false;
+}
+
 IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
     MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
     const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
