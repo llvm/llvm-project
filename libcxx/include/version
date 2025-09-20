@@ -200,6 +200,7 @@ __cpp_lib_ranges                                        202406L <algorithm> <fun
                                                         202110L // C++20
 __cpp_lib_ranges_as_const                               202207L <ranges>
 __cpp_lib_ranges_as_rvalue                              202207L <ranges>
+__cpp_lib_ranges_cache_latest                           202411L <ranges>
 __cpp_lib_ranges_chunk                                  202202L <ranges>
 __cpp_lib_ranges_chunk_by                               202202L <ranges>
 __cpp_lib_ranges_concat                                 202403L <ranges>
@@ -518,6 +519,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_ranges                               202406L
 // # define __cpp_lib_ranges_as_const                      202207L
 # define __cpp_lib_ranges_as_rvalue                     202207L
+# define __cpp_lib_ranges_cache_latest                  202411L
 // # define __cpp_lib_ranges_chunk                         202202L
 # define __cpp_lib_ranges_chunk_by                      202202L
 # define __cpp_lib_ranges_contains                      202207L
