@@ -725,7 +725,7 @@ representation of the pointer.
 Non-integral pointers with external state
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A futher special case of non-integral pointers is ones that include external
+A further special case of non-integral pointers is ones that include external
 state (such as bounds information or a type tag) with a target-defined size.
 An example of such a type is a CHERI capability, where there is an additional
 validity bit that is part of all pointer-typed registers, but is located in
