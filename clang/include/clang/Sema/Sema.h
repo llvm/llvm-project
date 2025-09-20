@@ -1166,7 +1166,7 @@ public:
   /// getCurFunctionOrMethodDecl - Return the Decl for the current ObjC method
   /// or C function we're in, otherwise return null.  If we're currently
   /// in a 'block', this returns the containing context.
-  NamedDecl *getCurFunctionOrMethodDecl() const;
+  NamedDecl *getCurFunctionOrMethodDecl(bool AllowLambda = false) const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
   /// _Nonnull one.

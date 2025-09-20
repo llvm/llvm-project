@@ -328,6 +328,9 @@ Improvements to Clang's diagnostics
   properly being rejected when used at compile-time. It was not implemented
   and caused assertion failures before (#GH158471).
 
+- Some reachability-analysis-based warnings in lambda expression which is in
+  non-templated context are emitted same as in function[ template].
+
 Improvements to Clang's time-trace
 ----------------------------------
 
