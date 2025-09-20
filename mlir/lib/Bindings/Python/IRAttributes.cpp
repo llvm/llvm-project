@@ -1478,7 +1478,7 @@ public:
                  nb::arg("alignment") = nb::none(),
                  nb::arg("is_mutable") = false, nb::arg("context") = nb::none(),
                  // clang-format off
-        nb::sig("def get_from_buffer(array: typing_extensions.Buffer, name: str, type: Type, alignment: int | None = None, is_mutable: bool = False, context: Context | None = None) -> DenseResourceElementsAttr"),
+                 nb::sig("def get_from_buffer(array: typing_extensions.Buffer, name: str, type: Type, alignment: int | None = None, is_mutable: bool = False, context: Context | None = None) -> DenseResourceElementsAttr"),
                  // clang-format on
                  kDenseResourceElementsAttrGetFromBufferDocstring);
   }

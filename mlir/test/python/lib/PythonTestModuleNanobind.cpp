@@ -39,8 +39,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       },
       nb::arg("context"), nb::arg("load") = true,
       // clang-format off
-      nb::sig("def register_python_test_dialect(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", "
-                                                     "load: bool = True) -> None"));
+      nb::sig("def register_python_test_dialect(context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") ", load: bool = True) -> None"));
   // clang-format on
 
   m.def(
@@ -59,7 +58,6 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       "test_diagnostics_with_errors_and_notes",
       [](MlirContext ctx) {
         mlir::python::CollectDiagnosticsToStringScope handler(ctx);
-
         mlirPythonTestEmitDiagnosticWithNote(ctx);
         throw nb::value_error(handler.takeMessage().c_str());
       },

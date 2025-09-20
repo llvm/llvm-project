@@ -908,10 +908,12 @@ mlir_generate_type_stubs(
 set(_mlir_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
 
 list(TRANSFORM _core_type_stub_sources PREPEND "_mlir_libs/")
+# Note, we do not do ADD_TO_PARENT here so that the type stubs are not associated (as mlir_DEPENDS) with
+# MLIRPythonSources.Core (or something) when a distro is installed/created. Otherwise they would not be regenerated
+# by users of the distro (the stubs are still installed in the distro - they are just not added to mlir_DEPENDS).
 declare_mlir_python_sources(
   MLIRPythonExtension.Core.type_stub_gen
   ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
-  ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES "${_core_type_stub_sources}"
 )
 
@@ -954,6 +956,7 @@ add_mlir_python_modules(MLIRPythonModules
   DECLARED_SOURCES
     MLIRPythonSources
     MLIRPythonExtension.RegisterEverything
+    MLIRPythonExtension.Core.type_stub_gen
     ${_ADDL_TEST_SOURCES}
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI

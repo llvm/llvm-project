@@ -3584,7 +3584,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           "walk", &PyOperationBase::walk, nb::arg("callback"),
           nb::arg("walk_order") = MlirWalkPostOrder,
           // clang-format off
-           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = " MAKE_MLIR_PYTHON_QUALNAME("ir.WalkOrder.POST_ORDER") ") -> None")
+          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = " MAKE_MLIR_PYTHON_QUALNAME("ir.WalkOrder.POST_ORDER") ") -> None")
           // clang-format on
       );
 

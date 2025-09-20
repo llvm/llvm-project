@@ -19,6 +19,7 @@
 #include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
@@ -27,8 +28,6 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ThreadPool.h"
-
-#include <mlir-c/BuiltinAttributes.h>
 
 namespace mlir {
 namespace python {
@@ -272,7 +271,8 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Context";
+  static constexpr const char kTypeDescription[] =
+      MAKE_MLIR_PYTHON_QUALNAME("ir.Context");
   static PyMlirContext &resolve();
 };
 
@@ -498,7 +498,8 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Location";
+  static constexpr const char kTypeDescription[] =
+      MAKE_MLIR_PYTHON_QUALNAME("ir.Location");
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }

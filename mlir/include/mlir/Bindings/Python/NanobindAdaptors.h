@@ -516,7 +516,7 @@ public:
           "get_static_typeid",
           [getTypeIDFunction]() { return getTypeIDFunction(); },
           // clang-format off
-              nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
+          nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
           // clang-format on
       );
       nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
@@ -609,7 +609,7 @@ public:
           "get_static_typeid",
           [getTypeIDFunction]() { return getTypeIDFunction(); },
           // clang-format off
-              nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
+          nanobind::sig("def get_static_typeid() -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID"))
           // clang-format on
       );
       nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("ir"))
