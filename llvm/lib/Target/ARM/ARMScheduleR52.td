@@ -235,7 +235,7 @@ def : InstRW< [R52WriteALU_WRI, R52Read_EX1, R52Read_EX1],
       "UQADD8", "UQADD16","UQSUB8","UQSUB16","UQASX","UQSAX", "t2QADD",
       "t2QSUB", "t2QDADD", "t2QDSUB", "t2SSAT", "t2SSAT16", "t2USAT",
       "t2QADD8", "t2QADD16", "t2QSUB8", "t2QSUB16", "t2QASX", "t2QSAX",
-      "t2UQADD8", "t2UQADD16","t2UQSUB8","t2UQSUB16","t2UQASX","t2UQSAX","t2ABS")>;
+      "t2UQADD8", "t2UQADD16","t2UQSUB8","t2UQSUB16","t2UQASX","t2UQSAX")>;
 
 // Parallel arithmetic
 def : InstRW< [R52WriteALU_EX2, R52Read_EX1, R52Read_EX1],

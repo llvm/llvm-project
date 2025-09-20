@@ -59,7 +59,7 @@ namespace {
 /// Expands CeilDivUIOp (n, m) into
 ///  n == 0 ? 0 : ((n-1) / m) + 1
 struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::CeilDivUIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -85,7 +85,7 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
 ///   return z;
 /// }
 struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::CeilDivSIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -127,7 +127,7 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
 ///   return z;
 /// }
 struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::FloorDivSIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -230,7 +230,7 @@ public:
 };
 
 struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -260,7 +260,7 @@ struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 };
 
 struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -364,7 +364,7 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
 ///
 /// 4) F32 bits[1:22] = 0
 struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -430,7 +430,7 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 };
 
 struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -502,7 +502,7 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 ///   Step 5: Round up if necessary, if mantissa[1:] greater than 1000000 or
 ///   subnormal.
 struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -603,7 +603,7 @@ Since All kinds of Infs and NaNs are mapped to same exponent bits in F32 type,
 they all map to NaN in F8E8M0 Type.
 */
 struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -642,7 +642,7 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
 };
 
 struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -684,7 +684,7 @@ Expands arith.ScalingTruncFOp(in, scale) into
  */
 struct ScalingTruncFOpConverter
     : public OpRewritePattern<arith::ScalingTruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);

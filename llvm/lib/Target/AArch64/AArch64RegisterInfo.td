@@ -1875,16 +1875,15 @@ class MatrixTileAsmOperand<string RC, int EltSize> : AsmOperandClass {
                           # EltSize # ", AArch64::" # RC # "RegClassID>";
 }
 
-class MatrixTileOperand<int EltSize, int NumBitsForTile, RegisterClass RC>
+class MatrixTileOperand<int EltSize, RegisterClass RC>
     : RegisterOperand<RC> {
   let ParserMatchClass = MatrixTileAsmOperand<!cast<string>(RC), EltSize>;
-  let DecoderMethod = "DecodeMatrixTile<" # NumBitsForTile # ">";
   let PrintMethod = "printMatrixTile";
 }
 
-def TileOp16  : MatrixTileOperand<16, 1, MPR16>;
-def TileOp32  : MatrixTileOperand<32, 2, MPR32>;
-def TileOp64  : MatrixTileOperand<64, 3, MPR64>;
+def TileOp16  : MatrixTileOperand<16, MPR16>;
+def TileOp32  : MatrixTileOperand<32, MPR32>;
+def TileOp64  : MatrixTileOperand<64, MPR64>;
 
 //
 // Tile vectors (horizontal and vertical)
@@ -1902,26 +1901,24 @@ class MatrixTileVectorAsmOperand<string RC, int EltSize, int IsVertical>
                           # EltSize # ", AArch64::" # RC # "RegClassID>";
 }
 
-class MatrixTileVectorOperand<int EltSize, int NumBitsForTile,
-                              RegisterClass RC, int IsVertical>
+class MatrixTileVectorOperand<int EltSize, RegisterClass RC, int IsVertical>
     : RegisterOperand<RC> {
   let ParserMatchClass = MatrixTileVectorAsmOperand<!cast<string>(RC), EltSize,
                                                     IsVertical>;
-  let DecoderMethod = "DecodeMatrixTile<" # NumBitsForTile # ">";
   let PrintMethod = "printMatrixTileVector<" # IsVertical # ">";
 }
 
-def TileVectorOpH8   : MatrixTileVectorOperand<  8, 0, MPR8,   0>;
-def TileVectorOpH16  : MatrixTileVectorOperand< 16, 1, MPR16,  0>;
-def TileVectorOpH32  : MatrixTileVectorOperand< 32, 2, MPR32,  0>;
-def TileVectorOpH64  : MatrixTileVectorOperand< 64, 3, MPR64,  0>;
-def TileVectorOpH128 : MatrixTileVectorOperand<128, 4, MPR128, 0>;
+def TileVectorOpH8   : MatrixTileVectorOperand<  8, MPR8,   0>;
+def TileVectorOpH16  : MatrixTileVectorOperand< 16, MPR16,  0>;
+def TileVectorOpH32  : MatrixTileVectorOperand< 32, MPR32,  0>;
+def TileVectorOpH64  : MatrixTileVectorOperand< 64, MPR64,  0>;
+def TileVectorOpH128 : MatrixTileVectorOperand<128, MPR128, 0>;
 
-def TileVectorOpV8   : MatrixTileVectorOperand<  8, 0, MPR8,   1>;
-def TileVectorOpV16  : MatrixTileVectorOperand< 16, 1, MPR16,  1>;
-def TileVectorOpV32  : MatrixTileVectorOperand< 32, 2, MPR32,  1>;
-def TileVectorOpV64  : MatrixTileVectorOperand< 64, 3, MPR64,  1>;
-def TileVectorOpV128 : MatrixTileVectorOperand<128, 4, MPR128, 1>;
+def TileVectorOpV8   : MatrixTileVectorOperand<  8, MPR8,   1>;
+def TileVectorOpV16  : MatrixTileVectorOperand< 16, MPR16,  1>;
+def TileVectorOpV32  : MatrixTileVectorOperand< 32, MPR32,  1>;
+def TileVectorOpV64  : MatrixTileVectorOperand< 64, MPR64,  1>;
+def TileVectorOpV128 : MatrixTileVectorOperand<128, MPR128, 1>;
 
 //
 // Accumulator matrix

@@ -322,6 +322,7 @@ struct Configuration {
   bool largeAddressAware = false;
   bool highEntropyVA = false;
   bool appContainer = false;
+  bool mergeDebugDirectory = true;
   bool mingw = false;
   bool warnMissingOrderSymbol = true;
   bool warnLocallyDefinedImported = true;

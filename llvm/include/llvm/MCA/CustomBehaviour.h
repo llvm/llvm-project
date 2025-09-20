@@ -134,6 +134,25 @@ public:
   StringRef getData() const { return Data; }
 };
 
+class LatencyInstrument : public Instrument {
+  std::optional<unsigned> Latency;
+
+public:
+  static const StringRef DESC_NAME;
+  LatencyInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
+    // Skip spaces and tabs.
+    Data = Data.trim();
+    if (Data.empty()) // Empty description. Bail out.
+      return;
+    unsigned L = 0;
+    if (!Data.getAsInteger(10, L))
+      Latency = L;
+  }
+
+  bool hasValue() const { return bool(Latency); }
+  unsigned getLatency() const { return *Latency; }
+};
+
 using UniqueInstrument = std::unique_ptr<Instrument>;
 
 /// This class allows targets to optionally customize the logic that resolves
@@ -143,19 +162,21 @@ class LLVM_ABI InstrumentManager {
 protected:
   const MCSubtargetInfo &STI;
   const MCInstrInfo &MCII;
+  bool EnableInstruments;
 
 public:
-  InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
-      : STI(STI), MCII(MCII) {}
+  InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+                    bool EnableInstruments = true)
+      : STI(STI), MCII(MCII), EnableInstruments(EnableInstruments) {};
 
   virtual ~InstrumentManager() = default;
 
   /// Returns true if llvm-mca should ignore instruments.
-  virtual bool shouldIgnoreInstruments() const { return true; }
+  virtual bool shouldIgnoreInstruments() const { return !EnableInstruments; }
 
   // Returns true if this supports processing Instrument with
   // Instrument.Desc equal to Type
-  virtual bool supportsInstrumentType(StringRef Type) const { return false; }
+  virtual bool supportsInstrumentType(StringRef Type) const;
 
   /// Allocate an Instrument, and return a unique pointer to it. This function
   /// may be useful to create instruments coming from comments in the assembly.
@@ -175,6 +196,13 @@ public:
   /// it returns the SchedClassID that belongs to MCI.
   virtual unsigned getSchedClassID(const MCInstrInfo &MCII, const MCInst &MCI,
                                    const SmallVector<Instrument *> &IVec) const;
+
+  // Return true if instruments can modify instruction description
+  virtual bool canCustomize(const ArrayRef<Instrument *> IVec) const;
+
+  // Customize instruction description
+  virtual void customize(const ArrayRef<Instrument *> IVec,
+                         llvm::mca::InstrDesc &Desc) const;
 };
 
 } // namespace mca

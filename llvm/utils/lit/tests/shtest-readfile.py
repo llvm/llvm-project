@@ -1,6 +1,6 @@
 ## Tests the readfile substitution.
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S%{fs-sep}Inputs%{fs-sep}shtest-readfile%{fs-sep}Output %s
+# RUN: env LIT_USE_INTERNAL_SHELL=1  not %{lit} -a -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S%{fs-sep}Inputs%{fs-sep}shtest-readfile%{fs-sep}Output %s
 
 # CHECK: -- Testing: 4 tests{{.*}}
 

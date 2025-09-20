@@ -84,14 +84,14 @@ def Inst3 : Instruction16Bit<3> {
 // In the default case, we emit a single decodeToMCinst function and DecodeIdx
 // is shared across all bitwidths.
 
-// CHECK-DEFAULT-LABEL: DecoderTable8[25]
-// CHECK-DEFAULT:         DecodeIdx: 0
-// CHECK-DEFAULT:         DecodeIdx: 1
+// CHECK-DEFAULT-LABEL: DecoderTable8
+// CHECK-DEFAULT:         using decoder 0
+// CHECK-DEFAULT:         using decoder 1
 // CHECK-DEFAULT:       };
 
-// CHECK-DEFAULT-LABEL: DecoderTable16[25]
-// CHECK-DEFAULT:         DecodeIdx: 2
-// CHECK-DEFAULT:         DecodeIdx: 3
+// CHECK-DEFAULT-LABEL: DecoderTable16
+// CHECK-DEFAULT:         using decoder 2
+// CHECK-DEFAULT:         using decoder 3
 // CHECK-DEFAULT:       };
 
 // CHECK-DEFAULT-LABEL: template <typename InsnType>
@@ -105,10 +105,10 @@ def Inst3 : Instruction16Bit<3> {
 // When we specialize per bitwidth, we emit 2 decodeToMCInst functions and
 // DecodeIdx is assigned per bit width.
 
-// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable8[26]
-// CHECK-SPECIALIZE-NO-TABLE:           /* 0 */ 8, // Bitwidth 8
-// CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 0
-// CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 1
+// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable8
+// CHECK-SPECIALIZE-NO-TABLE:           8, // 0: BitWidth 8
+// CHECK-SPECIALIZE-NO-TABLE:           using decoder 0
+// CHECK-SPECIALIZE-NO-TABLE:           using decoder 1
 // CHECK-SPECIALIZE-NO-TABLE:         };
 
 // CHECK-SPECIALIZE-NO-TABLE-LABEL:   template <typename InsnType>
@@ -117,10 +117,10 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-NO-TABLE:           case 0
 // CHECK-SPECIALIZE-NO-TABLE:           case 1
 
-// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable16[26]
-// CHECK-SPECIALIZE-NO-TABLE:           /* 0 */ 16, // Bitwidth 16
-// CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 0
-// CHECK-SPECIALIZE-NO-TABLE:           DecodeIdx: 1
+// CHECK-SPECIALIZE-NO-TABLE-LABEL:   DecoderTable16
+// CHECK-SPECIALIZE-NO-TABLE:           16, // 0: BitWidth 16
+// CHECK-SPECIALIZE-NO-TABLE:           using decoder 0
+// CHECK-SPECIALIZE-NO-TABLE:           using decoder 1
 // CHECK-SPECIALIZE-NO-TABLE:         };
 
 // CHECK-SPECIALIZE-NO-TABLE-LABEL:   template <typename InsnType>
@@ -138,10 +138,10 @@ def Inst3 : Instruction16Bit<3> {
 // Per bitwidth specialization with function table.
 
 // 8 bit deccoder table, functions, and function table.
-// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable8[26]
-// CHECK-SPECIALIZE-TABLE:           /* 0 */ 8, // Bitwidth 8
-// CHECK-SPECIALIZE-TABLE:            DecodeIdx: 0
-// CHECK-SPECIALIZE-TABLE:            DecodeIdx: 1
+// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable8
+// CHECK-SPECIALIZE-TABLE:            8, // 0: BitWidth 8
+// CHECK-SPECIALIZE-TABLE:            using decoder 0
+// CHECK-SPECIALIZE-TABLE:            using decoder 1
 // CHECK-SPECIALIZE-TABLE:          };
 
 // CHECK-SPECIALIZE-TABLE-LABEL:    template <typename InsnType>
@@ -161,10 +161,10 @@ def Inst3 : Instruction16Bit<3> {
 // CHECK-SPECIALIZE-TABLE-NEXT:     };
 
 // 16 bit deccoder table, functions, and function table.
-// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable16[26]
-// CHECK-SPECIALIZE-TABLE:            /* 0 */ 16, // Bitwidth 16
-// CHECK-SPECIALIZE-TABLE:            DecodeIdx: 0
-// CHECK-SPECIALIZE-TABLE:            DecodeIdx: 1
+// CHECK-SPECIALIZE-TABLE-LABEL:    DecoderTable16
+// CHECK-SPECIALIZE-TABLE:            16, // 0: BitWidth 16
+// CHECK-SPECIALIZE-TABLE:            using decoder 0
+// CHECK-SPECIALIZE-TABLE:            using decoder 1
 // CHECK-SPECIALIZE-TABLE:          };
 
 // CHECK-SPECIALIZE-TABLE-LABEL:    template <typename InsnType>

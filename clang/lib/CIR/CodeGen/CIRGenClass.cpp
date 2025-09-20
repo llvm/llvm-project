@@ -639,12 +639,22 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
 
+  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
+  mlir::Type elementType = arrayTy.getElementType();
+
+  // This might be a multi-dimensional array. Find the innermost element type.
+  while (auto maybeArrayTy = mlir::dyn_cast<cir::ArrayType>(elementType))
+    elementType = maybeArrayTy.getElementType();
+  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
+
   // Optimize for a constant count.
   if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
     if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
       // Just skip out if the constant count is zero.
       if (constIntAttr.getUInt() == 0)
         return;
+
+      arrayTy = cir::ArrayType::get(elementType, constIntAttr.getUInt());
       // Otherwise, emit the check.
     }
 
@@ -654,10 +664,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
   }
-
-  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
-  mlir::Type elementType = arrayTy.getElementType();
-  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
 
   // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.

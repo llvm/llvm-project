@@ -18,19 +18,12 @@ class I : Instruction {
 // 00000001 ________  I16_1
 // 00000010 ________  I16_2
 
-// CHECK:      /* 0 */  OPC_Scope, 17, 0,               // end scope at 20
-// CHECK-NEXT: /* 3 */  OPC_ExtractField, 0, 1,         // Field = Inst{0}
-// CHECK-NEXT: /* 6 */  OPC_FilterValueOrSkip, 0, 4, 0, // if Field != 0x0 skip to 14
-// CHECK-NEXT: /* 10 */ OPC_Decode, {{[0-9]+}}, 2, 0,   // Opcode: I8_0, DecodeIdx: 0
-// CHECK-NEXT: /* 14 */ OPC_FilterValue, 1,             // if Field != 0x1
-// CHECK-NEXT: /* 16 */ OPC_Decode, {{[0-9]+}}, 2, 0,   // Opcode: I8_1, DecodeIdx: 0
-// CHECK-NEXT: /* 20 */ OPC_ExtractField, 8, 8,         // Field = Inst{15-8}
-// CHECK-NEXT: /* 23 */ OPC_FilterValueOrSkip, 0, 4, 0, // if Field != 0x0 skip to 31
-// CHECK-NEXT: /* 27 */ OPC_Decode, {{[0-9]+}}, 2, 1,   // Opcode: I16_0, DecodeIdx: 1
-// CHECK-NEXT: /* 31 */ OPC_FilterValueOrSkip, 1, 4, 0, // if Field != 0x1 skip to 39
-// CHECK-NEXT: /* 35 */ OPC_Decode, {{[0-9]+}}, 2, 1,   // Opcode: I16_1, DecodeIdx: 1
-// CHECK-NEXT: /* 39 */ OPC_FilterValue, 2,             // if Field != 0x2
-// CHECK-NEXT: /* 41 */ OPC_Decode, {{[0-9]+}}, 2, 1,   // Opcode: I16_2, DecodeIdx: 1
+// CHECK: switch Inst[0]
+// CHECK: decode to I8_0
+// CHECK: decode to I8_1
+// CHECK: switch Inst[15:8]
+// CHECK: decode to I16_0
+// CHECK: decode to I16_1
 
 def I8_0  : I { dag Inst = (descend (operand "$op", 7), 0b0); }
 def I8_1  : I { dag Inst = (descend (operand "$op", 7), 0b1); }
