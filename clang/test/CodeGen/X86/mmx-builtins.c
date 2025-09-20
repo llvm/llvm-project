@@ -311,36 +311,42 @@ __m64 test_mm_hadd_pi16(__m64 a, __m64 b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phadd.w.128(
   return _mm_hadd_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_hadd_pi16((__m64)(__v4hi){1,2,3,4},(__m64)(__v4hi){5,6,7,8}),3,7,11,15));
 
 __m64 test_mm_hadd_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hadd_pi32
   // CHECK: call <4 x i32> @llvm.x86.ssse3.phadd.d.128(
   return _mm_hadd_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_hadd_pi32((__m64)(__v2si){1,2},(__m64)(__v2si){3,4}),3,7));
 
 __m64 test_mm_hadds_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hadds_pi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phadd.sw.128(
   return _mm_hadds_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_hadds_pi16((__m64)(__v4hi){32767, 32767, 32767, 32767},(__m64)(__v4hi){32767, 32767, 32767, 32767}),32767, 32767, 32767, 32767));
 
 __m64 test_mm_hsub_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hsub_pi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phsub.w.128(
   return _mm_hsub_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_hsub_pi16((__m64)(__v4hi){1,2,3,4},(__m64)(__v4hi){5,6,7,8}),-1,-1,-1,-1));
 
 __m64 test_mm_hsub_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hsub_pi32
   // CHECK: call <4 x i32> @llvm.x86.ssse3.phsub.d.128(
   return _mm_hsub_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_hsub_pi32((__m64)(__v2si){1,2},(__m64)(__v2si){3,4}),-1,-1));
 
 __m64 test_mm_hsubs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hsubs_pi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.phsub.sw.128(
   return _mm_hsubs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_hsubs_pi16((__m64)(__v4hi){32767, 32767, 32767, 32767},(__m64)(__v4hi){-4,-5,-6,-7}),32767, 32767, 32767, 32767));
 
 __m64 test_mm_insert_pi16(__m64 a, int d) {
   // CHECK-LABEL: test_mm_insert_pi16
