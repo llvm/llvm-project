@@ -2393,6 +2393,21 @@ bool RewriteInstance::analyzeRelocation(
            truncateToSize(SymbolAddress + Addend - PCRelOffset, RelSize);
   };
 
+  if (!verifyExtractedValue()) {
+    errs() << "BOLT-MISMATCH @off=0x" << Twine::utohexstr(Rel.getOffset())
+           << " type="
+           << object::getELFRelocationTypeName(
+                  /*EM=*/ELF::EM_PPC64, /*type=*/RType)
+           << " isPCRel=" << (IsPCRelative ? "yes" : "no")
+           << " size=" << RelSize << "\n"
+           << "  ExtractedValue=" << truncateToSize(ExtractedValue, RelSize)
+           << "  Expected="
+           << truncateToSize(SymbolAddress + Addend - PCRelOffset, RelSize)
+           << "  (SymbolAddress=" << SymbolAddress << ", Addend=" << Addend
+           << ", PCRelOffset=" << PCRelOffset << ")\n";
+    assert(false && "mismatched extracted relocation value");
+  }
+
   (void)verifyExtractedValue;
   assert(verifyExtractedValue() && "mismatched extracted relocation value");
 
