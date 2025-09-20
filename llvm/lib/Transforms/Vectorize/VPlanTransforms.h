@@ -121,6 +121,12 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
 
+  /// Remove invariant stores of reductions, given \p Rdxs, in \p Plan. \p LVer
+  /// is used to create metadata from an existing store.
+  static void removeInvariantStoresOfReduction(
+      VPlan &Plan, const MapVector<PHINode *, RecurrenceDescriptor> &Rdxs,
+      LoopVersioning &LVer);
+
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.

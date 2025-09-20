@@ -634,6 +634,48 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
+void VPlanTransforms::removeInvariantStoresOfReduction(
+    VPlan &Plan, const MapVector<PHINode *, RecurrenceDescriptor> &Rdxs,
+    LoopVersioning &LVer) {
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
+
+  auto IsInvariantStore = [Rdxs](StoreInst *SI) {
+    return any_of(Rdxs, [SI](const auto &RdxDesc) {
+      return RdxDesc.second.IntermediateStore == SI;
+    });
+  };
+
+  auto IsInvariantAddr = [Rdxs](Value *V) {
+    return any_of(Rdxs, [V](const auto &RdxDesc) {
+      auto *SI = RdxDesc.second.IntermediateStore;
+      return SI && SI->getPointerOperand() == V;
+    });
+  };
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = cast<VPSingleDefRecipe>(&R);
+
+      // The stores with invariant address inside the loop will be deleted, and
+      // in the exit block, a uniform store recipe will be created for the final
+      // invariant store of the reduction.
+      StoreInst *SI = dyn_cast_if_present<StoreInst>(Def->getUnderlyingValue());
+      if (!SI || !IsInvariantAddr(SI->getPointerOperand()))
+        continue;
+      if (IsInvariantStore(SI)) {
+        // Only create recipe for the final invariant store of the reduction.
+        auto *Recipe =
+            new VPReplicateRecipe(SI, Def->operands(), /*IsSingleScalar=*/true,
+                                  /*Mask=*/nullptr, VPIRMetadata(*SI, &LVer));
+        Recipe->insertBefore(*MiddleVPBB, MBIP);
+      }
+      Def->eraseFromParent();
+    }
+  }
+}
+
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
 // including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};

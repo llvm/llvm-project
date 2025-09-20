@@ -8497,6 +8497,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                   CM.foldTailByMasking());
 
   VPlanTransforms::createLoopRegions(*Plan);
+  VPlanTransforms::removeInvariantStoresOfReduction(
+      *Plan, Legal->getReductionVars(), *LVer);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8569,8 +8571,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
-  auto *MiddleVPBB = Plan->getMiddleBlock();
-  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
   // Mapping from VPValues in the initial plan to their widened VPValues. Needed
   // temporarily to update created block masks.
   DenseMap<VPValue *, VPValue *> Old2New;
@@ -8598,23 +8598,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       // VPlan.
       Instruction *Instr = cast<Instruction>(UnderlyingValue);
       Builder.setInsertPoint(SingleDef);
-
-      // The stores with invariant address inside the loop will be deleted, and
-      // in the exit block, a uniform store recipe will be created for the final
-      // invariant store of the reduction.
-      StoreInst *SI;
-      if ((SI = dyn_cast<StoreInst>(Instr)) &&
-          Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
-        // Only create recipe for the final invariant store of the reduction.
-        if (Legal->isInvariantStoreOfReduction(SI)) {
-          auto *Recipe =
-              new VPReplicateRecipe(SI, R.operands(), true /* IsUniform */,
-                                    nullptr /*Mask*/, VPIRMetadata(*SI, LVer));
-          Recipe->insertBefore(*MiddleVPBB, MBIP);
-        }
-        R.eraseFromParent();
-        continue;
-      }
 
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
