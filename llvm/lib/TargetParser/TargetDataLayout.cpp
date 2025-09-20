@@ -618,7 +618,6 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::shave:
   case Triple::renderscript32:
   case Triple::renderscript64:
-  case Triple::nvsass:
     // These are all virtual ISAs with no LLVM backend, and therefore no fixed
     // LLVM data layout.
     return "";

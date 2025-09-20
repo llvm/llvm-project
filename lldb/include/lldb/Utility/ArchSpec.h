@@ -236,8 +236,6 @@ public:
 
     eCore_wasm32,
 
-    eCore_nvsass,
-
     kNumCores,
 
     kCore_invalid,
@@ -284,10 +282,8 @@ public:
     kCore_mips64el_last = eCore_mips64r6el,
 
     kCore_mips_first = eCore_mips32,
-    kCore_mips_last = eCore_mips64r6el,
+    kCore_mips_last = eCore_mips64r6el
 
-    kCore_nvsass_first = eCore_nvsass,
-    kCore_nvsass_last = eCore_nvsass,
   };
 
   /// Default constructor.
