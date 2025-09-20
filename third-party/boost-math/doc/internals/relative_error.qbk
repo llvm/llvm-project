@@ -1,0 +1,139 @@
+[section:error_test Relative Error and Testing]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/test.hpp>
+``
+
+[important
+The header `boost/math/tools/test.hpp` is located under `libs/math/include_private`
+and is NOT installed to the usual locations by default; you will need to add `libs/math/include_private`
+to your compiler's include path in order to use this header.]
+
+   template <class T>
+   T relative_error(T a, T b);
+   
+   template <class A, class F1, class F2>
+   test_result<see-below> test(const A& a, F1 test_func, F2 expect_func);
+
+[h4 Description]
+
+   template <class T>
+   T relative_error(T a, T v);
+
+Returns the relative error between /a/ and /v/ using the usual formula:
+
+[equation error1]
+
+In addition the value returned is zero if:
+
+* Both /a/ and /v/ are infinite.
+* Both /a/ and /v/ are denormalised numbers or zero.
+
+Otherwise if only one of /a/ and /v/ is zero then the value returned is 1.
+
+   template <class A, class F1, class F2>
+   test_result<see-below> test(const A& a, F1 test_func, F2 expect_func);
+   
+This function is used for testing a function against tabulated test data.
+
+The return type contains statistical data on the relative errors (max, mean,
+variance, and the number of test cases etc), as well as the row of test data that
+caused the largest relative error.  Public members of type test_result are:
+
+[variablelist
+[[`unsigned worst()const;`][Returns the row at which the worst error occurred.]]
+[[`T min()const;`][Returns the smallest relative error found.]]
+[[`T max()const;`][Returns the largest relative error found.]]
+[[`T mean()const;`][Returns the mean error found.]]
+[[`std::uintmax_t count()const;`][Returns the number of test cases.]]
+[[`T variance()const;`][Returns the variance of the errors found.]]
+[[`T variance1()const;`][Returns the unbiased variance of the errors found.]]
+[[`T rms()const`][Returns the Root Mean Square, or quadratic mean of the errors.]]
+[[`test_result& operator+=(const test_result& t)`][Combines two test_result's into
+a single result.]]
+]
+
+The template parameter of test_result, is the same type as the values in the two
+dimensional array passed to function /test/, roughly that's 
+`A::value_type::value_type`.
+
+Parameter /a/ is a matrix of test data: and must be a standard library Sequence type,
+that contains another Sequence type:
+typically it will be a two dimensional instance of 
+[^std::array].  Each row
+of /a/ should contain all the parameters that are passed to the function 
+under test as well as the expected result.
+
+Parameter /test_func/ is the function under test, it is invoked with each row
+of test data in /a/.  Typically type F1 is created with Boost.Lambda: see 
+the example below.
+
+Parameter /expect_func/ is a functor that extracts the expected result
+from a row of test data in /a/.  Typically type F2 is created with Boost.Lambda: see 
+the example below.
+
+If the function under test returns a non-finite value when a finite result is
+expected, or if a gross error is found, then a message is sent to `std::cerr`,
+and a call to BOOST_ERROR() made (which means that including this header requires
+you use Boost.Test).  This is mainly a debugging/development aid 
+(and a good place for a breakpoint).
+
+[h4 Example]
+
+Suppose we want to test the `tgamma` and `lgamma` functions, we can create a
+two-dimensional matrix of test data, each row is one test case, and contains
+three elements: the input value, and the expected results for the `tgamma` and
+`lgamma` functions respectively.
+
+   static const std::array<std::array<TestType, 3>, NumberOfTests> 
+      factorials = {
+         /* big array of test data goes here */
+      };
+
+Now we can invoke the test function to test tgamma:
+   
+   using namespace boost::math::tools;
+   using namespace boost::lambda;
+   
+   // get a pointer to the function under test:
+   TestType (*funcp)(TestType) = boost::math::tgamma;
+   
+   // declare something to hold the result:
+   test_result<TestType> result;
+   //
+   // and test tgamma against data:
+   //
+   result = test(
+      factorials, 
+      bind(funcp, ret<TestType>(_1[0])), // calls tgamma with factorials[row][0]
+      ret<TestType>(_1[1])               // extracts the expected result from factorials[row][1]
+   );
+   //
+   // Print out some results:
+   //
+   std::cout << "The Mean was " << result.mean() << std::endl;
+   std::cout << "The worst error was " << (result.max)() << std::endl;
+   std::cout << "The worst error was at row " << result.worst_case() << std::endl;
+   //
+   // same again with lgamma this time:
+   //
+   funcp = boost::math::lgamma;
+   result = test(
+      factorials, 
+      bind(funcp, ret<TestType>(_1[0])), // calls tgamma with factorials[row][0]
+      ret<TestType>(_1[2])               // extracts the expected result from factorials[row][2]
+   );
+   //
+   // etc ...
+   //
+   
+[endsect] [/section:error_test Relative Error and Testing]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

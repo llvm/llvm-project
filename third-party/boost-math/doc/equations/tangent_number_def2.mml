@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+ <mrow>
+   <mi>tan</mi>
+   <mrow>
+    <mrow>
+     <mo stretchy="false">(</mo>
+     <mrow>
+      <mi>x</mi>
+     </mrow>
+     <mo stretchy="false">)</mo>
+    </mrow>
+    <mo stretchy="false">=</mo>
+    <mrow>
+     <munderover>
+      <mo stretchy="false">∑</mo>
+      <mrow>
+       <mrow>
+        <mi>k</mi>
+        <mo stretchy="false">=</mo>
+        <mn>1</mn>
+       </mrow>
+      </mrow>
+      <mrow>
+       <mo stretchy="false">∞</mo>
+      </mrow>
+     </munderover>
+     <mrow>
+      <mfrac>
+       <mrow>
+        <msub>
+         <mi>T</mi>
+         <mi>k</mi>
+        </msub>
+       </mrow>
+       <mrow>
+        <mrow>
+         <mo stretchy="false">(</mo>
+         <mrow>
+          <mrow>
+           <mn>2k</mn>
+           <mo stretchy="false">−</mo>
+           <mn>1</mn>
+          </mrow>
+         </mrow>
+         <mo stretchy="false">)</mo>
+        </mrow>
+        <mi>!</mi>
+       </mrow>
+      </mfrac>
+      <msup>
+       <mi>x</mi>
+       <mrow>
+        <mrow>
+         <mn>2k</mn>
+         <mo stretchy="false">−</mo>
+         <mn>1</mn>
+        </mrow>
+       </mrow>
+      </msup>
+     </mrow>
+    </mrow>
+   </mrow>
+  </mrow>
+</math>

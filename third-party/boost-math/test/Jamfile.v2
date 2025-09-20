@@ -1,0 +1,1735 @@
+# Copyright Daryle Walker, Hubert Holin, John Maddock 2006 - 2007
+# copyright Paul A. Bristow 2006 - 2010
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt.
+# \math_toolkit\libs\math\test\jamfile.v2
+# Runs all math toolkit tests, functions & distributions,
+# and build math examples.
+
+# bring in the rules for testing
+import testing ;
+import modules ;
+import path ;
+import pch ;
+import-search /boost/config/checks ;
+import config : requires ;
+
+local ntl-path = [ modules.peek : NTL_PATH ] ;
+local gmp_path = [ modules.peek : GMP_PATH ] ;
+local e_float_path = [ modules.peek : E_FLOAT_PATH ] ;
+
+#
+# PCH support is broken when --remove-test-targets is specified on the command
+# line.  Disable it until someone fixes this.
+#
+local remove-test-targets = [ MATCH (--remove-test-targets) : [ modules.peek : ARGV ] ] ;
+
+if $(remove-test-targets)
+{
+   OBJ_REMOVAL_OPTIONS = <pch>off ;
+}
+
+obj no_eh : noeh_support.cpp : <library>/boost/config//boost_config ;
+
+
+project
+    : requirements
+      <library>/boost/math//boost_math
+      <library>/boost/multiprecision//boost_multiprecision
+      <library>/boost/test//included
+      <library>/boost/type_index//boost_type_index
+      <library>/boost/ublas//boost_ublas
+      $(OBJ_REMOVAL_OPTIONS)
+      <toolset>acc:<cxxflags>+W2068,2461,2236,4070,4069
+      <toolset>intel-win:<cxxflags>-nologo
+      <toolset>intel-win:<linkflags>-nologo
+      #<toolset>intel-linux:<pch>off
+      <toolset>intel-darwin:<pch>off
+      <toolset>msvc:<warnings>all
+      <toolset>msvc:<asynch-exceptions>on
+      <toolset>msvc:<cxxflags>/wd4996
+      <toolset>msvc:<cxxflags>/wd4511 # copy constructor could not be generated
+      <toolset>msvc:<cxxflags>/wd4512
+      <toolset>msvc:<cxxflags>/wd4610
+      <toolset>msvc:<cxxflags>/wd4510
+      <toolset>msvc:<cxxflags>/wd4127
+      <toolset>msvc:<cxxflags>/wd4459
+      <toolset>msvc:<cxxflags>/wd4701 # needed for lexical cast - temporary.
+      <toolset>msvc:<cxxflags>/wd4189 # local variable is initialized but not referenced
+      <toolset>msvc-7.1:<source>../vc71_fix//vc_fix
+      <toolset>msvc-7.1:<pch>off
+      <toolset>clang-6.0.0:<pch>off  # added to see effect.
+      <toolset>clang:<cxxflags>-Wno-literal-range  # warning: magnitude of floating-point constant too small for type 'long double' [-Wliteral-range]
+      <toolset>gcc,<target-os>windows:<pch>off
+      <toolset>borland:<runtime-link>static
+      # <toolset>msvc:<cxxflags>/wd4506 has no effect?
+      # suppress xstring(237) : warning C4506: no definition for inline function
+      <exception-handling>off:<source>no_eh
+      <link>shared:<define>BOOST_REGEX_DYN_LINK=1
+      # For simplicities sake, make everything a static lib:
+      <link>static
+      <define>BOOST_ALL_NO_LIB=1
+      <define>BOOST_UBLAS_UNSUPPORTED_COMPILER=0
+      <include>.
+      <include>../include_private
+      <include>$(ntl-path)/include
+      <include>$(e_float_path)
+      <include>$(gmp_path) <include>$(gmp_path)/mpfr <include>$(gmp_path)/gmpfrxx <include>$(gmp_path)/mpfrc++
+      <search>$(gmp_path)
+      <search>$(mpfr_path)
+      <search>$(mpfr_path)/build.vc10/lib/Win32/Debug
+      [ requires cxx11_noexcept cxx11_rvalue_references sfinae_expr cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_hdr_initializer_list cxx11_hdr_chrono cxx11_thread_local cxx11_constexpr cxx11_nullptr cxx11_numeric_limits cxx11_decltype cxx11_hdr_array cxx11_hdr_atomic cxx11_hdr_type_traits cxx11_allocator cxx11_explicit_conversion_operators ]
+      [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction ]
+    ;
+
+if $(ntl-path)
+{
+   lib ntl : [ GLOB $(ntl-path)/src : *.cpp ] ;
+}
+else
+{
+   searched-lib ntl ;
+}
+
+explicit ntl ;
+
+cpp-pch pch : pch.hpp : <use>/boost/test//boost_unit_test_framework ;
+cpp-pch pch_light : pch_light.hpp : <use>/boost/test//boost_unit_test_framework ;
+lib compile_test_main : compile_test/main.cpp ;
+
+searched-lib quadmath ;
+
+local float128_type_intel_quad =
+    [ check-target-builds ../config//has_intel_quad "Intel _Quad datatype support"
+        : <cxxflags>-Qoption,cpp,--extended_float_type <define>BOOST_MATH_USE_FLOAT128 ] ;
+local float128_type_gcc =
+    [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support"
+        : <toolset>gcc:<library>quadmath <toolset>gcc:<define>BOOST_MATH_TEST_FLOAT128 ] ;
+local float128_type_floatmax =
+    [ check-target-builds ../config//has_128bit_floatmax_t "128-bit floatmax_t" : : <build>no ] ;
+local float128_type =
+    $(float128_type_intel_quad) $(float128_type_gcc) $(float128_type_floatmax) ;
+
+test-suite special_fun :
+   [ run test_1F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=1 : test_1F0_1 ] # hypergeometric_pFq_checked_series.hpp uses auto, the rest are from quadrature tests.
+   [ run test_1F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 : test_1F0_2 ] # hypergeometric_pFq_checked_series.hpp uses auto, the rest are from quadrature tests.
+   [ run test_1F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 : test_1F0_3 ] # hypergeometric_pFq_checked_series.hpp uses auto, the rest are from quadrature tests.
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=1 : test_2F0_1 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=2 : test_2F0_2 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=3 : test_2F0_3 ]
+   [ run test_2F0.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] $(float128_type) <define>TEST=4 : test_2F0_4 ]
+
+   [ run test_0F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=1 : test_0F1_1 ]
+   [ run test_0F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 : test_0F1_2 ]
+
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=1 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_integrals ]
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_float ]
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_double ]
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=4 release <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_long_double ]
+
+   [ run test_1F1_regularized.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_regularized_float ]
+   [ run test_1F1_regularized.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_regularized_double ]
+   [ run test_1F1_regularized.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=4 release <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_regularized_long_double ]
+   [ run test_1F1_regularized.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=5 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_regularized_real_concept ]
+   #  These are slow...
+   [ run test_1F1_log.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_log_float ]
+   [ run test_1F1_log.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_log_double ]
+   [ run test_1F1_log.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=4 release <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_log_long_double ]
+   [ run test_1F1_log.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=5 <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_log_real_concept ]
+   # pFq:
+   [ run test_pFq.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=2 release <toolset>clang:<cxxflags>-Wno-literal-range : test_pFq_float ]
+   [ run test_pFq.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 release <toolset>clang:<cxxflags>-Wno-literal-range : test_pFq_double ]
+   [ run test_pFq.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=4 release <toolset>clang:<cxxflags>-Wno-literal-range : test_pFq_long_double ]
+   [ run test_pFq.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=5 release <toolset>clang:<cxxflags>-Wno-literal-range : test_pFq_real_concept ]
+
+
+   [ run hypot_test.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework ]
+   [ run pow_test.cpp /boost/test//boost_unit_test_framework ]
+   [ run logaddexp_test.cpp /boost/test//boost_unit_test_framework ]
+   [ run logsumexp_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_variadic_templates ] ]
+   [ run ccmath_sqrt_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isinf_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isnan_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_abs_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isfinite_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isnormal_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_fpclassify_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_frexp_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_ldexp_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_div_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_logb_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_ilogb_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_scalbn_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_scalbln_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_floor_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_ceil_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_trunc_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_modf_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_round_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_fmod_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_remainder_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_copysign_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_hypot_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_fdim_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_fmax_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_fmin_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isgreater_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isgreaterequal_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isless_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_islessequal_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_isunordered_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_next_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_fma_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run ccmath_signbit_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr ] $(float128_type) ]
+   [ run log1p_expm1_test.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run powm1_sqrtp1m1_test.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run git_issue_705.cpp /boost/test//boost_unit_test_framework  ]
+   [ run git_issue_810.cpp /boost/test//boost_unit_test_framework  ]
+   [ run git_issue_826.cpp /boost/test//boost_unit_test_framework  ]
+   [ run git_issue_961.cpp ]
+   [ run git_issue_1006.cpp ]
+   [ run git_issue_184.cpp ]
+   [ run git_issue_1137.cpp ]
+   [ run git_issue_1139.cpp ]
+   [ run git_issue_1175.cpp ]
+   [ run git_issue_1194.cpp ]
+   [ run special_functions_test.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_airy.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_j.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_y.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_i.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_k.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_j_prime.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_y_prime.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_i_prime.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_k_prime.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run bessel_iterator_test.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_beta.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_bessel_airy_zeros.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_bernoulli_constants.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_binomial_coeff.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_carlson.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+        <define>TEST1
+        : test_carlson_1  ]
+   [ run test_carlson.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+        <define>TEST2
+      : test_carlson_2  ]
+   [ run test_carlson.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+        <define>TEST3
+        : test_carlson_3  ]
+   [ run test_carlson.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+        <define>TEST4
+        : test_carlson_4  ]
+   [ run test_cbrt.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_difference.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_digamma.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_ellint_1.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_ellint_2.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_ellint_3.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_ellint_d.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_jacobi_theta.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] ]
+   [ run test_jacobi_zeta.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_heuman_lambda.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_erf.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run erf_limits_test.cpp ]
+   [ run test_expint.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_factorials.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_gamma.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_gamma_edge.cpp ]
+   [ run test_gamma_mp.cpp /boost/test//boost_unit_test_framework : : : release <define>TEST=1 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :  test_gamma_mp_1 ]
+   [ run test_gamma_mp.cpp /boost/test//boost_unit_test_framework : : : release <define>TEST=2 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_gamma_mp_2 ]
+   [ run test_gamma_mp.cpp /boost/test//boost_unit_test_framework : : : release <define>TEST=3 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_gamma_mp_3 ]
+   [ run test_hankel.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_hermite.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_ibeta_float  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_ibeta_double  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_ibeta_long_double  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=1
+          <toolset>intel:<pch>off
+        : test_ibeta_real_concept1  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=2
+          <toolset>intel:<pch>off
+        : test_ibeta_real_concept2  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=3
+          <toolset>intel:<pch>off
+        : test_ibeta_real_concept3  ]
+   [ run test_ibeta.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=4
+          <toolset>intel:<pch>off
+        : test_ibeta_real_concept4  ]
+
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_float  ]
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_double  ]
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_long_double  ]
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=1
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_real_concept1  ]
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=2
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_real_concept2  ]
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=3
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_real_concept3  ]
+   [ run test_ibeta_derivative.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=4
+          <toolset>intel:<pch>off
+          <toolset>gcc:<cxxflags>-Wno-overflow
+        : test_ibeta_derivative_real_concept4  ]
+
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_float  ]
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_double  ]
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_long_double  ]
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=1
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_real_concept1  ]
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=2
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_real_concept2  ]
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=3
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_real_concept3  ]
+   [ run test_ibeta_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=4
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_real_concept4  ]
+   [ run test_ibeta_inv_ab.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_ab_float  ]
+   [ run test_ibeta_inv_ab.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_ab_double  ]
+   [ run test_ibeta_inv_ab.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_ab_long_double  ]
+   [ run test_ibeta_inv_ab.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=1
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_ab_real_concept1  ]
+   [ run test_ibeta_inv_ab.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=2
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_ab_real_concept2  ]
+   [ run test_ibeta_inv_ab.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=3
+          <toolset>intel:<pch>off
+        : test_ibeta_inv_ab_real_concept3  ]
+   [ run test_igamma.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_igamma_inv.cpp test_instances//test_instances pch_light  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_igamma_inv_float  ]
+   [ run test_igamma_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_igamma_inv_double  ]
+   [ run test_igamma_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_igamma_inv_long_double  ]
+   [ run test_igamma_inv.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <toolset>intel:<pch>off
+        : test_igamma_inv_real_concept  ]
+   [ run test_igamma_inva.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_igamma_inva_float  ]
+   [ run test_igamma_inva.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_igamma_inva_double  ]
+   [ run test_igamma_inva.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+      : test_igamma_inva_long_double  ]
+   [ run test_igamma_inva.cpp  test_instances//test_instances pch_light /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <toolset>intel:<pch>off
+        : test_igamma_inva_real_concept  ]
+   [ run test_instantiate1.cpp test_instantiate2.cpp  ]
+   [ run test_instantiate1.cpp test_instantiate2.cpp  : : : <exception-handling>off : test_instantiate_no_eh ]
+   [ run test_instantiate3.cpp ]
+   [ run test_jacobi.cpp pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_laguerre.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+
+   [ run test_lambert_w.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_lambert_w.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION=1  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_lambert_w_multiprecision_1 ]
+   [ run test_lambert_w.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION=2  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_lambert_w_multiprecision_2 ]
+   [ run test_lambert_w.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION=3  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_lambert_w_multiprecision_3 ]
+   [ run test_lambert_w.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION=4 <define>BOOST_MATH_TEST_FLOAT128 $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_lambert_w_multiprecision_4 ]
+   [ run test_lambert_w_integrals_float128.cpp /boost/test//boost_unit_test_framework : : : release [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>"-Bstatic -lquadmath -Bdynamic" : <build>no ] [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run test_lambert_w_integrals_quad.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run test_lambert_w_integrals_long_double.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] ]
+   [ run test_lambert_w_integrals_double.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] ]
+   [ run test_lambert_w_integrals_float.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] ]
+   [ run test_lambert_w_derivative.cpp /boost/test//boost_unit_test_framework : : : <define>BOOST_MATH_TEST_MULTIPRECISION  $(float128_type)  ]
+
+   [ run test_legendre.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework : : : $(float128_type)  ]
+   [ run chebyshev_test.cpp  : : : [ requires cxx11_inline_namespaces cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_range_based_for cxx11_constexpr ] $(float128_type)  ]
+   [ run chebyshev_transform_test.cpp ../config//fftw3f : : : <define>TEST1 [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] : chebyshev_transform_test_1 ]
+   [ run chebyshev_transform_test.cpp ../config//fftw3 : : : <define>TEST2 [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] : chebyshev_transform_test_2 ]
+   [ run chebyshev_transform_test.cpp ../config//fftw3l : : : <define>TEST3 [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] : chebyshev_transform_test_3 ]
+   [ run chebyshev_transform_test.cpp ../config//fftw3q ../config//quadmath : : : <define>TEST4 [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] [ check-target-builds ../config//has_float128 "__float128" : : <build>no ] : chebyshev_transform_test_4 ]
+
+   [ run cardinal_trigonometric_test.cpp ../config//fftw3f : : : <define>TEST1 [ requires cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] : cardinal_trigonometric_test_1 ]
+   [ run cardinal_trigonometric_test.cpp ../config//fftw3 : : : <define>TEST2 [ requires cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] : cardinal_trigonometric_test_2 ]
+   [ run cardinal_trigonometric_test.cpp ../config//fftw3l : : : <define>TEST3 [ requires cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] : cardinal_trigonometric_test_3 ]
+   [ run cardinal_trigonometric_test.cpp ../config//fftw3q ../config//quadmath : : : <define>TEST4 [ requires cxx11_auto_declarations cxx11_range_based_for ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] [ check-target-builds ../config//has_float128 "__float128" : : <build>no ] : cardinal_trigonometric_test_4 ]
+
+
+   [ run test_ldouble_simple.cpp /boost/test//boost_unit_test_framework  ]
+   # Needs to run in release mode, as it's rather slow:
+   [ run test_next.cpp pch /boost/test//boost_unit_test_framework : : : release  ]
+   [ run test_next_decimal.cpp pch /boost/test//boost_unit_test_framework : : : release  ]
+   [ run test_owens_t.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_polygamma.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_trigamma.cpp test_instances//test_instances /boost/test//boost_unit_test_framework  ]
+   [ run test_round.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run git_issue_430.cpp pch /boost/test//boost_unit_test_framework ]
+   [ run test_spherical_harmonic.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_sign.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_tgamma_for_issue396_part1.cpp /boost/test//boost_unit_test_framework : : : $(float128_type) <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] ]
+   [ run test_tgamma_for_issue396_part2.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ]  ]
+   [ run test_tgamma_ratio.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_trig.cpp test_instances//test_instances pch_light /boost/test//boost_unit_test_framework  ]
+   [ run test_zeta.cpp /boost/test//boost_unit_test_framework test_instances//test_instances pch_light  ]
+   [ run test_sinc.cpp /boost/test//boost_unit_test_framework pch_light ]
+   [ run test_fibonacci.cpp /boost/test//boost_unit_test_framework ]
+;
+
+test-suite distribution_tests :
+   [ run test_arcsine.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_landau.cpp pch : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>"-Bstatic -lquadmath -Bdynamic" ] ]
+   [ run test_saspoint5.cpp pch : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>"-Bstatic -lquadmath -Bdynamic" ] ]
+   [ run test_holtsmark.cpp pch : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>"-Bstatic -lquadmath -Bdynamic" ] ]
+   [ run test_mapairy.cpp pch : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>"-Bstatic -lquadmath -Bdynamic" ] ]
+   [ run test_bernoulli.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_beta_dist.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_binomial_float  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_binomial_double  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_binomial_long_double  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=0
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept0  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=1
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept1  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=2
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept2  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=3
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept3  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=4
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept4  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=5
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept5  ]
+   [ run test_binomial.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_ROUNDING=6
+          <toolset>intel:<pch>off
+        : test_binomial_real_concept6  ]
+   [ run test_cauchy.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_chi_squared.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_dist_overloads.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_exponential_dist.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_extreme_value.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_find_location.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_find_scale.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_fisher_f.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_gamma_dist.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_geometric.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_hyperexponential_dist.cpp /boost/test//boost_unit_test_framework ]
+   [ run test_hypergeometric_dist.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_QUANT=0
+          <toolset>intel:<pch>off
+        : test_hypergeometric_dist0  ]
+   [ run test_hypergeometric_dist.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_QUANT=1
+          <toolset>intel:<pch>off
+        : test_hypergeometric_dist1  ]
+   [ run test_hypergeometric_dist.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_QUANT=2
+          <toolset>intel:<pch>off
+        : test_hypergeometric_dist2  ]
+   [ run test_hypergeometric_dist.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_QUANT=3
+          <toolset>intel:<pch>off
+        : test_hypergeometric_dist3  ]
+   [ run test_hypergeometric_dist.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_QUANT=4
+          <toolset>intel:<pch>off
+        : test_hypergeometric_dist4  ]
+   [ run test_hypergeometric_dist.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_QUANT=5
+          <toolset>intel:<pch>off
+        : test_hypergeometric_dist5  ]
+   [ run test_inverse_chi_squared_distribution.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_inverse_gamma_distribution.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_inverse_gaussian.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_kolmogorov_smirnov.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] ]
+   [ run test_laplace.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_inv_hyp.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_logistic_dist.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_lognormal.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_negative_binomial.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_negative_binomial_float  ]
+   [ run test_negative_binomial.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_negative_binomial_double  ]
+   [ run test_negative_binomial.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_negative_binomial_long_double  ]
+   [ run test_negative_binomial.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <toolset>intel:<pch>off
+        : test_negative_binomial_real_concept  ]
+   [ run test_nc_chi_squared.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_nc_chi_squared_float  ]
+   [ run test_nc_chi_squared.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_nc_chi_squared_double  ]
+   [ run test_nc_chi_squared.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_nc_chi_squared_long_double  ]
+   [ run test_nc_chi_squared.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <toolset>intel:<pch>off
+        : test_nc_chi_squared_real_concept  ]
+   [ run test_nc_beta.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_nc_beta_float  ]
+   [ run test_nc_beta.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_nc_beta_double  ]
+   [ run test_nc_beta.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_nc_beta_long_double  ]
+   [ run test_nc_beta.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=1
+          <toolset>intel:<pch>off
+        : test_nc_beta_real_concept1  ]
+   [ run test_nc_beta.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <define>TEST_DATA=2
+          <toolset>intel:<pch>off
+        : test_nc_beta_real_concept2  ]
+   [ run test_nc_f.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_nc_t.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_nc_t_float  ]
+   [ run test_nc_t.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_nc_t_double  ]
+   [ run test_nc_t.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_nc_t_long_double  ]
+   [ run test_nc_t.cpp  pch /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <toolset>intel:<pch>off
+        : test_nc_t_real_concept  ]
+   [ run test_normal.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_pareto.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_poisson.cpp /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_FLOAT
+          <toolset>intel:<pch>off
+        : test_poisson_float  ]
+   [ run test_poisson.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_DOUBLE
+          <toolset>intel:<pch>off
+        : test_poisson_double  ]
+   [ run test_poisson.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_LDOUBLE
+          <toolset>intel:<pch>off
+        : test_poisson_long_double  ]
+   [ run test_poisson.cpp  /boost/test//boost_unit_test_framework
+        : # command line
+        : # input files
+        : # requirements
+          <define>TEST_REAL_CONCEPT
+          <toolset>intel:<pch>off
+        : test_poisson_real_concept  ]
+   [ run test_rayleigh.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_students_t.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_skew_normal.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_triangular.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_uniform.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_weibull.cpp /boost/test//boost_unit_test_framework ]
+
+   [ run test_legacy_nonfinite.cpp /boost/test//boost_unit_test_framework ]
+   [ run test_basic_nonfinite.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_lexical_cast.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_nonfinite_trap.cpp /boost/test//boost_unit_test_framework : : : <exception-handling>off:<build>no  ]
+   [ run test_signed_zero.cpp /boost/test//boost_unit_test_framework  ]
+   [ run complex_test.cpp /boost/test//boost_unit_test_framework  ]
+
+   [ compile test_dist_deduction_guides.cpp : [ requires cpp_deduction_guides cpp_variadic_templates ] ]
+   [ run git_issue_800.cpp /boost/test//boost_unit_test_framework  ]
+   [ run git_issue_845.cpp /boost/test//boost_unit_test_framework  ]
+   [ run scipy_issue_14901.cpp /boost/test//boost_unit_test_framework ]
+   [ run scipy_issue_14901_ncf.cpp /boost/test//boost_unit_test_framework ]
+   [ run scipy_issue_15101.cpp /boost/test//boost_unit_test_framework ]
+   [ run scipy_issue_17146.cpp /boost/test//boost_unit_test_framework  ]
+   [ run scipy_issue_17388.cpp /boost/test//boost_unit_test_framework  ]
+   [ run scipy_issue_17916.cpp /boost/test//boost_unit_test_framework  ]
+   [ run scipy_issue_17916_nct.cpp /boost/test//boost_unit_test_framework  ]
+   [ run scipy_issue_18302.cpp /boost/test//boost_unit_test_framework  ]
+   [ run scipy_issue_18511.cpp /boost/test//boost_unit_test_framework ]
+   [ compile scipy_issue_19762.cpp ]
+   [ run git_issue_1120.cpp ]
+;
+
+test-suite new_floats :
+   [ compile compile_test/float32.cpp ]
+   [ compile compile_test/float64.cpp ]
+   [ compile compile_test/float128.cpp ]
+   [ run test_float_io.cpp : : : $(float128_type) ]
+   [ run test_float_io.cpp : : : <define>BOOST_MATH_TEST_IO_AS_INTEL_QUAD=1 $(float128_type) : test_float_io_quad ]
+;
+
+test-suite mp :
+
+   [ run test_nc_t_quad.cpp  pch /boost/test//boost_unit_test_framework : : : release <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>-lquadmath ] ]
+   [ run test_polynomial.cpp /boost/test//boost_unit_test_framework : : : <define>TEST1 : test_polynomial_1  ]
+   [ run test_polynomial.cpp /boost/test//boost_unit_test_framework : : : <define>TEST2 : test_polynomial_2  ]
+   [ run test_polynomial.cpp /boost/test//boost_unit_test_framework : : : <define>TEST3 : test_polynomial_3  ]
+   [ run test_estrin.cpp ]
+   [ run polynomial_concept_check.cpp ]
+
+   [ run issue893.cpp ]
+   [ run git_issue_1098.cpp ]
+;
+
+test-suite misc :
+   [ run header_deprecated_test.cpp ]
+   [ run threading_sanity_check.cpp ]
+   [ run test_tr1.cpp
+   ../build//boost_math_tr1
+   ../build//boost_math_tr1f
+   ../build//boost_math_c99
+   ../build//boost_math_c99f
+   /boost/test//boost_unit_test_framework
+     ]
+
+   [ run test_tr1.cpp
+      ../build//boost_math_tr1l
+      ../build//boost_math_c99l
+      /boost/test//boost_unit_test_framework
+      : : :
+      <define>TEST_LD=1
+      [ check-target-builds ../config//has_long_double_support "long double support" : : <build>no ]
+      :
+      test_tr1_long_double
+     ]
+
+   [ run test_tr1.c
+      ../build//boost_math_tr1
+      ../build//boost_math_tr1f
+      ../build//boost_math_c99
+      ../build//boost_math_c99f
+      /boost/test//boost_unit_test_framework
+      : : : #requirements
+      :
+      test_tr1_c
+    ]
+
+   [ run test_tr1.c
+      ../build//boost_math_tr1l
+      ../build//boost_math_c99l
+      /boost/test//boost_unit_test_framework
+      : : :
+      <define>TEST_LD=1
+      [ check-target-builds ../config//has_long_double_support "long double support" : : <build>no ]
+      :
+      test_tr1_c_long_double
+    ]
+   [ run test_constants.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] $(float128_type) ]
+   [ run simple_continued_fraction_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] $(float128_type) ]
+   [ run centered_continued_fraction_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] $(float128_type) ]
+   [ run luroth_expansion_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] $(float128_type) ]
+   [ run engel_expansion_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] $(float128_type) ]
+   [ run test_classify.cpp pch /boost/test//boost_unit_test_framework : : : <toolset>msvc:<cxxflags>/bigobj ]
+   [ run test_error_handling.cpp /boost/test//boost_unit_test_framework  ]
+   [ run legendre_stieltjes_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_range_based_for ] $(float128_type)  ]
+   [ run test_minima.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_rationals.cpp /boost/test//boost_unit_test_framework
+      test_rational_instances/test_rational_double1.cpp
+      test_rational_instances/test_rational_double2.cpp
+      test_rational_instances/test_rational_double3.cpp
+      test_rational_instances/test_rational_double4.cpp
+      test_rational_instances/test_rational_double5.cpp
+      test_rational_instances/test_rational_float1.cpp
+      test_rational_instances/test_rational_float2.cpp
+      test_rational_instances/test_rational_float3.cpp
+      test_rational_instances/test_rational_float4.cpp
+      test_rational_instances/test_rational_ldouble1.cpp
+      test_rational_instances/test_rational_ldouble2.cpp
+      test_rational_instances/test_rational_ldouble3.cpp
+      test_rational_instances/test_rational_ldouble4.cpp
+      test_rational_instances/test_rational_ldouble5.cpp
+      test_rational_instances/test_rational_real_concept1.cpp
+      test_rational_instances/test_rational_real_concept2.cpp
+      test_rational_instances/test_rational_real_concept3.cpp
+      test_rational_instances/test_rational_real_concept4.cpp
+      test_rational_instances/test_rational_real_concept5.cpp
+   ]
+   [ run test_policy.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_2.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_3.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_4.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_5.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_6.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_7.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_8.cpp /boost/test//boost_unit_test_framework  ]
+   [ compile test_policy_9.cpp  ]
+   [ run test_policy_10.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_policy_sf.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_long_double_support.cpp /boost/test//boost_unit_test_framework
+      : : : [ check-target-builds ../config//has_long_double_support "long double support" : : <build>no ] ]
+   [ run test_recurrence.cpp : : : <define>TEST=1 [ requires cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_auto_declarations cxx11_decltype ] <toolset>msvc:<cxxflags>/bigobj : test_recurrence_1 ]
+   [ run test_recurrence.cpp : : : <define>TEST=2 release $(float128_type) [ requires cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_auto_declarations cxx11_decltype ]  : test_recurrence_2 ]
+   [ run test_recurrence.cpp : : : <define>TEST=3 release $(float128_type) [ requires cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_auto_declarations cxx11_decltype ]  : test_recurrence_3 ]
+
+   [ run test_print_info_on_type.cpp  ]
+   [ run univariate_statistics_test.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run univariate_statistics_backwards_compatible_test.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_hdr_forward_list cxx11_hdr_atomic cxx11_hdr_thread cxx11_hdr_tuple cxx11_hdr_future cxx11_sfinae_expr ] ]
+   [ run ooura_fourier_integral_test.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] $(float128_type) [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run empirical_cumulative_distribution_test.cpp  : : :  [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run norms_test.cpp /boost/test//boost_unit_test_framework : : :  [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run signal_statistics_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run anderson_darling_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run ljung_box_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run cubic_roots_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run quartic_roots_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run test_t_test.cpp : : : $(float128_type) [ requires cxx11_hdr_forward_list cxx11_hdr_atomic cxx11_hdr_thread cxx11_hdr_tuple cxx11_hdr_future cxx11_sfinae_expr ]  ]
+   [ run test_z_test.cpp : : : $(float128_type) [ requires cxx11_hdr_forward_list cxx11_hdr_atomic cxx11_hdr_thread cxx11_hdr_tuple cxx11_hdr_future cxx11_sfinae_expr ]  ]
+   [ run bivariate_statistics_test.cpp : : : [ requires cxx11_hdr_forward_list cxx11_hdr_atomic cxx11_hdr_thread cxx11_hdr_tuple cxx11_hdr_future cxx11_sfinae_expr ] [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] ]
+   [ run linear_regression_test.cpp : : : [ requires cxx11_hdr_forward_list cxx11_hdr_atomic cxx11_hdr_thread cxx11_hdr_tuple cxx11_hdr_future cxx11_sfinae_expr ]  ]
+   [ run test_runs_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run test_chatterjee_correlation.cpp /boost/test//boost_unit_test_framework ]
+   [ run test_rank.cpp /boost/test//boost_unit_test_framework ]
+   [ run lanczos_smoothing_test.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run condition_number_test.cpp /boost/test//boost_unit_test_framework : : : <define>TEST=1 <toolset>msvc:<cxxflags>/bigobj $(float128_type) : condition_number_test_1 ]
+   [ run condition_number_test.cpp /boost/test//boost_unit_test_framework : : : <define>TEST=2 <toolset>msvc:<cxxflags>/bigobj $(float128_type) : condition_number_test_2 ]
+   [ run condition_number_test.cpp /boost/test//boost_unit_test_framework : : : <define>TEST=3 <toolset>msvc:<cxxflags>/bigobj $(float128_type) : condition_number_test_3 ]
+   [ run test_real_concept.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_remez.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_roots.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run test_root_iterations.cpp pch /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_tuple ]  ]
+   [ run test_root_finding_concepts.cpp /boost/test//boost_unit_test_framework  ]
+   [ run test_toms748_solve.cpp pch /boost/test//boost_unit_test_framework  ]
+   [ run  compile_test/interpolators_cubic_spline_incl_test.cpp compile_test_main : : :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/interpolators_barycentric_rational_incl_test.cpp compile_test_main : : :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run octonion_test.cpp
+       /boost/test//boost_unit_test_framework ]
+   [ run octonion_test_simple.cpp ]
+   [ run quaternion_constexpr_test.cpp ]
+   [ run quaternion_test.cpp
+       /boost/test//boost_unit_test_framework : : : <toolset>msvc-14.0:<debug-symbols>off $(float128_type) ]
+   [ run quaternion_mult_incl_test.cpp
+       quaternion_mi1.cpp
+       quaternion_mi2.cpp
+       /boost/test//boost_unit_test_framework ]
+
+#   [ run __temporary_test.cpp test_instances//test_instances : : : <test-info>always_show_run_output <pch>off ]
+;
+
+test-suite interpolators :
+   [ run test_barycentric_rational.cpp /boost/test//boost_unit_test_framework : : :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_unified_initialization_syntax ] $(float128_type)  ]
+   [ run test_vector_barycentric_rational.cpp /boost/test//boost_unit_test_framework : : :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations cxx11_unified_initialization_syntax ]  [ check-target-builds ../../multiprecision/config//has_eigen : : <build>no ] ]
+   [ run cardinal_cubic_b_spline_test.cpp /boost/test//boost_unit_test_framework : : :  [ requires cxx11_smart_ptr cxx11_defaulted_functions ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release ]
+   [ run cardinal_b_spline_test.cpp : : :  [ requires cxx11_auto_declarations cxx11_constexpr cxx11_smart_ptr cxx11_defaulted_functions ] $(float128_type) ]
+   [ run jacobi_test.cpp : : :  [ requires cxx11_auto_declarations cxx11_constexpr cxx11_smart_ptr cxx11_defaulted_functions ] $(float128_type) ]
+   [ run gegenbauer_test.cpp : : :  [ requires cxx11_auto_declarations cxx11_constexpr cxx11_smart_ptr cxx11_defaulted_functions ] $(float128_type) ]
+   [ run daubechies_scaling_test.cpp /boost/hana//boost_hana : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] ]
+   [ run daubechies_wavelet_test.cpp /boost/hana//boost_hana : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] ]
+   [ run fourier_transform_daubechies_test.cpp  : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] ]
+   [ run wavelet_transform_test.cpp /boost/hana//boost_hana : : : <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run agm_test.cpp  : : : <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run rsqrt_test.cpp  : : : <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run cohen_acceleration_test.cpp  : : : <toolset>msvc:<cxxflags>/bigobj [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ compile compile_test/filters_daubechies_incl_test.cpp : [ requires cxx17_if_constexpr cxx17_std_apply ]  ]
+   [ compile compile_test/sf_daubechies_scaling_incl_test.cpp : [ requires cxx17_if_constexpr cxx17_std_apply ]  ]
+   [ run whittaker_shannon_test.cpp : : :  [ requires cxx11_auto_declarations cxx11_constexpr cxx11_smart_ptr cxx11_defaulted_functions ] ]
+   [ run cardinal_quadratic_b_spline_test.cpp : : :  [ requires cxx11_auto_declarations cxx11_constexpr cxx11_smart_ptr cxx11_defaulted_functions ] ]
+   [ run cardinal_quintic_b_spline_test.cpp : : :  [ requires cxx11_auto_declarations cxx11_constexpr cxx11_smart_ptr cxx11_defaulted_functions ] $(float128_type) ]
+   [ run makima_test.cpp /boost/circular_buffer//boost_circular_buffer : : :  [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run pchip_test.cpp /boost/circular_buffer//boost_circular_buffer : : :  [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run septic_hermite_test.cpp  : : :  [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run quintic_hermite_test.cpp /boost/circular_buffer//boost_circular_buffer : : :  [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run cubic_hermite_test.cpp /boost/circular_buffer//boost_circular_buffer : : :  [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run bilinear_uniform_test.cpp  : : : [ requires cxx17_if_constexpr cxx17_std_apply ]  ]
+   [ run bezier_polynomial_test.cpp  : : : [ requires cxx17_if_constexpr cxx17_std_apply ]  $(float128_type) ]
+   [ run catmull_rom_test.cpp /boost/test//boost_unit_test_framework : : : <define>TEST=1 [ requires cxx11_hdr_array cxx11_hdr_initializer_list ] : catmull_rom_test_1 ]
+   [ run catmull_rom_test.cpp /boost/test//boost_unit_test_framework : : : <define>TEST=2 [ requires cxx11_hdr_array cxx11_hdr_initializer_list ] : catmull_rom_test_2 ]
+   [ run catmull_rom_test.cpp /boost/test//boost_unit_test_framework : : : <define>TEST=3 [ requires cxx11_hdr_array cxx11_hdr_initializer_list ] : catmull_rom_test_3 ]
+   [ run compile_test/interpolators_catmull_rom_incl_test.cpp compile_test_main  : : : [ requires cxx11_hdr_array cxx11_hdr_initializer_list ] ]
+   [ run compile_test/interpolators_catmull_rom_concept_test.cpp compile_test_main   : : : [ requires cxx11_hdr_array cxx11_hdr_initializer_list ] ]
+   [ run test_standalone_asserts.cpp ]
+   [ run differential_evolution_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run jso_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run random_search_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ run cma_es_test.cpp : : : [ requires cxx17_if_constexpr cxx17_std_apply ] [ check-target-builds ../../multiprecision/config//has_eigen : : <build>no ] ]
+   [ compile compile_test/random_search_incl_test.cpp : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ compile compile_test/differential_evolution_incl_test.cpp : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+   [ compile compile_test/jso_incl_test.cpp : [ requires cxx17_if_constexpr cxx17_std_apply ] ]
+;
+
+test-suite quadrature :
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <toolset>msvc:<cxxflags>/bigobj <define>TEST1 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] :
+   tanh_sinh_quadrature_test_1 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <toolset>msvc:<cxxflags>/bigobj <define>TEST1A $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] :
+   tanh_sinh_quadrature_test_1a ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST1B $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] :
+   tanh_sinh_quadrature_test_1b ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <toolset>msvc:<cxxflags>/bigobj <define>TEST2 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] :
+   tanh_sinh_quadrature_test_2 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST2A $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] :
+   tanh_sinh_quadrature_test_2a ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <toolset>msvc:<cxxflags>/bigobj <define>TEST3 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_3 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST3A $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_3a ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST4 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_4 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST5 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_5 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <toolset>msvc:<cxxflags>/bigobj <define>TEST6 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_6 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST6A $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_6a ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST7 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_7 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST8 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_8 ]
+   [ run  tanh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <toolset>msvc:<cxxflags>/bigobj <define>TEST9
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] :
+   tanh_sinh_quadrature_test_9 ]
+
+   [ run tanh_sinh_mpfr.cpp ../tools//mpfr ../tools//gmp : : : [ check-target-builds ../config//has_mpfr : : <build>no ] [ check-target-builds ../config//has_gmp : : <build>no ] [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] release <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run sinh_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release $(float128_type) [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <define>TEST1 $(float128_type) [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] : exp_sinh_quadrature_test_1 ]
+
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST2 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] : exp_sinh_quadrature_test_2 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : <define>TEST3 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_3 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST4 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_4 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST5 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_5 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST6 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_6 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST7 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_7 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST8 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_8 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST9 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_9 ]
+   [ run exp_sinh_quadrature_test.cpp /boost/test//boost_unit_test_framework
+     : : : release <define>TEST10 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : exp_sinh_quadrature_test_10 ]
+
+   [ run gauss_quadrature_test.cpp : : : <define>TEST1 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release : gauss_quadrature_test_1 ]
+   [ run gauss_quadrature_test.cpp : : : <define>TEST2 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : gauss_quadrature_test_2 ]
+   [ run gauss_quadrature_test.cpp : : : <define>TEST3 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : gauss_quadrature_test_3 ]
+   [ run gauss_kronrod_quadrature_test.cpp : : : <define>TEST1 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release : gauss_kronrod_quadrature_test_1 ]
+   [ run gauss_kronrod_quadrature_test.cpp : : : <define>TEST1A $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : gauss_kronrod_quadrature_test_1a ]
+   [ run gauss_kronrod_quadrature_test.cpp : : : <define>TEST2 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : gauss_kronrod_quadrature_test_2 ]
+   [ run gauss_kronrod_quadrature_test.cpp : : : <define>TEST3 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : gauss_kronrod_quadrature_test_3 ]
+   [ run adaptive_gauss_kronrod_quadrature_test.cpp : : : <define>TEST1 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release : adaptive_gauss_quadrature_test_1 ]
+   [ run adaptive_gauss_kronrod_quadrature_test.cpp : : : <define>TEST1A $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : adaptive_gauss_quadrature_test_1a ]
+   [ run adaptive_gauss_kronrod_quadrature_test.cpp : : : <define>TEST2 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : adaptive_gauss_quadrature_test_2 ]
+   [ run adaptive_gauss_kronrod_quadrature_test.cpp : : : <define>TEST3 $(float128_type)
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : adaptive_gauss_quadrature_test_3 ]
+
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=1  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_1
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=2  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_2
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=3  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_3
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=4  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_4
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=5  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_5
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=6  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_6
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=7  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_7
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=8  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_8
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=9  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_9
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=10  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_10
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=11  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_11
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=12  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_12
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=13  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_13
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=14  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_14
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=15  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_15
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=16  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_16
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=17  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_17
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=18  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_18
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=19  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_19
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=20  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_20
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=21  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_21
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=22  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_22
+   ]
+   [ run naive_monte_carlo_test.cpp : : :
+     <toolset>msvc:<cxxflags>/bigobj <define>TEST=23  [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" : naive_monte_carlo_test_23
+   ]
+   [ compile compile_test/quad_naive_monte_carlo_incl_test.cpp :
+     [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ]
+     <target-os>linux:<linkflags>"-pthread" [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]
+   ]
+
+   [ compile compile_test/gauss_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile compile_test/gauss_kronrod_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run git_issue_898.cpp ]
+   [ run git_issue_1075.cpp : : : $(float128_type) ]
+
+   [ run test_trapezoidal.cpp /boost/test//boost_unit_test_framework : : :
+      release [ requires cxx11_lambdas cxx11_auto_declarations cxx11_decltype cxx11_unified_initialization_syntax cxx11_variadic_templates ]
+      $(float128_type) ]
+;
+
+test-suite autodiff :
+   [ run test_numerical_differentiation.cpp /boost/test//boost_unit_test_framework  : : : <toolset>msvc:<cxxflags>/bigobj [ requires cxx11_auto_declarations cxx11_constexpr ] ]
+   [ run  compile_test/diff_numerical_differentiation_incl_test.cpp compile_test_main  : : : [ requires cxx11_auto_declarations cxx11_constexpr ] ]
+   [ compile  compile_test/diff_numerical_differentiation_concept_test.cpp  : [ requires cxx11_auto_declarations cxx11_constexpr ] ]
+   [ run test_autodiff_1.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_2.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_3.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_4.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_5.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_6.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_7.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run test_autodiff_8.cpp /boost/test//boost_unit_test_framework : : : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ check-target-builds ../config//is_ci_standalone_run "Standalone CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ compile compile_test/diff_autodiff_incl_test.cpp : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ compile compile_test/diff_finite_difference_incl_test.cpp : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ compile compile_test/diff_lanczos_smoothing_incl_test.cpp : <toolset>gcc-mingw:<cxxflags>-Wa,-mbig-obj <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release [ requires cxx17_if_constexpr cxx17_std_apply ] $(float128_type) [ check-target-builds ../config//is_cygwin_run "Cygwin CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+;
+
+#
+#  These tests are run by default when you invoke the Jamfile, but
+#  they are deliberately NOT run from the CI scripts as they soak up
+#  too much time:
+#
+test-suite long-running-tests :
+   [ run test_0F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=3 release $(float128_type) : test_0F1_3 ]
+   [ run test_0F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=4 release : test_0F1_4 ]
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=5 <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_1F1_real_concept ]
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=6 release $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_quad ]
+   [ run test_1F1.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=7 release <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_1F1_dec_40 ]
+   [ run test_1F1_regularized.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=6 release $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] <toolset>clang:<cxxflags>-Wno-literal-range : test_1F1_regularized_quad ]
+   [ run test_1F1_regularized.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=7 release <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_1F1_regularized_dec_40 ]
+   [ run test_1F1_log.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=6 release $(float128_type) <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_1F1_log_quad ]
+   [ run test_1F1_log.cpp /boost/test//boost_unit_test_framework : : : release [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=7 release <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_1F1_log_dec_40 ]
+   [ run test_pFq.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=6 release $(float128_type) <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_pFq_quad ]
+   [ run test_pFq.cpp /boost/test//boost_unit_test_framework : : : [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] <define>TEST=7 release <toolset>clang:<cxxflags>-Wno-literal-range [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : test_pFq_dec_40 ]
+   [ run test_pFq_precision.cpp ../tools//mpfr ../tools//gmp /boost/test//boost_unit_test_framework /boost/system//boost_system /boost/chrono//boost_chrono : : : [ check-target-builds ../config//has_mpfr : : <build>no ] [ requires cxx11_hdr_initializer_list cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_smart_ptr ] release <toolset>clang:<cxxflags>-Wno-literal-range ]
+   [ run test_constant_generate.cpp : : : release <define>USE_CPP_FLOAT=1 <exception-handling>off:<build>no  ]
+;
+
+build-project ../example ;
+# Expect policy_ref_snips13 to fail (message about no Cauchy Mean).
+
+
+rule get_float128_tests
+{
+     local result ;
+     for local source in [ glob float128/*.cpp ]
+     {
+         result += [ run $(source)
+            /boost/test//boost_unit_test_framework/<link>static
+           : # command line
+           : # input files
+           : # requirements
+            $(float128_type)
+            <define>BOOST_ALL_NO_LIB
+           : $(source:B)_floatmax_t ] ;
+     }
+     return $(result) ;
+}
+
+test-suite float128_tests : [ get_float128_tests ] ;
+
+#
+# Concept checks, and things we do not want to test when running code coverage:
+#
+test-suite concepts :
+   [ run  compile_test/dist_bernoulli_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_beta_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_binomial_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_cauchy_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_chi_squared_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_complement_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_exponential_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_extreme_val_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_find_location_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_find_scale_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_fisher_f_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_gamma_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_inv_gamma_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_inv_chi_sq_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_hyperexponential_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_hypergeo_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_landau_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_mapairy_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_holtsmark_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_saspoint5_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_laplace_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_logistic_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_lognormal_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_neg_binom_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_nc_chi_squ_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_nc_beta_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_nc_f_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_nc_t_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_normal_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_poisson_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_students_t_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_triangular_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_uniform_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_weibull_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/distribution_concept_check.cpp : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_arcsine_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile  compile_test/dist_empirical_cumulative_dist_func_incl_test.cpp : [ requires cxx17_if_constexpr cxx17_std_apply ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ run  compile_test/dist_inv_gaussian_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile compile_test/test_promote_args.cpp : [ requires cpp_lib_type_trait_variable_templates ] ]
+
+   [ compile multiprc_concept_check_1.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_2.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_3.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_4.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_5.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_6.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_7.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_8.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_9.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile multiprc_concept_check_10.cpp : <debug-symbols>off <toolset>msvc:<cxxflags>/bigobj release <exception-handling>off:<build>no [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile ntl_concept_check.cpp : [ check-target-builds ../config//has_ntl_rr : : <build>no ] <debug-symbols>off [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile mpfr_concept_check.cpp : [ check-target-builds ../config//has_mpfr_class : : <build>no ] <debug-symbols>off [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile mpreal_concept_check.cpp : [ check-target-builds ../config//has_mpreal : : <build>no ] <debug-symbols>off [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+
+   [ compile  compile_test/interpolators_cubic_hermite_incl_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_makima_incl_test.cpp compile_test_main :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_pchip_incl_test.cpp compile_test_main :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_quintic_hermite_incl_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_septic_hermite_incl_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_vector_barycentric_rational_incl_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_whittaker_shannon_incl_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_abs_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_acos_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_acosh_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_asin_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_asinh_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_atan_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/compl_atanh_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+
+   [ run  compile_test/sf_1f0_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_0f1_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_2f0_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_1f1_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_pfq_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_acosh_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_asinh_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_atanh_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_beta_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_bernoulli_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_bessel_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_bessel_deriv_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_binomial_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_cbrt_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_cos_pi_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_digamma_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_polygamma_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_1_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_2_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_3_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_d_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_jacobi_theta_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_jacobi_zeta_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_heuman_lambda_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_rc_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_rd_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_rf_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_rj_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ellint_rg_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_erf_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_expint_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_expm1_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_factorials_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_fpclassify_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_gamma_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_hermite_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_hypot_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_laguerre_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/sf_lanczos_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_legendre_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_legendre_stieltjes_incl_test.cpp compile_test_main : : : [ requires cxx11_auto_declarations ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_log1p_incl_test.cpp compile_test_main : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/sf_math_fwd_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_modf_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_next_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_powm1_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_prime_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_relative_distance_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_round_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_sign_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_sin_pi_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_sinc_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_sinhc_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_sph_harm_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_sqrt1pm1_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_trunc_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_ulp_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_zeta_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/sf_chebyshev_incl_test.cpp ../config//fftw3 : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/sf_chebyshev_transform_incl_test.cpp ../config//fftw3 : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] [ check-target-builds ../config//has_fftw3 "libfftw3" : : <build>no ] ]
+   [ run  compile_test/sf_fibonacci_incl_test.cpp compile_test_main  : : : [ requires cxx17_std_apply cxx17_if_constexpr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_gegenbauer_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_lambert_w_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/sf_nonfinite_num_facets_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/std_real_concept_check.cpp  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile compile_test/std_real_concept_check.cpp  : <define>EMULATE32 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : std_real_concept_check_32 ]
+   [ compile compile_test/std_real_concept_check.cpp  : <define>EMULATE64 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : std_real_concept_check_64 ]
+   [ compile compile_test/std_real_concept_check.cpp  : <define>EMULATE80 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : std_real_concept_check_80 ]
+   [ compile compile_test/std_real_concept_check.cpp  : <define>EMULATE128 [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] : std_real_concept_check_128 ]
+   [ run  compile_test/cstdfloat_concept_check_1.cpp
+      : : : [ check-target-builds ../config//has_intel_quad "Intel _Quad datatype support" : <cxxflags>-Qoption,cpp,--extended_float_type ]
+            $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/cstdfloat_concept_check_2.cpp  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/cstdfloat_concept_check_3.cpp  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/cstdfloat_concept_check_4.cpp  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/cstdfloat_cmath_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/cstdfloat_complex_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/cstdfloat_iostream_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/cstdfloat_limits_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/cstdfloat_types_incl_test.cpp : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  test_cstdfloat.cpp /boost/test//boost_unit_test_framework  : : : $(float128_type) [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_airy_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_hankel_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_jacobi_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/sf_owens_t_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/dist_skew_norm_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/constants_incl_test.cpp compile_test_main  : : : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/quad_trapezoidal_incl_test.cpp compile_test_main  : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_decltype cxx11_unified_initialization_syntax cxx11_variadic_templates ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/test_traits.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_config_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_fraction_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_minima_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_polynomial_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_precision_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_rational_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_real_cast_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_remez_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_roots_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_series_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_solve_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_stats_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_test_data_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_test_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_toms748_inc_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_agm_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_assert_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_atomic_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_big_constant_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_centered_continued_fraction_incl_test.cpp   : [ requires cxx17_if_constexpr cxx17_std_apply ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_cohen_acceleration_incl_test.cpp   : [ requires cxx17_std_apply ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_complex_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_condition_numbers_incl_test.cpp   : [ requires cxx17_std_apply cxx17_if_constexpr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_convert_from_string_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_cxx03_warn_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_engel_expansion_incl_test.cpp   : [ requires cxx17_std_apply cxx17_if_constexpr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_header_deprecated_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_is_detected_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_luroth_expansion_incl_test.cpp   : [ requires cxx17_std_apply cxx17_if_constexpr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_mp_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_norms_incl_test.cpp   : [ requires cxx17_std_apply cxx17_if_constexpr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_polynomial_gcd_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_promotion_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_random_vector_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_simple_continued_fraction_incl_test.cpp   : [ requires cxx17_if_constexpr cxx17_std_apply ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_test_value_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_throw_exception_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_traits_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_ulps_plot_incl_test.cpp   : [ requires cxx17_if_constexpr cxx17_std_apply ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/tools_workaround_incl_test.cpp   : [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_cubic_spline_concept_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/interpolators_barycentric_rational_concept_test.cpp :  [ requires cxx11_smart_ptr cxx11_defaulted_functions cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/sf_legendre_stieltjes_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_defaulted_functions cxx11_lambdas ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ]  ]
+   [ compile  compile_test/quad_trapezoidal_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_decltype cxx11_unified_initialization_syntax cxx11_variadic_templates ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile test_no_long_double_policy.cpp ]
+   [ compile bernoulli_no_atomic_d.cpp ]
+   [ compile bernoulli_no_atomic_mp.cpp ]
+   [ compile-fail bernoulli_no_atomic_fail.cpp ]
+
+   [ run  compile_test/quad_exp_sinh_incl_test.cpp compile_test_main : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/quad_sinh_sinh_incl_test.cpp compile_test_main : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ run  compile_test/quad_tanh_sinh_incl_test.cpp compile_test_main : : : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_gauss_incl_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_gauss_kronrod_incl_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_ooura_fourier_integrals_incl_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_wavelet_transforms_incl_test.cpp : [ requires cxx17_std_apply cxx17_if_constexpr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_exp_sinh_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_sinh_sinh_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+   [ compile  compile_test/quad_tanh_sinh_concept_test.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_smart_ptr cxx11_unified_initialization_syntax sfinae_expr ] [ check-target-builds ../config//is_ci_sanitizer_run "Sanitizer CI run" : <build>no ] ]
+;
+
+#
+# Things that we can test with exceptions and RTTI turned off:
+#
+alias no_eh_tests :
+   compl_abs_incl_test
+   compl_acos_incl_test
+   compl_acosh_incl_test
+   compl_asin_incl_test
+   compl_asinh_incl_test
+   compl_atan_incl_test
+   compl_atanh_incl_test
+   sf_acosh_incl_test
+   sf_asinh_incl_test
+   sf_atanh_incl_test
+   sf_beta_incl_test
+   sf_bernoulli_incl_test
+   sf_bessel_incl_test
+   sf_bessel_deriv_incl_test
+   sf_binomial_incl_test
+   sf_cbrt_incl_test
+   sf_cos_pi_incl_test
+   sf_digamma_incl_test
+   sf_polygamma_incl_test
+   sf_ellint_1_incl_test
+   sf_ellint_2_incl_test
+   sf_ellint_3_incl_test
+   sf_ellint_d_incl_test
+   sf_jacobi_theta_incl_test
+   sf_jacobi_zeta_incl_test
+   sf_heuman_lambda_incl_test
+   sf_ellint_rc_incl_test
+   sf_ellint_rd_incl_test
+   sf_ellint_rf_incl_test
+   sf_ellint_rj_incl_test
+   sf_ellint_rg_incl_test
+   sf_erf_incl_test
+   sf_expint_incl_test
+   sf_expm1_incl_test
+   sf_factorials_incl_test
+   sf_fpclassify_incl_test
+   sf_gamma_incl_test
+   sf_hermite_incl_test
+   sf_hypot_incl_test
+   sf_laguerre_incl_test
+   sf_lanczos_incl_test
+   sf_legendre_incl_test
+   #sf_legendre_stieltjes_incl_test
+   sf_log1p_incl_test
+   sf_math_fwd_incl_test
+   sf_modf_incl_test
+   sf_next_incl_test
+   sf_powm1_incl_test
+   sf_prime_incl_test
+   sf_relative_distance_incl_test
+   sf_round_incl_test
+   sf_sign_incl_test
+   sf_sin_pi_incl_test
+   sf_sinc_incl_test
+   sf_sinhc_incl_test
+   sf_sph_harm_incl_test
+   sf_sqrt1pm1_incl_test
+   sf_trunc_incl_test
+   sf_ulp_incl_test
+   sf_zeta_incl_test
+   sf_chebyshev_incl_test
+   #sf_chebyshev_transform_incl_test
+   sf_fibonacci_incl_test
+   #sf_gegenbauer_incl_test
+   sf_lambert_w_incl_test
+   sf_nonfinite_num_facets_incl_test
+   sf_airy_incl_test
+   sf_hankel_incl_test
+   sf_jacobi_incl_test
+   sf_owens_t_incl_test
+   dist_skew_norm_incl_test
+   constants_incl_test
+   quad_trapezoidal_incl_test
+   test_traits
+   tools_config_inc_test
+   tools_fraction_inc_test
+   tools_minima_inc_test
+   tools_polynomial_inc_test
+   tools_precision_inc_test
+   tools_rational_inc_test
+   tools_real_cast_inc_test
+   tools_remez_inc_test
+   tools_roots_inc_test
+   tools_series_inc_test
+   tools_solve_inc_test
+   tools_stats_inc_test
+   tools_test_data_inc_test
+   #tools_test_inc_test
+   tools_toms748_inc_test
+   tools_agm_incl_test
+   tools_assert_incl_test
+   tools_atomic_incl_test
+   tools_big_constant_incl_test
+   #tools_centered_continued_fraction_incl_test
+   tools_cohen_acceleration_incl_test
+   tools_complex_incl_test
+   tools_condition_numbers_incl_test
+   tools_convert_from_string_incl_test
+   tools_cxx03_warn_incl_test
+   #tools_engel_expansion_incl_test
+   tools_header_deprecated_incl_test
+   tools_is_detected_incl_test
+   #tools_luroth_expansion_incl_test
+   tools_mp_incl_test
+   tools_norms_incl_test
+   tools_polynomial_gcd_incl_test
+   tools_promotion_incl_test
+   tools_random_vector_incl_test
+   #tools_simple_continued_fraction_incl_test
+   tools_test_value_incl_test
+   tools_throw_exception_incl_test
+   tools_traits_incl_test
+   #tools_ulps_plot_incl_test
+   tools_workaround_incl_test
+;
+
+explicit no_eh_tests ;
+
+# Some aliases which group blocks of tests for CI testing:
+
+alias github_ci_block_1 : special_fun float128_tests distribution_tests mp misc concepts ;
+alias github_ci_block_2 : quadrature interpolators autodiff ../example//examples ../tools ;
+explicit github_ci_block_1 ;
+explicit github_ci_block_2 ;

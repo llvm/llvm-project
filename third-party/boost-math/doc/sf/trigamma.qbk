@@ -1,0 +1,88 @@
+[section:trigamma Trigamma]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/trigamma.hpp>
+``
+
+  namespace boost{ namespace math{
+  
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` trigamma(T x);
+  
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` trigamma(T x, const ``__Policy``&);
+  
+  }} // namespaces
+  
+[h4 Description]
+
+Returns the trigamma function of /x/. Trigamma is defined as the 
+derivative of the digamma function:
+
+[equation trigamma1]
+
+[graph trigamma]
+
+[optional_policy]
+
+The return type of this function is computed using the __arg_promotion_rules:
+the result is of type `double` when T is an integer type, and type T otherwise.
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_trigamma]
+
+As shown above, error rates are generally very low for built in types.
+For multiprecision types, error rates are typically in the order of a
+few epsilon.
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph trigamma__double]
+
+[graph trigamma__80_bit_long_double]
+
+[graph trigamma____float128]
+
+[h4 Testing]
+
+Testing is against Mathematica generated spot values to 35 digit precision.
+
+[h4 Implementation]
+
+The arbitrary precision version of this function simply calls __polygamma.
+
+For built in fixed-precision types, negative arguments are first made positive via:
+
+[equation trigamma2]
+
+Then arguments in the range \[0, 1) are shifted to >= 1 via:
+
+[equation trigamma3]
+
+Then evaluation is via one of a number of rational approximations, for small /x/ these are
+of the form:
+
+[equation trigamma4]
+
+and for large /x/ of the form:
+
+[equation trigamma5]
+
+[endsect] [/section:digamma The Trigamma Function]
+
+[/ 
+  Copyright 2014 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

@@ -1,0 +1,434 @@
+[section:nmp Non-Member Properties]
+
+Properties that are common to all distributions are accessed via non-member
+getter functions: non-membership allows more of these functions to be added over time,
+as the need arises.  Unfortunately the literature uses many different and
+confusing names to refer to a rather small number of actual concepts; refer
+to the [link math_toolkit.dist_ref.nmp.concept_index concept index] to find the property you
+want by the name you are most familiar with.
+Or use the [link math_toolkit.dist_ref.nmp.function_index function index]
+to go straight to the function you want if you already know its name.
+
+[h4:function_index Function Index]
+
+* __cdf.
+* __ccdf.
+* __chf.
+* __hazard.
+* __kurtosis.
+* __kurtosis_excess
+* __logcdf.
+* __logpdf.
+* __mean.
+* __median.
+* __mode.
+* __pdf.
+* __range.
+* __quantile.
+* __quantile_c.
+* __skewness.
+* __sd.
+* __support.
+* __variance.
+* entropy.
+
+[h4:concept_index Conceptual Index]
+
+* __ccdf.
+* __cdf.
+* __chf.
+* [link math_toolkit.dist_ref.nmp.cdf_inv Inverse Cumulative Distribution Function].
+* [link math_toolkit.dist_ref.nmp.survival_inv Inverse Survival Function].
+* __hazard
+* [link math_toolkit.dist_ref.nmp.lower_critical Lower Critical Value].
+* __kurtosis.
+* __kurtosis_excess
+* __mean.
+* __median.
+* __mode.
+* [link math_toolkit.dist_ref.nmp.cdfPQ P].
+* [link math_toolkit.dist_ref.nmp.percent Percent Point Function].
+* __pdf.
+* [link math_toolkit.dist_ref.nmp.pmf Probability Mass Function].
+* __range.
+* [link math_toolkit.dist_ref.nmp.cdfPQ Q].
+* __quantile.
+* [link math_toolkit.dist_ref.nmp.quantile_c Quantile from the complement of the probability].
+* __skewness.
+* __sd
+* [link math_toolkit.dist_ref.nmp.survival Survival Function].
+* [link math_toolkit.dist_ref.nmp.support support].
+* [link math_toolkit.dist_ref.nmp.upper_critical Upper Critical Value].
+* __variance.
+* entropy
+
+[h4:cdf Cumulative Distribution Function]
+
+   template <class RealType, class ``__Policy``>
+   RealType cdf(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist, const RealType& x);
+
+The __cdf is the probability that
+the variable takes a value less than or equal to x.  It is equivalent
+to the integral from -infinity to x of the __pdf.
+
+This function may return a __domain_error if the random variable is outside
+the defined range for the distribution.
+
+For example, the following graph shows the cdf for the
+normal distribution:
+
+[$../graphs/cdf.png]
+
+[h4:ccdf Complement of the Cumulative Distribution Function]
+
+   template <class Distribution, class RealType>
+   RealType cdf(const ``['Unspecified-Complement-Type]``<Distribution, RealType>& comp);
+
+The complement of the __cdf
+is the probability that
+the variable takes a value greater than x.  It is equivalent
+to the integral from x to infinity of the __pdf, or 1 minus the __cdf of x.
+
+This is also known as the survival function.
+
+This function may return a __domain_error if the random variable is outside
+the defined range for the distribution.
+
+In this library, it is obtained by wrapping the arguments to the `cdf`
+function in a call to `complement`, for example:
+
+   // standard normal distribution object:
+   boost::math::normal norm;
+   // print survival function for x=2.0:
+   std::cout << cdf(complement(norm, 2.0)) << std::endl;
+
+For example, the following graph shows the __complement of the cdf for the
+normal distribution:
+
+[$../graphs/survival.png]
+
+See __why_complements for why the complement is useful and when it should be used.
+
+[h4:hazard Hazard Function]
+
+   template <class RealType, class ``__Policy``>
+   RealType hazard(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist, const RealType& x);
+
+Returns the __hazard of /x/ and distribution /dist/.
+
+This function may return a __domain_error if the random variable is outside
+the defined range for the distribution.
+
+[equation hazard]
+
+[caution
+Some authors refer to this as the conditional failure
+density function rather than the hazard function.]
+
+[h4:chf Cumulative Hazard Function]
+
+   template <class RealType, class ``__Policy``>
+   RealType chf(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist, const RealType& x);
+
+Returns the __chf of /x/ and distribution /dist/.
+
+This function may return a __domain_error if the random variable is outside
+the defined range for the distribution.
+
+[equation chf]
+
+[caution
+Some authors refer to this as simply the "Hazard Function".]
+
+[h4:mean mean]
+
+   template<class RealType, class ``__Policy``>
+   RealType mean(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the mean of the distribution /dist/.
+
+This function may return a __domain_error if the distribution does not have
+a defined mean (for example the Cauchy distribution).
+
+[h4:median median]
+
+   template<class RealType, class ``__Policy``>
+   RealType median(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the median of the distribution /dist/.
+
+[h4:mode mode]
+
+   template<class RealType, ``__Policy``>
+   RealType mode(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the mode of the distribution /dist/.
+
+This function may return a __domain_error if the distribution does not have
+a defined mode.
+
+[h4:pdf Probability Density Function]
+
+   template <class RealType, class ``__Policy``>
+   RealType pdf(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist, const RealType& x);
+
+For a continuous function, the probability density function (pdf) returns
+the probability that the variate has the value x.
+Since for continuous distributions the probability at a single point is actually zero,
+the probability is better expressed as the integral of the pdf between two points:
+see the __cdf.
+
+For a discrete distribution, the pdf is the probability that the
+variate takes the value x.
+
+This function may return a __domain_error if the random variable is outside
+the defined range for the distribution.
+
+For example, for a standard normal distribution the pdf looks like this:
+
+[$../graphs/pdf.png]
+
+[h4:range Range]
+
+   template<class RealType, class ``__Policy``>
+   std::pair<RealType, RealType> range(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the valid range of the random variable over distribution /dist/.
+
+[h4:quantile Quantile]
+
+   template <class RealType, class ``__Policy``>
+   RealType quantile(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist, const RealType& p);
+
+The quantile is best viewed as the inverse of the __cdf, it returns
+a value /x/ such that `cdf(dist, x) == p`.
+
+This is also known as the /percent point function/, or /percentile/, or /fractile/,
+it is also the same as calculating the ['lower critical value] of a distribution.
+
+This function returns a __domain_error if the probability lies outside [0,1].
+The function may return an __overflow_error if there is no finite value
+that has the specified probability.
+
+The following graph shows the quantile function for a standard normal
+distribution:
+
+[$../graphs/quantile.png]
+
+[h4:quantile_c Quantile from the complement of the probability.]
+See also [link math_toolkit.stat_tut.overview.complements complements].
+
+
+   template <class Distribution, class RealType>
+   RealType quantile(const ``['Unspecified-Complement-Type]``<Distribution, RealType>& comp);
+
+This is the inverse of the __ccdf.  It is calculated by wrapping
+the arguments in a call to the quantile function in a call to
+/complement/.  For example:
+
+   // define a standard normal distribution:
+   boost::math::normal norm;
+   // print the value of x for which the complement
+   // of the probability is 0.05:
+   std::cout << quantile(complement(norm, 0.05)) << std::endl;
+
+The function computes a value /x/ such that
+`cdf(complement(dist, x)) == q` where /q/ is complement of the
+probability.
+
+[link why_complements Why complements?]
+
+This function is also called the inverse survival function, and is the
+same as calculating the ['upper critical value] of a distribution.
+
+This function returns a __domain_error if the probability lies outside [0,1].
+The function may return an __overflow_error if there is no finite value
+that has the specified probability.
+
+The following graph show the inverse survival function for the normal
+distribution:
+
+[$../graphs/survival_inv.png]
+
+[h4:sd Standard Deviation]
+
+   template <class RealType, class ``__Policy``>
+   RealType standard_deviation(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the standard deviation of distribution /dist/.
+
+This function may return a __domain_error if the distribution does not have
+a defined standard deviation.
+
+[h4:support support]
+
+   template<class RealType, class ``__Policy``>
+   std::pair<RealType, RealType> support(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the supported range of random variable over the distribution /dist/.
+
+The distribution is said to be 'supported' over a range that is
+[@http://en.wikipedia.org/wiki/Probability_distribution
+ "the smallest closed set whose complement has probability zero"].
+Non-mathematicians might say it means the 'interesting' smallest range
+of random variate x that has the cdf going from zero to unity.
+Outside are uninteresting zones where the pdf is zero, and the cdf zero or unity.
+
+[h4:variance Variance]
+
+   template <class RealType, class ``__Policy``>
+   RealType variance(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the variance of the distribution /dist/.
+
+This function may return a __domain_error if the distribution does not have
+a defined variance.
+
+[h4:skewness Skewness]
+
+   template <class RealType, class ``__Policy``>
+   RealType skewness(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the skewness of the distribution /dist/.
+
+This function may return a __domain_error if the distribution does not have
+a defined skewness.
+
+[h4:kurtosis Kurtosis]
+
+   template <class RealType, class ``__Policy``>
+   RealType kurtosis(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the 'proper' kurtosis (normalized fourth moment) of the distribution /dist/.
+
+kurtosis = [beta][sub 2]= [mu][sub 4] / [mu][sub 2][super 2]
+
+Where [mu][sub i] is the i'th central moment of the distribution, and
+in particular [mu][sub 2] is the variance of the distribution.
+
+The kurtosis is a measure of the "peakedness" of a distribution.
+
+Note that the literature definition of kurtosis is confusing.
+The definition used here is that used by for example
+[@http://mathworld.wolfram.com/Kurtosis.html Wolfram MathWorld]
+(that includes a table of formulae for kurtosis excess for various distributions)
+but NOT the definition of
+[@http://en.wikipedia.org/wiki/Kurtosis kurtosis used by Wikipedia]
+which treats "kurtosis" and "kurtosis excess" as the same quantity.
+
+  kurtosis_excess = 'proper' kurtosis - 3
+
+This subtraction of 3 is convenient so that the ['kurtosis excess]
+of a normal distribution is zero.
+
+This function may return a __domain_error if the distribution does not have
+a defined kurtosis.
+
+'Proper' kurtosis can have a value from zero to + infinity.
+
+[h4:kurtosis_excess Kurtosis excess]
+
+   template <class RealType, ``__Policy``>
+   RealType kurtosis_excess(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the kurtosis excess of the distribution /dist/.
+
+kurtosis excess = [gamma][sub 2]= [mu][sub 4] / [mu][sub 2][super 2]- 3 = kurtosis - 3
+
+Where [mu][sub i] is the i'th central moment of the distribution, and
+in particular [mu][sub 2] is the variance of the distribution.
+
+The kurtosis excess is a measure of the "peakedness" of a distribution, and
+is more widely used than the "kurtosis proper".  It is defined so that
+the kurtosis excess of a normal distribution is zero.
+
+This function may return a __domain_error if the distribution does not have
+a defined kurtosis excess.
+
+Kurtosis excess can have a value from -2 to + infinity.
+
+  kurtosis = kurtosis_excess +3;
+
+The kurtosis excess of a normal distribution is zero.
+
+[h4:logcdf Natural Log of the Cumulative Distribution Function]
+
+   template <class RealType, ``__Policy``>
+   RealType logcdf(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the natural log of the CDF of distribution /dist/.
+
+[h4:logpdf Natural Log of the Probability Density Function]
+
+   template <class RealType, ``__Policy``>
+   RealType logcdf(const ``['Distribution-Type]``<RealType, ``__Policy``>& dist);
+
+Returns the natural log of the CDF of distribution /dist/.
+
+[h4:cdfPQ P and Q]
+
+The terms P and Q are sometimes used to refer to the __cdf
+and its [link math_toolkit.dist_ref.nmp.ccdf complement] respectively.
+Lowercase p and q are sometimes used to refer to the values returned
+by these functions.
+
+[h4:percent Percent Point Function or Percentile]
+
+The percent point function, also known as the percentile, is the same as
+the __quantile.
+
+[h4:cdf_inv Inverse CDF Function.]
+
+The inverse of the cumulative distribution function, is the same as the
+__quantile.
+
+[h4:survival_inv Inverse Survival Function.]
+
+The inverse of the survival function, is the same as computing the
+[link math_toolkit.dist_ref.nmp.quantile_c quantile
+from the complement of the probability].
+
+[h4:pmf Probability Mass Function]
+
+The Probability Mass Function is the same as the __pdf.
+
+The term Mass Function is usually applied to discrete distributions,
+while the term __pdf applies to continuous distributions.
+
+[h4:lower_critical Lower Critical Value.]
+
+The lower critical value calculates the value of the random variable
+given the area under the left tail of the distribution.
+It is equivalent to calculating the __quantile.
+
+[h4:upper_critical Upper Critical Value.]
+
+The upper critical value calculates the value of the random variable
+given the area under the right tail of the distribution.  It is equivalent to
+calculating the [link math_toolkit.dist_ref.nmp.quantile_c quantile from the complement of the
+probability].
+
+[h4:survival Survival Function]
+
+Refer to the __ccdf.
+
+[h4:entropy Entropy]
+
+The entropy (or differential entropy) of a continuous probability distribution /p/ is defined as
+
+[$../graphs/differential_entropy.svg]
+
+Note that the "natural" properties of the differential entropy do not uniquely specify a log base.
+In the Boost library, we /always/ use the natural logarithm to compute differential entropy.
+This choice of log base for entropy is sometimes referred to as "entropy measured in nats".
+See [@https://doi.org/10.1109/TIT.1978.1055832 On the entropy of continuous probability distributions] for more information.
+
+[endsect] [/section:nmp Non-Member Properties]
+
+[/ non_members.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

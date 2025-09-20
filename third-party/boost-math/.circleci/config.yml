@@ -1,0 +1,62 @@
+version: 2
+
+jobs:
+  inspect:
+    environment:
+      - BOOST_LIBRARY=math
+      - CXX_STANDARD=gnu++11
+    docker:
+      - image: gcc:9
+    steps:
+      - checkout
+      - run:
+          name: Setting up Environment
+          command: |
+            echo 'export BOOST="$HOME/boost-local"' >> $BASH_ENV
+            if [ $CIRCLE_BRANCH = "master" ]; then
+                echo 'export BOOST_BRANCH="master"' >> $BASH_ENV;
+            else
+                echo 'export BOOST_BRANCH="develop"' >> $BASH_ENV;
+            fi
+            echo 'export BOOST_REMOVE="$BOOST/boost/libs/$BOOST_LIBRARY"' >> $BASH_ENV
+            HOME_SED_=$(echo $HOME | sed -e 's/\//\\\//g')
+            echo 'export HOME_SED=$HOME_SED_' >> $BASH_ENV
+      - run:
+          name: install pre dependencies
+          command: |
+            apt-get update -yqq
+            apt-get install git xsltproc docbook-xsl docbook-xml -y
+      - run:
+          name: Initializing git repo for boost
+          command: |
+            echo BOOST=$BOOST BOOST_REMOVE=$BOOST_REMOVE BOOST_LIBRARY=$BOOST_LIBRARY BOOST_BRANCH=$BOOST_BRANCH PWD=$PWD
+            mkdir $BOOST
+            cd $BOOST
+            git clone --single-branch --branch $BOOST_BRANCH https://github.com/boostorg/boost.git
+            cd boost
+            git submodule update --init --merge
+            rm -rf $BOOST_REMOVE
+            mv $HOME/project $BOOST_REMOVE
+      - run:
+          name: Bootstrapping boost-build
+          command: |
+            cd $BOOST/boost && ./bootstrap.sh && ./b2 headers
+            echo "using xsltproc ;" | tee $HOME/user-config.jam
+            echo "using boostbook : /usr/share/xml/docbook/stylesheet/docbook-xsl : /usr/share/sgml/docbook/dtd/xml/4.2 ;" | tee -a $HOME/user-config.jam
+      - run:
+          name: Building inspect
+          command: |
+            cd $BOOST/boost/tools/inspect/build && ../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxflags="-std=gnu++14" release dist-bin
+      - run:
+          name: Building docs
+          command: |
+            cd $BOOST_REMOVE/doc && rm -rf html/boost_math && ../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxflags="-std=gnu++14" release
+      - run:
+          name: Running Inspect
+          command: |
+            cd $BOOST_REMOVE && ../../dist/bin/inspect -text
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - inspect

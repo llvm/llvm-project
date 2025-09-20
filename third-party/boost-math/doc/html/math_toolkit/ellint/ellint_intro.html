@@ -1,0 +1,500 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Elliptic Integral Overview</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../ellint.html" title="Elliptic Integrals">
+<link rel="prev" href="../ellint.html" title="Elliptic Integrals">
+<link rel="next" href="ellint_carlson.html" title="Elliptic Integrals - Carlson Form">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../ellint.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ellint.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ellint_carlson.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.ellint.ellint_intro"></a><a class="link" href="ellint_intro.html" title="Elliptic Integral Overview">Elliptic Integral Overview</a>
+</h3></div></div></div>
+<p>
+        The main reference for the elliptic integrals is:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          M. Abramowitz and I. A. Stegun (Eds.) (1964) Handbook of Mathematical Functions
+          with Formulas, Graphs, and Mathematical Tables, National Bureau of Standards
+          Applied Mathematics Series, U.S. Government Printing Office, Washington,
+          D.C.
+        </p></blockquote></div>
+<p>
+        and its recently revised version <a href="http://dlmf.nist.gov/" target="_top">NIST
+        Digital Library of Mathematical Functions (DMLF)</a>, in particular
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <a href="https://dlmf.nist.gov/19" target="_top">Elliptic Integrals, B. C. Carlson</a>
+        </p></blockquote></div>
+<p>
+        Mathworld also contain a lot of useful background information:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <a href="http://mathworld.wolfram.com/EllipticIntegral.html" target="_top">Weisstein,
+          Eric W. "Elliptic Integral." From MathWorld--A Wolfram Web Resource.</a>
+        </p></blockquote></div>
+<p>
+        As does <a href="http://en.wikipedia.org/wiki/Elliptic_integral" target="_top">Wikipedia
+        Elliptic integral</a>.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h0"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.notation"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.notation">Notation</a>
+      </h5>
+<p>
+        All variables are real numbers unless otherwise noted.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h1"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.definition"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.definition">Definition</a>
+      </h5>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint1.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        is called elliptic integral if <span class="emphasis"><em>R(t, s)</em></span> is a rational
+        function of <span class="emphasis"><em>t</em></span> and <span class="emphasis"><em>s</em></span>, and <span class="emphasis"><em>s<sup>2</sup></em></span>
+        is a cubic or quartic polynomial in <span class="emphasis"><em>t</em></span>.
+      </p>
+<p>
+        Elliptic integrals generally cannot be expressed in terms of elementary functions.
+        However, Legendre showed that all elliptic integrals can be reduced to the
+        following three canonical forms:
+      </p>
+<p>
+        Elliptic Integral of the First Kind (Legendre form)
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint2.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Elliptic Integral of the Second Kind (Legendre form)
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint3.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Elliptic Integral of the Third Kind (Legendre form)
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint4.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint5.svg"></span>
+
+        </p></blockquote></div>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+          <span class="emphasis"><em>φ</em></span> is called the amplitude.
+        </p>
+<p>
+          <span class="emphasis"><em>k</em></span> is called the elliptic modulus or eccentricity.
+        </p>
+<p>
+          <span class="emphasis"><em>α</em></span> is called the modular angle.
+        </p>
+<p>
+          <span class="emphasis"><em>n</em></span> is called the characteristic.
+        </p>
+</td></tr>
+</table></div>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+          Perhaps more than any other special functions the elliptic integrals are
+          expressed in a variety of different ways. In particular, the final parameter
+          <span class="emphasis"><em>k</em></span> (the modulus) may be expressed using a modular angle
+          α, or a parameter <span class="emphasis"><em>m</em></span>. These are related by:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">k = sin  α</span>
+          </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">m = k<sup>2</sup> = sin<sup>2</sup>α</span>
+          </p></blockquote></div>
+<p>
+          So that the integral of the third kind (for example) may be expressed as
+          either:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">Π(n, φ, k)</span>
+          </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">Π(n, φ \ α)</span>
+          </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">Π(n, φ | m)</span>
+          </p></blockquote></div>
+<p>
+          To further complicate matters, some texts refer to the <span class="emphasis"><em>complement
+          of the parameter m</em></span>, or 1 - m, where:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">1 - m = 1 - k<sup>2</sup> = cos<sup>2</sup>α</span>
+          </p></blockquote></div>
+<p>
+          This implementation uses <span class="emphasis"><em>k</em></span> throughout: this matches
+          the requirements of the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf" target="_top">Technical
+          Report on C++ Library Extensions</a>.<br>
+        </p>
+<p>
+          So you should be extra careful when using these functions!
+        </p>
+</td></tr>
+</table></div>
+<div class="warning"><table border="0" summary="Warning">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../../doc/src/images/warning.png"></td>
+<th align="left">Warning</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          Boost.Math order of arguments differs from other implementations: <span class="emphasis"><em>k</em></span>
+          is always the <span class="bold"><strong>first</strong></span> argument.
+        </p></td></tr>
+</table></div>
+<p>
+        A simple example comparing use of <a href="http://www.wolframalpha.com/" target="_top">Wolfram
+        Alpha</a> with Boost.Math (including much higher precision using <a href="../../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>)
+        is <a href="../../../../example/jacobi_zeta_example.cpp" target="_top">jacobi_zeta_example.cpp</a>.
+      </p>
+<p>
+        When <span class="emphasis"><em>φ</em></span> = <span class="emphasis"><em>π</em></span> / 2, the elliptic integrals
+        are called <span class="emphasis"><em>complete</em></span>.
+      </p>
+<p>
+        Complete Elliptic Integral of the First Kind (Legendre form)
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint6.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Complete Elliptic Integral of the Second Kind (Legendre form)
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint7.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Complete Elliptic Integral of the Third Kind (Legendre form)
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint8.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Legendre also defined a fourth integral /D(φ,k)/ which is a combination of
+        the other three:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint_d.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Like the other Legendre integrals this comes in both complete and incomplete
+        forms.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h2"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.carlson_elliptic_integrals"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.carlson_elliptic_integrals">Carlson
+        Elliptic Integrals</a>
+      </h5>
+<p>
+        Carlson [<a class="link" href="ellint_intro.html#ellint_ref_carlson77">Carlson77</a>] [<a class="link" href="ellint_intro.html#ellint_ref_carlson78">Carlson78</a>]
+        gives an alternative definition of elliptic integral's canonical forms:
+      </p>
+<p>
+        Carlson's Elliptic Integral of the First Kind
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint9.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>x</em></span>, <span class="emphasis"><em>y</em></span>, <span class="emphasis"><em>z</em></span>
+        are nonnegative and at most one of them may be zero.
+      </p>
+<p>
+        Carlson's Elliptic Integral of the Second Kind
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint10.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>x</em></span>, <span class="emphasis"><em>y</em></span> are nonnegative, at
+        most one of them may be zero, and <span class="emphasis"><em>z</em></span> must be positive.
+      </p>
+<p>
+        Carlson's Elliptic Integral of the Third Kind
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint11.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>x</em></span>, <span class="emphasis"><em>y</em></span>, <span class="emphasis"><em>z</em></span>
+        are nonnegative, at most one of them may be zero, and <span class="emphasis"><em>p</em></span>
+        must be nonzero.
+      </p>
+<p>
+        Carlson's Degenerate Elliptic Integral
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint12.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>x</em></span> is nonnegative and <span class="emphasis"><em>y</em></span> is
+        nonzero.
+      </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+          <span class="emphasis"><em>R<sub>C</sub>(x, y) = R<sub>F</sub>(x, y, y)</em></span>
+        </p>
+<p>
+          <span class="emphasis"><em>R<sub>D</sub>(x, y, z) = R<sub>J</sub>(x, y, z, z)</em></span>
+        </p>
+</td></tr>
+</table></div>
+<p>
+        Carlson's Symmetric Integral
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint27.svg"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h3"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.duplication_theorem"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.duplication_theorem">Duplication
+        Theorem</a>
+      </h5>
+<p>
+        Carlson proved in [<a class="link" href="ellint_intro.html#ellint_ref_carlson78">Carlson78</a>]
+        that
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint13.svg"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h4"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.carlson_s_formulas"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.carlson_s_formulas">Carlson's
+        Formulas</a>
+      </h5>
+<p>
+        The Legendre form and Carlson form of elliptic integrals are related by equations:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint14.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        In particular,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint15.svg"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h5"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.miscellaneous_elliptic_integrals"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.miscellaneous_elliptic_integrals">Miscellaneous
+        Elliptic Integrals</a>
+      </h5>
+<p>
+        There are two functions related to the elliptic integrals which otherwise
+        defy categorisation, these are the Jacobi Zeta function:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/jacobi_zeta.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        and the Heuman Lambda function:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/heuman_lambda.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Both of these functions are easily implemented in terms of Carlson's integrals,
+        and are provided in this library as <a class="link" href="jacobi_zeta.html" title="Jacobi Zeta Function">jacobi_zeta</a>
+        and <a class="link" href="heuman_lambda.html" title="Heuman Lambda Function">heuman_lambda</a>.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h6"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.numerical_algorithms"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.numerical_algorithms">Numerical
+        Algorithms</a>
+      </h5>
+<p>
+        The conventional methods for computing elliptic integrals are Gauss and Landen
+        transformations, which converge quadratically and work well for elliptic
+        integrals of the first and second kinds. Unfortunately they suffer from loss
+        of significant digits for the third kind.
+      </p>
+<p>
+        Carlson's algorithm [<a class="link" href="ellint_intro.html#ellint_ref_carlson79">Carlson79</a>]
+        [<a class="link" href="ellint_intro.html#ellint_ref_carlson78">Carlson78</a>], by contrast, provides
+        a unified method for all three kinds of elliptic integrals with satisfactory
+        precisions.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_intro.h7"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_intro.references"></a></span><a class="link" href="ellint_intro.html#math_toolkit.ellint.ellint_intro.references">References</a>
+      </h5>
+<p>
+        Special mention goes to:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          A. M. Legendre, <span class="emphasis"><em>Traité des Fonctions Elliptiques et des Integrales
+          Euleriennes</em></span>, Vol. 1. Paris (1825).
+        </p></blockquote></div>
+<p>
+        However the main references are:
+      </p>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+            <a name="ellint_ref_AS"></a>M. Abramowitz and I. A. Stegun (Eds.) (1964)
+            Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical
+            Tables, National Bureau of Standards Applied Mathematics Series, U.S.
+            Government Printing Office, Washington, D.C.
+          </li>
+<li class="listitem">
+            <a href="https://dlmf.nist.gov/19" target="_top">NIST Digital Library of Mathematical
+            Functions, Elliptic Integrals, B. C. Carlson</a>
+          </li>
+<li class="listitem">
+            <a name="ellint_ref_carlson79"></a>B.C. Carlson, <span class="emphasis"><em>Computing
+            elliptic integrals by duplication</em></span>, Numerische Mathematik,
+            vol 33, 1 (1979).
+          </li>
+<li class="listitem">
+            <a name="ellint_ref_carlson77"></a>B.C. Carlson, <span class="emphasis"><em>Elliptic Integrals
+            of the First Kind</em></span>, SIAM Journal on Mathematical Analysis,
+            vol 8, 231 (1977).
+          </li>
+<li class="listitem">
+            <a name="ellint_ref_carlson78"></a>B.C. Carlson, <span class="emphasis"><em>Short Proofs
+            of Three Theorems on Elliptic Integrals</em></span>, SIAM Journal on Mathematical
+            Analysis, vol 9, 524 (1978).
+          </li>
+<li class="listitem">
+            <a name="ellint_ref_carlson81"></a>B.C. Carlson and E.M. Notis, <span class="emphasis"><em>ALGORITHM
+            577: Algorithms for Incomplete Elliptic Integrals</em></span>, ACM Transactions
+            on Mathematical Software, vol 7, 398 (1981).
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em>On computing elliptic integrals and functions</em></span>.
+            J. Math. and Phys., 44 (1965), pp. 36-51.
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em>A table of elliptic integrals of the second
+            kind</em></span>. Math. Comp., 49 (1987), pp. 595-606. (Supplement, ibid.,
+            pp. S13-S17.)
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em>A table of elliptic integrals of the third kind</em></span>.
+            Math. Comp., 51 (1988), pp. 267-280. (Supplement, ibid., pp. S1-S5.)
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em>A table of elliptic integrals: cubic cases</em></span>.
+            Math. Comp., 53 (1989), pp. 327-333.
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em>A table of elliptic integrals: one quadratic
+            factor</em></span>. Math. Comp., 56 (1991), pp. 267-280.
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em>A table of elliptic integrals: two quadratic
+            factors</em></span>. Math. Comp., 59 (1992), pp. 165-180.
+          </li>
+<li class="listitem">
+            B. C. Carlson, <span class="emphasis"><em><a href="http://arxiv.org/abs/math.CA/9409227" target="_top">Numerical
+            computation of real or complex elliptic integrals</a></em></span>.
+            Numerical Algorithms, Volume 10, Number 1 / March, 1995, p13-26.
+          </li>
+<li class="listitem">
+            B. C. Carlson and John L. Gustafson, <span class="emphasis"><em><a href="http://arxiv.org/abs/math.CA/9310223" target="_top">Asymptotic
+            Approximations for Symmetric Elliptic Integrals</a></em></span>, SIAM
+            Journal on Mathematical Analysis, Volume 25, Issue 2 (March 1994), 288-303.
+          </li>
+</ol></div>
+<p>
+        The following references, while not directly relevant to our implementation,
+        may also be of interest:
+      </p>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+            R. Burlisch, <span class="emphasis"><em>Numerical Computation of Elliptic Integrals and
+            Elliptic Functions.</em></span> Numerical Mathematik 7, 78-90.
+          </li>
+<li class="listitem">
+            R. Burlisch, <span class="emphasis"><em>An extension of the Bartky Transformation to Incomplete
+            Elliptic Integrals of the Third Kind</em></span>. Numerical Mathematik
+            13, 266-284.
+          </li>
+<li class="listitem">
+            R. Burlisch, <span class="emphasis"><em>Numerical Computation of Elliptic Integrals and
+            Elliptic Functions. III</em></span>. Numerical Mathematik 13, 305-315.
+          </li>
+<li class="listitem">
+            T. Fukushima and H. Ishizaki, <span class="emphasis"><em><a href="http://adsabs.harvard.edu/abs/1994CeMDA..59..237F" target="_top">Numerical
+            Computation of Incomplete Elliptic Integrals of a General Form.</a></em></span>
+            Celestial Mechanics and Dynamical Astronomy, Volume 59, Number 3 / July,
+            1994, 237-251.
+          </li>
+</ol></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../ellint.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ellint.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ellint_carlson.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

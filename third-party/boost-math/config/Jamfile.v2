@@ -1,0 +1,54 @@
+# copyright John Maddock 2008
+# Distributed under the Boost Software License, Version 1.0. 
+# (See accompanying file LICENSE_1_0.txt or copy at 
+# http://www.boost.org/LICENSE_1_0.txt.
+
+import modules ;
+import path ;
+
+local ntl-path = [ modules.peek : NTL_PATH ] ;
+local gmp_path = [ modules.peek : GMP_PATH ] ;
+
+searched-lib quadmath ;
+searched-lib fftw3 ;
+searched-lib fftw3f ;
+searched-lib fftw3l ;
+searched-lib fftw3q ;
+
+obj has_long_double_support : has_long_double_support.cpp ;
+obj has_mpfr_class : has_mpfr_class.cpp :
+      <include>$(gmp_path) <include>$(gmp_path)/mpfr <include>$(gmp_path)/gmpfrxx ;
+obj has_mpreal : has_mpreal.cpp :
+      <include>$(gmp_path) <include>$(gmp_path)/mpfr <include>$(gmp_path)/mpfrc++ ;
+obj has_ntl_rr : has_ntl_rr.cpp : <include>$(ntl-path)/include ;
+obj has_gmpxx : has_gmpxx.cpp :
+      <include>$(gmp_path) <include>$(gmp_path)/mpfr <include>$(gmp_path)/gmpfrxx ;
+obj has_gcc_visibility : has_gcc_visibility.cpp :
+      <toolset>gcc:<cxxflags>-fvisibility=hidden <toolset>gcc:<cxxflags>-Werror ;
+exe has_float128 : has_float128.cpp quadmath ;
+exe has_fftw3 : has_fftw3.cpp fftw3 fftw3f fftw3l ;
+exe has_intel_quad : has_intel_quad.cpp : <cxxflags>-Qoption,cpp,--extended_float_type ;
+obj has_128bit_floatmax_t : has_128bit_floatmax_t.cpp ;
+obj has_mpfr : has_mpfr.cpp :
+      <include>$(gmp_path) <include>$(gmp_path)/mpfr <include>$(gmp_path)/gmpfrxx ;
+obj has_gmp : has_gmp.cpp :
+      <include>$(gmp_path) <include>$(gmp_path)/mpfr <include>$(gmp_path)/gmpfrxx ;
+obj is_ci_sanitizer_run : is_ci_sanitizer_run.cpp ;
+obj is_ci_standalone_run : is_ci_standalone_run.cpp ;
+obj is_cygwin_run : is_cygwin_run.cpp ;
+
+explicit has_long_double_support ;
+explicit has_mpfr_class ;
+explicit has_mpfr ;
+explicit has_gmp ;
+explicit has_mpreal ;
+explicit has_ntl_rr ;
+explicit has_gmpxx ;
+explicit has_gcc_visibility ;
+explicit has_float128 ;
+explicit has_intel_quad ;
+explicit has_128bit_floatmax_t ;
+explicit has_fftw3 ;
+explicit is_ci_sanitizer_run ;
+explicit is_ci_standalone_run ;
+explicit is_cygwin_run ;
