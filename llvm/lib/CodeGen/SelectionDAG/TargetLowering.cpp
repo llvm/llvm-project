@@ -9780,7 +9780,7 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
   // is more likely to legalize cleanly: abdu(lhs, rhs) -> sub(xor(sub(lhs,
   // rhs), uof(lhs, rhs)), uof(lhs, rhs))
   if (!IsSigned && VT.isScalarInteger() && !isTypeLegal(VT) &&
-      !shouldExpandCmpUsingSelects(VT)) {
+      !preferSelectsOverBooleanArithmetic(VT)) {
     SDValue USubO =
         DAG.getNode(ISD::USUBO, dl, DAG.getVTList(VT, MVT::i1), {LHS, RHS});
     SDValue Cmp = DAG.getNode(ISD::SIGN_EXTEND, dl, VT, USubO.getValue(1));
@@ -10975,7 +10975,8 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   // because one of the conditions can be merged with one of the selects.
   // And finally, if we don't know the contents of high bits of a boolean value
   // we can't perform any arithmetic either.
-  if (shouldExpandCmpUsingSelects(VT) || BoolVT.getScalarSizeInBits() == 1 ||
+  if (preferSelectsOverBooleanArithmetic(VT) ||
+      BoolVT.getScalarSizeInBits() == 1 ||
       getBooleanContents(BoolVT) == UndefinedBooleanContent) {
     SDValue SelectZeroOrOne =
         DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
