@@ -503,7 +503,8 @@ public:
   /// hash_state, empties it, and then merges the new chunk in. This also
   /// handles cases where the data straddles the end of the buffer.
   template <typename T>
-  char *combine_data(size_t &length, char *buffer_ptr, char *buffer_end, T data) {
+  char *combine_data(size_t &length, char *&buffer_ptr, char *buffer_end,
+                     T data) {
     if (!store_and_advance(buffer_ptr, buffer_end, data)) {
       // Check for skew which prevents the buffer from being packed, and do
       // a partial store into the buffer to fill it. This is only a concern
@@ -541,21 +542,15 @@ public:
   ///
   /// This function recurses through each argument, combining that argument
   /// into a single hash.
-  template <typename T, typename ...Ts>
+  template <typename... Ts>
   hash_code combine(size_t length, char *buffer_ptr, char *buffer_end,
-                    const T &arg, const Ts &...args) {
-    buffer_ptr = combine_data(length, buffer_ptr, buffer_end, get_hashable_data(arg));
+                    const Ts &...args) {
+    ((void)combine_data(length, buffer_ptr, buffer_end,
+                        get_hashable_data(args)),
+     ...);
 
-    // Recurse to the next argument.
-    return combine(length, buffer_ptr, buffer_end, args...);
-  }
-
-  /// Base case for recursive, variadic combining.
-  ///
-  /// The base case when combining arguments recursively is reached when all
-  /// arguments have been handled. It flushes the remaining buffer and
-  /// constructs a hash_code.
-  hash_code combine(size_t length, char *buffer_ptr, char *buffer_end) {
+    // Finalize the hash by flushing any remaining data in the buffer.
+    //
     // Check whether the entire set of values fit in the buffer. If so, we'll
     // use the optimized short hashing routine and skip state entirely.
     if (length == 0)
