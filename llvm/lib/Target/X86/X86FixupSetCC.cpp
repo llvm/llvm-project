@@ -136,6 +136,11 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
           .addReg(ZeroReg)
           .addReg(Reg0)
           .addImm(X86::sub_8bit);
+
+      if (unsigned InstrNum = ZExt->peekDebugInstrNum())
+        ZExt->getParent()->getParent()->makeDebugValueSubstitution(
+            {InstrNum, 0}, {MI.getDebugInstrNum(), 0});
+
       ToErase.push_back(ZExt);
     }
   }
