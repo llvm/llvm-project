@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -309,62 +310,17 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
 RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                  QualType Ty, AggValueSlot Slot) const {
-  unsigned ArgOffset = 0;
-  ABIArgInfo AI = classifyType(Ty, 16 * 8, ArgOffset);
-  llvm::Type *ArgTy = CGT.ConvertType(Ty);
-  if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
-    AI.setCoerceToType(ArgTy);
-
   CharUnits SlotSize = CharUnits::fromQuantity(8);
+  auto TInfo = getContext().getTypeInfoInChars(Ty);
 
-  CGBuilderTy &Builder = CGF.Builder;
-  Address Addr = Address(Builder.CreateLoad(VAListAddr, "ap.cur"),
-                         getVAListElementType(CGF), SlotSize);
-  llvm::Type *ArgPtrTy = CGF.UnqualPtrTy;
+  // Zero-sized types have a width of one byte for parameter passing purposes.
+  TInfo.Width = std::max(TInfo.Width, CharUnits::fromQuantity(1));
 
-  auto TypeInfo = getContext().getTypeInfoInChars(Ty);
-
-  Address ArgAddr = Address::invalid();
-  CharUnits Stride;
-  switch (AI.getKind()) {
-  case ABIArgInfo::Expand:
-  case ABIArgInfo::CoerceAndExpand:
-  case ABIArgInfo::InAlloca:
-  case ABIArgInfo::TargetSpecific:
-    llvm_unreachable("Unsupported ABI kind for va_arg");
-
-  case ABIArgInfo::Extend: {
-    Stride = SlotSize;
-    CharUnits Offset = SlotSize - TypeInfo.Width;
-    ArgAddr = Builder.CreateConstInBoundsByteGEP(Addr, Offset, "extend");
-    break;
-  }
-
-  case ABIArgInfo::Direct: {
-    auto AllocSize = getDataLayout().getTypeAllocSize(AI.getCoerceToType());
-    Stride = CharUnits::fromQuantity(AllocSize).alignTo(SlotSize);
-    ArgAddr = Addr;
-    break;
-  }
-
-  case ABIArgInfo::Indirect:
-  case ABIArgInfo::IndirectAliased:
-    Stride = SlotSize;
-    ArgAddr = Addr.withElementType(ArgPtrTy);
-    ArgAddr = Address(Builder.CreateLoad(ArgAddr, "indirect.arg"), ArgTy,
-                      TypeInfo.Align);
-    break;
-
-  case ABIArgInfo::Ignore:
-    return Slot.asRValue();
-  }
-
-  // Update VAList.
-  Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
-  Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
-
-  return CGF.EmitLoadOfAnyValue(
-      CGF.MakeAddrLValue(ArgAddr.withElementType(ArgTy), Ty), Slot);
+  // Arguments bigger than 2*SlotSize bytes are passed indirectly.
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
+                          /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
+                          SlotSize,
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {
