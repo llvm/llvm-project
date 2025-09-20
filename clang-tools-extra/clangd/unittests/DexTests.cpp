@@ -683,9 +683,10 @@ TEST(DexTest, SymbolIndexOptionsFilter) {
 
 TEST(DexTest, ProximityPathsBoosting) {
   auto RootSymbol = symbol("root::abc");
-  RootSymbol.CanonicalDeclaration.FileURI = "unittest:///file.h";
+  RootSymbol.CanonicalDeclaration.NameLocation.FileURI = "unittest:///file.h";
   auto CloseSymbol = symbol("close::abc");
-  CloseSymbol.CanonicalDeclaration.FileURI = "unittest:///a/b/c/d/e/f/file.h";
+  CloseSymbol.CanonicalDeclaration.NameLocation.FileURI =
+      "unittest:///a/b/c/d/e/f/file.h";
 
   std::vector<Symbol> Symbols{CloseSymbol, RootSymbol};
   Dex I(Symbols, RefSlab(), RelationSlab(), true);
