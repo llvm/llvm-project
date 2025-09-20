@@ -33,13 +33,14 @@ F:              ; preds = %0
   ret void
 }
 
+; We need to use finer-grained DataLayout properties for non-integral pointers
+; FIXME: Should be using a switch here
 define void @test1_ptr(ptr %V) {
 ; CHECK-LABEL: @test1_ptr(
-; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint ptr [[V:%.*]] to i40
-; CHECK-NEXT:    switch i40 [[MAGICPTR]], label [[F:%.*]] [
-; CHECK-NEXT:      i40 17, label [[T:%.*]]
-; CHECK-NEXT:      i40 4, label [[T]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq ptr [[V:%.*]], inttoptr (i32 4 to ptr)
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq ptr [[V]], inttoptr (i32 17 to ptr)
+; CHECK-NEXT:    [[CN:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       T:
@@ -63,11 +64,10 @@ F:              ; preds = %0
 
 define void @test1_ptr_as1(ptr addrspace(1) %V) {
 ; CHECK-LABEL: @test1_ptr_as1(
-; CHECK-NEXT:    [[MAGICPTR:%.*]] = ptrtoint ptr addrspace(1) [[V:%.*]] to i40
-; CHECK-NEXT:    switch i40 [[MAGICPTR]], label [[F:%.*]] [
-; CHECK-NEXT:      i40 17, label [[T:%.*]]
-; CHECK-NEXT:      i40 4, label [[T]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq ptr addrspace(1) [[V:%.*]], inttoptr (i32 4 to ptr addrspace(1))
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq ptr addrspace(1) [[V]], inttoptr (i32 17 to ptr addrspace(1))
+; CHECK-NEXT:    [[CN:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[CN]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       T:
