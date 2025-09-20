@@ -101,7 +101,8 @@ public:
       Chunk::UnpackedHeader Header = {};
       Header.ClassId = QuarantineClassId & Chunk::ClassIdMask;
       Header.SizeOrUnusedBytes = sizeof(QuarantineBatch);
-      Header.State = Chunk::State::Allocated;
+      // Do not use Allocated or this block will show up in iterateOverChunks.
+      Header.State = Chunk::State::Quarantined;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
       // Reset tag to 0 as this chunk may have been previously used for a tagged
@@ -120,7 +121,7 @@ public:
       Chunk::UnpackedHeader Header;
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
 
-      if (UNLIKELY(Header.State != Chunk::State::Allocated))
+      if (UNLIKELY(Header.State != Chunk::State::Quarantined))
         reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
       DCHECK_EQ(Header.ClassId, QuarantineClassId);
       DCHECK_EQ(Header.Offset, 0);
