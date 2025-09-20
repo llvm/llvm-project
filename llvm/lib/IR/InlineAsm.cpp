@@ -60,17 +60,23 @@ FunctionType *InlineAsm::getFunctionType() const {
   return FTy;
 }
 
-void InlineAsm::collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const {
+SmallVector<StringRef> InlineAsm::collectAsmInstrs() const {
   StringRef AsmStr(AsmString);
-  AsmStrs.clear();
+  SmallVector<StringRef> AsmLines;
+  AsmStr.split(AsmLines, '\n');
 
-  // TODO: 1) Unify delimiter for inline asm, we also meet other delimiters
-  // for example "\0A", ";".
-  // 2) Enhance StringRef. Some of the special delimiter ("\0") can't be
-  // split in StringRef. Also empty StringRef can not call split (will stuck).
-  if (AsmStr.empty())
-    return;
-  AsmStr.split(AsmStrs, "\n\t", -1, false);
+  SmallVector<StringRef> AsmInstrs;
+  AsmInstrs.reserve(AsmLines.size());
+  for (StringRef AsmLine : AsmLines) {
+    // Trim most general comments. We don't handle comment blocks (/* ... */).
+    // We also don't handle '@' (ARM) and ';' (MachO) since they have different
+    // interpretations in different targets and we don't have target info in IR.
+    auto Trimmed = AsmLine.split('#').first.split("//").first.trim();
+    if (Trimmed.empty())
+      continue;
+    AsmInstrs.push_back(Trimmed);
+  }
+  return AsmInstrs;
 }
 
 /// Parse - Analyze the specified string (e.g. "==&{eax}") and fill in the
