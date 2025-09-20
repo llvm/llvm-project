@@ -499,6 +499,9 @@ LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
+LANGOPT(SanitizeAddressDisableContainerOverflow, 1, 0, NotCompatible,
+        "Disable container overflow checks in AddressSanitizer (experimental)")
+
 #undef LANGOPT
 #undef ENUM_LANGOPT
 #undef VALUE_LANGOPT
