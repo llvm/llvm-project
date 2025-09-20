@@ -45,8 +45,8 @@ define i1 @or_fcmp_redundant_or4(double %v0) {
   ret i1 %v3
 }
 
-define i1 @or_fcmp_redundant_or_5(double %v0) {
-; CHECK-LABEL: @or_fcmp_redundant_or_5(
+define i1 @or_fcmp_redundant_or_neg1(double %v0) {
+; CHECK-LABEL: @or_fcmp_redundant_or_neg1(
 ; CHECK-NEXT:    [[V1:%.*]] = fcmp olt double [[V0:%.*]], 1.000000e-02
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp ogt double [[V0]], 1.990000e+00
 ; CHECK-NEXT:    [[V3:%.*]] = or i1 [[V1]], [[V2]]
@@ -58,8 +58,8 @@ define i1 @or_fcmp_redundant_or_5(double %v0) {
   ret i1 %v3
 }
 
-define i1 @or_fcmp_redundant_or_6(double %v0) {
-; CHECK-LABEL: @or_fcmp_redundant_or_6(
+define i1 @or_fcmp_redundant_or_neg2(double %v0) {
+; CHECK-LABEL: @or_fcmp_redundant_or_neg2(
 ; CHECK-NEXT:    [[V1:%.*]] = fcmp ogt double [[V0:%.*]], 1.000000e-02
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp olt double [[V0]], 1.990000e+00
 ; CHECK-NEXT:    [[V3:%.*]] = or i1 [[V1]], [[V2]]
@@ -115,8 +115,8 @@ define i1 @or_fcmp_redundant_and4(double %v0) {
   ret i1 %v3
 }
 
-define i1 @or_fcmp_redundant_and_5(double %v0) {
-; CHECK-LABEL: @or_fcmp_redundant_and_5(
+define i1 @or_fcmp_redundant_and_neg1(double %v0) {
+; CHECK-LABEL: @or_fcmp_redundant_and_neg1(
 ; CHECK-NEXT:    ret i1 false
 ;
   %v1 = fcmp olt double %v0, 1.000000e-02
@@ -125,8 +125,8 @@ define i1 @or_fcmp_redundant_and_5(double %v0) {
   ret i1 %v3
 }
 
-define i1 @or_fcmp_redundant_and_6(double %v0) {
-; CHECK-LABEL: @or_fcmp_redundant_and_6(
+define i1 @or_fcmp_redundant_and_neg2(double %v0) {
+; CHECK-LABEL: @or_fcmp_redundant_and_neg2(
 ; CHECK-NEXT:    [[V1:%.*]] = fcmp ogt double [[V0:%.*]], 1.000000e-02
 ; CHECK-NEXT:    [[V2:%.*]] = fcmp olt double [[V0]], 1.990000e+00
 ; CHECK-NEXT:    [[V3:%.*]] = and i1 [[V1]], [[V2]]

@@ -1827,43 +1827,28 @@ static Value *simplifyAndOrOfFCmpsWithConstants(FCmpInst *Cmp0, FCmpInst *Cmp1,
       !match(Cmp1->getOperand(1), m_APFloat(C1)))
     return nullptr;
 
-  auto Range0 = ConstantFPRange::makeExactFCmpRegion(Cmp0->getPredicate(), *C0);
-  auto Range1 = ConstantFPRange::makeExactFCmpRegion(Cmp1->getPredicate(), *C1);
+  auto Range0 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp0->getPredicate() : Cmp0->getInversePredicate(), *C0);
+  auto Range1 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp1->getPredicate() : Cmp1->getInversePredicate(), *C1);
 
   if (!Range0 || !Range1)
     return nullptr;
 
   // For and-of-compares, check if the intersection is empty:
   // (fcmp X, C0) && (fcmp X, C1) --> empty set --> false
-  if (IsAnd && (*Range0).intersectWith(*Range1).isEmptySet())
-    return getFalse(Cmp0->getType());
-
-  // For or-of-compares, check if the union is full:
-  // (fcmp X, C0) || (fcmp X, C1) --> full set --> true
-  //
-  // TODO: `unionWith` is not precise at the moment, so
-  // we can invert the predicate and check:
-  // inv(fcmp X, C0) && inv(fcmp X, C1) --> empty set --> false
-  if (!IsAnd) {
-    auto Range0Inv = ConstantFPRange::makeExactFCmpRegion(
-        FCmpInst::getInversePredicate(Cmp0->getPredicate()), *C0);
-    auto Range1Inv = ConstantFPRange::makeExactFCmpRegion(
-        FCmpInst::getInversePredicate(Cmp1->getPredicate()), *C1);
-    if (Range0Inv && Range1Inv) {
-      if ((*Range0Inv).intersectWith(*Range1Inv).isEmptySet())
-        return getFalse(Cmp0->getType());
-    }
-  }
+  if (Range0->intersectWith(*Range1).isEmptySet())
+    return ConstantInt::getBool(Cmp0->getType(), !IsAnd);
 
   // Is one range a superset of the other?
   // If this is and-of-compares, take the smaller set:
   // (fcmp ogt X, 4) && (fcmp ogt X, 42) --> fcmp ogt X, 42
   // If this is or-of-compares, take the larger set:
   // (fcmp ogt X, 4) || (fcmp ogt X, 42) --> fcmp ogt X, 4
-  if ((*Range0).contains(*Range1))
-    return IsAnd ? Cmp1 : Cmp0;
-  if ((*Range1).contains(*Range0))
-    return IsAnd ? Cmp0 : Cmp1;
+  if (Range0->contains(*Range1))
+    return Cmp1;
+  if (Range1->contains(*Range0))
+    return Cmp0;
 
   return nullptr;
 }
