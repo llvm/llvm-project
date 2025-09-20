@@ -13,6 +13,13 @@ public:
                                   MCPhysReg Reg2);
 
   bool shouldRecordCodeRelocation(unsigned Type) const override;
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInstr) const override;
 };
 
 } // namespace bolt
