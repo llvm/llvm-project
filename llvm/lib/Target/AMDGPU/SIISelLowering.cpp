@@ -9135,9 +9135,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
   unsigned IntrOpcode = Intr->BaseOpcode;
-  if (Intr->NoRetBaseOpcode != Intr->BaseOpcode &&
+  // For image atomic: use no-return opcode if result is unused.
+  if (Intr->AtomicNoRetBaseOpcode != Intr->BaseOpcode &&
       !Op.getNode()->hasAnyUseOfValue(0))
-    IntrOpcode = Intr->NoRetBaseOpcode;
+    IntrOpcode = Intr->AtomicNoRetBaseOpcode;
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);

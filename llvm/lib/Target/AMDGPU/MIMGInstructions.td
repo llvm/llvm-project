@@ -1828,7 +1828,7 @@ let SubtargetPredicate = isGFX12Plus in {
 class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   Intrinsic Intr = I;
   MIMGBaseOpcode BaseOpcode = !cast<MIMGBaseOpcode>(!strconcat("IMAGE_", I.P.OpMod));
-  MIMGBaseOpcode NoRetBaseOpcode = BaseOpcode;
+  MIMGBaseOpcode AtomicNoRetBaseOpcode = BaseOpcode;
   AMDGPUDimProps Dim = I.P.Dim;
   AMDGPUImageDimIntrinsicEval DimEval = AMDGPUImageDimIntrinsicEval<I.P>;
 
@@ -1866,18 +1866,18 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
 
 class ImageDimAtomicIntrinsicInfo<AMDGPUImageDimIntrinsic I>
   : ImageDimIntrinsicInfo<I> {
-  MIMGBaseOpcode NoRetBaseOpcode =
+  MIMGBaseOpcode AtomicNoRetBaseOpcode =
     !cast<MIMGBaseOpcode>(!strconcat("IMAGE_", I.P.OpMod, "_NORTN"));
 }
 
 def ImageDimIntrinsicTable : GenericTable {
   let FilterClass = "ImageDimIntrinsicInfo";
-  let Fields = ["Intr", "BaseOpcode", "NoRetBaseOpcode", "Dim", "NumOffsetArgs", "NumBiasArgs", "NumZCompareArgs", "NumGradients", "NumDmask", "NumData",
+  let Fields = ["Intr", "BaseOpcode", "AtomicNoRetBaseOpcode", "Dim", "NumOffsetArgs", "NumBiasArgs", "NumZCompareArgs", "NumGradients", "NumDmask", "NumData",
     "NumVAddrs", "NumArgs", "DMaskIndex", "VAddrStart", "OffsetIndex", "BiasIndex", "ZCompareIndex", "GradientStart", "CoordStart", "LodIndex", "MipIndex",
     "VAddrEnd", "RsrcIndex", "SampIndex", "UnormIndex", "TexFailCtrlIndex", "CachePolicyIndex",
     "BiasTyArg", "GradientTyArg", "CoordTyArg"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
-  string TypeOf_NoRetBaseOpcode = "MIMGBaseOpcode";
+  string TypeOf_AtomicNoRetBaseOpcode = "MIMGBaseOpcode";
   string TypeOf_Dim = "MIMGDim";
 
   let PrimaryKey = ["Intr"];
