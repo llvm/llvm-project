@@ -1482,7 +1482,7 @@ bool ARMTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
 }
 
-bool ARMTargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+bool ARMTargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   return !Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32;
 }
 
