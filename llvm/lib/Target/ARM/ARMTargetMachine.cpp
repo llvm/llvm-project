@@ -90,6 +90,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   RegisterTargetMachine<ARMBETargetMachine> Y(getTheARMBETarget());
   RegisterTargetMachine<ARMBETargetMachine> B(getTheThumbBETarget());
 
+  initializeARMVerifier();
+
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
