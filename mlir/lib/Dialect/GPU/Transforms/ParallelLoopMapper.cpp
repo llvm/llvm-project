@@ -65,12 +65,11 @@ static MappingLevel &operator++(MappingLevel &mappingLevel) {
   return mappingLevel;
 }
 
-/// Computed the hardware id to use for a given mapping level. Will
-/// assign x,y and z hardware ids for the first 3 dimensions and use
-/// sequential after.
-/// TODO: Make this use x for the inner-most loop that is
-/// distributed to map to x, the next innermost to y and the next innermost to
-/// z.
+/// Computed the hardware id to use for a given mapping level. Will assign z,y
+/// and x hardware ids for the outer-most 3 dimensions respectedly and use
+/// sequential after. When the number of nesting loops is less than 3, x is
+/// first mapped to the inner-most loop and y,z will be used for the next
+/// nesting loops.
 static Processor getHardwareIdForMapping(MappingLevel level, int dimension) {
 
   if (dimension >= kNumHardwareIds || level == Sequential)
@@ -79,11 +78,11 @@ static Processor getHardwareIdForMapping(MappingLevel level, int dimension) {
   case MapGrid:
     switch (dimension) {
     case 0:
-      return Processor::BlockX;
+      return Processor::BlockZ;
     case 1:
       return Processor::BlockY;
     case 2:
-      return Processor::BlockZ;
+      return Processor::BlockX;
     default:
       return Processor::Sequential;
     }
@@ -91,11 +90,11 @@ static Processor getHardwareIdForMapping(MappingLevel level, int dimension) {
   case MapBlock:
     switch (dimension) {
     case 0:
-      return Processor::ThreadX;
+      return Processor::ThreadZ;
     case 1:
       return Processor::ThreadY;
     case 2:
-      return Processor::ThreadZ;
+      return Processor::ThreadX;
     default:
       return Processor::Sequential;
     }
@@ -116,12 +115,14 @@ static void mapParallelOp(ParallelOp parallelOp,
 
   MLIRContext *ctx = parallelOp.getContext();
   Builder b(ctx);
+  int numLoops = parallelOp.getNumLoops();
+  int dimOffset = (numLoops > 2) ? 0 : (3 - numLoops);
   SmallVector<ParallelLoopDimMappingAttr, 4> attrs;
-  attrs.reserve(parallelOp.getNumLoops());
-  for (int i = 0, e = parallelOp.getNumLoops(); i < e; ++i) {
+  attrs.reserve(numLoops);
+  for (int i = 0, e = numLoops; i < e; ++i) {
     attrs.push_back(b.getAttr<ParallelLoopDimMappingAttr>(
-        getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
-        b.getDimIdentityMap()));
+        getHardwareIdForMapping(mappingLevel, i + dimOffset),
+        b.getDimIdentityMap(), b.getDimIdentityMap()));
   }
   (void)setMappingAttr(parallelOp, attrs);
   ++mappingLevel;
