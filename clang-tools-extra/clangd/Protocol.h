@@ -26,6 +26,7 @@
 #include "URI.h"
 #include "index/SymbolID.h"
 #include "support/MemoryTree.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
@@ -1450,6 +1451,19 @@ struct RenameParams {
 };
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
 llvm::json::Value toJSON(const RenameParams &);
+
+struct SearchASTArgs {
+  std::string searchQuery;
+  TextDocumentIdentifier textDocument;
+
+  // Todo (extend feature): make them members and modifiable:
+  /// wheter the whole query is shown
+  static auto constexpr BindRoot = true;
+  /// Simplify things for users; default for now.
+  static auto constexpr Tk = TraversalKind::TK_IgnoreUnlessSpelledInSource;
+};
+bool fromJSON(const llvm::json::Value &, SearchASTArgs &, llvm::json::Path);
+using BoundASTNodes = std::vector<std::map<std::string, struct ASTNode>>;
 
 struct PrepareRenameResult {
   /// Range of the string to rename.
