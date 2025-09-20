@@ -765,7 +765,9 @@ void AArch64PrologueEmitter::emitPrologue() {
 
   // The very last FrameSetup instruction indicates the end of prologue. Emit a
   // SEH opcode indicating the prologue end.
-  if (NeedsWinCFI && HasWinCFI) {
+  // Always emit SEH_PrologEnd if we need WinCFI, even if no other SEH instructions
+  // were emitted, to ensure .seh_endprologue appears before .seh_startepilogue.
+  if (NeedsWinCFI) {
     BuildMI(MBB, AfterSVESavesI, DL, TII->get(AArch64::SEH_PrologEnd))
         .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -887,7 +889,7 @@ void AArch64PrologueEmitter::emitEmptyStackFramePrologue(
   // All of the stack allocation is for locals.
   AFI->setLocalStackSize(NumBytes);
   if (!NumBytes) {
-    if (NeedsWinCFI && HasWinCFI) {
+    if (NeedsWinCFI) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
           .setMIFlag(MachineInstr::FrameSetup);
     }
@@ -962,7 +964,7 @@ void AArch64PrologueEmitter::emitFramePointerSetup(
     emitFrameOffset(MBB, MBBI, DL, AArch64::FP, AArch64::SP,
                     StackOffset::getFixed(FPOffset), TII,
                     MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
-    if (NeedsWinCFI && HasWinCFI) {
+    if (NeedsWinCFI) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
           .setMIFlag(MachineInstr::FrameSetup);
       // After setting up the FP, the rest of the prolog doesn't need to be
