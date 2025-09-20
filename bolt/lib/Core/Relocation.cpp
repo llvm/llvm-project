@@ -810,6 +810,7 @@ bool Relocation::isSupported(uint32_t Type) {
   case Triple::x86_64:
     return isSupportedX86(Type);
   case Triple::ppc64:
+  case Triple::ppc64le:
     return isSupportedPPC64(Type);
   }
 }
@@ -825,6 +826,7 @@ size_t Relocation::getSizeForType(uint32_t Type) {
   case Triple::x86_64:
     return getSizeForTypeX86(Type);
   case Triple::ppc64:
+  case Triple::ppc64le:
     return getSizeForTypePPC64(Type);
   }
 }
@@ -840,6 +842,7 @@ bool Relocation::skipRelocationType(uint32_t Type) {
   case Triple::x86_64:
     return skipRelocationTypeX86(Type);
   case Triple::ppc64:
+  case Triple::ppc64le:
     return skipRelocationTypePPC64(Type);
   }
 }
@@ -922,6 +925,7 @@ bool Relocation::isRelative(uint32_t Type) {
   case Triple::x86_64:
     return Type == ELF::R_X86_64_RELATIVE;
   case Triple::ppc64:
+  case Triple::ppc64le:
     return Type == ELF::R_PPC64_RELATIVE;
   }
 }
