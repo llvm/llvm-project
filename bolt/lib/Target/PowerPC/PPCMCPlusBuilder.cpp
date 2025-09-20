@@ -47,6 +47,22 @@ bool PPCMCPlusBuilder::shouldRecordCodeRelocation(unsigned Type) const {
   }
 }
 
+IndirectBranchType PPCMCPlusBuilder::analyzeIndirectBranch(
+    MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
+    const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+    unsigned &IndexRegNumOut, int64_t &DispValueOut, const MCExpr *&DispExprOut,
+    MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInstr) const {
+  (void)Instruction;
+  MemLocInstrOut = nullptr;
+  BaseRegNumOut = 0;
+  IndexRegNumOut = 0;
+  DispValueOut = 0;
+  DispExprOut = nullptr;
+  PCRelBaseOut = nullptr;
+  FixedEntryLoadInstr = nullptr;
+  return IndirectBranchType::UNKNOWN;
+}
+
 namespace llvm {
 namespace bolt {
 
