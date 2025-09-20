@@ -21,9 +21,11 @@ set(CROSS_PROJECT_TEST_DEPS
   count
   llvm-ar
   llvm-config
+  llvm-dis
   llvm-dwarfdump
   llvm-objdump
   not
+  obj2yaml
   split-file
   )
 
