@@ -717,6 +717,17 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAtomicXchgLowering::matchAndRewrite(
+    cir::AtomicXchg op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
+      op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
+      llvmOrder);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMBitClrsbOpLowering::matchAndRewrite(
     cir::BitClrsbOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
