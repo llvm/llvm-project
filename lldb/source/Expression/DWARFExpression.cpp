@@ -933,10 +933,18 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
   DataExtractor addr_data(addr_bytes, size_addr_bytes, byte_order, size);
 
   lldb::offset_t addr_data_offset = 0;
-  if (size <= 8)
-    return addr_data.GetMaxU64(&addr_data_offset, size);
-  else
+  switch (size) {
+  case 1:
+    return addr_data.GetU8(&addr_data_offset);
+  case 2:
+    return addr_data.GetU16(&addr_data_offset);
+  case 4:
+    return addr_data.GetU32(&addr_data_offset);
+  case 8:
+    return addr_data.GetU64(&addr_data_offset);
+  default:
     return addr_data.GetAddress(&addr_data_offset);
+  }
 }
 
 llvm::Expected<Value> DWARFExpression::Evaluate(
