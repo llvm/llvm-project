@@ -69,7 +69,7 @@ class LLVM_ABI ELFObjectFileBase : public ObjectFile {
   SubtargetFeatures getLoongArchFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
-  StringRef getCUDACPUName() const;
+  StringRef getNVPTXCPUName() const;
 
 protected:
   ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source);
@@ -1431,7 +1431,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   }
 
   case ELF::EM_CUDA: {
-    return Triple::nvsass;
+    if (EF.getHeader().e_ident[ELF::EI_CLASS] == ELF::ELFCLASS32)
+      return Triple::nvptx;
+    return Triple::nvptx64;
   }
 
   case ELF::EM_BPF:
