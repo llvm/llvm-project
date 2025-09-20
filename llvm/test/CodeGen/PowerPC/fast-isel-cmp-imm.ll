@@ -1,6 +1,6 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s --check-prefix=ELF64
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64le-unknown-linux-gnu -mattr=+vsx | FileCheck %s --check-prefix=VSX
-; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 -mattr=spe | FileCheck %s --check-prefix=SPE
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 -mattr=spe --enable-no-nans-fp-math | FileCheck %s --check-prefix=SPE
 
 declare void @foo()
 
