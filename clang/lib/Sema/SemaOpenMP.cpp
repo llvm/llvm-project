@@ -17305,6 +17305,43 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   return Res;
 }
 
+static std::pair<OpenMPDefaultmapClauseModifier, OpenMPDefaultmapClauseKind>
+getDefaultmapModifierAndKind(llvm::omp::DefaultKind M,
+                             OpenMPDefaultClauseVariableCategory VCKind) {
+  OpenMPDefaultmapClauseModifier DefMapMod;
+  OpenMPDefaultmapClauseKind DefMapKind;
+  switch (M) {
+  case OMP_DEFAULT_none:
+    DefMapMod = OMPC_DEFAULTMAP_MODIFIER_none;
+    break;
+  case OMP_DEFAULT_firstprivate:
+    DefMapMod = OMPC_DEFAULTMAP_MODIFIER_firstprivate;
+    break;
+  case OMP_DEFAULT_private:
+    DefMapMod = OMPC_DEFAULTMAP_MODIFIER_private;
+    break;
+  default:
+    llvm_unreachable("unexpected DSA in OpenMP default clause");
+  }
+  switch (VCKind) {
+  case OMPC_DEFAULT_VC_aggregate:
+    DefMapKind = OMPC_DEFAULTMAP_aggregate;
+    break;
+  case OMPC_DEFAULT_VC_pointer:
+    DefMapKind = OMPC_DEFAULTMAP_pointer;
+    break;
+  case OMPC_DEFAULT_VC_scalar:
+    DefMapKind = OMPC_DEFAULTMAP_scalar;
+    break;
+  case OMPC_DEFAULT_VC_all:
+    DefMapKind = OMPC_DEFAULTMAP_all;
+    break;
+  default:
+    llvm_unreachable("unexpected variable category in OpenMP default clause");
+  }
+  return std::make_pair(DefMapMod, DefMapKind);
+}
+
 OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
     llvm::omp::DefaultKind M, SourceLocation MLoc,
     OpenMPDefaultClauseVariableCategory VCKind, SourceLocation VCKindLoc,
@@ -17317,21 +17354,40 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
     return nullptr;
   }
 
-  switch (M) {
-  case OMP_DEFAULT_none:
-    DSAStack->setDefaultDSANone(MLoc);
-    break;
-  case OMP_DEFAULT_shared:
-    DSAStack->setDefaultDSAShared(MLoc);
-    break;
-  case OMP_DEFAULT_firstprivate:
-    DSAStack->setDefaultDSAFirstPrivate(MLoc);
-    break;
-  case OMP_DEFAULT_private:
-    DSAStack->setDefaultDSAPrivate(MLoc);
-    break;
-  default:
-    llvm_unreachable("DSA unexpected in OpenMP default clause");
+  if (getLangOpts().OpenMP >= 60 &&
+      DSAStack->getCurrentDirective() == OMPD_target) {
+    // OpenMP 6.0 (see page 224, lines 3-5) default Clause, Semantics
+    // If data-sharing-attribute is shared then the clause has no effect
+    // on a target construct; otherwise, its effect on a target construct is
+    // equivalent to specifying the defaultmap clause with the same
+    // data-sharing-attribute and variable-category.
+    if (M != OMP_DEFAULT_shared) {
+      auto [DefMapMod, DefMapKind] = getDefaultmapModifierAndKind(M, VCKind);
+      if (DefMapKind == OMPC_DEFAULTMAP_all) {
+        DSAStack->setDefaultDMAAttr(DefMapMod, OMPC_DEFAULTMAP_aggregate, MLoc);
+        DSAStack->setDefaultDMAAttr(DefMapMod, OMPC_DEFAULTMAP_scalar, MLoc);
+        DSAStack->setDefaultDMAAttr(DefMapMod, OMPC_DEFAULTMAP_pointer, MLoc);
+      } else {
+        DSAStack->setDefaultDMAAttr(DefMapMod, DefMapKind, MLoc);
+      }
+    }
+  } else {
+    switch (M) {
+    case OMP_DEFAULT_none:
+      DSAStack->setDefaultDSANone(MLoc);
+      break;
+    case OMP_DEFAULT_shared:
+      DSAStack->setDefaultDSAShared(MLoc);
+      break;
+    case OMP_DEFAULT_firstprivate:
+      DSAStack->setDefaultDSAFirstPrivate(MLoc);
+      break;
+    case OMP_DEFAULT_private:
+      DSAStack->setDefaultDSAPrivate(MLoc);
+      break;
+    default:
+      llvm_unreachable("DSA unexpected in OpenMP default clause");
+    }
   }
 
   switch (VCKind) {
