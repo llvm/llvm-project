@@ -1,4 +1,6 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,security.ArrayBound -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,security.ArrayBound,debug.ExprInspection -verify %s
+
+void clang_analyzer_value(int);
 
 // Test the interactions of `security.ArrayBound` with C++ features.
 
@@ -96,7 +98,7 @@ void test2_ptr_arith(int x) {
 // of a multi-dimensional array
 void test2_multi(int x) {
   auto buf = new int[100][100];
-  buf[0][-1] = 1; // expected-warning{{Out of bound access to memory}}
+  buf[0][-1] = 1; // expected-warning{{Out of bound access to the subarray 'buf[0]' at a negative index}}
 }
 
 // Tests under-indexing
@@ -117,8 +119,19 @@ void test2_multi_c(int x) {
 // of a multi-dimensional array
 void test2_multi_2(int x) {
   auto buf = new int[100][100];
-  buf[99][100] = 1; // expected-warning{{Out of bound access to memory}}
+  buf[99][100] = 1; // expected-warning{{Out of bound access to memory after the end of the subarray 'buf[99]'}}
 }
+
+void test2_multi_3() {
+  auto buf = new int[100][100];
+  buf[0][100] = 1; // expected-warning{{Out of bound access to memory after the end of the subarray 'buf[0]'}}
+}
+
+void test2_multi_4() {
+  auto buf = new int[100][100][100];
+  buf[0][101][0] = 1; // expected-warning{{Out of bound access to memory after the end of the subarray 'buf[0]'}}
+}
+
 
 // Tests normal access of
 // a multi-dimensional array
@@ -178,4 +191,29 @@ int test_reference_that_might_be_after_the_end(int idx) {
   if (idx == 10)
     return -1;
   return ref;
+}
+
+int test_type_alias() {
+  using Arr1 = int[10];
+  using Arr2 = Arr1[20];
+  Arr2 arr;
+  return arr[0][30]; // expected-warning {{Out of bound access to memory after the end of the subarray 'arr[0]'}}
+}
+
+int* test_type_alias_2() {
+  using Arr1 = int[10];
+  using Arr2 = Arr1[20];
+  Arr2* arr = new Arr2[]{};
+  return (*arr)[30]; // expected-warning {{Out of bound access to memory after the end of the heap area}}
+}
+
+// Similar to `out-of-bounds.c`
+// See Github ticket #39492.
+int test_cast_to_unsigned(signed char x) {
+  int *table = new int[256];
+  unsigned char y = x;
+  if (x >= 0)
+    return x;
+  clang_analyzer_value(y); // expected-warning {{8s:{ [-128, -1] } }}
+  return table[y]; // no-warning
 }
