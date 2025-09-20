@@ -695,7 +695,7 @@ def : ProcessorModel<"e500mc", PPCE500mcModel,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"e5500", PPCE5500Model,
-                  [DirectiveE5500, FeatureMFOCRF, Feature64Bit,
+                  [DirectiveE5500, FeatureMFOCRF, Feature64BitSupport,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"a2", PPCA2Model,
