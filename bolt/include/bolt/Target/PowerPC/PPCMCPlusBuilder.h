@@ -17,6 +17,9 @@ public:
   bool hasPCRelOperand(const MCInst &I) const override;
   int getMemoryOperandNo(const MCInst &Inst) const override;
 
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+                           MCContext *Ctx) const override;
+
   IndirectBranchType
   analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
                         InstructionIterator End, const unsigned PtrSize,
