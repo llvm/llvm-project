@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Options.h"
+#include "DebuggerView.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/Support/COM.h"
@@ -95,9 +96,10 @@ int main(int argc, char **argv) {
   cl::extrahelp HelpResponse(
       "\nPass @FILE as argument to read options from FILE.\n");
 
-  cl::HideUnrelatedOptions(
-      {&AttributeCategory, &CompareCategory, &InternalCategory, &OutputCategory,
-       &PrintCategory, &ReportCategory, &SelectCategory, &WarningCategory});
+  cl::HideUnrelatedOptions({&AttributeCategory, &CompareCategory,
+                            &InternalCategory, &OutputCategory, &PrintCategory,
+                            &ReportCategory, &SelectCategory, &WarningCategory,
+                            &debuggerview::Category});
   cl::ParseCommandLineOptions(argc, argv,
                               "Printing a logical representation of low-level "
                               "debug information.\n");
@@ -120,8 +122,11 @@ int main(int argc, char **argv) {
     llvm::append_range(Objects, Objs);
   }
 
-  propagateOptions();
+  if (debuggerview::Enable)
+    return debuggerview::printDebuggerView(Objects, OutputFile.os());
+
   ScopedPrinter W(OutputFile.os());
+  propagateOptions();
   LVReaderHandler ReaderHandler(Objects, W, ReaderOptions);
 
   // Print the command line.
