@@ -88,15 +88,6 @@ public:
   getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                       Type *Ty, TTI::TargetCostKind CostKind) const override;
 
-  /// \name EVL Support for predicated vectorization.
-  /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware. (see LLVM Language Reference - "Vector Predication
-  /// Intrinsics",
-  /// https://llvm.org/docs/LangRef.html#vector-predication-intrinsics and
-  /// "IR-level VP intrinsics",
-  /// https://llvm.org/docs/Proposals/VectorPredication.html#ir-level-vp-intrinsics).
-  bool hasActiveVectorLength() const override;
-
   TargetTransformInfo::PopcntSupportKind
   getPopcntSupport(unsigned TyWidth) const override;
 
