@@ -243,10 +243,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : plugins()) {
-      StringRef Buffer(reinterpret_cast<const char *>(Img->ImageStart),
-                       utils::getPtrDiff(Img->ImageEnd, Img->ImageStart));
-
-      if (!R.isPluginCompatible(Buffer))
+      if (!R.is_plugin_compatible(Img))
         continue;
 
       if (!initializePlugin(R))
@@ -269,7 +266,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
           continue;
         }
 
-        if (!R.isDeviceCompatible(DeviceId, Buffer))
+        if (!R.is_device_compatible(DeviceId, Img))
           continue;
 
         DP("Image " DPxMOD " is compatible with RTL %s device %d!\n",
