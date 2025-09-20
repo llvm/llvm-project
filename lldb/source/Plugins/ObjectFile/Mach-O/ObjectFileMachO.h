@@ -311,7 +311,8 @@ protected:
       export_size = in.export_size;
     };
 
-    uint32_t cmd = 0;                 /* LC_DYLD_INFO or LC_DYLD_INFO_ONLY */
+    /// LC_DYLD_INFO or LC_DYLD_INFO_ONLY
+    uint32_t cmd = 0;
     uint32_t cmdsize = 0;             /* sizeof(struct dyld_info_command) */
     lldb::offset_t rebase_off = 0;    /* file offset to rebase info  */
     uint32_t rebase_size = 0;         /* size of rebase info   */
@@ -325,9 +326,9 @@ protected:
     uint32_t export_size = 0;         /* size of lazy binding infs */
   };
 
-  // The LC_DYSYMTAB's dysymtab_command has 32-bit file offsets
-  // that we will use as virtual address offsets, and may need to span
-  // more than 4GB in virtual memory.
+  /// The LC_DYSYMTAB's dysymtab_command has 32-bit file offsets
+  /// that we will use as virtual address offsets, and may need to span
+  /// more than 4GB in virtual memory.
   struct DysymtabCommandLargeOffsets {
     DysymtabCommandLargeOffsets() {}
     DysymtabCommandLargeOffsets(const llvm::MachO::dysymtab_command &in)
