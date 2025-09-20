@@ -1,5 +1,9 @@
 // UNSUPPORTED: system-windows
 // REQUIRES: crash-recovery
+// env -u is not supported on AIX.
+// TODO(boomanaiden154): Remove this once we have switched over to lit's
+// internal shell which does support env -u.
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
 // XFAIL: target={{.*-windows-gnu}}

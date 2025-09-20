@@ -21,12 +21,13 @@
 #include "NVPTXGenInstrInfo.inc"
 
 namespace llvm {
+class NVPTXSubtarget;
 
 class NVPTXInstrInfo : public NVPTXGenInstrInfo {
   const NVPTXRegisterInfo RegInfo;
   virtual void anchor();
 public:
-  explicit NVPTXInstrInfo();
+  explicit NVPTXInstrInfo(const NVPTXSubtarget &STI);
 
   const NVPTXRegisterInfo &getRegisterInfo() const { return RegInfo; }
 

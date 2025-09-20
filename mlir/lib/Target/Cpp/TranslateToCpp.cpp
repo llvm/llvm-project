@@ -97,6 +97,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
         return op->emitError("unsupported cmp predicate");
       })
       .Case<emitc::ConditionalOp>([&](auto op) { return 2; })
+      .Case<emitc::ConstantOp>([&](auto op) { return 17; })
       .Case<emitc::DivOp>([&](auto op) { return 13; })
       .Case<emitc::LoadOp>([&](auto op) { return 16; })
       .Case<emitc::LogicalAndOp>([&](auto op) { return 4; })
@@ -267,8 +268,14 @@ struct CppEmitter {
     Operation *def = value.getDefiningOp();
     if (!def)
       return false;
+    return isPartOfCurrentExpression(def);
+  }
+
+  /// Determine whether given operation is part of the expression potentially
+  /// being emitted.
+  bool isPartOfCurrentExpression(Operation *def) {
     auto operandExpression = dyn_cast<ExpressionOp>(def->getParentOp());
-    return operandExpression == emittedExpression;
+    return operandExpression && operandExpression == emittedExpression;
   };
 
   // Resets the value counter to 0.
@@ -407,6 +414,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ConstantOp constantOp) {
   Operation *operation = constantOp.getOperation();
   Attribute value = constantOp.getValue();
+
+  if (emitter.isPartOfCurrentExpression(operation))
+    return emitter.emitAttribute(operation->getLoc(), value);
 
   return printConstantOp(emitter, operation, value);
 }

@@ -164,7 +164,6 @@ class Vocabulary {
   friend class llvm::IR2VecVocabAnalysis;
   using VocabVector = std::vector<ir2vec::Embedding>;
   VocabVector Vocab;
-  bool Valid = false;
 
 public:
   // Slot layout:
@@ -210,9 +209,9 @@ public:
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
   Vocabulary() = default;
-  LLVM_ABI Vocabulary(VocabVector &&Vocab);
+  LLVM_ABI Vocabulary(VocabVector &&Vocab) : Vocab(std::move(Vocab)) {}
 
-  LLVM_ABI bool isValid() const;
+  LLVM_ABI bool isValid() const { return Vocab.size() == NumCanonicalEntries; };
   LLVM_ABI unsigned getDimension() const;
   /// Total number of entries (opcodes + canonicalized types + operand kinds)
   static constexpr size_t getCanonicalSize() { return NumCanonicalEntries; }
@@ -243,22 +242,22 @@ public:
   /// Const Iterator type aliases
   using const_iterator = VocabVector::const_iterator;
   const_iterator begin() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.begin();
   }
 
   const_iterator cbegin() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.cbegin();
   }
 
   const_iterator end() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.end();
   }
 
   const_iterator cend() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.cend();
   }
 

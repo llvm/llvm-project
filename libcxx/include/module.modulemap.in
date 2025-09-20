@@ -2144,41 +2144,43 @@ module std [system] {
   }
 
   module utility {
-    module as_const                   { header "__utility/as_const.h" }
-    module as_lvalue                  { header "__utility/as_lvalue.h" }
-    module auto_cast                  {
+    module as_const                        { header "__utility/as_const.h" }
+    module as_lvalue                       { header "__utility/as_lvalue.h" }
+    module auto_cast                       {
       header "__utility/auto_cast.h"
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
-    module cmp                        { header "__utility/cmp.h" }
-    module convert_to_integral        { header "__utility/convert_to_integral.h" }
-    module element_count              { header "__utility/element_count.h" }
-    module exception_guard            { header "__utility/exception_guard.h" }
-    module exchange                   { header "__utility/exchange.h" }
-    module forward_like               { header "__utility/forward_like.h" }
-    module in_place {
+    module cmp                             { header "__utility/cmp.h" }
+    module convert_to_integral             { header "__utility/convert_to_integral.h" }
+    module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
+    module element_count                   { header "__utility/element_count.h" }
+    module exception_guard                 { header "__utility/exception_guard.h" }
+    module exchange                        { header "__utility/exchange.h" }
+    module forward_like                    { header "__utility/forward_like.h" }
+    module in_place                        {
       header "__utility/in_place.h"
       export std_core.type_traits.integral_constant
     }
-    module integer_sequence           { header "__utility/integer_sequence.h" }
-    module is_pointer_in_range        { header "__utility/is_pointer_in_range.h" }
-    module is_valid_range             { header "__utility/is_valid_range.h" }
-    module move                       { header "__utility/move.h" }
-    module no_destroy                 { header "__utility/no_destroy.h" }
-    module pair                       {
+    module integer_sequence                { header "__utility/integer_sequence.h" }
+    module is_pointer_in_range             { header "__utility/is_pointer_in_range.h" }
+    module is_valid_range                  { header "__utility/is_valid_range.h" }
+    module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
+    module move                            { header "__utility/move.h" }
+    module no_destroy                      { header "__utility/no_destroy.h" }
+    module pair                            {
       header "__utility/pair.h"
       export std.utility.piecewise_construct
     }
-    module piecewise_construct        { header "__utility/piecewise_construct.h" }
-    module priority_tag               { header "__utility/priority_tag.h" }
-    module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
-    module rel_ops                    { header "__utility/rel_ops.h" }
-    module scope_guard                { header "__utility/scope_guard.h" }
-    module small_buffer               { header "__utility/small_buffer.h" }
-    module swap                       { header "__utility/swap.h" }
-    module to_underlying              { header "__utility/to_underlying.h" }
-    module try_key_extraction         { header "__utility/try_key_extraction.h" }
-    module unreachable                { header "__utility/unreachable.h" }
+    module piecewise_construct             { header "__utility/piecewise_construct.h" }
+    module priority_tag                    { header "__utility/priority_tag.h" }
+    module private_constructor_tag         { header "__utility/private_constructor_tag.h" }
+    module rel_ops                         { header "__utility/rel_ops.h" }
+    module scope_guard                     { header "__utility/scope_guard.h" }
+    module small_buffer                    { header "__utility/small_buffer.h" }
+    module swap                            { header "__utility/swap.h" }
+    module to_underlying                   { header "__utility/to_underlying.h" }
+    module try_key_extraction              { header "__utility/try_key_extraction.h" }
+    module unreachable                     { header "__utility/unreachable.h" }
 
     header "utility"
     export *

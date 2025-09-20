@@ -516,6 +516,8 @@ add_math_entrypoint_object(roundevenf16)
 add_math_entrypoint_object(roundevenf128)
 add_math_entrypoint_object(roundevenbf16)
 
+add_math_entrypoint_object(rsqrtf16)
+
 add_math_entrypoint_object(scalbln)
 add_math_entrypoint_object(scalblnf)
 add_math_entrypoint_object(scalblnl)
@@ -562,6 +564,7 @@ add_math_entrypoint_object(sqrtf)
 add_math_entrypoint_object(sqrtl)
 add_math_entrypoint_object(sqrtf16)
 add_math_entrypoint_object(sqrtf128)
+add_math_entrypoint_object(sqrtbf16)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)

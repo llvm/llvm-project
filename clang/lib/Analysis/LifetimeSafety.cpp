@@ -50,6 +50,11 @@ struct Loan {
 
   Loan(LoanID id, AccessPath path, const Expr *IssueExpr)
       : ID(id), Path(path), IssueExpr(IssueExpr) {}
+
+  void dump(llvm::raw_ostream &OS) const {
+    OS << ID << " (Path: ";
+    OS << Path.D->getNameAsString() << ")";
+  }
 };
 
 /// An Origin is a symbolic identifier that represents the set of possible
@@ -118,18 +123,21 @@ public:
     return AllOrigins.back();
   }
 
+  // TODO: Mark this method as const once we remove the call to getOrCreate.
   OriginID get(const Expr &E) {
-    // Origin of DeclRefExpr is that of the declaration it refers to.
+    auto It = ExprToOriginID.find(&E);
+    if (It != ExprToOriginID.end())
+      return It->second;
+    // If the expression itself has no specific origin, and it's a reference
+    // to a declaration, its origin is that of the declaration it refers to.
+    // For pointer types, where we don't pre-emptively create an origin for the
+    // DeclRefExpr itself.
     if (const auto *DRE = dyn_cast<DeclRefExpr>(&E))
       return get(*DRE->getDecl());
-    auto It = ExprToOriginID.find(&E);
     // TODO: This should be an assert(It != ExprToOriginID.end()). The current
     // implementation falls back to getOrCreate to avoid crashing on
     // yet-unhandled pointer expressions, creating an empty origin for them.
-    if (It == ExprToOriginID.end())
-      return getOrCreate(E);
-
-    return It->second;
+    return getOrCreate(E);
   }
 
   OriginID get(const ValueDecl &D) {
@@ -148,10 +156,6 @@ public:
     if (It != ExprToOriginID.end())
       return It->second;
 
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(&E)) {
-      // Origin of DeclRefExpr is that of the declaration it refers to.
-      return getOrCreate(*DRE->getDecl());
-    }
     OriginID NewID = getNextOriginID();
     addOrigin(NewID, E);
     ExprToOriginID[&E] = NewID;
@@ -234,7 +238,8 @@ public:
     return nullptr;
   }
 
-  virtual void dump(llvm::raw_ostream &OS, const OriginManager &) const {
+  virtual void dump(llvm::raw_ostream &OS, const LoanManager &,
+                    const OriginManager &) const {
     OS << "Fact (Kind: " << static_cast<int>(K) << ")\n";
   }
 };
@@ -249,8 +254,11 @@ public:
   IssueFact(LoanID LID, OriginID OID) : Fact(Kind::Issue), LID(LID), OID(OID) {}
   LoanID getLoanID() const { return LID; }
   OriginID getOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
-    OS << "Issue (LoanID: " << getLoanID() << ", ToOrigin: ";
+  void dump(llvm::raw_ostream &OS, const LoanManager &LM,
+            const OriginManager &OM) const override {
+    OS << "Issue (";
+    LM.getLoan(getLoanID()).dump(OS);
+    OS << ", ToOrigin: ";
     OM.dump(getOriginID(), OS);
     OS << ")\n";
   }
@@ -269,8 +277,11 @@ public:
   LoanID getLoanID() const { return LID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
-    OS << "Expire (LoanID: " << getLoanID() << ")\n";
+  void dump(llvm::raw_ostream &OS, const LoanManager &LM,
+            const OriginManager &) const override {
+    OS << "Expire (";
+    LM.getLoan(getLoanID()).dump(OS);
+    OS << ")\n";
   }
 };
 
@@ -287,7 +298,8 @@ public:
       : Fact(Kind::AssignOrigin), OIDDest(OIDDest), OIDSrc(OIDSrc) {}
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override {
     OS << "AssignOrigin (Dest: ";
     OM.dump(getDestOriginID(), OS);
     OS << ", Src: ";
@@ -306,7 +318,8 @@ public:
 
   ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
   OriginID getReturnedOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override {
     OS << "ReturnOfOrigin (";
     OM.dump(getReturnedOriginID(), OS);
     OS << ")\n";
@@ -314,22 +327,29 @@ public:
 };
 
 class UseFact : public Fact {
-  OriginID UsedOrigin;
   const Expr *UseExpr;
+  // True if this use is a write operation (e.g., left-hand side of assignment).
+  // Write operations are exempted from use-after-free checks.
+  bool IsWritten = false;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(OriginID UsedOrigin, const Expr *UseExpr)
-      : Fact(Kind::Use), UsedOrigin(UsedOrigin), UseExpr(UseExpr) {}
+  UseFact(const Expr *UseExpr) : Fact(Kind::Use), UseExpr(UseExpr) {}
 
-  OriginID getUsedOrigin() const { return UsedOrigin; }
+  OriginID getUsedOrigin(const OriginManager &OM) const {
+    // TODO: Remove const cast and make OriginManager::get as const.
+    return const_cast<OriginManager &>(OM).get(*UseExpr);
+  }
   const Expr *getUseExpr() const { return UseExpr; }
+  void markAsWritten() { IsWritten = true; }
+  bool isWritten() const { return IsWritten; }
 
-  void dump(llvm::raw_ostream &OS, const OriginManager &OM) const override {
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override {
     OS << "Use (";
-    OM.dump(getUsedOrigin(), OS);
-    OS << ")\n";
+    OM.dump(getUsedOrigin(OM), OS);
+    OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
   }
 };
 
@@ -346,7 +366,8 @@ public:
 
   StringRef getAnnotation() const { return Annotation; }
 
-  void dump(llvm::raw_ostream &OS, const OriginManager &) const override {
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &) const override {
     OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
   }
 };
@@ -385,7 +406,7 @@ public:
       if (It != BlockToFactsMap.end()) {
         for (const Fact *F : It->second) {
           llvm::dbgs() << "    ";
-          F->dump(llvm::dbgs(), OriginMgr);
+          F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
         }
       }
       llvm::dbgs() << "  End of Block\n";
@@ -431,9 +452,49 @@ public:
   void VisitDeclStmt(const DeclStmt *DS) {
     for (const Decl *D : DS->decls())
       if (const auto *VD = dyn_cast<VarDecl>(D))
-        if (hasOrigin(VD->getType()))
+        if (hasOrigin(VD))
           if (const Expr *InitExpr = VD->getInit())
             addAssignOriginFact(*VD, *InitExpr);
+  }
+
+  void VisitDeclRefExpr(const DeclRefExpr *DRE) {
+    handleUse(DRE);
+    // For non-pointer/non-view types, a reference to the variable's storage
+    // is a borrow. We create a loan for it.
+    // For pointer/view types, we stick to the existing model for now and do
+    // not create an extra origin for the l-value expression itself.
+
+    // TODO: A single origin for a `DeclRefExpr` for a pointer or view type is
+    // not sufficient to model the different levels of indirection. The current
+    // single-origin model cannot distinguish between a loan to the variable's
+    // storage and a loan to what it points to. A multi-origin model would be
+    // required for this.
+    if (!isPointerType(DRE->getType())) {
+      if (const Loan *L = createLoan(DRE)) {
+        OriginID ExprOID = FactMgr.getOriginMgr().getOrCreate(*DRE);
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<IssueFact>(L->ID, ExprOID));
+      }
+    }
+  }
+
+  void VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
+    if (isGslPointerType(CCE->getType())) {
+      handleGSLPointerConstruction(CCE);
+      return;
+    }
+  }
+
+  void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+    // Specifically for conversion operators,
+    // like `std::string_view p = std::string{};`
+    if (isGslPointerType(MCE->getType()) &&
+        isa<CXXConversionDecl>(MCE->getCalleeDecl())) {
+      // The argument is the implicit object itself.
+      handleFunctionCall(MCE, MCE->getMethodDecl(),
+                         {MCE->getImplicitObjectArgument()});
+    }
+    // FIXME: A more general VisitCallExpr could also be used here.
   }
 
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N) {
@@ -443,42 +504,31 @@ public:
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
-    if (!hasOrigin(ICE->getType()))
+    if (!hasOrigin(ICE))
       return;
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
-    // TODO: Consider if this is actually useful in practice. Alternatively, we
-    // could directly use the sub-expression's OriginID instead of creating a
-    // new one.
     addAssignOriginFact(*ICE, *ICE->getSubExpr());
   }
 
   void VisitUnaryOperator(const UnaryOperator *UO) {
     if (UO->getOpcode() == UO_AddrOf) {
       const Expr *SubExpr = UO->getSubExpr();
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
-        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-          // Check if it's a local variable.
-          if (VD->hasLocalStorage()) {
-            OriginID OID = FactMgr.getOriginMgr().getOrCreate(*UO);
-            AccessPath AddrOfLocalVarPath(VD);
-            const Loan &L =
-                FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath, UO);
-            CurrentBlockFacts.push_back(
-                FactMgr.createFact<IssueFact>(L.ID, OID));
-          }
-        }
-      }
-    } else if (UO->getOpcode() == UO_Deref) {
-      // This is a pointer use, like '*p'.
-      OriginID OID = FactMgr.getOriginMgr().get(*UO->getSubExpr());
-      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(OID, UO));
+      // Taking address of a pointer-type expression is not yet supported and
+      // will be supported in multi-origin model.
+      if (isPointerType(SubExpr->getType()))
+        return;
+      // The origin of an address-of expression (e.g., &x) is the origin of
+      // its sub-expression (x). This fact will cause the dataflow analysis
+      // to propagate any loans held by the sub-expression's origin to the
+      // origin of this UnaryOperator expression.
+      addAssignOriginFact(*UO, *SubExpr);
     }
   }
 
   void VisitReturnStmt(const ReturnStmt *RS) {
     if (const Expr *RetExpr = RS->getRetValue()) {
-      if (hasOrigin(RetExpr->getType())) {
+      if (hasOrigin(RetExpr)) {
         OriginID OID = FactMgr.getOriginMgr().getOrCreate(*RetExpr);
         CurrentBlockFacts.push_back(
             FactMgr.createFact<ReturnOfOriginFact>(OID));
@@ -487,41 +537,39 @@ public:
   }
 
   void VisitBinaryOperator(const BinaryOperator *BO) {
-    if (BO->isAssignmentOp()) {
-      const Expr *LHSExpr = BO->getLHS();
-      const Expr *RHSExpr = BO->getRHS();
+    if (BO->isAssignmentOp())
+      handleAssignment(BO->getLHS(), BO->getRHS());
+  }
 
-      // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`
-      // LHS must be a pointer/reference type that can be an origin.
-      // RHS must also represent an origin (either another pointer/ref or an
-      // address-of).
-      if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-        if (const auto *VD_LHS =
-                dyn_cast<ValueDecl>(DRE_LHS->getDecl()->getCanonicalDecl());
-            VD_LHS && hasOrigin(VD_LHS->getType()))
-          addAssignOriginFact(*VD_LHS, *RHSExpr);
-    }
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2)
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE) {
     // Check if this is a test point marker. If so, we are done with this
     // expression.
-    if (VisitTestPoint(FCE))
+    if (handleTestPoint(FCE))
       return;
-    // Visit as normal otherwise.
-    Base::VisitCXXFunctionalCastExpr(FCE);
+    if (isGslPointerType(FCE->getType()))
+      addAssignOriginFact(*FCE, *FCE->getSubExpr());
   }
 
-private:
-  // Check if a type has an origin.
-  bool hasOrigin(QualType QT) { return QT->isPointerOrReferenceType(); }
+  void VisitInitListExpr(const InitListExpr *ILE) {
+    if (!hasOrigin(ILE))
+      return;
+    // For list initialization with a single element, like `View{...}`, the
+    // origin of the list itself is the origin of its single element.
+    if (ILE->getNumInits() == 1)
+      addAssignOriginFact(*ILE, *ILE->getInit(0));
+  }
 
-  template <typename Destination, typename Source>
-  void addAssignOriginFact(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE) {
+    if (!hasOrigin(MTE))
+      return;
+    // A temporary object's origin is the same as the origin of the
+    // expression that initializes it.
+    addAssignOriginFact(*MTE, *MTE->getSubExpr());
   }
 
   void handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
@@ -546,9 +594,90 @@ private:
     }
   }
 
+private:
+  static bool isGslPointerType(QualType QT) {
+    if (const auto *RD = QT->getAsCXXRecordDecl()) {
+      // We need to check the template definition for specializations.
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+        return CTSD->getSpecializedTemplate()
+            ->getTemplatedDecl()
+            ->hasAttr<PointerAttr>();
+      return RD->hasAttr<PointerAttr>();
+    }
+    return false;
+  }
+
+  static bool isPointerType(QualType QT) {
+    return QT->isPointerOrReferenceType() || isGslPointerType(QT);
+  }
+  // Check if a type has an origin.
+  static bool hasOrigin(const Expr *E) {
+    return E->isGLValue() || isPointerType(E->getType());
+  }
+
+  static bool hasOrigin(const VarDecl *VD) {
+    return isPointerType(VD->getType());
+  }
+
+  void handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
+    assert(isGslPointerType(CCE->getType()));
+    if (CCE->getNumArgs() != 1)
+      return;
+    if (hasOrigin(CCE->getArg(0)))
+      addAssignOriginFact(*CCE, *CCE->getArg(0));
+    else
+      // This could be a new borrow.
+      handleFunctionCall(CCE, CCE->getConstructor(),
+                         {CCE->getArgs(), CCE->getNumArgs()});
+  }
+
+  /// Checks if a call-like expression creates a borrow by passing a value to a
+  /// reference parameter, creating an IssueFact if it does.
+  void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
+                          ArrayRef<const Expr *> Args) {
+    if (!FD)
+      return;
+    // TODO: Handle more than one arguments.
+    for (unsigned I = 0; I <= 0 /*Args.size()*/; ++I) {
+      const Expr *ArgExpr = Args[I];
+
+      // Propagate origins for CXX this.
+      if (FD->isCXXClassMember() && I == 0) {
+        addAssignOriginFact(*Call, *ArgExpr);
+        continue;
+      }
+      // The parameter is a pointer, reference, or gsl::Pointer.
+      // This is a borrow. We propagate the origin from the argument expression
+      // at the call site to the parameter declaration in the callee.
+      if (hasOrigin(ArgExpr))
+        addAssignOriginFact(*Call, *ArgExpr);
+    }
+  }
+
+  /// Creates a loan for the storage path of a given declaration reference.
+  /// This function should be called whenever a DeclRefExpr represents a borrow.
+  /// \param DRE The declaration reference expression that initiates the borrow.
+  /// \return The new Loan on success, nullptr otherwise.
+  const Loan *createLoan(const DeclRefExpr *DRE) {
+    if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
+      AccessPath Path(VD);
+      // The loan is created at the location of the DeclRefExpr.
+      return &FactMgr.getLoanMgr().addLoan(Path, DRE);
+    }
+    return nullptr;
+  }
+
+  template <typename Destination, typename Source>
+  void addAssignOriginFact(const Destination &D, const Source &S) {
+    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
+    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
+  }
+
   /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
   /// If so, creates a `TestPointFact` and returns true.
-  bool VisitTestPoint(const CXXFunctionalCastExpr *FCE) {
+  bool handleTestPoint(const CXXFunctionalCastExpr *FCE) {
     if (!FCE->getType()->isVoidType())
       return false;
 
@@ -567,9 +696,50 @@ private:
     return false;
   }
 
+  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr) {
+    if (!hasOrigin(LHSExpr))
+      return;
+    // Find the underlying variable declaration for the left-hand side.
+    if (const auto *DRE_LHS =
+            dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenImpCasts())) {
+      markUseAsWrite(DRE_LHS);
+      if (const auto *VD_LHS = dyn_cast<ValueDecl>(DRE_LHS->getDecl()))
+        // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`.
+        // LHS must be a pointer/reference type that can be an origin. RHS must
+        // also represent an origin (either another pointer/ref or an
+        // address-of).
+        addAssignOriginFact(*VD_LHS, *RHSExpr);
+    }
+  }
+
+  // A DeclRefExpr will be treated as a use of the referenced decl. It will be
+  // checked for use-after-free unless it is later marked as being written to
+  // (e.g. on the left-hand side of an assignment).
+  void handleUse(const DeclRefExpr *DRE) {
+    if (isPointerType(DRE->getType())) {
+      UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+      CurrentBlockFacts.push_back(UF);
+      assert(!UseFacts.contains(DRE));
+      UseFacts[DRE] = UF;
+    }
+  }
+
+  void markUseAsWrite(const DeclRefExpr *DRE) {
+    if (!isPointerType(DRE->getType()))
+      return;
+    assert(UseFacts.contains(DRE));
+    UseFacts[DRE]->markAsWritten();
+  }
+
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+  // To distinguish between reads and writes for use-after-free checks, this map
+  // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
+  // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
+  // corresponding to the left-hand side is updated to be a "write", thereby
+  // exempting it from the check.
+  llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
 };
 
 // ========================================================================= //
@@ -740,10 +910,13 @@ template <typename T>
 static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
                                   llvm::ImmutableSet<T> B,
                                   typename llvm::ImmutableSet<T>::Factory &F) {
+  if (A == B)
+    return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
   for (const T &E : B)
-    A = F.add(A, E);
+    if (!A.contains(E))
+      A = F.add(A, E);
   return A;
 }
 
@@ -777,10 +950,11 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
   for (const auto &Entry : B) {
     const K &Key = Entry.first;
     const V &ValB = Entry.second;
-    if (const V *ValA = A.lookup(Key))
-      A = F.add(A, Key, JoinValues(*ValA, ValB));
-    else
+    const V *ValA = A.lookup(Key);
+    if (!ValA)
       A = F.add(A, Key, ValB);
+    else if (*ValA != ValB)
+      A = F.add(A, Key, JoinValues(*ValA, ValB));
   }
   return A;
 }
@@ -1032,8 +1206,9 @@ public:
   /// graph. It determines if the loans held by the used origin have expired
   /// at the point of use.
   void checkUse(const UseFact *UF) {
-
-    OriginID O = UF->getUsedOrigin();
+    if (UF->isWritten())
+      return;
+    OriginID O = UF->getUsedOrigin(FactMgr.getOriginMgr());
 
     // Get the set of loans that the origin might hold at this program point.
     LoanSet HeldLoans = LoanPropagation.getLoans(O, UF);

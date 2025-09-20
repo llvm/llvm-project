@@ -68,14 +68,14 @@ public:
   {
   }
 
-  constexpr bool operator==(OutputConfig RHS) const {
+  bool operator==(OutputConfig RHS) const {
 #define HANDLE_OUTPUT_CONFIG_FLAG(NAME, DEFAULT)                               \
   if (NAME != RHS.NAME)                                                        \
     return false;
 #include "llvm/Support/VirtualOutputConfig.def"
     return true;
   }
-  constexpr bool operator!=(OutputConfig RHS) const { return !operator==(RHS); }
+  bool operator!=(OutputConfig RHS) const { return !operator==(RHS); }
 
 private:
 #define HANDLE_OUTPUT_CONFIG_FLAG(NAME, DEFAULT) bool NAME : 1;
