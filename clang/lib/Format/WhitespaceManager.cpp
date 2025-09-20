@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WhitespaceManager.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
@@ -286,7 +285,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
 static void
 AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                    unsigned Column, bool RightJustify,
-                   ArrayRef<const unsigned> Matches,
+                   ArrayRef<unsigned> Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
   int Shift = 0;
 
