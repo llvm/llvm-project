@@ -11,6 +11,8 @@ public:
 
   static void createPushRegisters(MCInst &Inst1, MCInst &Inst2, MCPhysReg Reg1,
                                   MCPhysReg Reg2);
+
+  bool shouldRecordCodeRelocation(unsigned Type) const override;
 };
 
 } // namespace bolt
