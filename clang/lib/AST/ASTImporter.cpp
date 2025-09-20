@@ -1069,22 +1069,22 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (Expr *E = Record->dyn_cast<Expr *>()) {
+      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
       } else {
-        auto Pair = Record->dyn_cast<std::pair<SourceLocation, StringRef> *>();
+        auto Pair =
+            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
           return ToPairFirst.takeError();
         StringRef ToPairSecond = ImportASTStringRef(Pair->second);
-        ToSat.Details.emplace_back(
-            new (Importer.getToContext())
-                ConstraintSatisfaction::SubstitutionDiagnostic{
-                    ToPairFirst.get(), ToPairSecond});
+        ToSat.Details.emplace_back(new (Importer.getToContext())
+                                       ConstraintSubstitutionDiagnostic{
+                                           ToPairFirst.get(), ToPairSecond});
       }
     }
   }

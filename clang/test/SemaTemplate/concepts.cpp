@@ -1002,7 +1002,7 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; //#GH54678-ill-formed-concept
 // expected-error@-1 {{a concept definition cannot refer to itself}} \
 // expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
 // expected-note@-1 {{declared here}}
@@ -1023,8 +1023,7 @@ template<class T> void eee(T t) // expected-note {{candidate template ignored: c
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
 template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
-
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'False'}}
 void test() {
     aaa(42); // expected-error {{no matching function}}
     bbb(42L); // expected-error{{no matching function}}
@@ -1264,12 +1263,7 @@ C auto x = 0;
 // expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
 // expected-note@-1 {{in instantiation of default argument}}
 
-// This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
-// Which makes us behave like GCC.
 static_assert(f(0));
-// expected-error@-1 {{no matching function for call}} \
-// expected-note@#GH61824_f {{constraints not satisfied}} \
-// expected-note@#T_Type {{type 'int' cannot be used prior to '::'}}
 
 }
 
@@ -1278,4 +1272,43 @@ template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
 ([](auto) { return true; }) < PerfectSquare <class T>;
 // expected-error@-1 {{declaration of 'T' shadows template parameter}} \
 // expected-error@-1 {{a concept definition cannot refer to itself}}
+
+}
+namespace GH61811{
+template <class T> struct A { static const int x = 42; };
+template <class Ta> concept A42 = A<Ta>::x == 42;
+template <class Tv> concept Void = __is_same_as(Tv, void);
+template <class Tb, class Ub> concept A42b = Void<Tb> || A42<Ub>;
+template <class Tc> concept R42c = A42b<Tc, Tc&>;
+static_assert (R42c<void>);
+}
+
+namespace parameter_mapping_regressions {
+
+namespace case1 {
+
+template <template <class> class> using __meval = struct __q;
+template <template <class> class _Tp>
+concept __mvalid = requires { typename __meval<_Tp>; };
+template <class _Fn>
+concept __minvocable = __mvalid<_Fn::template __f>;
+template <class...> struct __mdefer_;
+template <class _Fn, class... _Args>
+  requires __minvocable<_Fn>
+struct __mdefer_<_Fn, _Args...> {};
+template <class = __q> struct __mtransform {
+  template <class> using __f = int;
+};
+struct __completion_domain_or_none_ : __mdefer_<__mtransform<>> {};
+
+}
+
+namespace case2 {
+
+template<auto& Q, class P> concept C = Q.template operator()<P>();
+template<class P> concept E = C<[]<class Ty>{ return false; }, P>;
+static_assert(!E<int>);
+
+}
+
 }
