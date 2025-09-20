@@ -545,7 +545,8 @@ public:
   template <typename... Ts>
   hash_code combine(size_t length, char *buffer_ptr, char *buffer_end,
                     const Ts &...args) {
-    (combine_data(length, buffer_ptr, buffer_end, get_hashable_data(args)),
+    ((void)combine_data(length, buffer_ptr, buffer_end,
+                        get_hashable_data(args)),
      ...);
 
     // Finalize the hash by flushing any remaining data in the buffer.
