@@ -4875,8 +4875,7 @@ MachineInstr *AArch64InstructionSelector::emitConjunctionRec(
       auto Dst = MRI.cloneVirtualRegister(LHS);
       if (isa<GICmp>(Cmp))
         return emitSUBS(Dst, Cmp->getOperand(2), Cmp->getOperand(3), MIB);
-      return emitFPCompare(Cmp->getOperand(2).getReg(),
-                           Cmp->getOperand(3).getReg(), MIB);
+      return emitFPCompare(LHS, RHS, MIB, CC);
     }
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, Predicate, OutCC, MIB);
