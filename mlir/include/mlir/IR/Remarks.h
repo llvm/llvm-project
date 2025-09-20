@@ -13,6 +13,8 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -21,6 +23,7 @@
 #include <optional>
 
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Value.h"
 
@@ -60,22 +63,27 @@ struct RemarkOpts {
   StringRef categoryName;    // Category name (subject to regex filtering)
   StringRef subCategoryName; // Subcategory name
   StringRef functionName;    // Function name if available
+  bool postponed = false;    // Postpone showing the remark
 
   // Construct RemarkOpts from a remark name.
   static constexpr RemarkOpts name(StringRef n) {
-    return RemarkOpts{n, {}, {}, {}};
+    return RemarkOpts{n, {}, {}, {}, false};
   }
   /// Return a copy with the category set.
   constexpr RemarkOpts category(StringRef v) const {
-    return {remarkName, v, subCategoryName, functionName};
+    return {remarkName, v, subCategoryName, functionName, postponed};
   }
   /// Return a copy with the subcategory set.
   constexpr RemarkOpts subCategory(StringRef v) const {
-    return {remarkName, categoryName, v, functionName};
+    return {remarkName, categoryName, v, functionName, postponed};
   }
   /// Return a copy with the function name set.
   constexpr RemarkOpts function(StringRef v) const {
-    return {remarkName, categoryName, subCategoryName, v};
+    return {remarkName, categoryName, subCategoryName, v, postponed};
+  }
+  /// Return a copy with the postponed flag set.
+  constexpr RemarkOpts postpone() const {
+    return {remarkName, categoryName, subCategoryName, functionName, true};
   }
 };
 
@@ -92,10 +100,10 @@ public:
          RemarkOpts opts)
       : remarkKind(remarkKind), functionName(opts.functionName), loc(loc),
         categoryName(opts.categoryName), subCategoryName(opts.subCategoryName),
-        remarkName(opts.remarkName) {
+        remarkName(opts.remarkName), postponed(opts.postponed) {
     if (!categoryName.empty() && !subCategoryName.empty()) {
       (llvm::Twine(categoryName) + ":" + subCategoryName)
-          .toStringRef(fullCategoryName);
+          .toStringRef(combinedCategoryName);
     }
   }
 
@@ -144,14 +152,14 @@ public:
 
   llvm::StringRef getCategoryName() const { return categoryName; }
 
-  llvm::StringRef getFullCategoryName() const {
+  llvm::StringRef getCombinedCategoryName() const {
     if (categoryName.empty() && subCategoryName.empty())
       return {};
     if (subCategoryName.empty())
       return categoryName;
     if (categoryName.empty())
       return subCategoryName;
-    return fullCategoryName;
+    return combinedCategoryName;
   }
 
   StringRef getRemarkName() const {
@@ -168,6 +176,8 @@ public:
 
   StringRef getRemarkTypeString() const;
 
+  bool isPostponed() const { return postponed; }
+
 protected:
   /// Keeps the MLIR diagnostic kind, which is used to determine the
   /// diagnostic kind in the LLVM remark streamer.
@@ -183,13 +193,16 @@ protected:
   StringRef subCategoryName;
 
   /// Combined name for category and sub-category
-  SmallString<64> fullCategoryName;
+  SmallString<64> combinedCategoryName;
 
   /// Remark identifier
   StringRef remarkName;
 
   /// Args collected via the streaming interface.
   SmallVector<Arg, 4> args;
+
+  /// Whether the remark is postponed (to be shown later).
+  bool postponed = false;
 
 private:
   /// Convert the MLIR diagnostic severity to LLVM diagnostic severity.
@@ -344,6 +357,10 @@ public:
 
 class RemarkEngine {
 private:
+  /// Postponed remarks. They are deferred to the end of the pipeline, where the
+  /// user can intercept them for custom processing, otherwise they will be
+  /// reported on engine destruction.
+  llvm::DenseSet<Remark> postponedRemarks;
   /// Regex that filters missed optimization remarks: only matching one are
   /// reported.
   std::optional<llvm::Regex> missFilter;
@@ -392,6 +409,12 @@ private:
   InFlightRemark emitIfEnabled(Location loc, RemarkOpts opts,
                                bool (RemarkEngine::*isEnabled)(StringRef)
                                    const);
+  /// Emit all postponed remarks.
+  void emitPostponedRemarks();
+
+  /// Report a remark. When `forcePrintPostponedRemarks` is true, the remark
+  /// will be printed even if it is postponed.
+  void reportImpl(const Remark &remark);
 
 public:
   /// Default constructor is deleted, use the other constructor.
@@ -411,7 +434,7 @@ public:
                            std::string *errMsg);
 
   /// Report a remark.
-  void report(const Remark &&remark);
+  void report(const Remark &remark);
 
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
@@ -428,6 +451,17 @@ public:
   /// Report an analysis remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemarkAnalysis(Location loc, RemarkOpts opts);
+
+  /// Get the postponed remarks.
+  const DenseSet<Remark> &getPostponedRemarks() const { return postponedRemarks; }
+
+  /// Clear the postponed remarks.
+  void clearPostponedRemarks() { postponedRemarks.clear(); }
+
+  /// Drop a postponed remark.
+  bool dropPostponedRemark(Remark &remark) {
+    return postponedRemarks.erase(remark);
+  }
 };
 
 template <typename Fn, typename... Args>
@@ -498,6 +532,21 @@ inline detail::InFlightRemark analysis(Location loc, RemarkOpts opts) {
   return withEngine(&detail::RemarkEngine::emitOptimizationRemarkAnalysis, loc,
                     opts);
 }
+//===----------------------------------------------------------------------===//
+// Utils
+//===----------------------------------------------------------------------===//
+
+/// Drop a postponed remark.
+inline bool dropPostponedRemark(Location loc, RemarkKind remarkKind,
+                                RemarkOpts opts) {
+  MLIRContext *ctx = loc->getContext();
+  detail::Remark remark(remarkKind, DiagnosticSeverity::Remark, loc, opts);
+
+  // Drop the remark from the postponed remarks.
+  if (detail::RemarkEngine *engine = ctx->getRemarkEngine())
+    return engine->dropPostponedRemark(remark);
+  return false;
+}
 
 //===----------------------------------------------------------------------===//
 // Setup
@@ -516,5 +565,65 @@ LogicalResult enableOptimizationRemarks(
     const remark::RemarkCategories &cats, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark
+
+//===----------------------------------------------------------------------===//
+// DenseMapInfo specialization for Remark
+//===----------------------------------------------------------------------===//
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::remark::detail::Remark> {
+  static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
+  static constexpr StringRef kTombstoneKey = "<TOMBSTONE_KEY>";
+
+  /// Helper to provide a static dummy context for sentinel keys.
+  static mlir::MLIRContext *getStaticDummyContext() {
+    static mlir::MLIRContext dummyContext;
+    return &dummyContext;
+  }
+
+  /// Create an empty remark
+  static inline mlir::remark::detail::Remark getEmptyKey() {
+    return mlir::remark::detail::Remark(
+        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
+        mlir::UnknownLoc::get(getStaticDummyContext()),
+        mlir::remark::RemarkOpts::name(kEmptyKey));
+  }
+
+  /// Create a dead remark
+  static inline mlir::remark::detail::Remark getTombstoneKey() {
+    return mlir::remark::detail::Remark(
+        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
+        mlir::UnknownLoc::get(getStaticDummyContext()),
+        mlir::remark::RemarkOpts::name(kTombstoneKey));
+  }
+
+  /// Compute the hash value of the remark
+  static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
+    return llvm::hash_combine(
+        remark.getLocation().getAsOpaquePointer(),
+        llvm::hash_value(remark.getRemarkName()),
+        llvm::hash_value(remark.getCombinedCategoryName()),
+        static_cast<unsigned>(remark.getRemarkType()));
+  }
+
+  static bool isEqual(const mlir::remark::detail::Remark &lhs,
+                      const mlir::remark::detail::Remark &rhs) {
+    // Check for empty/tombstone keys first
+    if (lhs.getRemarkName() == kEmptyKey ||
+        lhs.getRemarkName() == kTombstoneKey ||
+        rhs.getRemarkName() == kEmptyKey ||
+        rhs.getRemarkName() == kTombstoneKey) {
+      return lhs.getRemarkName() == rhs.getRemarkName();
+    }
+
+    // For regular remarks, compare key identifying fields
+    return lhs.getLocation() == rhs.getLocation() &&
+           lhs.getRemarkName() == rhs.getRemarkName() &&
+           lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName() &&
+           lhs.getRemarkType() == rhs.getRemarkType();
+  }
+};
+} // namespace llvm
 
 #endif // MLIR_IR_REMARKS_H

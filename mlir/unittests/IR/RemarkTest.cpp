@@ -10,9 +10,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
 #include "mlir/Remark/RemarkStreamer.h"
-#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LogicalResult.h"
@@ -280,7 +278,7 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*all=*/"",
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
                                         /*passed=*/categoryLoopunroll,
                                         /*missed=*/std::nullopt,
                                         /*analysis=*/std::nullopt,
@@ -314,5 +312,203 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // printed
   EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
   EXPECT_EQ(errOut.find(pass3Msg), std::string::npos); // filtered out
+}
+
+TEST(Remark, TestCustomOptimizationRemarkPostponeDiagnostic) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "My message";
+  const auto *pass2Msg = "My another message";
+  const auto *pass3Msg = "Do not show this message";
+
+  std::string categoryLoopunroll("LoopUnroll");
+  std::string myPassname1("myPass1");
+  std::string myPassname2("myPass2");
+  std::string funcName("myFunc");
+
+  {
+    MLIRContext context;
+    Location loc = UnknownLoc::get(&context);
+
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                        /*passed=*/categoryLoopunroll,
+                                        /*missed=*/std::nullopt,
+                                        /*analysis=*/std::nullopt,
+                                        /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), cats, true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Postponed remark should not be printed yet.
+    // Remark 1: pass, category LoopUnroll
+    {
+      remark::passed(loc, remark::RemarkOpts::name("")
+                              .category(categoryLoopunroll)
+                              .subCategory(myPassname2)
+                              .postpone())
+          << pass1Msg;
+      llvm::errs().flush();
+      std::string errOut1 = testing::internal::GetCapturedStderr();
+      // Ensure no remark has been printed yet.
+      EXPECT_TRUE(errOut1.empty())
+          << "Expected no stderr output before postponed remarks are flushed";
+    }
+    {
+      // Postponed remark should not be printed yet.
+      testing::internal::CaptureStderr();
+      // Remark 2: failure, category LoopUnroll
+      remark::failed(loc, remark::RemarkOpts::name("")
+                              .category(categoryLoopunroll)
+                              .subCategory(myPassname2)
+                              .postpone())
+          << remark::reason(pass2Msg);
+
+      llvm::errs().flush();
+      std::string errOut2 = testing::internal::GetCapturedStderr();
+      // Ensure no remark has been printed yet.
+      EXPECT_TRUE(errOut2.empty())
+          << "Expected no stderr output before postponed remarks are flushed";
+    }
+    {
+      // Remark 3: pass, category Inline (should be printed)
+      testing::internal::CaptureStderr();
+      remark::passed(loc, remark::RemarkOpts::name("")
+                              .category(categoryLoopunroll)
+                              .subCategory(myPassname1))
+          << pass3Msg;
+
+      llvm::errs().flush();
+      std::string errOut = testing::internal::GetCapturedStderr();
+      auto third = errOut.find("Custom remark:");
+      EXPECT_NE(third, std::string::npos);
+    }
+
+    testing::internal::CaptureStderr();
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Expect exactly two "Custom remark:" lines.
+  auto first = errOut.find("Custom remark:");
+  EXPECT_NE(first, std::string::npos);
+  auto second = errOut.find("Custom remark:", first + 1);
+  EXPECT_NE(second, std::string::npos);
+  auto third = errOut.find("Custom remark:", second + 1);
+  EXPECT_EQ(third, std::string::npos);
+
+  // Containment checks for messages.
+  EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // printed
+  EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
+}
+
+TEST(Remark, TestRemarkDrop) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "I am failed";
+  const auto *pass2Msg = "I succeeded";
+  std::string categoryLoopunroll("LoopUnroll");
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    Location locOther = FileLineColLoc::get(&context, "test.cpp", 55, 5);
+
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*all=*/categoryLoopunroll,
+                                        /*passed=*/categoryLoopunroll,
+                                        /*missed=*/categoryLoopunroll,
+                                        /*analysis=*/categoryLoopunroll,
+                                        /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), cats, true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // [Pass-early]: Failed remark is emitted as postponed but not shown
+    {
+      remark::failed(loc, remark::RemarkOpts::name("unroller")
+                              .category(categoryLoopunroll)
+                              .postpone())
+          << pass1Msg;
+
+      // Ensure no remark has been printed yet.
+      llvm::errs().flush();
+      std::string errOut1 = testing::internal::GetCapturedStderr();
+      EXPECT_TRUE(errOut1.empty())
+          << "Expected no stderr output before postponed remarks are flushed";
+    }
+    testing::internal::CaptureStderr();
+    // [Pass-late]: Drop the failed remark, and emit a passed remark
+    {
+      // Step 1. Drop the remark from early-pass
+      bool dropped = remark::dropPostponedRemark(
+          loc, remark::RemarkKind::RemarkFailure,
+          remark::RemarkOpts::name("unroller").category(categoryLoopunroll));
+
+      EXPECT_TRUE(dropped) << "Expected the remark to be dropped";
+
+      // Step 2. Print the pass remark
+      remark::passed(
+          loc,
+          remark::RemarkOpts::name("unroller").category(categoryLoopunroll))
+          << pass2Msg;
+    }
+  }
+  // done with the compilation
+  llvm::errs().flush();
+  std::string errOut2 = testing::internal::GetCapturedStderr();
+
+  EXPECT_EQ(errOut2.find(pass1Msg), std::string::npos);
+  EXPECT_NE(errOut2.find(pass2Msg), std::string::npos);
+}
+
+TEST(Remark, TestRemarkCannotDrop) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "I am failed";
+  const auto *pass2Msg = "I succeeded";
+  std::string categoryLoopunroll("LoopUnroll");
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    Location locOther = FileLineColLoc::get(&context, "test.cpp", 55, 5);
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*all=*/categoryLoopunroll,
+                                        /*passed=*/categoryLoopunroll,
+                                        /*missed=*/categoryLoopunroll,
+                                        /*analysis=*/categoryLoopunroll,
+                                        /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), cats, true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+    // [Pass-early]: Failed remark is emitted as postponed but not shown
+    {
+      remark::failed(locOther, remark::RemarkOpts::name("unroller")
+                                   .category(categoryLoopunroll)
+                                   .postpone())
+          << pass1Msg;
+    }
+    // [Pass-late]: Drop the failed remark, and emit a passed remark
+    {
+      // Step 1. Drop the remark from early-pass
+      bool dropped = remark::dropPostponedRemark(
+          loc, remark::RemarkKind::RemarkFailure,
+          remark::RemarkOpts::name("unroller").category(categoryLoopunroll));
+
+      EXPECT_FALSE(dropped) << "Expected the remark should not be dropped it "
+                               "has different location";
+
+      // Step 2. Print the pass remark
+      remark::passed(
+          loc,
+          remark::RemarkOpts::name("unroller").category(categoryLoopunroll))
+          << pass2Msg;
+    }
+  }
+  // done with the compilation
+  llvm::errs().flush();
+  std::string errOut3 = testing::internal::GetCapturedStderr();
+  EXPECT_NE(errOut3.find(pass1Msg), std::string::npos); // printed
+  EXPECT_NE(errOut3.find(pass2Msg), std::string::npos); // printed
 }
 } // namespace
