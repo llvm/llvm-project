@@ -891,6 +891,10 @@ void StmtPrinter::VisitOMPTaskwaitDirective(OMPTaskwaitDirective *Node) {
 
 void StmtPrinter::VisitOMPAssumeDirective(OMPAssumeDirective *Node) {
   Indent() << "#pragma omp assume";
+}
+
+void StmtPrinter::VisitOMPTaskgraphDirective(OMPTaskgraphDirective *Node) {
+  Indent() << "#pragma omp taskgraph";
   PrintOMPExecutableDirective(Node);
 }
 
