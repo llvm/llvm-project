@@ -41,6 +41,8 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
+#include "clang/Summary/SummaryConsumer.h"
+#include "clang/Summary/SummarySerialization.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -754,10 +756,56 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
   return new PrintingCodeCompleteConsumer(Opts, OS);
 }
 
+void CompilerInstance::createSummaryConsumer(FrontendInputFile Input) {
+  StringRef EmitSummaryDir = getFrontendOpts().EmitSummaryDir;
+  if (EmitSummaryDir.empty() || !Input.isFile())
+    return;
+
+  llvm::SmallString<32> SummaryFile = EmitSummaryDir;
+  llvm::sys::path::append(SummaryFile, llvm::sys::path::filename(Input.getFile()));
+  
+  StringRef Format = getFrontendOpts().SummaryFormat;
+  llvm::sys::path::replace_extension(SummaryFile,
+                                     Format == "binary" ? "summary" : Format);
+
+  std::error_code EC;
+  SummaryOS.reset(new llvm::raw_fd_ostream(SummaryFile, EC,
+                                           llvm::sys::fs::CD_CreateAlways));
+
+  if (EC) {
+    SummaryOS = nullptr;
+    return;
+  }
+
+  if (!hasSummarySerializer())
+    createSummarySerializer();
+
+  TheSummaryConsumer.reset(
+      new SerializingSummaryConsumer(getSummarySerializer(), *SummaryOS));
+}
+
+void CompilerInstance::createSummarySerializer() {
+  StringRef Format = getFrontendOpts().SummaryFormat;
+  SummarySerializer *Serializer;
+
+  if (!hasSummaryContext())
+    createSummaryContext();
+
+  if (Format == "yaml")
+    Serializer = new YAMLSummarySerializer(*getSummaryContext());
+  else if (Format == "binary")
+    Serializer = new BinarySummarySerializer(*getSummaryContext());
+  else
+    Serializer = new JSONSummarySerializer(*getSummaryContext());
+
+  TheSummarySerializer.reset(Serializer);
+}
+
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer));
+                         TUKind, CompletionConsumer, getSummaryContext(),
+                         getSummaryConsumer()));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

@@ -21,19 +21,20 @@
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
+#include "clang/Summary/SummaryContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cassert>
 #include <optional>
@@ -178,10 +179,13 @@ private:
   /// The flag, which specifies the mode of inlining for the engine.
   InliningModes HowToInline;
 
+  const SummaryContext *SummaryCtx;
+
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
-             SetOfConstDecls *VisitedCalleesIn,
-             FunctionSummariesTy *FS, InliningModes HowToInlineIn);
+             SetOfConstDecls *VisitedCalleesIn, FunctionSummariesTy *FS,
+             InliningModes HowToInlineIn,
+             const SummaryContext *SummaryCtx = nullptr);
 
   virtual ~ExprEngine() = default;
 
@@ -216,6 +220,8 @@ public:
   getCrossTranslationUnitContext() {
     return &CTU;
   }
+
+  const SummaryContext *getSummaryCtx() { return SummaryCtx; }
 
   const NodeBuilderContext &getBuilderContext() {
     assert(currBldrCtx);
