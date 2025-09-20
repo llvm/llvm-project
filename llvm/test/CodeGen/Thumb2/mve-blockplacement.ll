@@ -358,7 +358,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    mov lr, r0
-; CHECK-NEXT:    subs r0, #1
+; CHECK-NEXT:    cmp r0, #1
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    blt.w .LBB1_28
 ; CHECK-NEXT:  @ %bb.1: @ %for.cond2.preheader.lr.ph
@@ -426,7 +426,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:  .LBB1_5: @ %for.cond.cleanup5
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
 ; CHECK-NEXT:    adds r5, #2
-; CHECK-NEXT:    subs.w r1, r5, lr
+; CHECK-NEXT:    cmp r5, lr
 ; CHECK-NEXT:    asr.w r0, r5, #31
 ; CHECK-NEXT:    sbcs.w r0, r0, r12
 ; CHECK-NEXT:    bge.w .LBB1_28
