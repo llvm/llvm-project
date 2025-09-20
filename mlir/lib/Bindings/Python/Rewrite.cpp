@@ -9,10 +9,15 @@
 #include "Rewrite.h"
 
 #include "IRModule.h"
+#include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
+#include "mlir-c/Support.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir/Config/mlir-config.h"
+#include "nanobind/nanobind.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -35,6 +40,43 @@ public:
       mlirPDLPatternModuleDestroy(module);
   }
   MlirPDLPatternModule get() { return module; }
+
+  static nb::object fromPDLValue(MlirPDLValue value) {
+    if (mlirPDLValueIsValue(value)) {
+      return nb::cast(mlirPDLValueAsValue(value));
+    }
+    if (mlirPDLValueIsOperation(value)) {
+      return nb::cast(mlirPDLValueAsOperation(value));
+    }
+    if (mlirPDLValueIsAttribute(value)) {
+      return nb::cast(mlirPDLValueAsAttribute(value));
+    }
+    if (mlirPDLValueIsType(value)) {
+      return nb::cast(mlirPDLValueAsType(value));
+    }
+
+    throw std::runtime_error("unsupported PDL value type");
+  }
+
+  void registerRewriteFunction(const std::string &name,
+                               const nb::callable &fn) {
+    mlirPDLPatternModuleRegisterRewriteFunction(
+        get(), mlirStringRefCreate(name.data(), name.size()),
+        [](MlirPatternRewriter rewriter, MlirPDLResultList results,
+           size_t nValues, MlirPDLValue *values,
+           void *userData) -> MlirLogicalResult {
+          auto f = nb::handle(static_cast<PyObject *>(userData));
+          std::vector<nb::object> args;
+          args.reserve(nValues);
+          for (size_t i = 0; i < nValues; ++i) {
+            args.push_back(fromPDLValue(values[i]));
+          }
+          return nb::cast<bool>(f(rewriter, results, args))
+                     ? mlirLogicalResultSuccess()
+                     : mlirLogicalResultFailure();
+        },
+        fn.ptr());
+  }
 
 private:
   MlirPDLPatternModule module;
@@ -76,10 +118,27 @@ private:
 
 /// Create the `mlir.rewrite` here.
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
+  nb::class_<MlirPatternRewriter>(m, "PatternRewriter");
   //----------------------------------------------------------------------------
-  // Mapping of the top-level PassManager
+  // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+  nb::class_<MlirPDLResultList>(m, "PDLResultList")
+      .def("push_back",
+           [](MlirPDLResultList results, const PyValue &value) {
+             mlirPDLResultListPushBackValue(results, value);
+           })
+      .def("push_back",
+           [](MlirPDLResultList results, const PyOperation &op) {
+             mlirPDLResultListPushBackOperation(results, op);
+           })
+      .def("push_back",
+           [](MlirPDLResultList results, const PyType &type) {
+             mlirPDLResultListPushBackType(results, type);
+           })
+      .def("push_back", [](MlirPDLResultList results, const PyAttribute &attr) {
+        mlirPDLResultListPushBackAttribute(results, attr);
+      });
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
       .def(
           "__init__",
@@ -88,10 +147,20 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
                 PyPDLPatternModule(mlirPDLPatternModuleFromModule(module));
           },
           "module"_a, "Create a PDL module from the given module.")
-      .def("freeze", [](PyPDLPatternModule &self) {
-        return new PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
-            mlirRewritePatternSetFromPDLPatternModule(self.get())));
-      });
+      .def(
+          "freeze",
+          [](PyPDLPatternModule &self) {
+            return new PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
+                mlirRewritePatternSetFromPDLPatternModule(self.get())));
+          },
+          nb::keep_alive<0, 1>())
+      .def(
+          "register_rewrite_function",
+          [](PyPDLPatternModule &self, const std::string &name,
+             const nb::callable &fn) {
+            self.registerRewriteFunction(name, fn);
+          },
+          nb::keep_alive<1, 3>());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
   nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
