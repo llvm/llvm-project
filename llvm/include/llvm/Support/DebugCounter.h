@@ -48,6 +48,7 @@
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Range.h"
 #include <string>
 
 namespace llvm {
@@ -56,18 +57,7 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  struct Chunk {
-    int64_t Begin;
-    int64_t End;
-    LLVM_ABI void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
-  };
-
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
-
-  /// Return true on parsing error and print the error message on the
-  /// llvm::errs()
-  LLVM_ABI static bool parseChunks(StringRef Str, SmallVector<Chunk> &Res);
+  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Range> Ranges);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
@@ -176,7 +166,7 @@ protected:
     uint64_t CurrChunkIdx = 0;
     bool IsSet = false;
     std::string Desc;
-    SmallVector<Chunk> Chunks;
+    RangeUtils::RangeList Chunks;
   };
 
   DenseMap<unsigned, CounterInfo> Counters;
