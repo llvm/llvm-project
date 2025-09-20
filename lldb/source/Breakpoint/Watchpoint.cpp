@@ -10,6 +10,7 @@
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -26,45 +27,124 @@
 using namespace lldb;
 using namespace lldb_private;
 
+static bool IsValueObjectsEqual(lldb::ValueObjectSP lhs,
+                                lldb::ValueObjectSP rhs) {
+  lldbassert(lhs);
+  lldbassert(rhs);
+
+  Status error;
+
+  DataExtractor lhs_data;
+  lhs->GetData(lhs_data, error);
+  if (error.Fail())
+    return false;
+
+  DataExtractor rhs_data;
+  rhs->GetData(rhs_data, error);
+  if (error.Fail())
+    return false;
+
+  return llvm::equal(
+      llvm::iterator_range(lhs_data.GetDataStart(), lhs_data.GetDataEnd()),
+      llvm::iterator_range(rhs_data.GetDataStart(), rhs_data.GetDataEnd()));
+}
+
+CompilerType Watchpoint::AddressWatchpointCalculateStrategy::DeriveCompilerType(
+    Target &target, uint32_t size) {
+  auto type_system_or_err =
+      target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
+
+  auto err = type_system_or_err.takeError();
+  if (err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
+                   "Failed to set type: {0}");
+    return CompilerType();
+  }
+
+  auto ts = *type_system_or_err;
+  if (!ts) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
+                   "Failed to set type: Typesystem is no longer live: {0}");
+    return CompilerType();
+  }
+
+  if (size <= target.GetArchitecture().GetAddressByteSize())
+    return ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
+
+  CompilerType clang_uint8_type =
+      ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
+  return clang_uint8_type.GetArrayType(size);
+}
+
+lldb::ValueObjectSP
+Watchpoint::AddressWatchpointCalculateStrategy::CalculateWatchedValue() const {
+  if (!m_type.IsValid()) {
+    // Don't know how to report new & old values, since we couldn't make a
+    // scalar type for this watchpoint. This works around an assert in
+    // ValueObjectMemory::Create.
+    // FIXME: This should not happen, but if it does in some case we care about,
+    // we can go grab the value raw and print it as unsigned.
+    return nullptr;
+  }
+
+  // To obtain a value that represents memory at a given address, we only need
+  // an information about process.
+  // Create here an ExecutionContext from the current process.
+  ExecutionContext exe_ctx;
+  lldb::ProcessSP process_sp = m_target.GetProcessSP();
+  if (!process_sp)
+    return nullptr;
+  process_sp->CalculateExecutionContext(exe_ctx);
+
+  ConstString g_watch_name("$__lldb__watch_value");
+  Address watch_address(m_addr);
+  auto new_value_sp = ValueObjectMemory::Create(
+      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
+      watch_address, m_type);
+  new_value_sp = new_value_sp->CreateConstantValue(g_watch_name);
+  return new_value_sp;
+}
+
+lldb::ValueObjectSP
+Watchpoint::ExpressionWatchpointCalculateStrategy::CalculateWatchedValue()
+    const {
+  EvaluateExpressionOptions options;
+  options.SetUnwindOnError(true);
+  options.SetKeepInMemory(false);
+  ValueObjectSP result_value_sp;
+  ExpressionResults result_code = m_target.EvaluateExpression(
+      m_expr, m_exe_ctx.GetFramePtr(), result_value_sp, options);
+  if (result_code != eExpressionCompleted || !result_value_sp) {
+    return nullptr;
+  }
+
+  return result_value_sp;
+}
+
 Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
-                       const CompilerType *type, bool hardware)
-    : StoppointSite(0, addr, size, hardware), m_target(target),
-      m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
-      m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
-      m_watch_write(0), m_watch_modify(0), m_ignore_count(0) {
-
-  if (type && type->IsValid())
-    m_type = *type;
-  else {
-    // If we don't have a known type, then we force it to unsigned int of the
-    // right size.
-    auto type_system_or_err =
-        target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
-    if (auto err = type_system_or_err.takeError()) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                     "Failed to set type: {0}");
-    } else {
-      if (auto ts = *type_system_or_err) {
-        if (size <= target.GetArchitecture().GetAddressByteSize()) {
-          m_type =
-              ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
-        } else {
-          CompilerType clang_uint8_type =
-              ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
-          m_type = clang_uint8_type.GetArrayType(size);
-        }
-      } else
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                       "Failed to set type: Typesystem is no longer live: {0}");
-    }
-  }
-
+                       const CompilerType *type, lldb::WatchpointMode mode)
+    : StoppointSite(0, addr, size,
+                    mode == lldb::eWatchpointModeHardware ? true : false),
+      m_target(target), m_enabled(false), m_mode(mode),
+      m_is_watch_variable(false), m_is_ephemeral(false), m_disabled_count(0),
+      m_ignore_count(0), m_watch_spec_str{},
+      m_calculate_strategy{
+          AddressWatchpointCalculateStrategy{target, addr, size, type}} {
   // Set the initial value of the watched variable:
-  if (m_target.GetProcessSP()) {
-    ExecutionContext exe_ctx;
-    m_target.GetProcessSP()->CalculateExecutionContext(exe_ctx);
-    CaptureWatchedValue(exe_ctx);
-  }
+  CaptureWatchedValue(CalculateWatchedValue());
+}
+
+Watchpoint::Watchpoint(Target &target, llvm::StringRef expr, uint32_t size,
+                       ExecutionContext &exe_ctx)
+    : StoppointSite(0, LLDB_INVALID_ADDRESS, size, /*hardware =*/false),
+      m_target(target), m_enabled(false), m_mode(lldb::eWatchpointModeSoftware),
+      m_is_watch_variable(false), m_is_ephemeral(false), m_disabled_count(0),
+      m_ignore_count(0), m_watch_spec_str{expr},
+      m_calculate_strategy{ExpressionWatchpointCalculateStrategy{
+          target, m_watch_spec_str, exe_ctx}} {
+  lldbassert(!HardwareRequired());
+  // Set the initial value of the watched variable:
+  CaptureWatchedValue(CalculateWatchedValue());
 }
 
 Watchpoint::~Watchpoint() = default;
@@ -168,6 +248,10 @@ bool Watchpoint::VariableWatchpointDisabler(void *baton,
               " matched internal breakpoint execution context",
               watch_sp->GetID());
     process_sp->DisableWatchpoint(watch_sp);
+    Debugger::ReportWarning(
+        llvm::formatv("Watchpoint {0} is leaving its scope! "
+                      "Disabling this watchpoint.",
+                      watch_sp->GetID()));
     return false;
   }
   LLDB_LOGF(log,
@@ -184,72 +268,121 @@ void Watchpoint::ClearCallback() {
 
 void Watchpoint::SetDeclInfo(const std::string &str) { m_decl_str = str; }
 
-std::string Watchpoint::GetWatchSpec() { return m_watch_spec_str; }
+std::string Watchpoint::GetWatchSpec() const { return m_watch_spec_str; }
 
 void Watchpoint::SetWatchSpec(const std::string &str) {
   m_watch_spec_str = str;
-}
-
-bool Watchpoint::IsHardware() const {
-  lldbassert(m_is_hardware || !HardwareRequired());
-  return m_is_hardware;
 }
 
 bool Watchpoint::IsWatchVariable() const { return m_is_watch_variable; }
 
 void Watchpoint::SetWatchVariable(bool val) { m_is_watch_variable = val; }
 
-bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
-  ConstString g_watch_name("$__lldb__watch_value");
-  m_old_value_sp = m_new_value_sp;
-  Address watch_address(GetLoadAddress());
-  if (!m_type.IsValid()) {
-    // Don't know how to report new & old values, since we couldn't make a
-    // scalar type for this watchpoint. This works around an assert in
-    // ValueObjectMemory::Create.
-    // FIXME: This should not happen, but if it does in some case we care about,
-    // we can go grab the value raw and print it as unsigned.
-    return false;
+lldb::ValueObjectSP Watchpoint::CalculateWatchedValue() const {
+  auto caller = [](const auto &strategy) {
+    return strategy.CalculateWatchedValue();
+  };
+  auto value_obj_sp = std::visit(caller, m_calculate_strategy);
+  if (!value_obj_sp)
+    Debugger::ReportError("Watchpoint %u: Failed to calculate watched value! "
+                          "The behavior of this watchpoint may be disrupted!",
+                          m_id);
+  return value_obj_sp;
+}
+
+CompilerType Watchpoint::GetCompilerType() const {
+  const AddressWatchpointCalculateStrategy *addr_strategy =
+      std::get_if<AddressWatchpointCalculateStrategy>(&m_calculate_strategy);
+  if (!addr_strategy)
+    return CompilerType();
+  return addr_strategy->GetCompilerType();
+}
+
+bool Watchpoint::CheckWatchpointCondition(
+    const ExecutionContext &exe_ctx) const {
+  if (GetConditionText() == nullptr)
+    return true;
+
+  Log *log = GetLog(LLDBLog::Watchpoints);
+
+  // We need to make sure the user sees any parse errors in their
+  // condition, so we'll hook the constructor errors up to the
+  // debugger's Async I/O.
+  EvaluateExpressionOptions expr_options;
+  expr_options.SetUnwindOnError(true);
+  expr_options.SetIgnoreBreakpoints(true);
+  ValueObjectSP result_value_sp;
+  ExpressionResults result_code = m_target.EvaluateExpression(
+      GetConditionText(), exe_ctx.GetBestExecutionContextScope(),
+      result_value_sp, expr_options);
+
+  if (!result_value_sp || result_code != eExpressionCompleted) {
+    LLDB_LOGF(log, "Error evaluating condition:\n");
+
+    StreamString strm;
+    strm << "stopped due to an error evaluating condition of "
+            "watchpoint ";
+    GetDescription(&strm, eDescriptionLevelBrief);
+    strm << ": \"" << GetConditionText() << "\"\n";
+
+    Debugger::ReportError(strm.GetString().str(),
+                          exe_ctx.GetTargetRef().GetDebugger().GetID());
+    return true;
   }
-  m_new_value_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
-      watch_address, m_type);
-  m_new_value_sp = m_new_value_sp->CreateConstantValue(g_watch_name);
-  return (m_new_value_sp && m_new_value_sp->GetError().Success());
+
+  Scalar scalar_value;
+  if (!result_value_sp->ResolveValue(scalar_value)) {
+    LLDB_LOGF(log, "Failed to get an integer result from the expression.");
+    return true;
+  }
+
+  bool should_stop = scalar_value.ULongLong(1) != 0;
+
+  LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",
+            should_stop ? "true" : "false");
+
+  return should_stop;
 }
 
 bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
-  if (!m_watch_modify || m_watch_read)
-    return true;
-  if (!m_type.IsValid())
-    return true;
+  if (!CheckWatchpointCondition(exe_ctx)) {
+    // The condition failed, which we consider "not having hit
+    // the watchpoint".
+    return false;
+  }
 
-  ConstString g_watch_name("$__lldb__watch_value");
-  Address watch_address(GetLoadAddress());
-  ValueObjectSP newest_valueobj_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
-      watch_address, m_type);
-  newest_valueobj_sp = newest_valueobj_sp->CreateConstantValue(g_watch_name);
-  Status error;
+  lldb::ValueObjectSP current_value_sp = CalculateWatchedValue();
+  if (!current_value_sp || current_value_sp->GetError().Fail())
+    return false;
 
-  DataExtractor new_data;
-  DataExtractor old_data;
+  if (IsHardware()) {
+    // Don't stop if the watched region value is unmodified, and
+    // this is a Modify-type watchpoint.
+    if (WatchpointModify() && !WatchpointRead() &&
+        IsValueObjectsEqual(current_value_sp, m_new_value_sp))
+      return false;
+  } else {
+    if (m_new_value_sp && IsValueObjectsEqual(current_value_sp, m_new_value_sp))
+      return false;
 
-  newest_valueobj_sp->GetData(new_data, error);
-  if (error.Fail())
-    return true;
-  m_new_value_sp->GetData(old_data, error);
-  if (error.Fail())
-    return true;
+    if (m_previous_hit_value_sp &&
+        IsValueObjectsEqual(current_value_sp, m_previous_hit_value_sp))
+      return false;
 
-  if (new_data.GetByteSize() != old_data.GetByteSize() ||
-      new_data.GetByteSize() == 0)
-    return true;
+    m_previous_hit_value_sp = current_value_sp;
+  }
 
-  if (memcmp(new_data.GetDataStart(), old_data.GetDataStart(),
-             old_data.GetByteSize()) == 0)
-    return false; // Value has not changed, user requested modify watchpoint
+  // All checks are passed. Hit!
+  m_hit_counter.Increment();
 
+  // Even if ignore count > 0 consider it as a hit anyway, just
+  // don't stop at this watchpoint.
+  if (m_ignore_count) {
+    --m_ignore_count;
+    return false;
+  }
+
+  CaptureWatchedValue(current_value_sp);
   return true;
 }
 
@@ -257,12 +390,10 @@ bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
 // should continue.
 
 bool Watchpoint::ShouldStop(StoppointCallbackContext *context) {
-  m_hit_counter.Increment();
-
   return IsEnabled();
 }
 
-void Watchpoint::GetDescription(Stream *s, lldb::DescriptionLevel level) {
+void Watchpoint::GetDescription(Stream *s, lldb::DescriptionLevel level) const {
   DumpWithLevel(s, level);
 }
 
@@ -276,7 +407,7 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
   bool printed_anything = false;
 
   // For read watchpoints, don't display any before/after value changes.
-  if (m_watch_read && !m_watch_modify && !m_watch_write)
+  if (WatchpointRead() && !WatchpointModify() && !WatchpointWrite())
     return printed_anything;
 
   s->Printf("\n");
@@ -349,11 +480,12 @@ void Watchpoint::DumpWithLevel(Stream *s,
   assert(description_level >= lldb::eDescriptionLevelBrief &&
          description_level <= lldb::eDescriptionLevelVerbose);
 
-  s->Printf("Watchpoint %u: addr = 0x%8.8" PRIx64
+  s->Printf("%s Watchpoint %u: addr = 0x%8.8" PRIx64
             " size = %u state = %s type = %s%s%s",
-            GetID(), GetLoadAddress(), m_byte_size,
-            IsEnabled() ? "enabled" : "disabled", m_watch_read ? "r" : "",
-            m_watch_write ? "w" : "", m_watch_modify ? "m" : "");
+            IsHardware() ? "Hardware" : "Software", GetID(), GetLoadAddress(),
+            m_byte_size, IsEnabled() ? "enabled" : "disabled",
+            WatchpointRead() ? "r" : "", WatchpointWrite() ? "w" : "",
+            WatchpointModify() ? "m" : "");
 
   if (description_level >= lldb::eDescriptionLevelFull) {
     if (!m_decl_str.empty())
@@ -417,31 +549,34 @@ void Watchpoint::SetEnabled(bool enabled, bool notify) {
     // Within StopInfo.cpp, we purposely do disable/enable watchpoint while
     // performing watchpoint actions.
   }
+
   bool changed = enabled != m_enabled;
   m_enabled = enabled;
   if (notify && !m_is_ephemeral && changed)
     SendWatchpointChangedEvent(enabled ? eWatchpointEventTypeEnabled
                                        : eWatchpointEventTypeDisabled);
+
+  if (IsHardware() || !enabled)
+    return;
+
+  // If we enable a software watchpoint, we should update
+  // m_previous_hit_value_sp
+  m_previous_hit_value_sp = CalculateWatchedValue();
 }
 
 void Watchpoint::SetWatchpointType(uint32_t type, bool notify) {
-  int old_watch_read = m_watch_read;
-  int old_watch_write = m_watch_write;
-  int old_watch_modify = m_watch_modify;
-  m_watch_read = (type & LLDB_WATCH_TYPE_READ) != 0;
-  m_watch_write = (type & LLDB_WATCH_TYPE_WRITE) != 0;
-  m_watch_modify = (type & LLDB_WATCH_TYPE_MODIFY) != 0;
-  if (notify &&
-      (old_watch_read != m_watch_read || old_watch_write != m_watch_write ||
-       old_watch_modify != m_watch_modify))
+  if (!IsHardware() &&
+      (type & LLDB_WATCH_TYPE_READ || type & LLDB_WATCH_TYPE_WRITE)) {
+    Debugger::ReportWarning("Software watchpoint can only be a modify type, "
+                            "setting watchpoint type to modify",
+                            m_target.GetDebugger().GetID());
+    type = LLDB_WATCH_TYPE_MODIFY;
+  }
+
+  if (notify && m_watch_type != type)
     SendWatchpointChangedEvent(eWatchpointEventTypeTypeChanged);
+  m_watch_type = type;
 }
-
-bool Watchpoint::WatchpointRead() const { return m_watch_read != 0; }
-
-bool Watchpoint::WatchpointWrite() const { return m_watch_write != 0; }
-
-bool Watchpoint::WatchpointModify() const { return m_watch_modify != 0; }
 
 uint32_t Watchpoint::GetIgnoreCount() const { return m_ignore_count; }
 
