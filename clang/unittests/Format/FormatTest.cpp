@@ -17852,6 +17852,59 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
                Spaces);
 }
 
+TEST_F(FormatTest, SpaceBeforeUnderscoreParens) {
+  // Test with SpaceBeforeParens = Always to clearly show the difference
+  FormatStyle Style = getLLVMStyle();
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+
+  // Default LLVM style should have SpaceBeforeUnderscoreParens = true
+  EXPECT_TRUE(Style.SpaceBeforeUnderscoreParens);
+  verifyFormat("func (arg);", Style);    // All functions should have space
+  verifyFormat("my_func (arg);", Style); // All functions should have space
+  verifyFormat("_ (message);", Style);   // Single underscore should have space
+                                       // when SpaceBeforeUnderscoreParens=true
+  verifyFormat("underscore_ (param);",
+               Style); // Other underscores should have space
+
+  // Now test with SpaceBeforeUnderscoreParens = false but SpaceBeforeParens =
+  // Always
+  Style.SpaceBeforeUnderscoreParens = false;
+  verifyFormat("func (arg);",
+               Style); // Non-underscore functions should still have space
+  verifyFormat("my_func (arg);",
+               Style); // Functions with underscores should still have space
+  verifyFormat(
+      "_(message);",
+      Style); // Single underscore (gettext macro) should NOT have space
+  verifyFormat("underscore_ (param);",
+               Style); // Other underscores should still have space
+  verifyFormat("_private_func (data);",
+               Style); // Functions starting with underscore but not single _
+                       // should have space
+
+  // Test GNU style (should have SpaceBeforeUnderscoreParens = false by default)
+  FormatStyle GNUStyle = getGNUStyle();
+  EXPECT_FALSE(GNUStyle.SpaceBeforeUnderscoreParens);
+  EXPECT_EQ(GNUStyle.SpaceBeforeParens,
+            FormatStyle::SBPO_Always); // GNU style should have
+                                       // SpaceBeforeParens = Always
+  verifyFormat("func (arg);",
+               GNUStyle); // GNU style has SpaceBeforeParens = Always
+  verifyFormat("my_func (arg);",
+               GNUStyle); // Functions with underscores should have space
+  verifyFormat(
+      "_(message);",
+      GNUStyle); // Single underscore (gettext macro) should NOT have space
+  verifyFormat("_private_func (data);",
+               GNUStyle); // Other functions should have space
+
+  // Test mixed scenarios with GNU style
+  verifyFormat("printf (_(\"Hello\"));\n"
+               "func (arg);\n"
+               "_(\"World\");",
+               GNUStyle);
+}
+
 TEST_F(FormatTest, ConfigurableSpacesInSquareBrackets) {
   verifyFormat("int a[5];");
   verifyFormat("a[3] += 42;");
