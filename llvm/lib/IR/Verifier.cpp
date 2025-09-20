@@ -4411,7 +4411,7 @@ void Verifier::visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range,
 }
 
 void Verifier::checkAtomicMemAccessSize(Type *Ty, const Instruction *I) {
-  unsigned Size = DL.getTypeSizeInBits(Ty);
+  unsigned Size = DL.getTypeSizeInBits(Ty).getFixedValue();
   Check(Size >= 8, "atomic memory access' size must be byte-sized", Ty, I);
   Check(!(Size & (Size - 1)),
         "atomic memory access' operand must have a power-of-two size", Ty, I);
