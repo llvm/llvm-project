@@ -26,6 +26,5 @@ static_library("cert") {
     "ProperlySeededRandomGeneratorCheck.cpp",
     "SetLongJmpCheck.cpp",
     "ThrownExceptionTypeCheck.cpp",
-    "VariadicFunctionDefCheck.cpp",
   ]
 }
