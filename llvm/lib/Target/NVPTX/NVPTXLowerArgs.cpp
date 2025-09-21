@@ -412,6 +412,22 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   }
 }
 
+// Create a call to the nvvm_internal_addrspace_wrap intrinsic and set the
+// alignment of the return value based on the alignment of the argument.
+static CallInst *createNVVMInternalAddrspaceWrap(IRBuilder<> &IRB,
+                                                 Argument &Arg) {
+  CallInst *ArgInParam =
+      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
+                          {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
+                          &Arg, {}, Arg.getName() + ".param");
+
+  if (MaybeAlign ParamAlign = Arg.getParamAlign())
+    ArgInParam->addRetAttr(
+        Attribute::getWithAlignment(ArgInParam->getContext(), *ParamAlign));
+
+  return ArgInParam;
+}
+
 namespace {
 struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   using Base = PtrUseVisitor<ArgUseChecker>;
@@ -515,10 +531,7 @@ void copyByValParam(Function &F, Argument &Arg) {
       Arg.getParamAlign().value_or(DL.getPrefTypeAlign(StructType)));
   Arg.replaceAllUsesWith(AllocA);
 
-  Value *ArgInParam =
-      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
-                          {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
-                          &Arg, {}, Arg.getName());
+  CallInst *ArgInParam = createNVVMInternalAddrspaceWrap(IRB, Arg);
 
   // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
   // addrspacecast preserves alignment.  Since params are constant, this load
@@ -549,9 +562,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
     SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
 
     IRBuilder<> IRB(&*FirstInst);
-    Value *ArgInParamAS = IRB.CreateIntrinsic(
-        Intrinsic::nvvm_internal_addrspace_wrap,
-        {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()}, {Arg});
+    CallInst *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
 
     for (Use *U : UsesToUpdate)
       convertToParamAS(U, ArgInParamAS, HasCvtaParam, IsGridConstant);
@@ -581,10 +592,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
     // argument already in the param address space, we need to use the noop
     // intrinsic, this had the added benefit of preventing other optimizations
     // from folding away this pair of addrspacecasts.
-    auto *ParamSpaceArg =
-        IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
-                            {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getType()},
-                            Arg, {}, Arg->getName() + ".param");
+    auto *ParamSpaceArg = createNVVMInternalAddrspaceWrap(IRB, *Arg);
 
     // Cast param address to generic address space.
     Value *GenericArg = IRB.CreateAddrSpaceCast(

@@ -85,10 +85,10 @@ define i64 @simple_integers(i8, i16, i32, i64) nounwind {
   ret i64 0
 }
 
-; NOTE: Only float and double are supported.
-define double @simple_floats(float, double) nounwind {
-; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$fd;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$fd
+; NOTE: Only half, float, and double are supported.
+define double @simple_floats(half, float, double) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
@@ -600,7 +600,7 @@ start:
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$i8i8i8i8
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#simple_floats"
-; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$fd
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_varargs"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$varargs

@@ -1156,6 +1156,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDataObjCMessageRefs:
         case eSectionTypeDataObjCCFStrings:
         case eSectionTypeGoSymtab:
+        case eSectionTypeWasmName:
           return AddressClass::eData;
 
         case eSectionTypeDebug:
@@ -2155,10 +2156,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
   Progress progress("Parsing symbol table", file_name);
 
-  llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
-  llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
-  llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  llvm::MachO::dysymtab_command dysymtab = m_dysymtab;
+  LinkeditDataCommandLargeOffsets function_starts_load_command;
+  LinkeditDataCommandLargeOffsets exports_trie_load_command;
+  DyldInfoCommandLargeOffsets dyld_info;
+  DysymtabCommandLargeOffsets dysymtab(m_dysymtab);
   SymtabCommandLargeOffsets symtab_load_command;
   // The data element of type bool indicates that this entry is thumb
   // code.
@@ -2195,32 +2196,24 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       break;
     // Watch for the symbol table load command
     switch (lc.cmd) {
-    case LC_SYMTAB:
-      // struct symtab_command {
-      //   uint32_t        cmd;            /* LC_SYMTAB */
-      //   uint32_t        cmdsize;        /* sizeof(struct symtab_command) */
-      //   uint32_t        symoff;         /* symbol table offset */
-      //   uint32_t        nsyms;          /* number of symbol table entries */
-      //   uint32_t        stroff;         /* string table offset */
-      //   uint32_t        strsize;        /* string table size in bytes */
-      // };
-      symtab_load_command.cmd = lc.cmd;
-      symtab_load_command.cmdsize = lc.cmdsize;
-      symtab_load_command.symoff = m_data.GetU32(&offset);
-      symtab_load_command.nsyms = m_data.GetU32(&offset);
-      symtab_load_command.stroff = m_data.GetU32(&offset);
-      symtab_load_command.strsize = m_data.GetU32(&offset);
-      break;
+    case LC_SYMTAB: {
+      llvm::MachO::symtab_command lc_obj;
+      if (m_data.GetU32(&offset, &lc_obj.symoff, 4)) {
+        lc_obj.cmd = lc.cmd;
+        lc_obj.cmdsize = lc.cmdsize;
+        symtab_load_command = lc_obj;
+      }
+    } break;
 
     case LC_DYLD_INFO:
-    case LC_DYLD_INFO_ONLY:
-      if (m_data.GetU32(&offset, &dyld_info.rebase_off, 10)) {
-        dyld_info.cmd = lc.cmd;
-        dyld_info.cmdsize = lc.cmdsize;
-      } else {
-        memset(&dyld_info, 0, sizeof(dyld_info));
+    case LC_DYLD_INFO_ONLY: {
+      llvm::MachO::dyld_info_command lc_obj;
+      if (m_data.GetU32(&offset, &lc_obj.rebase_off, 10)) {
+        lc_obj.cmd = lc.cmd;
+        lc_obj.cmdsize = lc.cmdsize;
+        dyld_info = lc_obj;
       }
-      break;
+    } break;
 
     case LC_LOAD_DYLIB:
     case LC_LOAD_WEAK_DYLIB:
@@ -2244,22 +2237,20 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     } break;
 
-    case LC_DYLD_EXPORTS_TRIE:
-      exports_trie_load_command.cmd = lc.cmd;
-      exports_trie_load_command.cmdsize = lc.cmdsize;
-      if (m_data.GetU32(&offset, &exports_trie_load_command.dataoff, 2) ==
-          nullptr) // fill in offset and size fields
-        memset(&exports_trie_load_command, 0,
-               sizeof(exports_trie_load_command));
-      break;
-    case LC_FUNCTION_STARTS:
-      function_starts_load_command.cmd = lc.cmd;
-      function_starts_load_command.cmdsize = lc.cmdsize;
-      if (m_data.GetU32(&offset, &function_starts_load_command.dataoff, 2) ==
-          nullptr) // fill in data offset and size fields
-        memset(&function_starts_load_command, 0,
-               sizeof(function_starts_load_command));
-      break;
+    case LC_DYLD_EXPORTS_TRIE: {
+      llvm::MachO::linkedit_data_command lc_obj;
+      lc_obj.cmd = lc.cmd;
+      lc_obj.cmdsize = lc.cmdsize;
+      if (m_data.GetU32(&offset, &lc_obj.dataoff, 2))
+        exports_trie_load_command = lc_obj;
+    } break;
+    case LC_FUNCTION_STARTS: {
+      llvm::MachO::linkedit_data_command lc_obj;
+      lc_obj.cmd = lc.cmd;
+      lc_obj.cmdsize = lc.cmdsize;
+      if (m_data.GetU32(&offset, &lc_obj.dataoff, 2))
+        function_starts_load_command = lc_obj;
+    } break;
 
     case LC_UUID: {
       const uint8_t *uuid_bytes = m_data.PeekData(offset, 16);
@@ -2784,7 +2775,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                     const char *symbol_name_non_abi_mangled = NULL;
 
                     SectionSP symbol_section;
-                    uint32_t symbol_byte_size = 0;
                     bool add_nlist = true;
                     bool is_debug = ((nlist.n_type & N_STAB) != 0);
                     bool demangled_is_synthesized = false;
@@ -3436,61 +3426,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                       if (symbol_section) {
                         const addr_t section_file_addr =
                             symbol_section->GetFileAddress();
-                        if (symbol_byte_size == 0 &&
-                            function_starts_count > 0) {
-                          addr_t symbol_lookup_file_addr = nlist.n_value;
-                          // Do an exact address match for non-ARM addresses,
-                          // else get the closest since the symbol might be a
-                          // thumb symbol which has an address with bit zero
-                          // set
-                          FunctionStarts::Entry *func_start_entry =
-                              function_starts.FindEntry(symbol_lookup_file_addr,
-                                                        !is_arm);
-                          if (is_arm && func_start_entry) {
-                            // Verify that the function start address is the
-                            // symbol address (ARM) or the symbol address + 1
-                            // (thumb)
-                            if (func_start_entry->addr !=
-                                    symbol_lookup_file_addr &&
-                                func_start_entry->addr !=
-                                    (symbol_lookup_file_addr + 1)) {
-                              // Not the right entry, NULL it out...
-                              func_start_entry = NULL;
-                            }
-                          }
-                          if (func_start_entry) {
-                            func_start_entry->data = true;
-
-                            addr_t symbol_file_addr = func_start_entry->addr;
-                            uint32_t symbol_flags = 0;
-                            if (is_arm) {
-                              if (symbol_file_addr & 1)
-                                symbol_flags = MACHO_NLIST_ARM_SYMBOL_IS_THUMB;
-                              symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                            }
-
-                            const FunctionStarts::Entry *next_func_start_entry =
-                                function_starts.FindNextEntry(func_start_entry);
-                            const addr_t section_end_file_addr =
-                                section_file_addr +
-                                symbol_section->GetByteSize();
-                            if (next_func_start_entry) {
-                              addr_t next_symbol_file_addr =
-                                  next_func_start_entry->addr;
-                              // Be sure the clear the Thumb address bit when
-                              // we calculate the size from the current and
-                              // next address
-                              if (is_arm)
-                                next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                              symbol_byte_size = std::min<lldb::addr_t>(
-                                  next_symbol_file_addr - symbol_file_addr,
-                                  section_end_file_addr - symbol_file_addr);
-                            } else {
-                              symbol_byte_size =
-                                  section_end_file_addr - symbol_file_addr;
-                            }
-                          }
-                        }
                         symbol_value -= section_file_addr;
                       }
 
@@ -3619,9 +3554,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                       }
                       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
 
-                      if (symbol_byte_size > 0)
-                        sym[sym_idx].SetByteSize(symbol_byte_size);
-
                       if (demangled_is_synthesized)
                         sym[sym_idx].SetDemangledNameIsSynthesized(true);
                       ++sym_idx;
@@ -3710,7 +3642,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       SymbolType type = eSymbolTypeInvalid;
       SectionSP symbol_section;
-      lldb::addr_t symbol_byte_size = 0;
       bool add_nlist = true;
       bool is_gsym = false;
       bool demangled_is_synthesized = false;
@@ -4296,47 +4227,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       if (symbol_section) {
         const addr_t section_file_addr = symbol_section->GetFileAddress();
-        if (symbol_byte_size == 0 && function_starts_count > 0) {
-          addr_t symbol_lookup_file_addr = nlist.n_value;
-          // Do an exact address match for non-ARM addresses, else get the
-          // closest since the symbol might be a thumb symbol which has an
-          // address with bit zero set.
-          FunctionStarts::Entry *func_start_entry =
-              function_starts.FindEntry(symbol_lookup_file_addr, !is_arm);
-          if (is_arm && func_start_entry) {
-            // Verify that the function start address is the symbol address
-            // (ARM) or the symbol address + 1 (thumb).
-            if (func_start_entry->addr != symbol_lookup_file_addr &&
-                func_start_entry->addr != (symbol_lookup_file_addr + 1)) {
-              // Not the right entry, NULL it out...
-              func_start_entry = nullptr;
-            }
-          }
-          if (func_start_entry) {
-            func_start_entry->data = true;
-
-            addr_t symbol_file_addr = func_start_entry->addr;
-            if (is_arm)
-              symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-
-            const FunctionStarts::Entry *next_func_start_entry =
-                function_starts.FindNextEntry(func_start_entry);
-            const addr_t section_end_file_addr =
-                section_file_addr + symbol_section->GetByteSize();
-            if (next_func_start_entry) {
-              addr_t next_symbol_file_addr = next_func_start_entry->addr;
-              // Be sure the clear the Thumb address bit when we calculate the
-              // size from the current and next address
-              if (is_arm)
-                next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-              symbol_byte_size = std::min<lldb::addr_t>(
-                  next_symbol_file_addr - symbol_file_addr,
-                  section_end_file_addr - symbol_file_addr);
-            } else {
-              symbol_byte_size = section_end_file_addr - symbol_file_addr;
-            }
-          }
-        }
         symbol_value -= section_file_addr;
       }
 
@@ -4442,9 +4332,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
       if (nlist.n_desc & N_WEAK_REF)
         sym[sym_idx].SetIsWeak(true);
-
-      if (symbol_byte_size > 0)
-        sym[sym_idx].SetByteSize(symbol_byte_size);
 
       if (demangled_is_synthesized)
         sym[sym_idx].SetDemangledNameIsSynthesized(true);
@@ -4564,23 +4451,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           Address symbol_addr;
           if (module_sp->ResolveFileAddress(symbol_file_addr, symbol_addr)) {
             SectionSP symbol_section(symbol_addr.GetSection());
-            uint32_t symbol_byte_size = 0;
             if (symbol_section) {
-              const addr_t section_file_addr = symbol_section->GetFileAddress();
-              const FunctionStarts::Entry *next_func_start_entry =
-                  function_starts.FindNextEntry(func_start_entry);
-              const addr_t section_end_file_addr =
-                  section_file_addr + symbol_section->GetByteSize();
-              if (next_func_start_entry) {
-                addr_t next_symbol_file_addr = next_func_start_entry->addr;
-                if (is_arm)
-                  next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                symbol_byte_size = std::min<lldb::addr_t>(
-                    next_symbol_file_addr - symbol_file_addr,
-                    section_end_file_addr - symbol_file_addr);
-              } else {
-                symbol_byte_size = section_end_file_addr - symbol_file_addr;
-              }
               sym[sym_idx].SetID(synthetic_sym_id++);
               // Don't set the name for any synthetic symbols, the Symbol
               // object will generate one if needed when the name is accessed
@@ -4592,8 +4463,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               add_symbol_addr(symbol_addr.GetFileAddress());
               if (symbol_flags)
                 sym[sym_idx].SetFlags(symbol_flags);
-              if (symbol_byte_size)
-                sym[sym_idx].SetByteSize(symbol_byte_size);
               ++sym_idx;
             }
           }

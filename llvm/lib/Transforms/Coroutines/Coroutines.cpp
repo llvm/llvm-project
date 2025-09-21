@@ -85,6 +85,9 @@ static Intrinsic::ID NonOverloadedCoroIntrinsics[] = {
     Intrinsic::coro_id_async,
     Intrinsic::coro_id_retcon,
     Intrinsic::coro_id_retcon_once,
+    Intrinsic::coro_noop,
+    Intrinsic::coro_prepare_async,
+    Intrinsic::coro_prepare_retcon,
     Intrinsic::coro_promise,
     Intrinsic::coro_resume,
     Intrinsic::coro_save,
@@ -353,9 +356,9 @@ void coro::Shape::invalidateCoroutine(
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
       CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
-      CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
+      CS->eraseFromParent();
     }
     CoroSuspends.clear();
 

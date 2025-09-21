@@ -111,7 +111,7 @@ class DbgEng(DebuggerBase):
         # We are, by this point, already launched.
         self.step_info = probe_process.probe_state(self.client)
 
-    def step(self):
+    def step_in(self):
         res = setup.step_once(self.client)
         if not res:
             self.finished = True
@@ -122,7 +122,7 @@ class DbgEng(DebuggerBase):
         # relevant source file -- this is likely to be a problem when setting
         # breakpoints. Until that's fixed, single step instead of running
         # freely. This isn't very efficient, but at least makes progress.
-        self.step()
+        self.step_in()
 
     def _get_step_info(self, watches, step_index):
         frames = self.step_info

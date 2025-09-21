@@ -18,8 +18,8 @@ This document describes how the SME ACLE attributes map to LLVM IR
 attributes and how LLVM lowers these attributes to implement the rules and
 requirements of the ABI.
 
-Below we describe the LLVM IR attributes and their relation to the C/C++
-level ACLE attributes:
+Below, we describe the LLVM IR attributes and their relation to the
+C/C++-level ACLE attributes:
 
 ``aarch64_pstate_sm_enabled``
     is used for functions with ``__arm_streaming``
@@ -51,8 +51,8 @@ level ACLE attributes:
 
 Clang must ensure that the above attributes are added both to the
 function's declaration/definition as well as to their call-sites. This is
-important for calls to attributed function pointers, where there is no
-definition or declaration available.
+important for calls to attributed function pointers, where no
+definition or declaration is available.
 
 
 2. Handling PSTATE.SM
@@ -77,7 +77,7 @@ and almost all parts of CodeGen we can assume that the runtime value for
 ``vscale`` does not. If we let the compiler insert the appropriate ``smstart``
 and ``smstop`` instructions around call boundaries, then the effects on SVE
 state can be mitigated. By limiting the state changes to a very brief window
-around the call we can control how the operations are scheduled and how live
+around the call, we can control how the operations are scheduled and how live
 values remain preserved between state transitions.
 
 In order to control PSTATE.SM at this level of granularity, we use function and
@@ -89,7 +89,7 @@ Restrictions on attributes
 
 * It is undefined behaviour to pass or return (pointers to) scalable vector
   objects to/from functions which may use a different SVE vector length.
-  This includes functions with a non-streaming interface, but marked with
+  This includes functions with a non-streaming interface but marked with
   ``aarch64_pstate_sm_body``.
 
 * It is not allowed for a function to be decorated with both
@@ -100,7 +100,7 @@ Restrictions on attributes
   ``aarch64_new_za``, ``aarch64_in_za``, ``aarch64_out_za``, ``aarch64_inout_za``,
   ``aarch64_preserves_za``.
 
-These restrictions also apply in the higher level SME ACLE, which means we can
+These restrictions also apply in the higher-level SME ACLE, which means we can
 emit diagnostics in Clang to signal users about incorrect behaviour.
 
 
@@ -224,7 +224,7 @@ The ``COND_SMSTART/COND_SMSTOP`` nodes additionally take ``CurrentState`` and
 
 When ``CurrentState`` and ``ExpectedState`` can be evaluated at compile-time
 (i.e. they are both constants) then an unconditional ``smstart/smstop``
-instruction is emitted. Otherwise the node is matched to a Pseudo instruction
+instruction is emitted. Otherwise, the node is matched to a Pseudo instruction
 which expands to a compare/branch and a ``smstart/smstop``. This is necessary to
 implement transitions from ``SC -> N`` and ``SC -> S``.
 
@@ -236,7 +236,7 @@ streaming compatible, the compiler has to insert a SMSTOP before the call and
 insert a SMSTOP after the call.
 
 If the function that is called is an intrinsic with no side-effects which in
-turn is lowered to a function call (e.g. ``@llvm.cos()``), then the call to
+turn is lowered to a function call (e.g., ``@llvm.cos()``), then the call to
 ``@llvm.cos()`` is not part of any Chain; it can be scheduled freely.
 
 Lowering of a Callsite creates a small chain of nodes which:
@@ -297,11 +297,11 @@ To ensure we use the correct SVE vector length to allocate the locals with, we
 can use the streaming vector-length to allocate the stack-slots through the
 ``ADDSVL`` instruction, even when the CPU is not yet in streaming mode.
 
-This only works for locals and not callee-save slots, since LLVM doesn't support
+This works only for locals and not callee-save slots, since LLVM doesn't support
 mixing two different scalable vector lengths in one stack frame. That means that the
 case where a function is marked ``arm_locally_streaming`` and needs to spill SVE
 callee-saves in the prologue is currently unsupported.  However, it is unlikely
-for this to happen without user intervention, because ``arm_locally_streaming``
+for this to happen without user intervention because ``arm_locally_streaming``
 functions cannot take or return vector-length-dependent values. This would otherwise
 require forcing both the SVE PCS using '``aarch64_sve_pcs``' combined with using
 ``arm_locally_streaming`` in order to encounter this problem. This combination
@@ -330,7 +330,7 @@ attributed with ``arm_locally_streaming``:
       return array[N - 1] + arg;
     }
 
-should use ADDSVL for allocating the stack space and should avoid clobbering
+should use ``ADDSVL`` for allocating the stack space and should avoid clobbering
 the return/argument values.
 
 .. code-block:: none
@@ -381,17 +381,17 @@ Preventing the use of illegal instructions in Streaming Mode
 * When executing a program in normal mode (PSTATE.SM=0), a subset of SME
   instructions are invalid.
 
-* Streaming-compatible functions must only use instructions that are valid when
+* Streaming-compatible functions must use only instructions that are valid when
   either PSTATE.SM=0 or PSTATE.SM=1.
 
 The value of PSTATE.SM is not controlled by the feature flags, but rather by the
-function attributes. This means that we can compile for '``+sme``' and the compiler
+function attributes. This means that we can compile for '``+sme``', and the compiler
 will code-generate any instructions, even if they are not legal under the requested
 streaming mode. The compiler needs to use the function attributes to ensure the
 compiler doesn't do transformations under the assumption that certain operations
 are available at runtime.
 
-We made a conscious choice not to model this with feature flags, because we
+We made a conscious choice not to model this with feature flags because we
 still want to support inline-asm in either mode (with the user placing
 smstart/smstop manually), and this became rather complicated to implement at the
 individual instruction level (see `D120261 <https://reviews.llvm.org/D120261>`_
@@ -408,7 +408,7 @@ auto-vectorization with a subset of streaming-compatible instructions, but that
 requires changes to the CostModel, Legalization and SelectionDAG lowering.
 
 We will also emit diagnostics in Clang to prevent the use of
-non-streaming(-compatible) operations, e.g. through ACLE intrinsics, when a
+non-streaming(-compatible) operations, e.g., through ACLE intrinsics, when a
 function is decorated with the streaming mode attributes.
 
 
@@ -456,7 +456,7 @@ AArch64 Predicate-as-Counter Type
 :Overview:
 
 The predicate-as-counter type represents the type of a predicate-as-counter
-value held in a AArch64 SVE predicate register. Such a value contains
+value held in an AArch64 SVE predicate register. Such a value contains
 information about the number of active lanes, the element width and a bit that
 tells whether the generated mask should be inverted. ACLE intrinsics should be
 used to move the predicate-as-counter value to/from a predicate vector.

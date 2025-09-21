@@ -57,6 +57,19 @@ not.
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
+
+Parameter Attributes
+--------------------
+
+``"nvvm.grid_constant"``
+    This attribute may be attached to a ``byval`` parameter of a kernel function
+    to indicate that the parameter should be lowered as a direct reference to
+    the grid-constant memory of the parameter, as opposed to a copy of the
+    parameter in local memory. Writing to a grid-constant parameter is
+    undefined behavior. Unlike a normal ``byval`` parameter, the address of a
+    grid-constant parameter is not unique to a given function invocation but
+    instead is shared by all kernels in the grid.
+
 .. _nvptx_fnattrs:
 
 Function Attributes
@@ -91,6 +104,12 @@ Function Attributes
     The total number of CTAs is the product of the number of CTAs in each 
     dimension. Specifying a different cluster dimension at launch will result in
     a runtime error or kernel launch failure. Only supported for Hopper+.
+
+``"nvvm.blocksareclusters"``
+    This attribute implies that the grid launch configuration for the corresponding
+    kernel function is specifying the number of clusters instead of the number of thread
+    blocks. This attribute is only allowed for kernel functions and requires
+    ``nvvm.reqntid`` and ``nvvm.cluster_dim`` attributes.
 
 .. _address_spaces:
 
@@ -971,6 +990,10 @@ Syntax:
   declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
   declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
   
+  declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)  
+  
   declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
   declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
 
@@ -983,7 +1006,10 @@ The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
 correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
 The '``prefetch.*``' instructions bring the cache line containing the
 specified address in global or local memory address space into the 
-specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
+specified cache level (L1 or L2). If the '``.tensormap``' qualifier is specified then the 
+prefetch instruction brings the cache line containing the specified address in the 
+'``.const``' or '``.param memory``' state space for subsequent use by the '``cp.async.bulk.tensor``' 
+instruction. The '`prefetchu.*``' instruction brings the cache line 
 containing the specified generic address into the specified uniform cache level.
 If no address space is specified, it is assumed to be generic address. The intrinsic 
 uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
@@ -1072,6 +1098,8 @@ Syntax:
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
+
 Overview:
 """""""""
 
@@ -1082,7 +1110,13 @@ global memory to shared::cluster memory (indicated by the ``g2s`` prefix)
 in ``tile`` mode. In tile mode, the multi-dimensional layout of the
 source tensor is preserved at the destination. The dimension of the
 tensor data ranges from 1d to 5d with the coordinates specified
-by the ``i32 %d0 ... i32 %d4`` arguments.
+by the ``i32 %d0 ... i32 %d4`` arguments. In ``tile.gather4`` mode,
+four rows in a 2D tensor are combined to form a single 2D destination
+tensor. The first coordinate ``i32 %x0`` denotes the column index
+followed by four coordinates indicating the four row-indices.
+So, this mode takes a total of 5 coordinates as input arguments.
+For more information on ``gather4`` mode, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
 
 * The last three arguments to these intrinsics are flags
   indicating support for multicast, cache_hint and cta_group::1/2
@@ -1116,9 +1150,17 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
 Overview:
 """""""""
@@ -1131,10 +1173,105 @@ in ``im2col`` mode. In im2col mode, some dimensions of the source tensor
 are unrolled into a single dimensional column at the destination. In this
 mode, the tensor has to be at least three-dimensional. Along with the tensor
 coordinates, im2col offsets are also specified (denoted by
-``i16 im2col0...i16 %im2col2``). The number of im2col offsets is two less
-than the number of dimensions of the tensor operation. The last three arguments
-to these intrinsics are flags, with the same functionality as described
-in the ``tile`` mode intrinsics above.
+``i16 im2col0...i16 %im2col2``). For the ``im2col`` mode, the number of offsets
+is two less than the number of dimensions of the tensor operation. For the
+``im2col.w`` and ``im2col.w.128`` mode, the number of offsets is always 2,
+denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments. For more information
+on ``im2col.w`` and ``im2col.w.128`` modes, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+
+The last three arguments to these intrinsics are flags, with the same functionality
+as described in the ``tile`` mode intrinsics above.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.[1-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.2d(..., i32 %d0, i32 %d1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.[1-5]d``' intrinsics
+correspond to the ``cp.async.bulk.tensor.[1-5]d.shared::cta.global.*``
+set of PTX instructions. These instructions initiate an asynchronous
+copy of tensor data from global memory to shared::cta memory in
+``tile`` mode. In tile mode, the multi-dimensional layout of the
+source tensor is preserved at the destination. The dimension of the
+tensor data ranges from 1d to 5d with the coordinates specified
+by the ``i32 %d0 ... i32 %d4`` arguments. In ``tile.gather4`` mode,
+four rows in a 2D tensor are combined to form a single 2D destination
+tensor. The first coordinate ``i32 %x0`` denotes the column index
+followed by four coordinates indicating the four row-indices.
+So, this mode takes a total of 5 coordinates as input arguments.
+For more information on ``gather4`` mode, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+
+'``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.[3-5]d``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.[3-5]d``' intrinsics
+correspond to the ``cp.async.bulk.tensor.[1-5]d.shared::cta.global.*``
+set of PTX instructions. These instructions initiate an asynchronous copy
+of tensor data from global memory to shared::cta memory in ``im2col`` mode.
+In im2col mode, some dimensions of the source tensor are unrolled into a
+single dimensional column at the destination. In this mode, the tensor has
+to be at least three-dimensional. Along with the tensor coordinates, im2col
+offsets are also specified (denoted by ``i16 im2col0...i16 %im2col2``).
+For the ``im2col`` mode, the number of offsets is two less than the number
+of dimensions of the tensor operation. For the ``im2col.w`` and ``im2col.w.128``
+mode, the number of offsets is always 2, denoted by ``i16 %wHalo`` and
+``i16 %wOffset`` arguments. For more information on ``im2col.w`` and
+``im2col.w.128`` modes, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
@@ -1153,6 +1290,8 @@ Syntax:
   declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
+  declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.scatter4.2d(ptr addrspace(3) %src, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch)
+
 Overview:
 """""""""
 
@@ -1162,6 +1301,12 @@ These instructions initiate an asynchronous copy of tensor data from
 shared::cta to global memory (indicated by the ``s2g`` prefix)
 in ``tile`` mode. The dimension of the tensor data ranges from 1d to 5d
 with the coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments.
+In ``tile.scatter4`` mode, a single 2D source tensor is divided into
+four rows in the 2D destination tensor. The first coordinate ``i32 %x0``
+denotes the column index followed by four coordinates indicating the
+four row-indices. So, this mode takes a total of 5 coordinates as input arguments.
+For more information on ``scatter4`` mode, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
 
 * The last argument to these intrinsics is a boolean flag
   indicating support for cache_hint. This flag argument must
@@ -1214,6 +1359,8 @@ Syntax:
   declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.gather4.2d(ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch)
+
 Overview:
 """""""""
 
@@ -1224,6 +1371,13 @@ of tensor data from global memory to the L2 cache. In tile mode, the
 multi-dimensional layout of the source tensor is preserved at the destination.
 The dimension of the tensor data ranges from 1d to 5d with the coordinates
 specified by the ``i32 %d0 ... i32 %d4`` arguments.
+
+In ``tile.gather4`` mode, four rows in the 2-dimnesional source tensor are
+fetched to the L2 cache. The first coordinate ``i32 %x0`` denotes the column index
+followed by four coordinates indicating the four row-indices. So, this mode takes
+a total of 5 coordinates as input arguments.
+For more information on ``gather4`` mode, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
 
 * The last argument to these intrinsics is a boolean flag
   indicating support for cache_hint. This flag argument must
@@ -1246,6 +1400,14 @@ Syntax:
   declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.128.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
 Overview:
 """""""""
 
@@ -1256,9 +1418,16 @@ of tensor data from global memory to the L2 cache. In im2col mode, some
 dimensions of the source tensor are unrolled into a single dimensional
 column at the destination. In this mode, the tensor has to be at least
 three-dimensional. Along with the tensor coordinates, im2col offsets are
-also specified (denoted by ``i16 im2col0...i16 %im2col2``). The number
-of im2col offsets is two less than the number of dimensions of the tensor
-operation. The last argument to these intrinsics is a boolean flag, with
+also specified (denoted by ``i16 im2col0...i16 %im2col2``). For ``im2col``
+mode, the number of offsets is two less than the number of dimensions of
+the tensor operation. For the ``im2col.w`` and ``im2col.w.128`` modes,
+the number of offsets is always 2, denoted by ``i16 %wHalo`` and
+``i16 %wOffset`` arguments. For more information on ``im2col.w`` and
+``im2col.w.128`` modes, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+
+
+The last argument to these intrinsics is a boolean flag, with
 the same functionality as described in the ``tile`` mode intrinsics above.
 
 For more information, refer PTX ISA
@@ -2133,9 +2302,9 @@ The Kernel
   ; Intrinsic to read X component of thread ID
   declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2157,9 +2326,6 @@ The Kernel
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -2284,34 +2450,6 @@ instructions. Intrinsics are provided to convert pointers between the generic
 and non-generic address spaces.
 
 See :ref:`address_spaces` and :ref:`nvptx_intrinsics` for more information.
-
-
-Kernel Metadata
-^^^^^^^^^^^^^^^
-
-In PTX, a function can be either a `kernel` function (callable from the host
-program), or a `device` function (callable only from GPU code). You can think
-of `kernel` functions as entry-points in the GPU program. To mark an LLVM IR
-function as a `kernel` function, we make use of special LLVM metadata. The
-NVPTX back-end will look for a named metadata node called
-``nvvm.annotations``. This named metadata must contain a list of metadata that
-describe the IR. For our purposes, we need to declare a metadata node that
-assigns the "kernel" attribute to the LLVM IR function that should be emitted
-as a PTX `kernel` function. These metadata nodes take the form:
-
-.. code-block:: text
-
-  !{<function ref>, metadata !"kernel", i32 1}
-
-For the previous example, we have:
-
-.. code-block:: llvm
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
-
-Here, we have a single metadata declaration in ``nvvm.annotations``. This
-metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
 
 
 Running the Kernel
@@ -2513,9 +2651,9 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   ; libdevice function
   declare float @__nv_powf(float, float)
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2537,9 +2675,6 @@ Libdevice provides an ``__nv_powf`` function that we will use.
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

@@ -96,22 +96,9 @@ may be omitted.
 If the transform involves commutative operations, add tests with commuted
 (swapped) operands.
 
-Make sure that the operand order stays intact in the CHECK lines of your
-pre-commited tests. You should not see something like this:
-
-```llvm
-; CHECK-NEXT: [[OR:%.*]] = or i8 [[X]], [[Y]]
-; ...
-%or = or i8 %y, %x
-```
-
-If this happens, you may need to change one of the operands to have higher
-complexity (include the "thwart" comment in that case):
-
-```llvm
-%y2 = mul i8 %y, %y ; thwart complexity-based canonicalization
-%or = or i8 %y, %x
-```
+As an exception, it is not necessary to test commutation if one of the operands
+is a constant: In this case, the constant operand is always canonicalized to
+the right.
 
 ### Add vector tests
 

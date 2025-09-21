@@ -91,6 +91,7 @@ void foo_v1(float *AAA, float *BBB, int *I) { return; }
 void foo_v2(float *AAA, float *BBB, int *I) { return; }
 void foo_v3(float *AAA, float *BBB, int *I) { return; }
 void foo_v4(float *AAA, float *BBB, int *I, omp_interop_t IOp) { return; }
+void foo_v5(float *AAA, float *BBB, int I) { return; }
 
 #if _OPENMP >= 202011 // At least OpenMP 5.1
 void vararg_foo(const char *fmt, omp_interop_t it, ...);
@@ -127,6 +128,11 @@ void vararg_bar2(const char *fmt) { return; }
 // expected-error@+2 {{use of undeclared identifier 'J'}}
 #pragma omp declare variant(foo_v1)                          \
    adjust_args(nothing:J)                                    \
+   match(construct={dispatch}, device={arch(x86,x86_64)})
+
+// expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
+#pragma omp declare variant(foo_v1)                          \
+   adjust_args(need_device_addr:AAA)                         \
    match(construct={dispatch}, device={arch(x86,x86_64)})
 
 // expected-error@+2 {{expected reference to one of the parameters of function 'foo'}}
@@ -217,6 +223,12 @@ void vararg_bar2(const char *fmt) { return; }
 #endif // _OPENMP < 202011
 
 void foo(float *AAA, float *BBB, int *I) { return; }
+
+// expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
+#pragma omp declare variant(foo_v5)                          \
+   adjust_args(need_device_addr:I)                         \
+   match(construct={dispatch}, device={arch(x86,x86_64)})
+void foo5(float *AAA, float *BBB, int I) { return; }
 
 #endif // NO_INTEROP_T_DEF
 

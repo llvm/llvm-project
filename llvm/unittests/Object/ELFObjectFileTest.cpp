@@ -177,10 +177,10 @@ TEST(ELFObjectFileTest, MachineTestForPPC) {
 }
 
 TEST(ELFObjectFileTest, MachineTestForRISCV) {
-  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-littleriscv",
-                                      "elf64-littleriscv", "elf64-littleriscv"};
-  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32,
-                                           Triple::riscv64, Triple::riscv64};
+  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-bigriscv",
+                                      "elf64-littleriscv", "elf64-bigriscv"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32be,
+                                           Triple::riscv64, Triple::riscv64be};
   for (auto [Idx, Data] : enumerate(generateData(ELF::EM_RISCV)))
     checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
@@ -680,7 +680,7 @@ Sections:
               - AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 ]
+                CallsiteEndOffsets: [ 0x1 ]
 )";
 
   {
@@ -713,7 +713,7 @@ Sections:
                 AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 , 0x1 ]
+                CallsiteEndOffsets: [ 0x1 , 0x1 ]
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1

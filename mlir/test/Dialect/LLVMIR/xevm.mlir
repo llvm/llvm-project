@@ -59,6 +59,29 @@ func.func @blockprefetch2d(%ptr: !llvm.ptr<1>, %base_width: i32, %base_height: i
 }
 
 // -----
+// CHECK-LABEL: func.func @blockload(
+// CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr<1>)
+func.func @blockload(%ptr: !llvm.ptr<1>) -> vector<4xi16> {
+  // CHECK: %[[VAR0:.*]] = xevm.blockload %[[ARG0]]
+  // CHECK-SAME: cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>
+  // CHECK-SAME: (!llvm.ptr<1>) -> vector<4xi16>
+  %loaded = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}>
+              : (!llvm.ptr<1>) -> vector<4xi16>
+  return %loaded : vector<4xi16>
+}
+
+// -----
+// CHECK-LABEL: func.func @blockstore(
+// CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr<1>,
+// CHECK-SAME: %[[ARG1:.*]]: vector<4xi32>)
+func.func @blockstore(%ptr: !llvm.ptr<1>, %value: vector<4xi32>) {
+  // CHECK: xevm.blockstore %[[ARG0]], %[[ARG1]]
+  // CHECK-SAME: (!llvm.ptr<1>, vector<4xi32>)
+  xevm.blockstore %ptr, %value : (!llvm.ptr<1>, vector<4xi32>)
+  return
+}
+
+// -----
 // CHECK-LABEL: func.func @mma(
 // CHECK-SAME: %[[ARG0:.*]]: vector<8xf32>, %[[ARG1:.*]]: vector<8xi16>, %[[ARG2:.*]]: vector<8xi32>)
 func.func @mma(%loaded_c_casted: vector<8xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>) -> vector<8xf32> {

@@ -13,7 +13,7 @@ program test
   return
 end
 
-! CHECK: func.func @_QQmain() attributes {fir.bindc_name = "test"} {
+! CHECK: func.func @_QQmain() attributes {fir.bindc_name = "TEST"} {
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
 ! CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 ! CHECK-NEXT: ^bb1:

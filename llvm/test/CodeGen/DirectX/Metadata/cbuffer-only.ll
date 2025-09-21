@@ -8,7 +8,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 
 define void @cbuffer_is_only_binding() {
   %cbuf = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
-      @llvm.dx.resource.handlefrombinding(i32 1, i32 8, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 1, i32 8, i32 1, i32 0, ptr null)
   ; CHECK: %CBuffer = type { float }
 
   ret void

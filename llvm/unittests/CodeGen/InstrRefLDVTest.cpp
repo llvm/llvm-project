@@ -159,7 +159,7 @@ public:
     // Setup things like the artifical block map, and BlockNo <=> RPO Order
     // mappings.
     LDV->initialSetup(*MF);
-    LDV->LS.initialize(*MF);
+    LDV->LS.scanFunction(*MF);
     addMTracker(MF);
     return &*LDV;
   }

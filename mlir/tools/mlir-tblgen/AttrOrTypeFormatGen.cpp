@@ -585,7 +585,7 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
     os.getStream().printReindented(strfmt(checkParamKey, param->getName()));
     if (isa<ParameterElement>(arg))
       genVariableParser(param, ctx, os.indent());
-    else if (auto custom = dyn_cast<CustomDirective>(arg))
+    else if (auto *custom = dyn_cast<CustomDirective>(arg))
       genCustomParser(custom, ctx, os.indent());
     os.unindent() << "} else ";
     // Print the check for duplicate or unknown parameter.
@@ -877,9 +877,9 @@ void DefFormat::genCommaSeparatedPrinter(
     extra(arg);
     shouldEmitSpace = false;
     lastWasPunctuation = true;
-    if (auto realParam = dyn_cast<ParameterElement>(arg))
+    if (auto *realParam = dyn_cast<ParameterElement>(arg))
       genVariablePrinter(realParam, ctx, os);
-    else if (auto custom = dyn_cast<CustomDirective>(arg))
+    else if (auto *custom = dyn_cast<CustomDirective>(arg))
       genCustomPrinter(custom, ctx, os);
     if (param->isOptional())
       os.unindent() << "}\n";
@@ -1124,7 +1124,7 @@ DefFormatParser::verifyStructArguments(SMLoc loc,
       return emitError(loc, "expected a parameter, custom directive or params "
                             "directive in `struct` arguments list");
     }
-    if (auto custom = dyn_cast<CustomDirective>(el)) {
+    if (auto *custom = dyn_cast<CustomDirective>(el)) {
       if (custom->getNumElements() != 1) {
         return emitError(loc, "`struct` can only contain `custom` directives "
                               "with a single argument");

@@ -10,6 +10,9 @@
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
+// If offload memory pooling is enabled for a large allocation, reuse error is
+// not detected. UNSUPPORTED: large_allocation_memory_pool
+
 #include <omp.h>
 
 int main() {

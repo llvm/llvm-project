@@ -83,6 +83,8 @@ struct Scanner {
   /// \returns True on error.
   bool scan(SmallVectorImpl<Directive> &Directives);
 
+  friend bool clang::scanInputForCXX20ModulesUsage(StringRef Source);
+
 private:
   /// Lexes next token and advances \p First and the \p Lexer.
   [[nodiscard]] dependency_directives_scan::Token &
@@ -560,15 +562,13 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
     if (Tok.is(tok::semi))
       break;
   }
+
+  const auto &Tok = lexToken(First, End);
   pushDirective(Kind);
-  skipWhitespace(First, End);
-  if (First == End)
+  if (Tok.is(tok::eof) || Tok.is(tok::eod))
     return false;
-  if (!isVerticalWhitespace(*First))
-    return reportError(
-        DirectiveLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
-  skipNewline(First, End);
-  return false;
+  return reportError(DirectiveLoc,
+                     diag::err_dep_source_scanner_unexpected_tokens_at_import);
 }
 
 dependency_directives_scan::Token &Scanner::lexToken(const char *&First,
@@ -734,6 +734,13 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
     if (!tryLexIdentifierOrSkipLine(First, End))
       return false;
     break;
+  }
+  case ';': {
+    // Handle the global module fragment `module;`.
+    if (Id == "module" && !Export)
+      break;
+    skipLine(First, End);
+    return false;
   }
   case '<':
   case '"':
@@ -905,14 +912,6 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     CurDirToks.clear();
   });
 
-  // Handle "@import".
-  if (*First == '@')
-    return lexAt(First, End);
-
-  // Handle module directives for C++20 modules.
-  if (*First == 'i' || *First == 'e' || *First == 'm')
-    return lexModule(First, End);
-
   if (*First == '_') {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
       return lex_Pragma(First, End);
@@ -924,6 +923,14 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   TheLexer.setParsingPreprocessorDirective(true);
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
+
+  // Handle "@import".
+  if (*First == '@')
+    return lexAt(First, End);
+
+  // Handle module directives for C++20 modules.
+  if (*First == 'i' || *First == 'e' || *First == 'm')
+    return lexModule(First, End);
 
   // Lex '#'.
   const dependency_directives_scan::Token &HashTok = lexToken(First, End);
@@ -1069,4 +1076,52 @@ void clang::printDependencyDirectivesAsSource(
       OS << Source.slice(Tok.Offset, Tok.getEnd());
     }
   }
+}
+
+static void skipUntilMaybeCXX20ModuleDirective(const char *&First,
+                                               const char *const End) {
+  assert(First <= End);
+  while (First != End) {
+    if (*First == '#') {
+      ++First;
+      skipToNewlineRaw(First, End);
+    }
+    skipWhitespace(First, End);
+    if (const auto Len = isEOL(First, End)) {
+      First += Len;
+      continue;
+    }
+    break;
+  }
+}
+
+bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+  const char *First = Source.begin();
+  const char *const End = Source.end();
+  skipUntilMaybeCXX20ModuleDirective(First, End);
+  if (First == End)
+    return false;
+
+  // Check if the next token can even be a module directive before creating a
+  // full lexer.
+  if (!(*First == 'i' || *First == 'e' || *First == 'm'))
+    return false;
+
+  llvm::SmallVector<dependency_directives_scan::Token> Tokens;
+  Scanner S(StringRef(First, End - First), Tokens, nullptr, SourceLocation());
+  S.TheLexer.setParsingPreprocessorDirective(true);
+  if (S.lexModule(First, End))
+    return false;
+  auto IsCXXNamedModuleDirective = [](const DirectiveWithTokens &D) {
+    switch (D.Kind) {
+    case dependency_directives_scan::cxx_module_decl:
+    case dependency_directives_scan::cxx_import_decl:
+    case dependency_directives_scan::cxx_export_module_decl:
+    case dependency_directives_scan::cxx_export_import_decl:
+      return true;
+    default:
+      return false;
+    }
+  };
+  return llvm::any_of(S.DirsWithToks, IsCXXNamedModuleDirective);
 }

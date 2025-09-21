@@ -318,6 +318,11 @@ private:
   template <typename T> static bool CheckMulUB(T A, T B, T &R) {
     if constexpr (std::is_signed_v<T>) {
       return llvm::MulOverflow<T>(A, B, R);
+    } else if constexpr (sizeof(T) < sizeof(int)) {
+      // Silly integer promotion rules will convert both A and B to int,
+      // even it T is unsigned. Prevent that by manually casting to uint first.
+      R = static_cast<T>(static_cast<unsigned>(A) * static_cast<unsigned>(B));
+      return false;
     } else {
       R = A * B;
       return false;

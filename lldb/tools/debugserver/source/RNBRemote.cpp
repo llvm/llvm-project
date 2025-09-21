@@ -21,6 +21,7 @@
 #include <mach/exception_types.h>
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
+#include <memory>
 #include <pwd.h>
 #include <string>
 #include <sys/stat.h>
@@ -4422,12 +4423,12 @@ rnb_err_t RNBRemote::HandlePacket_qSpeedTest(const char *p) {
     return HandlePacket_ILLFORMED(
         __FILE__, __LINE__, p,
         "Didn't find response_size value at right offset");
-  else if (*end == ';') {
-    static char g_data[4 * 1024 * 1024 + 16];
-    strcpy(g_data, "data:");
-    memset(g_data + 5, 'a', response_size);
-    g_data[response_size + 5] = '\0';
-    return SendPacket(g_data);
+  else if (*end == ';' && response_size < (4 * 1024 * 1024)) {
+    std::vector<char> buf(response_size + 6, 'a');
+    memcpy(buf.data(), "data:", 5);
+    buf[buf.size() - 1] = '\0';
+    rnb_err_t return_value = SendPacket(buf.data());
+    return return_value;
   } else {
     return SendErrorPacket("E79");
   }
@@ -5410,9 +5411,8 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             JSONGenerator::ArraySP medata_array_sp(new JSONGenerator::Array());
             for (nub_size_t i = 0;
                  i < tid_stop_info.details.exception.data_count; ++i) {
-              medata_array_sp->AddItem(
-                  JSONGenerator::IntegerSP(new JSONGenerator::Integer(
-                      tid_stop_info.details.exception.data[i])));
+              medata_array_sp->AddItem(std::make_shared<JSONGenerator::Integer>(
+                  tid_stop_info.details.exception.data[i]));
             }
             thread_dict_sp->AddItem("medata", medata_array_sp);
           }

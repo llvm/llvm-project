@@ -112,7 +112,7 @@ void testCacheOut(PtrWrapper w) {
 void testUseAfter(int *p) {
   SomeClass *c = new SomeClass;
   free(p);
-  c->f(p); // expected-warning{{Use of memory after it is freed}}
+  c->f(p); // expected-warning{{Use of memory after it is released}}
   delete c;
 }
 
@@ -140,25 +140,25 @@ void testDeleteMallocked() {
 void testDeleteOpAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  operator delete(p); // expected-warning{{Use of memory after it is freed}}
+  operator delete(p); // expected-warning{{Use of memory after it is released}}
 }
 
 void testDeleteAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  delete p; // expected-warning{{Use of memory after it is freed}}
+  delete p; // expected-warning{{Use of memory after it is released}}
 }
 
 void testStandardPlacementNewAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  p = new(p) int; // expected-warning{{Use of memory after it is freed}}
+  p = new(p) int; // expected-warning{{Use of memory after it is released}}
 }
 
 void testCustomPlacementNewAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  p = new(0, p) int; // expected-warning{{Use of memory after it is freed}}
+  p = new(0, p) int; // expected-warning{{Use of memory after it is released}}
 }
 
 void testUsingThisAfterDelete() {

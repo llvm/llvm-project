@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcTargetObjectFile.h"
-#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"

@@ -462,6 +462,13 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         return ScalarPHI;
   }
 
+  // If SrcVec is a subvector starting at index 0, extract from the
+  // wider source vector
+  Value *V;
+  if (match(SrcVec,
+            m_Intrinsic<Intrinsic::vector_extract>(m_Value(V), m_Zero())))
+    return ExtractElementInst::Create(V, Index);
+
   // TODO come up with a n-ary matcher that subsumes both unary and
   // binary matchers.
   UnaryOperator *UO;
@@ -2571,17 +2578,16 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
 /// Canonicalize casts after shuffle.
 static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
                                     InstCombiner::BuilderTy &Builder) {
-  // Do we have 2 matching cast operands?
   auto *Cast0 = dyn_cast<CastInst>(Shuf.getOperand(0));
-  auto *Cast1 = dyn_cast<CastInst>(Shuf.getOperand(1));
-  if (!Cast0 || !Cast1 || Cast0->getOpcode() != Cast1->getOpcode() ||
-      Cast0->getSrcTy() != Cast1->getSrcTy())
+  if (!Cast0)
     return nullptr;
 
   // TODO: Allow other opcodes? That would require easing the type restrictions
   //       below here.
   CastInst::CastOps CastOpcode = Cast0->getOpcode();
   switch (CastOpcode) {
+  case Instruction::SExt:
+  case Instruction::ZExt:
   case Instruction::FPToSI:
   case Instruction::FPToUI:
   case Instruction::SIToFP:
@@ -2591,13 +2597,29 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
     return nullptr;
   }
 
+  VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
   VectorType *ShufTy = Shuf.getType();
   VectorType *ShufOpTy = cast<VectorType>(Shuf.getOperand(0)->getType());
-  VectorType *CastSrcTy = cast<VectorType>(Cast0->getSrcTy());
 
   // TODO: Allow length-increasing shuffles?
   if (ShufTy->getElementCount().getKnownMinValue() >
       ShufOpTy->getElementCount().getKnownMinValue())
+    return nullptr;
+
+  // shuffle (cast X), Poison, identity-with-extract-mask -->
+  // cast (shuffle X, Poison, identity-with-extract-mask).
+  if (isa<PoisonValue>(Shuf.getOperand(1)) && Cast0->hasOneUse() &&
+      Shuf.isIdentityWithExtract()) {
+    auto *NewIns = Builder.CreateShuffleVector(Cast0->getOperand(0),
+                                               PoisonValue::get(CastSrcTy),
+                                               Shuf.getShuffleMask());
+    return CastInst::Create(Cast0->getOpcode(), NewIns, Shuf.getType());
+  }
+
+  auto *Cast1 = dyn_cast<CastInst>(Shuf.getOperand(1));
+  // Do we have 2 matching cast operands?
+  if (!Cast1 || Cast0->getOpcode() != Cast1->getOpcode() ||
+      Cast0->getSrcTy() != Cast1->getSrcTy())
     return nullptr;
 
   // TODO: Allow element-size-decreasing casts (ex: fptosi float to i8)?
@@ -3020,7 +3042,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     Value *V = LHS;
     unsigned MaskElems = Mask.size();
     auto *SrcTy = cast<FixedVectorType>(V->getType());
-    unsigned VecBitWidth = SrcTy->getPrimitiveSizeInBits().getFixedValue();
+    unsigned VecBitWidth = DL.getTypeSizeInBits(SrcTy);
     unsigned SrcElemBitWidth = DL.getTypeSizeInBits(SrcTy->getElementType());
     assert(SrcElemBitWidth && "vector elements must have a bitwidth");
     unsigned SrcNumElems = SrcTy->getNumElements();

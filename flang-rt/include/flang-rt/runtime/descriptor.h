@@ -32,8 +32,10 @@
 #include <cstdlib>
 #include <cstring>
 
+RT_OFFLOAD_VAR_GROUP_BEGIN
 /// Value used for asyncObject when no specific stream is specified.
 static constexpr std::int64_t *kNoAsyncObject = nullptr;
+RT_OFFLOAD_VAR_GROUP_END
 
 namespace Fortran::runtime {
 
@@ -101,6 +103,9 @@ public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
       : derivedType_{dt}, len_{0} {}
+  RT_API_ATTRS DescriptorAddendum(const DescriptorAddendum &that) {
+    *this = that;
+  }
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
   RT_API_ATTRS const typeInfo::DerivedType *derivedType() const {
@@ -166,20 +171,24 @@ public:
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(TypeCategory, int kind, void *p = nullptr,
       int rank = maxRank, const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(int characterKind, std::size_t characters,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      bool addendum = false);
+      bool addendum = false, int allocatorIdx = kDefaultAllocator);
   RT_API_ATTRS void Establish(const typeInfo::DerivedType &dt,
       void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
-      ISO::CFI_attribute_t attribute = CFI_attribute_other);
+      ISO::CFI_attribute_t attribute = CFI_attribute_other,
+      int allocatorIdx = kDefaultAllocator);
+
+  RT_API_ATTRS void UncheckedScalarEstablish(
+      const typeInfo::DerivedType &, void *);
 
   // To create a descriptor for a derived type the caller
   // must provide non-null dt argument.
@@ -433,7 +442,9 @@ public:
     bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      stridesAreContiguous &= bytes == dim.ByteStride() || dim.Extent() == 1;
+      if (bytes != dim.ByteStride() && dim.Extent() != 1) {
+        stridesAreContiguous = false;
+      }
       bytes *= dim.Extent();
     }
     // One and zero element arrays are contiguous even if the descriptor
@@ -448,28 +459,44 @@ public:
 
   // The result, if any, is a fixed stride value that can be used to
   // address all elements.  It generalizes contiguity by also allowing
-  // the case of an array with extent 1 on all but one dimension.
+  // the case of an array with extent 1 on all dimensions but one.
+  // Returns 0 for an empty array, a byte stride if one is well-defined
+  // for the array, or nullopt otherwise.
   RT_API_ATTRS common::optional<SubscriptValue> FixedStride() const {
-    auto rank{static_cast<std::size_t>(raw_.rank)};
-    common::optional<SubscriptValue> stride;
-    for (std::size_t j{0}; j < rank; ++j) {
-      const Dimension &dim{GetDimension(j)};
-      auto extent{dim.Extent()};
-      if (extent == 0) {
-        break; // empty array
-      } else if (extent == 1) { // ok
-      } else if (stride) {
-        // Extent > 1 on multiple dimensions
-        if (IsContiguous()) {
-          return ElementBytes();
+    int rank{raw_.rank};
+    auto elementBytes{static_cast<SubscriptValue>(ElementBytes())};
+    if (rank == 0) {
+      return elementBytes;
+    } else if (rank == 1) {
+      const Dimension &dim{GetDimension(0)};
+      return dim.Extent() == 0 ? 0 : dim.ByteStride();
+    } else {
+      common::optional<SubscriptValue> stride;
+      auto bytes{elementBytes};
+      for (int j{0}; j < rank; ++j) {
+        const Dimension &dim{GetDimension(j)};
+        auto extent{dim.Extent()};
+        if (extent == 0) {
+          return 0; // empty array
+        } else if (extent == 1) { // ok
         } else {
-          return common::nullopt;
+          if (stride) { // Extent > 1 on multiple dimensions
+            if (bytes != dim.ByteStride()) { // discontiguity
+              while (++j < rank) {
+                if (GetDimension(j).Extent() == 0) {
+                  return 0; // empty array
+                }
+              }
+              return common::nullopt; // nonempty, discontiguous
+            }
+          } else {
+            stride = dim.ByteStride();
+          }
+          bytes *= extent;
         }
-      } else {
-        stride = dim.ByteStride();
       }
+      return stride.value_or(elementBytes /*for singleton*/);
     }
-    return stride.value_or(0); // 0 for scalars and empty arrays
   }
 
   // Establishes a pointer to a section or element.
@@ -478,7 +505,8 @@ public:
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
 
-  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
+  RT_API_ATTRS void ApplyMold(
+      const Descriptor &, int rank, bool isMonomorphic = false);
 
   RT_API_ATTRS void Check() const;
 

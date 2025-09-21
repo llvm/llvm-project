@@ -327,7 +327,7 @@ public:
 
   /// find_prev_unset - Returns the index of the first unset bit that precedes
   /// the bit at \p PriorTo.  Returns -1 if all previous bits are set.
-  int find_prev_unset(unsigned PriorTo) {
+  int find_prev_unset(unsigned PriorTo) const {
     return find_last_unset_in(0, PriorTo);
   }
 
@@ -767,11 +767,6 @@ private:
 
     std::copy(Bits.begin() + Count, Bits.begin() + NumWords, Bits.begin());
     std::fill(Bits.begin() + NumWords - Count, Bits.begin() + NumWords, 0);
-  }
-
-  int next_unset_in_word(int WordIndex, BitWord Word) const {
-    unsigned Result = WordIndex * BITWORD_SIZE + llvm::countr_one(Word);
-    return Result < size() ? Result : -1;
   }
 
   unsigned NumBitWords(unsigned S) const {

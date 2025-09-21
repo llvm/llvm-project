@@ -547,8 +547,26 @@ define signext i32 @bclri_i32_31(i32 signext %a) nounwind {
 ; CHECK-NEXT:    slli a0, a0, 33
 ; CHECK-NEXT:    srli a0, a0, 33
 ; CHECK-NEXT:    ret
-  %and = and i32 %a, -2147483649
+  %and = and i32 %a, 2147483647
   ret i32 %and
+}
+
+define signext i32 @bclri_i32_31_allWUsers(i32 signext %a) nounwind {
+; RV64I-LABEL: bclri_i32_31_allWUsers:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 33
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bclri_i32_31_allWUsers:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bclri a0, a0, 31
+; RV64ZBS-NEXT:    addiw a0, a0, 1
+; RV64ZBS-NEXT:    ret
+  %and = and i32 %a, 2147483647
+  %add = add i32 %and, 1
+  ret i32 %add
 }
 
 define i64 @bclri_i64_10(i64 %a) nounwind {
@@ -724,6 +742,24 @@ define signext i32 @bseti_i32_31(i32 signext %a) nounwind {
   ret i32 %or
 }
 
+define signext i32 @bseti_i32_31_allWUsers(i32 signext %a) nounwind {
+; RV64I-LABEL: bseti_i32_31_allWUsers:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bseti_i32_31_allWUsers:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bseti a0, a0, 31
+; RV64ZBS-NEXT:    addiw a0, a0, 1
+; RV64ZBS-NEXT:    ret
+  %or = or i32 %a, 2147483648
+  %add = add i32 %or, 1
+  ret i32 %add
+}
+
 define i64 @bseti_i64_10(i64 %a) nounwind {
 ; CHECK-LABEL: bseti_i64_10:
 ; CHECK:       # %bb.0:
@@ -860,6 +896,24 @@ define signext i32 @binvi_i32_31(i32 signext %a) nounwind {
 ; CHECK-NEXT:    ret
   %xor = xor i32 %a, 2147483648
   ret i32 %xor
+}
+
+define void @binvi_i32_31_allWUsers(i32 signext %a, ptr %p) nounwind {
+; RV64I-LABEL: binvi_i32_31_allWUsers:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 524288
+; RV64I-NEXT:    xor a0, a0, a2
+; RV64I-NEXT:    sw a0, 0(a1)
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: binvi_i32_31_allWUsers:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 31
+; RV64ZBS-NEXT:    sw a0, 0(a1)
+; RV64ZBS-NEXT:    ret
+  %xor = xor i32 %a, 2147483648
+  store i32 %xor, ptr %p
+  ret void
 }
 
 define i64 @binvi_i64_10(i64 %a) nounwind {

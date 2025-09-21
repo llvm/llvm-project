@@ -10,7 +10,6 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -99,127 +98,179 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
   return os.str();
 }
 
-template <bool isLoad, typename OpType>
+static int32_t getL1CacheControl(LoadCacheControl cc) {
+  int32_t control = 0;
+  switch (cc) {
+  case LoadCacheControl::L1UC_L2UC_L3UC:
+  case LoadCacheControl::L1UC_L2UC_L3C:
+  case LoadCacheControl::L1UC_L2C_L3UC:
+  case LoadCacheControl::L1UC_L2C_L3C:
+    control = 1;
+    break;
+  case LoadCacheControl::L1C_L2UC_L3UC:
+  case LoadCacheControl::L1C_L2UC_L3C:
+  case LoadCacheControl::L1C_L2C_L3UC:
+  case LoadCacheControl::L1C_L2C_L3C:
+    control = 2;
+    break;
+  case LoadCacheControl::L1S_L2UC_L3UC:
+  case LoadCacheControl::L1S_L2UC_L3C:
+  case LoadCacheControl::L1S_L2C_L3UC:
+  case LoadCacheControl::L1S_L2C_L3C:
+    control = 3;
+    break;
+  case LoadCacheControl::INVALIDATE_READ:
+    control = 4;
+    break;
+  }
+  return control;
+}
+
+static int32_t getL1CacheControl(StoreCacheControl cc) {
+  int32_t control = 0;
+  switch (cc) {
+  case StoreCacheControl::L1UC_L2UC_L3UC:
+  case StoreCacheControl::L1UC_L2UC_L3WB:
+  case StoreCacheControl::L1UC_L2WB_L3UC:
+  case StoreCacheControl::L1UC_L2WB_L3WB:
+    control = 1;
+    break;
+  case StoreCacheControl::L1WT_L2UC_L3UC:
+  case StoreCacheControl::L1WT_L2UC_L3WB:
+  case StoreCacheControl::L1WT_L2WB_L3UC:
+  case StoreCacheControl::L1WT_L2WB_L3WB:
+    control = 2;
+    break;
+  case StoreCacheControl::L1S_L2UC_L3UC:
+  case StoreCacheControl::L1S_L2UC_L3WB:
+  case StoreCacheControl::L1S_L2WB_L3UC:
+  case StoreCacheControl::L1S_L2WB_L3WB:
+    control = 3;
+    break;
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
+    control = 4;
+    break;
+  }
+  return control;
+}
+
+static int32_t getL3CacheControl(LoadCacheControl cc) {
+  int32_t control = 0;
+  switch (cc) {
+  case LoadCacheControl::L1UC_L2UC_L3UC:
+  case LoadCacheControl::L1UC_L2C_L3UC:
+  case LoadCacheControl::L1C_L2UC_L3UC:
+  case LoadCacheControl::L1C_L2C_L3UC:
+  case LoadCacheControl::L1S_L2UC_L3UC:
+  case LoadCacheControl::L1S_L2C_L3UC:
+    control = 1;
+    break;
+  case LoadCacheControl::L1UC_L2UC_L3C:
+  case LoadCacheControl::L1UC_L2C_L3C:
+  case LoadCacheControl::L1C_L2UC_L3C:
+  case LoadCacheControl::L1C_L2C_L3C:
+  case LoadCacheControl::L1S_L2UC_L3C:
+  case LoadCacheControl::L1S_L2C_L3C:
+    control = 2;
+    break;
+  case LoadCacheControl::INVALIDATE_READ:
+    control = 4;
+    break;
+  }
+  return control;
+}
+
+static int32_t getL3CacheControl(StoreCacheControl cc) {
+  int32_t control = 0;
+  switch (cc) {
+  case StoreCacheControl::L1UC_L2UC_L3UC:
+  case StoreCacheControl::L1UC_L2WB_L3UC:
+  case StoreCacheControl::L1WT_L2UC_L3UC:
+  case StoreCacheControl::L1WT_L2WB_L3UC:
+  case StoreCacheControl::L1S_L2UC_L3UC:
+  case StoreCacheControl::L1S_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+    control = 1;
+    break;
+  case StoreCacheControl::L1UC_L2UC_L3WB:
+  case StoreCacheControl::L1UC_L2WB_L3WB:
+  case StoreCacheControl::L1WT_L2UC_L3WB:
+  case StoreCacheControl::L1WT_L2WB_L3WB:
+  case StoreCacheControl::L1S_L2UC_L3WB:
+  case StoreCacheControl::L1S_L2WB_L3WB:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
+    control = 2;
+    break;
+  }
+  return control;
+}
+
+static std::optional<LoadCacheControl> getCacheControl(PrefetchOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<LoadCacheControl> getCacheControl(BlockLoad2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<LoadCacheControl> getCacheControl(BlockPrefetch2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<StoreCacheControl> getCacheControl(BlockStore2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<LoadCacheControl> getCacheControl(LLVM::LoadOp op) {
+  if (op->hasAttr("cache_control")) {
+    auto attr = op->getAttrOfType<xevm::LoadCacheControlAttr>("cache_control");
+    if (!attr)
+      return std::nullopt;
+    return std::optional<LoadCacheControl>(attr.getValue());
+  }
+  return std::nullopt;
+}
+
+static std::optional<StoreCacheControl> getCacheControl(LLVM::StoreOp op) {
+  if (op->hasAttr("cache_control")) {
+    auto attr = op->getAttrOfType<xevm::StoreCacheControlAttr>("cache_control");
+    if (!attr)
+      return std::nullopt;
+    return std::optional<StoreCacheControl>(attr.getValue());
+  }
+  return std::nullopt;
+}
+
+template <typename OpType>
 int32_t getL1CacheControl(OpType op) {
-  int32_t control = 0;
-  if constexpr (isLoad) {
-    switch (*op.getCacheControl()) {
-    case LoadCacheControl::L1UC_L2UC_L3UC:
-    case LoadCacheControl::L1UC_L2UC_L3C:
-    case LoadCacheControl::L1UC_L2C_L3UC:
-    case LoadCacheControl::L1UC_L2C_L3C:
-      control = 1;
-      break;
-    case LoadCacheControl::L1C_L2UC_L3UC:
-    case LoadCacheControl::L1C_L2UC_L3C:
-    case LoadCacheControl::L1C_L2C_L3UC:
-    case LoadCacheControl::L1C_L2C_L3C:
-      control = 2;
-      break;
-    case LoadCacheControl::L1S_L2UC_L3UC:
-    case LoadCacheControl::L1S_L2UC_L3C:
-    case LoadCacheControl::L1S_L2C_L3UC:
-    case LoadCacheControl::L1S_L2C_L3C:
-      control = 3;
-      break;
-    case LoadCacheControl::INVALIDATE_READ:
-      control = 4;
-      break;
-    }
-  } else {
-    switch (*op.getCacheControl()) {
-    case StoreCacheControl::L1UC_L2UC_L3UC:
-    case StoreCacheControl::L1UC_L2UC_L3WB:
-    case StoreCacheControl::L1UC_L2WB_L3UC:
-    case StoreCacheControl::L1UC_L2WB_L3WB:
-      control = 1;
-      break;
-    case StoreCacheControl::L1WT_L2UC_L3UC:
-    case StoreCacheControl::L1WT_L2UC_L3WB:
-    case StoreCacheControl::L1WT_L2WB_L3UC:
-    case StoreCacheControl::L1WT_L2WB_L3WB:
-      control = 2;
-      break;
-    case StoreCacheControl::L1S_L2UC_L3UC:
-    case StoreCacheControl::L1S_L2UC_L3WB:
-    case StoreCacheControl::L1S_L2WB_L3UC:
-    case StoreCacheControl::L1S_L2WB_L3WB:
-      control = 3;
-      break;
-    case StoreCacheControl::L1WB_L2UC_L3UC:
-    case StoreCacheControl::L1WB_L2WB_L3UC:
-    case StoreCacheControl::L1WB_L2UC_L3WB:
-      control = 4;
-      break;
-    }
-  }
-  return control;
+  return getL1CacheControl(*getCacheControl(op));
 }
 
-template <bool isLoad, typename OpType>
+template <typename OpType>
 int32_t getL3CacheControl(OpType op) {
-  int32_t control = 0;
-  if constexpr (isLoad) {
-    switch (*op.getCacheControl()) {
-    case LoadCacheControl::L1UC_L2UC_L3UC:
-    case LoadCacheControl::L1UC_L2C_L3UC:
-    case LoadCacheControl::L1C_L2UC_L3UC:
-    case LoadCacheControl::L1C_L2C_L3UC:
-    case LoadCacheControl::L1S_L2UC_L3UC:
-    case LoadCacheControl::L1S_L2C_L3UC:
-      control = 1;
-      break;
-    case LoadCacheControl::L1UC_L2UC_L3C:
-    case LoadCacheControl::L1UC_L2C_L3C:
-    case LoadCacheControl::L1C_L2UC_L3C:
-    case LoadCacheControl::L1C_L2C_L3C:
-    case LoadCacheControl::L1S_L2UC_L3C:
-    case LoadCacheControl::L1S_L2C_L3C:
-      control = 2;
-      break;
-    case LoadCacheControl::INVALIDATE_READ:
-      control = 4;
-      break;
-    }
-  } else {
-    switch (*op.getCacheControl()) {
-    case StoreCacheControl::L1UC_L2UC_L3UC:
-    case StoreCacheControl::L1UC_L2WB_L3UC:
-    case StoreCacheControl::L1WT_L2UC_L3UC:
-    case StoreCacheControl::L1WT_L2WB_L3UC:
-    case StoreCacheControl::L1S_L2UC_L3UC:
-    case StoreCacheControl::L1S_L2WB_L3UC:
-    case StoreCacheControl::L1WB_L2UC_L3UC:
-    case StoreCacheControl::L1WB_L2WB_L3UC:
-      control = 1;
-      break;
-    case StoreCacheControl::L1UC_L2UC_L3WB:
-    case StoreCacheControl::L1UC_L2WB_L3WB:
-    case StoreCacheControl::L1WT_L2UC_L3WB:
-    case StoreCacheControl::L1WT_L2WB_L3WB:
-    case StoreCacheControl::L1S_L2UC_L3WB:
-    case StoreCacheControl::L1S_L2WB_L3WB:
-    case StoreCacheControl::L1WB_L2UC_L3WB:
-      control = 2;
-      break;
-    }
-  }
-  return control;
+  return getL3CacheControl(*getCacheControl(op));
 }
 
-template <bool isLoad, typename OpType>
+template <typename OpType>
 static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
-  if (!op.getCacheControl())
+  if (!getCacheControl(op))
     return {};
   constexpr int32_t decorationCacheControlArity{4};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
+  constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
+                          std::is_same_v<OpType, BlockPrefetch2dOp> ||
+                          std::is_same_v<OpType, LLVM::LoadOp> ||
+                          std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
-      controlKey, 0, getL1CacheControl<isLoad, OpType>(op), 0};
+      controlKey, 0, getL1CacheControl<OpType>(op), 0};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL3{
-      controlKey, 1, getL3CacheControl<isLoad, OpType>(op), 0};
+      controlKey, 1, getL3CacheControl<OpType>(op), 0};
   auto arrayAttrL1 = rewriter.getI32ArrayAttr(decorationsL1);
   auto arrayAttrL3 = rewriter.getI32ArrayAttr(decorationsL3);
 
@@ -251,7 +302,7 @@ static LLVM::CallOp createDeviceFunctionCall(
   for (auto [idx, attrName] : paramAttrs)
     funcOp.setArgAttr(idx, attrName, rewriter.getUnitAttr());
 
-  auto callOp = rewriter.create<LLVM::CallOp>(loc, funcOp, args);
+  auto callOp = LLVM::CallOp::create(rewriter, loc, funcOp, args);
   callOp->setAttrs(funcOp->getAttrs());
 
   return callOp;
@@ -299,7 +350,7 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
       VectorType newTy = VectorType::get(
           vecBitSize / packedType.getIntOrFloatBitWidth(), packedType);
       if (origTy != newTy)
-        val = rewriter.create<LLVM::BitcastOp>(loc, newTy, val);
+        val = LLVM::BitcastOp::create(rewriter, loc, newTy, val);
       return val;
     };
 
@@ -326,7 +377,7 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
             : cOrigTy;
     VectorType resTy = cTy;
     if (cOrigTy != cTy)
-      c = rewriter.create<LLVM::BitcastOp>(loc, cTy, c);
+      c = LLVM::BitcastOp::create(rewriter, loc, cTy, c);
 
     constexpr int32_t systolicDepth{8};
     std::string fnName =
@@ -352,7 +403,7 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
             ->getResult(0);
 
     if (resOrigTy != resTy)
-      result = rewriter.create<LLVM::BitcastOp>(loc, resOrigTy, result);
+      result = LLVM::BitcastOp::create(rewriter, loc, resOrigTy, result);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -383,7 +434,7 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
     auto loc = op.getLoc();
     const std::string fnName{"_Z8prefetchPU3AS1Kcm"};
     Value one =
-        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 1);
     SmallVector<Value> args{op.getPtr(), one};
     SmallVector<Type> argTypes;
     for (auto arg : args)
@@ -399,7 +450,7 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
         rewriter, fnName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, {}, funcAttr, op.getOperation());
     if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata<true>(rewriter, op))
+            getCacheControlMetadata(rewriter, op))
       call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     rewriter.eraseOp(op);
     return success();
@@ -439,11 +490,11 @@ class MemfenceToOCLPattern : public OpConversionPattern<MemfenceOp> {
           op, "Fence only supports workgroup and device memory scopes.");
     }
     Type i32Type = rewriter.getI32Type();
-    Value acqRel = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 4);
+    Value acqRel = LLVM::ConstantOp::create(rewriter, loc, i32Type, 4);
     Value memScopeConst =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Type, memScope);
+        LLVM::ConstantOp::create(rewriter, loc, i32Type, memScope);
     Value addrSpaceConst =
-        rewriter.create<LLVM::ConstantOp>(loc, i32Type, addrSpace);
+        LLVM::ConstantOp::create(rewriter, loc, i32Type, addrSpace);
     SmallVector<Value> args{addrSpaceConst, acqRel, memScopeConst};
     SmallVector<Type> argTypes{3, i32Type};
     createDeviceFunctionCall(rewriter, mangle(fnName, argTypes),
@@ -477,13 +528,13 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
 
     auto i32Type = rewriter.getI32Type();
     Value byteCoord =
-        rewriter.create<LLVM::UndefOp>(loc, VectorType::get(2, i32Type));
-    Value zero = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 0);
-    Value one = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 1);
-    byteCoord = rewriter.create<LLVM::InsertElementOp>(
-        loc, VectorType::get(2, i32Type), byteCoord, op.getX(), zero);
-    byteCoord = rewriter.create<LLVM::InsertElementOp>(
-        loc, VectorType::get(2, i32Type), byteCoord, op.getY(), one);
+        LLVM::UndefOp::create(rewriter, loc, VectorType::get(2, i32Type));
+    Value zero = LLVM::ConstantOp::create(rewriter, loc, i32Type, 0);
+    Value one = LLVM::ConstantOp::create(rewriter, loc, i32Type, 1);
+    byteCoord = LLVM::InsertElementOp::create(
+        rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getX(), zero);
+    byteCoord = LLVM::InsertElementOp::create(
+        rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getY(), one);
     SmallVector<Value> args{op.getPtr(), op.getBaseWidth(), op.getBaseHeight(),
                             op.getBasePitch(), byteCoord};
     SmallVector<Type> retTypes;
@@ -504,11 +555,11 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     } else {
       auto vecElemType = vecType.getElementType();
       auto vecElemBitWidth = vecElemType.getIntOrFloatBitWidth();
-      Value numElems = rewriter.create<LLVM::ConstantOp>(
-          loc, i32Type, vecType.getNumElements());
-      auto dstOrSrcPtr = rewriter.create<LLVM::AllocaOp>(
-          loc, LLVM::LLVMPointerType::get(rewriter.getContext()), vecElemType,
-          numElems);
+      Value numElems = LLVM::ConstantOp::create(rewriter, loc, i32Type,
+                                                vecType.getNumElements());
+      auto dstOrSrcPtr = LLVM::AllocaOp::create(
+          rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()),
+          vecElemType, numElems);
       args.push_back(dstOrSrcPtr);
       if constexpr (isLoad) { // Load
         funcName += "read";
@@ -530,7 +581,7 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         bitWidthId = (vecElemBitWidth == 32)
                          ? "j"
                          : ((vecElemBitWidth == 16) ? "t" : "h");
-        rewriter.create<LLVM::StoreOp>(loc, op.getStoredVal(), dstOrSrcPtr);
+        LLVM::StoreOp::create(rewriter, loc, op.getStoredVal(), dstOrSrcPtr);
         paramAttrs = {
             std::make_pair(0, LLVM::LLVMDialect::getNonNullAttrName()),
             std::make_pair(0, LLVM::LLVMDialect::getWriteOnlyAttrName()),
@@ -558,14 +609,29 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, funcName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, paramAttrs, funcAttr, op.getOperation());
     if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata < isLoad || isPrefetch > (rewriter, op)) {
+            getCacheControlMetadata(rewriter, op)) {
       call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     }
     if constexpr (isLoad)
       rewriter.replaceOp(
-          op, rewriter.create<LLVM::LoadOp>(loc, vecType, spvLoadDstPtr));
+          op, LLVM::LoadOp::create(rewriter, loc, vecType, spvLoadDstPtr));
     else
       rewriter.eraseOp(op);
+    return success();
+  }
+};
+template <typename OpType>
+class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!op->hasAttr("cache_control"))
+      return failure();
+    std::optional<ArrayAttr> optCacheControls =
+        getCacheControlMetadata(rewriter, op);
+    op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    op->removeAttr("cache_control");
     return success();
   }
 };
@@ -584,10 +650,8 @@ struct ConvertXeVMToLLVMPass
 
   void runOnOperation() override {
     ConversionTarget target(getContext());
-    target.addLegalDialect<LLVM::LLVMDialect>();
-    target.addIllegalDialect<XeVMDialect>();
     RewritePatternSet patterns(&getContext());
-    populateXeVMToLLVMConversionPatterns(patterns);
+    populateXeVMToLLVMConversionPatterns(target, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -612,7 +676,7 @@ struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
-    populateXeVMToLLVMConversionPatterns(patterns);
+    populateXeVMToLLVMConversionPatterns(target, patterns);
   }
 };
 } // namespace
@@ -621,12 +685,17 @@ struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
-void ::mlir::populateXeVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
+void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
+                                                  RewritePatternSet &patterns) {
+  target.addDynamicallyLegalDialect<LLVM::LLVMDialect>(
+      [](Operation *op) { return !op->hasAttr("cache_control"); });
+  target.addIllegalDialect<XeVMDialect>();
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
                LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
                LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
-               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern>(
-      patterns.getContext());
+               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern,
+               LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
+               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>>(patterns.getContext());
 }
 
 void ::mlir::registerConvertXeVMToLLVMInterface(DialectRegistry &registry) {

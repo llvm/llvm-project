@@ -13,7 +13,7 @@ declare double @llvm.sqrt.f64(double)
 
 ; -- reciprocal sqrt --
 
-define float @test_rsqrt32(float %a) #0 {
+define float @test_rsqrt32(float %a) {
 ; CHECK-LABEL: test_rsqrt32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -28,7 +28,7 @@ define float @test_rsqrt32(float %a) #0 {
   ret float %ret
 }
 
-define float @test_rsqrt_ftz(float %a) #0 #1 {
+define float @test_rsqrt_ftz(float %a) #1 {
 ; CHECK-LABEL: test_rsqrt_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -76,7 +76,7 @@ define double @test_rsqrt64_ftz(double %a) #1 {
 
 ; -- sqrt --
 
-define float @test_sqrt32(float %a) #0 {
+define float @test_sqrt32(float %a) {
 ; CHECK-LABEL: test_sqrt32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -90,7 +90,7 @@ define float @test_sqrt32(float %a) #0 {
   ret float %ret
 }
 
-define float @test_sqrt32_ninf(float %a) #0 {
+define float @test_sqrt32_ninf(float %a) {
 ; CHECK-LABEL: test_sqrt32_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -108,7 +108,7 @@ define float @test_sqrt32_ninf(float %a) #0 {
   ret float %ret
 }
 
-define float @test_sqrt_ftz(float %a) #0 #1 {
+define float @test_sqrt_ftz(float %a) #1 {
 ; CHECK-LABEL: test_sqrt_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -122,7 +122,7 @@ define float @test_sqrt_ftz(float %a) #0 #1 {
   ret float %ret
 }
 
-define float @test_sqrt_ftz_ninf(float %a) #0 #1 {
+define float @test_sqrt_ftz_ninf(float %a) #1 {
 ; CHECK-LABEL: test_sqrt_ftz_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -139,7 +139,7 @@ define float @test_sqrt_ftz_ninf(float %a) #0 #1 {
   ret float %ret
 }
 
-define double @test_sqrt64(double %a) #0 {
+define double @test_sqrt64(double %a) {
 ; CHECK-LABEL: test_sqrt64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -156,7 +156,7 @@ define double @test_sqrt64(double %a) #0 {
 ; There's no sqrt.approx.f64 instruction; we emit
 ; reciprocal(rsqrt.approx.f64(x)).  There's no non-ftz approximate reciprocal,
 ; so we just use the ftz version.
-define double @test_sqrt64_ninf(double %a) #0 {
+define double @test_sqrt64_ninf(double %a) {
 ; CHECK-LABEL: test_sqrt64_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -175,7 +175,7 @@ define double @test_sqrt64_ninf(double %a) #0 {
   ret double %ret
 }
 
-define double @test_sqrt64_ftz(double %a) #0 #1 {
+define double @test_sqrt64_ftz(double %a) #1 {
 ; CHECK-LABEL: test_sqrt64_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -190,7 +190,7 @@ define double @test_sqrt64_ftz(double %a) #0 #1 {
 }
 
 ; There's no sqrt.approx.ftz.f64 instruction; we just use the non-ftz version.
-define double @test_sqrt64_ftz_ninf(double %a) #0 #1 {
+define double @test_sqrt64_ftz_ninf(double %a) #1 {
 ; CHECK-LABEL: test_sqrt64_ftz_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -214,7 +214,7 @@ define double @test_sqrt64_ftz_ninf(double %a) #0 #1 {
 ; The sqrt and rsqrt refinement algorithms both emit an rsqrt.approx, followed
 ; by some math.
 
-define float @test_rsqrt32_refined(float %a) #0 #2 {
+define float @test_rsqrt32_refined(float %a) #2 {
 ; CHECK-LABEL: test_rsqrt32_refined(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
@@ -229,11 +229,11 @@ define float @test_rsqrt32_refined(float %a) #0 #2 {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.sqrt.f32(float %a)
-  %ret = fdiv arcp float 1.0, %val
+  %ret = fdiv arcp contract float 1.0, %val
   ret float %ret
 }
 
-define float @test_sqrt32_refined(float %a) #0 #2 {
+define float @test_sqrt32_refined(float %a) #2 {
 ; CHECK-LABEL: test_sqrt32_refined(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -247,7 +247,7 @@ define float @test_sqrt32_refined(float %a) #0 #2 {
   ret float %ret
 }
 
-define float @test_sqrt32_refined_ninf(float %a) #0 #2 {
+define float @test_sqrt32_refined_ninf(float %a) #2 {
 ; CHECK-LABEL: test_sqrt32_refined_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -265,11 +265,11 @@ define float @test_sqrt32_refined_ninf(float %a) #0 #2 {
 ; CHECK-NEXT:    selp.f32 %r8, 0f00000000, %r6, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %ret = tail call ninf afn float @llvm.sqrt.f32(float %a)
+  %ret = tail call ninf afn contract float @llvm.sqrt.f32(float %a)
   ret float %ret
 }
 
-define double @test_rsqrt64_refined(double %a) #0 #2 {
+define double @test_rsqrt64_refined(double %a) #2 {
 ; CHECK-LABEL: test_rsqrt64_refined(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
@@ -284,11 +284,11 @@ define double @test_rsqrt64_refined(double %a) #0 #2 {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.sqrt.f64(double %a)
-  %ret = fdiv arcp double 1.0, %val
+  %ret = fdiv arcp contract double 1.0, %val
   ret double %ret
 }
 
-define double @test_sqrt64_refined(double %a) #0 #2 {
+define double @test_sqrt64_refined(double %a) #2 {
 ; CHECK-LABEL: test_sqrt64_refined(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -302,7 +302,7 @@ define double @test_sqrt64_refined(double %a) #0 #2 {
   ret double %ret
 }
 
-define double @test_sqrt64_refined_ninf(double %a) #0 #2 {
+define double @test_sqrt64_refined_ninf(double %a) #2 {
 ; CHECK-LABEL: test_sqrt64_refined_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -320,13 +320,13 @@ define double @test_sqrt64_refined_ninf(double %a) #0 #2 {
 ; CHECK-NEXT:    selp.f64 %rd8, 0d0000000000000000, %rd6, %p1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd8;
 ; CHECK-NEXT:    ret;
-  %ret = tail call ninf afn double @llvm.sqrt.f64(double %a)
+  %ret = tail call ninf afn contract double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
 
 ; -- refined sqrt and rsqrt with ftz enabled --
 
-define float @test_rsqrt32_refined_ftz(float %a) #0 #1 #2 {
+define float @test_rsqrt32_refined_ftz(float %a) #1 #2 {
 ; CHECK-LABEL: test_rsqrt32_refined_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
@@ -341,11 +341,11 @@ define float @test_rsqrt32_refined_ftz(float %a) #0 #1 #2 {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %val = tail call float @llvm.sqrt.f32(float %a)
-  %ret = fdiv arcp float 1.0, %val
+  %ret = fdiv arcp contract float 1.0, %val
   ret float %ret
 }
 
-define float @test_sqrt32_refined_ftz(float %a) #0 #1 #2 {
+define float @test_sqrt32_refined_ftz(float %a) #1 #2 {
 ; CHECK-LABEL: test_sqrt32_refined_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -359,7 +359,7 @@ define float @test_sqrt32_refined_ftz(float %a) #0 #1 #2 {
   ret float %ret
 }
 
-define float @test_sqrt32_refined_ftz_ninf(float %a) #0 #1 #2 {
+define float @test_sqrt32_refined_ftz_ninf(float %a) #1 #2 {
 ; CHECK-LABEL: test_sqrt32_refined_ftz_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -376,12 +376,12 @@ define float @test_sqrt32_refined_ftz_ninf(float %a) #0 #1 #2 {
 ; CHECK-NEXT:    selp.f32 %r7, 0f00000000, %r6, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-NEXT:    ret;
-  %ret = tail call ninf afn float @llvm.sqrt.f32(float %a)
+  %ret = tail call ninf afn contract float @llvm.sqrt.f32(float %a)
   ret float %ret
 }
 
 ; There's no rsqrt.approx.ftz.f64, so we just use the non-ftz version.
-define double @test_rsqrt64_refined_ftz(double %a) #0 #1 #2 {
+define double @test_rsqrt64_refined_ftz(double %a) #1 #2 {
 ; CHECK-LABEL: test_rsqrt64_refined_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
@@ -396,11 +396,11 @@ define double @test_rsqrt64_refined_ftz(double %a) #0 #1 #2 {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
   %val = tail call double @llvm.sqrt.f64(double %a)
-  %ret = fdiv arcp double 1.0, %val
+  %ret = fdiv arcp contract double 1.0, %val
   ret double %ret
 }
 
-define double @test_sqrt64_refined_ftz(double %a) #0 #1 #2 {
+define double @test_sqrt64_refined_ftz(double %a) #1 #2 {
 ; CHECK-LABEL: test_sqrt64_refined_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -414,7 +414,7 @@ define double @test_sqrt64_refined_ftz(double %a) #0 #1 #2 {
   ret double %ret
 }
 
-define double @test_sqrt64_refined_ftz_ninf(double %a) #0 #1 #2 {
+define double @test_sqrt64_refined_ftz_ninf(double %a) #1 #2 {
 ; CHECK-LABEL: test_sqrt64_refined_ftz_ninf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -432,10 +432,9 @@ define double @test_sqrt64_refined_ftz_ninf(double %a) #0 #1 #2 {
 ; CHECK-NEXT:    selp.f64 %rd8, 0d0000000000000000, %rd6, %p1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd8;
 ; CHECK-NEXT:    ret;
-  %ret = tail call ninf afn double @llvm.sqrt.f64(double %a)
+  %ret = tail call ninf afn contract double @llvm.sqrt.f64(double %a)
   ret double %ret
 }
 
-attributes #0 = { "unsafe-fp-math" = "true" }
 attributes #1 = { "denormal-fp-math-f32" = "preserve-sign,preserve-sign" }
 attributes #2 = { "reciprocal-estimates" = "rsqrtf:1,rsqrtd:1,sqrtf:1,sqrtd:1" }

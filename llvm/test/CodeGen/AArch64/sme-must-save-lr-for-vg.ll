@@ -11,14 +11,12 @@ define void @foo() "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    lsr x9, x9, #3
-; CHECK-NEXT:    str x9, [sp, #72] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_get_current_vg
 ; CHECK-NEXT:    str x0, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset vg, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
 ; CHECK-NEXT:    .cfi_offset b8, -40
 ; CHECK-NEXT:    .cfi_offset b9, -48
 ; CHECK-NEXT:    .cfi_offset b10, -56
@@ -29,13 +27,15 @@ define void @foo() "aarch64_pstate_sm_body" {
 ; CHECK-NEXT:    .cfi_offset b15, -96
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore vg
 ; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    .cfi_restore b8
 ; CHECK-NEXT:    .cfi_restore b9
 ; CHECK-NEXT:    .cfi_restore b10

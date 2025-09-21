@@ -833,7 +833,7 @@ define i1 @usubo_ugt_i32(i32 %x, i32 %y, ptr %p) {
 ; RV64-NEXT:    sext.w a3, a1
 ; RV64-NEXT:    sext.w a4, a0
 ; RV64-NEXT:    sltu a3, a4, a3
-; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    sw a0, 0(a2)
 ; RV64-NEXT:    mv a0, a3
 ; RV64-NEXT:    ret
@@ -860,7 +860,7 @@ define i1 @usubo_ugt_constant_op0_i8(i8 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    zext.b a2, a0
 ; RV64-NEXT:    li a3, 42
-; RV64-NEXT:    subw a3, a3, a0
+; RV64-NEXT:    sub a3, a3, a0
 ; RV64-NEXT:    sltiu a0, a2, 43
 ; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    sb a3, 0(a1)
@@ -890,7 +890,7 @@ define i1 @usubo_ult_constant_op0_i16(i16 %x, ptr %p) {
 ; RV64-NEXT:    slli a2, a0, 48
 ; RV64-NEXT:    li a3, 43
 ; RV64-NEXT:    srli a2, a2, 48
-; RV64-NEXT:    subw a3, a3, a0
+; RV64-NEXT:    sub a3, a3, a0
 ; RV64-NEXT:    sltiu a0, a2, 44
 ; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    sh a3, 0(a1)
@@ -987,7 +987,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, ptr %p) {
 ; RV64-LABEL: usubo_ne_constant0_op1_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a2, a0
-; RV64-NEXT:    negw a3, a0
+; RV64-NEXT:    neg a3, a0
 ; RV64-NEXT:    snez a0, a2
 ; RV64-NEXT:    sw a3, 0(a1)
 ; RV64-NEXT:    ret

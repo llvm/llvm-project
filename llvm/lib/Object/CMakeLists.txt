@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMObject
   OffloadBundle.cpp
   RecordStreamer.cpp
   RelocationResolver.cpp
+  SFrameParser.cpp
   SymbolicFile.cpp
   SymbolSize.cpp
   TapiFile.cpp

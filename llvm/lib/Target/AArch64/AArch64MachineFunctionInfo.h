@@ -213,9 +213,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// or return type
   bool IsSVECC = false;
 
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
-
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
 
@@ -231,24 +228,29 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
-  // Holds a pointer to a buffer that is large enough to represent
-  // all SME ZA state and any additional state required by the
-  // __arm_sme_save/restore support routines.
-  Register SMESaveBufferAddr = MCRegister::NoRegister;
-
-  // true if SMESaveBufferAddr is used.
-  bool SMESaveBufferUsed = false;
-
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
 
-  // The stack slots where VG values are stored to.
-  int64_t VGIdx = std::numeric_limits<int>::max();
-  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
-
   // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
   SMEAttrs SMEFnAttrs;
+
+  // Holds the TPIDR2 block if allocated early (for Windows/stack probes
+  // support).
+  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
+
+  // Holds the spill slot for ZT0.
+  int ZT0SpillSlotIndex = std::numeric_limits<int>::max();
+
+  // Note: The following properties are only used for the old SME ABI lowering:
+  /// The frame-index for the TPIDR2 object used for lazy saves.
+  TPIDR2Object TPIDR2;
+  // Holds a pointer to a buffer that is large enough to represent
+  // all SME ZA state and any additional state required by the
+  // __arm_sme_save/restore support routines.
+  Register SMESaveBufferAddr = MCRegister::NoRegister;
+  // true if SMESaveBufferAddr is used.
+  bool SMESaveBufferUsed = false;
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -258,6 +260,30 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  void setEarlyAllocSMESaveBuffer(Register Ptr) {
+    EarlyAllocSMESaveBuffer = Ptr;
+  }
+
+  Register getEarlyAllocSMESaveBuffer() const {
+    return EarlyAllocSMESaveBuffer;
+  }
+
+  void setZT0SpillSlotIndex(int FI) { ZT0SpillSlotIndex = FI; }
+  int getZT0SpillSlotIndex() const {
+    assert(hasZT0SpillSlotIndex() && "ZT0 spill slot index not set!");
+    return ZT0SpillSlotIndex;
+  }
+  bool hasZT0SpillSlotIndex() const {
+    return ZT0SpillSlotIndex != std::numeric_limits<int>::max();
+  }
+
+  // Old SME ABI lowering state getters/setters:
+  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
+  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
+
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
   }
@@ -265,25 +291,11 @@ public:
     return PredicateRegForFillSpill;
   }
 
-  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
-  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
-
-  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
-  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
-
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
 
-  int64_t getVGIdx() const { return VGIdx; };
-  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
-
-  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
-  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
-
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
-
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -600,6 +612,7 @@ namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
   std::optional<uint64_t> StackSizeSVE;
+  std::optional<bool> HasStackFrame;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -612,6 +625,7 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
     YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
+    YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
   }
 };
 

@@ -1285,8 +1285,34 @@ INTERCEPTOR(int, puts, char *s) {
 #endif
 
 #if SANITIZER_INTERCEPT_PRCTL
-INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
-            unsigned long arg4, unsigned long arg5) {
+
+#  if defined(__aarch64__)
+// https://llvm.org/docs/PointerAuth.html
+// AArch64 is currently the only architecture with full PAC support.
+// Avoid adding PAC instructions to prevent crashes caused by
+// prctl(PR_PAC_RESET_KEYS, ...). Since PR_PAC_RESET_KEYS resets the
+// authentication key, using the old key afterward will lead to a crash.
+
+#    if defined(__ARM_FEATURE_BTI_DEFAULT)
+#      define BRANCH_PROTECTION_ATTRIBUTE \
+        __attribute__((target("branch-protection=bti")))
+#    else
+#      define BRANCH_PROTECTION_ATTRIBUTE \
+        __attribute__((target("branch-protection=none")))
+#    endif
+
+#    define PRCTL_INTERCEPTOR(ret_type, func, ...)                          \
+      DEFINE_REAL(ret_type, func, __VA_ARGS__)                              \
+      DECLARE_WRAPPER(ret_type, func, __VA_ARGS__)                          \
+      extern "C" INTERCEPTOR_ATTRIBUTE BRANCH_PROTECTION_ATTRIBUTE ret_type \
+      WRAP(func)(__VA_ARGS__)
+
+#  else
+#    define PRCTL_INTERCEPTOR INTERCEPTOR
+#  endif
+
+PRCTL_INTERCEPTOR(int, prctl, int option, unsigned long arg2,
+                  unsigned long arg3, unsigned long arg4, unsigned long arg5) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, prctl, option, arg2, arg3, arg4, arg5);
   static const int PR_SET_NAME = 15;
@@ -1326,7 +1352,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   }
   return res;
 }
-#define INIT_PRCTL COMMON_INTERCEPT_FUNCTION(prctl)
+#  define INIT_PRCTL COMMON_INTERCEPT_FUNCTION(prctl)
 #else
 #define INIT_PRCTL
 #endif  // SANITIZER_INTERCEPT_PRCTL

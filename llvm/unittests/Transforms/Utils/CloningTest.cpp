@@ -1203,13 +1203,9 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
 
   ASSERT_FALSE(verifyModule(*M, &errs()));
 
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
 #define EXPECT_ATOM(Inst, G)                                                   \
   EXPECT_TRUE(Inst->getDebugLoc());                                            \
   EXPECT_EQ(Inst->getDebugLoc()->getAtomGroup(), uint64_t(G));
-#else
-#define EXPECT_ATOM(Inst, G) (void)Inst;
-#endif
 
   Function *F = M->getFunction("test");
   BasicBlock *BB = &*F->begin();

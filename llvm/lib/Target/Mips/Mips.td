@@ -213,6 +213,22 @@ def FeatureStrictAlign
                        "Disable unaligned load store for r6">;
 
 //===----------------------------------------------------------------------===//
+// Mips Instruction Predicate Definitions.
+//===----------------------------------------------------------------------===//
+
+def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
+                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
+def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
+                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar MIPS32 = DefaultMode;
+def MIPS64 : HwMode<[IsPTR64bit]>;
+
+//===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
