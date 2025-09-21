@@ -96,7 +96,8 @@ struct __lazy_synth_three_way_comparator<_Comparator,
                                                             __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
   // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
   // the comparator.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
 
   // Same comment as above.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __eager_compare_result
