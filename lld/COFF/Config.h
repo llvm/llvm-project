@@ -212,6 +212,8 @@ struct Configuration {
 
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;
+  // Used for /sectionlayout: to layout sections in specified order.
+  std::map<std::string, int> sectionOrder;
 
   // Options for manifest files.
   ManifestKind manifest = Default;
@@ -310,12 +312,17 @@ struct Configuration {
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;
+  bool cetCompatStrict = false;
+  bool cetCompatIpValidationRelaxed = false;
+  bool cetCompatDynamicApisInProcOnly = false;
+  bool hotpatchCompat = false;
   bool nxCompat = true;
   bool allowIsolation = true;
   bool terminalServerAware = true;
   bool largeAddressAware = false;
   bool highEntropyVA = false;
   bool appContainer = false;
+  bool mergeDebugDirectory = true;
   bool mingw = false;
   bool warnMissingOrderSymbol = true;
   bool warnLocallyDefinedImported = true;

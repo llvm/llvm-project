@@ -49,7 +49,7 @@ TEST_F(FortranVariableTest, SimpleScalar) {
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
       /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
-      /*dummy_scope=*/nullptr, name,
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 
@@ -75,7 +75,8 @@ TEST_F(FortranVariableTest, CharacterScalar) {
       *builder, loc, eleType, /*pinned=*/false, typeParams);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
-      /*shape=*/mlir::Value{}, typeParams, /*dummy_scope=*/nullptr, name,
+      /*shape=*/mlir::Value{}, typeParams, /*dummy_scope=*/nullptr,
+      /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 
@@ -106,7 +107,8 @@ TEST_F(FortranVariableTest, SimpleArray) {
   mlir::Value shape = createShape(extents);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
-      shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr, name,
+      shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
+      /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 
@@ -137,7 +139,8 @@ TEST_F(FortranVariableTest, CharacterArray) {
   mlir::Value shape = createShape(extents);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
-      shape, typeParams, /*dummy_scope=*/nullptr, name,
+      shape, typeParams, /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 

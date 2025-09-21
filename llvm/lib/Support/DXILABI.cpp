@@ -15,20 +15,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DXILABI.h"
-#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"SRV", llvm::dxil::ResourceClass::SRV},
-    {"UAV", llvm::dxil::ResourceClass::UAV},
-    {"CBV", llvm::dxil::ResourceClass::CBuffer},
-    {"Sampler", llvm::dxil::ResourceClass::Sampler},
-};
-
-ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> dxil::getResourceClasses() {
-  return ArrayRef(ResourceClassNames);
-}
-
 StringRef dxil::getResourceClassName(dxil::ResourceClass RC) {
-  return enumToStringRef(RC, getResourceClasses());
+  switch (RC) {
+  case dxil::ResourceClass::SRV:
+    return "SRV";
+  case dxil::ResourceClass::UAV:
+    return "UAV";
+  case dxil::ResourceClass::CBuffer:
+    return "CBV";
+  case dxil::ResourceClass::Sampler:
+    return "Sampler";
+  }
+  llvm_unreachable("Invalid ResourceClass enum value");
 }

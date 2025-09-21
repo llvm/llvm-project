@@ -42,6 +42,11 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
+cir::FuncType CIRGenTypes::getFunctionType(GlobalDecl gd) {
+  const CIRGenFunctionInfo &fi = arrangeGlobalDeclaration(gd);
+  return getFunctionType(fi);
+}
+
 cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
   mlir::Type resultType = convertType(info.getReturnType());
   SmallVector<mlir::Type, 8> argTypes;
@@ -55,8 +60,23 @@ cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
                             info.isVariadic());
 }
 
+cir::FuncType CIRGenTypes::getFunctionTypeForVTable(GlobalDecl gd) {
+  const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+  const FunctionProtoType *fpt = md->getType()->getAs<FunctionProtoType>();
+
+  if (!isFuncTypeConvertible(fpt))
+    cgm.errorNYI("getFunctionTypeForVTable: non-convertible function type");
+
+  return getFunctionType(gd);
+}
+
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
-  assert(!cir::MissingFeatures::opCallVirtual());
+  if (isVirtual()) {
+    const CallExpr *ce = getVirtualCallExpr();
+    return cgf.cgm.getCXXABI().getVirtualFunctionPointer(
+        cgf, getVirtualMethodDecl(), getThisAddress(), getVirtualFunctionType(),
+        ce ? ce->getBeginLoc() : SourceLocation());
+  }
   return *this;
 }
 
@@ -177,7 +197,10 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
   if (passParams)
     appendParameterTypes(*this, argTypes, fpt);
 
-  assert(!cir::MissingFeatures::implicitConstructorArgs());
+  // The structor signature may include implicit parameters.
+  [[maybe_unused]] CIRGenCXXABI::AddedStructorArgCounts addedArgs =
+      theCXXABI.buildStructorSignature(gd, argTypes);
+  assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
 
   RequiredArgs required =
       (passParams && md->isVariadic() ? RequiredArgs(argTypes.size())
@@ -267,10 +290,7 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   // Deactivate the cleanup for the callee-destructed param that was pushed.
   assert(!cir::MissingFeatures::thunks());
   if (type->isRecordType() &&
-      type->castAs<RecordType>()
-          ->getOriginalDecl()
-          ->getDefinitionOrSelf()
-          ->isParamDestroyedInCallee() &&
+      type->castAsRecordDecl()->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     cgm.errorNYI(param->getSourceRange(),
                  "emitDelegateCallArg: callee-destructed param");
@@ -307,26 +327,27 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
 
 /// Arrange a call to a C++ method, passing the given arguments.
 ///
+/// extraPrefixArgs is the number of ABI-specific args passed after the `this`
+/// parameter.
 /// passProtoArgs indicates whether `args` has args for the parameters in the
 /// given CXXConstructorDecl.
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
     const CallArgList &args, const CXXConstructorDecl *d, CXXCtorType ctorKind,
-    bool passProtoArgs) {
+    unsigned extraPrefixArgs, unsigned extraSuffixArgs, bool passProtoArgs) {
 
   // FIXME: Kill copy.
   llvm::SmallVector<CanQualType, 16> argTypes;
   for (const auto &arg : args)
     argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
 
-  assert(!cir::MissingFeatures::implicitConstructorArgs());
   // +1 for implicit this, which should always be args[0]
-  unsigned totalPrefixArgs = 1;
+  unsigned totalPrefixArgs = 1 + extraPrefixArgs;
 
   CanQual<FunctionProtoType> fpt = getFormalType(d);
-  RequiredArgs required =
-      passProtoArgs
-          ? RequiredArgs::getFromProtoWithExtraSlots(fpt, totalPrefixArgs)
-          : RequiredArgs::All;
+  RequiredArgs required = passProtoArgs
+                              ? RequiredArgs::getFromProtoWithExtraSlots(
+                                    fpt, totalPrefixArgs + extraSuffixArgs)
+                              : RequiredArgs::All;
 
   GlobalDecl gd(d, ctorKind);
   if (theCXXABI.hasThisReturn(gd))
@@ -670,10 +691,8 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (argType->isRecordType() && argType->castAs<RecordType>()
-                                     ->getOriginalDecl()
-                                     ->getDefinitionOrSelf()
-                                     ->isParamDestroyedInCallee()) {
+  if (argType->isRecordType() &&
+      argType->castAsRecordDecl()->isParamDestroyedInCallee()) {
     assert(!cir::MissingFeatures::msabi());
     cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
   }

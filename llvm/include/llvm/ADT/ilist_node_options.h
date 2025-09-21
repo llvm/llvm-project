@@ -82,7 +82,7 @@ template <class... Options> struct extract_sentinel_tracking;
 template <bool EnableSentinelTracking, class... Options>
 struct extract_sentinel_tracking<
     ilist_sentinel_tracking<EnableSentinelTracking>, Options...>
-    : std::integral_constant<bool, EnableSentinelTracking>, is_explicit {};
+    : std::bool_constant<EnableSentinelTracking>, is_explicit {};
 template <class Option1, class... Options>
 struct extract_sentinel_tracking<Option1, Options...>
     : extract_sentinel_tracking<Options...> {};
@@ -119,7 +119,7 @@ template <class Tag> struct is_valid_option<ilist_tag<Tag>> : std::true_type {};
 template <class... Options> struct extract_iterator_bits;
 template <bool IteratorBits, class... Options>
 struct extract_iterator_bits<ilist_iterator_bits<IteratorBits>, Options...>
-    : std::integral_constant<bool, IteratorBits> {};
+    : std::bool_constant<IteratorBits> {};
 template <class Option1, class... Options>
 struct extract_iterator_bits<Option1, Options...>
     : extract_iterator_bits<Options...> {};
@@ -145,12 +145,8 @@ struct is_valid_option<ilist_parent<ParentTy>> : std::true_type {};
 /// Check whether options are valid.
 ///
 /// The conjunction of \a is_valid_option on each individual option.
-template <class... Options> struct check_options;
-template <> struct check_options<> : std::true_type {};
-template <class Option1, class... Options>
-struct check_options<Option1, Options...>
-    : std::integral_constant<bool, is_valid_option<Option1>::value &&
-                                       check_options<Options...>::value> {};
+template <class... Options>
+struct check_options : std::conjunction<is_valid_option<Options>...> {};
 
 /// Traits for options for \a ilist_node.
 ///

@@ -13,7 +13,6 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/RegionInfo.h"
@@ -309,6 +308,9 @@ class StructurizeCFG {
 
   void hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
 
+  bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
+                              BasicBlock *HoistTo);
+
   void orderNodes();
 
   void analyzeLoops(RegionNode *N);
@@ -328,7 +330,7 @@ class StructurizeCFG {
   void addPhiValues(BasicBlock *From, BasicBlock *To);
 
   void findUndefBlocks(BasicBlock *PHIBlock,
-                       const SmallSet<BasicBlock *, 8> &Incomings,
+                       const SmallPtrSet<BasicBlock *, 8> &Incomings,
                        SmallVector<BasicBlock *> &UndefBlks) const;
 
   void mergeIfCompatible(EquivalenceClasses<PHINode *> &PhiClasses, PHINode *A,
@@ -416,11 +418,21 @@ public:
 
 } // end anonymous namespace
 
+char StructurizeCFGLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
+                      "Structurize the CFG", false, false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
+INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
+                    "Structurize the CFG", false, false)
+
 /// Checks whether an instruction is zero cost instruction and checks if the
 /// operands are from different BB. If so, this instruction can be coalesced
 /// if its hoisted to predecessor block. So, this returns true.
-static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
-                                   const TargetTransformInfo *TTI) {
+bool StructurizeCFG::isHoistableInstruction(Instruction *I, BasicBlock *BB,
+                                            BasicBlock *HoistTo) {
   if (I->getParent() != BB || isa<PHINode>(I))
     return false;
 
@@ -433,26 +445,17 @@ static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
   if (CostVal != 0)
     return false;
 
-  // Check if any operands are instructions defined in the same block.
+  // Check if all operands are available at the hoisting destination.
   for (auto &Op : I->operands()) {
     if (auto *OpI = dyn_cast<Instruction>(Op)) {
-      if (OpI->getParent() == BB)
+      // Operand must dominate the hoisting destination.
+      if (!DT->dominates(OpI->getParent(), HoistTo))
         return false;
     }
   }
 
   return true;
 }
-
-char StructurizeCFGLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
-                      "Structurize the CFG", false, false)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
-INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
-                    "Structurize the CFG", false, false)
 
 /// Structurization can introduce unnecessary VGPR copies due to register
 /// coalescing interference. For example, if the Else block has a zero-cost
@@ -479,7 +482,7 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
   for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
     auto *Inst = dyn_cast<Instruction>(ElseVal);
-    if (!Inst || !isHoistableInstruction(Inst, ElseBB, TTI))
+    if (!Inst || !isHoistableInstruction(Inst, ElseBB, CommonDominator))
       continue;
     Inst->removeFromParent();
     Inst->insertInto(CommonDominator, Term->getIterator());
@@ -762,7 +765,7 @@ void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
 /// from some blocks as undefined. The function will find out all such blocks
 /// and return in \p UndefBlks.
 void StructurizeCFG::findUndefBlocks(
-    BasicBlock *PHIBlock, const SmallSet<BasicBlock *, 8> &Incomings,
+    BasicBlock *PHIBlock, const SmallPtrSet<BasicBlock *, 8> &Incomings,
     SmallVector<BasicBlock *> &UndefBlks) const {
   //  We may get a post-structured CFG like below:
   //
@@ -788,7 +791,7 @@ void StructurizeCFG::findUndefBlocks(
   // path N->F2->F3->B. For example, the threads take the branch F1->N may
   // always take the branch F2->P2. So, when we are reconstructing a PHI
   // originally in B, we can safely say the incoming value from N is undefined.
-  SmallSet<BasicBlock *, 8> VisitedBlock;
+  SmallPtrSet<BasicBlock *, 8> VisitedBlock;
   SmallVector<BasicBlock *, 8> Stack;
   if (PHIBlock == ParentRegion->getExit()) {
     for (auto P : predecessors(PHIBlock)) {
@@ -884,7 +887,7 @@ void StructurizeCFG::setPhiValues() {
 
     PhiMap &BlkPhis = OldPhiIt->second;
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
-    SmallSet<BasicBlock *, 8> Incomings;
+    SmallPtrSet<BasicBlock *, 8> Incomings;
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
@@ -998,7 +1001,8 @@ void StructurizeCFG::simplifyHoistedPhis() {
         continue;
 
       OtherPhi->setIncomingValue(PoisonValBBIdx, V);
-      Phi->setIncomingValue(i, OtherV);
+      if (DT->dominates(OtherV, Phi))
+        Phi->setIncomingValue(i, OtherV);
     }
   }
 }

@@ -780,6 +780,53 @@ def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
   }];
 }
 
+class ROCDL_ConcretePair<Type elem0, Type elem1> :
+  Type<And<[
+    LLVM_AnyStruct.predicate,
+    SubstLeaves<
+         "$_self",
+         "::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).getBody()[0]",
+         elem0.predicate>,
+      SubstLeaves<
+         "$_self",
+         "::llvm::cast<::mlir::LLVM::LLVMStructType>($_self).getBody()[1]",
+         elem1.predicate>
+  ]>,
+  "LLVM dialect-compatible struct of " # elem0.summary # "and" # elem1.summary,
+  "::mlir::LLVM::LLVMStructType">,
+  BuildableType<"::mlir::LLVM::LLVMStructType::getLiteral($_builder.getContext(), "
+  "{" # elem0.builderCall # ", " # elem1.builderCall # "})">;
+
+// Permlane16 swap intrinsic operation
+def ROCDL_Permlane16SwapOp : ROCDL_IntrOp<"permlane16.swap", [], [],
+    [], 1, 0, 0, 0,
+    [2, 3], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src, I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs ROCDL_ConcretePair<I32, I32>:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src) `)` `->` type($res)
+  }];
+  let description = [{
+    Performs a `permlane16.swap` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
+
+// Permlane32 swap intrinsic operation
+def ROCDL_Permlane32SwapOp : ROCDL_IntrOp<"permlane32.swap", [], [],
+    [], 1, 0, 0, 0,
+    [2, 3], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src, I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs ROCDL_ConcretePair<I32, I32>:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src `,` $fi `,` $boundControl `:` `(` type($old) `,` type($src) `)` `->` type($res)
+  }];
+  let description = [{
+    Performs a `permlane32.swap` operation with the given operands, applying the
+    permutation specified by $fi to the provided inputs.
+  }];
+}
+
 class ROCDL_ConcreteVector<Type elem, int length> :
   FixedVectorOfLengthAndType<[length], [elem]>,
   BuildableType<
@@ -788,10 +835,17 @@ class ROCDL_ConcreteVector<Type elem, int length> :
 
 def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
 def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
+def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
 def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
 def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
+def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
 def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
 def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
+def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
+def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
+def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
+def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
+def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
 def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
 def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
 def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
@@ -927,6 +981,68 @@ class ScaleArgInfo<TypeConstraint argTyVal, string typeName> {
   string name = !tolower(typeName);
   string nameForOp = typeName;
 }
+
+//===---------------------------------------------------------------------===//
+// Scaled {fp4,bf8,fp8} to {bf16,f16,f32} conversion intrinsics
+//===---------------------------------------------------------------------===//
+
+foreach smallT = [
+  ScaleArgInfo<I32, "Fp4">,
+  ScaleArgInfo<ROCDL_V2I32Type, "Fp8">,
+  ScaleArgInfo<ROCDL_V2I32Type, "Bf8">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V8F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V8BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V8F32Type, "F32">,
+  ] in {
+    def ROCDL_CvtPkScalePk8 # largeT.nameForOp # smallT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk8." # largeT.name # "." # smallT.name,
+          [Pure], 1, [2], ["scaleSel"]>,
+        Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
+
+      let summary = "Scales 8 " # smallT.name # " and converts them to 8 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
+      let results = (outs largeT.type:$res);
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
+      }];
+    }
+  } // foreach largeT
+} // foreach smallTOp
+
+//===---------------------------------------------------------------------===//
+// Scaled {bf6,fp6} to {bf16,f16,f32} conversion intrinsics
+//===---------------------------------------------------------------------===//
+
+foreach smallT = [
+  ScaleArgInfo<ROCDL_V3I32Type, "Fp6">,
+  ScaleArgInfo<ROCDL_V3I32Type, "Bf6">
+] in {
+  foreach largeT = [
+    ScaleArgInfo<ROCDL_V16F16Type, "F16">,
+    ScaleArgInfo<ROCDL_V16BF16Type, "Bf16">,
+    ScaleArgInfo<ROCDL_V16F32Type, "F32">,
+  ] in {
+    def ROCDL_CvtPkScalePk16 # largeT.nameForOp # smallT.nameForOp # Op :
+          ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk16." # largeT.name # "." # smallT.name,
+          [Pure], 1, [2], ["scaleSel"]>,
+        Arguments<(ins smallT.type:$src, I32:$scale, I32Attr:$scaleSel)> {
+
+      let summary = "Scales 16 " # smallT.name # " and converts them to 16 " # largeT.name # ".";
+      let description = [{
+        Available on gfx1250+.
+      }];
+      let results = (outs largeT.type:$res);
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
+      }];
+
+    }
+  } // foreach largeT
+} // foreach smallTOp
 
 //===---------------------------------------------------------------------===//
 // Scaled 32x6-bit float float conversion intrinsics

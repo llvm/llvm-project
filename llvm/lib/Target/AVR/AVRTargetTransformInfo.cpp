@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVRTargetTransformInfo.h"
-#include "llvm/CodeGen/CostTable.h"
 
 using namespace llvm;
 

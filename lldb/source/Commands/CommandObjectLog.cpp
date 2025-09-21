@@ -547,7 +547,7 @@ protected:
         Timer::SetQuiet(!increment);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else
-        result.AppendError("Could not convert increment value to boolean.");
+        result.AppendError("could not convert increment value to boolean");
     }
 
     if (!result.Succeeded()) {

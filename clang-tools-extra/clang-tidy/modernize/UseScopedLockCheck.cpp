@@ -1,4 +1,4 @@
-//===--- UseScopedLockCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 }
 
 static bool isLockGuard(const QualType &Type) {
-  if (const auto *Record = Type->getAs<RecordType>())
+  if (const auto *Record = Type->getAsCanonical<RecordType>())
     if (const RecordDecl *Decl = Record->getOriginalDecl())
       return isLockGuardDecl(Decl);
 
@@ -98,7 +98,7 @@ static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
 
 // Find the exact source range of the 'lock_guard' name token
 static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
-  const TemplateSpecializationTypeLoc TemplateLoc =
+  const auto TemplateLoc =
       SourceInfo->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
   if (!TemplateLoc)
     return {};

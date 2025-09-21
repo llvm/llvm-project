@@ -43,6 +43,7 @@ static std::vector<std::string> getRandomFuncNames() {
   return TestFuncNames;
 }
 
+#ifdef SYMBOL_TEST_DATA_FILE
 static std::vector<std::string> readSymbolsFromFile(StringRef InputFile) {
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFile, /*IsText=*/true);
   if (!BufOrError) {
@@ -53,10 +54,7 @@ static std::vector<std::string> readSymbolsFromFile(StringRef InputFile) {
   // Hackily figure out if there's a prefix on the symbol names - llvm-nm
   // appears to not have a flag to skip this.
   llvm::Triple HostTriple(LLVM_HOST_TRIPLE);
-  std::string DummyDatalayout = "e";
-  DummyDatalayout += DataLayout::getManglingComponent(HostTriple);
-
-  DataLayout DL(DummyDatalayout);
+  DataLayout DL(HostTriple.computeDataLayout());
   char GlobalPrefix = DL.getGlobalPrefix();
 
   std::vector<std::string> Lines;
@@ -69,6 +67,7 @@ static std::vector<std::string> readSymbolsFromFile(StringRef InputFile) {
   }
   return Lines;
 }
+#endif
 
 static void BM_LookupRuntimeLibcallByNameKnownCalls(benchmark::State &State) {
   std::vector<StringRef> Names = getLibcallNameStringRefs();
@@ -93,6 +92,7 @@ static void BM_LookupRuntimeLibcallByNameRandomCalls(benchmark::State &State) {
   }
 }
 
+#ifdef SYMBOL_TEST_DATA_FILE
 // This isn't fully representative, it doesn't include any anonymous functions.
 // nm -n --no-demangle --format=just-symbols sample-binary > sample.txt
 static void BM_LookupRuntimeLibcallByNameSampleData(benchmark::State &State) {
@@ -106,9 +106,13 @@ static void BM_LookupRuntimeLibcallByNameSampleData(benchmark::State &State) {
     }
   }
 }
+#endif
 
 BENCHMARK(BM_LookupRuntimeLibcallByNameKnownCalls);
 BENCHMARK(BM_LookupRuntimeLibcallByNameRandomCalls);
+
+#ifdef SYMBOL_TEST_DATA_FILE
 BENCHMARK(BM_LookupRuntimeLibcallByNameSampleData);
+#endif
 
 BENCHMARK_MAIN();

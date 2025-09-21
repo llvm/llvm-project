@@ -30,7 +30,7 @@ namespace interp {
 class Function;
 class Program;
 class State;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 struct ParamOffset {
   unsigned Offset;
@@ -59,7 +59,8 @@ public:
                 ConstantExprKind Kind);
 
   /// Evaluates a toplevel initializer.
-  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
+  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
+                             APValue &Result);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);

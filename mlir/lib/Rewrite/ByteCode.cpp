@@ -20,8 +20,10 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <numeric>
 #include <optional>
 
@@ -707,10 +709,8 @@ void Generator::allocateMemoryIndices(pdl_interp::FuncOp matcherFunc,
   }
 
   // Print the index usage and ensure that we did not run out of index space.
-  LLVM_DEBUG({
-    llvm::dbgs() << "Allocated " << allocatedIndices.size() << " indices "
-                 << "(down from initial " << valueDefRanges.size() << ").\n";
-  });
+  LDBG() << "Allocated " << allocatedIndices.size() << " indices "
+         << "(down from initial " << valueDefRanges.size() << ").";
   assert(allocatedIndices.size() <= std::numeric_limits<ByteCodeField>::max() &&
          "Ran out of memory for allocated indices");
 
@@ -736,6 +736,7 @@ void Generator::generate(Region *region, ByteCodeWriter &writer) {
 }
 
 void Generator::generate(Operation *op, ByteCodeWriter &writer) {
+  LDBG() << "Generating bytecode for operation: " << op->getName();
   LLVM_DEBUG({
     // The following list must contain all the operations that do not
     // produce any bytecode.
@@ -1275,12 +1276,8 @@ private:
   /// Handle a switch operation with the provided value and cases.
   template <typename T, typename RangeT, typename Comparator = std::equal_to<T>>
   void handleSwitch(const T &value, RangeT &&cases, Comparator cmp = {}) {
-    LLVM_DEBUG({
-      llvm::dbgs() << "  * Value: " << value << "\n"
-                   << "  * Cases: ";
-      llvm::interleaveComma(cases, llvm::dbgs());
-      llvm::dbgs() << "\n";
-    });
+    LDBG() << "Switch operation:\n  * Value: " << value
+           << "\n  * Cases: " << llvm::interleaved(cases);
 
     // Check to see if the attribute value is within the case list. Jump to
     // the correct successor index based on the result.
@@ -1424,38 +1421,27 @@ private:
 } // namespace
 
 void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing ApplyConstraint:\n");
+  LDBG() << "Executing ApplyConstraint:";
   ByteCodeField fun_idx = read();
   SmallVector<PDLValue, 16> args;
   readList<PDLValue>(args);
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * Arguments: ";
-    llvm::interleaveComma(args, llvm::dbgs());
-    llvm::dbgs() << "\n";
-  });
+  LDBG() << "  * Arguments: " << llvm::interleaved(args);
 
   ByteCodeField isNegated = read();
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * isNegated: " << isNegated << "\n";
-    llvm::interleaveComma(args, llvm::dbgs());
-  });
+  LDBG() << "  * isNegated: " << isNegated;
 
   ByteCodeField numResults = read();
   const PDLRewriteFunction &constraintFn = constraintFunctions[fun_idx];
   ByteCodeRewriteResultList results(numResults);
   LogicalResult rewriteResult = constraintFn(rewriter, results, args);
   [[maybe_unused]] ArrayRef<PDLValue> constraintResults = results.getResults();
-  LLVM_DEBUG({
-    if (succeeded(rewriteResult)) {
-      llvm::dbgs() << "  * Constraint succeeded\n";
-      llvm::dbgs() << "  * Results: ";
-      llvm::interleaveComma(constraintResults, llvm::dbgs());
-      llvm::dbgs() << "\n";
-    } else {
-      llvm::dbgs() << "  * Constraint failed\n";
-    }
-  });
+  if (succeeded(rewriteResult)) {
+    LDBG() << "  * Constraint succeeded, results: "
+           << llvm::interleaved(constraintResults);
+  } else {
+    LDBG() << "  * Constraint failed";
+  }
   assert((failed(rewriteResult) || constraintResults.size() == numResults) &&
          "native PDL rewrite function succeeded but returned "
          "unexpected number of results");
@@ -1466,15 +1452,12 @@ void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
 }
 
 LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing ApplyRewrite:\n");
+  LDBG() << "Executing ApplyRewrite:";
   const PDLRewriteFunction &rewriteFn = rewriteFunctions[read()];
   SmallVector<PDLValue, 16> args;
   readList<PDLValue>(args);
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * Arguments: ";
-    llvm::interleaveComma(args, llvm::dbgs());
-  });
+  LDBG() << "  * Arguments: " << llvm::interleaved(args);
 
   // Execute the rewrite function.
   ByteCodeField numResults = read();
@@ -1487,7 +1470,7 @@ LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
   processNativeFunResults(results, numResults, rewriteResult);
 
   if (failed(rewriteResult)) {
-    LLVM_DEBUG(llvm::dbgs() << "  - Failed");
+    LDBG() << "  - Failed";
     return failure();
   }
   return success();
@@ -1516,7 +1499,7 @@ void ByteCodeExecutor::processNativeFunResults(
     PDLValue::Kind resultKind = read<PDLValue::Kind>();
     (void)resultKind;
     PDLValue result = results.getResults()[resultIdx];
-    LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
+    LDBG() << "  * Result: " << result;
     assert(result.getKind() == resultKind &&
            "native PDL rewrite function returned an unexpected type of "
            "result");
@@ -1544,16 +1527,16 @@ void ByteCodeExecutor::processNativeFunResults(
 }
 
 void ByteCodeExecutor::executeAreEqual() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing AreEqual:\n");
+  LDBG() << "Executing AreEqual:";
   const void *lhs = read<const void *>();
   const void *rhs = read<const void *>();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * " << lhs << " == " << rhs << "\n");
+  LDBG() << "  * " << lhs << " == " << rhs;
   selectJump(lhs == rhs);
 }
 
 void ByteCodeExecutor::executeAreRangesEqual() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing AreRangesEqual:\n");
+  LDBG() << "Executing AreRangesEqual:";
   PDLValue::Kind valueKind = read<PDLValue::Kind>();
   const void *lhs = read<const void *>();
   const void *rhs = read<const void *>();
@@ -1562,14 +1545,14 @@ void ByteCodeExecutor::executeAreRangesEqual() {
   case PDLValue::Kind::TypeRange: {
     const TypeRange *lhsRange = reinterpret_cast<const TypeRange *>(lhs);
     const TypeRange *rhsRange = reinterpret_cast<const TypeRange *>(rhs);
-    LLVM_DEBUG(llvm::dbgs() << "  * " << lhs << " == " << rhs << "\n\n");
+    LDBG() << "  * " << lhs << " == " << rhs;
     selectJump(*lhsRange == *rhsRange);
     break;
   }
   case PDLValue::Kind::ValueRange: {
     const auto *lhsRange = reinterpret_cast<const ValueRange *>(lhs);
     const auto *rhsRange = reinterpret_cast<const ValueRange *>(rhs);
-    LLVM_DEBUG(llvm::dbgs() << "  * " << lhs << " == " << rhs << "\n\n");
+    LDBG() << "  * " << lhs << " == " << rhs;
     selectJump(*lhsRange == *rhsRange);
     break;
   }
@@ -1579,20 +1562,19 @@ void ByteCodeExecutor::executeAreRangesEqual() {
 }
 
 void ByteCodeExecutor::executeBranch() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing Branch\n");
+  LDBG() << "Executing Branch";
   curCodeIt = &code[read<ByteCodeAddr>()];
 }
 
 void ByteCodeExecutor::executeCheckOperandCount() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CheckOperandCount:\n");
+  LDBG() << "Executing CheckOperandCount:";
   Operation *op = read<Operation *>();
   uint32_t expectedCount = read<uint32_t>();
   bool compareAtLeast = read();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Found: " << op->getNumOperands() << "\n"
-                          << "  * Expected: " << expectedCount << "\n"
-                          << "  * Comparator: "
-                          << (compareAtLeast ? ">=" : "==") << "\n");
+  LDBG() << "  * Found: " << op->getNumOperands()
+         << "\n  * Expected: " << expectedCount
+         << "\n  * Comparator: " << (compareAtLeast ? ">=" : "==");
   if (compareAtLeast)
     selectJump(op->getNumOperands() >= expectedCount);
   else
@@ -1600,25 +1582,24 @@ void ByteCodeExecutor::executeCheckOperandCount() {
 }
 
 void ByteCodeExecutor::executeCheckOperationName() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CheckOperationName:\n");
+  LDBG() << "Executing CheckOperationName:";
   Operation *op = read<Operation *>();
   OperationName expectedName = read<OperationName>();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Found: \"" << op->getName() << "\"\n"
-                          << "  * Expected: \"" << expectedName << "\"\n");
+  LDBG() << "  * Found: \"" << op->getName() << "\"\n  * Expected: \""
+         << expectedName << "\"";
   selectJump(op->getName() == expectedName);
 }
 
 void ByteCodeExecutor::executeCheckResultCount() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CheckResultCount:\n");
+  LDBG() << "Executing CheckResultCount:";
   Operation *op = read<Operation *>();
   uint32_t expectedCount = read<uint32_t>();
   bool compareAtLeast = read();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Found: " << op->getNumResults() << "\n"
-                          << "  * Expected: " << expectedCount << "\n"
-                          << "  * Comparator: "
-                          << (compareAtLeast ? ">=" : "==") << "\n");
+  LDBG() << "  * Found: " << op->getNumResults()
+         << "\n  * Expected: " << expectedCount
+         << "\n  * Comparator: " << (compareAtLeast ? ">=" : "==");
   if (compareAtLeast)
     selectJump(op->getNumResults() >= expectedCount);
   else
@@ -1626,36 +1607,35 @@ void ByteCodeExecutor::executeCheckResultCount() {
 }
 
 void ByteCodeExecutor::executeCheckTypes() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing AreEqual:\n");
+  LDBG() << "Executing AreEqual:";
   TypeRange *lhs = read<TypeRange *>();
   Attribute rhs = read<Attribute>();
-  LLVM_DEBUG(llvm::dbgs() << "  * " << lhs << " == " << rhs << "\n\n");
+  LDBG() << "  * " << lhs << " == " << rhs;
 
   selectJump(*lhs == cast<ArrayAttr>(rhs).getAsValueRange<TypeAttr>());
 }
 
 void ByteCodeExecutor::executeContinue() {
   ByteCodeField level = read();
-  LLVM_DEBUG(llvm::dbgs() << "Executing Continue\n"
-                          << "  * Level: " << level << "\n");
+  LDBG() << "Executing Continue\n  * Level: " << level;
   ++loopIndex[level];
   popCodeIt();
 }
 
 void ByteCodeExecutor::executeCreateConstantTypeRange() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CreateConstantTypeRange:\n");
+  LDBG() << "Executing CreateConstantTypeRange:";
   unsigned memIndex = read();
   unsigned rangeIndex = read();
   ArrayAttr typesAttr = cast<ArrayAttr>(read<Attribute>());
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Types: " << typesAttr << "\n\n");
+  LDBG() << "  * Types: " << typesAttr;
   assignRangeToMemory(typesAttr.getAsValueRange<TypeAttr>(), memIndex,
                       rangeIndex);
 }
 
 void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
                                               Location mainRewriteLoc) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CreateOperation:\n");
+  LDBG() << "Executing CreateOperation:";
 
   unsigned memIndex = read();
   OperationState state(mainRewriteLoc, read<OperationName>());
@@ -1696,45 +1676,37 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
   Operation *resultOp = rewriter.create(state);
   memory[memIndex] = resultOp;
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * Attributes: "
-                 << state.attributes.getDictionary(state.getContext())
-                 << "\n  * Operands: ";
-    llvm::interleaveComma(state.operands, llvm::dbgs());
-    llvm::dbgs() << "\n  * Result Types: ";
-    llvm::interleaveComma(state.types, llvm::dbgs());
-    llvm::dbgs() << "\n  * Result: " << *resultOp << "\n";
-  });
+  LDBG() << "  * Attributes: "
+         << state.attributes.getDictionary(state.getContext())
+         << "\n  * Operands: " << llvm::interleaved(state.operands)
+         << "\n  * Result Types: " << llvm::interleaved(state.types)
+         << "\n  * Result: " << *resultOp;
 }
 
 template <typename T>
 void ByteCodeExecutor::executeDynamicCreateRange(StringRef type) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing CreateDynamic" << type << "Range:\n");
+  LDBG() << "Executing CreateDynamic" << type << "Range:";
   unsigned memIndex = read();
   unsigned rangeIndex = read();
   SmallVector<T> values;
   readList(values);
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "\n  * " << type << "s: ";
-    llvm::interleaveComma(values, llvm::dbgs());
-    llvm::dbgs() << "\n";
-  });
+  LDBG() << "  * " << type << "s: " << llvm::interleaved(values);
 
   assignRangeToMemory(values, memIndex, rangeIndex);
 }
 
 void ByteCodeExecutor::executeEraseOp(PatternRewriter &rewriter) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing EraseOp:\n");
+  LDBG() << "Executing EraseOp:";
   Operation *op = read<Operation *>();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n");
+  LDBG() << "  * Operation: " << *op;
   rewriter.eraseOp(op);
 }
 
 template <typename T, typename Range, PDLValue::Kind kind>
 void ByteCodeExecutor::executeExtract() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing Extract" << kind << ":\n");
+  LDBG() << "Executing Extract" << kind << ":";
   Range *range = read<Range *>();
   unsigned index = read<uint32_t>();
   unsigned memIndex = read();
@@ -1745,18 +1717,16 @@ void ByteCodeExecutor::executeExtract() {
   }
 
   T result = index < range->size() ? (*range)[index] : T();
-  LLVM_DEBUG(llvm::dbgs() << "  * " << kind << "s(" << range->size() << ")\n"
-                          << "  * Index: " << index << "\n"
-                          << "  * Result: " << result << "\n");
+  LDBG() << "  * " << kind << "s(" << range->size() << ")";
+  LDBG() << "  * Index: " << index;
+  LDBG() << "  * Result: " << result;
   storeToMemory(memIndex, result);
 }
 
-void ByteCodeExecutor::executeFinalize() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing Finalize\n");
-}
+void ByteCodeExecutor::executeFinalize() { LDBG() << "Executing Finalize"; }
 
 void ByteCodeExecutor::executeForEach() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing ForEach:\n");
+  LDBG() << "Executing ForEach:";
   const ByteCodeField *prevCodeIt = getPrevCodeIt();
   unsigned rangeIndex = read();
   unsigned memIndex = read();
@@ -1768,12 +1738,12 @@ void ByteCodeExecutor::executeForEach() {
     ArrayRef<Operation *> array = opRangeMemory[rangeIndex];
     assert(index <= array.size() && "iterated past the end");
     if (index < array.size()) {
-      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << array[index] << "\n");
+      LDBG() << "  * Result: " << array[index];
       value = array[index];
       break;
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
+    LDBG() << "  * Done";
     index = 0;
     selectJump(size_t(0));
     return;
@@ -1791,49 +1761,47 @@ void ByteCodeExecutor::executeForEach() {
 }
 
 void ByteCodeExecutor::executeGetAttribute() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetAttribute:\n");
+  LDBG() << "Executing GetAttribute:";
   unsigned memIndex = read();
   Operation *op = read<Operation *>();
   StringAttr attrName = read<StringAttr>();
   Attribute attr = op->getAttr(attrName);
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n"
-                          << "  * Attribute: " << attrName << "\n"
-                          << "  * Result: " << attr << "\n");
+  LDBG() << "  * Operation: " << *op << "\n  * Attribute: " << attrName
+         << "\n  * Result: " << attr;
   memory[memIndex] = attr.getAsOpaquePointer();
 }
 
 void ByteCodeExecutor::executeGetAttributeType() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetAttributeType:\n");
+  LDBG() << "Executing GetAttributeType:";
   unsigned memIndex = read();
   Attribute attr = read<Attribute>();
   Type type;
   if (auto typedAttr = dyn_cast<TypedAttr>(attr))
     type = typedAttr.getType();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Attribute: " << attr << "\n"
-                          << "  * Result: " << type << "\n");
+  LDBG() << "  * Attribute: " << attr << "\n  * Result: " << type;
   memory[memIndex] = type.getAsOpaquePointer();
 }
 
 void ByteCodeExecutor::executeGetDefiningOp() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetDefiningOp:\n");
+  LDBG() << "Executing GetDefiningOp:";
   unsigned memIndex = read();
   Operation *op = nullptr;
   if (read<PDLValue::Kind>() == PDLValue::Kind::Value) {
     Value value = read<Value>();
     if (value)
       op = value.getDefiningOp();
-    LLVM_DEBUG(llvm::dbgs() << "  * Value: " << value << "\n");
+    LDBG() << "  * Value: " << value;
   } else {
     ValueRange *values = read<ValueRange *>();
     if (values && !values->empty()) {
       op = values->front().getDefiningOp();
     }
-    LLVM_DEBUG(llvm::dbgs() << "  * Values: " << values << "\n");
+    LDBG() << "  * Values: " << values;
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Result: " << op << "\n");
+  LDBG() << "  * Result: " << op;
   memory[memIndex] = op;
 }
 
@@ -1843,9 +1811,8 @@ void ByteCodeExecutor::executeGetOperand(unsigned index) {
   Value operand =
       index < op->getNumOperands() ? op->getOperand(index) : Value();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n"
-                          << "  * Index: " << index << "\n"
-                          << "  * Result: " << operand << "\n");
+  LDBG() << "  * Operation: " << *op << "\n  * Index: " << index
+         << "\n  * Result: " << operand;
   memory[memIndex] = operand.getAsOpaquePointer();
 }
 
@@ -1860,13 +1827,12 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
   // Check for the sentinel index that signals that all values should be
   // returned.
   if (index == std::numeric_limits<uint32_t>::max()) {
-    LLVM_DEBUG(llvm::dbgs() << "  * Getting all values\n");
+    LDBG() << "  * Getting all values";
     // `values` is already the full value range.
 
     // Otherwise, check to see if this operation uses AttrSizedSegments.
   } else if (op->hasTrait<AttrSizedSegmentsT>()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "  * Extracting values from `" << attrSizedSegments << "`\n");
+    LDBG() << "  * Extracting values from `" << attrSizedSegments << "`";
 
     auto segmentAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrSizedSegments);
     if (!segmentAttr || segmentAttr.asArrayRef().size() <= index)
@@ -1877,16 +1843,15 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
         std::accumulate(segments.begin(), segments.begin() + index, 0);
     values = values.slice(startIndex, *std::next(segments.begin(), index));
 
-    LLVM_DEBUG(llvm::dbgs() << "  * Extracting range[" << startIndex << ", "
-                            << *std::next(segments.begin(), index) << "]\n");
+    LDBG() << "  * Extracting range[" << startIndex << ", "
+           << *std::next(segments.begin(), index) << "]";
 
     // Otherwise, assume this is the last operand group of the operation.
     // FIXME: We currently don't support operations with
     // SameVariadicOperandSize/SameVariadicResultSize here given that we don't
     // have a way to detect it's presence.
   } else if (values.size() >= index) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "  * Treating values as trailing variadic range\n");
+    LDBG() << "  * Treating values as trailing variadic range";
     values = values.drop_front(index);
 
     // If we couldn't detect a way to compute the values, bail out.
@@ -1905,7 +1870,7 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
 }
 
 void ByteCodeExecutor::executeGetOperands() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetOperands:\n");
+  LDBG() << "Executing GetOperands:";
   unsigned index = read<uint32_t>();
   Operation *op = read<Operation *>();
   ByteCodeField rangeIndex = read();
@@ -1914,7 +1879,7 @@ void ByteCodeExecutor::executeGetOperands() {
       op->getOperands(), op, index, rangeIndex, "operandSegmentSizes",
       valueRangeMemory);
   if (!result)
-    LLVM_DEBUG(llvm::dbgs() << "  * Invalid operand range\n");
+    LDBG() << "  * Invalid operand range";
   memory[read()] = result;
 }
 
@@ -1924,14 +1889,13 @@ void ByteCodeExecutor::executeGetResult(unsigned index) {
   OpResult result =
       index < op->getNumResults() ? op->getResult(index) : OpResult();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n"
-                          << "  * Index: " << index << "\n"
-                          << "  * Result: " << result << "\n");
+  LDBG() << "  * Operation: " << *op << "\n  * Index: " << index
+         << "\n  * Result: " << result;
   memory[memIndex] = result.getAsOpaquePointer();
 }
 
 void ByteCodeExecutor::executeGetResults() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetResults:\n");
+  LDBG() << "Executing GetResults:";
   unsigned index = read<uint32_t>();
   Operation *op = read<Operation *>();
   ByteCodeField rangeIndex = read();
@@ -1940,12 +1904,12 @@ void ByteCodeExecutor::executeGetResults() {
       op->getResults(), op, index, rangeIndex, "resultSegmentSizes",
       valueRangeMemory);
   if (!result)
-    LLVM_DEBUG(llvm::dbgs() << "  * Invalid result range\n");
+    LDBG() << "  * Invalid result range";
   memory[read()] = result;
 }
 
 void ByteCodeExecutor::executeGetUsers() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetUsers:\n");
+  LDBG() << "Executing GetUsers:";
   unsigned memIndex = read();
   unsigned rangeIndex = read();
   OwningOpRange &range = opRangeMemory[rangeIndex];
@@ -1957,7 +1921,7 @@ void ByteCodeExecutor::executeGetUsers() {
     Value value = read<Value>();
     if (!value)
       return;
-    LLVM_DEBUG(llvm::dbgs() << "  * Value: " << value << "\n");
+    LDBG() << "  * Value: " << value;
 
     // Extract the users of a single value.
     range = OwningOpRange(std::distance(value.user_begin(), value.user_end()));
@@ -1967,11 +1931,8 @@ void ByteCodeExecutor::executeGetUsers() {
     ValueRange *values = read<ValueRange *>();
     if (!values)
       return;
-    LLVM_DEBUG({
-      llvm::dbgs() << "  * Values (" << values->size() << "): ";
-      llvm::interleaveComma(*values, llvm::dbgs());
-      llvm::dbgs() << "\n";
-    });
+    LDBG() << "  * Values (" << values->size()
+           << "): " << llvm::interleaved(*values);
 
     // Extract all the users of a range of values.
     SmallVector<Operation *> users;
@@ -1981,54 +1942,49 @@ void ByteCodeExecutor::executeGetUsers() {
     llvm::copy(users, range.begin());
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range.size() << " operations\n");
+  LDBG() << "  * Result: " << range.size() << " operations";
 }
 
 void ByteCodeExecutor::executeGetValueType() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetValueType:\n");
+  LDBG() << "Executing GetValueType:";
   unsigned memIndex = read();
   Value value = read<Value>();
   Type type = value ? value.getType() : Type();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Value: " << value << "\n"
-                          << "  * Result: " << type << "\n");
+  LDBG() << "  * Value: " << value << "\n  * Result: " << type;
   memory[memIndex] = type.getAsOpaquePointer();
 }
 
 void ByteCodeExecutor::executeGetValueRangeTypes() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing GetValueRangeTypes:\n");
+  LDBG() << "Executing GetValueRangeTypes:";
   unsigned memIndex = read();
   unsigned rangeIndex = read();
   ValueRange *values = read<ValueRange *>();
   if (!values) {
-    LLVM_DEBUG(llvm::dbgs() << "  * Values: <NULL>\n\n");
+    LDBG() << "  * Values: <NULL>";
     memory[memIndex] = nullptr;
     return;
   }
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * Values (" << values->size() << "): ";
-    llvm::interleaveComma(*values, llvm::dbgs());
-    llvm::dbgs() << "\n  * Result: ";
-    llvm::interleaveComma(values->getType(), llvm::dbgs());
-    llvm::dbgs() << "\n";
-  });
+  LDBG() << "  * Values (" << values->size()
+         << "): " << llvm::interleaved(*values)
+         << "\n  * Result: " << llvm::interleaved(values->getType());
   typeRangeMemory[rangeIndex] = values->getType();
   memory[memIndex] = &typeRangeMemory[rangeIndex];
 }
 
 void ByteCodeExecutor::executeIsNotNull() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing IsNotNull:\n");
+  LDBG() << "Executing IsNotNull:";
   const void *value = read<const void *>();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Value: " << value << "\n");
+  LDBG() << "  * Value: " << value;
   selectJump(value != nullptr);
 }
 
 void ByteCodeExecutor::executeRecordMatch(
     PatternRewriter &rewriter,
     SmallVectorImpl<PDLByteCode::MatchResult> &matches) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing RecordMatch:\n");
+  LDBG() << "Executing RecordMatch:";
   unsigned patternIndex = read();
   PatternBenefit benefit = currentPatternBenefits[patternIndex];
   const ByteCodeField *dest = &code[read<ByteCodeAddr>()];
@@ -2036,7 +1992,7 @@ void ByteCodeExecutor::executeRecordMatch(
   // If the benefit of the pattern is impossible, skip the processing of the
   // rest of the pattern.
   if (benefit.isImpossibleToMatch()) {
-    LLVM_DEBUG(llvm::dbgs() << "  * Benefit: Impossible To Match\n");
+    LDBG() << "  * Benefit: Impossible To Match";
     curCodeIt = dest;
     return;
   }
@@ -2052,8 +2008,8 @@ void ByteCodeExecutor::executeRecordMatch(
     matchLocs.push_back(read<Operation *>()->getLoc());
   Location matchLoc = rewriter.getFusedLoc(matchLocs);
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Benefit: " << benefit.getBenefit() << "\n"
-                          << "  * Location: " << matchLoc << "\n");
+  LDBG() << "  * Benefit: " << benefit.getBenefit();
+  LDBG() << "  * Location: " << matchLoc;
   matches.emplace_back(matchLoc, patterns[patternIndex], benefit);
   PDLByteCode::MatchResult &match = matches.back();
 
@@ -2083,38 +2039,34 @@ void ByteCodeExecutor::executeRecordMatch(
 }
 
 void ByteCodeExecutor::executeReplaceOp(PatternRewriter &rewriter) {
-  LLVM_DEBUG(llvm::dbgs() << "Executing ReplaceOp:\n");
+  LDBG() << "Executing ReplaceOp:";
   Operation *op = read<Operation *>();
   SmallVector<Value, 16> args;
   readList(args);
 
-  LLVM_DEBUG({
-    llvm::dbgs() << "  * Operation: " << *op << "\n"
-                 << "  * Values: ";
-    llvm::interleaveComma(args, llvm::dbgs());
-    llvm::dbgs() << "\n";
-  });
+  LDBG() << "  * Operation: " << *op
+         << "\n  * Values: " << llvm::interleaved(args);
   rewriter.replaceOp(op, args);
 }
 
 void ByteCodeExecutor::executeSwitchAttribute() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing SwitchAttribute:\n");
+  LDBG() << "Executing SwitchAttribute:";
   Attribute value = read<Attribute>();
   ArrayAttr cases = read<ArrayAttr>();
   handleSwitch(value, cases);
 }
 
 void ByteCodeExecutor::executeSwitchOperandCount() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing SwitchOperandCount:\n");
+  LDBG() << "Executing SwitchOperandCount:";
   Operation *op = read<Operation *>();
   auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n");
+  LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumOperands(), cases);
 }
 
 void ByteCodeExecutor::executeSwitchOperationName() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing SwitchOperationName:\n");
+  LDBG() << "Executing SwitchOperationName:";
   OperationName value = read<Operation *>()->getName();
   size_t caseCount = read();
 
@@ -2123,13 +2075,11 @@ void ByteCodeExecutor::executeSwitchOperationName() {
   // switch so that we can display all of the possible values.
   LLVM_DEBUG({
     const ByteCodeField *prevCodeIt = curCodeIt;
-    llvm::dbgs() << "  * Value: " << value << "\n"
-                 << "  * Cases: ";
-    llvm::interleaveComma(
-        llvm::map_range(llvm::seq<size_t>(0, caseCount),
-                        [&](size_t) { return read<OperationName>(); }),
-        llvm::dbgs());
-    llvm::dbgs() << "\n";
+    LDBG() << "  * Value: " << value << "\n  * Cases: "
+           << llvm::interleaved(
+                  llvm::map_range(llvm::seq<size_t>(0, caseCount), [&](size_t) {
+                    return read<OperationName>();
+                  }));
     curCodeIt = prevCodeIt;
   });
 
@@ -2144,27 +2094,27 @@ void ByteCodeExecutor::executeSwitchOperationName() {
 }
 
 void ByteCodeExecutor::executeSwitchResultCount() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing SwitchResultCount:\n");
+  LDBG() << "Executing SwitchResultCount:";
   Operation *op = read<Operation *>();
   auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
 
-  LLVM_DEBUG(llvm::dbgs() << "  * Operation: " << *op << "\n");
+  LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumResults(), cases);
 }
 
 void ByteCodeExecutor::executeSwitchType() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing SwitchType:\n");
+  LDBG() << "Executing SwitchType:";
   Type value = read<Type>();
   auto cases = read<ArrayAttr>().getAsValueRange<TypeAttr>();
   handleSwitch(value, cases);
 }
 
 void ByteCodeExecutor::executeSwitchTypes() {
-  LLVM_DEBUG(llvm::dbgs() << "Executing SwitchTypes:\n");
+  LDBG() << "Executing SwitchTypes:";
   TypeRange *value = read<TypeRange *>();
   auto cases = read<ArrayAttr>().getAsRange<ArrayAttr>();
   if (!value) {
-    LLVM_DEBUG(llvm::dbgs() << "Types: <NULL>\n");
+    LDBG() << "Types: <NULL>";
     return selectJump(size_t(0));
   }
   handleSwitch(*value, cases, [](ArrayAttr caseValue, const TypeRange &value) {
@@ -2178,7 +2128,7 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
                           std::optional<Location> mainRewriteLoc) {
   while (true) {
     // Print the location of the operation being executed.
-    LLVM_DEBUG(llvm::dbgs() << readInline<Location>() << "\n");
+    LDBG() << readInline<Location>();
 
     OpCode opCode = static_cast<OpCode>(read());
     switch (opCode) {
@@ -2239,7 +2189,7 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
       break;
     case Finalize:
       executeFinalize();
-      LLVM_DEBUG(llvm::dbgs() << "\n");
+      LDBG() << "";
       return success();
     case ForEach:
       executeForEach();
@@ -2258,12 +2208,12 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
     case GetOperand2:
     case GetOperand3: {
       unsigned index = opCode - GetOperand0;
-      LLVM_DEBUG(llvm::dbgs() << "Executing GetOperand" << index << ":\n");
+      LDBG() << "Executing GetOperand" << index << ":";
       executeGetOperand(index);
       break;
     }
     case GetOperandN:
-      LLVM_DEBUG(llvm::dbgs() << "Executing GetOperandN:\n");
+      LDBG() << "Executing GetOperandN:";
       executeGetOperand(read<uint32_t>());
       break;
     case GetOperands:
@@ -2274,12 +2224,12 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
     case GetResult2:
     case GetResult3: {
       unsigned index = opCode - GetResult0;
-      LLVM_DEBUG(llvm::dbgs() << "Executing GetResult" << index << ":\n");
+      LDBG() << "Executing GetResult" << index << ":";
       executeGetResult(index);
       break;
     }
     case GetResultN:
-      LLVM_DEBUG(llvm::dbgs() << "Executing GetResultN:\n");
+      LDBG() << "Executing GetResultN:";
       executeGetResult(read<uint32_t>());
       break;
     case GetResults:
@@ -2324,7 +2274,7 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
       executeSwitchTypes();
       break;
     }
-    LLVM_DEBUG(llvm::dbgs() << "\n");
+    LDBG() << "";
   }
 }
 
@@ -2383,7 +2333,7 @@ LogicalResult PDLByteCode::rewrite(PatternRewriter &rewriter,
   // bug in the user code (i.e. failable rewrites should not be used with
   // pattern rewriters that don't support it).
   if (failed(result) && !rewriter.canRecoverFromRewriteFailure()) {
-    LLVM_DEBUG(llvm::dbgs() << " and rollback is not supported - aborting");
+    LDBG() << " and rollback is not supported - aborting";
     llvm::report_fatal_error(
         "Native PDL Rewrite failed, but the pattern "
         "rewriter doesn't support recovery. Failable pattern rewrites should "

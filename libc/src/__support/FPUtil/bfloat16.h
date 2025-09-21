@@ -29,9 +29,9 @@ struct BFloat16 {
 
   LIBC_INLINE BFloat16() = default;
 
-  LIBC_INLINE constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
-
-  template <typename T> LIBC_INLINE constexpr explicit BFloat16(T value) {
+  template <typename T>
+  LIBC_INLINE constexpr explicit BFloat16(T value)
+      : bits(static_cast<uint16_t>(0U)) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<bfloat16>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
@@ -48,6 +48,8 @@ struct BFloat16 {
           xd(sign, 0, value);
       bits = xd.template as<bfloat16, /*ShouldSignalExceptions=*/true>().bits;
 
+    } else if constexpr (cpp::is_convertible_v<T, BFloat16>) {
+      bits = value.operator BFloat16().bits;
     } else {
       bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
     }
@@ -59,6 +61,11 @@ struct BFloat16 {
   LIBC_INLINE constexpr operator float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
+  }
+
+  template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
+  LIBC_INLINE constexpr explicit operator T() const {
+    return static_cast<T>(static_cast<float>(*this));
   }
 
   LIBC_INLINE bool operator==(BFloat16 other) const {

@@ -39,15 +39,9 @@ typedef short __v8hi __attribute__((__vector_size__(16)));
 typedef char __v16qi __attribute__((__vector_size__(16)));
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS_SSE2                                                \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS_SSE2                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2 constexpr
@@ -71,9 +65,9 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
 ///
 /// This intrinsic corresponds to the <c> EMMS </c> instruction.
 ///
-static __inline__ void __attribute__((__always_inline__, __nodebug__,
-                                      __target__("mmx,no-evex512")))
-_mm_empty(void) {
+static __inline__ void
+    __attribute__((__always_inline__, __nodebug__, __target__("mmx")))
+    _mm_empty(void) {
   __builtin_ia32_emms();
 }
 
@@ -242,11 +236,10 @@ _mm_packs_pu16(__m64 __m1, __m64 __m2)
 ///    Bits [63:56] are written to bits [63:56] of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpackhi_pi8(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2,
-                                          4, 12, 5, 13, 6, 14, 7, 15);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpackhi_pi8(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2, 4, 12, 5,
+                                        13, 6, 14, 7, 15);
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of
@@ -266,11 +259,9 @@ _mm_unpackhi_pi8(__m64 __m1, __m64 __m2)
 ///    Bits [63:48] are written to bits [63:48] of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpackhi_pi16(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2,
-                                          2, 6, 3, 7);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpackhi_pi16(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2, 2, 6, 3, 7);
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of
@@ -288,10 +279,9 @@ _mm_unpackhi_pi16(__m64 __m1, __m64 __m2)
 ///    the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [2 x i32] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpackhi_pi32(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 1, 3);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpackhi_pi32(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 1, 3);
 }
 
 /// Unpacks the lower 32 bits from two 64-bit integer vectors of [8 x i8]
@@ -315,11 +305,10 @@ _mm_unpackhi_pi32(__m64 __m1, __m64 __m2)
 ///    Bits [31:24] are written to bits [63:56] of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpacklo_pi8(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2,
-                                          0, 8, 1, 9, 2, 10, 3, 11);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpacklo_pi8(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v8qi)__m1, (__v8qi)__m2, 0, 8, 1, 9,
+                                        2, 10, 3, 11);
 }
 
 /// Unpacks the lower 32 bits from two 64-bit integer vectors of
@@ -339,11 +328,9 @@ _mm_unpacklo_pi8(__m64 __m1, __m64 __m2)
 ///    Bits [31:16] are written to bits [63:48] of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpacklo_pi16(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2,
-                                          0, 4, 1, 5);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpacklo_pi16(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v4hi)__m1, (__v4hi)__m2, 0, 4, 1, 5);
 }
 
 /// Unpacks the lower 32 bits from two 64-bit integer vectors of
@@ -361,10 +348,9 @@ _mm_unpacklo_pi16(__m64 __m1, __m64 __m2)
 ///    the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [2 x i32] containing the interleaved
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_unpacklo_pi32(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 0, 2);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_unpacklo_pi32(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_shufflevector((__v2si)__m1, (__v2si)__m2, 0, 2);
 }
 
 /// Adds each 8-bit integer element of the first 64-bit integer vector
@@ -786,11 +772,9 @@ _mm_sll_pi16(__m64 __m, __m64 __count)
 /// \returns A 64-bit integer vector of [4 x i16] containing the left-shifted
 ///    values. If \a __count is greater or equal to 16, the result is set to all
 ///    0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_pi16(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psllwi128((__v8hi)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_slli_pi16(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psllwi128((__v8hi)__zext128(__m), __count));
 }
 
 /// Left-shifts each 32-bit signed integer element of the first
@@ -833,11 +817,9 @@ _mm_sll_pi32(__m64 __m, __m64 __count)
 /// \returns A 64-bit integer vector of [2 x i32] containing the left-shifted
 ///    values. If \a __count is greater or equal to 32, the result is set to all
 ///    0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_pi32(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_pslldi128((__v4si)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_slli_pi32(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_pslldi128((__v4si)__zext128(__m), __count));
 }
 
 /// Left-shifts the first 64-bit integer parameter by the number of bits
@@ -875,11 +857,9 @@ _mm_sll_si64(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the left-shifted value. If
 ///     \a __count is greater or equal to 64, the result is set to 0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_si64(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psllqi128((__v2di)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_slli_si64(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psllqi128((__v2di)__zext128(__m), __count));
 }
 
 /// Right-shifts each 16-bit integer element of the first parameter,
@@ -924,11 +904,9 @@ _mm_sra_pi16(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [4 x i16] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srai_pi16(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrawi128((__v8hi)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srai_pi16(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrawi128((__v8hi)__zext128(__m), __count));
 }
 
 /// Right-shifts each 32-bit integer element of the first parameter,
@@ -973,11 +951,9 @@ _mm_sra_pi32(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [2 x i32] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srai_pi32(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psradi128((__v4si)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srai_pi32(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psradi128((__v4si)__zext128(__m), __count));
 }
 
 /// Right-shifts each 16-bit integer element of the first parameter,
@@ -1020,11 +996,9 @@ _mm_srl_pi16(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [4 x i16] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_pi16(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrlwi128((__v8hi)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srli_pi16(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrlwi128((__v8hi)__zext128(__m), __count));
 }
 
 /// Right-shifts each 32-bit integer element of the first parameter,
@@ -1067,11 +1041,9 @@ _mm_srl_pi32(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [2 x i32] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_pi32(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrldi128((__v4si)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srli_pi32(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrldi128((__v4si)__zext128(__m), __count));
 }
 
 /// Right-shifts the first 64-bit integer parameter by the number of bits
@@ -1110,11 +1082,9 @@ _mm_srl_si64(__m64 __m, __m64 __count)
 /// \param __count
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the right-shifted value.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_si64(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrlqi128((__v2di)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srli_si64(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrlqi128((__v2di)__zext128(__m), __count));
 }
 
 /// Performs a bitwise AND of two 64-bit integer vectors.

@@ -109,6 +109,22 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+
+add_header_library(
+  rsqrtf16
+  HDRS
+    rsqrtf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
 add_header_library(
   asin_utils
   HDRS
@@ -420,6 +436,52 @@ add_header_library(
 )
 
 add_header_library(
+  coshf16
+  HDRS
+    coshf16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cospif
+  HDRS
+    cospif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cospif16
+  HDRS
+    cospif16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  dsqrtl
+  HDRS
+    dsqrtl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
   erff
   HDRS
     erff.h
@@ -487,6 +549,21 @@ add_header_library(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  expxf16_utils
+  HDRS
+    expxf16_utils.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.attributes
+    libc.src.__support.math.expf16_utils
+    libc.src.__support.math.exp10_float16_constants
 )
 
 add_header_library(

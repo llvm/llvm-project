@@ -631,6 +631,7 @@ LTO::~LTO() = default;
 void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                                ArrayRef<SymbolResolution> Res,
                                unsigned Partition, bool InSummary) {
+  llvm::TimeTraceScope timeScope("LTO add module to global resolution");
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
@@ -731,6 +732,7 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
 
 Error LTO::add(std::unique_ptr<InputFile> Input,
                ArrayRef<SymbolResolution> Res) {
+  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
   assert(!CalledGetMaxTasks);
 
   if (Conf.ResolutionFile)
@@ -756,6 +758,7 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 Expected<ArrayRef<SymbolResolution>>
 LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                unsigned ModI, ArrayRef<SymbolResolution> Res) {
+  llvm::TimeTraceScope timeScope("LTO add module", Input.getName());
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
@@ -850,6 +853,7 @@ Expected<
 LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                    BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    ArrayRef<SymbolResolution> Res) {
+  llvm::TimeTraceScope timeScope("LTO add regular LTO");
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
       BM.getLazyModule(RegularLTO.Ctx, /*ShouldLazyLoadMetadata*/ true,
@@ -1024,6 +1028,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
 Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
                           bool LivenessFromIndex) {
+  llvm::TimeTraceScope timeScope("LTO link regular LTO");
   std::vector<GlobalValue *> Keep;
   for (GlobalValue *GV : Mod.Keep) {
     if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID())) {
@@ -1063,6 +1068,7 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
 Expected<ArrayRef<SymbolResolution>>
 LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                 ArrayRef<SymbolResolution> Res) {
+  llvm::TimeTraceScope timeScope("LTO add thin LTO");
   ArrayRef<SymbolResolution> ResTmp = Res;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!ResTmp.empty());
@@ -1252,6 +1258,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
 
 void lto::updateMemProfAttributes(Module &Mod,
                                   const ModuleSummaryIndex &Index) {
+  llvm::TimeTraceScope timeScope("LTO update memprof attributes");
   if (Index.withSupportsHotColdNew())
     return;
 
@@ -1282,6 +1289,7 @@ void lto::updateMemProfAttributes(Module &Mod,
 }
 
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
+  llvm::TimeTraceScope timeScope("Run regular LTO");
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       RegularLTO.CombinedModule->getContext(), Conf.RemarksFilename,
@@ -1294,10 +1302,12 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
-  for (auto &M : RegularLTO.ModsWithSummaries)
-    if (Error Err = linkRegularLTO(std::move(M),
-                                   /*LivenessFromIndex=*/true))
-      return Err;
+  {
+    llvm::TimeTraceScope timeScope("Link regular LTO");
+    for (auto &M : RegularLTO.ModsWithSummaries)
+      if (Error Err = linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
+        return Err;
+  }
 
   // Ensure we don't have inconsistently split LTO units with type tests.
   // FIXME: this checks both LTO and ThinLTO. It happens to work as we take
@@ -1526,6 +1536,9 @@ public:
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
       MapVector<StringRef, BitcodeModule> &ModuleMap) {
+    auto ModuleID = BM.getModuleIdentifier();
+    llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (in-process)",
+                                   ModuleID);
     auto RunThinBackend = [&](AddStreamFn AddStream) {
       LTOLLVMContext BackendContext(Conf);
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
@@ -1536,9 +1549,6 @@ public:
                          ImportList, DefinedGlobals, &ModuleMap,
                          Conf.CodeGenOnly);
     };
-
-    auto ModuleID = BM.getModuleIdentifier();
-
     if (ShouldEmitIndexFiles) {
       if (auto E = emitFiles(ImportList, ModuleID, ModuleID.str()))
         return E;
@@ -1639,6 +1649,9 @@ public:
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
       MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+    auto ModuleID = BM.getModuleIdentifier();
+    llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (first round)",
+                                   ModuleID);
     auto RunThinBackend = [&](AddStreamFn CGAddStream,
                               AddStreamFn IRAddStream) {
       LTOLLVMContext BackendContext(Conf);
@@ -1650,8 +1663,6 @@ public:
                          ImportList, DefinedGlobals, &ModuleMap,
                          Conf.CodeGenOnly, IRAddStream);
     };
-
-    auto ModuleID = BM.getModuleIdentifier();
     // Like InProcessThinBackend, we produce index files as needed for
     // FirstRoundThinBackend. However, these files are not generated for
     // SecondRoundThinBackend.
@@ -1735,6 +1746,9 @@ public:
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
       MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+    auto ModuleID = BM.getModuleIdentifier();
+    llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (second round)",
+                                   ModuleID);
     auto RunThinBackend = [&](AddStreamFn AddStream) {
       LTOLLVMContext BackendContext(Conf);
       std::unique_ptr<Module> LoadedModule =
@@ -1744,8 +1758,6 @@ public:
                          ImportList, DefinedGlobals, &ModuleMap,
                          /*CodeGenOnly=*/true);
     };
-
-    auto ModuleID = BM.getModuleIdentifier();
     if (!Cache.isValid() || !CombinedIndex.modulePaths().count(ModuleID) ||
         all_of(CombinedIndex.getModuleHash(ModuleID),
                [](uint32_t V) { return V == 0; }))
@@ -1915,6 +1927,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
 
 Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  llvm::TimeTraceScope timeScope("Run ThinLTO");
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));

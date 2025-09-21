@@ -1527,15 +1527,12 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
+  if (S.EvalMode == EvaluationMode::ConstantFold)
+    return false;
+  assert(Temp);
+
   const Pointer &Ptr = S.P.getGlobal(I);
-
-  const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue(S.getASTContext());
-  APValue *Cached = Temp->getOrCreateValue(true);
-  *Cached = APV;
-
   assert(Ptr.getDeclDesc()->asExpr());
-
   S.SeenGlobalTemporaries.push_back(
       std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
 
@@ -1549,20 +1546,14 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
 /// 3) Initialized global with index \I with that
 inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
                                const LifetimeExtendedTemporaryDecl *Temp) {
+  if (S.EvalMode == EvaluationMode::ConstantFold)
+    return false;
   assert(Temp);
-  const Pointer &P = S.Stk.peek<Pointer>();
-  APValue *Cached = Temp->getOrCreateValue(true);
 
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
   S.SeenGlobalTemporaries.push_back(
-      std::make_pair(P.getDeclDesc()->asExpr(), Temp));
-
-  if (std::optional<APValue> APV =
-          P.toRValue(S.getASTContext(), Temp->getTemporaryExpr()->getType())) {
-    *Cached = *APV;
-    return true;
-  }
-
-  return false;
+      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+  return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1640,6 +1631,9 @@ bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.initialize();
@@ -1652,6 +1646,9 @@ bool InitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
   const Pointer &Field = Ptr.atField(I);
   Field.deref<T>() = Value;
   Field.activate();
@@ -1663,7 +1660,13 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
+  const Pointer &Field = Ptr.atField(F->Offset);
 
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
@@ -1689,7 +1692,13 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
                           const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckArray(S, OpPC, Ptr))
+    return false;
+
+  const Pointer &Field = Ptr.atField(F->Offset);
 
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
@@ -1788,6 +1797,8 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
 
   if (!Ptr.isBlockPointer()) {
+    if (!Ptr.isIntegralPointer())
+      return false;
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
@@ -1809,6 +1820,8 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
     return false;
 
   if (!Ptr.isBlockPointer()) {
+    if (!Ptr.isIntegralPointer())
+      return false;
     S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
     return true;
   }
@@ -2114,19 +2127,28 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   if (Ptr.isUnknownSizeArray())
     return false;
 
+  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
-  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+  if (Idx == 0 && !Desc->isArray()) {
     Ptr.initialize();
     new (&Ptr.deref<T>()) T(Value);
     return true;
   }
 
-  const Pointer &ElemPtr = Ptr.atIndex(Idx);
-  if (!CheckInit(S, OpPC, ElemPtr))
+  if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  ElemPtr.initialize();
-  new (&ElemPtr.deref<T>()) T(Value);
+  if (Idx >= Desc->getNumElems()) {
+    // CheckRange.
+    if (S.getLangOpts().CPlusPlus) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+          << AK_Assign << S.Current->getRange(OpPC);
+    }
+    return false;
+  }
+  Ptr.initializeElement(Idx);
+  new (&Ptr.elem<T>(Idx)) T(Value);
   return true;
 }
 
@@ -2135,22 +2157,32 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
   if (Ptr.isUnknownSizeArray())
     return false;
 
+  const Descriptor *Desc = Ptr.getFieldDesc();
   // In the unlikely event that we're initializing the first item of
   // a non-array, skip the atIndex().
-  if (Idx == 0 && !Ptr.getFieldDesc()->isArray()) {
+  if (Idx == 0 && !Desc->isArray()) {
     Ptr.initialize();
     new (&Ptr.deref<T>()) T(Value);
     return true;
   }
 
-  const Pointer &ElemPtr = Ptr.atIndex(Idx);
-  if (!CheckInit(S, OpPC, ElemPtr))
+  if (!CheckLive(S, OpPC, Ptr, AK_Assign))
     return false;
-  ElemPtr.initialize();
-  new (&ElemPtr.deref<T>()) T(Value);
+  if (Idx >= Desc->getNumElems()) {
+    // CheckRange.
+    if (S.getLangOpts().CPlusPlus) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+          << AK_Assign << S.Current->getRange(OpPC);
+    }
+    return false;
+  }
+  Ptr.initializeElement(Idx);
+  new (&Ptr.elem<T>(Idx)) T(Value);
   return true;
 }
 
@@ -2437,9 +2469,17 @@ inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
 
     if (Ptr.getLifetime() == Lifetime::Ended) {
-      auto *D = cast<NamedDecl>(Ptr.getFieldDesc()->asDecl());
-      S.FFDiag(D->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
-          << D->getNameAsString();
+      // Try to use the declaration for better diagnostics
+      if (const Decl *D = Ptr.getDeclDesc()->asDecl()) {
+        auto *ND = cast<NamedDecl>(D);
+        S.FFDiag(ND->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << ND->getNameAsString();
+      } else {
+        S.FFDiag(Ptr.getDeclDesc()->getLocation(),
+                 diag::note_constexpr_destroy_out_of_lifetime)
+            << Ptr.toDiagnosticString(S.getASTContext());
+      }
       return false;
     }
   }
@@ -3135,6 +3175,9 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   const auto &SrcPtr = S.Stk.pop<Pointer>();
   const auto &DestPtr = S.Stk.peek<Pointer>();
 
+  if (SrcPtr.isDummy() || DestPtr.isDummy())
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
@@ -3158,8 +3201,10 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
-    return false;
+  if (!Ptr.isZeroSizeArray()) {
+    if (!CheckRange(S, OpPC, Ptr, CSK_ArrayToPointer))
+      return false;
+  }
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
@@ -3458,7 +3503,15 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     S.Stk.push<Pointer>(0, nullptr);
     return true;
   }
-  assert(NumElements.isPositive());
+  if (NumElements.isNegative()) {
+    if (!IsNoThrow) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+          << NumElements.toDiagnosticString(S.getASTContext());
+      return false;
+    }
+    S.Stk.push<Pointer>(0, nullptr);
+    return true;
+  }
 
   if (!CheckArraySize(S, OpPC, static_cast<uint64_t>(NumElements)))
     return false;
@@ -3535,17 +3588,28 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
-                        uint32_t ResultBitWidth,
-                        const llvm::fltSemantics *Sem) {
+                        uint32_t ResultBitWidth, const llvm::fltSemantics *Sem,
+                        const Type *TargetType) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;
 
   if constexpr (std::is_same_v<T, Pointer>) {
+    if (!TargetType->isNullPtrType()) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_bit_cast_invalid_type)
+          << /*IsToType=*/true << /*IsReference=*/false << 1 /*Pointer*/;
+      return false;
+    }
     // The only pointer type we can validly bitcast to is nullptr_t.
     S.Stk.push<Pointer>();
     return true;
+  } else if constexpr (std::is_same_v<T, MemberPointer>) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_bit_cast_invalid_type)
+        << /*IsToType=*/true << /*IsReference=*/false << 2 /*MemberPointer*/;
+    return false;
   } else {
 
     size_t BuffSize = ResultBitWidth / 8;

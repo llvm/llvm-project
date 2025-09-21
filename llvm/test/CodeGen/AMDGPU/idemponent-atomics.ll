@@ -48,11 +48,47 @@ define i32 @global_agent_release_idempotent_or(ptr addrspace(1) %in) {
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; OPT-LABEL: @global_agent_release_idempotent_or(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") release, align 4
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw add ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") release, align 4
 ; OPT-NEXT:    ret i32 [[VAL]]
 ;
 entry:
   %val = atomicrmw or ptr addrspace(1) %in, i32 0 syncscope("agent-one-as") release, align 4
+  ret i32 %val
+}
+
+define i32 @global_agent_release_idempotent_or_no_remote(ptr addrspace(1) %in) {
+; GFX942-LABEL: global_agent_release_idempotent_or_no_remote:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    global_atomic_or v0, v[0:1], v2, off sc0
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+; OPT-LABEL: @global_agent_release_idempotent_or_no_remote(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") release, align 4, !amdgpu.no.remote.memory [[META0:![0-9]+]]
+; OPT-NEXT:    ret i32 [[VAL]]
+entry:
+  %val = atomicrmw or ptr addrspace(1) %in, i32 0 syncscope("agent-one-as") release, align 4, !amdgpu.no.remote.memory !0
+  ret i32 %val
+}
+
+define i32 @global_agent_release_idempotent_or_no_fine_grained(ptr addrspace(1) %in) {
+; GFX942-LABEL: global_agent_release_idempotent_or_no_fine_grained:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    global_atomic_or v0, v[0:1], v2, off sc0
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+; OPT-LABEL: @global_agent_release_idempotent_or_no_fine_grained(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") release, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; OPT-NEXT:    ret i32 [[VAL]]
+entry:
+  %val = atomicrmw or ptr addrspace(1) %in, i32 0 syncscope("agent-one-as") release, align 4, !amdgpu.no.fine.grained.memory !0
   ret i32 %val
 }
 
@@ -68,7 +104,7 @@ define i32 @global_agent_acquire_release_idempotent_or(ptr addrspace(1) %in) {
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; OPT-LABEL: @global_agent_acquire_release_idempotent_or(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") acq_rel, align 4
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw add ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") acq_rel, align 4
 ; OPT-NEXT:    ret i32 [[VAL]]
 ;
 entry:
@@ -88,9 +124,8 @@ define i32 @global_agent_acquire_release_idempotent_or__no_fine_grained(ptr addr
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; OPT-LABEL: @global_agent_acquire_release_idempotent_or__no_fine_grained(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") acq_rel, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") acq_rel, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; OPT-NEXT:    ret i32 [[VAL]]
-;
 entry:
   %val = atomicrmw or ptr addrspace(1) %in, i32 0 syncscope("agent-one-as") acq_rel, align 4, !amdgpu.no.fine.grained.memory !0
   ret i32 %val
@@ -108,7 +143,7 @@ define i32 @global_agent_seq_cst_idempotent_or(ptr addrspace(1) %in) {
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; OPT-LABEL: @global_agent_seq_cst_idempotent_or(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[VAL:%.*]] = atomicrmw or ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") seq_cst, align 4
+; OPT-NEXT:    [[VAL:%.*]] = atomicrmw add ptr addrspace(1) [[IN:%.*]], i32 0 syncscope("agent-one-as") seq_cst, align 4
 ; OPT-NEXT:    ret i32 [[VAL]]
 ;
 entry:

@@ -95,8 +95,7 @@ def LLVM_NonLoadableTargetExtType : Type<
 // type that has size (not void, function, opaque struct type or target
 // extension type which does not support memory operations).
 def LLVM_LoadableType : Type<
-  Or<[And<[LLVM_PrimitiveType.predicate, Neg<LLVM_OpaqueStruct.predicate>,
-          Neg<LLVM_NonLoadableTargetExtType.predicate>]>,
+  Or<[CPred<"mlir::LLVM::isLoadableType($_self)">,
       LLVM_PointerElementTypeInterface.predicate]>,
   "LLVM type with size">;
 
@@ -475,11 +474,12 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<Trait> traits = [],
                            bit requiresFastmath = 0,
+                           bit requiresArgAndResultAttrs = 0,
                            list<int> immArgPositions = [],
                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
                   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-                  requiresFastmath, /*requiresArgAndResultAttrs=*/0,
+                  requiresFastmath, requiresArgAndResultAttrs,
                   /*requiresOpBundles=*/0, immArgPositions,
                   immArgAttrNames>;
 
