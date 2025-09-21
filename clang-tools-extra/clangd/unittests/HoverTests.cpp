@@ -3457,13 +3457,13 @@ template <typename T, typename C = bool> class Foo {}
 ```
 
 ---
+documentation
+
+---
 **Template Parameters:**
 
 - `typename T`
 - `typename C = bool`
-
----
-documentation
 
 ---
 Size: 10 bytes)",
@@ -4004,6 +4004,8 @@ void foo()
 brief doc
 
 ---
+**Details:**
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -4042,6 +4044,8 @@ brief doc
 `int`
 
 ---
+**Details:**
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -4117,6 +4121,8 @@ brief doc
 - `1` - if failed
 
 ---
+**Details:**
+
 longer doc
 
 ---
@@ -4186,6 +4192,8 @@ brief doc
 `int` - it returns something
 
 ---
+**Details:**
+
 longer doc)"},
   };
 

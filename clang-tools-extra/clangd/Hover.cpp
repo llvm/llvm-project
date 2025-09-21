@@ -1594,8 +1594,10 @@ markup::Document HoverInfo::presentDoxygen() const {
     Output.addRuler();
   }
 
-  // add any other documentation.
-  SymbolDoc.docToMarkup(Output);
+  if (SymbolDoc.hasDetailedDoc()) {
+    Output.addParagraph().appendBoldText("Details:");
+    SymbolDoc.detailedDocToMarkup(Output);
+  }
 
   Output.addRuler();
 

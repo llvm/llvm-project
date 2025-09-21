@@ -78,6 +78,14 @@ public:
     for (auto *Block : FC->getBlocks()) {
       visit(Block);
     }
+
+    // If we have not seen a brief command, use the very first free paragraph as
+    // the brief.
+    if (!BriefParagraph && !FreeParagraphs.empty() &&
+        FreeParagraphs.contains(0)) {
+      BriefParagraph = FreeParagraphs.lookup(0);
+      FreeParagraphs.erase(0);
+    }
   }
 
   bool isParameterDocumented(StringRef ParamName) const {
@@ -92,8 +100,12 @@ public:
 
   bool hasReturnCommand() const { return ReturnParagraph; }
 
+  bool hasDetailedDoc() const {
+    return !FreeParagraphs.empty() || !BlockCommands.empty();
+  }
+
   /// Converts all unhandled comment commands to a markup document.
-  void docToMarkup(markup::Document &Out) const;
+  void detailedDocToMarkup(markup::Document &Out) const;
   /// Converts the "brief" command(s) to a markup document.
   void briefToMarkup(markup::Paragraph &Out) const;
   /// Converts the "return" command(s) to a markup document.

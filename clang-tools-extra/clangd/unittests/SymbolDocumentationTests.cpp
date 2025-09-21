@@ -15,7 +15,7 @@
 namespace clang {
 namespace clangd {
 
-TEST(SymbolDocumentation, DocToMarkup) {
+TEST(SymbolDocumentation, DetailedDocToMarkup) {
 
   CommentOptions CommentOpts;
 
@@ -26,49 +26,49 @@ TEST(SymbolDocumentation, DocToMarkup) {
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {
       {
-          "foo bar",
+          "brief\n\nfoo bar",
           "foo bar",
           "foo bar",
           "foo bar",
       },
       {
-          "foo\nbar\n",
+          "brief\n\nfoo\nbar\n",
           "foo\nbar",
           "foo\nbar",
           "foo bar",
       },
       {
-          "foo\n\nbar\n",
+          "brief\n\nfoo\n\nbar\n",
           "foo\n\nbar",
           "foo\n\nbar",
           "foo\n\nbar",
       },
       {
-          "foo \\p bar baz",
+          "brief\n\nfoo \\p bar baz",
           "foo `bar` baz",
           "foo `bar` baz",
           "foo bar baz",
       },
       {
-          "foo \\e bar baz",
+          "brief\n\nfoo \\e bar baz",
           "foo \\*bar\\* baz",
           "foo *bar* baz",
           "foo *bar* baz",
       },
       {
-          "foo \\b bar baz",
+          "brief\n\nfoo \\b bar baz",
           "foo \\*\\*bar\\*\\* baz",
           "foo **bar** baz",
           "foo **bar** baz",
       },
       {
-          "foo \\ref bar baz",
+          "brief\n\nfoo \\ref bar baz",
           "foo \\*\\*\\\\ref\\*\\* `bar` baz",
           "foo **\\ref** `bar` baz",
           "foo **\\ref** bar baz",
       },
       {
-          "foo @ref bar baz",
+          "brief\n\nfoo @ref bar baz",
           "foo \\*\\*@ref\\*\\* `bar` baz",
           "foo **@ref** `bar` baz",
           "foo **@ref** bar baz",
@@ -80,7 +80,7 @@ TEST(SymbolDocumentation, DocToMarkup) {
           "",
       },
       {
-          "\\throw exception foo",
+          "brief\n\n\\throw exception foo",
           "\\*\\*\\\\throw\\*\\* `exception` foo",
           "**\\throw** `exception` foo",
           "**\\throw** exception foo",
@@ -108,7 +108,8 @@ TEST(SymbolDocumentation, DocToMarkup) {
 - item 3)",
       },
       {
-          "\\defgroup mygroup this is a group\nthis is not a group description",
+          "brief\n\n\\defgroup mygroup this is a group\nthis is not a group "
+          "description",
           "\\*\\*@defgroup\\*\\* `mygroup this is a group`\n\nthis is not a "
           "group "
           "description",
@@ -118,7 +119,9 @@ TEST(SymbolDocumentation, DocToMarkup) {
           "description",
       },
       {
-          R"(\verbatim
+          R"(brief
+
+\verbatim
 this is a
 verbatim block containing
 some verbatim text
@@ -150,7 +153,7 @@ some verbatim text
 **@endverbatim**)",
       },
       {
-          "@param foo this is a parameter\n@param bar this is another "
+          "brief\n\n@param foo this is a parameter\n@param bar this is another "
           "parameter",
           "",
           "",
@@ -169,24 +172,26 @@ More description
 documentation)",
           R"(\*\*\\brief\*\* another brief?
 
-\*\*\\details\*\* these are details
+these are details
 
 More description
 documentation)",
           R"(**\brief** another brief?
 
-**\details** these are details
+these are details
 
 More description
 documentation)",
           R"(**\brief** another brief?
 
-**\details** these are details
+these are details
 
 More description documentation)",
       },
       {
-          R"(<b>this is a bold text</b>
+          R"(brief
+
+<b>this is a bold text</b>
 normal text<i>this is an italic text</i>
 <code>this is a code block</code>)",
           R"(\<b>this is a bold text\</b>
@@ -198,14 +203,16 @@ normal text\<i>this is an italic text\</i>
           "<b>this is a bold text</b> normal text<i>this is an italic text</i> "
           "<code>this is a code block</code>",
       },
-      {"@note This is a note",
+      {"brief\n\n@note This is a note",
        R"(\*\*Note:\*\*  
 This is a note)",
        R"(**Note:**  
 This is a note)",
        R"(**Note:**
 This is a note)"},
-      {R"(Paragraph 1
+      {R"(brief
+
+Paragraph 1
 @note This is a note
 
 Paragraph 2)",
@@ -231,14 +238,16 @@ Paragraph 2)",
 This is a note
 
 Paragraph 2)"},
-      {"@warning This is a warning",
+      {"brief\n\n@warning This is a warning",
        R"(\*\*Warning:\*\*  
 This is a warning)",
        R"(**Warning:**  
 This is a warning)",
        R"(**Warning:**
 This is a warning)"},
-      {R"(Paragraph 1
+      {R"(brief
+
+Paragraph 1
 @warning This is a warning
 
 Paragraph 2)",
@@ -264,12 +273,31 @@ Paragraph 2)",
 This is a warning
 
 Paragraph 2)"},
+      {R"(@note this is not treated as brief
+
+@brief this is the brief
+
+Another paragraph)",
+       R"(\*\*Note:\*\*  
+this is not treated as brief
+
+---
+Another paragraph)",
+       R"(**Note:**  
+this is not treated as brief
+
+---
+Another paragraph)",
+       R"(**Note:**
+this is not treated as brief
+
+Another paragraph)"},
   };
   for (const auto &C : Cases) {
     markup::Document Doc;
     SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
 
-    SymbolDoc.docToMarkup(Doc);
+    SymbolDoc.detailedDocToMarkup(Doc);
 
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
@@ -401,7 +429,7 @@ class B:
     markup::Document Doc;
     SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
 
-    SymbolDoc.docToMarkup(Doc);
+    SymbolDoc.detailedDocToMarkup(Doc);
 
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
@@ -561,7 +589,7 @@ class C:
     markup::Document Doc;
     SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
 
-    SymbolDoc.docToMarkup(Doc);
+    SymbolDoc.detailedDocToMarkup(Doc);
 
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
@@ -659,7 +687,7 @@ int function() { return 0; })"},
     markup::Document Doc;
     SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
 
-    SymbolDoc.docToMarkup(Doc);
+    SymbolDoc.detailedDocToMarkup(Doc);
 
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
@@ -702,7 +730,7 @@ line
     markup::Document Doc;
     SymbolDocCommentVisitor SymbolDoc(C.Documentation, CommentOpts);
 
-    SymbolDoc.docToMarkup(Doc);
+    SymbolDoc.briefToMarkup(Doc.addParagraph());
 
     EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
     EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);

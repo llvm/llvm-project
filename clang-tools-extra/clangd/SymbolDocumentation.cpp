@@ -231,6 +231,17 @@ public:
       }
       return;
     }
+    case comments::CommandTraits::KCI_details: {
+      // The \details command is just used to separate the brief from the
+      // detailed description. This separation is already done in the
+      // SymbolDocCommentVisitor. Therefore we can omit the command itself
+      // here and just process the paragraph.
+      if (B->getParagraph() && !B->getParagraph()->isWhitespace()) {
+        ParagraphToMarkupDocument(Out.addParagraph(), Traits)
+            .visit(B->getParagraph());
+      }
+      return;
+    }
     default: {
       // Some commands have arguments, like \throws.
       // The arguments are not part of the paragraph.
@@ -509,7 +520,7 @@ void SymbolDocCommentVisitor::parameterDocToString(
   }
 }
 
-void SymbolDocCommentVisitor::docToMarkup(markup::Document &Out) const {
+void SymbolDocCommentVisitor::detailedDocToMarkup(markup::Document &Out) const {
   for (unsigned I = 0; I < CommentPartIndex; ++I) {
     if (const auto *BC = BlockCommands.lookup(I)) {
       BlockCommentToMarkupDocument(Out, Traits).visit(BC);
