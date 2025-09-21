@@ -510,3 +510,21 @@ define i32 @sub_undemanded_low_bits(i32 %x) {
   %shr = lshr i32 %sub, 4
   ret i32 %shr
 }
+
+define i1 @add_nuw_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @add_nuw_i1(
+; CHECK-NEXT:    [[Z:%.*]] = or disjoint i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %z = add nuw i1 %x, %y
+  ret i1 %z
+}
+
+define i1 @add_nsw_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @add_nsw_i1(
+; CHECK-NEXT:    [[Z:%.*]] = or disjoint i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %z = add nsw i1 %x, %y
+  ret i1 %z
+}
