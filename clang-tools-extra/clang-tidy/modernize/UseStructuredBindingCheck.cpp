@@ -360,7 +360,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
         (Twine(Prefix) + " [" + FirstVar->getNameAsString() + ", " +
          SecondVar->getNameAsString() + "]" + (CFRS ? " :" : ""))
             .str();
-    diag(DiagLoc, "use structured binding to decompose a pair")
+    diag(DiagLoc, "use a structured binding to decompose a pair")
         << FixItHint::CreateReplacement(ReplaceRange, ReplacementText)
         << FixItHint::CreateRemoval(
                SourceRange{BeginDS->getBeginLoc(), EndDS->getEndLoc()});
