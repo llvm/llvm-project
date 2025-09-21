@@ -20,8 +20,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include <optional>
 
 using namespace clang;

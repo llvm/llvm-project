@@ -89,6 +89,10 @@ public:
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
+  bool combineD16Load(MachineInstr &MI) const;
+  bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
+                    MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -392,6 +396,88 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MI.eraseFromParent();
 }
 
+bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
+  Register Dst;
+  MachineInstr *Load, *SextLoad;
+  const int64_t CleanLo16 = 0xFFFFFFFFFFFF0000;
+  const int64_t CleanHi16 = 0x000000000000FFFF;
+
+  // Load lo
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                            m_Copy(m_SpecificICst(CleanLo16))),
+                     m_MInstr(Load)))) {
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
+      const MachineMemOperand *MMO = *Load->memoperands_begin();
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, MI, Load, Dst);
+      if (LoadSize == 16)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, MI, Load, Dst);
+      return false;
+    }
+
+    if (mi_match(
+            Load, MRI,
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
+    }
+
+    return false;
+  }
+
+  // Load hi
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                            m_Copy(m_SpecificICst(CleanHi16))),
+                     m_GShl(m_MInstr(Load), m_Copy(m_SpecificICst(16)))))) {
+
+    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
+      const MachineMemOperand *MMO = *Load->memoperands_begin();
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, MI, Load, Dst);
+      if (LoadSize == 16)
+        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, MI, Load, Dst);
+      return false;
+    }
+
+    if (mi_match(
+            Load, MRI,
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
+        return false;
+      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
+      if (MMO->getSizeInBits().getValue() != 8)
+        return false;
+
+      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
+bool AMDGPURegBankCombinerImpl::applyD16Load(
+    unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
+    Register SrcReg32ToOverwriteD16) const {
+  B.buildInstr(D16Opc, {DstMI.getOperand(0).getReg()},
+               {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
+      .setMemRefs(SmallLoad->memoperands());
+  DstMI.eraseFromParent();
+  return true;
+}
+
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
   return MF.getInfo<SIMachineFunctionInfo>()->getMode();
 }
@@ -462,8 +548,7 @@ AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
 }
 
 bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();

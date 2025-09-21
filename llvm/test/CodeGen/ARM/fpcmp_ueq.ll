@@ -9,12 +9,13 @@ entry:
 }
 
 ; CHECK-ARMv4-LABEL: f7:
-; CHECK-ARMv4-DAG: bl ___eqsf2
-; CHECK-ARMv4-DAG: bl ___unordsf2
-; CHECK-ARMv4: cmp r0, #0
-; CHECK-ARMv4: movne r0, #1
-; CHECK-ARMv4: orrs r0, r0,
-; CHECK-ARMv4: moveq r0, #42
+; CHECK-ARMv4: bl ___eqsf2
+; CHECK-ARMv4-NEXT: rsbs r1, r0, #0
+; CHECK-ARMv4-NEXT: adc	r6, r0, r1
+
+; CHECK-ARMv4: bl ___unordsf2
+; CHECK-ARMv4-NEXT: orrs r0, r0, r6
+; CHECK-ARMv4-NEXT: mov r0, #154
 
 ; CHECK-ARMv7-LABEL: f7:
 ; CHECK-ARMv7: vcmp.f32

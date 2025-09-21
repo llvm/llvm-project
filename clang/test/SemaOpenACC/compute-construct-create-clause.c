@@ -97,6 +97,6 @@ void ModList() {
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
 #pragma acc serial create(readonly: V1)
   for(int i = 5; i < 10;++i);
-#pragma acc kernels loop create(zero: V1)
+#pragma acc parallel create(capture:V1)
   for(int i = 5; i < 10;++i);
 }

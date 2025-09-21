@@ -101,8 +101,13 @@ enum class ObjCTypeQual {
   NumQuals
 };
 
-/// TypeCastState - State whether an expression is or may be a type cast.
-enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
+/// If a typo should be encountered, should typo correction suggest type names,
+/// non type names, or both?
+enum class TypoCorrectionTypeBehavior {
+  AllowNonTypes,
+  AllowTypes,
+  AllowBoth,
+};
 
 /// Control what ParseCastExpression will parse.
 enum class CastParseKind { AnyCastExpr = 0, UnaryExprOnly, PrimaryExprOnly };
@@ -114,6 +119,15 @@ enum class ParenParseOption {
   CompoundStmt,    // Also allow '(' compound-statement ')'
   CompoundLiteral, // Also allow '(' type-name ')' '{' ... '}'
   CastExpr         // Also allow '(' type-name ')' <anything>
+};
+
+/// In a call to ParseParenExpression, are the initial parentheses part of an
+/// operator that requires the parens be there (like typeof(int)) or could they
+/// be something else, such as part of a compound literal or a sizeof
+/// expression, etc.
+enum class ParenExprKind {
+  PartOfOperator, // typeof(int)
+  Unknown,        // sizeof(int) or sizeof (int)1.0f, or compound literal, etc
 };
 
 /// Describes the behavior that should be taken for an __if_exists
@@ -290,9 +304,7 @@ public:
     return ConsumeToken();
   }
 
-  SourceLocation getEndOfPreviousToken() {
-    return PP.getLocForEndOfToken(PrevTokLocation);
-  }
+  SourceLocation getEndOfPreviousToken() const;
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
@@ -2598,8 +2610,7 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
-          std::nullopt);
+      llvm::function_ref<void()> CodeCompletionHandler = {});
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -3037,11 +3048,11 @@ private:
 
   /// Parse the argument to C++23's [[assume()]] attribute. Returns true on
   /// error.
-  bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
-                                  IdentifierInfo *AttrName,
-                                  SourceLocation AttrNameLoc,
-                                  SourceLocation *EndLoc,
-                                  ParsedAttr::Form Form);
+  bool
+  ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs, IdentifierInfo *AttrName,
+                             SourceLocation AttrNameLoc,
+                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
+                             SourceLocation *EndLoc, ParsedAttr::Form Form);
 
   /// Try to parse an 'identifier' which appears within an attribute-token.
   ///
@@ -3601,7 +3612,7 @@ private:
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 
-  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
+  void ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs);
 
   ///@}
 
@@ -3712,11 +3723,12 @@ public:
   ///         assignment-expression ...[opt]
   ///         expression ',' assignment-expression ...[opt]
   /// \endverbatim
-  ExprResult
-  ParseExpression(TypeCastState isTypeCast = TypeCastState::NotTypeCast);
+  ExprResult ParseExpression(TypoCorrectionTypeBehavior CorrectionBehavior =
+                                 TypoCorrectionTypeBehavior::AllowNonTypes);
 
   ExprResult ParseConstantExpressionInExprEvalContext(
-      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
+      TypoCorrectionTypeBehavior CorrectionBehavior =
+          TypoCorrectionTypeBehavior::AllowNonTypes);
   ExprResult ParseConstantExpression();
   ExprResult ParseArrayBoundExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
@@ -3753,8 +3765,9 @@ public:
   ExprResult ParseConstraintLogicalOrExpression(bool IsTrailingRequiresClause);
 
   /// Parse an expr that doesn't include (top-level) commas.
-  ExprResult ParseAssignmentExpression(
-      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
+  ExprResult
+  ParseAssignmentExpression(TypoCorrectionTypeBehavior CorrectionBehavior =
+                                TypoCorrectionTypeBehavior::AllowNonTypes);
 
   ExprResult ParseConditionalExpression();
 
@@ -4020,14 +4033,15 @@ private:
   ///
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand, bool &NotCastExpr,
-                                 TypeCastState isTypeCast,
+                                 TypoCorrectionTypeBehavior CorrectionBehavior,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
-  ExprResult
-  ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand = false,
-                      TypeCastState isTypeCast = TypeCastState::NotTypeCast,
-                      bool isVectorLiteral = false,
-                      bool *NotPrimaryExpression = nullptr);
+  ExprResult ParseCastExpression(CastParseKind ParseKind,
+                                 bool isAddressOfOperand = false,
+                                 TypoCorrectionTypeBehavior CorrectionBehavior =
+                                     TypoCorrectionTypeBehavior::AllowNonTypes,
+                                 bool isVectorLiteral = false,
+                                 bool *NotPrimaryExpression = nullptr);
 
   /// Returns true if the next token cannot start an expression.
   bool isNotExpressionStart();
@@ -4172,8 +4186,7 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false);
+                           bool FailImmediatelyOnInvalidExpr = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -4185,10 +4198,15 @@ private:
   /// \endverbatim
   bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
 
-  /// ParseParenExpression - This parses the unit that starts with a '(' token,
-  /// based on what is allowed by ExprType.  The actual thing parsed is returned
-  /// in ExprType. If stopIfCastExpr is true, it will only return the parsed
-  /// type, not the parsed cast-expression.
+  /// This parses the unit that starts with a '(' token, based on what is
+  /// allowed by ExprType. The actual thing parsed is returned in ExprType. If
+  /// StopIfCastExpr is true, it will only return the parsed type, not the
+  /// parsed cast-expression. If ParenBehavior is ParenExprKind::PartOfOperator,
+  /// the initial open paren and its matching close paren are known to be part
+  /// of another grammar production and not part of the operand. e.g., the
+  /// typeof and typeof_unqual operators in C. Otherwise, the function has to
+  /// parse the parens to determine whether they're part of a cast or compound
+  /// literal expression rather than a parenthesized type.
   ///
   /// \verbatim
   ///       primary-expression: [C99 6.5.1]
@@ -4213,7 +4231,9 @@ private:
   ///       '(' '[' expression ']' { '[' expression ']' } cast-expression
   /// \endverbatim
   ExprResult ParseParenExpression(ParenParseOption &ExprType,
-                                  bool stopIfCastExpr, bool isTypeCast,
+                                  bool StopIfCastExpr,
+                                  ParenExprKind ParenBehavior,
+                                  TypoCorrectionTypeBehavior CorrectionBehavior,
                                   ParsedType &CastTy,
                                   SourceLocation &RParenLoc);
 
@@ -5168,10 +5188,18 @@ private:
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
+  struct ParsedSemantic {
+    StringRef Name = "";
+    unsigned Index = 0;
+    bool Explicit = false;
+  };
+
+  ParsedSemantic ParseHLSLSemantic();
+
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
-  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
+  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd, ParsedAttributes &Attrs);
 
   ///@}
 
@@ -7074,6 +7102,10 @@ private:
   bool HandlePragmaMSOptimize(StringRef PragmaName,
                               SourceLocation PragmaLocation);
 
+  // #pragma intrinsic("foo")
+  bool HandlePragmaMSIntrinsic(StringRef PragmaName,
+                               SourceLocation PragmaLocation);
+
   /// Handle the annotation token produced for
   /// #pragma align...
   void HandlePragmaAlign();
@@ -7189,7 +7221,8 @@ public:
   /// 'while', or 'for').
   StmtResult
   ParseStatement(SourceLocation *TrailingElseLoc = nullptr,
-                 ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt);
+                 ParsedStmtContext StmtCtx = ParsedStmtContext::SubStmt,
+                 LabelDecl *PrecedingLabel = nullptr);
 
   /// ParseStatementOrDeclaration - Read 'statement' or 'declaration'.
   /// \verbatim
@@ -7244,12 +7277,13 @@ public:
   ///
   StmtResult
   ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
-                              SourceLocation *TrailingElseLoc = nullptr);
+                              SourceLocation *TrailingElseLoc = nullptr,
+                              LabelDecl *PrecedingLabel = nullptr);
 
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
       SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
-      ParsedAttributes &DeclSpecAttrs);
+      ParsedAttributes &DeclSpecAttrs, LabelDecl *PrecedingLabel);
 
   /// Parse an expression statement.
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
@@ -7374,7 +7408,8 @@ public:
   ///         'switch' '(' expression ')' statement
   /// [C++]   'switch' '(' condition ')' statement
   /// \endverbatim
-  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                                  LabelDecl *PrecedingLabel);
 
   /// ParseWhileStatement
   /// \verbatim
@@ -7382,7 +7417,8 @@ public:
   ///         'while' '(' expression ')' statement
   /// [C++]   'while' '(' condition ')' statement
   /// \endverbatim
-  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                                 LabelDecl *PrecedingLabel);
 
   /// ParseDoStatement
   /// \verbatim
@@ -7390,7 +7426,7 @@ public:
   ///         'do' statement 'while' '(' expression ')' ';'
   /// \endverbatim
   /// Note: this lets the caller parse the end ';'.
-  StmtResult ParseDoStatement();
+  StmtResult ParseDoStatement(LabelDecl *PrecedingLabel);
 
   /// ParseForStatement
   /// \verbatim
@@ -7417,7 +7453,8 @@ public:
   /// [C++0x]   expression
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
-  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
+                               LabelDecl *PrecedingLabel);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7434,6 +7471,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'continue' ';'
+  /// [C2y]   'continue' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7444,6 +7482,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'break' ';'
+  /// [C2y]   'break' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7460,9 +7499,12 @@ public:
   /// \endverbatim
   StmtResult ParseReturnStatement();
 
+  StmtResult ParseBreakOrContinueStatement(bool IsContinue);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
-                                 ParsedAttributes &Attrs);
+                                 ParsedAttributes &Attrs,
+                                 LabelDecl *PrecedingLabel);
 
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 

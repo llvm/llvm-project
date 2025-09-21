@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
@@ -88,13 +89,15 @@ inline const char *toString(DWARFSectionKind Kind) {
 /// The conversion depends on the version of the index section.
 /// IndexVersion is expected to be either 2 for pre-standard GNU proposal
 /// or 5 for DWARFv5 package file.
-uint32_t serializeSectionKind(DWARFSectionKind Kind, unsigned IndexVersion);
+LLVM_ABI uint32_t serializeSectionKind(DWARFSectionKind Kind,
+                                       unsigned IndexVersion);
 
 /// Convert a value read from an index section to the internal representation.
 ///
 /// The conversion depends on the index section version, which is expected
 /// to be either 2 for pre-standard GNU proposal or 5 for DWARFv5 package file.
-DWARFSectionKind deserializeSectionKind(uint32_t Value, unsigned IndexVersion);
+LLVM_ABI DWARFSectionKind deserializeSectionKind(uint32_t Value,
+                                                 unsigned IndexVersion);
 
 class DWARFUnitIndex {
   struct Header {
@@ -103,8 +106,8 @@ class DWARFUnitIndex {
     uint32_t NumUnits;
     uint32_t NumBuckets = 0;
 
-    bool parse(DataExtractor IndexData, uint64_t *OffsetPtr);
-    void dump(raw_ostream &OS) const;
+    LLVM_ABI bool parse(DataExtractor IndexData, uint64_t *OffsetPtr);
+    LLVM_ABI void dump(raw_ostream &OS) const;
   };
 
 public:
@@ -135,9 +138,10 @@ public:
     friend class DWARFUnitIndex;
 
   public:
-    const SectionContribution *getContribution(DWARFSectionKind Sec) const;
-    const SectionContribution *getContribution() const;
-    SectionContribution &getContribution();
+    LLVM_ABI const SectionContribution *
+    getContribution(DWARFSectionKind Sec) const;
+    LLVM_ABI const SectionContribution *getContribution() const;
+    LLVM_ABI SectionContribution &getContribution();
 
     const SectionContribution *getContributions() const {
       return Contributions.get();
@@ -170,13 +174,13 @@ public:
 
   explicit operator bool() const { return Header.NumBuckets; }
 
-  bool parse(DataExtractor IndexData);
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI bool parse(DataExtractor IndexData);
+  LLVM_ABI void dump(raw_ostream &OS) const;
 
   uint32_t getVersion() const { return Header.Version; }
 
-  const Entry *getFromOffset(uint64_t Offset) const;
-  const Entry *getFromHash(uint64_t Offset) const;
+  LLVM_ABI const Entry *getFromOffset(uint64_t Offset) const;
+  LLVM_ABI const Entry *getFromHash(uint64_t Offset) const;
 
   ArrayRef<DWARFSectionKind> getColumnKinds() const {
     return ArrayRef(ColumnKinds.get(), Header.NumColumns);

@@ -1080,14 +1080,14 @@ define i32 @muli32_m65(i32 %a) nounwind {
 ; RV64I-LABEL: muli32_m65:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 6
-; RV64I-NEXT:    negw a0, a0
+; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_m65:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a1, a0, 6
-; RV64IM-NEXT:    negw a0, a0
+; RV64IM-NEXT:    neg a0, a0
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, -65
@@ -1980,14 +1980,14 @@ define i8 @muladd_demand(i8 %x, i8 %y) nounwind {
 ; RV64I-LABEL: muladd_demand:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    sub a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 15
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muladd_demand:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a0, a0, 1
-; RV64IM-NEXT:    subw a0, a1, a0
+; RV64IM-NEXT:    sub a0, a1, a0
 ; RV64IM-NEXT:    andi a0, a0, 15
 ; RV64IM-NEXT:    ret
   %m = mul i8 %x, 14
@@ -2048,14 +2048,14 @@ define i8 @muladd_demand_2(i8 %x, i8 %y) nounwind {
 ; RV64I-LABEL: muladd_demand_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    subw a1, a1, a0
+; RV64I-NEXT:    sub a1, a1, a0
 ; RV64I-NEXT:    ori a0, a1, -16
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muladd_demand_2:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a0, a0, 1
-; RV64IM-NEXT:    subw a1, a1, a0
+; RV64IM-NEXT:    sub a1, a1, a0
 ; RV64IM-NEXT:    ori a0, a1, -16
 ; RV64IM-NEXT:    ret
   %m = mul i8 %x, 14

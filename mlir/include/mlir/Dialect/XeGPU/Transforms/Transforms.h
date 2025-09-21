@@ -62,6 +62,7 @@ void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
+void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as

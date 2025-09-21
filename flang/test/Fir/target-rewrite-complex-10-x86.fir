@@ -30,5 +30,5 @@ func.func @takecomplex10(%z: complex<f80>) {
 // AMD64:    %[[VAL_3:.*]] = fir.alloca complex<f80>
 // AMD64:    fir.store %[[VAL_2]] to %[[VAL_3]] : !fir.ref<complex<f80>>
 
-// AMD64_LLVM: define void @takecomplex10(ptr byval({ x86_fp80, x86_fp80 }) align 16 captures(none) %0)
+// AMD64_LLVM: define void @takecomplex10(ptr noalias byval({ x86_fp80, x86_fp80 }) align 16 captures(none) %0)
 }

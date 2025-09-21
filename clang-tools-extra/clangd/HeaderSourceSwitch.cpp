@@ -20,22 +20,24 @@ namespace clangd {
 
 std::optional<Path> getCorrespondingHeaderOrSource(
     PathRef OriginalFile, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
-  llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
-                                        ".c++", ".m", ".mm"};
-  llvm::StringRef HeaderExtensions[] = {".h",    ".hh",   ".hpp", ".hxx",
-                                        ".inc",  ".cppm", ".ccm", ".cxxm",
-                                        ".c++m", ".ixx"};
+  static constexpr llvm::StringRef SourceExtensions[] = {
+      ".cpp", ".c", ".cc", ".cxx", ".c++", ".m", ".mm"};
+  static constexpr llvm::StringRef HeaderExtensions[] = {
+      ".h",    ".hh",  ".hpp",  ".hxx",  ".inc",
+      ".cppm", ".ccm", ".cxxm", ".c++m", ".ixx"};
 
   llvm::StringRef PathExt = llvm::sys::path::extension(OriginalFile);
 
   // Lookup in a list of known extensions.
-  bool IsSource = llvm::any_of(SourceExtensions, [&PathExt](PathRef SourceExt) {
-    return SourceExt.equals_insensitive(PathExt);
-  });
+  const bool IsSource =
+      llvm::any_of(SourceExtensions, [&PathExt](PathRef SourceExt) {
+        return SourceExt.equals_insensitive(PathExt);
+      });
 
-  bool IsHeader = llvm::any_of(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
-    return HeaderExt.equals_insensitive(PathExt);
-  });
+  const bool IsHeader =
+      llvm::any_of(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
+        return HeaderExt.equals_insensitive(PathExt);
+      });
 
   // We can only switch between the known extensions.
   if (!IsSource && !IsHeader)
@@ -94,7 +96,7 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   //
   // For each symbol in the original file, we get its target location (decl or
   // def) from the index, then award that target file.
-  bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
+  const bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
   Index->lookup(Request, [&](const Symbol &Sym) {
     if (IsHeader)
       AwardTarget(Sym.Definition.FileURI);

@@ -532,6 +532,9 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
     std::vector<uint64_t> &MaxCountMap = TotalMaxCountMaps[FunctionNum];
     std::vector<uint64_t> &MinCountMap = TotalMinCountMaps[FunctionNum];
 
+    // Record external entry count into CallGraphIncomingFlows
+    CallGraphIncomingFlows[FunctionNum] += Function->getExternEntryCount();
+
     // Update MaxCountMap, MinCountMap, and CallGraphIncomingFlows
     auto recordCall = [&](const BinaryBasicBlock *SourceBB,
                           const MCSymbol *DestSymbol, uint64_t Count,

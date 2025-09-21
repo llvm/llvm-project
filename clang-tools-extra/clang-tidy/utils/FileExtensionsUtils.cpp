@@ -1,4 +1,4 @@
-//===--- FileExtensionsUtils.cpp - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,7 +58,7 @@ getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions) {
   if (Extension.empty())
     return std::nullopt;
   // Skip "." prefix.
-  if (!FileExtensions.count(Extension.substr(1)))
+  if (!FileExtensions.contains(Extension.substr(1)))
     return std::nullopt;
   return Extension;
 }

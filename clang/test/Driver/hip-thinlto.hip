@@ -3,6 +3,7 @@
 // CHECK: -plugin-opt=thinlto
 // CHECK-SAME: -plugin-opt=-force-import-all
 // CHECK-SAME: -plugin-opt=-avail-extern-to-local
+// CHECK-SAME: -plugin-opt=-avail-extern-gv-in-addrspace-to-local=3
 int main(int, char *[]) {
   return 0;
 }

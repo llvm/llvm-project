@@ -186,5 +186,12 @@ struct std::enable_if<true, S>; // expected-error {{cannot be specialized}}
 #  if TEST_STD_VER >= 20
 template <>
 struct std::integral_constant<S, {}>; // expected-error {{cannot be specialized}}
+
+template <>
+struct std::common_reference<S>; // expected-error {{cannot be specialized}}
+template <>
+struct std::common_reference<S, S>; // expected-error {{cannot be specialized}}
+template <>
+struct std::common_reference<S, S, S>; // expected-error {{cannot be specialized}}
 #  endif
 #endif

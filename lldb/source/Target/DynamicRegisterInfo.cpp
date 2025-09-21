@@ -245,8 +245,6 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     // 'encoding':'uint' , 'format':'hex'         , 'set': 0, 'ehframe' : 2,
     // 'dwarf' : 2, 'generic':'arg4', 'alt-name':'arg4', },
     RegisterInfo reg_info;
-    std::vector<uint32_t> value_regs;
-    std::vector<uint32_t> invalidate_regs;
     memset(&reg_info, 0, sizeof(reg_info));
 
     llvm::StringRef name_val;

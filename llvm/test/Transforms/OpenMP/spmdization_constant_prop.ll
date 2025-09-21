@@ -8,7 +8,7 @@
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ;
-target datalayout = "A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32"
+target datalayout = "A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32"
 target triple = "amdgcn-amd-amdhsa"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
@@ -61,7 +61,7 @@ common.ret:                                       ; preds = %user_code.entry, %e
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p5(i64 immarg, ptr addrspace(5) captures(none)) #1
+declare void @llvm.lifetime.start.p5(ptr addrspace(5) captures(none)) #1
 
 ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 define internal void @__omp_outlined__(ptr noalias captures(none) %.global_tid., ptr noalias captures(none) %.bound_tid., ptr nonnull align 4 captures(none) %ng, ptr nonnull align 8 captures(none) %aa) #2 {
@@ -72,7 +72,7 @@ entry:
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) captures(none)) #1
+declare void @llvm.lifetime.end.p5(ptr addrspace(5) captures(none)) #1
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 noundef %1) #3 {

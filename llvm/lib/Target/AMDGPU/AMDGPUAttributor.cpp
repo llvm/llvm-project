@@ -13,11 +13,8 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/Analysis/CycleAnalysis.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
@@ -80,6 +77,13 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
   case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
     return WORKGROUP_ID_Z;
+  case Intrinsic::amdgcn_cluster_id_x:
+    NonKernelOnly = true;
+    return CLUSTER_ID_X;
+  case Intrinsic::amdgcn_cluster_id_y:
+    return CLUSTER_ID_Y;
+  case Intrinsic::amdgcn_cluster_id_z:
+    return CLUSTER_ID_Z;
   case Intrinsic::amdgcn_lds_kernel_id:
     return LDS_KERNEL_ID;
   case Intrinsic::amdgcn_dispatch_ptr:
@@ -235,6 +239,10 @@ public:
     return ST.getMaxWavesPerEU();
   }
 
+  unsigned getMaxAddrSpace() const override {
+    return AMDGPUAS::MAX_AMDGPU_ADDRESS;
+  }
+
 private:
   /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
   /// local to flat. These casts may require the queue pointer.
@@ -329,7 +337,7 @@ struct AAAMDAttributes
                                             Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAAMDAttributes"; }
+  StringRef getName() const override { return "AAAMDAttributes"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -355,9 +363,7 @@ struct AAUniformWorkGroupSize
                                                    Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override {
-    return "AAUniformWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAUniformWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -937,9 +943,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override {
-    return "AAAMDFlatWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAAMDFlatWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1071,7 +1075,7 @@ struct AAAMDMaxNumWorkgroups
         /* ForceReplace= */ true);
   }
 
-  const std::string getName() const override { return "AAAMDMaxNumWorkgroups"; }
+  StringRef getName() const override { return "AAAMDMaxNumWorkgroups"; }
 
   const std::string getAsStr(Attributor *) const override {
     std::string Buffer = "AAAMDMaxNumWorkgroupsState[";
@@ -1179,7 +1183,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAMDWavesPerEU"; }
+  StringRef getName() const override { return "AAAMDWavesPerEU"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1285,7 +1289,7 @@ struct AAAMDGPUNoAGPR
                            {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
-  const std::string getName() const override { return "AAAMDGPUNoAGPR"; }
+  StringRef getName() const override { return "AAAMDGPUNoAGPR"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1299,72 +1303,155 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
-/// Performs the final check and updates the 'amdgpu-waves-per-eu' attribute
-/// based on the finalized 'amdgpu-flat-work-group-size' attribute.
-/// Both attributes start with narrow ranges that expand during iteration.
-/// However, a narrower flat-workgroup-size leads to a wider waves-per-eu range,
-/// preventing optimal updates later. Therefore, waves-per-eu can't be updated
-/// with intermediate values during the attributor run. We defer the
-/// finalization of waves-per-eu until after the flat-workgroup-size is
-/// finalized.
-/// TODO: Remove this and move similar logic back into the attributor run once
-/// we have a better representation for waves-per-eu.
-static bool updateWavesPerEU(Module &M, TargetMachine &TM) {
-  bool Changed = false;
+/// An abstract attribute to propagate the function attribute
+/// "amdgpu-cluster-dims" from kernel entry functions to device functions.
+struct AAAMDGPUClusterDims
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUClusterDims(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  LLVMContext &Ctx = M.getContext();
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDGPUClusterDims &createForPosition(const IRPosition &IRP,
+                                                Attributor &A);
 
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
+  /// See AbstractAttribute::getName().
+  StringRef getName() const override { return "AAAMDGPUClusterDims"; }
 
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
 
-    std::optional<std::pair<unsigned, std::optional<unsigned>>>
-        FlatWgrpSizeAttr =
-            AMDGPU::getIntegerPairAttribute(F, "amdgpu-flat-work-group-size");
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUClusterDims.
+  static bool classof(const AbstractAttribute *AA) {
+    return AA->getIdAddr() == &ID;
+  }
 
-    unsigned MinWavesPerEU = ST.getMinWavesPerEU();
-    unsigned MaxWavesPerEU = ST.getMaxWavesPerEU();
+  virtual const AMDGPU::ClusterDimsAttr &getClusterDims() const = 0;
 
-    unsigned MinFlatWgrpSize = ST.getMinFlatWorkGroupSize();
-    unsigned MaxFlatWgrpSize = ST.getMaxFlatWorkGroupSize();
-    if (FlatWgrpSizeAttr.has_value()) {
-      MinFlatWgrpSize = FlatWgrpSizeAttr->first;
-      MaxFlatWgrpSize = *(FlatWgrpSizeAttr->second);
-    }
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
 
-    // Start with the "best" range.
-    unsigned Min = MinWavesPerEU;
-    unsigned Max = MinWavesPerEU;
+const char AAAMDGPUClusterDims::ID = 0;
 
-    // Compute the range from flat workgroup size. `getWavesPerEU` will also
-    // account for the 'amdgpu-waves-er-eu' attribute.
-    auto [MinFromFlatWgrpSize, MaxFromFlatWgrpSize] =
-        ST.getWavesPerEU(F, {MinFlatWgrpSize, MaxFlatWgrpSize});
+struct AAAMDGPUClusterDimsFunction : public AAAMDGPUClusterDims {
+  AAAMDGPUClusterDimsFunction(const IRPosition &IRP, Attributor &A)
+      : AAAMDGPUClusterDims(IRP, A) {}
 
-    // For the lower bound, we have to "tighten" it.
-    Min = std::max(Min, MinFromFlatWgrpSize);
-    // For the upper bound, we have to "extend" it.
-    Max = std::max(Max, MaxFromFlatWgrpSize);
+  void initialize(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    assert(F && "empty associated function");
 
-    // Clamp the range to the max range.
-    Min = std::max(Min, MinWavesPerEU);
-    Max = std::min(Max, MaxWavesPerEU);
+    Attr = AMDGPU::ClusterDimsAttr::get(*F);
 
-    // Update the attribute if it is not the max.
-    if (Min != MinWavesPerEU || Max != MaxWavesPerEU) {
-      SmallString<10> Buffer;
-      raw_svector_ostream OS(Buffer);
-      OS << Min << ',' << Max;
-      Attribute OldAttr = F.getFnAttribute("amdgpu-waves-per-eu");
-      Attribute NewAttr = Attribute::get(Ctx, "amdgpu-waves-per-eu", OS.str());
-      F.addFnAttr(NewAttr);
-      Changed |= OldAttr == NewAttr;
+    // No matter what a kernel function has, it is final.
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      if (Attr.isUnknown())
+        indicatePessimisticFixpoint();
+      else
+        indicateOptimisticFixpoint();
     }
   }
 
-  return Changed;
+  const std::string getAsStr(Attributor *A) const override {
+    if (!getAssumed() || Attr.isUnknown())
+      return "unknown";
+    if (Attr.isNoCluster())
+      return "no";
+    if (Attr.isVariableDims())
+      return "variable";
+    return Attr.to_string();
+  }
+
+  void trackStatistics() const override {}
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto OldState = Attr;
+
+    auto CheckCallSite = [&](AbstractCallSite CS) {
+      const auto *CallerAA = A.getAAFor<AAAMDGPUClusterDims>(
+          *this, IRPosition::function(*CS.getInstruction()->getFunction()),
+          DepClassTy::REQUIRED);
+      if (!CallerAA || !CallerAA->isValidState())
+        return false;
+
+      return merge(CallerAA->getClusterDims());
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    return OldState == Attr ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (Attr.isUnknown())
+      return ChangeStatus::UNCHANGED;
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(getAssociatedFunction()->getContext(), AttrName,
+                        Attr.to_string())},
+        /*ForceReplace=*/true);
+  }
+
+  const AMDGPU::ClusterDimsAttr &getClusterDims() const override {
+    return Attr;
+  }
+
+private:
+  bool merge(const AMDGPU::ClusterDimsAttr &Other) {
+    // Case 1: Both of them are unknown yet, we do nothing and continue wait for
+    // propagation.
+    if (Attr.isUnknown() && Other.isUnknown())
+      return true;
+
+    // Case 2: The other is determined, but we are unknown yet, we simply take
+    // the other's value.
+    if (Attr.isUnknown()) {
+      Attr = Other;
+      return true;
+    }
+
+    // Case 3: We are determined but the other is unknown yet, we simply keep
+    // everything unchanged.
+    if (Other.isUnknown())
+      return true;
+
+    // After this point, both are determined.
+
+    // Case 4: If they are same, we do nothing.
+    if (Attr == Other)
+      return true;
+
+    // Now they are not same.
+
+    // Case 5: If either of us uses cluster (but not both; otherwise case 4
+    // would hold), then it is unknown whether cluster will be used, and the
+    // state is final, unlike case 1.
+    if (Attr.isNoCluster() || Other.isNoCluster()) {
+      Attr.setUnknown();
+      return false;
+    }
+
+    // Case 6: Both of us use cluster, but the dims are different, so the result
+    // is, cluster is used, but we just don't have a fixed dims.
+    Attr.setVariableDims();
+    return true;
+  }
+
+  AMDGPU::ClusterDimsAttr Attr;
+
+  static constexpr const char AttrName[] = "amdgpu-cluster-dims";
+};
+
+AAAMDGPUClusterDims &
+AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
+  if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+    return *new (A.Allocator) AAAMDGPUClusterDimsFunction(IRP, A);
+  llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
@@ -1384,8 +1471,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAInstanceInfo::ID});
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1423,59 +1510,30 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       A.getOrCreateAAFor<AAAMDWavesPerEU>(IRPosition::function(*F));
     }
 
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
+    if (!F->isDeclaration() && ST.hasClusters())
+      A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
+
     for (auto &I : instructions(F)) {
-      if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*LI->getPointerOperand()));
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*SI->getPointerOperand()));
-      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*RMW->getPointerOperand()));
-      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*CmpX->getPointerOperand()));
+      Value *Ptr = nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(&I))
+        Ptr = LI->getPointerOperand();
+      else if (auto *SI = dyn_cast<StoreInst>(&I))
+        Ptr = SI->getPointerOperand();
+      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+        Ptr = RMW->getPointerOperand();
+      else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
+        Ptr = CmpX->getPointerOperand();
+
+      if (Ptr) {
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
       }
     }
   }
 
-  bool Changed = A.run() == ChangeStatus::CHANGED;
-
-  Changed |= updateWavesPerEU(M, TM);
-
-  return Changed;
+  return A.run() == ChangeStatus::CHANGED;
 }
-
-class AMDGPUAttributorLegacy : public ModulePass {
-public:
-  AMDGPUAttributorLegacy() : ModulePass(ID) {}
-
-  /// doInitialization - Virtual method overridden by subclasses to do
-  /// any necessary initialization before any pass is run.
-  bool doInitialization(Module &) override {
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC)
-      report_fatal_error("TargetMachine is required");
-
-    TM = &TPC->getTM<TargetMachine>();
-    return false;
-  }
-
-  bool runOnModule(Module &M) override {
-    AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{},
-                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<CycleInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "AMDGPU Attributor"; }
-  TargetMachine *TM;
-  static char ID;
-};
 } // namespace
 
 PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
@@ -1489,14 +1547,3 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
                                                : PreservedAnalyses::all();
 }
-
-char AMDGPUAttributorLegacy::ID = 0;
-
-Pass *llvm::createAMDGPUAttributorLegacyPass() {
-  return new AMDGPUAttributorLegacy();
-}
-INITIALIZE_PASS_BEGIN(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
-INITIALIZE_PASS_END(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                    false, false)

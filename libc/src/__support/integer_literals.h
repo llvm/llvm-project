@@ -13,13 +13,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H
 #define LLVM_LIBC_SRC___SUPPORT_INTEGER_LITERALS_H
 
+#include "hdr/stdint_proxy.h"         // uintxx_t
 #include "src/__support/CPP/limits.h" // CHAR_BIT
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h" // UInt128
 #include <stddef.h>                // size_t
-#include <stdint.h>                // uintxx_t
 
 namespace LIBC_NAMESPACE_DECL {
 

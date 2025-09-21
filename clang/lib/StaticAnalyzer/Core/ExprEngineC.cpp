@@ -711,9 +711,10 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
   }
 
   ExplodedNode *N = Pred;
-  while (!N->getLocation().getAs<BlockEntrance>()) {
+  while (!N->getLocation().getAs<BlockEdge>()) {
     ProgramPoint P = N->getLocation();
-    assert(P.getAs<PreStmt>()|| P.getAs<PreStmtPurgeDeadSymbols>());
+    assert(P.getAs<PreStmt>() || P.getAs<PreStmtPurgeDeadSymbols>() ||
+           P.getAs<BlockEntrance>());
     (void) P;
     if (N->pred_size() != 1) {
       // We failed to track back where we came from.
@@ -729,7 +730,6 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     return;
   }
 
-  N = *N->pred_begin();
   BlockEdge BE = N->getLocation().castAs<BlockEdge>();
   SVal X;
 
@@ -769,54 +769,6 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
     }
   }
   Bldr.generateNode(B, Pred, state->BindExpr(B, Pred->getLocationContext(), X));
-}
-
-void ExprEngine::VisitInitListExpr(const InitListExpr *IE,
-                                   ExplodedNode *Pred,
-                                   ExplodedNodeSet &Dst) {
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
-
-  ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
-  QualType T = getContext().getCanonicalType(IE->getType());
-  unsigned NumInitElements = IE->getNumInits();
-
-  if (!IE->isGLValue() && !IE->isTransparent() &&
-      (T->isArrayType() || T->isRecordType() || T->isVectorType() ||
-       T->isAnyComplexType())) {
-    llvm::ImmutableList<SVal> vals = getBasicVals().getEmptySValList();
-
-    // Handle base case where the initializer has no elements.
-    // e.g: static int* myArray[] = {};
-    if (NumInitElements == 0) {
-      SVal V = svalBuilder.makeCompoundVal(T, vals);
-      B.generateNode(IE, Pred, state->BindExpr(IE, LCtx, V));
-      return;
-    }
-
-    for (const Stmt *S : llvm::reverse(*IE)) {
-      SVal V = state->getSVal(cast<Expr>(S), LCtx);
-      vals = getBasicVals().prependSVal(V, vals);
-    }
-
-    B.generateNode(IE, Pred,
-                   state->BindExpr(IE, LCtx,
-                                   svalBuilder.makeCompoundVal(T, vals)));
-    return;
-  }
-
-  // Handle scalars: int{5} and int{} and GLvalues.
-  // Note, if the InitListExpr is a GLvalue, it means that there is an address
-  // representing it, so it must have a single init element.
-  assert(NumInitElements <= 1);
-
-  SVal V;
-  if (NumInitElements == 0)
-    V = getSValBuilder().makeZeroVal(T);
-  else
-    V = state->getSVal(IE->getInit(0), LCtx);
-
-  B.generateNode(IE, Pred, state->BindExpr(IE, LCtx, V));
 }
 
 void ExprEngine::VisitGuardedExpr(const Expr *Ex,
@@ -916,7 +868,8 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
   QualType T = Ex->getTypeOfArgument();
 
   for (ExplodedNode *N : CheckedSet) {
-    if (Ex->getKind() == UETT_SizeOf) {
+    if (Ex->getKind() == UETT_SizeOf || Ex->getKind() == UETT_DataSizeOf ||
+        Ex->getKind() == UETT_CountOf) {
       if (!T->isIncompleteType() && !T->isConstantSizeType()) {
         assert(T->isVariableArrayType() && "Unknown non-constant-sized type.");
 

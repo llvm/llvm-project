@@ -7,11 +7,11 @@ define void @test() {
 ; CHECK-NEXT:    br i1 false, label %[[BB1:.*]], label %[[BB5:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], %[[BB1]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 0, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 0, i32 0
 ; CHECK-NEXT:    [[TMP3]] = or <2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 0, i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 false, label %[[BB1]], label %[[BB5]]

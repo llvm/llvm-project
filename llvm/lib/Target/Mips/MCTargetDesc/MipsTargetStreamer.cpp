@@ -12,10 +12,10 @@
 
 #include "MipsTargetStreamer.h"
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MipsBaseInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
-#include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -398,42 +397,42 @@ MipsTargetAsmStreamer::MipsTargetAsmStreamer(MCStreamer &S,
 void MipsTargetAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.dtprelword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.dtpreldword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.tprelword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.tpreldword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.gpword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
 void MipsTargetAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
   auto *MAI = getStreamer().getContext().getAsmInfo();
   OS << "\t.gpdword\t";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -931,7 +930,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
 }
 
 void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getStreamer().getAssembler().registerSymbol(*Symbol);
   uint8_t Type = Symbol->getType();
   if (Type != ELF::STT_FUNC)
@@ -969,7 +968,7 @@ void MipsTargetELFStreamer::finish() {
 
       Align Alignment = Section.getAlign();
       S.switchSection(&Section);
-      if (Section.useCodeAlign())
+      if (getContext().getAsmInfo()->useCodeAlign(Section))
         S.emitCodeAlignment(Alignment, &STI, Alignment.value());
       else
         S.emitValueToAlignment(Alignment, 0, 1, Alignment.value());
@@ -1015,11 +1014,11 @@ void MipsTargetELFStreamer::finish() {
 }
 
 void MipsTargetELFStreamer::emitAssignment(MCSymbol *S, const MCExpr *Value) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // If on rhs is micromips symbol then mark Symbol as microMips.
   if (Value->getKind() != MCExpr::SymbolRef)
     return;
-  const auto &RhsSym = cast<MCSymbolELF>(
+  auto &RhsSym = static_cast<const MCSymbolELF &>(
       static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
 
   if (!(RhsSym.getOther() & ELF::STO_MIPS_MICROMIPS))
@@ -1033,45 +1032,46 @@ MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
 }
 
 void MipsTargetELFStreamer::emitGPRel32Value(const MCExpr *Value) {
-  MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_GPREL32)));
-  DF->appendContents(4, 0);
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, Mips::fixup_Mips_GPREL32);
+  S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
-  MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_GPREL32)));
-  DF->appendContents(8, 0);
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  // fixup_Mips_GPREL32 desginates R_MIPS_GPREL32+R_MIPS_64 on MIPS64.
+  S.addFixup(Value, Mips::fixup_Mips_GPREL32);
+  S.appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_DTPREL32)));
-  DF->appendContents(4, 0);
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, Mips::fixup_Mips_DTPREL32);
+  S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_DTPREL64)));
-  DF->appendContents(8, 0);
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  S.addFixup(Value, Mips::fixup_Mips_DTPREL64);
+  S.appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel32Value(const MCExpr *Value) {
-  MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_TPREL32)));
-  DF->appendContents(4, 0);
+  auto &S = getStreamer();
+  S.ensureHeadroom(4);
+  S.addFixup(Value, Mips::fixup_Mips_TPREL32);
+  S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
-  MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_TPREL64)));
-  DF->appendContents(8, 0);
+  auto &S = getStreamer();
+  S.ensureHeadroom(8);
+  S.addFixup(Value, Mips::fixup_Mips_TPREL64);
+  S.appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetMicroMips() {
@@ -1265,9 +1265,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   MCInst TmpInst;
   TmpInst.setOpcode(Mips::LUi);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  const MCExpr *HiSym = MipsMCExpr::create(
-      MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(GP_Disp, MCA.getContext()),
-      MCA.getContext());
+  auto *HiSym = MCSpecifierExpr::create(GP_Disp, Mips::S_HI, MCA.getContext());
   TmpInst.addOperand(MCOperand::createExpr(HiSym));
   getStreamer().emitInstruction(TmpInst, STI);
 
@@ -1276,9 +1274,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   TmpInst.setOpcode(Mips::ADDiu);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  const MCExpr *LoSym = MipsMCExpr::create(
-      MipsMCExpr::MEK_LO, MCSymbolRefExpr::create(GP_Disp, MCA.getContext()),
-      MCA.getContext());
+  auto *LoSym = MCSpecifierExpr::create(GP_Disp, Mips::S_LO, MCA.getContext());
   TmpInst.addOperand(MCOperand::createExpr(LoSym));
   getStreamer().emitInstruction(TmpInst, STI);
 
@@ -1341,12 +1337,12 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
   }
 
-  const MipsMCExpr *HiExpr = MipsMCExpr::createGpOff(
-      MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
-      MCA.getContext());
-  const MipsMCExpr *LoExpr = MipsMCExpr::createGpOff(
-      MipsMCExpr::MEK_LO, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
-      MCA.getContext());
+  auto *HiExpr =
+      Mips::createGpOff(MCSymbolRefExpr::create(&Sym, MCA.getContext()),
+                        Mips::S_HI, MCA.getContext());
+  auto *LoExpr =
+      Mips::createGpOff(MCSymbolRefExpr::create(&Sym, MCA.getContext()),
+                        Mips::S_LO, MCA.getContext());
 
   // lui $gp, %hi(%neg(%gp_rel(funcSym)))
   emitRX(Mips::LUi, GPReg, MCOperand::createExpr(HiExpr), SMLoc(), &STI);

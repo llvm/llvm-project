@@ -11,37 +11,37 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
-#include "MCTargetDesc/ARMMCExpr.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {ARMMCExpr::VK_GOT_PREL, "GOT_PREL"},
-    {ARMMCExpr::VK_ARM_NONE, "none"},
-    {ARMMCExpr::VK_PREL31, "prel31"},
-    {ARMMCExpr::VK_SBREL, "sbrel"},
-    {ARMMCExpr::VK_TARGET1, "target1"},
-    {ARMMCExpr::VK_TARGET2, "target2"},
-    {ARMMCExpr::VK_TLSLDO, "TLSLDO"},
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {ARM::S_GOT_PREL, "GOT_PREL"},
+    {ARM::S_ARM_NONE, "none"},
+    {ARM::S_PREL31, "prel31"},
+    {ARM::S_SBREL, "sbrel"},
+    {ARM::S_TARGET1, "target1"},
+    {ARM::S_TARGET2, "target2"},
+    {ARM::S_TLSLDO, "TLSLDO"},
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "imgrel"},
-    {ARMMCExpr::VK_FUNCDESC, "FUNCDESC"},
-    {ARMMCExpr::VK_GOT, "GOT"},
-    {ARMMCExpr::VK_GOTFUNCDESC, "GOTFUNCDESC"},
-    {ARMMCExpr::VK_GOTOFF, "GOTOFF"},
-    {ARMMCExpr::VK_GOTOFFFUNCDESC, "GOTOFFFUNCDESC"},
-    {ARMMCExpr::VK_GOTTPOFF, "GOTTPOFF"},
-    {ARMMCExpr::VK_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
-    {ARMMCExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
-    {ARMMCExpr::VK_TLSCALL, "tlscall"},
-    {ARMMCExpr::VK_TLSDESC, "tlsdesc"},
-    {ARMMCExpr::VK_TLSGD, "TLSGD"},
-    {ARMMCExpr::VK_TLSGD_FDPIC, "tlsgd_fdpic"},
-    {ARMMCExpr::VK_TLSLDM, "TLSLDM"},
-    {ARMMCExpr::VK_TLSLDM_FDPIC, "tlsldm_fdpic"},
-    {ARMMCExpr::VK_TPOFF, "TPOFF"},
+    {ARM::S_FUNCDESC, "FUNCDESC"},
+    {ARM::S_GOT, "GOT"},
+    {ARM::S_GOTFUNCDESC, "GOTFUNCDESC"},
+    {ARM::S_GOTOFF, "GOTOFF"},
+    {ARM::S_GOTOFFFUNCDESC, "GOTOFFFUNCDESC"},
+    {ARM::S_GOTTPOFF, "GOTTPOFF"},
+    {ARM::S_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
+    {ARM::S_PLT, "PLT"},
+    {ARM::S_COFF_SECREL, "SECREL32"},
+    {ARM::S_TLSCALL, "tlscall"},
+    {ARM::S_TLSDESC, "tlsdesc"},
+    {ARM::S_TLSGD, "TLSGD"},
+    {ARM::S_TLSGD_FDPIC, "tlsgd_fdpic"},
+    {ARM::S_TLSLDM, "TLSLDM"},
+    {ARM::S_TLSLDM_FDPIC, "tlsldm_fdpic"},
+    {ARM::S_TPOFF, "TPOFF"},
 };
 
 void ARMMCAsmInfoDarwin::anchor() { }
@@ -53,8 +53,7 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
+  AllowDollarAtStartOfIdentifier = false;
   UseDataRegionDirectives = true;
 
   SupportsDebugInformation = true;
@@ -67,7 +66,7 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
                        ? ExceptionHandling::SjLj
                        : ExceptionHandling::DwarfCFI;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::anchor() { }
@@ -82,8 +81,7 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
+  AllowDollarAtStartOfIdentifier = false;
 
   SupportsDebugInformation = true;
 
@@ -104,7 +102,7 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -131,7 +129,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
@@ -141,8 +139,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
+  AllowDollarAtStartOfIdentifier = false;
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
@@ -157,5 +154,64 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
+}
+
+void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                             const MCSpecifierExpr &Expr) {
+  switch (Expr.getSpecifier()) {
+  default:
+    llvm_unreachable("Invalid kind!");
+  case ARM::S_HI16:
+    OS << ":upper16:";
+    break;
+  case ARM::S_LO16:
+    OS << ":lower16:";
+    break;
+  case ARM::S_HI_8_15:
+    OS << ":upper8_15:";
+    break;
+  case ARM::S_HI_0_7:
+    OS << ":upper0_7:";
+    break;
+  case ARM::S_LO_8_15:
+    OS << ":lower8_15:";
+    break;
+  case ARM::S_LO_0_7:
+    OS << ":lower0_7:";
+    break;
+  }
+
+  const MCExpr *Sub = Expr.getSubExpr();
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << '(';
+  MAI.printExpr(OS, *Sub);
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << ')';
+}
+
+const MCSpecifierExpr *ARM::createUpper16(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI16, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower16(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO16, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createUpper8_15(const MCExpr *Expr,
+                                            MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI_8_15, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createUpper0_7(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI_0_7, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower8_15(const MCExpr *Expr,
+                                            MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO_8_15, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower0_7(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO_0_7, Ctx);
 }

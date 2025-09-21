@@ -132,6 +132,10 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
+if (LLDB_CAN_USE_LLDB_RPC_SERVER)
+  add_lldb_test_dependency(lldb-rpc-generate-sources)
+endif()
+
 # Add dependencies that are not exported targets when building standalone.
 if(NOT LLDB_BUILT_STANDALONE)
   add_lldb_test_dependency(
@@ -220,6 +224,7 @@ add_lldb_test_dependency(
   llvm-pdbutil
   llvm-readobj
   llvm-ar
+  yaml2macho-core
   )
 
 if(TARGET lld)
@@ -245,11 +250,13 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLVM_ENABLE_DIA_SDK
   LLDB_HAS_LIBCXX
   LLDB_TEST_SHELL_DISABLE_REMOTE
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS)
+  LLDB_IS_64_BITS
+  LLDB_BUILD_LLDBRPC)
 
 # Configure the individual test suites.
 add_subdirectory(API)

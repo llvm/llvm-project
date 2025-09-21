@@ -74,4 +74,26 @@ The ComplexToStandard dialect does still call into libm for some floating
 point math operations, however these don't have the same ABI issues as the
 complex libm functions.
 
+The flang driver option `-fcomplex-arithmetic=` allows you to select whether
+complex number division is lowered to function calls or to the `complex.div`
+operation in the MLIR complex dialect. To avoid the ABI issues mentioned above,
+the choice of function calls or the `complex.div` operation is made during the
+lowering phase. The behavior of this option is as follows:
+
+- `basic`: Lowers to `complex.div` and is converted to algebraic formulas. No
+special handling to avoid overflow. NaN and infinite values are not handled.
+- `improved`: Lowers to `complex.div` and is converted to Smith's algorithm. See
+SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962). This
+value offers improved handling for overflow in intermediate calculations, but
+overflow may occur. NaN and infinite values are handled.
+- `full`: Lowers to a call to runtime library functions. Overflow and non-finite
+values are handled by the library implementation. This is the default value.
+
+While [the same option in clang][2] allows specifying `promoted`, this is not
+implemented in Flang. Also, in the case of `improved`, clang does not handle NaN
+and infinite values, but Flang does. These behavioral differences arise because
+the transformation of complex division calculations depends on the implementation
+of ComplexToStandard, which may change in the future.
+
 [1]: https://discourse.llvm.org/t/rfc-change-lowering-of-fortran-math-intrinsics/63971
+[2]: https://clang.llvm.org/docs/UsersManual.html#cmdoption-fcomplex-arithmetic

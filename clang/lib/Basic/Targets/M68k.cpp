@@ -13,8 +13,6 @@
 #include "M68k.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -58,6 +56,7 @@ M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedInt;
   PtrDiffType = SignedInt;
   IntPtrType = SignedInt;
+  IntAlign = LongAlign = PointerAlign = 16;
 }
 
 bool M68kTargetInfo::setCPU(const std::string &Name) {

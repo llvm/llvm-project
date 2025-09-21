@@ -13,6 +13,8 @@ add_llvm_unittest(TableGenTests
   AutomataTest.cpp
   CodeExpanderTest.cpp
   ParserEntryPointTest.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
 target_link_libraries(TableGenTests PRIVATE LLVMTableGenCommon LLVMTableGen)

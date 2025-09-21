@@ -158,13 +158,11 @@ public:
   bool runOnMachineFunction(MachineFunction &mf) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -2389,19 +2387,42 @@ void RAGreedy::initializeCSRCost() {
 /// The results are stored into \p Out.
 /// \p Out is not cleared before being populated.
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+
   for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!TII->isFullCopyInstr(Instr))
+    if (!Instr.isCopy())
       continue;
+
     // Look for the other end of the copy.
     Register OtherReg = Instr.getOperand(0).getReg();
+    unsigned OtherSubReg = Instr.getOperand(0).getSubReg();
+    unsigned SubReg = Instr.getOperand(1).getSubReg();
+
     if (OtherReg == Reg) {
       OtherReg = Instr.getOperand(1).getReg();
+      OtherSubReg = Instr.getOperand(1).getSubReg();
+      SubReg = Instr.getOperand(0).getSubReg();
       if (OtherReg == Reg)
         continue;
     }
+
     // Get the current assignment.
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
+    if (OtherSubReg) {
+      if (OtherReg.isPhysical()) {
+        MCRegister Tuple =
+            TRI->getMatchingSuperReg(OtherPhysReg, OtherSubReg, RC);
+        if (!Tuple)
+          continue;
+        OtherPhysReg = Tuple;
+      } else {
+        // TODO: There should be a hinting mechanism for subregisters
+        if (SubReg != OtherSubReg)
+          continue;
+      }
+    }
+
     // Push the collected information.
     Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
                            OtherPhysReg));

@@ -74,22 +74,26 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 
 void ModList() {
   int V1;
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc data copyout(always, alwaysin, alwaysout, zero, readonly: V1)
-  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
+#pragma acc data copyout(alwaysin: V1)
 #pragma acc data copyout(alwaysout: V1)
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc data copyout(readonly: V1)
-#pragma acc data copyout(always, alwaysin, zero: V1)
+#pragma acc data copyout(capture: V1)
+#pragma acc data copyout(always, alwaysout, zero, capture: V1)
 
-  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+2{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc exit data copyout(always, alwaysin, alwaysout, zero, readonly: V1)
-  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'copyout' clause}}
+#pragma acc exit data copyout(alwaysin: V1)
 #pragma acc exit data copyout(alwaysout: V1)
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc exit data copyout(readonly: V1)
-#pragma acc exit data copyout(always, alwaysin, zero: V1)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyout' clause}}
+#pragma acc exit data copyout(capture: V1)
 }
 

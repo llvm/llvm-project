@@ -1,4 +1,4 @@
-//===--- MoveConstArgCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -78,9 +78,9 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-bool isRValueReferenceParam(const Expr *Invocation,
-                            const QualType *InvocationParmType,
-                            const Expr *Arg) {
+static bool isRValueReferenceParam(const Expr *Invocation,
+                                   const QualType *InvocationParmType,
+                                   const Expr *Arg) {
   if (Invocation && (*InvocationParmType)->isRValueReferenceType() &&
       Arg->isLValue()) {
     if (!Invocation->getType()->isRecordType())

@@ -148,6 +148,18 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   return Result;
 }
 
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult Result = AliasResult::MayAlias;
+
+  for (const auto &AA : AAs) {
+    Result = AA->aliasErrno(Loc, M);
+    if (Result != AliasResult::MayAlias)
+      break;
+  }
+
+  return Result;
+}
+
 ModRefInfo AAResults::getModRefInfoMask(const MemoryLocation &Loc,
                                         bool IgnoreLocals) {
   SimpleAAQueryInfo AAQIP(*this);
@@ -857,13 +869,13 @@ bool llvm::isEscapeSource(const Value *V) {
     return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
   }
 
-  // The load case works because isNonEscapingLocalObject considers all
+  // The load case works because isNotCapturedBefore considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
   // to PointerMayBeCaptured).
   if (isa<LoadInst>(V))
     return true;
 
-  // The inttoptr case works because isNonEscapingLocalObject considers all
+  // The inttoptr case works because isNotCapturedBefore considers all
   // means of converting or equating a pointer to an int (ptrtoint, ptr store
   // which could be followed by an integer load, ptr<->int compare) as
   // escaping, and objects located at well-known addresses via platform-specific

@@ -408,3 +408,25 @@ namespace deduction2 {
     void i() { e(&C::h); }
   };
 } // namespace deduction2
+
+namespace deduction_qualifiers {
+  struct A {
+    int v;
+  };
+  using CA = const A;
+
+  template <class T> void g(const T&, int T::*);
+  template <class T> void h(const T&, int CA::*);
+
+  void test(const A a, A b) {
+    g(a, &A::v);
+    g(a, &CA::v);
+    h(a, &A::v);
+    h(a, &CA::v);
+
+    g(b, &A::v);
+    g(b, &CA::v);
+    h(b, &A::v);
+    h(b, &CA::v);
+  }
+} // namespace deduction_qualifiers

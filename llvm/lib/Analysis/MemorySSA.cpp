@@ -1277,7 +1277,7 @@ MemorySSA::~MemorySSA() {
 }
 
 MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
-  auto Res = PerBlockAccesses.insert(std::make_pair(BB, nullptr));
+  auto Res = PerBlockAccesses.try_emplace(BB);
 
   if (Res.second)
     Res.first->second = std::make_unique<AccessList>();
@@ -1285,7 +1285,7 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
 }
 
 MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
-  auto Res = PerBlockDefs.insert(std::make_pair(BB, nullptr));
+  auto Res = PerBlockDefs.try_emplace(BB);
 
   if (Res.second)
     Res.first->second = std::make_unique<DefsList>();

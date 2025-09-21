@@ -6,8 +6,8 @@ struct S {
 };
 
 int S::Value = 1;
-// DXIL: @_ZN1S5ValueE = global i32 1, align 4
-// SPIRV: @_ZN1S5ValueE = addrspace(10) global i32 1, align 4
+// DXIL: @_ZN1S5ValueE = hidden global i32 1, align 4
+// SPIRV: @_ZN1S5ValueE = hidden addrspace(10) global i32 1, align 4
 
 [shader("compute")]
 [numthreads(1,1,1)]

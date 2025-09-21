@@ -19,13 +19,13 @@ define bfloat @normal_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
+  ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY4]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri]], [[COPY4]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
   ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr]], killed [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr16 = COPY [[COPY5]].hsub
   ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY6]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
@@ -65,13 +65,13 @@ define bfloat @fast_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
+  ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY4]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri]], [[COPY4]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
   ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr]], killed [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr16 = COPY [[COPY5]].hsub
   ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY6]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
@@ -111,13 +111,13 @@ define bfloat @ninf_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
+  ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY4]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri]], [[COPY4]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
   ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr]], killed [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr16 = COPY [[COPY5]].hsub
   ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY6]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
@@ -161,13 +161,13 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY5]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri]], [[COPY5]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
   ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr]], [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
   ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[COPY7]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
@@ -176,12 +176,12 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY8]], killed [[COPY9]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr1]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY10]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri2]], [[COPY10]]
   ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr2]], [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri3:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr3]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
+  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri3]]
   ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr16 = COPY [[COPY11]].hsub
   ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY12]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
@@ -232,13 +232,13 @@ define bfloat @nnan_ninf_contract_fadd_sequence(bfloat %x, bfloat %y, bfloat %z)
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY5]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri]], [[COPY5]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
   ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr]], [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
   ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[COPY7]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
@@ -247,12 +247,12 @@ define bfloat @nnan_ninf_contract_fadd_sequence(bfloat %x, bfloat %y, bfloat %z)
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[COPY8]], killed [[COPY9]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr1]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY10]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri2]], [[COPY10]]
   ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr2]], [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri3:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr3]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
+  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri3]]
   ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr16 = COPY [[COPY11]].hsub
   ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY12]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
@@ -299,13 +299,13 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY5]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri]], [[COPY5]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
   ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr]], [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
   ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[COPY7]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
@@ -314,12 +314,12 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY8]], killed [[COPY9]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY killed [[FADDSrr1]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY10]], 16, 16
   ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr killed [[UBFMWri2]], [[COPY10]]
   ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr killed [[ADDWrr2]], [[MOVi32imm]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri3:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr3]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
+  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY killed [[UBFMWri3]]
   ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr16 = COPY [[COPY11]].hsub
   ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY12]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0

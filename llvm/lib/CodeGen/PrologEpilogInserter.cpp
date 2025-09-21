@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -352,8 +351,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   delete RS;
   SaveBlocks.clear();
   RestoreBlocks.clear();
-  MFI.setSavePoint(nullptr);
-  MFI.setRestorePoint(nullptr);
+  MFI.setSavePoints({});
+  MFI.setRestorePoints({});
   return true;
 }
 
@@ -424,16 +423,18 @@ void PEIImpl::calculateCallFrameInfo(MachineFunction &MF) {
 /// callee-saved registers, and placing prolog and epilog code.
 void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-
   // Even when we do not change any CSR, we still want to insert the
   // prologue and epilogue of the function.
   // So set the save points for those.
 
   // Use the points found by shrink-wrapping, if any.
-  if (MFI.getSavePoint()) {
-    SaveBlocks.push_back(MFI.getSavePoint());
-    assert(MFI.getRestorePoint() && "Both restore and save must be set");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
+  if (!MFI.getSavePoints().empty()) {
+    assert(MFI.getSavePoints().size() == 1 &&
+           "Multiple save points are not yet supported!");
+    SaveBlocks.push_back(MFI.getSavePoints().front());
+    assert(MFI.getRestorePoints().size() == 1 &&
+           "Multiple restore points are not yet supported!");
+    MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
@@ -559,7 +560,11 @@ static void updateLiveness(MachineFunction &MF) {
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
   SmallVector<MachineBasicBlock *, 8> WorkList;
   MachineBasicBlock *Entry = &MF.front();
-  MachineBasicBlock *Save = MFI.getSavePoint();
+
+  assert(MFI.getSavePoints().size() < 2 &&
+         "Multiple save points not yet supported!");
+  MachineBasicBlock *Save =
+      MFI.getSavePoints().empty() ? nullptr : MFI.getSavePoints().front();
 
   if (!Save)
     Save = Entry;
@@ -570,7 +575,10 @@ static void updateLiveness(MachineFunction &MF) {
   }
   Visited.insert(Save);
 
-  MachineBasicBlock *Restore = MFI.getRestorePoint();
+  assert(MFI.getRestorePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
+  MachineBasicBlock *Restore =
+      MFI.getRestorePoints().empty() ? nullptr : MFI.getRestorePoints().front();
   if (Restore)
     // By construction Restore cannot be visited, otherwise it
     // means there exists a path to Restore that does not go
@@ -659,8 +667,7 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
   // pipeline is set up without giving the passes a chance to look at the
   // TargetMachine.
   // FIXME: Find a way to express this in getRequiredProperties.
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs));
+  assert(MF.getProperties().hasNoVRegs());
 
   const Function &F = MF.getFunction();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
@@ -1552,7 +1559,7 @@ void PEIImpl::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       // If this instruction has a FrameIndex operand, we need to
       // use that target machine register info object to eliminate
       // it.
-      TRI.eliminateFrameIndex(MI, SPAdj, i);
+      TRI.eliminateFrameIndex(MI, SPAdj, i, RS);
 
       // Reset the iterator if we were at the beginning of the BB.
       if (AtBeginning) {

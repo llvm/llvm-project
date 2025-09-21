@@ -424,21 +424,74 @@ entry:
   ret <2 x double> %0
 }
 
-declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
-declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
-declare <4 x float> @llvm.rint.v4f32(<4 x float>)
-declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>)
-declare <4 x float> @llvm.floor.v4f32(<4 x float>)
-declare <4 x float> @llvm.round.v4f32(<4 x float>)
-declare <8 x half> @llvm.ceil.v8f16(<8 x half>)
-declare <8 x half> @llvm.trunc.v8f16(<8 x half>)
-declare <8 x half> @llvm.rint.v8f16(<8 x half>)
-declare <8 x half> @llvm.nearbyint.v8f16(<8 x half>)
-declare <8 x half> @llvm.floor.v8f16(<8 x half>)
-declare <8 x half> @llvm.round.v8f16(<8 x half>)
-declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
-declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
-declare <2 x double> @llvm.rint.v2f64(<2 x double>)
-declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>)
-declare <2 x double> @llvm.floor.v2f64(<2 x double>)
-declare <2 x double> @llvm.round.v2f64(<2 x double>)
+define arm_aapcs_vfpcc <4 x float> @froundeven_float32_t(<4 x float> %src) {
+; CHECK-MVE-LABEL: froundeven_float32_t:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vrintn.f32 s3, s3
+; CHECK-MVE-NEXT:    vrintn.f32 s2, s2
+; CHECK-MVE-NEXT:    vrintn.f32 s1, s1
+; CHECK-MVE-NEXT:    vrintn.f32 s0, s0
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-MVEFP-LABEL: froundeven_float32_t:
+; CHECK-MVEFP:       @ %bb.0: @ %entry
+; CHECK-MVEFP-NEXT:    vrintn.f32 q0, q0
+; CHECK-MVEFP-NEXT:    bx lr
+entry:
+  %0 = call fast <4 x float> @llvm.roundeven.v4f32(<4 x float> %src)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @froundeven_float16_t(<8 x half> %src) {
+; CHECK-MVE-LABEL: froundeven_float16_t:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s0
+; CHECK-MVE-NEXT:    vrintn.f16 s0, s0
+; CHECK-MVE-NEXT:    vrintn.f16 s4, s4
+; CHECK-MVE-NEXT:    vins.f16 s0, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
+; CHECK-MVE-NEXT:    vrintn.f16 s4, s4
+; CHECK-MVE-NEXT:    vrintn.f16 s1, s1
+; CHECK-MVE-NEXT:    vins.f16 s1, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s2
+; CHECK-MVE-NEXT:    vrintn.f16 s4, s4
+; CHECK-MVE-NEXT:    vrintn.f16 s2, s2
+; CHECK-MVE-NEXT:    vins.f16 s2, s4
+; CHECK-MVE-NEXT:    vmovx.f16 s4, s3
+; CHECK-MVE-NEXT:    vrintn.f16 s4, s4
+; CHECK-MVE-NEXT:    vrintn.f16 s3, s3
+; CHECK-MVE-NEXT:    vins.f16 s3, s4
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-MVEFP-LABEL: froundeven_float16_t:
+; CHECK-MVEFP:       @ %bb.0: @ %entry
+; CHECK-MVEFP-NEXT:    vrintn.f16 q0, q0
+; CHECK-MVEFP-NEXT:    bx lr
+entry:
+  %0 = call fast <8 x half> @llvm.roundeven.v8f16(<8 x half> %src)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <2 x double> @froundeven_float64_t(<2 x double> %src) {
+; CHECK-LABEL: froundeven_float64_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    bl roundeven
+; CHECK-NEXT:    vmov r2, r3, d8
+; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl roundeven
+; CHECK-NEXT:    vmov d8, r0, r1
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %0 = call fast <2 x double> @llvm.roundeven.v2f64(<2 x double> %src)
+  ret <2 x double> %0
+}

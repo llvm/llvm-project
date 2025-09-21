@@ -1154,20 +1154,20 @@ namespace GH65985 {
 int consteval operator""_foo(unsigned long long V) {
     return 0;
 }
-int consteval operator""_bar(unsigned long long V); // expected-note 3{{here}}
+int consteval operator""_bar(unsigned long long V); // expected-note 4 {{here}}
 
 int consteval f() {
   return 0;
 }
 
-int consteval g();  // expected-note {{here}}
+int consteval g();  // expected-note 2 {{here}}
 
 
 struct C {
     static const int a = 1_foo;
     static constexpr int b = 1_foo;
     static const int c = 1_bar; // expected-error {{call to consteval function 'GH65985::operator""_bar' is not a constant expression}} \
-                                // expected-note {{undefined function 'operator""_bar' cannot be used in a constant expression}} \
+                                // expected-note 2 {{undefined function 'operator""_bar' cannot be used in a constant expression}} \
                                 // expected-error {{in-class initializer for static data member is not a constant expression}}
 
     // FIXME: remove duplicate diagnostics
@@ -1179,7 +1179,7 @@ struct C {
     static const int e = f();
     static const int f = g(); // expected-error {{call to consteval function 'GH65985::g' is not a constant expression}} \
                               // expected-error {{in-class initializer for static data member is not a constant expression}} \
-                              // expected-note  {{undefined function 'g' cannot be used in a constant expression}}
+                              // expected-note 2 {{undefined function 'g' cannot be used in a constant expression}}
 };
 
 }

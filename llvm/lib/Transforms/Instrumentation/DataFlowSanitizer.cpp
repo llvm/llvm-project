@@ -1506,12 +1506,10 @@ bool DataFlowSanitizer::runImpl(
 
   auto GetOrInsertGlobal = [this, &Changed](StringRef Name,
                                             Type *Ty) -> Constant * {
-    Constant *C = Mod->getOrInsertGlobal(Name, Ty);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(C)) {
-      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-    }
-    return C;
+    GlobalVariable *G = Mod->getOrInsertGlobal(Name, Ty);
+    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
+    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    return G;
   };
 
   // These globals must be kept in sync with the ones in dfsan.cpp.
@@ -1977,12 +1975,10 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2,
   auto V1Elems = ShadowElements.find(V1);
   auto V2Elems = ShadowElements.find(V2);
   if (V1Elems != ShadowElements.end() && V2Elems != ShadowElements.end()) {
-    if (std::includes(V1Elems->second.begin(), V1Elems->second.end(),
-                      V2Elems->second.begin(), V2Elems->second.end())) {
+    if (llvm::includes(V1Elems->second, V2Elems->second)) {
       return collapseToPrimitiveShadow(V1, Pos);
     }
-    if (std::includes(V2Elems->second.begin(), V2Elems->second.end(),
-                      V1Elems->second.begin(), V1Elems->second.end())) {
+    if (llvm::includes(V2Elems->second, V1Elems->second)) {
       return collapseToPrimitiveShadow(V2, Pos);
     }
   } else if (V1Elems != ShadowElements.end()) {

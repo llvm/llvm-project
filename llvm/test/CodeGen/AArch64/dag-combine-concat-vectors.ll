@@ -8,7 +8,7 @@ declare void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8>, <vscale x 
 define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK-LABEL: allocno_reload_assign:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, xzr
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p0.s

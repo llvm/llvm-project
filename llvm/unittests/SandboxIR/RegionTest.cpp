@@ -429,6 +429,22 @@ define void @foo(i8 %v) {
   }
 }
 
+TEST_F(RegionTest, AuxWithoutRegion) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v) {
+  %Add0 = add i8 %v, 0, !sandboxaux !0
+  ret void
+}
+!0 = !{i32 0}
+)IR");
+#ifndef NDEBUG
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI), "No region.*");
+#endif
+}
+
 TEST_F(RegionTest, AuxRoundTrip) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {
@@ -460,4 +476,37 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_EQ(Rgn, *Regions[0].get());
 #endif
   EXPECT_THAT(Rgn.getAux(), testing::ElementsAre(T1, T0));
+}
+
+// Same as before but only add instructions to aux. They should get added too
+// the region too automatically.
+TEST_F(RegionTest, AuxOnlyRoundTrip) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v) {
+  %add0 = add i8 %v, 0
+  %add1 = add i8 %v, 1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Add1 = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::Region Rgn(Ctx, *TTI);
+#ifndef NDEBUG
+  EXPECT_DEATH(Rgn.setAux({Add0, Add0}), ".*already.*");
+#endif
+  Rgn.setAux({Add1, Add0});
+
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+  ASSERT_EQ(1U, Regions.size());
+#ifndef NDEBUG
+  EXPECT_EQ(Rgn, *Regions[0].get());
+#endif
+  EXPECT_THAT(Rgn.getAux(), testing::ElementsAre(Add1, Add0));
 }

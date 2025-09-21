@@ -24,7 +24,8 @@ include "SparcInstrFormats.td"
 def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
 
 // True when generating 64-bit code. This also implies HasV9.
-def Is64Bit : Predicate<"Subtarget->is64Bit()">;
+def Is64Bit : Predicate<"Subtarget->is64Bit()">,
+              AssemblerPredicate<(all_of FeatureV9)>;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
               AssemblerPredicate<(all_of FeatureSoftMulDiv)>;
@@ -54,6 +55,14 @@ def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
 // HasUA2007 - This is true when the target processor has UA 2007 extensions.
 def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
                 AssemblerPredicate<(all_of FeatureUA2007)>;
+
+// HasOSA2011 - This is true when the target processor has OSA 2011 extensions.
+def HasOSA2011 : Predicate<"Subtarget->isOSA2011()">,
+                AssemblerPredicate<(all_of FeatureOSA2011)>;
+
+// HasCrypto - This is true when the target processor has cryptographic extensions.
+def HasCrypto : Predicate<"Subtarget->isCrypto()">,
+                AssemblerPredicate<(all_of FeatureCrypto)>;
 
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
@@ -87,11 +96,30 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
+// HwModes Pattern Stuff
+//===----------------------------------------------------------------------===//
+
+defvar SPARC32 = DefaultMode;
+def SPARC64 : HwMode<[Is64Bit]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
 
+def sparc_ptr_rc : RegClassByHwMode<
+  [SPARC32, SPARC64],
+  [IntRegs, I64Regs]>;
+
+// Both cases can use the same decoder method, so avoid the dispatch
+// by hwmode by setting an explicit DecoderMethod
+def ptr_op : RegisterOperand<sparc_ptr_rc> {
+  let DecoderMethod = "DecodeIntRegsRegisterClass";
+}
+
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
+
+def simm5  : PatLeaf<(imm), [{ return isInt<5>(N->getSExtValue()); }]>;
 
 def simm10  : PatLeaf<(imm), [{ return isInt<10>(N->getSExtValue()); }]>;
 
@@ -153,6 +181,12 @@ def SparcMEMriAsmOperand : AsmOperandClass {
   let ParserMethod = "parseMEMOperand";
 }
 
+def simm5Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM5";
+  let EncoderMethod = "getSImm5OpValue";
+}
+
 def simm13Op : Operand<iPTR> {
   let OperandType = "OPERAND_IMMEDIATE";
   let DecoderMethod = "DecodeSIMM13";
@@ -161,12 +195,12 @@ def simm13Op : Operand<iPTR> {
 
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc);
+  let MIOperandInfo = (ops ptr_op, ptr_op);
   let ParserMatchClass = SparcMEMrrAsmOperand;
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm13Op);
+  let MIOperandInfo = (ops ptr_op, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -227,14 +261,30 @@ def PrefetchTag : Operand<i32> {
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<22>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchPredTargetOpValue";
+  let DecoderMethod = "DecodeDisp<19>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
+  let DecoderMethod = "DecodeDisp<16>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
+}
+
+def cbtarget : Operand<OtherVT> {
+  let EncoderMethod = "getCompareAndBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<10>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SparcCallTargetAsmOperand : AsmOperandClass {
@@ -246,6 +296,8 @@ def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
   let ParserMatchClass = SparcCallTargetAsmOperand;
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 // Operand for printing out a condition code.
@@ -1750,22 +1802,22 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
 // as inline assembler-supported instructions.
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
   def SMACrr :  F3_1<2, 0b111111,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "smac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def SMACri :  F3_2<2, 0b111111,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "smac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 
   def UMACrr :  F3_1<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "umac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def UMACri :  F3_2<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "umac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 }
@@ -1980,4 +2032,5 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"
 include "SparcInstrUAOSA.td"
+include "SparcInstrCrypto.td"
 include "SparcInstrAliases.td"

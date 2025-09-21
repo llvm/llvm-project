@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=loop-interchange -S -debug 2>&1 | FileCheck %s
 
 ; CHECK:       Dependency matrix before interchange:
-; CHECK-NEXT:  I I
+; CHECK-NEXT:  * *
 ; CHECK-NEXT:  = *
 ; CHECK-NEXT:  < *
 ; CHECK-NEXT:  Processing InnerLoopId

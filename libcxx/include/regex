@@ -794,6 +794,19 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #else
 #  include <__config>
 
+// standard-mandated includes
+
+// [iterator.range]
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
+
+// [re.syn]
+#  include <compare>
+#  include <initializer_list>
+
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__algorithm/find.h>
@@ -816,19 +829,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #    include <string>
 #    include <vector>
 #    include <version>
-
-// standard-mandated includes
-
-// [iterator.range]
-#    include <__iterator/access.h>
-#    include <__iterator/data.h>
-#    include <__iterator/empty.h>
-#    include <__iterator/reverse_access.h>
-#    include <__iterator/size.h>
-
-// [re.syn]
-#    include <compare>
-#    include <initializer_list>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
@@ -2120,7 +2120,7 @@ public:
       __ranges_.push_back(
           std::make_pair(__traits_.transform(__b.begin(), __b.end()), __traits_.transform(__e.begin(), __e.end())));
     } else {
-      if (__b.size() != 1 || __e.size() != 1)
+      if (__b.size() != 1 || __e.size() != 1 || char_traits<typename string_type::value_type>::lt(__e[0], __b[0]))
         std::__throw_regex_error<regex_constants::error_range>();
       if (__icase_) {
         __b[0] = __traits_.translate_nocase(__b[0]);

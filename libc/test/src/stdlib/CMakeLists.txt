@@ -9,6 +9,7 @@ add_libc_test(
   DEPENDS
     libc.src.errno.errno
     libc.src.stdlib.atof
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_header_library(
@@ -64,6 +65,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.stdlib.strtod
     libc.src.__support.FPUtil.fenv_impl
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_fp_unittest(
@@ -76,6 +78,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.stdlib.strtof
     libc.src.__support.FPUtil.fenv_impl
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_header_library(
@@ -86,6 +89,7 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -95,6 +99,7 @@ add_libc_test(
   SRCS
     strtoint32_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
     .strtol_test_support
@@ -107,6 +112,7 @@ add_libc_test(
   SRCS
     strtoint64_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
     .strtol_test_support
@@ -133,6 +139,7 @@ add_libc_test(
     libc.src.errno.errno
     libc.src.__support.uint128
     libc.src.stdlib.strtold
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -375,6 +382,7 @@ add_libc_test(
   SRCS
     memalignment_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.stdlib.memalignment
 )

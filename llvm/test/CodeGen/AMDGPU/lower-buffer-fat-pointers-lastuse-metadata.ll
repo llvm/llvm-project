@@ -27,12 +27,12 @@ define amdgpu_kernel void @buffer_last_use_load_0(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_mov_b32 s5, s12
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s3
-; GFX12-NEXT:    s_mov_b32 s3, s12
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX12-NEXT:    s_mov_b32 s13, s2
 ; GFX12-NEXT:    s_mov_b32 s2, s1
+; GFX12-NEXT:    s_mov_b32 s3, s12
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -69,12 +69,12 @@ define amdgpu_kernel void @buffer_last_use_load_1(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_mov_b32 s5, s12
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s3
-; GFX12-NEXT:    s_mov_b32 s3, s12
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX12-NEXT:    s_mov_b32 s13, s2
 ; GFX12-NEXT:    s_mov_b32 s2, s1
+; GFX12-NEXT:    s_mov_b32 s3, s12
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -112,12 +112,12 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_mov_b32 s5, s12
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s3
-; GFX12-NEXT:    s_mov_b32 s3, s12
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX12-NEXT:    s_mov_b32 s13, s2
 ; GFX12-NEXT:    s_mov_b32 s2, s1
+; GFX12-NEXT:    s_mov_b32 s3, s12
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -153,12 +153,12 @@ define amdgpu_kernel void @buffer_last_use_and_nontemporal_load(ptr addrspace(7)
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_mov_b32 s5, s12
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s3
-; GFX12-NEXT:    s_mov_b32 s3, s12
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX12-NEXT:    s_mov_b32 s13, s2
 ; GFX12-NEXT:    s_mov_b32 s2, s1
+; GFX12-NEXT:    s_mov_b32 s3, s12
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

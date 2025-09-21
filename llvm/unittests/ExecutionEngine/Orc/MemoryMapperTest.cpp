@@ -81,7 +81,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
     {
       // Provide working memory
       char *WA1 = Mapper->prepare(Mem1->Start, HW.size() + 1);
-      std::strcpy(static_cast<char *>(WA1), HW.c_str());
+      std::strcpy(WA1, HW.c_str());
     }
 
     // A structure to be passed to initialize
@@ -106,7 +106,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
 
     {
       char *WA2 = Mapper->prepare(Mem1->Start + PageSize, HW.size() + 1);
-      std::strcpy(static_cast<char *>(WA2), HW.c_str());
+      std::strcpy(WA2, HW.c_str());
     }
 
     MemoryMapper::AllocInfo Alloc2;
@@ -159,7 +159,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
       EXPECT_THAT_ERROR(Mem2.takeError(), Succeeded());
 
       char *WA = Mapper->prepare(Mem2->Start, HW.size() + 1);
-      std::strcpy(static_cast<char *>(WA), HW.c_str());
+      std::strcpy(WA, HW.c_str());
 
       MemoryMapper::AllocInfo Alloc3;
       {

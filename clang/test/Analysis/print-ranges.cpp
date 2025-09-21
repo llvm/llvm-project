@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config eagerly-assume=false -verify %s
-// UNSUPPORTED z3
+// UNSUPPORTED: z3
 
 template <typename T>
 void clang_analyzer_value(T x);

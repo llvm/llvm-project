@@ -91,7 +91,7 @@ constexpr bool test() {
   }
 
   // Make sure iota_view<short, short> works properly. For details,
-  // see https://github.com/llvm/llvm-project/issues/67551.
+  // see https://llvm.org/PR67551.
   {
     static_assert(std::ranges::sized_range<std::ranges::iota_view<short, short>>);
     std::ranges::iota_view<short, short> io(10, 20);

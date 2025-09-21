@@ -69,6 +69,7 @@ namespace cl {
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr,
                                       bool LongOptionsUseDoubleDash = false);
 
@@ -1496,6 +1497,12 @@ public:
     return this->getValue();
   }
 
+  template <class T> DataType &operator=(T &&Val) {
+    this->getValue() = std::forward<T>(Val);
+    Callback(this->getValue());
+    return this->getValue();
+  }
+
   template <class... Mods>
   explicit opt(const Mods &... Ms)
       : Option(llvm::cl::Optional, NotHidden), Parser(*this) {
@@ -1512,11 +1519,18 @@ public:
       [](const typename ParserClass::parser_data_type &) {};
 };
 
-extern template class opt<unsigned>;
-extern template class opt<int>;
-extern template class opt<std::string>;
-extern template class opt<char>;
-extern template class opt<bool>;
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in clients, leading to duplicate symbol conflicts.
+extern template class LLVM_TEMPLATE_ABI opt<std::string>;
+#endif
+
+extern template class LLVM_TEMPLATE_ABI opt<unsigned>;
+extern template class LLVM_TEMPLATE_ABI opt<int>;
+extern template class LLVM_TEMPLATE_ABI opt<char>;
+extern template class LLVM_TEMPLATE_ABI opt<bool>;
 
 //===----------------------------------------------------------------------===//
 // Default storage class definition: external storage.  This implementation
@@ -2179,7 +2193,8 @@ class ExpansionContext {
                                  SmallVectorImpl<const char *> &NewArgv);
 
 public:
-  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T);
+  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                            vfs::FileSystem *FS = nullptr);
 
   ExpansionContext &setMarkEOLs(bool X) {
     MarkEOLs = X;

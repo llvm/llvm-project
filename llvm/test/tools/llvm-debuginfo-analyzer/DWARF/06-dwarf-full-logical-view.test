@@ -28,13 +28,14 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x000000000b][001]              {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [0x000000000b][002]                {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [0x000000000b][002]                {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT:                                    {Directory} '/data/projects/tests/input/general'
 ; ONE-NEXT:                                    {File} 'test.cpp'
 ; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x000000003a]
 ; ONE-NEXT: [0x000000000b][002]                {Range} Lines 2:9 [0x0000000000:0x000000003a]
-; ONE-NEXT: [0x00000000bc][002]                {BaseType} 'bool'
-; ONE-NEXT: [0x0000000099][002]                {BaseType} 'int'
-; ONE-NEXT: [0x00000000b5][002]                {BaseType} 'unsigned int'
+; ONE-NEXT: [0x00000000bc][002]                {BaseType} 'bool' [Size = 1]
+; ONE-NEXT: [0x0000000099][002]                {BaseType} 'int' [Size = 4]
+; ONE-NEXT: [0x00000000b5][002]                {BaseType} 'unsigned int' [Size = 4]
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x00000000a0][002]   {Source} '/data/projects/tests/input/general/test.cpp'
 ; ONE-NEXT: [0x00000000a0][002]      1         {TypeAlias} 'INTPTR' -> [0x00000000ab]'* const int'
@@ -52,8 +53,6 @@
 ; ONE-NEXT: [0x0000000023][004]      6             {Line} {NewStatement} '/data/projects/tests/input/general/test.cpp'
 ; ONE-NEXT: [0x0000000023][004]                    {Code} 'movl	$0x7, -0x4(%rbp)'
 ; ONE-NEXT: [0x000000002a][004]                    {Code} 'jmp	0x6'
-; ONE-NEXT: [0x000000002f][004]      8             {Line} {NewStatement} '/data/projects/tests/input/general/test.cpp'
-; ONE-NEXT: [0x000000002f][004]                    {Code} 'movl	-0x14(%rbp), %eax'
 ; ONE-NEXT: [0x0000000063][003]      2           {Parameter} 'ParamBool' -> [0x00000000bc]'bool'
 ; ONE-NEXT: [0x0000000063][004]                    {Coverage} 100.00%
 ; ONE-NEXT: [0x0000000064][004]                    {Location}
@@ -78,13 +77,15 @@
 ; ONE-NEXT: [0x0000000012][003]      3           {Line} {NewStatement} {PrologueEnd} '/data/projects/tests/input/general/test.cpp'
 ; ONE-NEXT: [0x0000000012][003]                  {Code} 'testb	$0x1, -0x15(%rbp)'
 ; ONE-NEXT: [0x0000000016][003]                  {Code} 'je	0x13'
+; ONE-NEXT: [0x000000002f][003]      8           {Line} {NewStatement} '/data/projects/tests/input/general/test.cpp'
+; ONE-NEXT: [0x000000002f][003]                  {Code} 'movl	-0x14(%rbp), %eax'
 ; ONE-NEXT: [0x0000000032][003]      8           {Line} '/data/projects/tests/input/general/test.cpp'
 ; ONE-NEXT: [0x0000000032][003]                  {Code} 'movl	%eax, -0x4(%rbp)'
 ; ONE-NEXT: [0x0000000035][003]      9           {Line} {NewStatement} '/data/projects/tests/input/general/test.cpp'
 ; ONE-NEXT: [0x0000000035][003]                  {Code} 'movl	-0x4(%rbp), %eax'
 ; ONE-NEXT: [0x0000000038][003]                  {Code} 'popq	%rbp'
 ; ONE-NEXT: [0x0000000039][003]                  {Code} 'retq'
-; ONE-NEXT: [0x000000003a][003]      9           {Line} {NewStatement} {EndSequence} '/data/projects/tests/input/general/test.cpp'
+; ONE-NEXT: [0x000000003a][002]      9         {Line} {NewStatement} {EndSequence} '/data/projects/tests/input/general/test.cpp'
 ; ONE-EMPTY:
 ; ONE-NEXT: -----------------------------
 ; ONE-NEXT: Element      Total    Printed

@@ -112,9 +112,8 @@ subroutine eq_and_comm_same_offset
 
   ! CHECK: %[[arr4Store:.*]] = fir.alloca !fir.array<70756xi8> {uniq_name = "_QFeq_and_comm_same_offsetEarr3"}
   ! CHECK: %[[mcbAddr:.*]] = fir.address_of(@my_common_block_) : !fir.ref<!fir.array<1064xi8>>
-  ! CHECK: %[[mcbCast:.*]] = fir.convert %[[mcbAddr]] : (!fir.ref<!fir.array<1064xi8>>) -> !fir.ref<!fir.array<?xi8>>
   ! CHECK: %[[c0:.*]] = arith.constant 0 : index
-  ! CHECK: %[[mcbCoor:.*]] = fir.coordinate_of %[[mcbCast]], %[[c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[mcbCoor:.*]] = fir.coordinate_of %[[mcbAddr]], %[[c0]] : (!fir.ref<!fir.array<1064xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[mcbCoorCast:.*]] = fir.convert %[[mcbCoor]] : (!fir.ref<i8>) -> !fir.ptr<!fir.array<133xf32>>
   ! CHECK: %[[c1:.*]] = arith.constant 0 : index
   ! CHECK: %[[arr4Addr:.*]] = fir.coordinate_of %[[arr4Store]], %[[c1]] : (!fir.ref<!fir.array<70756xi8>>, index) -> !fir.ref<i8>

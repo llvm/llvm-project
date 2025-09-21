@@ -231,3 +231,76 @@ LBL0:
 # CHECK-INST: ldinc	 m0, a8
 # CHECK: encoding: [0x04,0x08,0x80]
 	ldinc	 m0, a8
+
+# Instruction format RSR
+# CHECK-INST: xsr a3, acclo
+# CHECK: # encoding: [0x30,0x10,0x61]
+xsr a3, acclo
+
+# CHECK-INST: xsr a3, acclo
+# CHECK: # encoding: [0x30,0x10,0x61]
+xsr.acclo a3
+
+# CHECK-INST: xsr a3, acclo
+# CHECK: # encoding: [0x30,0x10,0x61]
+xsr a3, 16
+
+# CHECK-INST: xsr a3, acchi
+# CHECK: # encoding: [0x30,0x11,0x61]
+xsr a3, acchi
+
+# CHECK-INST: xsr a3, acchi
+# CHECK: # encoding: [0x30,0x11,0x61]
+xsr.acchi a3
+
+# CHECK-INST: xsr a3, acchi
+# CHECK: # encoding: [0x30,0x11,0x61]
+xsr a3, 17
+
+# CHECK-INST: xsr a3, m0
+# CHECK: # encoding: [0x30,0x20,0x61]
+xsr a3, m0
+
+# CHECK-INST: xsr a3, m0
+# CHECK: # encoding: [0x30,0x20,0x61]
+xsr.m0 a3
+
+# CHECK-INST: xsr a3, m0
+# CHECK: # encoding: [0x30,0x20,0x61]
+xsr a3, 32
+
+# CHECK-INST: xsr a3, m1
+# CHECK: # encoding: [0x30,0x21,0x61]
+xsr a3, m1
+
+# CHECK-INST: xsr a3, m1
+# CHECK: # encoding: [0x30,0x21,0x61]
+xsr.m1 a3
+
+# CHECK-INST: xsr a3, m1
+# CHECK: # encoding: [0x30,0x21,0x61]
+xsr a3, 33
+
+# CHECK-INST: xsr a3, m2
+# CHECK: # encoding: [0x30,0x22,0x61]
+xsr a3, m2
+
+# CHECK-INST: xsr a3, m2
+# CHECK: # encoding: [0x30,0x22,0x61]
+xsr.m2 a3
+
+# CHECK-INST: xsr a3, m2
+# CHECK: # encoding: [0x30,0x22,0x61]
+xsr a3, 34
+
+# CHECK-INST: xsr a3, m3
+# CHECK: # encoding: [0x30,0x23,0x61]
+xsr a3, m3
+
+# CHECK-INST: xsr a3, m3
+# CHECK: # encoding: [0x30,0x23,0x61]
+xsr.m3 a3
+
+# CHECK-INST: xsr a3, m3
+# CHECK: # encoding: [0x30,0x23,0x61]
+xsr a3, 35

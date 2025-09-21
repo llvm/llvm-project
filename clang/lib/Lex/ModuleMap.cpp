@@ -37,9 +37,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <cstring>
 #include <optional>
 #include <string>
@@ -260,6 +258,7 @@ static bool isBuiltinHeaderName(StringRef FileName) {
            .Case("stdarg.h", true)
            .Case("stdatomic.h", true)
            .Case("stdbool.h", true)
+           .Case("stdcountof.h", true)
            .Case("stddef.h", true)
            .Case("stdint.h", true)
            .Case("tgmath.h", true)
@@ -310,10 +309,8 @@ void ModuleMap::resolveHeader(Module *Mod,
   } else if (Header.HasBuiltinHeader && !Header.Size && !Header.ModTime) {
     // There's a builtin header but no corresponding on-disk header. Assume
     // this was supposed to modularize the builtin header alone.
-  } else if ((Header.Kind == Module::HK_Excluded) ||
-             (Header.Kind == Module::HK_Textual)) {
-    // Ignore excluded and textual header files as a module can be built with
-    // such headers missing.
+  } else if (Header.Kind == Module::HK_Excluded) {
+    // Ignore missing excluded header files. They're optional anyway.
   } else {
     // If we find a module that has a missing header, we mark this module as
     // unavailable and store the header directive for displaying diagnostics.

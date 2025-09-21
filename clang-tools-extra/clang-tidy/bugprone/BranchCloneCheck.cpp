@@ -1,4 +1,4 @@
-//===--- BranchCloneCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CloneDetection.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/Support/Casting.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -63,6 +62,7 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
       return true; // Ignore sub-switches
     }
 
+    // NOLINTNEXTLINE(readability-identifier-naming) - FIXME
     bool TraverseSwitchCase(SwitchCase *, DataRecursionQueue * = nullptr) {
       return true; // Ignore cases
     }

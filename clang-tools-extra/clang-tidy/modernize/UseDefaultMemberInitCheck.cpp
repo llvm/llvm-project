@@ -1,4 +1,4 @@
-//===--- UseDefaultMemberInitCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -159,6 +159,13 @@ static bool sameValue(const Expr *E1, const Expr *E2) {
   case Stmt::UnaryOperatorClass:
     return sameValue(cast<UnaryOperator>(E1)->getSubExpr(),
                      cast<UnaryOperator>(E2)->getSubExpr());
+  case Stmt::BinaryOperatorClass: {
+    const auto *BinOp1 = cast<BinaryOperator>(E1);
+    const auto *BinOp2 = cast<BinaryOperator>(E2);
+    return BinOp1->getOpcode() == BinOp2->getOpcode() &&
+           sameValue(BinOp1->getLHS(), BinOp2->getLHS()) &&
+           sameValue(BinOp1->getRHS(), BinOp2->getRHS());
+  }
   case Stmt::CharacterLiteralClass:
     return cast<CharacterLiteral>(E1)->getValue() ==
            cast<CharacterLiteral>(E2)->getValue();
@@ -190,7 +197,7 @@ UseDefaultMemberInitCheck::UseDefaultMemberInitCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       UseAssignment(Options.get("UseAssignment", false)),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseDefaultMemberInitCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -199,17 +206,22 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto ConstExpRef = varDecl(anyOf(isConstexpr(), isStaticStorageClass()));
+  auto NumericLiteral = anyOf(integerLiteral(), floatLiteral());
+  auto UnaryNumericLiteral = unaryOperator(hasAnyOperatorName("+", "-"),
+                                           hasUnaryOperand(NumericLiteral));
+
+  auto ConstExprRef = varDecl(anyOf(isConstexpr(), isStaticStorageClass()));
+  auto ImmutableRef =
+      declRefExpr(to(decl(anyOf(enumConstantDecl(), ConstExprRef))));
+
+  auto BinaryNumericExpr = binaryOperator(
+      hasOperands(anyOf(NumericLiteral, ImmutableRef, binaryOperator()),
+                  anyOf(NumericLiteral, ImmutableRef, binaryOperator())));
 
   auto InitBase =
-      anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
-            unaryOperator(hasAnyOperatorName("+", "-"),
-                          hasUnaryOperand(integerLiteral())),
-            floatLiteral(),
-            unaryOperator(hasAnyOperatorName("+", "-"),
-                          hasUnaryOperand(floatLiteral())),
-            cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr(to(anyOf(enumConstantDecl(), ConstExpRef))));
+      anyOf(stringLiteral(), characterLiteral(), NumericLiteral,
+            UnaryNumericLiteral, cxxBoolLiteral(), cxxNullPtrLiteralExpr(),
+            implicitValueInitExpr(), ImmutableRef, BinaryNumericExpr);
 
   auto ExplicitCastExpr = castExpr(hasSourceExpression(InitBase));
   auto InitMatcher = anyOf(InitBase, ExplicitCastExpr);

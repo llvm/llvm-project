@@ -8,7 +8,7 @@ define amdgpu_kernel void @__omp_offloading_fd00_2c00523__ZN11qmcplusplus7ompBLA
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [0 x [0 x float]], i32 0, align 8, addrspace(5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[TMP1]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call fastcc i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr nofree noundef readonly align 8 captures(none) dereferenceable_or_null(8) [[TMP2]], i1 noundef false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call fastcc i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr nofree readonly align 8 captures(none) dereferenceable_or_null(8) [[TMP2]], i1 noundef false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [0 x [0 x float]], i32 0, align 8, addrspace(5)

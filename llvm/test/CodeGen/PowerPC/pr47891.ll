@@ -7,13 +7,11 @@
 define dso_local void @poly2_lshift1(ptr nocapture %p) local_unnamed_addr #0 {
 ; CHECK-LABEL: poly2_lshift1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r6, r2, .LCPI0_0@toc@ha
+; CHECK-NEXT:    ld r6, 0(r3)
 ; CHECK-NEXT:    li r4, 72
 ; CHECK-NEXT:    ld r5, 64(r3)
-; CHECK-NEXT:    addi r6, r6, .LCPI0_0@toc@l
+; CHECK-NEXT:    xxleqv v4, v4, v4
 ; CHECK-NEXT:    lxvd2x vs0, r3, r4
-; CHECK-NEXT:    lxvd2x v4, 0, r6
-; CHECK-NEXT:    ld r6, 0(r3)
 ; CHECK-NEXT:    sldi r7, r6, 1
 ; CHECK-NEXT:    rotldi r6, r6, 1
 ; CHECK-NEXT:    std r7, 0(r3)
@@ -35,11 +33,11 @@ define dso_local void @poly2_lshift1(ptr nocapture %p) local_unnamed_addr #0 {
 ; CHECK-NEXT:    std r7, 32(r3)
 ; CHECK-NEXT:    ld r7, 40(r3)
 ; CHECK-NEXT:    rldimi r6, r7, 1, 0
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    mtfprd f0, r5
 ; CHECK-NEXT:    rotldi r7, r7, 1
 ; CHECK-NEXT:    std r6, 40(r3)
 ; CHECK-NEXT:    ld r6, 48(r3)
+; CHECK-NEXT:    xxswapd v2, vs0
+; CHECK-NEXT:    mtfprd f0, r5
 ; CHECK-NEXT:    rldimi r7, r6, 1, 0
 ; CHECK-NEXT:    rotldi r6, r6, 1
 ; CHECK-NEXT:    std r7, 48(r3)

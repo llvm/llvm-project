@@ -25,13 +25,9 @@ using namespace llvm;
 
 namespace llvm {
 StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::Float32RegsRegClass)
-    return ".b32";
-  if (RC == &NVPTX::Float64RegsRegClass)
-    return ".b64";
-  if (RC == &NVPTX::Int128RegsRegClass)
+  if (RC == &NVPTX::B128RegClass)
     return ".b128";
-  if (RC == &NVPTX::Int64RegsRegClass)
+  if (RC == &NVPTX::B64RegClass)
     // We use untyped (.b) integer registers here as NVCC does.
     // Correctness of generated code does not depend on register type,
     // but using .s/.u registers runs into ptxas bug that prevents
@@ -51,11 +47,11 @@ StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
     //   add.f16v2 rb32,rb32,rb32; // OK
     //   add.f16v2 rs32,rs32,rs32; // OK
     return ".b64";
-  if (RC == &NVPTX::Int32RegsRegClass)
+  if (RC == &NVPTX::B32RegClass)
     return ".b32";
-  if (RC == &NVPTX::Int16RegsRegClass)
+  if (RC == &NVPTX::B16RegClass)
     return ".b16";
-  if (RC == &NVPTX::Int1RegsRegClass)
+  if (RC == &NVPTX::B1RegClass)
     return ".pred";
   if (RC == &NVPTX::SpecialRegsRegClass)
     return "!Special!";
@@ -63,19 +59,15 @@ StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
 }
 
 StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::Float32RegsRegClass)
-    return "%f";
-  if (RC == &NVPTX::Float64RegsRegClass)
-    return "%fd";
-  if (RC == &NVPTX::Int128RegsRegClass)
+  if (RC == &NVPTX::B128RegClass)
     return "%rq";
-  if (RC == &NVPTX::Int64RegsRegClass)
+  if (RC == &NVPTX::B64RegClass)
     return "%rd";
-  if (RC == &NVPTX::Int32RegsRegClass)
+  if (RC == &NVPTX::B32RegClass)
     return "%r";
-  if (RC == &NVPTX::Int16RegsRegClass)
+  if (RC == &NVPTX::B16RegClass)
     return "%rs";
-  if (RC == &NVPTX::Int1RegsRegClass)
+  if (RC == &NVPTX::B1RegClass)
     return "%p";
   if (RC == &NVPTX::SpecialRegsRegClass)
     return "!Special!";
@@ -111,15 +103,20 @@ BitVector NVPTXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
-                                            RegScavenger *RS) const {
+                                            RegScavenger *) const {
   assert(SPAdj == 0 && "Unexpected");
 
   MachineInstr &MI = *II;
-  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  if (MI.isLifetimeMarker()) {
+    MI.eraseFromParent();
+    return true;
+  }
 
-  MachineFunction &MF = *MI.getParent()->getParent();
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
-               MI.getOperand(FIOperandNum + 1).getImm();
+  const int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
+                     MI.getOperand(FIOperandNum + 1).getImm();
 
   // Using I0 as the frame pointer
   MI.getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), false);

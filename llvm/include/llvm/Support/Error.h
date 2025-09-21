@@ -418,8 +418,9 @@ private:
         auto &E2List = static_cast<ErrorList &>(*E2Payload);
         for (auto &Payload : E2List.Payloads)
           E1List.Payloads.push_back(std::move(Payload));
-      } else
+      } else {
         E1List.Payloads.push_back(E2.takePayload());
+      }
 
       return E1;
     }
@@ -714,10 +715,11 @@ private:
     if (HasError) {
       dbgs() << "Unchecked Expected<T> contained error:\n";
       (*getErrorStorage())->log(dbgs());
-    } else
+    } else {
       dbgs() << "Expected<T> value was in success state. (Note: Expected<T> "
                 "values in success mode must still be checked prior to being "
                 "destroyed).\n";
+    }
     abort();
   }
 #endif
@@ -1189,7 +1191,7 @@ private:
 /// (or Expected) and you want to call code that still returns
 /// std::error_codes.
 class LLVM_ABI ECError : public ErrorInfo<ECError> {
-  LLVM_ABI_FRIEND friend Error errorCodeToError(std::error_code);
+  LLVM_ABI friend Error errorCodeToError(std::error_code);
 
   void anchor() override;
 

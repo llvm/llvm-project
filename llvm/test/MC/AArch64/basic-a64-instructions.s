@@ -3349,7 +3349,7 @@ _func:
 
 	.equ equvalue, 0x0001
         movk x1, equvalue, lsl 16
-// CHECK: .set equvalue, 1
+// CHECK: equvalue = 1
 // CHECK-NEXT: movk x1, #1, lsl #16 // encoding: [0x21,0x00,0xa0,0xf2]
 
         movz x2, #:abs_g0:sym

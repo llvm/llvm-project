@@ -3,6 +3,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=complex" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=complex allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @complex_create
 // CHECK-SAME:    (%[[REAL0:.*]]: f32, %[[IMAG0:.*]]: f32)
@@ -23,9 +24,9 @@ func.func @complex_constant() -> complex<f64> {
 
 // CHECK-LABEL: func @complex_extract
 // CHECK-SAME:    (%[[CPLX:.*]]: complex<f32>)
-// CHECK-NEXT:    %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
-// CHECK-NEXT:    %[[REAL:.*]] = llvm.extractvalue %[[CAST0]][0] : !llvm.struct<(f32, f32)>
-// CHECK-NEXT:    %[[IMAG:.*]] = llvm.extractvalue %[[CAST0]][1] : !llvm.struct<(f32, f32)>
+// CHECK:    builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
+// CHECK:    %[[REAL:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(f32, f32)>
+// CHECK:    %[[IMAG:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(f32, f32)>
 func.func @complex_extract(%cplx: complex<f32>) {
   %real1 = complex.re %cplx : complex<f32>
   %imag1 = complex.im %cplx : complex<f32>

@@ -7,7 +7,6 @@
 define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2-LABEL: dot_ext_v8i8_v8i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pushq %r14
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    movzbl (%rdi), %eax
 ; SSE2-NEXT:    movzbl (%rdi,%rsi), %ecx
@@ -18,9 +17,9 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2-NEXT:    leaq (%rsi,%rsi,4), %rbx
 ; SSE2-NEXT:    movzbl (%rdi,%rbx), %ebx
 ; SSE2-NEXT:    movzbl (%rdi,%r9,2), %r9d
-; SSE2-NEXT:    leaq (,%rsi,8), %r14
-; SSE2-NEXT:    subq %rsi, %r14
-; SSE2-NEXT:    movzbl (%rdi,%r14), %esi
+; SSE2-NEXT:    leaq (%rdi,%rsi,8), %rdi
+; SSE2-NEXT:    subq %rsi, %rdi
+; SSE2-NEXT:    movzbl (%rdi), %esi
 ; SSE2-NEXT:    shll $16, %ecx
 ; SSE2-NEXT:    orl %eax, %ecx
 ; SSE2-NEXT:    movd %ecx, %xmm0
@@ -38,7 +37,6 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    popq %r14
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: dot_ext_v8i8_v8i32:
@@ -46,7 +44,7 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE4-NEXT:    movzbl (%rdi), %eax
 ; SSE4-NEXT:    leaq (%rsi,%rsi,4), %rcx
 ; SSE4-NEXT:    leaq (%rsi,%rsi,2), %r8
-; SSE4-NEXT:    leaq (,%rsi,8), %r9
+; SSE4-NEXT:    leaq (%rdi,%rsi,8), %r9
 ; SSE4-NEXT:    subq %rsi, %r9
 ; SSE4-NEXT:    movd %eax, %xmm0
 ; SSE4-NEXT:    pinsrb $2, (%rdi,%rsi), %xmm0
@@ -55,7 +53,7 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE4-NEXT:    pinsrb $8, (%rdi,%rsi,4), %xmm0
 ; SSE4-NEXT:    pinsrb $10, (%rdi,%rcx), %xmm0
 ; SSE4-NEXT:    pinsrb $12, (%rdi,%r8,2), %xmm0
-; SSE4-NEXT:    pinsrb $14, (%rdi,%r9), %xmm0
+; SSE4-NEXT:    pinsrb $14, (%r9), %xmm0
 ; SSE4-NEXT:    movdqu (%rdx), %xmm1
 ; SSE4-NEXT:    pmaddwd %xmm0, %xmm1
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
@@ -70,7 +68,7 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    leaq (%rsi,%rsi,2), %rcx
 ; AVX-NEXT:    leaq (%rsi,%rsi,4), %r8
-; AVX-NEXT:    leaq (,%rsi,8), %r9
+; AVX-NEXT:    leaq (%rdi,%rsi,8), %r9
 ; AVX-NEXT:    subq %rsi, %r9
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vpinsrb $2, (%rdi,%rsi), %xmm0, %xmm0
@@ -79,7 +77,7 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; AVX-NEXT:    vpinsrb $8, (%rdi,%rsi,4), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $10, (%rdi,%r8), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $12, (%rdi,%rcx,2), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $14, (%rdi,%r9), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $14, (%r9), %xmm0, %xmm0
 ; AVX-NEXT:    vpmaddwd (%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

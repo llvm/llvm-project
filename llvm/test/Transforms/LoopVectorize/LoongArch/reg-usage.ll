@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
 ; RUN: opt --passes=loop-vectorize --mtriple loongarch64-linux-gnu \
-; RUN:   --mattr=+lsx -debug-only=loop-vectorize --force-vector-width=1 \
+; RUN:   --mattr=+lsx -debug-only=loop-vectorize,vplan --force-vector-width=1 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
 ; RUN: opt --passes=loop-vectorize --mtriple loongarch64-linux-gnu \
-; RUN:   --mattr=+lsx -debug-only=loop-vectorize --force-vector-width=4 \
+; RUN:   --mattr=+lsx -debug-only=loop-vectorize,vplan --force-vector-width=4 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-VECTOR
 
 define void @bar(ptr %A, i32 signext %n) {

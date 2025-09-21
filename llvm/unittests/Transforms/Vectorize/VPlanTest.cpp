@@ -706,13 +706,15 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
-  VPInstruction *TC = new VPInstruction(Instruction::Add, {});
+  VPInstruction *TC = new VPInstruction(Instruction::PHI, {});
   VPlan &Plan = getPlan(TC);
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
   VPBB0->appendRecipe(TC);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
+  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
   VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
@@ -722,7 +724,7 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB1->setName("bb1");
 
   VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
-  VPInstruction *I5 = new VPInstruction(Instruction::Ret, {I4});
+  VPInstruction *I5 = new VPInstruction(Instruction::Br, {I4});
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(I4);
   VPBB2->appendRecipe(I5);
@@ -752,14 +754,14 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "preheader:\l" +
-    "  EMIT vp\<%1\> = add\l" +
+    "  EMIT-SCALAR vp\<%1\> = phi \l" +
     "Successor(s): bb1\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
-    "  EMIT vp\<%2\> = add\l" +
-    "  EMIT vp\<%3\> = sub vp\<%2\>\l" +
+    "  EMIT vp\<%2\> = add ir\<1\>, ir\<1\>\l" +
+    "  EMIT vp\<%3\> = sub vp\<%2\>, ir\<1\>\l" +
     "  EMIT br vp\<%2\>, vp\<%3\>\l" +
     "Successor(s): bb2\l"
   ]
@@ -767,7 +769,7 @@ compound=true
   N2 [label =
     "bb2:\l" +
     "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
-    "  EMIT ret vp\<%5\>\l" +
+    "  EMIT br vp\<%5\>\l" +
     "Successor(s): ir-bb\<scalar.header\>\l"
   ]
   N2 -> N3 [ label=""]
@@ -780,8 +782,8 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%2> = add
-  EMIT vp<%3> = sub vp<%2>
+  EMIT vp<%2> = add ir<1>, ir<1>
+  EMIT vp<%3> = sub vp<%2>, ir<1>
   EMIT br vp<%2>, vp<%3>
 Successor(s): bb2
 )";
@@ -793,7 +795,7 @@ Successor(s): bb2
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
   EMIT vp<%5> = mul vp<%3>, vp<%2>
-  EMIT ret vp<%5>
+  EMIT br vp<%5>
 Successor(s): ir-bb<scalar.header>
 )";
   std::string Block2Dump;
@@ -842,11 +844,11 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
 vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
+  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -866,11 +868,11 @@ No successors
 vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
+  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -890,11 +892,11 @@ No successors
 vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
+  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -903,6 +905,52 @@ No successors
 )";
     EXPECT_EQ(ExpectedStr, FullDump);
   }
+}
+
+TEST_F(VPBasicBlockTest, cloneAndPrint) {
+  VPlan &Plan = getPlan(nullptr);
+  VPBasicBlock *VPBB0 = Plan.getEntry();
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
+  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
+  VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
+
+  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(I2);
+  VPBB1->appendRecipe(I3);
+  VPBB1->setName("bb1");
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+
+  const char *ExpectedStr = R"(digraph VPlan {
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  N0 [label =
+    "preheader:\l" +
+    "Successor(s): bb1\l"
+  ]
+  N0 -> N1 [ label=""]
+  N1 [label =
+    "bb1:\l" +
+    "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
+    "  EMIT store vp\<%1\>, vp\<%2\>\l" +
+    "No successors\l"
+  ]
+}
+)";
+  // Check that printing a cloned plan produces the same output.
+  std::string FullDump;
+  raw_string_ostream OS(FullDump);
+  VPlan *Clone = Plan.duplicate();
+  Clone->printDOT(OS);
+  EXPECT_EQ(ExpectedStr, FullDump);
+  delete Clone;
 }
 #endif
 
@@ -1027,7 +1075,7 @@ TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
   Args.push_back(I1);
   Args.push_back(I2);
   Args.push_back(M2);
-  VPBlendRecipe Recipe(Phi, Args);
+  VPBlendRecipe Recipe(Phi, Args, {});
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1040,7 +1088,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   InterleaveGroup<Instruction> IG(4, false, Align(4));
-  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, DebugLoc());
+  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
