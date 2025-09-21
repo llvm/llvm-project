@@ -2061,7 +2061,7 @@ void DWARFLinker::generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
 
   // Build set of linked address ranges for unit function ranges.
   AddressRanges LinkedFunctionRanges;
-  for (const AddressRangeValuePair &Range : FunctionRanges)
+  for (const AddressRangeValuePair<int64_t> &Range : FunctionRanges)
     LinkedFunctionRanges.insert(
         {Range.Range.start() + Range.Value, Range.Range.end() + Range.Value});
 
@@ -2074,7 +2074,7 @@ void DWARFLinker::generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
       Unit.getUnitRangesAttribute();
 
   if (!AllRngListAttributes.empty() || UnitRngListAttribute) {
-    std::optional<AddressRangeValuePair> CachedRange;
+    std::optional<AddressRangeValuePair<int64_t>> CachedRange;
     MCSymbol *EndLabel = TheDwarfEmitter->emitDwarfDebugRangeListHeader(Unit);
 
     // Read original address ranges, apply relocation value, emit linked address
@@ -2329,7 +2329,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
       Seq.reserve(InputRows.size());
 
       const auto &FunctionRanges = Unit.getFunctionRanges();
-      std::optional<AddressRangeValuePair> CurrRange;
+      std::optional<AddressRangeValuePair<int64_t>> CurrRange;
 
       // FIXME: This logic is meant to generate exactly the same output as
       // Darwin's classic dsymutil. There is a nicer way to implement this
@@ -2562,7 +2562,7 @@ void DWARFLinker::patchFrameInfoForObject(LinkContext &Context) {
     // the function entry point, thus we can't just lookup the address
     // in the debug map. Use the AddressInfo's range map to see if the FDE
     // describes something that we can relocate.
-    std::optional<AddressRangeValuePair> Range =
+    std::optional<AddressRangeValuePair<int64_t>> Range =
         AllUnitsRanges.getRangeThatContains(Loc);
     if (!Range) {
       // The +4 is to account for the size of the InitialLength field itself.
