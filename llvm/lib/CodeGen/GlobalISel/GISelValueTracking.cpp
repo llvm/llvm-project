@@ -369,8 +369,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_UMULH: {
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
                          Depth + 1);
-    if (Known.isUnknown())
-      break;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
     Known = KnownBits::mulhu(Known, Known2);
@@ -379,8 +377,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_SMULH: {
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
                          Depth + 1);
-    if (Known.isUnknown())
-      break;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
     Known = KnownBits::mulhs(Known, Known2);
