@@ -140,6 +140,13 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
       insertComment(Description, TextCommentsArray, "BriefComments");
     else if (I.Name == "return")
       insertComment(Description, TextCommentsArray, "ReturnComments");
+    else if (I.Name == "throws" || I.Name == "throw") {
+      json::Value ThrowsVal = Object();
+      auto &ThrowsObj = *ThrowsVal.getAsObject();
+      ThrowsObj["Exception"] = I.Args.front();
+      ThrowsObj["Children"] = TextCommentsArray;
+      insertComment(Description, ThrowsVal, "ThrowsComments");
+    }
     return Obj;
   }
 
