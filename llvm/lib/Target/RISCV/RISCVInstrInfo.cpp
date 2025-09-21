@@ -1476,6 +1476,64 @@ bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
   return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
 }
 
+bool RISCVInstrInfo::isVectorCopy(const TargetRegisterInfo *TRI,
+                                  const MachineInstr &MI) {
+  return MI.isCopy() && MI.getOperand(0).getReg().isPhysical() &&
+         RISCVRegisterInfo::isRVVRegClass(
+             TRI->getMinimalPhysRegClass(MI.getOperand(0).getReg()));
+}
+
+bool RISCVInstrInfo::isMaskRegOp(const MachineInstr &MI) {
+  if (!RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+    return false;
+  const unsigned Log2SEW =
+      MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  // A Log2SEW of 0 is an operation on mask registers only.
+  return Log2SEW == 0;
+}
+
+bool RISCVInstrInfo::hasUndefinedPassthru(const MachineInstr &MI) {
+
+  unsigned UseOpIdx;
+  if (!MI.isRegTiedToUseOperand(0, &UseOpIdx))
+    // If there is no passthrough operand, then the pass through
+    // lanes are undefined.
+    return true;
+
+  // All undefined passthrus should be $noreg: see
+  // RISCVDAGToDAGISel::doPeepholeNoRegPassThru
+  const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
+  return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
+}
+
+std::optional<unsigned>
+RISCVInstrInfo::getEEWForLoadStore(const MachineInstr &MI) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return std::nullopt;
+  case RISCV::VLE8_V:
+  case RISCV::VLSE8_V:
+  case RISCV::VSE8_V:
+  case RISCV::VSSE8_V:
+    return 8;
+  case RISCV::VLE16_V:
+  case RISCV::VLSE16_V:
+  case RISCV::VSE16_V:
+  case RISCV::VSSE16_V:
+    return 16;
+  case RISCV::VLE32_V:
+  case RISCV::VLSE32_V:
+  case RISCV::VSE32_V:
+  case RISCV::VSSE32_V:
+    return 32;
+  case RISCV::VLE64_V:
+  case RISCV::VLSE64_V:
+  case RISCV::VSE64_V:
+  case RISCV::VSSE64_V:
+    return 64;
+  }
+}
+
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   bool IsSigned = false;
   bool IsEquality = false;

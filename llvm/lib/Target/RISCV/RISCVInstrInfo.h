@@ -321,6 +321,25 @@ public:
   static bool isFromLoadImm(const MachineRegisterInfo &MRI,
                             const MachineOperand &Op, int64_t &Imm);
 
+  /// Return true if \p MI is a copy that will be lowered to one or more
+  /// vmvNr.vs.
+  static bool isVectorCopy(const TargetRegisterInfo *TRI,
+                           const MachineInstr &MI);
+
+  /// Return true if this is an operation on mask registers.  Note that
+  /// this includes both arithmetic/logical ops and load/store (vlm/vsm).
+  static bool isMaskRegOp(const MachineInstr &MI);
+
+  /// Return true if the inactive elements in the result are entirely undefined.
+  /// Note that this is different from "agnostic" as defined by the vector
+  /// specification.  Agnostic requires each lane to either be undisturbed, or
+  /// take the value -1; no other value is allowed.
+  static bool hasUndefinedPassthru(const MachineInstr &MI);
+
+  /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
+  /// not a load or store which ignores SEW.
+  static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI);
+
 protected:
   const RISCVSubtarget &STI;
 
