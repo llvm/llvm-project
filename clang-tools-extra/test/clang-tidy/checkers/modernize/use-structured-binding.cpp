@@ -77,6 +77,23 @@ void DecomposeByAssignWarnCases() {
     const auto& y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
+
+  {
+    auto P = getPair<int, int>(); // match
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: auto [x, y] = getPair<int, int>(); // match
+    int x = P.first;
+    int y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+    
+    // maybe match with `hasParent` but NOT with `has(declStmt())`
+    auto another_p = getPair<int, int>();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: auto [another_x, another_y] = getPair<int, int>();
+    int another_x = another_p.first;
+    int another_y = another_p.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
 }
 
 void forRangeWarnCases() {
