@@ -1449,6 +1449,33 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
+void DisassemblerLLVMC::UpdateFeatureString(llvm::StringRef additional_features,
+                                            std::string &features) {
+  // Allow users to override default additional features.
+  for (llvm::StringRef flag : llvm::split(additional_features, ",")) {
+    flag = flag.trim();
+    if (flag.empty())
+      continue;
+    // By default, if both +flag and -flag are present in the feature string,
+    // disassembler keeps the feature enabled (+flag).
+    // To respect user intent, we make -flag(user) take priority over the
+    // default +flag coming from ELF.
+    bool add_flag = true;
+    if (flag.starts_with('+')) {
+      std::string disable_flag = "-" + flag.substr(1).str();
+      if (features.find(disable_flag) != std::string::npos) {
+        add_flag = false;
+      }
+    }
+    if (add_flag) {
+      if (!features.empty()) {
+        features = ',' + features;
+      }
+      features = flag.str() + features;
+    }
+  }
+}
+
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string,
                                      const char *cpu_string,
@@ -1594,6 +1621,13 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     // FIXME: how do we detect features such as `+a`, `+m`?
     // Turn them on by default now, since everyone seems to use them
     features_str += "+a,+m,";
+  }
+
+  llvm::StringRef additional_features = arch.GetDisassemblyFeatures();
+  // Prepend the additional_features if it's not already in the features_str to
+  // avoid duplicates.
+  if (!additional_features.empty()) {
+    UpdateFeatureString(additional_features, features_str);
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
