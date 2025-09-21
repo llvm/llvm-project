@@ -166,7 +166,7 @@ AST_POLYMORPHIC_MATCHER(isInMarco,
 AST_MATCHER_P(Expr, ignoringCopyCtorAndImplicitCast,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   if (const auto *CtorE = dyn_cast<CXXConstructExpr>(&Node)) {
-    if (const auto *CtorD = CtorE->getConstructor();
+    if (const CXXConstructorDecl *CtorD = CtorE->getConstructor();
         CtorD->isCopyConstructor() && CtorE->getNumArgs() == 1) {
       return InnerMatcher.matches(*CtorE->getArg(0)->IgnoreImpCasts(), Finder,
                                   Builder);
