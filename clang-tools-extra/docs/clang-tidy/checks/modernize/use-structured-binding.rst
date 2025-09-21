@@ -84,12 +84,3 @@ and:
   if (results.second) {
       handle_inserted(results.first);
   }
-
-Options
--------
-
-.. option:: PairTypes
-
-   A semicolon-separated list of type names to be treated as pair-like for
-   structured binding suggestions. Example: `MyPairType;OtherPairType`. 
-   Default is `std::pair`.

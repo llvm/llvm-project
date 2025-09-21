@@ -388,3 +388,46 @@ void stdTieNotWarn() {
     x = 1;
   };
 }
+
+struct otherPair {
+  int first;
+  int second;
+};
+
+void OtherPairTest() {
+  {
+    auto P = otherPair();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: auto [x, y] = otherPair();
+    int x = P.first;
+    int y = P.second;
+  }
+}
+
+struct otherNonPair1 {
+  int first;
+  int second;
+
+private:
+  int third;
+};
+
+struct otherNonPair2 {
+  int first;
+  int second;
+  int third;
+};
+
+void OtherNonPairTest() {
+  {
+    auto P = otherNonPair1();
+    int x = P.first;
+    int y = P.second;
+  }
+
+  {
+    auto P = otherNonPair2();
+    int x = P.first;
+    int y = P.second;
+  }
+}
