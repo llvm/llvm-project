@@ -6364,6 +6364,107 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
   return new ICmpInst(CmpInst::ICMP_SLT, X, Constant::getNullValue(SrcTy));
 }
 
+Instruction *InstCombinerImpl::foldICmpWithSextAndAdd(ICmpInst &ICmp) {
+  Value *X;
+  Value *Y, *Z;
+  // Match the pattern: icmp ult (add (sext X), Y), Z
+  // where X is a value, Y and Z are integer constants
+  // icmp ult (add(sext(X), Y)), Z  -> icmp ult (add(X, Y)), Z
+  if (match(&ICmp, m_SpecificICmp(CmpInst::ICMP_ULT,
+                                  m_Add(m_SExt(m_Value(X)), m_Value(Y)),
+                                  m_Value(Z)))) {
+    Type *XType = X->getType();
+    if (!XType->isIntegerTy())
+      return nullptr;
+
+    unsigned XBitWidth = XType->getIntegerBitWidth();
+    auto ExtractValue = [&](Value *V, Type *TargetType,
+                            int64_t &OutValue) -> Value * {
+      if (auto *C = dyn_cast<ConstantInt>(V)) {
+        OutValue = C->getSExtValue();
+        return ConstantInt::get(TargetType, OutValue);
+      }
+      if (match(V, m_SExt(m_Value()))) {
+        Value *Src = cast<SExtInst>(V)->getOperand(0);
+        if (Src->getType() == TargetType)
+          return Src;
+      }
+      return nullptr;
+    };
+
+    int64_t YValue, ZValue;
+    Value *NewY = ExtractValue(Y, XType, YValue);
+    Value *NewZ = ExtractValue(Z, XType, ZValue);
+    if (!NewY || !NewZ)
+      return nullptr;
+
+    bool IsYVariable = match(Y, m_SExt(m_Value()));
+    bool IsYOrZVariable =
+        match(Y, m_SExt(m_Value())) || match(Z, m_SExt(m_Value()));
+    if (IsYOrZVariable) {
+      bool FoundCondition = false;
+      BasicBlock *BB = ICmp.getParent();
+      for (Instruction &I : *BB) {
+        if (auto *Assume = dyn_cast<IntrinsicInst>(&I)) {
+          if (Assume->getIntrinsicID() == Intrinsic::assume) {
+            Value *Cond = Assume->getOperand(0);
+            ConstantInt *C, *C2;
+            unsigned CommonWidth = Z->getType()->getIntegerBitWidth();
+            APInt MaxValue(CommonWidth, 1);
+            MaxValue <<= (XBitWidth - 1);
+            APInt Limit = MaxValue;
+            Limit += 1;
+            // if both "Y" and "Z" are variables, Op would be "Sub"
+            if (match(Cond, m_SpecificICmp(
+                                CmpInst::ICMP_ULT,
+                                m_Sub(m_SExt(m_Value(Y)), m_SExt(m_Value(Z))),
+                                m_ConstantInt(C))) ||
+                match(Cond,
+                      m_SpecificICmp(CmpInst::ICMP_ULT,
+                                     m_Add(m_SExt(m_Value(Y)), m_Value(Z)),
+                                     m_ConstantInt(C)))) {
+              if (C->getValue().ugt(Limit))
+                return nullptr;
+
+              FoundCondition = true;
+              if (Assume->use_empty()) {
+                eraseInstFromFunction(*Assume);
+              }
+              break;
+            }
+            if (!IsYVariable &&
+                match(Cond, m_SpecificICmp(CmpInst::ICMP_ULT,
+                                           m_Add(m_Value(Z), m_ConstantInt(C2)),
+                                           m_ConstantInt(C)))) {
+              auto *K = llvm::dyn_cast<llvm::ConstantInt>(Y);
+              if ((C2->getValue().sextOrTrunc(CommonWidth) -
+                   C->getValue().sextOrTrunc(CommonWidth))
+                      .slt(K->getValue() - Limit))
+                return nullptr;
+
+              FoundCondition = true;
+              if (Assume->use_empty()) {
+                eraseInstFromFunction(*Assume);
+              }
+              break;
+            }
+          }
+        }
+      }
+      if (!FoundCondition)
+        return nullptr;
+    } else {
+      auto MaxValue = (1LL << (XBitWidth - 1));
+      if (YValue - ZValue > MaxValue || YValue - ZValue < -MaxValue)
+        return nullptr;
+    }
+
+    Value *NewAdd = Builder.CreateAdd(X, NewY);
+    return new ICmpInst(CmpInst::ICMP_ULT, NewAdd, NewZ);
+  }
+  return nullptr;
+}
+
 /// Handle icmp (cast x), (cast or constant).
 Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   // If any operand of ICmp is a inttoptr roundtrip cast then remove it as
@@ -7711,6 +7812,10 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       replaceOperand(I, 1, Pair->second);
       return &I;
     }
+  }
+
+  if (Instruction *Res = foldICmpWithSextAndAdd(I)) {
+    return Res;
   }
 
   // In case of a comparison with two select instructions having the same
