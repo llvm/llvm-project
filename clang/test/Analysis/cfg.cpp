@@ -178,7 +178,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK-NEXT:    1: x
 // CHECK-NEXT:    2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:    3: return [B1.2];
-// CHECK-NEXT:    Preds (5): B3 B4 B5 B6 B2(Unreachable)
+// CHECK-NEXT:    Preds (5): B3 B4 B5 B6 B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:  [B2]
 // CHECK-NEXT:    1: 0
@@ -188,7 +188,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK-NEXT:    5: [B2.4] (ImplicitCastExpr, IntegralCast, int)
 // CHECK-NEXT:    T: switch [B2.5]
 // CHECK-NEXT:    Preds (1): B7
-// CHECK-NEXT:    Succs (5): B3 B4 B5 B6 B1(Unreachable)
+// CHECK-NEXT:    Succs (5): B3 B4 B5 B6 B1
 // CHECK:  [B3]
 // CHECK-NEXT:   case D:
 // CHECK-NEXT:    1: 4
@@ -254,14 +254,14 @@ int test_enum_with_extension(enum MyEnum value) {
 // CHECK-NEXT:    5: [B2.4] (ImplicitCastExpr, IntegralCast, int)
 // CHECK-NEXT:    T: switch [B2.5]
 // CHECK-NEXT:    Preds (1): B7
-// CHECK-NEXT:    Succs (4): B4 B5 B6 B3(Unreachable)
+// CHECK-NEXT:    Succs (4): B4 B5 B6 B3
 // CHECK:  [B3]
 // CHECK-NEXT:   default:
 // CHECK-NEXT:    1: 4
 // CHECK-NEXT:    2: x
 // CHECK-NEXT:    3: [B3.2] = [B3.1]
 // CHECK-NEXT:    T: break;
-// CHECK-NEXT:    Preds (1): B2(Unreachable)
+// CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B1
 // CHECK:  [B4]
 // CHECK-NEXT:   case C:

@@ -265,7 +265,7 @@ int test_enum_cases(enum Cases C) {
   case C4: return 3;
   case C3: return 4;
   }
-} // no-warning
+} // expected-warning {{non-void function does not return a value in all control paths}}
 
 // PR12318 - Don't give a may reach end of non-void function warning.
 int test34(int x) {

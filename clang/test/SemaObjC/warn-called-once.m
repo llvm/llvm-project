@@ -444,27 +444,6 @@ void never_called_switch_none(int cond, void (^callback)(void) CALLED_ONCE) {
   }
 }
 
-enum YesNoOrMaybe {
-  YES,
-  NO,
-  MAYBE
-};
-
-void exhaustive_switch(enum YesNoOrMaybe cond, void (^callback)(void) CALLED_ONCE) {
-  switch (cond) {
-  case YES:
-    callback();
-    break;
-  case NO:
-    callback();
-    break;
-  case MAYBE:
-    callback();
-    break;
-  }
-  // no-warning
-}
-
 void called_twice_exceptions(void (^callback)(void) CALLED_ONCE) {
   // TODO: Obj-C exceptions are not supported in CFG,
   //       we should report warnings in these as well.
