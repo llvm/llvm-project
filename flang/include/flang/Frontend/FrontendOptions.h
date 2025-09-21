@@ -254,6 +254,9 @@ struct FrontendOptions {
   /// Print the supported cpus for the current target
   unsigned printSupportedCPUs : 1;
 
+  /// Print the supported extensions for the current target
+  unsigned printSupportedExtensions : 1;
+
   /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
   /// symbols based on source-code location. This is not needed in regular
   /// compilation.
