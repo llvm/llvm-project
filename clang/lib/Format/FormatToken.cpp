@@ -33,7 +33,7 @@ const char *getTokenTypeName(TokenType Type) {
   return nullptr;
 }
 
-static SmallVector<StringRef> QtPropertyKeywords = {
+static constexpr std::array<StringRef, 14> QtPropertyKeywords = {
     "BINDABLE",   "CONSTANT", "DESIGNABLE", "FINAL", "MEMBER",
     "NOTIFY",     "READ",     "REQUIRED",   "RESET", "REVISION",
     "SCRIPTABLE", "STORED",   "USER",       "WRITE",
@@ -46,7 +46,7 @@ bool FormatToken::isQtProperty() const {
 }
 
 // Sorted common C++ non-keyword types.
-static SmallVector<StringRef> CppNonKeywordTypes = {
+static constexpr std::array<StringRef, 14> CppNonKeywordTypes = {
     "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
     "intptr_t", "ptrdiff_t", "size_t",  "time_t",    "uint16_t",
     "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
