@@ -55,6 +55,7 @@ static bool matchNVarDeclStartingWith(
       BeginDS = EndDS;
 
     auto Matches = [&](const Decl *VD) {
+      // We don't want redundant decls in DeclStmt.
       if (Count == N)
         return false;
 
@@ -113,7 +114,7 @@ AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
   if (Parents.size() != 1)
     return false;
 
-  auto *C = Parents[0].get<CompoundStmt>();
+  const auto *C = Parents[0].get<CompoundStmt>();
   if (!C)
     return false;
 
@@ -128,12 +129,11 @@ AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
 AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
               InnerMatchers) {
-
   const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
     return false;
 
-  auto *C = Parents[0].get<CompoundStmt>();
+  const auto *C = Parents[0].get<CompoundStmt>();
   if (!C)
     return false;
 
@@ -274,7 +274,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                       hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
-                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(expr().bind(InitExprName)))))
+                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(
+                          expr().bind(InitExprName)))))
                   .bind(PairDeclName)),
           hasNextTwoVarDecl(
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
@@ -294,7 +295,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
               varDecl(hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
-                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(expr().bind(InitExprName)))))
+                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(
+                          expr().bind(InitExprName)))))
                   .bind(PairDeclName)),
           hasBody(
               compoundStmt(
@@ -376,10 +378,10 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   // Check whether PairVar, FirstVar and SecondVar have the same transfer type,
   // so they can be combined to structured binding.
   const auto *PairVar = Result.Nodes.getNodeAs<VarDecl>(PairDeclName);
-  const Expr *InitE = Result.Nodes.getNodeAs<Expr>(InitExprName);
 
   const std::optional<TransferType> PairCaptureType =
-      getTransferType(*Result.Context, PairVar->getType(), InitE->getType());
+      getTransferType(*Result.Context, PairVar->getType(),
+                      Result.Nodes.getNodeAs<Expr>(InitExprName)->getType());
   const std::optional<TransferType> FirstVarCaptureType =
       getTransferType(*Result.Context, FirstVar->getType(),
                       *Result.Nodes.getNodeAs<QualType>(FirstTypeName));
