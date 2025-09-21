@@ -28,7 +28,7 @@
 // - static __segment_iterator Traits::__segment(It __it)
 //   Returns an iterator to the segment that the provided iterator is in.
 //
-// - static __local_iterator Traits::__local(It __it)
+// - static __local_iterator Traits::__local_it(It __it)
 //   Returns the local iterator pointing to the element that the provided iterator points to.
 //
 // - static __local_iterator Traits::__begin(__segment_iterator __it)
@@ -59,7 +59,7 @@ struct __segmented_iterator_traits;
   using __local_iterator   = ...;
 
   static __segment_iterator __segment(_Iterator);
-  static __local_iterator __local(_Iterator);
+  static __local_iterator __local_it(_Iterator);
   static __local_iterator __begin(__segment_iterator);
   static __local_iterator __end(__segment_iterator);
   static _Iterator __compose(__segment_iterator, __local_iterator);
