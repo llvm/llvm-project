@@ -11037,12 +11037,16 @@ __mmask16 test_mm512_int2mask(int __a)
   return _mm512_int2mask(__a);
 }
 
+TEST_CONSTEXPR(_mm512_int2mask((int)0xDEADBEEF) == 0xBEEF);
+
 int test_mm512_mask2int(__mmask16 __a)
 {
   // CHECK-LABEL: test_mm512_mask2int
   // CHECK: zext i16 %{{.*}} to i32
   return _mm512_mask2int(__a);
 }
+
+TEST_CONSTEXPR(_mm512_mask2int(0x8000) == 0x00008000); // Zero-extended
 
 __m128 test_mm_mask_move_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {
