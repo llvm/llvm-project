@@ -113,6 +113,17 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   }
 };
 
+/// A mix-in indicates that the pass cannot be skipped
+/// in pass instrumentation.
+struct RequiredPassMixin {};
+
+/// A convenient mix-in to indicate the pass cannot be skipped
+/// in pass instrumentation.
+///
+/// It automatically mixes in \c PassInfoMixin and \c RequiredPassMixin.
+template <typename DerivedT>
+struct RequiredPassInfoMixin : PassInfoMixin<DerivedT>, RequiredPassMixin {};
+
 namespace detail {
 
 /// Actual unpacker of extra arguments in getAnalysisResult,
