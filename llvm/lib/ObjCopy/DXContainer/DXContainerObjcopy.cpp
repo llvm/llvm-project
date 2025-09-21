@@ -9,8 +9,10 @@
 #include "llvm/ObjCopy/DXContainer/DXContainerObjcopy.h"
 #include "DXContainerReader.h"
 #include "DXContainerWriter.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -42,7 +44,40 @@ static Error extractPartAsObject(StringRef PartName, StringRef OutFilename,
                          "part '%s' not found", PartName.str().c_str());
 }
 
+static Error dumpPartToFile(StringRef PartName, StringRef Filename,
+                            StringRef InputFilename, Object &Obj) {
+  for (const Part &P : Obj.Parts) {
+    if (P.Name == PartName) {
+      ArrayRef<uint8_t> Contents = P.Data;
+      // For parts containing llvm bitcode, don't dump the program headers so
+      // that we get a valid .bc file.
+      if (PartName == "DXIL" || PartName == "STAT")
+        Contents = Contents.drop_front(sizeof(llvm::dxbc::ProgramHeader));
+      Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+          FileOutputBuffer::create(Filename, Contents.size());
+      if (!BufferOrErr)
+        return createFileError(Filename, BufferOrErr.takeError());
+      std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
+      llvm::copy(Contents, Buf->getBufferStart());
+      if (Error E = Buf->commit())
+        return createFileError(Filename, std::move(E));
+      return Error::success();
+    }
+  }
+  return createFileError(Filename,
+                         std::make_error_code(std::errc::invalid_argument),
+                         "part '%s' not found", PartName.str().c_str());
+}
+
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
+  for (StringRef Flag : Config.DumpSection) {
+    StringRef SecName;
+    StringRef FileName;
+    std::tie(SecName, FileName) = Flag.split("=");
+    if (Error E = dumpPartToFile(SecName, FileName, Config.InputFilename, Obj))
+      return E;
+  }
+
   // Extract all sections before any modifications.
   for (StringRef Flag : Config.ExtractSection) {
     StringRef SectionName;
