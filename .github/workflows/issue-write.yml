@@ -6,6 +6,7 @@ on:
       - "Check code formatting"
       - "Check for private emails used in PRs"
       - "PR Request Release Note"
+      - "Code lint"
     types:
       - completed
 

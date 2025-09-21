@@ -27,3 +27,32 @@ loop:
 exit:
   ret void
 }
+
+declare void @clobber()
+
+define void @test_add_sub_1_guard(ptr %src, i32 %n) {
+; CHECK-LABEL: 'test_add_sub_1_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @test_add_sub_1_guard
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (zext i32 (-1 + (%n /u 2))<nsw> to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (zext i32 (-1 + (%n /u 2))<nsw> to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %shr = lshr i32 %n, 1
+  %sub.1 = add i32 %shr, -1
+  %sub.ext = zext i32 %sub.1 to i64
+  %pre = icmp eq i32 %shr, 1
+  %end = getelementptr i8, ptr %src, i64 %sub.ext
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %iv = phi ptr [ %src, %entry ], [ %iv.next, %loop ]
+  call void @clobber()
+  %iv.next = getelementptr i8, ptr %iv, i64 1
+  %ec = icmp eq ptr %iv, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
