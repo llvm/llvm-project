@@ -52,6 +52,7 @@ public:
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   bool enableWritePrefetching() const override;
+  bool enableInterleavedAccessVectorization() const override { return true; }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
 
