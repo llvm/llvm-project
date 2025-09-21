@@ -366,6 +366,7 @@ Bug Fixes in This Version
 - Fixed an assertion when an improper use of the ``malloc`` attribute targeting
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
+- Accept empty enum in MSVC-compatible C. (#GH114402)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
