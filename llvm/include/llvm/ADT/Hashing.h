@@ -476,7 +476,7 @@ template <typename RangeT> hash_code hash_combine_range(RangeT &&R) {
 namespace hashing {
 namespace detail {
 
-/// Helper class to manage the combining of `hash_combine` arguments.
+/// Helper class to manage the combining of hash_combine arguments.
 ///
 /// This class manages the state and various calls involved in combining a
 /// variadic argument list into a single hash.
