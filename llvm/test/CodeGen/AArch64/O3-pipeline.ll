@@ -162,6 +162,8 @@
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       AArch64 MI Peephole Optimization pass
 ; CHECK-NEXT:       AArch64 Dead register definitions
+; CHECK-NEXT:       Machine Common Subexpression Elimination
+; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
