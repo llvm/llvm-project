@@ -981,6 +981,9 @@ public:
   /// Return a reference to the internal implementation.
   detail::ConversionPatternRewriterImpl &getImpl();
 
+  /// Return "true" if the given operation was replaced or erased.
+  bool isOpIgnored(Operation *op) const;
+
 private:
   // Allow OperationConverter to construct new rewriters.
   friend struct OperationConverter;
