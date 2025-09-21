@@ -28,6 +28,7 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
@@ -41,7 +42,6 @@
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "SetLongJmpCheck.h"
 #include "ThrownExceptionTypeCheck.h"
-#include "VariadicFunctionDefCheck.h"
 
 namespace {
 
@@ -245,7 +245,8 @@ public:
         .registerCheck<bugprone::PointerArithmeticOnPolymorphicObjectCheck>(
             "cert-ctr56-cpp");
     // DCL
-    CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
+    CheckFactories.registerCheck<modernize::AvoidVariadicFunctionsCheck>(
+        "cert-dcl50-cpp");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(

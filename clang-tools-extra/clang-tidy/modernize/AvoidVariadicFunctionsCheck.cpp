@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "VariadicFunctionDefCheck.h"
+#include "AvoidVariadicFunctionsCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::modernize {
 
-void VariadicFunctionDefCheck::registerMatchers(MatchFinder *Finder) {
+void AvoidVariadicFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   // We only care about function *definitions* that are variadic, and do not
   // have extern "C" language linkage.
   Finder->addMatcher(
@@ -22,7 +22,8 @@ void VariadicFunctionDefCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void VariadicFunctionDefCheck::check(const MatchFinder::MatchResult &Result) {
+void AvoidVariadicFunctionsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
   diag(FD->getLocation(),
@@ -30,4 +31,4 @@ void VariadicFunctionDefCheck::check(const MatchFinder::MatchResult &Result) {
        "parameter pack or currying instead");
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::modernize
