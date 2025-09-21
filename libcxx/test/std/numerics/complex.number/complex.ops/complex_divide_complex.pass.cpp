@@ -12,7 +12,7 @@
 //   complex<T>
 //   operator/(const complex<T>& lhs, const complex<T>& rhs); // constexpr in C++20
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2131685
 
 #include <cassert>
 #include <complex>
@@ -34,24 +34,27 @@ test()
     return true;
 }
 
-TEST_CONSTEXPR_CXX20
-bool
-test_edges()
-{
-  const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
+template <class T>
+TEST_CONSTEXPR_CXX20 bool test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
   int classification[N];
   for (unsigned i=0; i < N; ++i)
-    classification[i] = classify(testcases[i]);
+    classification[i] = classify(testcases<T>[i]);
 
   for (unsigned i = 0; i < N; ++i) {
+    auto const x = testcases<T>[i];
     for (unsigned j = 0; j < N; ++j) {
-      std::complex<double> r = testcases[i] / testcases[j];
+      auto const y      = testcases<T>[j];
+      std::complex<T> r = x / y;
       switch (classification[i]) {
       case zero:
         switch (classification[j]) {
         case zero:
           assert(classify(r) == NaN);
           break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
         case non_zero:
           assert(classify(r) == zero);
           break;
@@ -66,11 +69,17 @@ test_edges()
           break;
         }
         break;
+      case lowest_value:
+      case maximum_value:
+        continue; // not tested
       case non_zero:
         switch (classification[j]) {
         case zero:
           assert(classify(r) == inf);
           break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
         case non_zero:
           assert(classify(r) == non_zero);
           break;
@@ -90,6 +99,9 @@ test_edges()
         case zero:
           assert(classify(r) == inf);
           break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
         case non_zero:
           assert(classify(r) == inf);
           break;
@@ -109,6 +121,9 @@ test_edges()
         case zero:
           assert(classify(r) == NaN);
           break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
         case non_zero:
           assert(classify(r) == NaN);
           break;
@@ -128,6 +143,9 @@ test_edges()
         case zero:
           assert(classify(r) == inf);
           break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
         case non_zero:
           assert(classify(r) == NaN);
           break;
@@ -153,13 +171,17 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
 #if TEST_STD_VER > 17
     static_assert(test<float>());
     static_assert(test<double>());
     static_assert(test<long double>());
-    static_assert(test_edges());
+    static_assert(test_edges<float>());
+    static_assert(test_edges<double>());
+    static_assert(test_edges<long double>());
 #endif
 
     return 0;
