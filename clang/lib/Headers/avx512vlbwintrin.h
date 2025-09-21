@@ -313,7 +313,7 @@
     _mm256_mask_cmp_epu16_mask((k), (A), (B), _MM_CMPINT_NE)
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
-_mm256_mask_add_epi8(__m256i __W, __mmask32 __U, __m256i __A, __m256i __B){
+_mm256_mask_add_epi8(__m256i __W, __mmask32 __U, __m256i __A, __m256i __B) {
   return (__m256i)__builtin_ia32_selectb_256((__mmask32)__U,
                                              (__v32qi)_mm256_add_epi8(__A, __B),
                                              (__v32qi)__W);
