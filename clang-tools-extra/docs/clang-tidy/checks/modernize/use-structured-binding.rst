@@ -66,8 +66,8 @@ except const and & since it's not very common:
   static int b = pair.first;
   static int c = pair.second;
 
-The check doesn't check for some situations which could possibly transfered
-to structured bnindings, for example:
+The check doesn't check for some situations which could possibly be transferred
+to structured bindings, for example:
 
 .. code-block:: c++
 
