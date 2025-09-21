@@ -15869,12 +15869,17 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         To = SE.getUMaxExpr(FromRewritten, RHS);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
+        if (RHS->isOne())
+          ExprsToRewrite.push_back(From);
         break;
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE:
         To = SE.getSMaxExpr(FromRewritten, RHS);
-        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten))
+        if (auto *SMin = dyn_cast<SCEVSMinExpr>(FromRewritten)) {
           EnqueueOperands(SMin);
+        }
+        if (RHS->isOne())
+          ExprsToRewrite.push_back(From);
         break;
       case CmpInst::ICMP_EQ:
         if (isa<SCEVConstant>(RHS))
@@ -16005,7 +16010,22 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     for (const SCEV *Expr : ExprsToRewrite) {
       const SCEV *RewriteTo = Guards.RewriteMap[Expr];
       Guards.RewriteMap.erase(Expr);
-      Guards.RewriteMap.insert({Expr, Guards.rewrite(RewriteTo)});
+      const SCEV *Rewritten = Guards.rewrite(RewriteTo);
+
+      // Try to strengthen divisibility of SMax/UMax expressions coming from >=
+      // 1 conditions.
+      if (auto *SMax = dyn_cast<SCEVSMaxExpr>(Rewritten)) {
+        unsigned MinTrailingZeros = SE.getMinTrailingZeros(SMax->getOperand(1));
+        for (const SCEV *Op : drop_begin(SMax->operands(), 2))
+          MinTrailingZeros =
+              std::min(MinTrailingZeros, SE.getMinTrailingZeros(Op));
+        if (MinTrailingZeros != 0)
+          Rewritten = SE.getSMaxExpr(
+              SE.getConstant(APInt(SMax->getType()->getScalarSizeInBits(), 1)
+                                 .shl(MinTrailingZeros)),
+              SMax);
+      }
+      Guards.RewriteMap.insert({Expr, Rewritten});
     }
   }
 }
