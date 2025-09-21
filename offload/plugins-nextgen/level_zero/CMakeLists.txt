@@ -1,7 +1,3 @@
-if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-  return()
-endif()
-
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.level_zero LEVEL_ZERO)
 
