@@ -39,6 +39,8 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Summary/SummaryContext.h"
+#include "clang/Summary/SummarySerialization.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,7 +50,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <system_error>
 using namespace clang;
 
@@ -1052,6 +1056,76 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       if (!Found) {
         CI.getDiagnostics().Report(diag::err_fe_no_pch_in_dir) << PCHInclude;
         return false;
+      }
+    }
+  }
+
+  bool EmitSummaries = !CI.getFrontendOpts().EmitSummaryDir.empty();
+  bool ReadSummaries = !CI.getFrontendOpts().ReadSummaryDir.empty();
+
+  if (EmitSummaries || ReadSummaries) {
+    if (!CI.hasSummaryContext())
+      CI.createSummaryContext();
+
+    if (!CI.hasSummarySerializer())
+      CI.createSummarySerializer();
+  }
+
+  if (EmitSummaries)
+    CI.createSummaryConsumer(getCurrentInput());
+
+  if (ReadSummaries) {
+    // FIXME: this is a quick shortcut so large summaries are only evaluated
+    // once, we should think about implementing it in a reasonable way...
+    static const char *reducedCacheName =
+        "reduced-summary-so-that-we-do-not-have-to-evaluate-it-every-time";
+    const std::string summaryExtension =
+        '.' + (CI.getFrontendOpts().SummaryFormat == "binary"
+                   ? "summary"
+                   : CI.getFrontendOpts().SummaryFormat);
+
+    FileManager &FileMgr = CI.getFileManager();
+    StringRef SummaryDirPath = CI.getFrontendOpts().ReadSummaryDir;
+    if (auto SummaryDir = FileMgr.getOptionalDirectoryRef(SummaryDirPath)) {
+      std::error_code EC;
+      SmallString<128> DirNative;
+      llvm::sys::path::native(SummaryDir->getName(), DirNative);
+
+      llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+      std::string cacheFile =
+          DirNative.str().str() + '/' + reducedCacheName + summaryExtension;
+
+      std::vector<std::string> paths;
+
+      if (FS.exists(cacheFile)) {
+        paths.emplace_back(cacheFile);
+      } else {
+        for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
+                                           DirEnd;
+             Dir != DirEnd && !EC; Dir.increment(EC)) {
+          if (llvm::sys::path::extension(Dir->path()) != summaryExtension)
+            continue;
+
+          paths.emplace_back(Dir->path().str());
+        }
+      }
+
+      llvm::sort(paths);
+
+      for (auto &&path : paths) {
+        std::ifstream t(path);
+        std::stringstream buffer;
+        buffer << t.rdbuf();
+
+        CI.getSummarySerializer().parse(buffer.str());
+      }
+
+      CI.getSummaryContext()->ReduceSummaries();
+
+      if (!FS.exists(cacheFile)) {
+        // FIXME: very quick printing of the summary to the cache file
+        llvm::raw_fd_ostream fd(cacheFile, EC, llvm::sys::fs::CD_CreateAlways);
+        CI.getSummarySerializer().serialize(fd);
       }
     }
   }

@@ -89,6 +89,7 @@ public:
   ArrayRef<std::string> Plugins;
   std::unique_ptr<CodeInjector> Injector;
   cross_tu::CrossTranslationUnitContext CTU;
+  const SummaryContext *SummaryCtx;
 
   /// Stores the declarations from the local translation unit.
   /// Note, we pre-compute the local declarations at parse time as an
@@ -124,7 +125,7 @@ public:
       : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
         Injector(std::move(injector)), CTU(CI),
-        MacroExpansions(CI.getLangOpts()) {
+        SummaryCtx(CI.getSummaryContext()), MacroExpansions(CI.getLangOpts()) {
     EntryPointStat::lockRegistry();
     DigestAnalyzerOptions();
 
@@ -757,7 +758,8 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
 
-  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
+  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode,
+                 SummaryCtx);
 
   // Execute the worklist algorithm.
   llvm::TimeRecord ExprEngineStartTime;

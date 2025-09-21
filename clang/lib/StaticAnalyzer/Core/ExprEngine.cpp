@@ -221,7 +221,8 @@ static const char* TagProviderName = "ExprEngine";
 
 ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
                        AnalysisManager &mgr, SetOfConstDecls *VisitedCalleesIn,
-                       FunctionSummariesTy *FS, InliningModes HowToInlineIn)
+                       FunctionSummariesTy *FS, InliningModes HowToInlineIn,
+                       const SummaryContext *SummaryCtx)
     : CTU(CTU), IsCTUEnabled(mgr.getAnalyzerOptions().IsNaiveCTUEnabled),
       AMgr(mgr), AnalysisDeclContexts(mgr.getAnalysisDeclContextManager()),
       Engine(*this, FS, mgr.getAnalyzerOptions()), G(Engine.getGraph()),
@@ -230,7 +231,7 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
       SymMgr(StateMgr.getSymbolManager()), MRMgr(StateMgr.getRegionManager()),
       svalBuilder(StateMgr.getSValBuilder()), ObjCNoRet(mgr.getASTContext()),
       BR(mgr, *this), VisitedCallees(VisitedCalleesIn),
-      HowToInline(HowToInlineIn) {
+      HowToInline(HowToInlineIn), SummaryCtx(SummaryCtx) {
   unsigned TrimInterval = mgr.options.GraphTrimInterval;
   if (TrimInterval != 0) {
     // Enable eager node reclamation when constructing the ExplodedGraph.

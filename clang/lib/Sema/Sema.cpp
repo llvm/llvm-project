@@ -71,6 +71,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
+#include "clang/Summary/SummaryContext.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -270,11 +271,13 @@ const unsigned Sema::MaxAlignmentExponent;
 const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
-           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
+           TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter,
+           SummaryContext *SummaryCtx, SummaryConsumer *SummaryConsumer)
     : SemaBase(*this), CollectStats(false), TUKind(TUKind),
       CurFPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
       SourceMgr(PP.getSourceManager()), APINotes(SourceMgr, LangOpts),
+      SummaryCtx(SummaryCtx), TheSummaryConsumer(SummaryConsumer),
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
@@ -326,6 +329,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
       ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+  assert((!SummaryConsumer || SummaryCtx) &&
+         "summary consumer without a summary context");
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -1166,6 +1171,9 @@ void Sema::ActOnStartOfTranslationUnit() {
   if (getLangOpts().CPlusPlusModules &&
       getLangOpts().getCompilingModule() == LangOptions::CMK_HeaderUnit)
     HandleStartOfHeaderUnit();
+
+  if (TheSummaryConsumer)
+    TheSummaryConsumer->ProcessStartOfSourceFile();
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
@@ -1231,6 +1239,9 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
 void Sema::ActOnEndOfTranslationUnit() {
   assert(DelayedDiagnostics.getCurrentPool() == nullptr
          && "reached end of translation unit with a pool attached?");
+
+  if (TheSummaryConsumer)
+    TheSummaryConsumer->ProcessEndOfSourceFile();
 
   // If code completion is enabled, don't perform any end-of-translation-unit
   // work.

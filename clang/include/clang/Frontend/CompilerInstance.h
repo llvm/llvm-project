@@ -19,6 +19,7 @@
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Summary/SummaryContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -49,6 +50,8 @@ class ModuleFile;
 }
 
 class CodeCompleteConsumer;
+class SummaryContext;
+class SummaryConsumer;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
@@ -127,6 +130,18 @@ class CompilerInstance : public ModuleLoader {
 
   /// The code completion consumer.
   std::unique_ptr<CodeCompleteConsumer> CompletionConsumer;
+
+  /// The summary serializer.
+  std::unique_ptr<SummarySerializer> TheSummarySerializer;
+
+  /// The summary consumer.
+  std::unique_ptr<SummaryConsumer> TheSummaryConsumer;
+
+  /// The summary context.
+  std::unique_ptr<SummaryContext> SummaryCtx;
+
+  /// The summary output file.
+  std::unique_ptr<llvm::raw_fd_ostream> SummaryOS;
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
@@ -643,6 +658,34 @@ public:
   /// setCodeCompletionConsumer - Replace the current code completion consumer;
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
+
+  /// @}
+  /// @name Summary
+  /// @{
+
+  bool hasSummaryContext() { return (bool)SummaryCtx; }
+
+  SummaryContext *getSummaryContext() { return SummaryCtx.get(); }
+
+  void createSummaryContext() { SummaryCtx.reset(new SummaryContext()); }
+
+  bool hasSummaryConsumer() const { return (bool)TheSummaryConsumer; }
+
+  SummaryConsumer *getSummaryConsumer() const {
+    return TheSummaryConsumer.get();
+  }
+
+  void createSummaryConsumer(FrontendInputFile Input);
+
+  bool hasSummarySerializer() const { return (bool)TheSummarySerializer; }
+
+  SummarySerializer &getSummarySerializer() const {
+    assert(TheSummarySerializer &&
+           "Compiler instance has no code summary serializer!");
+    return *TheSummarySerializer;
+  }
+
+  void createSummarySerializer();
 
   /// @}
   /// @name Frontend timer

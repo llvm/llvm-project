@@ -5304,6 +5304,32 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
+  if (Args.getLastArg(options::OPT_summaries_dir_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
+
+  if (Args.getLastArg(options::OPT_summary_format_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_summary_format_EQ);
+
+  if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
+    std::string EmitSummaryDir = ".";
+
+    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
+        A->containsValue("obj") && FinalOutput) {
+      StringRef ObjDir = llvm::sys::path::parent_path(FinalOutput->getValue());
+      if (!ObjDir.empty())
+        EmitSummaryDir = ObjDir;
+    } 
+    
+    if(A->containsValue("src") && Input.isFilename()) {
+      StringRef BasePath = llvm::sys::path::parent_path(Input.getFilename());
+      if(!BasePath.empty())
+        EmitSummaryDir = BasePath.str();
+    }
+
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-emit-summary-dir=") + EmitSummaryDir));
+  }
+
   auto *MemProfArg = Args.getLastArg(options::OPT_fmemory_profile,
                                      options::OPT_fmemory_profile_EQ,
                                      options::OPT_fno_memory_profile);
