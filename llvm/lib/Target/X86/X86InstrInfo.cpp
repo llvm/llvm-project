@@ -9104,6 +9104,30 @@ uint16_t X86InstrInfo::getExecutionDomainCustom(const MachineInstr &MI) const {
   case X86::VPBLENDWYrmi:
   case X86::VPBLENDWYrri:
     return GetBlendDomains(8, false);
+  case X86::VMOVSSZrr:
+    // Only convert to BLEND if we are VEX compatible.
+    if (RI.getEncodingValue(MI.getOperand(0).getReg()) >= 16 ||
+        RI.getEncodingValue(MI.getOperand(1).getReg()) >= 16 ||
+        RI.getEncodingValue(MI.getOperand(2).getReg()) >= 16)
+      return 0;
+    [[fallthrough]];
+  case X86::MOVSSrr:
+  case X86::VMOVSSrr:
+    if (Subtarget.hasSSE41())
+      return 0x2 | 0x8; // PackedSingle | PackedInt
+    return 0x2;         // PackedSingle
+  case X86::VMOVSDZrr:
+    // Only convert to BLEND if we are VEX compatible.
+    if (RI.getEncodingValue(MI.getOperand(0).getReg()) >= 16 ||
+        RI.getEncodingValue(MI.getOperand(1).getReg()) >= 16 ||
+        RI.getEncodingValue(MI.getOperand(2).getReg()) >= 16)
+      return 0;
+    [[fallthrough]];
+  case X86::MOVSDrr:
+  case X86::VMOVSDrr:
+    if (Subtarget.hasSSE41())
+      return 0x2 | 0x4 | 0x8; // PackedSingle | PackedDouble | PackedInt
+    return 0x4;               // PackedDouble
   case X86::VPANDDZ128rr:
   case X86::VPANDDZ128rm:
   case X86::VPANDDZ256rr:
@@ -9244,6 +9268,39 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
   case X86::VPBLENDWYrmi:
   case X86::VPBLENDWYrri:
     return SetBlendDomain(16, true);
+  case X86::MOVSSrr:
+  case X86::VMOVSSrr:
+  case X86::VMOVSSZrr:
+    if (Domain == 3) { // PackedInt
+      MI.setDesc(
+          get(Opcode == X86::MOVSSrr ? X86::PBLENDWrri : X86::VPBLENDWrri));
+      MI.addOperand(MachineOperand::CreateImm(0x03));
+      if (Opcode == X86::VMOVSSZrr)
+        MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+      return true;
+    }
+    return Domain == 1; // PackedSingle
+  case X86::MOVSDrr:
+  case X86::VMOVSDrr:
+  case X86::VMOVSDZrr:
+    if (Domain == 1) { // PackedSingle
+      MI.setDesc(
+          get(Opcode == X86::MOVSDrr ? X86::BLENDPSrri : X86::VBLENDPSrri));
+      MI.addOperand(MachineOperand::CreateImm(0x03));
+      if (Opcode == X86::VMOVSDZrr)
+        MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+      return true;
+    } else if (Domain == 2) { // PackedDouble
+      return true;
+    } else if (Domain == 3) { // PackedInt
+      MI.setDesc(
+          get(Opcode == X86::MOVSDrr ? X86::PBLENDWrri : X86::VPBLENDWrri));
+      MI.addOperand(MachineOperand::CreateImm(0x0F));
+      if (Opcode == X86::VMOVSDZrr)
+        MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+      return true;
+    }
+    return false;
   case X86::VPANDDZ128rr:
   case X86::VPANDDZ128rm:
   case X86::VPANDDZ256rr:

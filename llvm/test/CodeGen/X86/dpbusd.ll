@@ -345,7 +345,6 @@ define i32 @vpdpbusd_128(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVX512VLVNNI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VLVNNI-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX512VLVNNI-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
-; AVX512VLVNNI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VLVNNI-NEXT:    vpdpbusd %xmm1, %xmm0, %xmm2
 ; AVX512VLVNNI-NEXT:    vmovd %xmm2, %eax
 ; AVX512VLVNNI-NEXT:    addl %edx, %eax
