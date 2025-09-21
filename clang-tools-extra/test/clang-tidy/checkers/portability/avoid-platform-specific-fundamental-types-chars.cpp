@@ -173,6 +173,16 @@ void test_template_instantiation() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
 }
 
+// Test template specializations with char types
+template<typename T>
+void template_function(T param) {}
+
+template<>
+void template_function<char>(char param) {
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes 
+// CHECK-MESSAGES: :[[@LINE-2]]:30: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes 
+}
+
 // Test that integer and float types are NOT flagged when their options are disabled
 int should_not_warn_int = 42;
 long should_not_warn_long = 100L;
