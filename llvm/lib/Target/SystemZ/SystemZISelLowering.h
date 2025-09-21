@@ -471,7 +471,7 @@ public:
   }
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool isCheapToSpeculateCttz(Type *) const override { return true; }
-  bool preferZeroCompareBranch() const override { return true; }
+  bool preferZeroCompareBranch(BranchInst *) const override { return true; }
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override {
     ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
     return Mask && Mask->getValue().isIntN(16);
