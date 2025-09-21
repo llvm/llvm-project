@@ -814,6 +814,14 @@ private:
     }
   }
 
+  /// Generate bodies of OpenMP privatizers by cloning the bodies of FIR
+  /// privatizers.
+  ///
+  /// \param [in] rewriter - used to driver IR generation for privatizers.
+  /// \param [in] mapper - value mapping from FIR to OpenMP constructs.
+  /// \param [in] loop - FIR loop to convert its localizers.
+  ///
+  /// \param [out] privateClauseOps - OpenMP privatizers to gen their bodies.
   void genPrivatizers(mlir::ConversionPatternRewriter &rewriter,
                       mlir::IRMapping &mapper, fir::DoConcurrentLoopOp loop,
                       mlir::omp::PrivateClauseOps &privateClauseOps) const {
