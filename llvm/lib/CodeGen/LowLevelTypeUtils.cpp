@@ -36,6 +36,9 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     // concerned.
     auto SizeInBits = DL.getTypeSizeInBits(&Ty);
     assert(SizeInBits != 0 && "invalid zero-sized type");
+    if (Ty.isBFloatTy()) {
+      return LLT::scalar_bfloat(SizeInBits);
+    }
     return LLT::scalar(SizeInBits);
   }
 
