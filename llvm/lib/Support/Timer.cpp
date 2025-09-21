@@ -312,8 +312,10 @@ TimerGroup::~TimerGroup() {
       Next->Prev = Prev;
   };
 
-  // If the managed instance is already dead, it means we're in the CRT
-  // destruction, so no need to lock.
+  // TimerGlobals is always created implicity, through a call to timerLock(),
+  // when a TimeGroup is created. On CRT shutdown, the TimerGlobals instance
+  // might have been destroyed already. Avoid re-creating it if calling
+  // timerLock().
   if (!isTimerGlobalsConstructed()) {
     unlink();
     return;
