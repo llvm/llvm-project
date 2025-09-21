@@ -8,14 +8,12 @@
 
 #include "UseStructuredBindingCheck.h"
 #include "../utils/DeclRefExprUtils.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static constexpr const char *DefaultPairTypes = "std::pair";
 static constexpr llvm::StringLiteral PairDeclName = "PairVarD";
 static constexpr llvm::StringLiteral PairVarTypeName = "PairVarType";
 static constexpr llvm::StringLiteral FirstVarDeclName = "FirstVarDecl";
@@ -178,15 +176,14 @@ AST_MATCHER_P(Expr, ignoringCopyCtorAndImplicitCast,
   return InnerMatcher.matches(*Node.IgnoreImpCasts(), Finder, Builder);
 }
 
-} // namespace
-
-UseStructuredBindingCheck::UseStructuredBindingCheck(StringRef Name,
-                                                     ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      PairTypes(utils::options::parseStringList(
-          Options.get("PairTypes", DefaultPairTypes))) {
-  ;
+AST_MATCHER(CXXRecordDecl, isPairType) {
+  return llvm::all_of(Node.fields(), [](const FieldDecl *FD) {
+    return FD->getAccess() == AS_public &&
+           (FD->getName() == "first" || FD->getName() == "second");
+  });
 }
+
+} // namespace
 
 static auto getVarInitWithMemberMatcher(
     StringRef PairName, StringRef MemberName, StringRef TypeName,
@@ -204,10 +201,9 @@ static auto getVarInitWithMemberMatcher(
 }
 
 void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
-  auto PairType =
-      qualType(unless(isVolatileQualified()),
-               hasUnqualifiedDesugaredType(recordType(
-                   hasDeclaration(cxxRecordDecl(hasAnyName(PairTypes))))));
+  auto PairType = qualType(unless(isVolatileQualified()),
+                           hasUnqualifiedDesugaredType(recordType(
+                               hasDeclaration(cxxRecordDecl(isPairType())))));
 
   auto UnlessShouldBeIgnored =
       unless(anyOf(hasAnySpecifiersShouldBeIgnored(), isInMarco()));
