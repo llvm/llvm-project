@@ -117,10 +117,10 @@ AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
   if (!C)
     return false;
 
-  const auto I = llvm::find(llvm::reverse(C->body()), &Node);
-  assert(I != C->body_rend() && "C is parent of Node");
-  return matchNVarDeclStartingWith(I + 1, C->body_rend(), InnerMatchers, Finder,
-                                   Builder, true);
+  const auto It = llvm::find(llvm::reverse(C->body()), &Node);
+  assert(It != C->body_rend() && "C is parent of Node");
+  return matchNVarDeclStartingWith(It + 1, C->body_rend(), InnerMatchers,
+                                   Finder, Builder, true);
 }
 
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
@@ -136,9 +136,9 @@ AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
   if (!C)
     return false;
 
-  const auto *I = llvm::find(C->body(), &Node);
-  assert(I != C->body_end() && "C is parent of Node");
-  return matchNVarDeclStartingWith(I + 1, C->body_end(), InnerMatchers, Finder,
+  const auto *It = llvm::find(C->body(), &Node);
+  assert(It != C->body_end() && "C is parent of Node");
+  return matchNVarDeclStartingWith(It + 1, C->body_end(), InnerMatchers, Finder,
                                    Builder);
 }
 
