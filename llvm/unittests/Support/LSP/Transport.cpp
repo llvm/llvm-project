@@ -190,7 +190,7 @@ TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
         responseCallbackInvoked += 1;
       });
   callFn({}, 109);
-  EXPECT_EQ(responseCallbackInvoked, 0);
+  EXPECT_EQ(responseCallbackInvoked, 0u);
 
   // The request receives multiple responses, but only the first one triggers
   // the response callback. The first response has erroneous JSON that causes a
