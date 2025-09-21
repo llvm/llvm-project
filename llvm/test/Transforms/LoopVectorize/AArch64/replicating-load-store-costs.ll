@@ -205,25 +205,25 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD_2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD_3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
-; CHECK-NEXT:    store ptr null, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP11]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[DST2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr ptr, ptr [[TMP12]], i32 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr ptr, ptr [[TMP12]], i32 4
@@ -487,29 +487,29 @@ define void @scalar_store_cost_after_discarding_interleave_group(ptr %dst, i32 %
 ; CHECK-NEXT:    [[TMP95:%.*]] = trunc <8 x i32> [[BROADCAST_SPLAT2]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP96:%.*]] = or <8 x i16> [[TMP95]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP97:%.*]] = add <8 x i16> [[TMP96]], splat (i16 1)
-; CHECK-NEXT:    [[TMP98:%.*]] = getelementptr i8, ptr [[TMP23]], i64 8
-; CHECK-NEXT:    [[TMP99:%.*]] = getelementptr i8, ptr [[TMP24]], i64 8
-; CHECK-NEXT:    [[TMP100:%.*]] = getelementptr i8, ptr [[TMP25]], i64 8
-; CHECK-NEXT:    [[TMP101:%.*]] = getelementptr i8, ptr [[TMP26]], i64 8
-; CHECK-NEXT:    [[TMP102:%.*]] = getelementptr i8, ptr [[TMP27]], i64 8
-; CHECK-NEXT:    [[TMP103:%.*]] = getelementptr i8, ptr [[TMP28]], i64 8
-; CHECK-NEXT:    [[TMP104:%.*]] = getelementptr i8, ptr [[TMP29]], i64 8
-; CHECK-NEXT:    [[TMP105:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
 ; CHECK-NEXT:    [[TMP106:%.*]] = extractelement <8 x i16> [[TMP97]], i32 0
-; CHECK-NEXT:    store i16 [[TMP106]], ptr [[TMP98]], align 2
 ; CHECK-NEXT:    [[TMP107:%.*]] = extractelement <8 x i16> [[TMP97]], i32 1
-; CHECK-NEXT:    store i16 [[TMP107]], ptr [[TMP99]], align 2
 ; CHECK-NEXT:    [[TMP108:%.*]] = extractelement <8 x i16> [[TMP97]], i32 2
-; CHECK-NEXT:    store i16 [[TMP108]], ptr [[TMP100]], align 2
 ; CHECK-NEXT:    [[TMP109:%.*]] = extractelement <8 x i16> [[TMP97]], i32 3
-; CHECK-NEXT:    store i16 [[TMP109]], ptr [[TMP101]], align 2
 ; CHECK-NEXT:    [[TMP110:%.*]] = extractelement <8 x i16> [[TMP97]], i32 4
-; CHECK-NEXT:    store i16 [[TMP110]], ptr [[TMP102]], align 2
 ; CHECK-NEXT:    [[TMP111:%.*]] = extractelement <8 x i16> [[TMP97]], i32 5
-; CHECK-NEXT:    store i16 [[TMP111]], ptr [[TMP103]], align 2
 ; CHECK-NEXT:    [[TMP112:%.*]] = extractelement <8 x i16> [[TMP97]], i32 6
-; CHECK-NEXT:    store i16 [[TMP112]], ptr [[TMP104]], align 2
 ; CHECK-NEXT:    [[TMP113:%.*]] = extractelement <8 x i16> [[TMP97]], i32 7
+; CHECK-NEXT:    [[TMP123:%.*]] = getelementptr i8, ptr [[TMP23]], i64 8
+; CHECK-NEXT:    [[TMP124:%.*]] = getelementptr i8, ptr [[TMP24]], i64 8
+; CHECK-NEXT:    [[TMP125:%.*]] = getelementptr i8, ptr [[TMP25]], i64 8
+; CHECK-NEXT:    [[TMP126:%.*]] = getelementptr i8, ptr [[TMP26]], i64 8
+; CHECK-NEXT:    [[TMP127:%.*]] = getelementptr i8, ptr [[TMP27]], i64 8
+; CHECK-NEXT:    [[TMP128:%.*]] = getelementptr i8, ptr [[TMP28]], i64 8
+; CHECK-NEXT:    [[TMP129:%.*]] = getelementptr i8, ptr [[TMP29]], i64 8
+; CHECK-NEXT:    [[TMP105:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
+; CHECK-NEXT:    store i16 [[TMP106]], ptr [[TMP123]], align 2
+; CHECK-NEXT:    store i16 [[TMP107]], ptr [[TMP124]], align 2
+; CHECK-NEXT:    store i16 [[TMP108]], ptr [[TMP125]], align 2
+; CHECK-NEXT:    store i16 [[TMP109]], ptr [[TMP126]], align 2
+; CHECK-NEXT:    store i16 [[TMP110]], ptr [[TMP127]], align 2
+; CHECK-NEXT:    store i16 [[TMP111]], ptr [[TMP128]], align 2
+; CHECK-NEXT:    store i16 [[TMP112]], ptr [[TMP129]], align 2
 ; CHECK-NEXT:    store i16 [[TMP113]], ptr [[TMP105]], align 2
 ; CHECK-NEXT:    [[TMP114:%.*]] = getelementptr i8, ptr [[TMP23]], i64 6
 ; CHECK-NEXT:    [[TMP115:%.*]] = getelementptr i8, ptr [[TMP24]], i64 6

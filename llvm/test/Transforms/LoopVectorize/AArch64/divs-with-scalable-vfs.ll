@@ -241,12 +241,12 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP23:%.*]] = udiv <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = urem i64 [[INDEX]], [[MUL_2_I]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = urem i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = udiv i64 [[TMP26]], [[X]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = urem i64 [[TMP26]], [[X]]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 2 x i64> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = mul i64 [[X]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP30]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP31]], [[X]]
