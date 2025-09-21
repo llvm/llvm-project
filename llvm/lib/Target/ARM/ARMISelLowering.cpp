@@ -10479,6 +10479,9 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
 
   // Special case for Thumb1 UCMP only
   if (!IsSigned && Subtarget->isThumb1Only()) {
+    LHS = DAG.getFreeze(LHS);
+    RHS = DAG.getFreeze(RHS);
+
     // For Thumb unsigned comparison, use this sequence:
     // subs r2, r0, r1   ; r2 = LHS - RHS, sets flags
     // sbc r2, r2        ; r2 = r2 - r2 - !carry
@@ -10511,10 +10514,7 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
     // Final subtraction: Sbc1Result - Sbc2Result (no flags needed)
     SDValue Result =
         DAG.getNode(ISD::SUB, dl, MVT::i32, Sbc1Result, Sbc2Result);
-    if (Op.getValueType() != MVT::i32)
-      Result = DAG.getSExtOrTrunc(Result, dl, Op.getValueType());
-
-    return Result;
+    return DAG.getSExtOrTrunc(Result, dl, Op.getValueType());
   }
 
   // For the ARM assembly pattern:
@@ -10582,10 +10582,7 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   SDValue Result2 = DAG.getNode(ARMISD::CMOV, dl, MVT::i32, Result1, MinusOne,
                                 LTCondValue, Flags);
 
-  if (Op.getValueType() != MVT::i32)
-    Result2 = DAG.getSExtOrTrunc(Result2, dl, Op.getValueType());
-
-  return Result2;
+  return DAG.getSExtOrTrunc(Result2, dl, Op.getValueType());
 }
 
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {

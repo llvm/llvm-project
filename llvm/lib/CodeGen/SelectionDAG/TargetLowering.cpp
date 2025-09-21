@@ -10956,8 +10956,8 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 
 SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
-  SDValue LHS = Node->getOperand(0);
-  SDValue RHS = Node->getOperand(1);
+  SDValue LHS = DAG.getFreeze(Node->getOperand(0));
+  SDValue RHS = DAG.getFreeze(Node->getOperand(1));
   EVT VT = LHS.getValueType();
   EVT ResVT = Node->getValueType(0);
   EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);

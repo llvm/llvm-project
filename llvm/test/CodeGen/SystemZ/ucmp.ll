@@ -4,7 +4,7 @@
 define i8 @ucmp.8.8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp.8.8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cr %r2, %r3
+; CHECK-NEXT:    clr %r2, %r3
 ; CHECK-NEXT:    lhi %r2, 0
 ; CHECK-NEXT:    lochih %r2, 1
 ; CHECK-NEXT:    lochil %r2, -1
@@ -16,7 +16,7 @@ define i8 @ucmp.8.8(i8 zeroext %x, i8 zeroext %y) nounwind {
 define i8 @ucmp.8.16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp.8.16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cr %r2, %r3
+; CHECK-NEXT:    clr %r2, %r3
 ; CHECK-NEXT:    lhi %r2, 0
 ; CHECK-NEXT:    lochih %r2, 1
 ; CHECK-NEXT:    lochil %r2, -1

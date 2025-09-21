@@ -4,11 +4,13 @@
 define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp_8_8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrldi 5, 4, 32
+; CHECK-NEXT:    clrldi 6, 3, 32
+; CHECK-NEXT:    sub 5, 5, 6
 ; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    sub 5, 4, 3
 ; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    rldicl 5, 5, 1, 63
 ; CHECK-NEXT:    rldic 3, 3, 0, 32
+; CHECK-NEXT:    rldicl 5, 5, 1, 63
 ; CHECK-NEXT:    isellt 3, 3, 5
 ; CHECK-NEXT:    blr
   %1 = call i8 @llvm.ucmp(i8 %x, i8 %y)
@@ -18,11 +20,13 @@ define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; CHECK-LABEL: ucmp_8_16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrldi 5, 4, 32
+; CHECK-NEXT:    clrldi 6, 3, 32
+; CHECK-NEXT:    sub 5, 5, 6
 ; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    sub 5, 4, 3
 ; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    rldicl 5, 5, 1, 63
 ; CHECK-NEXT:    rldic 3, 3, 0, 32
+; CHECK-NEXT:    rldicl 5, 5, 1, 63
 ; CHECK-NEXT:    isellt 3, 3, 5
 ; CHECK-NEXT:    blr
   %1 = call i8 @llvm.ucmp(i16 %x, i16 %y)

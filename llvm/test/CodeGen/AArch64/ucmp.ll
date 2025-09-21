@@ -13,8 +13,8 @@ define i8 @ucmp.8.8(i8 %x, i8 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: ucmp.8.8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    and w9, w1, #0xff
+; CHECK-GI-NEXT:    uxtb w8, w0
+; CHECK-GI-NEXT:    uxtb w9, w1
 ; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    csinv w0, w8, wzr, hs
@@ -34,8 +34,8 @@ define i8 @ucmp.8.16(i16 %x, i16 %y) nounwind {
 ;
 ; CHECK-GI-LABEL: ucmp.8.16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
+; CHECK-GI-NEXT:    uxth w8, w0
+; CHECK-GI-NEXT:    uxth w9, w1
 ; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    cset w8, hi
 ; CHECK-GI-NEXT:    csinv w0, w8, wzr, hs

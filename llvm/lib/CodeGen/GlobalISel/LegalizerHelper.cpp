@@ -8582,6 +8582,8 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Cmp->getReg(1));
   LLT CmpTy = DstTy.changeElementSize(1);
+  auto LHS = MIRBuilder.buildFreeze(SrcTy, Cmp->getLHSReg());
+  auto RHS = MIRBuilder.buildFreeze(SrcTy, Cmp->getRHSReg());
 
   CmpInst::Predicate LTPredicate = Cmp->isSigned()
                                        ? CmpInst::Predicate::ICMP_SLT
@@ -8591,10 +8593,8 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
                                        : CmpInst::Predicate::ICMP_UGT;
 
   auto Zero = MIRBuilder.buildConstant(DstTy, 0);
-  auto IsGT = MIRBuilder.buildICmp(GTPredicate, CmpTy, Cmp->getLHSReg(),
-                                   Cmp->getRHSReg());
-  auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, Cmp->getLHSReg(),
-                                   Cmp->getRHSReg());
+  auto IsGT = MIRBuilder.buildICmp(GTPredicate, CmpTy, LHS, RHS);
+  auto IsLT = MIRBuilder.buildICmp(LTPredicate, CmpTy, LHS, RHS);
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
   auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);

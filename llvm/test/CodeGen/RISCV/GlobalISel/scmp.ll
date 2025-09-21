@@ -5,6 +5,10 @@
 define i8 @scmp.8.8(i8 signext %x, i8 signext %y) nounwind {
 ; RV32I-LABEL: scmp.8.8:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    slli a1, a1, 24
+; RV32I-NEXT:    srai a0, a0, 24
+; RV32I-NEXT:    srai a1, a1, 24
 ; RV32I-NEXT:    slt a2, a1, a0
 ; RV32I-NEXT:    slt a0, a0, a1
 ; RV32I-NEXT:    sub a0, a2, a0
@@ -12,6 +16,10 @@ define i8 @scmp.8.8(i8 signext %x, i8 signext %y) nounwind {
 ;
 ; RV64I-LABEL: scmp.8.8:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    slli a1, a1, 56
+; RV64I-NEXT:    srai a0, a0, 56
+; RV64I-NEXT:    srai a1, a1, 56
 ; RV64I-NEXT:    slt a2, a1, a0
 ; RV64I-NEXT:    slt a0, a0, a1
 ; RV64I-NEXT:    sub a0, a2, a0
@@ -23,6 +31,10 @@ define i8 @scmp.8.8(i8 signext %x, i8 signext %y) nounwind {
 define i8 @scmp.8.16(i16 signext %x, i16 signext %y) nounwind {
 ; RV32I-LABEL: scmp.8.16:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    slli a1, a1, 16
+; RV32I-NEXT:    srai a0, a0, 16
+; RV32I-NEXT:    srai a1, a1, 16
 ; RV32I-NEXT:    slt a2, a1, a0
 ; RV32I-NEXT:    slt a0, a0, a1
 ; RV32I-NEXT:    sub a0, a2, a0
@@ -30,6 +42,10 @@ define i8 @scmp.8.16(i16 signext %x, i16 signext %y) nounwind {
 ;
 ; RV64I-LABEL: scmp.8.16:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    slli a1, a1, 48
+; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    slt a2, a1, a0
 ; RV64I-NEXT:    slt a0, a0, a1
 ; RV64I-NEXT:    sub a0, a2, a0
