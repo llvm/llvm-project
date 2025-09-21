@@ -44,7 +44,6 @@
 #include "llvm/Object/CVDebugRecord.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -133,8 +132,8 @@ public:
   /// Write the PDB to disk and store the Guid generated for it in *Guid.
   void commit(codeview::GUID *guid);
 
-  // Print statistics regarding the final PDB
-  void printStats();
+  // Collect some statistics regarding the final PDB
+  void collectStats();
 
 private:
   void pdbMakeAbsolute(SmallVectorImpl<char> &fileName);
@@ -154,13 +153,6 @@ private:
   DebugStringTableSubsection pdbStrTab;
 
   llvm::SmallString<128> nativePath;
-
-  // For statistics
-  uint64_t globalSymbols = 0;
-  uint64_t moduleSymbols = 0;
-  uint64_t publicSymbols = 0;
-  uint64_t nbTypeRecords = 0;
-  uint64_t nbTypeRecordsBytes = 0;
 };
 
 /// Represents an unrelocated DEBUG_S_FRAMEDATA subsection.
@@ -610,7 +602,9 @@ void PDBLinker::analyzeSymbolSubsection(
           addGlobalSymbol(builder.getGsiBuilder(),
                           file->moduleDBI->getModuleIndex(), moduleSymOffset,
                           storage);
-          ++globalSymbols;
+
+          if (ctx.pdbStats.has_value())
+            ++ctx.pdbStats->globalSymbols;
         }
 
         // Update the module stream offset and record any string table index
@@ -619,7 +613,9 @@ void PDBLinker::analyzeSymbolSubsection(
         if (symbolGoesInModuleStream(sym, scopeLevel)) {
           recordStringTableReferences(sym, moduleSymOffset, stringTableFixups);
           moduleSymOffset += alignedSize;
-          ++moduleSymbols;
+
+          if (ctx.pdbStats.has_value())
+            ++ctx.pdbStats->moduleSymbols;
         }
 
         return Error::success();
@@ -1192,10 +1188,10 @@ void PDBLinker::addObjectsToPDB() {
     }
   }
 
-  if (ctx.config.showSummary) {
+  if (ctx.pdbStats.has_value()) {
     for (TpiSource *source : ctx.tpiSourceList) {
-      nbTypeRecords += source->nbTypeRecords;
-      nbTypeRecordsBytes += source->nbTypeRecordsBytes;
+      ctx.pdbStats->nbTypeRecords += source->nbTypeRecords;
+      ctx.pdbStats->nbTypeRecordsBytes += source->nbTypeRecordsBytes;
     }
   }
 }
@@ -1231,42 +1227,23 @@ void PDBLinker::addPublicsToPDB() {
     }
   });
 
-  if (!publics.empty()) {
-    publicSymbols = publics.size();
+  if (ctx.pdbStats.has_value())
+    ctx.pdbStats->publicSymbols = publics.size();
+
+  if (!publics.empty())
     gsiBuilder.addPublicSymbols(std::move(publics));
-  }
 }
 
-void PDBLinker::printStats() {
+void PDBLinker::collectStats() {
   if (!ctx.config.showSummary)
     return;
 
+  ctx.pdbStats->nbTPIrecords = builder.getTpiBuilder().getRecordCount();
+  ctx.pdbStats->nbIPIrecords = builder.getIpiBuilder().getRecordCount();
+  ctx.pdbStats->strTabSize = pdbStrTab.size();
+
   SmallString<256> buffer;
   raw_svector_ostream stream(buffer);
-
-  stream << center_justify("Summary", 80) << '\n'
-         << std::string(80, '-') << '\n';
-
-  auto print = [&](uint64_t v, StringRef s) {
-    stream << formatv("{0}",
-                      fmt_align(formatv("{0:N}", v), AlignStyle::Right, 20))
-           << " " << s << '\n';
-  };
-
-  print(ctx.objFileInstances.size(),
-        "Input OBJ files (expanded from all cmd-line inputs)");
-  print(ctx.consumedInputsSize,
-        "Size of all consumed OBJ files (non-lazy), in bytes");
-  print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
-  print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
-  print(nbTypeRecords, "Input type records");
-  print(nbTypeRecordsBytes, "Size of all input type records, in bytes");
-  print(builder.getTpiBuilder().getRecordCount(), "Merged TPI records");
-  print(builder.getIpiBuilder().getRecordCount(), "Merged IPI records");
-  print(pdbStrTab.size(), "Output PDB strings");
-  print(globalSymbols, "Global symbol records");
-  print(moduleSymbols, "Module symbol records");
-  print(publicSymbols, "Public symbol records");
 
   auto printLargeInputTypeRecs = [&](StringRef name,
                                      ArrayRef<uint32_t> recCounts,
@@ -1318,9 +1295,9 @@ void PDBLinker::printStats() {
     // FIXME: Reimplement for ghash.
     printLargeInputTypeRecs("TPI", tMerger.tpiCounts, tMerger.getTypeTable());
     printLargeInputTypeRecs("IPI", tMerger.ipiCounts, tMerger.getIDTable());
-  }
 
-  Msg(ctx) << buffer;
+    ctx.pdbStats->largeInputTypeRecs = buffer.str();
+  }
 }
 
 void PDBLinker::addNatvisFiles() {
@@ -1624,6 +1601,9 @@ void lld::coff::createPDB(COFFLinkerContext &ctx,
   {
     PDBLinker pdb(ctx);
 
+    if (ctx.config.showSummary)
+      ctx.pdbStats.emplace();
+
     pdb.initialize(buildId);
     pdb.addObjectsToPDB();
     pdb.addImportFilesToPDB();
@@ -1640,8 +1620,8 @@ void lld::coff::createPDB(COFFLinkerContext &ctx,
       memcpy(&buildId->PDB70.Signature, &guid, 16);
     }
 
+    pdb.collectStats();
     t1.stop();
-    pdb.printStats();
 
     // Manually start this profile point to measure ~PDBLinker().
     if (getTimeTraceProfilerInstance() != nullptr)

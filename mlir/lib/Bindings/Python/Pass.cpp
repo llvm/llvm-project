@@ -57,6 +57,13 @@ private:
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
+  // Mapping of MlirExternalPass
+  //----------------------------------------------------------------------------
+  nb::class_<MlirExternalPass>(m, "ExternalPass")
+      .def("signal_pass_failure",
+           [](MlirExternalPass pass) { mlirExternalPassSignalFailure(pass); });
+
+  //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   nb::class_<PyPassManager>(m, "PassManager")
@@ -70,6 +77,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             new (&self) PyPassManager(passManager);
           },
           "anchor_op"_a = nb::str("any"), "context"_a = nb::none(),
+          // clang-format off
+          nb::sig("def __init__(self, anchor_op: str = 'any', context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> None"),
+          // clang-format on
           "Create a new PassManager for the current (or provided) Context.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyPassManager::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyPassManager::createFromCapsule)
@@ -142,6 +152,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             return new PyPassManager(passManager);
           },
           "pipeline"_a, "context"_a = nb::none(),
+          // clang-format off
+          nb::sig("def parse(pipeline: str, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> PassManager"),
+          // clang-format on
           "Parse a textual pass-pipeline and return a top-level PassManager "
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
@@ -182,9 +195,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             callbacks.clone = [](void *) -> void * {
               throw std::runtime_error("Cloning Python passes not supported");
             };
-            callbacks.run = [](MlirOperation op, MlirExternalPass,
+            callbacks.run = [](MlirOperation op, MlirExternalPass pass,
                                void *userData) {
-              nb::borrow<nb::callable>(static_cast<PyObject *>(userData))(op);
+              nb::handle(static_cast<PyObject *>(userData))(op, pass);
             };
             auto externalPass = mlirCreateExternalPass(
                 passID, mlirStringRefCreate(name->data(), name->length()),
@@ -210,6 +223,9 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
                               errors.take());
           },
           "operation"_a,
+          // clang-format off
+          nb::sig("def run(self, operation: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ") -> None"),
+          // clang-format on
           "Run the pass manager on the provided operation, raising an "
           "MLIRError on failure.")
       .def(

@@ -35,6 +35,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -57,26 +58,6 @@ template <typename T> struct make_const_ptr {
 template <typename T> struct make_const_ref {
   using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
-
-namespace detail {
-template <class, template <class...> class Op, class... Args> struct detector {
-  using value_t = std::false_type;
-};
-template <template <class...> class Op, class... Args>
-struct detector<std::void_t<Op<Args...>>, Op, Args...> {
-  using value_t = std::true_type;
-};
-} // end namespace detail
-
-/// Detects if a given trait holds for some set of arguments 'Args'.
-/// For example, the given trait could be used to detect if a given type
-/// has a copy assignment operator:
-///   template<class T>
-///   using has_copy_assign_t = decltype(std::declval<T&>()
-///                                                 = std::declval<const T&>());
-///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
-template <template <class...> class Op, class... Args>
-using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
 /// This class provides various trait information about a callable object.
 ///   * To access the number of arguments: Traits::num_args
@@ -132,6 +113,13 @@ using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 ///  the given types in the variadic list.
 template <typename T, typename... Ts>
 using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
+
+/// traits class for checking whether type `T` is same as all other types in
+/// `Ts`.
+template <typename T = void, typename... Ts>
+using all_types_equal = std::conjunction<std::is_same<T, Ts>...>;
+template <typename T = void, typename... Ts>
+constexpr bool all_types_equal_v = all_types_equal<T, Ts...>::value;
 
 /// Determine if all types in Ts are distinct.
 ///
@@ -1015,13 +1003,17 @@ class concat_iterator
 
   static constexpr bool ReturnsByValue =
       !(std::is_reference_v<decltype(*std::declval<IterTs>())> && ...);
+  static constexpr bool ReturnsConvertibleType =
+      !all_types_equal_v<
+          std::remove_cv_t<ValueT>,
+          remove_cvref_t<decltype(*std::declval<IterTs>())>...> &&
+      (std::is_convertible_v<decltype(*std::declval<IterTs>()), ValueT> && ...);
 
+  // Cannot return a reference type if a conversion takes place, provided that
+  // the result of dereferencing all `IterTs...` is convertible to `ValueT`.
   using reference_type =
-      typename std::conditional_t<ReturnsByValue, ValueT, ValueT &>;
-
-  using handle_type =
-      typename std::conditional_t<ReturnsByValue, std::optional<ValueT>,
-                                  ValueT *>;
+      std::conditional_t<ReturnsByValue || ReturnsConvertibleType, ValueT,
+                         ValueT &>;
 
   /// We store both the current and end iterators for each concatenated
   /// sequence in a tuple of pairs.
@@ -1032,49 +1024,38 @@ class concat_iterator
   std::tuple<IterTs...> Begins;
   std::tuple<IterTs...> Ends;
 
-  /// Attempts to increment a specific iterator.
-  ///
-  /// Returns true if it was able to increment the iterator. Returns false if
-  /// the iterator is already at the end iterator.
-  template <size_t Index> bool incrementHelper() {
+  /// Attempts to increment the `Index`-th iterator. If the iterator is already
+  /// at end, recurse over iterators in `Others...`.
+  template <size_t Index, size_t... Others> void incrementImpl() {
     auto &Begin = std::get<Index>(Begins);
     auto &End = std::get<Index>(Ends);
-    if (Begin == End)
-      return false;
-
+    if (Begin == End) {
+      if constexpr (sizeof...(Others) != 0)
+        return incrementImpl<Others...>();
+      llvm_unreachable("Attempted to increment an end concat iterator!");
+    }
     ++Begin;
-    return true;
   }
 
   /// Increments the first non-end iterator.
   ///
   /// It is an error to call this with all iterators at the end.
   template <size_t... Ns> void increment(std::index_sequence<Ns...>) {
-    // Build a sequence of functions to increment each iterator if possible.
-    bool (concat_iterator::*IncrementHelperFns[])() = {
-        &concat_iterator::incrementHelper<Ns>...};
-
-    // Loop over them, and stop as soon as we succeed at incrementing one.
-    for (auto &IncrementHelperFn : IncrementHelperFns)
-      if ((this->*IncrementHelperFn)())
-        return;
-
-    llvm_unreachable("Attempted to increment an end concat iterator!");
+    incrementImpl<Ns...>();
   }
 
-  /// Returns null if the specified iterator is at the end. Otherwise,
-  /// dereferences the iterator and returns the address of the resulting
-  /// reference.
-  template <size_t Index> handle_type getHelper() const {
+  /// Dereferences the `Index`-th iterator and returns the resulting reference.
+  /// If `Index` is at end, recurse over iterators in `Others...`.
+  template <size_t Index, size_t... Others> reference_type getImpl() const {
     auto &Begin = std::get<Index>(Begins);
     auto &End = std::get<Index>(Ends);
-    if (Begin == End)
-      return {};
-
-    if constexpr (ReturnsByValue)
-      return *Begin;
-    else
-      return &*Begin;
+    if (Begin == End) {
+      if constexpr (sizeof...(Others) != 0)
+        return getImpl<Others...>();
+      llvm_unreachable(
+          "Attempted to get a pointer from an end concat iterator!");
+    }
+    return *Begin;
   }
 
   /// Finds the first non-end iterator, dereferences, and returns the resulting
@@ -1082,16 +1063,7 @@ class concat_iterator
   ///
   /// It is an error to call this with all iterators at the end.
   template <size_t... Ns> reference_type get(std::index_sequence<Ns...>) const {
-    // Build a sequence of functions to get from iterator if possible.
-    handle_type (concat_iterator::*GetHelperFns[])()
-        const = {&concat_iterator::getHelper<Ns>...};
-
-    // Loop over them, and return the first result we find.
-    for (auto &GetHelperFn : GetHelperFns)
-      if (auto P = (this->*GetHelperFn)())
-        return *P;
-
-    llvm_unreachable("Attempted to get a pointer from an end concat iterator!");
+    return getImpl<Ns...>();
   }
 
 public:
@@ -1712,6 +1684,12 @@ template <typename R> constexpr size_t range_size(R &&Range) {
     return adl_size(Range);
   else
     return static_cast<size_t>(std::distance(adl_begin(Range), adl_end(Range)));
+}
+
+/// Wrapper for std::accumulate.
+template <typename R, typename E> auto accumulate(R &&Range, E &&Init) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init));
 }
 
 /// Provide wrappers to std::for_each which take ranges instead of having to

@@ -245,20 +245,10 @@ CodeGenOptLevel MipsSubtarget::getOptLevelToEnablePostRAScheduler() const {
 MipsSubtarget &
 MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                                const TargetMachine &TM) {
-  const Triple &TT = TM.getTargetTriple();
-  StringRef CPUName = MIPS_MC::selectMipsCPU(TT, CPU);
-
-  std::string FullFS;
-  if (getABI().ArePtrs64bit()) {
-    FullFS = "+ptr64";
-    if (!FS.empty())
-      FullFS = (Twine(FullFS) + "," + FS).str();
-  } else {
-    FullFS = FS.str();
-  }
+  StringRef CPUName = MIPS_MC::selectMipsCPU(TM.getTargetTriple(), CPU);
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, /*TuneCPU=*/CPUName, FullFS);
+  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
   // Initialize scheduling itinerary for the specified CPU.
   InstrItins = getInstrItineraryForCPU(CPUName);
 

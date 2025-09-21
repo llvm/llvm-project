@@ -82,13 +82,6 @@ protected:
   static constexpr size_t InlineStorageSize = sizeof(void *) * 3;
   static constexpr size_t InlineStorageAlign = alignof(void *);
 
-  template <typename T, class = void>
-  struct IsSizeLessThanThresholdT : std::false_type {};
-
-  template <typename T>
-  struct IsSizeLessThanThresholdT<
-      T, std::enable_if_t<sizeof(T) <= 2 * sizeof(void *)>> : std::true_type {};
-
   // Provide a type function to map parameters that won't observe extra copies
   // or moves and which are small enough to likely pass in register to values
   // and all other types to l-value reference types. We use this to compute the
@@ -101,6 +94,9 @@ protected:
   template <typename T> struct AdjustedParamTBase {
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
+    template <typename U>
+    using IsSizeLessThanThresholdT =
+        std::bool_constant<sizeof(U) <= 2 * sizeof(void *)>;
     using type =
         std::conditional_t<std::is_trivially_copy_constructible<T>::value &&
                                std::is_trivially_move_constructible<T>::value &&

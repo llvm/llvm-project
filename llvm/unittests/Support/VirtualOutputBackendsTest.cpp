@@ -559,9 +559,9 @@ Error OnDiskOutputBackendProvider::checkKept(StringRef FilePath,
   if (Error E = lookupFileInfo(FilePath, Info))
     return E;
 
+#ifndef _WIN32
   sys::fs::UniqueID UID =
       shouldUseTemporaries(*Info) ? *Info->TempUID : *Info->UID;
-#ifndef _WIN32
   if (!Info->F->hasUniqueID(UID))
     return createStringError(inconvertibleErrorCode(),
                              "File not created by keep or changed UID");

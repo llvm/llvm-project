@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Demangle
   Support
   TableGen
+  SupportLSP
 )
 
 llvm_add_library(TableGenLspServerLib
@@ -17,5 +18,4 @@ llvm_add_library(TableGenLspServerLib
   LINK_LIBS PUBLIC
   MLIRLspServerSupportLib
   MLIRSupport
-  LLVMSupportLSP
   )
