@@ -1213,8 +1213,8 @@ bool Preprocessor::HandleModuleContextualKeyword(
     LookUpIdentifierInfo(*NextTok);
 
   if (Result.getIdentifierInfo()->isModulesImport()) {
-    if (NextTok->isOneOf(tok::identifier, tok::less, tok::string_literal,
-                         tok::colon, tok::header_name)) {
+    if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
+                         tok::header_name)) {
       Result.setKind(tok::kw_import);
       ModuleImportLoc = Result.getLocation();
       IsAtImport = false;
