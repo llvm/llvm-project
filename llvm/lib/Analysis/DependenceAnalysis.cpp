@@ -389,7 +389,8 @@ bool FullDependence::isSplitable(unsigned Level, bool isSameSD) const {
 // performed across two separate loop nests that have the Same iteration space
 // and Depth.
 bool FullDependence::inSameSDLoops(unsigned Level) const {
-  assert(0 < Level && Level <= Levels + SameSDLevels && "Level out of range");
+  assert(0 < Level && Level <= static_cast<unsigned>(Levels) + SameSDLevels &&
+         "Level out of range");
   return Level > Levels;
 }
 
