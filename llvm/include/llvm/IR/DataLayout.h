@@ -81,7 +81,7 @@ public:
     /// If the index width is less than the representation bit width, the
     /// pointer is non-integral and bits beyond the index width could be used
     /// for additional metadata (e.g. AMDGPU buffer fat pointers with bounds
-    /// and other flags or CHERI capabilities that contain bounds+permissions.
+    /// and other flags or CHERI capabilities that contain bounds+permissions).
     uint32_t IndexBitWidth;
     /// Pointers in this address space don't have a well-defined bitwise
     /// representation (e.g. they may be relocated by a copying garbage
@@ -383,9 +383,9 @@ public:
   /// NOTE: This also returns true for "unstable" pointers where the
   /// representation may be just an address, but this value can change at any
   /// given time (e.g. due to copying garbage collection).
-  /// Examples include AMDGPU buffer descriptors
-  /// with a 128-bit fat pointer and a 32-bit offset or CHERI capabilities that
-  /// contain bounds, permissions and an out-of-band validity bit.
+  /// Examples include AMDGPU buffer descriptors with a 128-bit fat pointer
+  /// and a 32-bit offset or CHERI capabilities that contain bounds, permissions
+  /// and an out-of-band validity bit.
   ///
   /// In general, more specialized functions such as shouldAvoidIntToPtr(),
   /// shouldAvoidPtrToInt(), or hasExternalState() should be preferred over
@@ -393,7 +393,8 @@ public:
   /// TODO: should remove/deprecate this once all uses have migrated.
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
     const auto &PS = getPointerSpec(AddrSpace);
-    return PS.BitWidth != PS.IndexBitWidth || PS.HasUnstableRepresentation;
+    return PS.BitWidth != PS.IndexBitWidth || PS.HasUnstableRepresentation ||
+           PS.HasExternalState;
   }
 
   /// Returns whether this address space has an "unstable" pointer

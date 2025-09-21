@@ -31,6 +31,7 @@ public:
     UsesELFSectionDirectiveForBSS = true;
     HasSingleParameterDotFile = true;
     HasDotTypeDotSizeDirective = true;
+    HasIdentDirective = false;
 
     SupportsDebugInformation = true;
     ExceptionsType = ExceptionHandling::DwarfCFI;
