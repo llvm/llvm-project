@@ -15,9 +15,12 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr76_vgpr77_vgpr78_vgpr79
   ; GCN-NEXT:    ; implicit-def: $vgpr106
   ; GCN-NEXT:    ; implicit-def: $vgpr132
+  ; GCN-NEXT:    ; implicit-def: $vgpr112
+  ; GCN-NEXT:    ; implicit-def: $vgpr113
+  ; GCN-NEXT:    ; implicit-def: $vgpr114
+  ; GCN-NEXT:    ; implicit-def: $vgpr115
   ; GCN-NEXT:    ; implicit-def: $vgpr133
   ; GCN-NEXT:    ; implicit-def: $vgpr139
-  ; GCN-NEXT:    ; implicit-def: $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127
   ; GCN-NEXT:    ; iglp_opt mask(0x00000002)
   ; GCN-NEXT:    ; implicit-def: $sgpr0
   ; GCN-NEXT:    ; implicit-def: $vgpr16
@@ -222,6 +225,9 @@
   ; GCN-NEXT:    buffer_load_dwordx4 v[152:155], v226, s[8:11], 0 offen offset:192 sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
+  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[72:73], v[76:77], v[0:15]
+  ; GCN-NEXT:    v_add_u32_e32 v72, 0xc0, v93
+  ; GCN-NEXT:    v_add_u32_e32 v73, v132, v112
   ; GCN-NEXT:    buffer_load_dwordx4 v[68:71], v72, s[8:11], 0 offen sc0 sc1
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[64:79], v[184:185], v[156:157], v[64:79]
   ; GCN-NEXT:    buffer_load_dwordx4 v[226:229], v227, s[8:11], 0 offen sc0 sc1
@@ -236,15 +242,12 @@
   ; GCN-NEXT:    buffer_load_dwordx2 v[162:163], v232, s[0:3], 0 offen sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
-  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[74:75], v[78:79], v[0:15]
-  ; GCN-NEXT:    ; implicit-def: $vgpr74
-  ; GCN-NEXT:    v_add_u32_e32 v72, v132, v74
-  ; GCN-NEXT:    ; implicit-def: $vgpr75
+  ; GCN-NEXT:    v_add_u32_e32 v72, v132, v114
   ; GCN-NEXT:    buffer_load_dwordx2 v[100:101], v72, s[0:3], 0 offen sc0 sc1
   ; GCN-NEXT:    buffer_load_dwordx2 v[172:173], v233, s[0:3], 0 offen sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
-  ; GCN-NEXT:    v_add_u32_e32 v72, v132, v75
+  ; GCN-NEXT:    v_add_u32_e32 v72, v132, v115
   ; GCN-NEXT:    buffer_load_dwordx2 v[104:105], v72, s[0:3], 0 offen sc0 sc1
   ; GCN-NEXT:    buffer_load_dwordx2 v[174:175], v234, s[0:3], 0 offen sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -252,6 +255,8 @@
   ; GCN-NEXT:    ;;#ASMSTART
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
+  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[74:75], v[78:79], v[0:15]
+  ; GCN-NEXT:    ; kill: killed $vgpr73
   ; GCN-NEXT:    ds_read_b128 v[72:75], v94
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[64:79], v[186:187], v[158:159], v[64:79]
   ; GCN-NEXT:    v_perm_b32 v238, v162, v160, s5
@@ -262,9 +267,11 @@
   ; GCN-NEXT:    ds_read_b128 v[160:163], v213
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
-  ; GCN-NEXT:    ; kill: killed $vgpr76
   ; GCN-NEXT:    ; implicit-def: $vgpr76_vgpr77_vgpr78_vgpr79
   ; GCN-NEXT:    ; implicit-def: $sgpr8
+  ; GCN-NEXT:    ; implicit-def: $vgpr112
+  ; GCN-NEXT:    ; implicit-def: $vgpr113
+  ; GCN-NEXT:    ; implicit-def: $vgpr114
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[48:63], v[72:73], v[76:77], v[48:63]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[48:63], v[74:75], v[78:79], v[48:63]
   ; GCN-NEXT:    ds_read_b128 v[72:75], v94 offset:512

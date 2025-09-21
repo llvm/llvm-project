@@ -506,13 +506,13 @@ define void @test_rewrite_mfma_subreg_insert1(float %arg0, float %arg1, ptr addr
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v0, v1, v[2:5]
+; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[6:9], v0, v1, v[2:5]
 ; CHECK-NEXT:    s_nop 3
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[6:7], v[8:9] op_sel:[1,0]
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v3
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v9
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use a[0:7]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -711,15 +711,15 @@ define void @test_rewrite_mfma_copy_from_agpr_class_f64_4x4x4f64_chain(double %a
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_and_b32_e32 v12, 0x3ff, v31
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], v[2:3], a[0:1]
-; CHECK-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
-; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[8:9], 0, v[2:3]
+; CHECK-NEXT:    s_nop 3
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[4:5], v[6:7], a[0:1]
-; CHECK-NEXT:    s_nop 8
-; CHECK-NEXT:    global_store_dwordx2 v[2:3], a[0:1], off
+; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 3, v12
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_lshl_add_u64 v[4:5], v[8:9], 0, v[4:5]
+; CHECK-NEXT:    s_nop 5
+; CHECK-NEXT:    global_store_dwordx2 v[4:5], a[0:1], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %src2 = call double asm sideeffect "; def $0", "=a"()
