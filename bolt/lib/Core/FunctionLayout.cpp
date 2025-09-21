@@ -241,6 +241,22 @@ FunctionLayout::getBasicBlockAfter(const BinaryBasicBlock *BB,
   return *BlockAfter;
 }
 
+DenseMap<BinaryBasicBlock *, BinaryBasicBlock *>
+FunctionLayout::getBasicBlocksAfter(bool IgnoreSplits) const {
+  DenseMap<BinaryBasicBlock *, BinaryBasicBlock *> NextBasicBlock(block_size());
+  for (size_t i = 0; i + 1 < block_size(); i++) {
+    auto Current = block_begin() + i;
+    auto Next = block_begin() + i + 1;
+
+    if (IgnoreSplits) {
+      NextBasicBlock.insert(std::pair(*Current, *Next));
+    } else if (Next != getFragment((*Current)->getFragmentNum()).end()) {
+      NextBasicBlock.insert(std::pair(*Current, *Next));
+    }
+  }
+  return NextBasicBlock;
+}
+
 bool FunctionLayout::isSplit() const {
   const unsigned NonEmptyFragCount = llvm::count_if(
       fragments(), [](const FunctionFragment &FF) { return !FF.empty(); });

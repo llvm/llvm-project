@@ -243,8 +243,17 @@ public:
 
   /// Returns the basic block after the given basic block in the layout or
   /// nullptr if the last basic block is given.
+  ///
+  /// Note that this performs a linear search for BB.
   const BinaryBasicBlock *getBasicBlockAfter(const BinaryBasicBlock *BB,
                                              bool IgnoreSplits = true) const;
+
+  /// Returns a mapping from BB -> getBasicBlockAfter(BB).
+  ///
+  /// This should be preferred in loops that call getBasicBlockAfter without
+  /// changes to the function layout. Caching the results avoid n^2 lookup cost.
+  DenseMap<BinaryBasicBlock *, BinaryBasicBlock *>
+  getBasicBlocksAfter(bool IgnoreSplits = true) const;
 
   /// True if the layout contains at least two non-empty fragments.
   bool isSplit() const;

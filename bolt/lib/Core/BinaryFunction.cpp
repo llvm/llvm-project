@@ -3591,17 +3591,7 @@ void BinaryFunction::fixBranches() {
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
-  // Caches `FunctionLayout::nextBasicBlock(IgnoreSplits = false)`.
-  // nextBasicBlock uses linear search to find the next block, so the loop
-  // below becomes O(n^2). This avoids that.
-  DenseMap<BinaryBasicBlock *, BinaryBasicBlock *> nextBasicBlock(
-      Layout.block_size());
-  for (size_t i = 0; i + 1 < Layout.block_size(); i++) {
-    auto current = Layout.block_begin() + i;
-    auto next = Layout.block_begin() + i + 1;
-    if (next != Layout.getFragment((*current)->getFragmentNum()).end())
-      nextBasicBlock.insert(std::pair(*current, *next));
-  }
+  auto NextBasicBlock = Layout.getBasicBlocksAfter(/* IgnoreSplits */ false);
 
   for (BinaryBasicBlock *BB : BasicBlocks) {
     const MCSymbol *TBB = nullptr;
@@ -3617,7 +3607,7 @@ void BinaryFunction::fixBranches() {
 
     // Basic block that follows the current one in the final layout.
     const BinaryBasicBlock *const NextBB =
-        nextBasicBlock.lookup_or(BB, nullptr);
+        NextBasicBlock.lookup_or(BB, nullptr);
 
     if (BB->succ_size() == 1) {
       // __builtin_unreachable() could create a conditional branch that
