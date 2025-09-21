@@ -125,21 +125,42 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   nb::class_<MlirPDLResultList>(m, "PDLResultList")
-      .def("push_back",
-           [](MlirPDLResultList results, const PyValue &value) {
-             mlirPDLResultListPushBackValue(results, value);
-           })
-      .def("push_back",
-           [](MlirPDLResultList results, const PyOperation &op) {
-             mlirPDLResultListPushBackOperation(results, op);
-           })
-      .def("push_back",
-           [](MlirPDLResultList results, const PyType &type) {
-             mlirPDLResultListPushBackType(results, type);
-           })
-      .def("push_back", [](MlirPDLResultList results, const PyAttribute &attr) {
-        mlirPDLResultListPushBackAttribute(results, attr);
-      });
+      .def(
+          "push_back",
+          [](MlirPDLResultList results, const PyValue &value) {
+            mlirPDLResultListPushBackValue(results, value);
+          },
+          // clang-format off
+          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
+          // clang-format on
+          )
+      .def(
+          "push_back",
+          [](MlirPDLResultList results, const PyOperation &op) {
+            mlirPDLResultListPushBackOperation(results, op);
+          },
+          // clang-format off
+          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
+          // clang-format on
+          )
+      .def(
+          "push_back",
+          [](MlirPDLResultList results, const PyType &type) {
+            mlirPDLResultListPushBackType(results, type);
+          },
+          // clang-format off
+          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
+          // clang-format on
+          )
+      .def(
+          "push_back",
+          [](MlirPDLResultList results, const PyAttribute &attr) {
+            mlirPDLResultListPushBackAttribute(results, attr);
+          },
+          // clang-format off
+          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
+          // clang-format on
+      );
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
       .def(
           "__init__",
