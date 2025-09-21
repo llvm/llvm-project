@@ -44,6 +44,22 @@ static bool matchNVarDeclStartingWith(
   const DeclStmt *EndDS = nullptr;
   size_t N = InnerMatchers.size();
   size_t Count = 0;
+
+  auto Matches = [&](const Decl *VD) {
+    // We don't want redundant decls in DeclStmt.
+    if (Count == N)
+      return false;
+
+    if (const auto *Var = dyn_cast<VarDecl>(VD);
+        Var && InnerMatchers[Backwards ? N - Count - 1 : Count].matches(
+                   *Var, Finder, Builder)) {
+      ++Count;
+      return true;
+    }
+
+    return false;
+  };
+
   for (; Iter != EndIter; ++Iter) {
     EndDS = dyn_cast<DeclStmt>(*Iter);
     if (!EndDS)
@@ -51,21 +67,6 @@ static bool matchNVarDeclStartingWith(
 
     if (!BeginDS)
       BeginDS = EndDS;
-
-    auto Matches = [&](const Decl *VD) {
-      // We don't want redundant decls in DeclStmt.
-      if (Count == N)
-        return false;
-
-      if (const auto *Var = dyn_cast<VarDecl>(VD);
-          Var && InnerMatchers[Backwards ? N - Count - 1 : Count].matches(
-                     *Var, Finder, Builder)) {
-        ++Count;
-        return true;
-      }
-
-      return false;
-    };
 
     if (Backwards) {
       for (const auto *VD : llvm::reverse(EndDS->decls())) {
