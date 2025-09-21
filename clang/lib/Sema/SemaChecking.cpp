@@ -12382,6 +12382,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       }
       // ... or possibly if we're increasing rank, too
       else if (Order < 0) {
+        // Don't warn if we are in a C++ list initialization expression, as
+        // that means the promotion was asked for explicitly.
+        if (IsListInit)
+          return;
+
         if (SourceMgr.isInSystemMacro(CC))
           return;
 
