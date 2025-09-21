@@ -66,6 +66,21 @@ using namespace omp;
 
 #define DEBUG_TYPE "openmp-opt"
 
+static bool isOMPRTLLoopFunc(RuntimeFunction RF) {
+  return RF == OMPRTL___kmpc_distribute_static_loop_4 ||
+         RF == OMPRTL___kmpc_distribute_static_loop_4u ||
+         RF == OMPRTL___kmpc_distribute_static_loop_8 ||
+         RF == OMPRTL___kmpc_distribute_static_loop_8u ||
+         RF == OMPRTL___kmpc_distribute_for_static_loop_4 ||
+         RF == OMPRTL___kmpc_distribute_for_static_loop_4u ||
+         RF == OMPRTL___kmpc_distribute_for_static_loop_8 ||
+         RF == OMPRTL___kmpc_distribute_for_static_loop_8u ||
+         RF == OMPRTL___kmpc_for_static_loop_4 ||
+         RF == OMPRTL___kmpc_for_static_loop_4u ||
+         RF == OMPRTL___kmpc_for_static_loop_8 ||
+         RF == OMPRTL___kmpc_for_static_loop_8u;
+}
+
 static cl::opt<bool> DisableOpenMPOptimizations(
     "openmp-opt-disable", cl::desc("Disable OpenMP specific optimizations."),
     cl::Hidden, cl::init(false));
@@ -4559,13 +4574,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // parallel regions we expect, if there are any.
     for (int I = 0, E = ReachedKnownParallelRegions.size(); I < E; ++I) {
       auto *CB = ReachedKnownParallelRegions[I];
-      auto *ParallelRegion = dyn_cast<Function>(
-          CB->getArgOperand(WrapperFunctionArgNo)->stripPointerCasts());
+      auto *ParallelRegion =
+          CB->getArgOperand(WrapperFunctionArgNo)->stripPointerCasts();
       BasicBlock *PRExecuteBB = BasicBlock::Create(
           Ctx, "worker_state_machine.parallel_region.execute", Kernel,
           StateMachineEndParallelBB);
-      CallInst::Create(ParallelRegion, {ZeroArg, GTid}, "", PRExecuteBB)
-          ->setDebugLoc(DLoc);
+      if (auto *ParallelRegionFn = dyn_cast<Function>(ParallelRegion)) {
+        CallInst::Create(ParallelRegionFn, {ZeroArg, GTid}, "", PRExecuteBB)
+            ->setDebugLoc(DLoc);
+      }
       BranchInst::Create(StateMachineEndParallelBB, PRExecuteBB)
           ->setDebugLoc(DLoc);
 
@@ -4891,37 +4908,41 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       return;
     }
 
-    // Next we check if we know the callee. If it is a known OpenMP function
-    // we will handle them explicitly in the switch below. If it is not, we
-    // will use an AAKernelInfo object on the callee to gather information and
-    // merge that into the current state. The latter happens in the updateImpl.
+    // Next we check if we know the callee.
+    // If it is not a known OpenMP function we use an AAKernelInfo object on the
+    // callee to gather information and merge that into the current state. This
+    // will happen later in the updateImpl.
+    auto CheckNonOmpRTLCallee = [&](Function *Callee) {
+      // Unknown caller or declarations are not analyzable, we give up.
+      if (!Callee || !A.isFunctionIPOAmendable(*Callee)) {
+        // Unknown callees might contain parallel regions, except if they have
+        // an appropriate assumption attached.
+        if (!AssumptionAA ||
+            !(AssumptionAA->hasAssumption("omp_no_openmp") ||
+              AssumptionAA->hasAssumption("omp_no_parallelism")))
+          ReachedUnknownParallelRegions.insert(&CB);
+
+        // If SPMDCompatibilityTracker is not fixed, we need to give up on
+        // the idea we can run something unknown in SPMD-mode.
+        if (!SPMDCompatibilityTracker.isAtFixpoint()) {
+          SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+          SPMDCompatibilityTracker.insert(&CB);
+        }
+
+        // We have updated the state for this unknown call properly, there
+        // won't be any change so we indicate a fixpoint.
+        indicateOptimisticFixpoint();
+      }
+    };
+
+    // Known OpenMP functions will be handled explicitly in the switch below.
     auto CheckCallee = [&](Function *Callee, unsigned NumCallees) {
       auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
       const auto &It = OMPInfoCache.RuntimeFunctionIDMap.find(Callee);
       if (It == OMPInfoCache.RuntimeFunctionIDMap.end()) {
-        // Unknown caller or declarations are not analyzable, we give up.
-        if (!Callee || !A.isFunctionIPOAmendable(*Callee)) {
-
-          // Unknown callees might contain parallel regions, except if they have
-          // an appropriate assumption attached.
-          if (!AssumptionAA ||
-              !(AssumptionAA->hasAssumption("omp_no_openmp") ||
-                AssumptionAA->hasAssumption("omp_no_parallelism")))
-            ReachedUnknownParallelRegions.insert(&CB);
-
-          // If SPMDCompatibilityTracker is not fixed, we need to give up on the
-          // idea we can run something unknown in SPMD-mode.
-          if (!SPMDCompatibilityTracker.isAtFixpoint()) {
-            SPMDCompatibilityTracker.indicatePessimisticFixpoint();
-            SPMDCompatibilityTracker.insert(&CB);
-          }
-
-          // We have updated the state for this unknown call properly, there
-          // won't be any change so we indicate a fixpoint.
-          indicateOptimisticFixpoint();
-        }
         // If the callee is known and can be used in IPO, we will update the
         // state based on the callee state in updateImpl.
+        CheckNonOmpRTLCallee(Callee);
         return;
       }
       if (NumCallees > 1) {
@@ -5000,6 +5021,27 @@ struct AAKernelInfoCallSite : AAKernelInfo {
           break;
         };
       } break;
+      case OMPRTL___kmpc_distribute_static_loop_4:
+      case OMPRTL___kmpc_distribute_static_loop_4u:
+      case OMPRTL___kmpc_distribute_static_loop_8:
+      case OMPRTL___kmpc_distribute_static_loop_8u:
+      case OMPRTL___kmpc_distribute_for_static_loop_4:
+      case OMPRTL___kmpc_distribute_for_static_loop_4u:
+      case OMPRTL___kmpc_distribute_for_static_loop_8:
+      case OMPRTL___kmpc_distribute_for_static_loop_8u:
+      case OMPRTL___kmpc_for_static_loop_4:
+      case OMPRTL___kmpc_for_static_loop_4u:
+      case OMPRTL___kmpc_for_static_loop_8:
+      case OMPRTL___kmpc_for_static_loop_8u: {
+        // Check the contents of the callback, which contains the body executed
+        // in a loop by these functions.
+        unsigned CallBackArgOpNo = 1;
+        auto *CallBackFunc = cast<Function>(CB.getArgOperand(CallBackArgOpNo));
+        // If the callee is known and can be used in IPO, we will update the
+        // state based on the callee state in updateImpl.
+        CheckNonOmpRTLCallee(CallBackFunc);
+        return;
+      }
       case OMPRTL___kmpc_target_init:
         KernelInitCB = &CB;
         break;
@@ -5056,11 +5098,18 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     KernelInfoState StateBefore = getState();
 
     auto CheckCallee = [&](Function *F, int NumCallees) {
+      CallBase &CB = cast<CallBase>(getAssociatedValue());
       const auto &It = OMPInfoCache.RuntimeFunctionIDMap.find(F);
+      bool IsStaticLoopFn = It != OMPInfoCache.RuntimeFunctionIDMap.end() &&
+                            isOMPRTLLoopFunc(It->getSecond());
 
       // If F is not a runtime function, propagate the AAKernelInfo of the
       // callee.
-      if (It == OMPInfoCache.RuntimeFunctionIDMap.end()) {
+      if (It == OMPInfoCache.RuntimeFunctionIDMap.end() || IsStaticLoopFn) {
+        if (IsStaticLoopFn) {
+          unsigned CallBackArgOpNo = 1;
+          F = cast<Function>(CB.getArgOperand(CallBackArgOpNo));
+        }
         const IRPosition &FnPos = IRPosition::function(*F);
         auto *FnAA =
             A.getAAFor<AAKernelInfo>(*this, FnPos, DepClassTy::REQUIRED);
@@ -5074,7 +5123,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       if (NumCallees > 1)
         return indicatePessimisticFixpoint();
 
-      CallBase &CB = cast<CallBase>(getAssociatedValue());
       if (It->getSecond() == OMPRTL___kmpc_parallel_51) {
         if (!handleParallel51(A, CB))
           return indicatePessimisticFixpoint();
