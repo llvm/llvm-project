@@ -182,10 +182,10 @@ class ClangFormatHelper(FormatHelper):
     friendly_name = "C/C++ code formatter"
 
     def _construct_command(self, diff_expression: list[str] | None):
-        cf_cmd = [self.clang_fmt_path, "--diff"]
+        cf_cmd = [self.clang_fmt_path, "HEAD~1"]
 
-        if diff_expression:
-            cf_cmd.extend(diff_expression)
+        # if diff_expression:
+        #     cf_cmd.extend(diff_expression)
 
         # Gather the extension of all modified files and pass them explicitly to git-clang-format.
         # This prevents git-clang-format from applying its own filtering rules on top of ours.

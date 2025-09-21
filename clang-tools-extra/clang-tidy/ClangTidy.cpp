@@ -505,8 +505,11 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
 ClangTidyOptions::OptionMap ClangTidyASTConsumerFactory::getCheckOptions() {
   ClangTidyOptions::OptionMap Options;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
-      CheckFactories->createChecks(&Context);
-  for (const auto &Check : Checks)
+      CheckFactories->createChecks 
+      (&Context);
+  for (const 
+    
+    auto &Check : Checks)
     Check->storeOptions(Options);
   return Options;
 }
