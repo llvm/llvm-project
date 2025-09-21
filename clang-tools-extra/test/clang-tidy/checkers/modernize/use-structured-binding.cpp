@@ -402,6 +402,61 @@ void OtherPairTest() {
     int x = P.first;
     int y = P.second;
   }
+
+  {
+    const auto P = otherPair();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: const auto [x, y] = otherPair();
+    const int x = P.first;
+    const auto y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+
+  {
+    otherPair otherP;
+    auto& P = otherP;
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: auto& [x, y] = otherP;
+    int& x = P.first;
+    auto& y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+
+  {
+    std::pair<int, int> otherP;
+    const auto& P = otherP;
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: const auto& [x, y] = otherP;
+    const int& x = P.first;
+    const auto& y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+}
+
+void OtherPairNotWarnCases() {
+  {
+    auto P = otherPair();
+    const int x = P.first;
+    int y = P.second;
+  }
+
+  {
+    auto P = otherPair();
+    volatile int x = P.first;
+    int y = P.second;
+  }
+
+  {
+    auto P = otherPair();
+    int x = P.first;
+    [[maybe_unused]] int y = P.second;
+  }
+
+  {
+    static auto P = getPair<int, int>();
+    int x = P.first;
+    int y = P.second;
+  }
 }
 
 struct otherNonPair1 {
