@@ -223,6 +223,21 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
     return declRefExpr(to(varDecl(UnlessShouldBeIgnored).bind(Name)));
   };
 
+  auto HasAnyLambdaCaptureThisVar =
+      [](ast_matchers::internal::Matcher<VarDecl> VDMatcher)
+      -> ast_matchers::internal::BindableMatcher<Stmt> {
+    return compoundStmt(hasDescendant(
+        lambdaExpr(hasAnyCapture(capturesVar(varDecl(VDMatcher))))));
+  };
+
+  // Captured structured bindings are a C++20 extension
+  auto UnlessFirstVarOrSecondVarIsCapturedByLambda =
+      getLangOpts().CPlusPlus20
+          ? compoundStmt()
+          : compoundStmt(unless(HasAnyLambdaCaptureThisVar(
+                anyOf(equalsBoundNode(std::string(FirstVarDeclName)),
+                      equalsBoundNode(std::string(SecondVarDeclName))))));
+
   // X x;
   // Y y;
   // std::tie(x, y) = ...;
@@ -243,7 +258,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   varDecl(equalsBoundNode(std::string(FirstVarDeclName))),
                   varDecl(equalsBoundNode(std::string(SecondVarDeclName)))}),
-          hasParent(compoundStmt().bind(ScopeBlockName))),
+          hasParent(compoundStmt(UnlessFirstVarOrSecondVarIsCapturedByLambda)
+                        .bind(ScopeBlockName))),
       this);
 
   // pair<X, Y> p = ...;
@@ -262,7 +278,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
           hasNextTwoVarDecl(
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   VarInitWithFirstMember, VarInitWithSecondMember}),
-          hasParent(compoundStmt().bind(ScopeBlockName))),
+          hasParent(compoundStmt(UnlessFirstVarOrSecondVarIsCapturedByLambda)
+                        .bind(ScopeBlockName))),
       this);
 
   // for (pair<X, Y> p : map) {
@@ -282,7 +299,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
               compoundStmt(
                   hasFirstTwoVarDecl(llvm::SmallVector<
                                      ast_matchers::internal::Matcher<VarDecl>>{
-                      VarInitWithFirstMember, VarInitWithSecondMember}))
+                      VarInitWithFirstMember, VarInitWithSecondMember}),
+                  UnlessFirstVarOrSecondVarIsCapturedByLambda)
                   .bind(ScopeBlockName)))
           .bind(ForRangeStmtName),
       this);
@@ -316,17 +334,6 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BeginDS = Result.Nodes.getNodeAs<DeclStmt>(BeginDeclStmtName);
   const auto *EndDS = Result.Nodes.getNodeAs<DeclStmt>(EndDeclStmtName);
   const auto *ScopeBlock = Result.Nodes.getNodeAs<CompoundStmt>(ScopeBlockName);
-
-  // Captured structured bindings are a C++20 extension
-  if (!Result.Context->getLangOpts().CPlusPlus20) {
-    if (auto Matchers = match(
-            compoundStmt(
-                hasDescendant(lambdaExpr(hasAnyCapture(capturesVar(varDecl(
-                    anyOf(equalsNode(FirstVar), equalsNode(SecondVar)))))))),
-            *ScopeBlock, *Result.Context);
-        !Matchers.empty())
-      return;
-  }
 
   const auto *CFRS = Result.Nodes.getNodeAs<CXXForRangeStmt>(ForRangeStmtName);
   auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
