@@ -18,8 +18,7 @@ void DecomposeByAssignWarnCases() {
     auto P = getPair<int, int>();
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: auto [x, y] = getPair<int, int>();
-    int x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    int x = P.first;
     int y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -45,8 +44,7 @@ void DecomposeByAssignWarnCases() {
     auto P = getPair<int, int>();
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: auto [x, y] = getPair<int, int>();
-    int x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    int x = P.first;
     auto y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -55,8 +53,7 @@ void DecomposeByAssignWarnCases() {
     const auto P = getPair<int, int>();
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: const auto [x, y] = getPair<int, int>();
-    const int x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    const int x = P.first;
     const auto y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -66,8 +63,7 @@ void DecomposeByAssignWarnCases() {
     auto& P = otherP;
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: auto& [x, y] = otherP;
-    int& x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    int& x = P.first;
     auto& y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -77,8 +73,7 @@ void DecomposeByAssignWarnCases() {
     const auto& P = otherP;
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: const auto& [x, y] = otherP;
-    const int& x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    const int& x = P.first;
     const auto& y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -89,8 +84,7 @@ void forRangeWarnCases() {
   for (auto P : Pairs) {
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: for (auto [x, y] : Pairs) {
-    int x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    int x = P.first;
     int y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -113,8 +107,7 @@ void forRangeWarnCases() {
   for (const auto P : Pairs) {
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: for (const auto [x, y] : Pairs) {
-    const int x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    const int x = P.first;
     const int y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -122,8 +115,7 @@ void forRangeWarnCases() {
   for (auto& P : Pairs) {
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: for (auto& [x, y] : Pairs) {
-    int& x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    int& x = P.first;
     int& y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -131,8 +123,7 @@ void forRangeWarnCases() {
   for (const auto& P : Pairs) {
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: for (const auto& [x, y] : Pairs) {
-    const int& x = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    const int& x = P.first;
     const int& y = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -141,8 +132,7 @@ void forRangeWarnCases() {
   for (auto P : ClassPairs) {
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: for (auto [c1, c2] : ClassPairs) {
-    TestClass c1 = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    TestClass c1 = P.first;
     TestClass c2 = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -150,8 +140,7 @@ void forRangeWarnCases() {
   for (const auto P : ClassPairs) {
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES-ALL: for (const auto [c1, c2] : ClassPairs) {
-    const TestClass c1 = P.first; // REMOVE
-    // CHECK-FIXES-ALL: // REMOVE
+    const TestClass c1 = P.first;
     const TestClass c2 = P.second; // REMOVE
     // CHECK-FIXES-ALL: // REMOVE
   }
@@ -193,8 +182,7 @@ void forRangeNotWarnCases() {
 }
 
 void stdTieWarnCases() {
-  int a = 0; // REMOVE
-  // CHECK-FIXES-ALL: // REMOVE
+  int a = 0;
   int b = 0; // REMOVE
   // CHECK-FIXES-ALL: // REMOVE
   std::tie(a, b) = getPair<int, int>();
@@ -207,16 +195,14 @@ void stdTieWarnCases() {
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-ALL: auto [x, y] = getPair<int, int>();
 
-  int* pa = nullptr; // REMOVE
-  // CHECK-FIXES-ALL: // REMOVE
+  int* pa = nullptr;
   int* pb = nullptr; // REMOVE
   // CHECK-FIXES-ALL: // REMOVE
   std::tie(pa, pb) = getPair<int*, int*>();
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-ALL: auto [pa, pb] = getPair<int*, int*>();
 
-  TestClass c1 (1, 2); // REMOVE
-  // CHECK-FIXES-ALL: // REMOVE
+  TestClass c1 (1, 2);
   TestClass c2 = TestClass {3, 4}; // REMOVE
   // CHECK-FIXES-ALL: // REMOVE
   std::tie(c1, c2) = getPair<TestClass, TestClass>();
@@ -325,8 +311,7 @@ void captureByVal() {
   auto P = getPair<int, int>();
   // CHECK-MESSAGES-CPP20ORLATER: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-CPP20ORLATER: auto [x, y] = getPair<int, int>();
-  int x = P.first; // REMOVE
-  // CHECK-FIXES-CPP20ORLATER: // REMOVE
+  int x = P.first;
   int y = P.second; // REMOVE
   // CHECK-FIXES-CPP20ORLATER: // REMOVE
 
@@ -339,8 +324,7 @@ void captureByRef() {
   auto P = getPair<int, int>();
   // CHECK-MESSAGES-CPP20ORLATER: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-CPP20ORLATER: auto [x, y] = getPair<int, int>();
-  int x = P.first; // REMOVE
-  // CHECK-FIXES-CPP20ORLATER: // REMOVE
+  int x = P.first;
   int y = P.second; // REMOVE
   // CHECK-FIXES-CPP20ORLATER: // REMOVE
 
@@ -353,8 +337,7 @@ void captureByAllRef() {
   auto P = getPair<int, int>();
   // CHECK-MESSAGES-CPP20ORLATER: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-CPP20ORLATER: auto [x, y] = getPair<int, int>();
-  int x = P.first; // REMOVE
-  // CHECK-FIXES-CPP20ORLATER: // REMOVE
+  int x = P.first;
   int y = P.second; // REMOVE
   // CHECK-FIXES-CPP20ORLATER: // REMOVE
 
@@ -367,8 +350,7 @@ void deepLambda() {
   auto P = getPair<int, int>();
   // CHECK-MESSAGES-CPP20ORLATER: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-CPP20ORLATER: auto [x, y] = getPair<int, int>();
-  int x = P.first; // REMOVE
-  // CHECK-FIXES-CPP20ORLATER: // REMOVE
+  int x = P.first;
   int y = P.second; // REMOVE
   // CHECK-FIXES-CPP20ORLATER: // REMOVE
 
@@ -384,8 +366,7 @@ void forRangeNotWarn() {
   for (auto P : Pairs) {
   // CHECK-MESSAGES-CPP20ORLATER: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
   // CHECK-FIXES-CPP20ORLATER: for (auto [x, y] : Pairs) {
-    int x = P.first; // REMOVE
-    // CHECK-FIXES-CPP20ORLATER: // REMOVE
+    int x = P.first;
     int y = P.second; // REMOVE
     // CHECK-FIXES-CPP20ORLATER: // REMOVE
 
@@ -396,8 +377,7 @@ void forRangeNotWarn() {
 }
 
 void stdTieNotWarn() {
-  int x = 0; // REMOVE
-  // CHECK-FIXES-CPP20ORLATER: // REMOVE
+  int x = 0;
   int y = 0; // REMOVE
   // CHECK-FIXES-CPP20ORLATER: // REMOVE
   std::tie(x, y) = getPair<int, int>();

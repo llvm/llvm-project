@@ -20,8 +20,8 @@ static constexpr llvm::StringLiteral PairDeclName = "PairVarD";
 static constexpr llvm::StringLiteral PairVarTypeName = "PairVarType";
 static constexpr llvm::StringLiteral FirstVarDeclName = "FirstVarDecl";
 static constexpr llvm::StringLiteral SecondVarDeclName = "SecondVarDecl";
-static constexpr llvm::StringLiteral FirstDeclStmtName = "FirstDeclStmt";
-static constexpr llvm::StringLiteral SecondDeclStmtName = "SecondDeclStmt";
+static constexpr llvm::StringLiteral BeginDeclStmtName = "BeginDeclStmt";
+static constexpr llvm::StringLiteral EndDeclStmtName = "EndDeclStmt";
 static constexpr llvm::StringLiteral FirstTypeName = "FirstType";
 static constexpr llvm::StringLiteral SecondTypeName = "SecondType";
 static constexpr llvm::StringLiteral ScopeBlockName = "ScopeBlock";
@@ -29,45 +29,65 @@ static constexpr llvm::StringLiteral StdTieAssignStmtName = "StdTieAssign";
 static constexpr llvm::StringLiteral StdTieExprName = "StdTieExpr";
 static constexpr llvm::StringLiteral ForRangeStmtName = "ForRangeStmt";
 
-/// Try to match exactly two VarDecl inside two DeclStmts, and set binding for
-/// the used DeclStmts.
-static bool
-matchTwoVarDecl(const DeclStmt *DS1, const DeclStmt *DS2,
-                ast_matchers::internal::Matcher<VarDecl> InnerMatcher1,
-                ast_matchers::internal::Matcher<VarDecl> InnerMatcher2,
-                internal::ASTMatchFinder *Finder,
-                internal::BoundNodesTreeBuilder *Builder) {
-  SmallVector<std::pair<const VarDecl *, const DeclStmt *>, 2> Vars;
-  auto CollectVarsInDeclStmt = [&Vars](const DeclStmt *DS) -> bool {
-    if (!DS)
-      return true;
+/// Matches a sequence of VarDecls matching the inner matchers, starting from
+/// the \p Iter to \p EndIter and set bindings for the first DeclStmt and the
+/// last DeclStmt if matched.
+///
+/// \p Backwards indicates whether to match the VarDecls in reverse order.
+template <typename Iterator>
+static bool matchNVarDeclStartingWith(
+    Iterator Iter, Iterator EndIter,
+    ArrayRef<ast_matchers::internal::Matcher<VarDecl>> InnerMatchers,
+    ast_matchers::internal::ASTMatchFinder *Finder,
+    ast_matchers::internal::BoundNodesTreeBuilder *Builder,
+    bool Backwards = false) {
+  const DeclStmt *BeginDS = nullptr;
+  const DeclStmt *EndDS = nullptr;
+  size_t N = InnerMatchers.size();
+  size_t Count = 0;
+  for (; Iter != EndIter; ++Iter) {
+    EndDS = dyn_cast<DeclStmt>(*Iter);
+    if (!EndDS)
+      break;
 
-    for (const auto *VD : DS->decls()) {
-      if (Vars.size() == 2)
+    if (!BeginDS)
+      BeginDS = EndDS;
+
+    auto Matches = [&](const Decl *VD) {
+      if (Count == N)
         return false;
 
-      if (const auto *Var = dyn_cast<VarDecl>(VD))
-        Vars.emplace_back(Var, DS);
-      else
-        return false;
+      if (const auto *Var = dyn_cast<VarDecl>(VD);
+          Var && InnerMatchers[Backwards ? N - Count - 1 : Count].matches(
+                     *Var, Finder, Builder)) {
+        ++Count;
+        return true;
+      }
+
+      return false;
+    };
+
+    if (Backwards) {
+      for (const auto *VD : llvm::reverse(EndDS->decls())) {
+        if (!Matches(VD))
+          return false;
+      }
+    } else {
+      for (const auto *VD : EndDS->decls()) {
+        if (!Matches(VD))
+          return false;
+      }
     }
 
-    return true;
-  };
-
-  // If we already get two VarDecls, then don't need to collect from DS2.
-  if (!CollectVarsInDeclStmt(DS1) ||
-      (Vars.size() != 2 && !CollectVarsInDeclStmt(DS2)) || Vars.size() != 2)
-    return false;
-
-  if (InnerMatcher1.matches(*Vars[0].first, Finder, Builder) &&
-      InnerMatcher2.matches(*Vars[1].first, Finder, Builder)) {
-    Builder->setBinding(FirstDeclStmtName,
-                        clang::DynTypedNode::create(*Vars[0].second));
-    if (Vars[0].second != Vars[1].second)
-      Builder->setBinding(SecondDeclStmtName,
-                          clang::DynTypedNode::create(*Vars[1].second));
-    return true;
+    // All the matchers is satisfied in those DeclStmts.
+    if (Count == N) {
+      Builder->setBinding(
+          BeginDeclStmtName,
+          clang::DynTypedNode::create(Backwards ? *EndDS : *BeginDS));
+      Builder->setBinding(EndDeclStmtName, clang::DynTypedNode::create(
+                                               Backwards ? *BeginDS : *EndDS));
+      return true;
+    }
   }
 
   return false;
@@ -84,12 +104,11 @@ enum TransferType : uint8_t {
 };
 
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
-/// following two VarDecls matching the inner matcher, at the same time set
-/// binding for the CompoundStmt.
-AST_MATCHER_P2(Stmt, hasPreTwoVarDecl, ast_matchers::internal::Matcher<VarDecl>,
-               InnerMatcher1, ast_matchers::internal::Matcher<VarDecl>,
-               InnerMatcher2) {
-  DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
+/// following two VarDecls matching the inner matcher.
+AST_MATCHER_P(Stmt, hasPreTwoVarDecl,
+              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              InnerMatchers) {
+  const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
     return false;
 
@@ -99,34 +118,16 @@ AST_MATCHER_P2(Stmt, hasPreTwoVarDecl, ast_matchers::internal::Matcher<VarDecl>,
 
   const auto I = llvm::find(llvm::reverse(C->body()), &Node);
   assert(I != C->body_rend() && "C is parent of Node");
-  if ((I + 1) == C->body_rend())
-    return false;
-
-  const auto *DS2 = dyn_cast<DeclStmt>(*(I + 1));
-  if (!DS2)
-    return false;
-
-  const DeclStmt *DS1 = (!DS2->isSingleDecl() || ((I + 2) == C->body_rend())
-                             ? nullptr
-                             : dyn_cast<DeclStmt>(*(I + 2)));
-  if (DS1 && !DS1->isSingleDecl())
-    return false;
-
-  if (matchTwoVarDecl(DS1, DS2, InnerMatcher1, InnerMatcher2, Finder,
-                      Builder)) {
-    Builder->setBinding(ScopeBlockName, clang::DynTypedNode::create(*C));
-    return true;
-  }
-
-  return false;
+  return matchNVarDeclStartingWith(I + 1, C->body_rend(), InnerMatchers, Finder,
+                                   Builder, true);
 }
 
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
-/// followed by two VarDecls matching the inner matcher, at the same time set
-/// binding for the CompoundStmt.
-AST_MATCHER_P2(Stmt, hasNextTwoVarDecl,
-               ast_matchers::internal::Matcher<VarDecl>, InnerMatcher1,
-               ast_matchers::internal::Matcher<VarDecl>, InnerMatcher2) {
+/// followed by two VarDecls matching the inner matcher.
+AST_MATCHER_P(Stmt, hasNextTwoVarDecl,
+              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              InnerMatchers) {
+
   const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
     return false;
@@ -137,33 +138,17 @@ AST_MATCHER_P2(Stmt, hasNextTwoVarDecl,
 
   const auto *I = llvm::find(C->body(), &Node);
   assert(I != C->body_end() && "C is parent of Node");
-  if ((I + 1) == C->body_end())
-    return false;
-
-  if (matchTwoVarDecl(
-          dyn_cast<DeclStmt>(*(I + 1)),
-          ((I + 2) == C->body_end() ? nullptr : dyn_cast<DeclStmt>(*(I + 2))),
-          InnerMatcher1, InnerMatcher2, Finder, Builder)) {
-    Builder->setBinding(ScopeBlockName, clang::DynTypedNode::create(*C));
-    return true;
-  }
-
-  return false;
+  return matchNVarDeclStartingWith(I + 1, C->body_end(), InnerMatchers, Finder,
+                                   Builder);
 }
 
 /// Matches a CompoundStmt which has two VarDecls matching the inner matcher in
 /// the beginning.
-AST_MATCHER_P2(CompoundStmt, hasFirstTwoVarDecl,
-               ast_matchers::internal::Matcher<VarDecl>, InnerMatcher1,
-               ast_matchers::internal::Matcher<VarDecl>, InnerMatcher2) {
-  const auto *I = Node.body_begin();
-  if ((I) == Node.body_end())
-    return false;
-
-  return matchTwoVarDecl(
-      dyn_cast<DeclStmt>(*(I)),
-      ((I + 1) == Node.body_end() ? nullptr : dyn_cast<DeclStmt>(*(I + 1))),
-      InnerMatcher1, InnerMatcher2, Finder, Builder);
+AST_MATCHER_P(CompoundStmt, hasFirstTwoVarDecl,
+              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>,
+              InnerMatchers) {
+  return matchNVarDeclStartingWith(Node.body_begin(), Node.body_end(),
+                                   InnerMatchers, Finder, Builder);
 }
 
 /// It's not very common to have specifiers for variables used to decompose a
@@ -255,8 +240,10 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                   hasRHS(expr(hasType(PairType))))
                   .bind(StdTieAssignStmtName)),
           hasPreTwoVarDecl(
-              varDecl(equalsBoundNode(std::string(FirstVarDeclName))),
-              varDecl(equalsBoundNode(std::string(SecondVarDeclName))))),
+              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+                  varDecl(equalsBoundNode(std::string(FirstVarDeclName))),
+                  varDecl(equalsBoundNode(std::string(SecondVarDeclName)))}),
+          hasParent(compoundStmt().bind(ScopeBlockName))),
       this);
 
   // pair<X, Y> p = ...;
@@ -272,7 +259,10 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                                   .bind(PairVarTypeName)),
                       hasInitializer(expr()))
                   .bind(PairDeclName)),
-          hasNextTwoVarDecl(VarInitWithFirstMember, VarInitWithSecondMember)),
+          hasNextTwoVarDecl(
+              llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
+                  VarInitWithFirstMember, VarInitWithSecondMember}),
+          hasParent(compoundStmt().bind(ScopeBlockName))),
       this);
 
   // for (pair<X, Y> p : map) {
@@ -288,9 +278,12 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                                   .bind(PairVarTypeName)),
                       hasInitializer(expr()))
                   .bind(PairDeclName)),
-          hasBody(compoundStmt(hasFirstTwoVarDecl(VarInitWithFirstMember,
-                                                  VarInitWithSecondMember))
-                      .bind(ScopeBlockName)))
+          hasBody(
+              compoundStmt(
+                  hasFirstTwoVarDecl(llvm::SmallVector<
+                                     ast_matchers::internal::Matcher<VarDecl>>{
+                      VarInitWithFirstMember, VarInitWithSecondMember}))
+                  .bind(ScopeBlockName)))
           .bind(ForRangeStmtName),
       this);
 }
@@ -320,8 +313,8 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FirstVar = Result.Nodes.getNodeAs<VarDecl>(FirstVarDeclName);
   const auto *SecondVar = Result.Nodes.getNodeAs<VarDecl>(SecondVarDeclName);
 
-  const auto *DS1 = Result.Nodes.getNodeAs<DeclStmt>(FirstDeclStmtName);
-  const auto *DS2 = Result.Nodes.getNodeAs<DeclStmt>(SecondDeclStmtName);
+  const auto *BeginDS = Result.Nodes.getNodeAs<DeclStmt>(BeginDeclStmtName);
+  const auto *EndDS = Result.Nodes.getNodeAs<DeclStmt>(EndDeclStmtName);
   const auto *ScopeBlock = Result.Nodes.getNodeAs<CompoundStmt>(ScopeBlockName);
 
   // Captured structured bindings are a C++20 extension
@@ -336,7 +329,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *CFRS = Result.Nodes.getNodeAs<CXXForRangeStmt>(ForRangeStmtName);
-  auto DiagAndFix = [&DS1, &DS2, &FirstVar, &SecondVar, &CFRS,
+  auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
                      this](SourceLocation DiagLoc, SourceRange ReplaceRange,
                            TransferType TT = TT_ByVal) {
     StringRef Prefix;
@@ -354,18 +347,15 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
       Prefix = "const auto&";
       break;
     }
-    std::vector<FixItHint> Hints;
-    if (DS1)
-      Hints.emplace_back(FixItHint::CreateRemoval(DS1->getSourceRange()));
-    if (DS2)
-      Hints.emplace_back(FixItHint::CreateRemoval(DS2->getSourceRange()));
 
     std::string ReplacementText =
         (Twine(Prefix) + " [" + FirstVar->getNameAsString() + ", " +
          SecondVar->getNameAsString() + "]" + (CFRS ? " :" : ""))
             .str();
     diag(DiagLoc, "use structured binding to decompose a pair")
-        << FixItHint::CreateReplacement(ReplaceRange, ReplacementText) << Hints;
+        << FixItHint::CreateReplacement(ReplaceRange, ReplacementText)
+        << FixItHint::CreateRemoval(
+               SourceRange{BeginDS->getBeginLoc(), EndDS->getEndLoc()});
   };
 
   if (const auto *COCE =
