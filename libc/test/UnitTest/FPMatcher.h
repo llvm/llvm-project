@@ -125,6 +125,7 @@ public:
 
   bool match(T actualValue) {
     actual = actualValue;
+#ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return matchComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
@@ -134,14 +135,18 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return matchComplex<float16>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return matchComplex<float128>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT128
+#else  // LIBC_COMPILER_IS_MSVC
+    return true;
+#endif // LIBC_COMPILER_IS_MSVC
   }
 
   void explainError() override {
+#ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return explainErrorComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
@@ -151,11 +156,12 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return explainErrorComplex<float16>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return explainErrorComplex<float128>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT128
+#endif // LIBC_COMPILER_IS_MSVC
   }
 };
 

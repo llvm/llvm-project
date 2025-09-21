@@ -235,6 +235,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
+  a crash on ``sizeof`` of an array of dependent type.
+
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
   positive when enums or unions from system header files or the ``std``
@@ -307,6 +311,11 @@ Changes in existing checks
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to support string
+  comparisons to ``npos``. Internal changes may cause new rare false positives
+  in non-standard containers.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly

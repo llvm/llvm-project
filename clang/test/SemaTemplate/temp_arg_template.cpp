@@ -149,6 +149,12 @@ namespace CheckDependentNonTypeParamTypes {
   };
   // FIXME: This should be rejected, as there are no valid instantiations for E<char>::F
   template struct E<char>;
+
+#if __cplusplus >= 201703L
+  template<template<auto> class TT, class V> struct G {
+    using type = TT<((void)0, V::value)>;
+  };
+#endif
 }
 
 namespace PR32185 {
