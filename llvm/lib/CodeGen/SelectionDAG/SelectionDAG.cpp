@@ -3483,9 +3483,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::VECTOR_COMPRESS: {
     SDValue Vec = Op.getOperand(0);
     SDValue PassThru = Op.getOperand(2);
-
-    Known.Zero.setAllBits();
-    Known.One.setAllBits();
     Known = computeKnownBits(PassThru, DemandedElts, Depth + 1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
