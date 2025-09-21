@@ -27,6 +27,27 @@ using namespace mlir::python;
 namespace {
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+nb::object objectFromPDLValue(MlirPDLValue value) {
+  if (mlirPDLValueIsValue(value))
+    return nb::cast(mlirPDLValueAsValue(value));
+  if (mlirPDLValueIsOperation(value))
+    return nb::cast(mlirPDLValueAsOperation(value));
+  if (mlirPDLValueIsAttribute(value))
+    return nb::cast(mlirPDLValueAsAttribute(value));
+  if (mlirPDLValueIsType(value))
+    return nb::cast(mlirPDLValueAsType(value));
+
+  throw std::runtime_error("unsupported PDL value type");
+}
+
+MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
+  if (obj.is_none())
+    return mlirLogicalResultSuccess();
+
+  return nb::cast<bool>(obj) ? mlirLogicalResultFailure()
+                             : mlirLogicalResultSuccess();
+}
+
 /// Owning Wrapper around a PDLPatternModule.
 class PyPDLPatternModule {
 public:
@@ -41,19 +62,6 @@ public:
   }
   MlirPDLPatternModule get() { return module; }
 
-  static nb::object fromPDLValue(MlirPDLValue value) {
-    if (mlirPDLValueIsValue(value))
-      return nb::cast(mlirPDLValueAsValue(value));
-    if (mlirPDLValueIsOperation(value))
-      return nb::cast(mlirPDLValueAsOperation(value));
-    if (mlirPDLValueIsAttribute(value))
-      return nb::cast(mlirPDLValueAsAttribute(value));
-    if (mlirPDLValueIsType(value))
-      return nb::cast(mlirPDLValueAsType(value));
-
-    throw std::runtime_error("unsupported PDL value type");
-  }
-
   void registerRewriteFunction(const std::string &name,
                                const nb::callable &fn) {
     mlirPDLPatternModuleRegisterRewriteFunction(
@@ -61,14 +69,12 @@ public:
         [](MlirPatternRewriter rewriter, MlirPDLResultList results,
            size_t nValues, MlirPDLValue *values,
            void *userData) -> MlirLogicalResult {
-          auto f = nb::handle(static_cast<PyObject *>(userData));
+          nb::handle f = nb::handle(static_cast<PyObject *>(userData));
           std::vector<nb::object> args;
           args.reserve(nValues);
           for (size_t i = 0; i < nValues; ++i)
-            args.push_back(fromPDLValue(values[i]));
-          return nb::cast<bool>(f(rewriter, results, args))
-                     ? mlirLogicalResultSuccess()
-                     : mlirLogicalResultFailure();
+            args.push_back(objectFromPDLValue(values[i]));
+          return logicalResultFromObject(f(rewriter, results, args));
         },
         fn.ptr());
   }

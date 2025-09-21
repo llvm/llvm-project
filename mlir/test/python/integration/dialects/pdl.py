@@ -156,7 +156,6 @@ def get_pdl_pattern_fold():
     def add_fold(rewriter, results, values):
         a0, a1 = values
         results.push_back(IntegerAttr.get(i32, a0.value + a1.value))
-        return True
 
     pdl_module = PDLModule(m)
     pdl_module.register_rewrite_function("add_fold", add_fold)
