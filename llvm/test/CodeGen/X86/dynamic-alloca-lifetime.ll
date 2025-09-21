@@ -1,4 +1,4 @@
-; RUN: llc -no-stack-coloring=false < %s | FileCheck %s
+; RUN: llc -optimize-ssp=false -no-stack-coloring=false < %s | FileCheck %s
 
 ; This test crashed in PEI because the stack protector was dead.
 ; This was due to it being colored, which was in turn due to incorrect

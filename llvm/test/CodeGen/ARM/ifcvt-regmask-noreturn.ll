@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -verify-machineinstrs | FileCheck %s
+; RUN: llc %s -o - -optimize-ssp=false -verify-machineinstrs | FileCheck %s
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7s-apple-ios8.0.0"

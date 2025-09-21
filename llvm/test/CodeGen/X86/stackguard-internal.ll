@@ -1,5 +1,5 @@
 ; Check that the backend doesn't crash.
-; RUN: llc -mtriple=x86_64-pc-freebsd %s -o - | FileCheck %s
+; RUN: llc -optimize-ssp=false -mtriple=x86_64-pc-freebsd %s -o - | FileCheck %s
 
 @__stack_chk_guard = internal global [8 x i64] zeroinitializer, align 16
 

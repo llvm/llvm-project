@@ -129,6 +129,7 @@
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
+#include "llvm/Transforms/Scalar/StackProtectRefinement.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
@@ -1281,6 +1282,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   else
     MPM.addPass(buildInlinerPipeline(Level, Phase));
 
+  if (Level != OptimizationLevel::O0)
+    MPM.addPass(StackProtectRefinementPass());
+
   // Remove any dead arguments exposed by cleanups, constant folding globals,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
@@ -1958,6 +1962,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Run whole program optimization of virtual call when the list of callees
   // is fixed.
   MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
+
+  MPM.addPass(StackProtectRefinementPass());
 
   // Stop here at -O1.
   if (Level == OptimizationLevel::O1) {
