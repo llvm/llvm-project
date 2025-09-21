@@ -46,6 +46,7 @@ class GreedyRewriteConfig;
 #define GEN_PASS_DECL_SYMBOLPRIVATIZE
 #define GEN_PASS_DECL_TOPOLOGICALSORT
 #define GEN_PASS_DECL_COMPOSITEFIXEDPOINTPASS
+#define GEN_PASS_DECL_SELECTPASS
 #include "mlir/Transforms/Passes.h.inc"
 
 /// Creates an instance of the Canonicalizer pass, configured with default
@@ -138,6 +139,13 @@ std::unique_ptr<Pass> createTopologicalSortPass();
 std::unique_ptr<Pass> createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
     int maxIterations = 10);
+
+/// Creates select pass, which dynamically selects pass pipeline to run based on
+/// root op attribute.
+std::unique_ptr<Pass> createSelectPass(
+    std::string name, std::string selectCondName,
+    ArrayRef<std::pair<StringRef, std::function<void(OpPassManager &)>>>
+        populateFuncs);
 
 //===----------------------------------------------------------------------===//
 // Registration
