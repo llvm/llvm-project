@@ -1073,6 +1073,10 @@ namespace Virtual {
     virtual constexpr int f() { return 10; }
   };
 
+  K k;
+  static_assert(k.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
   class L : public K {
   public:
     int b = f();
@@ -1083,6 +1087,18 @@ namespace Virtual {
   static_assert(l.a == 10);
   static_assert(l.b == 10);
   static_assert(l.c == 10);
+
+  struct M {
+    K& mk = k;
+  };
+  static_assert(M{}.mk.f() == 10); // both-error {{not an integral constant expression}} \
+                                   // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
+  struct N {
+    K* mk = &k;
+  };
+  static_assert(N{}.mk->f() == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
 }
 
 namespace DiscardedTrivialCXXConstructExpr {
@@ -1121,4 +1137,8 @@ namespace VirtualFunctionCallThroughArrayElem {
   };
   constexpr Y ys[20];
   static_assert(ys[12].foo() == static_cast<const X&>(ys[12]).foo());
+
+  X a[3][4];
+  static_assert(a[2][3].foo()); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'a[2][3]' whose dynamic type is not constant}}
 }

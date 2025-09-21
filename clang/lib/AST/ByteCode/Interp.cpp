@@ -445,7 +445,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   bool NoDiag) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
@@ -470,7 +471,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   }
 
   if (IsConstant) {
-    if (S.getLangOpts().CPlusPlus) {
+    if (S.getLangOpts().CPlusPlus && !NoDiag) {
       S.CCEDiag(S.Current->getLocation(OpPC),
                 S.getLangOpts().CPlusPlus11
                     ? diag::note_constexpr_ltor_non_constexpr
@@ -478,7 +479,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
                 1)
           << D << T;
       S.Note(D->getLocation(), diag::note_declared_at);
-    } else {
+    } else if (!NoDiag) {
       S.CCEDiag(S.Current->getLocation(OpPC));
     }
     return true;
@@ -493,16 +494,18 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return true;
   }
 
-  diagnoseNonConstVariable(S, OpPC, D);
+  if (!NoDiag)
+    diagnoseNonConstVariable(S, OpPC, D);
   return false;
 }
 
-static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          bool NoDiag = false) {
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   if (!Ptr.getDeclID())
     return true;
-  return CheckConstant(S, OpPC, Ptr.getDeclDesc());
+  return CheckConstant(S, OpPC, Ptr.getDeclDesc(), NoDiag);
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -1636,6 +1639,33 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
+static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+                           const CXXRecordDecl *&DynamicDecl) {
+  while (TypePtr.isBaseClass())
+    TypePtr = TypePtr.getBase();
+
+  QualType DynamicType = TypePtr.getType();
+  if (DynamicType->isPointerType() || DynamicType->isReferenceType()) {
+    DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
+  } else if (DynamicType->isArrayType()) {
+    const Type *ElemType = DynamicType->getPointeeOrArrayElementType();
+    assert(ElemType);
+    DynamicDecl = ElemType->getAsCXXRecordDecl();
+  } else {
+    DynamicDecl = DynamicType->getAsCXXRecordDecl();
+  }
+
+  if (!CheckConstant(S, OpPC, TypePtr, true)) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    APValue V = TypePtr.toAPValue(S.getASTContext());
+    QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
+    S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+        << AccessKinds::AK_MemberCall << V.getAsString(S.getASTContext(), TT);
+    return false;
+  }
+  return true;
+}
+
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
   assert(Func->hasThisPointer());
@@ -1660,22 +1690,8 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  {
-    Pointer TypePtr = ThisPtr;
-    while (TypePtr.isBaseClass())
-      TypePtr = TypePtr.getBase();
-
-    QualType DynamicType = TypePtr.getType();
-    if (DynamicType->isPointerType() || DynamicType->isReferenceType()) {
-      DynamicDecl = DynamicType->getPointeeCXXRecordDecl();
-    } else if (DynamicType->isArrayType()) {
-      const Type *ElemType = DynamicType->getPointeeOrArrayElementType();
-      assert(ElemType);
-      DynamicDecl = ElemType->getAsCXXRecordDecl();
-    } else {
-      DynamicDecl = DynamicType->getAsCXXRecordDecl();
-    }
-  }
+  if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+    return false;
   assert(DynamicDecl);
 
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
