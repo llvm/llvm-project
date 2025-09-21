@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_VARIADICFUNCTIONDEF_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_VARIADICFUNCTIONDEF_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDVARIADICFUNCTIONSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDVARIADICFUNCTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::modernize {
 
-/// Guards against any C-style variadic function definitions (not declarations).
+/// Find all function definitions of C-style variadic functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/dcl50-cpp.html
-class VariadicFunctionDefCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-variadic-functions.html
+class AvoidVariadicFunctionsCheck : public ClangTidyCheck {
 public:
-  VariadicFunctionDefCheck(StringRef Name, ClangTidyContext *Context)
+  AvoidVariadicFunctionsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -28,6 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_VARIADICFUNCTIONDEF_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDVARIADICFUNCTIONSCHECK_H
