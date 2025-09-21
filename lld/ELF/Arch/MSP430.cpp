@@ -31,8 +31,8 @@ namespace {
 class MSP430 final : public TargetInfo {
 public:
   MSP430(Ctx &);
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                     StringRef rv_vendor = "") const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 };
@@ -43,8 +43,8 @@ MSP430::MSP430(Ctx &ctx) : TargetInfo(ctx) {
   trapInstr = {0x43, 0x43, 0x43, 0x43};
 }
 
-RelExpr MSP430::getRelExpr(RelType type, const Symbol &s,
-                           const uint8_t *loc) const {
+RelExpr MSP430::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                           StringRef rv_vendor) const {
   switch (type) {
   case R_MSP430_10_PCREL:
   case R_MSP430_16_PCREL:

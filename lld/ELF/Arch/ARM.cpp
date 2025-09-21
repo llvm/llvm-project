@@ -29,8 +29,8 @@ class ARM final : public TargetInfo {
 public:
   ARM(Ctx &);
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                     StringRef rv_vendor = "") const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -99,8 +99,8 @@ uint32_t ARM::calcEFlags() const {
   return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
 }
 
-RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
-                        const uint8_t *loc) const {
+RelExpr ARM::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                        StringRef rv_vendor) const {
   switch (type) {
   case R_ARM_ABS32:
   case R_ARM_MOVW_ABS_NC:

@@ -169,8 +169,8 @@ public:
   PPC64(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                     StringRef rv_vendor = "") const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writePltHeader(uint8_t *buf) const override;
@@ -990,8 +990,8 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
-                          const uint8_t *loc) const {
+RelExpr PPC64::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                          StringRef rv_vendor) const {
   switch (type) {
   case R_PPC64_NONE:
     return R_NONE;

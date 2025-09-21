@@ -21,8 +21,8 @@ namespace {
 class SPARCV9 final : public TargetInfo {
 public:
   SPARCV9(Ctx &);
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                     StringRef rv_vendor = "") const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
@@ -44,8 +44,8 @@ SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x100000;
 }
 
-RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
-                            const uint8_t *loc) const {
+RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                            StringRef rv_vendor) const {
   switch (type) {
   case R_SPARC_32:
   case R_SPARC_UA32:

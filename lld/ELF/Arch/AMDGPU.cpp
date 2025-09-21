@@ -32,8 +32,8 @@ public:
   uint32_t calcEFlags() const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                     StringRef rv_vendor = "") const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
 };
@@ -176,8 +176,8 @@ void AMDGPU::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
-                           const uint8_t *loc) const {
+RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                           StringRef rv_vendor) const {
   switch (type) {
   case R_AMDGPU_ABS32:
   case R_AMDGPU_ABS64:

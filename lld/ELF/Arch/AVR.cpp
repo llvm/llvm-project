@@ -44,8 +44,8 @@ class AVR final : public TargetInfo {
 public:
   AVR(Ctx &ctx) : TargetInfo(ctx) { needsThunks = true; }
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                     StringRef rv_vendor) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -54,8 +54,8 @@ public:
 };
 } // namespace
 
-RelExpr AVR::getRelExpr(RelType type, const Symbol &s,
-                        const uint8_t *loc) const {
+RelExpr AVR::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
+                        StringRef rv_vendor) const {
   switch (type) {
   case R_AVR_6:
   case R_AVR_6_ADIW:
