@@ -72,7 +72,7 @@ define void @test_remove_instrs_in_exit_block() {
 ; INDVARS-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
 ; INDVARS-NEXT:    br label [[INNER]]
 ; INDVARS:       outer.latch:
-; INDVARS-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i16 [[OUTER_IV]], 1
+; INDVARS-NEXT:    [[OUTER_IV_NEXT]] = add nsw i16 [[OUTER_IV]], 1
 ; INDVARS-NEXT:    [[CMP_2:%.*]] = icmp eq i16 poison, [[OUTER_IV]]
 ; INDVARS-NEXT:    br i1 [[CMP_2]], label [[OUTER_HEADER]], label [[EXIT:%.*]]
 ; INDVARS:       exit:
