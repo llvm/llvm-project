@@ -312,6 +312,11 @@ Changes in existing checks
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
 
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to support string
+  comparisons to ``npos``. Internal changes may cause new rare false positives
+  in non-standard containers.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
   generating fix-it hints when size method is called from implicit ``this``,
