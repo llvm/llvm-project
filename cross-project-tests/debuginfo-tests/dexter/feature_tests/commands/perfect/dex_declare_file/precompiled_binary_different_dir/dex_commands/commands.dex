@@ -5,7 +5,7 @@
 # UNSUPPORTED: system-darwin
 #
 # RUN: %clang %S/../source/test.cpp -O0 -g -o %t
-# RUN: %dexter_regression_base --binary %t %s | FileCheck --dump-input-context=999999999 %s
+# RUN: %dexter_regression_base --binary %t %s | FileCheck %s
 # RUN: rm %t
 # CHECK: commands.dex
 #

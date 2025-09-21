@@ -34,7 +34,7 @@ public:
     llvm::ImmutableSet<const VarDecl *> liveDecls;
     llvm::ImmutableSet<const BindingDecl *> liveBindings;
 
-    bool equals(const LivenessValues &V) const;
+    bool operator==(const LivenessValues &V) const;
 
     LivenessValues()
       : liveExprs(nullptr), liveDecls(nullptr), liveBindings(nullptr) {}
@@ -58,13 +58,8 @@ public:
 
     /// A callback invoked right before invoking the
     ///  liveness transfer function on the given statement.
-    virtual void observeStmt(const Stmt *S,
-                             const CFGBlock *currentBlock,
-                             const LivenessValues& V) {}
-
-    /// Called when the live variables analysis registers
-    /// that a variable is killed.
-    virtual void observerKill(const DeclRefExpr *DR) {}
+    virtual void observeStmt(const Stmt *S, const CFGBlock *currentBlock,
+                             const LivenessValues &V) {}
   };
 
   ~LiveVariables() override;

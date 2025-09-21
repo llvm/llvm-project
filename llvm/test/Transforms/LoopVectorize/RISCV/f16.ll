@@ -26,7 +26,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-LABEL: define void @fadd(
 ; ZVFHMIN-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZVFHMIN-NEXT:  [[ENTRY:.*:]]
-; ZVFHMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; ZVFHMIN-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFHMIN:       [[VECTOR_BODY]]:
@@ -46,7 +46,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ZVFHMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
-; ZVFHMIN:       [[SCALAR_PH]]:
+; ZVFHMIN:       [[SCALAR_PH:.*]]:
 ; ZVFHMIN-NEXT:    br label %[[LOOP:.*]]
 ; ZVFHMIN:       [[LOOP]]:
 ; ZVFHMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -58,7 +58,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    store half [[Z]], ptr [[A_GEP]], align 2
 ; ZVFHMIN-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; ZVFHMIN-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; ZVFHMIN-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; ZVFHMIN-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]]
 ; ZVFHMIN:       [[EXIT]]:
 ; ZVFHMIN-NEXT:    ret void
 ;

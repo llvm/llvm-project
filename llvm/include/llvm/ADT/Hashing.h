@@ -333,20 +333,21 @@ inline uint64_t get_execution_seed() {
 // for equality. For all the platforms we care about, this holds for integers
 // and pointers, but there are platforms where it doesn't and we would like to
 // support user-defined types which happen to satisfy this property.
-template <typename T> struct is_hashable_data
-  : std::integral_constant<bool, ((is_integral_or_enum<T>::value ||
-                                   std::is_pointer<T>::value) &&
-                                  64 % sizeof(T) == 0)> {};
+template <typename T>
+struct is_hashable_data : std::bool_constant<((is_integral_or_enum<T>::value ||
+                                               std::is_pointer<T>::value) &&
+                                              64 % sizeof(T) == 0)> {};
 
 // Special case std::pair to detect when both types are viable and when there
 // is no alignment-derived padding in the pair. This is a bit of a lie because
 // std::pair isn't truly POD, but it's close enough in all reasonable
 // implementations for our use case of hashing the underlying data.
-template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
-  : std::integral_constant<bool, (is_hashable_data<T>::value &&
-                                  is_hashable_data<U>::value &&
-                                  (sizeof(T) + sizeof(U)) ==
-                                   sizeof(std::pair<T, U>))> {};
+template <typename T, typename U>
+struct is_hashable_data<std::pair<T, U>>
+    : std::bool_constant<(is_hashable_data<T>::value &&
+                          is_hashable_data<U>::value &&
+                          (sizeof(T) + sizeof(U)) == sizeof(std::pair<T, U>))> {
+};
 
 /// Helper to get the hashable data representation for a type.
 template <typename T> auto get_hashable_data(const T &value) {
@@ -482,8 +483,11 @@ namespace detail {
 /// recursive combining of arguments used in hash_combine. It is particularly
 /// useful at minimizing the code in the recursive calls to ease the pain
 /// caused by a lack of variadic functions.
-struct hash_combine_recursive_helper {
+struct hash_combine_helper {
   char buffer[64] = {};
+  char *buffer_ptr;
+  char *const buffer_end;
+  size_t length = 0;
   hash_state state;
   const uint64_t seed;
 
@@ -492,8 +496,9 @@ public:
   ///
   /// This sets up the state for a recursive hash combine, including getting
   /// the seed and buffer setup.
-  hash_combine_recursive_helper()
-    : seed(get_execution_seed()) {}
+  hash_combine_helper()
+      : buffer_ptr(buffer), buffer_end(buffer + 64),
+        seed(get_execution_seed()) {}
 
   /// Combine one chunk of data into the current in-flight hash.
   ///
@@ -501,8 +506,7 @@ public:
   /// the data. If the buffer is full, it hashes the buffer into its
   /// hash_state, empties it, and then merges the new chunk in. This also
   /// handles cases where the data straddles the end of the buffer.
-  template <typename T>
-  char *combine_data(size_t &length, char *buffer_ptr, char *buffer_end, T data) {
+  template <typename T> void combine_data(T data) {
     if (!store_and_advance(buffer_ptr, buffer_end, data)) {
       // Check for skew which prevents the buffer from being packed, and do
       // a partial store into the buffer to fill it. This is only a concern
@@ -533,28 +537,17 @@ public:
                              partial_store_size))
         llvm_unreachable("buffer smaller than stored type");
     }
-    return buffer_ptr;
   }
 
   /// Recursive, variadic combining method.
   ///
   /// This function recurses through each argument, combining that argument
   /// into a single hash.
-  template <typename T, typename ...Ts>
-  hash_code combine(size_t length, char *buffer_ptr, char *buffer_end,
-                    const T &arg, const Ts &...args) {
-    buffer_ptr = combine_data(length, buffer_ptr, buffer_end, get_hashable_data(arg));
+  template <typename... Ts> hash_code combine(const Ts &...args) {
+    (combine_data(get_hashable_data(args)), ...);
 
-    // Recurse to the next argument.
-    return combine(length, buffer_ptr, buffer_end, args...);
-  }
-
-  /// Base case for recursive, variadic combining.
-  ///
-  /// The base case when combining arguments recursively is reached when all
-  /// arguments have been handled. It flushes the remaining buffer and
-  /// constructs a hash_code.
-  hash_code combine(size_t length, char *buffer_ptr, char *buffer_end) {
+    // Finalize the hash by flushing any remaining data in the buffer.
+    //
     // Check whether the entire set of values fit in the buffer. If so, we'll
     // use the optimized short hashing routine and skip state entirely.
     if (length == 0)
@@ -588,10 +581,10 @@ public:
 /// The result is suitable for returning from a user's hash_value
 /// *implementation* for their user-defined type. Consumers of a type should
 /// *not* call this routine, they should instead call 'hash_value'.
-template <typename ...Ts> hash_code hash_combine(const Ts &...args) {
+template <typename... Ts> hash_code hash_combine(const Ts &...args) {
   // Recursively hash each argument using a helper class.
-  ::llvm::hashing::detail::hash_combine_recursive_helper helper;
-  return helper.combine(0, helper.buffer, helper.buffer + 64, args...);
+  ::llvm::hashing::detail::hash_combine_helper helper;
+  return helper.combine(args...);
 }
 
 // Implementation details for implementations of hash_value overloads provided

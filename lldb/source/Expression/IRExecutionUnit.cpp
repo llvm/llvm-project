@@ -723,7 +723,7 @@ private:
 /// Returns address of the function referred to by the special function call
 /// label \c label.
 static llvm::Expected<lldb::addr_t>
-ResolveFunctionCallLabel(const FunctionCallLabel &label,
+ResolveFunctionCallLabel(FunctionCallLabel &label,
                          const lldb_private::SymbolContext &sc,
                          bool &symbol_was_missing_weak) {
   symbol_was_missing_weak = false;

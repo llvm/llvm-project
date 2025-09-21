@@ -574,6 +574,7 @@ def get_run_handler(triple):
         "arm64-apple-macosx": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "armv7-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
         "armv7-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
+        "armv7k-apple-watchos": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
         "thumb": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
         "thumb-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
         "thumbv5-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),

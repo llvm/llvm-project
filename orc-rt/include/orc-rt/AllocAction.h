@@ -64,17 +64,17 @@ struct AllocActionFunction {
 /// An AllocAction is a pair of an AllocActionFn and an argument data buffer.
 struct AllocAction {
   AllocAction() = default;
-  AllocAction(AllocActionFn AA, WrapperFunctionBuffer ArgData)
-      : AA(AA), ArgData(std::move(ArgData)) {}
+  AllocAction(AllocActionFn Fn, WrapperFunctionBuffer ArgData)
+      : Fn(Fn), ArgData(std::move(ArgData)) {}
 
   [[nodiscard]] WrapperFunctionBuffer operator()() {
-    assert(AA && "Attempt to call null action");
-    return AA(ArgData.data(), ArgData.size());
+    assert(Fn && "Attempt to call null action");
+    return Fn(ArgData.data(), ArgData.size());
   }
 
-  explicit operator bool() const noexcept { return !!AA; }
+  explicit operator bool() const noexcept { return !!Fn; }
 
-  AllocActionFn AA = nullptr;
+  AllocActionFn Fn = nullptr;
   WrapperFunctionBuffer ArgData;
 };
 

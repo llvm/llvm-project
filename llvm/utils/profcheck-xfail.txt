@@ -56,6 +56,7 @@ CodeGen/AMDGPU/global_atomics_optimizer_fp_no_rtn.ll
 CodeGen/AMDGPU/GlobalISel/atomic_optimizations_mul_one.ll
 CodeGen/AMDGPU/lower-buffer-fat-pointers-mem-transfer.ll
 CodeGen/AMDGPU/lower-ctor-dtor.ll
+CodeGen/AMDGPU/lower-intrinsics-cluster-barrier.ll
 CodeGen/AMDGPU/lower-mem-intrinsics.ll
 CodeGen/AMDGPU/lower-mem-intrinsics-threshold.ll
 CodeGen/AMDGPU/opencl-printf-and-hostcall.ll
@@ -558,6 +559,7 @@ tools/UpdateTestChecks/update_test_checks/stable_ir_values5.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values6.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values_funcs.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values.test
+tools/UpdateTestChecks/update_test_checks/tbaa-semantics-checks.test
 tools/UpdateTestChecks/update_test_checks/various_ir_values_dbgrecords.test
 Transforms/AggressiveInstCombine/inline-strcmp-debugloc.ll
 Transforms/AggressiveInstCombine/lower-table-based-cttz-basics.ll
@@ -754,7 +756,6 @@ Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/switch.ll
-Transforms/FunctionSpecialization/function-specialization3.ll
 Transforms/GCOVProfiling/atomic-counter.ll
 Transforms/GCOVProfiling/exit-block.ll
 Transforms/GCOVProfiling/function-numbering.ll
@@ -830,7 +831,6 @@ Transforms/IndVarSimplify/invalidate-modified-lcssa-phi.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/Inline/optimization-remarks-hotness-threshold.ll
-Transforms/InstCombine/2004-09-20-BadLoadCombine2.ll
 Transforms/InstCombine/2004-09-20-BadLoadCombine.ll
 Transforms/InstCombine/2005-04-07-UDivSelectCrash.ll
 Transforms/InstCombine/2011-02-14-InfLoop.ll
@@ -1214,6 +1214,7 @@ Transforms/LoopVectorize/AArch64/predication_costs.ll
 Transforms/LoopVectorize/AArch64/reduction-recurrence-costs-sve.ll
 Transforms/LoopVectorize/AArch64/reduction-small-size.ll
 Transforms/LoopVectorize/AArch64/reg-usage.ll
+Transforms/LoopVectorize/AArch64/replicating-load-store-costs.ll
 Transforms/LoopVectorize/AArch64/runtime-check-trip-count-decisions.ll
 Transforms/LoopVectorize/AArch64/scalable-call.ll
 Transforms/LoopVectorize/AArch64/scalable-predicate-instruction.ll
@@ -1232,6 +1233,7 @@ Transforms/LoopVectorize/AArch64/single-early-exit-interleave.ll
 Transforms/LoopVectorize/AArch64/smallest-and-widest-types.ll
 Transforms/LoopVectorize/AArch64/store-costs-sve.ll
 Transforms/LoopVectorize/AArch64/strict-fadd.ll
+Transforms/LoopVectorize/AArch64/struct-return-cost.ll
 Transforms/LoopVectorize/AArch64/sve2-histcnt-epilogue.ll
 Transforms/LoopVectorize/AArch64/sve-basic-vec.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-inloop-reductions.ll
@@ -1303,6 +1305,7 @@ Transforms/LoopVectorize/explicit_outer_uniform_diverg_branch.ll
 Transforms/LoopVectorize/first-order-recurrence-complex.ll
 Transforms/LoopVectorize/first-order-recurrence.ll
 Transforms/LoopVectorize/first-order-recurrence-sink-replicate-region.ll
+Transforms/LoopVectorize/first-order-recurrence-with-uniform-ops.ll
 Transforms/LoopVectorize/float-induction.ll
 Transforms/LoopVectorize/float-minmax-instruction-flag.ll
 Transforms/LoopVectorize/fmax-without-fast-math-flags-interleave.ll
@@ -1369,6 +1372,7 @@ Transforms/LoopVectorize/outer-loop-wide-phis.ll
 Transforms/LoopVectorize/phi-cost.ll
 Transforms/LoopVectorize/pointer-induction.ll
 Transforms/LoopVectorize/PowerPC/exit-branch-cost.ll
+Transforms/LoopVectorize/PowerPC/large-loop-rdx.ll
 Transforms/LoopVectorize/PowerPC/optimal-epilog-vectorization.ll
 Transforms/LoopVectorize/PowerPC/optimal-epilog-vectorization-profitability.ll
 Transforms/LoopVectorize/PowerPC/small-loop-rdx.ll
@@ -1570,6 +1574,7 @@ Transforms/LoopVectorize/X86/outer_loop_test1_no_explicit_vect_width.ll
 Transforms/LoopVectorize/X86/pr109581-unused-blend.ll
 Transforms/LoopVectorize/X86/pr141968-instsimplifyfolder.ll
 Transforms/LoopVectorize/X86/pr23997.ll
+Transforms/LoopVectorize/X86/pr47437.ll
 Transforms/LoopVectorize/X86/pr51366-sunk-instruction-used-outside-of-loop.ll
 Transforms/LoopVectorize/X86/pr54634.ll
 Transforms/LoopVectorize/X86/pr55096-scalarize-add.ll
@@ -1741,6 +1746,7 @@ Transforms/PGOProfile/profcheck-select.ll
 Transforms/PGOProfile/prof-verify.ll
 Transforms/PGOProfile/prof-verify-no-entrycount.ll
 Transforms/PGOProfile/X86/macho.ll
+Transforms/PhaseOrdering/AArch64/constraint-elimination-placement.ll
 Transforms/PhaseOrdering/AArch64/globals-aa-required-for-vectorization.ll
 Transforms/PhaseOrdering/AArch64/hoisting-sinking-required-for-vectorization.ll
 Transforms/PhaseOrdering/AArch64/loopflatten.ll
@@ -1867,6 +1873,7 @@ Transforms/SimplifyCFG/switch-dup-bbs.ll
 Transforms/SimplifyCFG/switch_mask.ll
 Transforms/SimplifyCFG/switch_msan.ll
 Transforms/SimplifyCFG/switch-on-const-select.ll
+Transforms/SimplifyCFG/switch-transformations-no-lut.ll
 Transforms/SimplifyCFG/switchToSelect-domtree-preservation-edgecase.ll
 Transforms/SimplifyCFG/switch-to-select-multiple-edge-per-block-phi.ll
 Transforms/SimplifyCFG/switch-to-select-two-case.ll
@@ -1965,6 +1972,7 @@ Transforms/SROA/slice-width.ll
 Transforms/SROA/std-clamp.ll
 Transforms/SROA/vector-conversion.ll
 Transforms/SROA/vector-promotion.ll
+Transforms/SROA/vector-promotion-cannot-tree-structure-merge.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/StructurizeCFG/AMDGPU/uniform-regions.ll
 Transforms/StructurizeCFG/hoist-zerocost.ll
@@ -1989,15 +1997,4 @@ Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
 Transforms/VectorCombine/AArch64/shuffletoidentity.ll
 Transforms/VectorCombine/X86/shuffle-of-selects.ll
-Transforms/WholeProgramDevirt/branch-funnel.ll
-Transforms/WholeProgramDevirt/branch-funnel-threshold.ll
-Transforms/WholeProgramDevirt/devirt_single_after_filtering_unreachable_function.ll
-Transforms/WholeProgramDevirt/expand-check.ll
 Transforms/WholeProgramDevirt/unique-retval-same-vtable.ll
-Transforms/WholeProgramDevirt/vcp-accesses-memory.ll
-Transforms/WholeProgramDevirt/vcp-decl.ll
-Transforms/WholeProgramDevirt/vcp-non-constant-arg.ll
-Transforms/WholeProgramDevirt/vcp-no-this.ll
-Transforms/WholeProgramDevirt/vcp-too-wide-ints.ll
-Transforms/WholeProgramDevirt/vcp-type-mismatch.ll
-Transforms/WholeProgramDevirt/vcp-uses-this.ll

@@ -52,9 +52,9 @@ define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: ctlz_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
-; RV64XTHEADBB-NOB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NOB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NOB-NEXT:    th.extu a0, a0, 31, 0
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -32
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ;
 ; RV64XTHEADBB-B-LABEL: ctlz_i32:
@@ -112,10 +112,9 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: log2_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
-; RV64XTHEADBB-NOB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NOB-NEXT:    th.ff0 a0, a0
-; RV64XTHEADBB-NOB-NEXT:    li a1, 31
+; RV64XTHEADBB-NOB-NEXT:    th.extu a0, a0, 31, 0
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NOB-NEXT:    li a1, 63
 ; RV64XTHEADBB-NOB-NEXT:    sub a0, a1, a0
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ;
@@ -177,10 +176,9 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NOB-LABEL: log2_ceil_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
 ; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -1
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
-; RV64XTHEADBB-NOB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NOB-NEXT:    th.ff0 a0, a0
-; RV64XTHEADBB-NOB-NEXT:    li a1, 32
+; RV64XTHEADBB-NOB-NEXT:    th.extu a0, a0, 31, 0
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NOB-NEXT:    li a1, 64
 ; RV64XTHEADBB-NOB-NEXT:    sub a0, a1, a0
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ;
@@ -240,10 +238,9 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: findLastSet_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    not a1, a0
+; RV64XTHEADBB-NOB-NEXT:    slli a1, a0, 32
 ; RV64XTHEADBB-NOB-NEXT:    snez a0, a0
-; RV64XTHEADBB-NOB-NEXT:    slli a1, a1, 32
-; RV64XTHEADBB-NOB-NEXT:    th.ff0 a1, a1
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a1, a1
 ; RV64XTHEADBB-NOB-NEXT:    xori a1, a1, 31
 ; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NOB-NEXT:    or a0, a0, a1
@@ -310,9 +307,8 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64XTHEADBB-NOB-LABEL: ctlz_lshr_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
 ; RV64XTHEADBB-NOB-NEXT:    srliw a0, a0, 1
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
-; RV64XTHEADBB-NOB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NOB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -32
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ;
 ; RV64XTHEADBB-B-LABEL: ctlz_lshr_i32:
@@ -1219,4 +1215,94 @@ bb2:                                              ; preds = %bb2, %bb
 
 bb7:                                              ; preds = %bb2
   ret void
+}
+
+define signext i32 @hasAllNBitUsers_extu(i64 %arg1, i64 %arg2, i64 %arg3)  {
+; RV64I-LABEL: hasAllNBitUsers_extu:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    li a3, 256
+; RV64I-NEXT:  .LBB38_1: # %bb2
+; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    slli a0, a0, 47
+; RV64I-NEXT:    srli a0, a0, 62
+; RV64I-NEXT:    addi a2, a2, 1
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    bltu a2, a3, .LBB38_1
+; RV64I-NEXT:  # %bb.2: # %bb7
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: hasAllNBitUsers_extu:
+; RV64XTHEADBB:       # %bb.0: # %entry
+; RV64XTHEADBB-NEXT:    addi a2, a2, -1
+; RV64XTHEADBB-NEXT:    li a3, 256
+; RV64XTHEADBB-NEXT:  .LBB38_1: # %bb2
+; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 16, 15
+; RV64XTHEADBB-NEXT:    addi a2, a2, 1
+; RV64XTHEADBB-NEXT:    addw a0, a0, a1
+; RV64XTHEADBB-NEXT:    bltu a2, a3, .LBB38_1
+; RV64XTHEADBB-NEXT:  # %bb.2: # %bb7
+; RV64XTHEADBB-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = lshr i64 %i1, 15
+  %i4b = and i64 %i4, 3
+  %i5 = add i64 %i4b, %arg2
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i7 = trunc i64 %i5 to i32
+  ret i32 %i7
+}
+
+define signext i32 @hasAllNBitUsers_ext(i64 %arg1, i64 %arg2, i64 %arg3)  {
+; RV64I-LABEL: hasAllNBitUsers_ext:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    li a3, 256
+; RV64I-NEXT:  .LBB39_1: # %bb2
+; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    slli a0, a0, 47
+; RV64I-NEXT:    srli a0, a0, 62
+; RV64I-NEXT:    addi a2, a2, 1
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    bltu a2, a3, .LBB39_1
+; RV64I-NEXT:  # %bb.2: # %bb7
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: hasAllNBitUsers_ext:
+; RV64XTHEADBB:       # %bb.0: # %entry
+; RV64XTHEADBB-NEXT:    addi a2, a2, -1
+; RV64XTHEADBB-NEXT:    li a3, 256
+; RV64XTHEADBB-NEXT:  .LBB39_1: # %bb2
+; RV64XTHEADBB-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 16, 15
+; RV64XTHEADBB-NEXT:    addi a2, a2, 1
+; RV64XTHEADBB-NEXT:    addw a0, a0, a1
+; RV64XTHEADBB-NEXT:    bltu a2, a3, .LBB39_1
+; RV64XTHEADBB-NEXT:  # %bb.2: # %bb7
+; RV64XTHEADBB-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = ashr i64 %i1, 15
+  %i4b = and i64 %i4, 3
+  %i5 = add i64 %i4b, %arg2
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i7 = trunc i64 %i5 to i32
+  ret i32 %i7
 }
