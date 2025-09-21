@@ -92,7 +92,9 @@ InvalidEnumDefaultInitializationCheck::InvalidEnumDefaultInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredEnums(utils::options::parseStringList(
-          Options.get("IgnoredEnums", "::std::errc"))) {}
+          Options.get("IgnoredEnums", ""))) {
+            IgnoredEnums.emplace_back("::std::errc");
+          }
 
 void InvalidEnumDefaultInitializationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

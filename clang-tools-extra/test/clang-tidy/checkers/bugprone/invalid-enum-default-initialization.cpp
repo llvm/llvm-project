@@ -153,3 +153,12 @@ enum MyEnum {
 MyEnum MyEnumVar{};
 // CHECK-NOTES-DEFAULT: :[[@LINE-1]]:17: warning: enum value of type 'MyEnum' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
 // CHECK-NOTES-DEFAULT: :148:6: note: enum is defined here
+
+namespace std {
+  enum errc {
+    A = 1,
+    B
+  };
+}
+
+std::errc err{};

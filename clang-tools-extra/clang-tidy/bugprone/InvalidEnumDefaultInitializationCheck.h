@@ -27,7 +27,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const std::vector<StringRef> IgnoredEnums;
+  std::vector<StringRef> IgnoredEnums;
 };
 
 } // namespace clang::tidy::bugprone
