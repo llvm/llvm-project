@@ -28,6 +28,7 @@ static constexpr llvm::StringLiteral ScopeBlockName = "ScopeBlock";
 static constexpr llvm::StringLiteral StdTieAssignStmtName = "StdTieAssign";
 static constexpr llvm::StringLiteral StdTieExprName = "StdTieExpr";
 static constexpr llvm::StringLiteral ForRangeStmtName = "ForRangeStmt";
+static constexpr llvm::StringLiteral InitExprName = "init_expr";
 
 /// Matches a sequence of VarDecls matching the inner matchers, starting from
 /// the \p Iter to \p EndIter and set bindings for the first DeclStmt and the
@@ -273,7 +274,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                       hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
-                      hasInitializer(expr()))
+                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(expr().bind(InitExprName)))))
                   .bind(PairDeclName)),
           hasNextTwoVarDecl(
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
@@ -293,7 +294,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
               varDecl(hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
-                      hasInitializer(expr()))
+                      hasInitializer(expr(ignoringCopyCtorAndImplicitCast(expr().bind(InitExprName)))))
                   .bind(PairDeclName)),
           hasBody(
               compoundStmt(
@@ -375,12 +376,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   // Check whether PairVar, FirstVar and SecondVar have the same transfer type,
   // so they can be combined to structured binding.
   const auto *PairVar = Result.Nodes.getNodeAs<VarDecl>(PairDeclName);
-  const Expr *InitE = PairVar->getInit();
-  if (auto Res =
-          match(expr(ignoringCopyCtorAndImplicitCast(expr().bind("init_expr"))),
-                *InitE, *Result.Context);
-      !Res.empty())
-    InitE = Res[0].getNodeAs<Expr>("init_expr");
+  const Expr *InitE = Result.Nodes.getNodeAs<Expr>(InitExprName);
 
   const std::optional<TransferType> PairCaptureType =
       getTransferType(*Result.Context, PairVar->getType(), InitE->getType());
