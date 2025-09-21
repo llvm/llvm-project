@@ -565,12 +565,13 @@ const Scalar lldb_private::operator-(Scalar lhs, Scalar rhs) {
 
 const Scalar lldb_private::operator/(Scalar lhs, Scalar rhs) {
   Scalar result;
-  if ((result.m_type = Scalar::PromoteToMaxType(lhs, rhs)) != Scalar::e_void &&
-      !rhs.IsZero()) {
+  if ((result.m_type = Scalar::PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     switch (result.m_type) {
     case Scalar::e_void:
       break;
     case Scalar::e_int:
+      if (rhs.IsZero())
+        break;
       result.m_integer = lhs.m_integer / rhs.m_integer;
       return result;
     case Scalar::e_float:

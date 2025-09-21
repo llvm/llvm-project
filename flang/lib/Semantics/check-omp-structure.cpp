@@ -596,10 +596,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return std::get<parser::OmpBeginDirective>(t).DirName();
   }
 
-  bool Pre(const parser::OmpSectionsDirective &x) {
-    checker_(x.source, x.v);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
@@ -677,10 +673,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   }
   bool Pre(const parser::OmpEndDirective &x) {
     checker_(x.DirName().source, x.DirId());
-    return false;
-  }
-  bool Pre(const parser::OmpLoopDirective &x) {
-    checker_(x.source, x.v);
     return false;
   }
 
@@ -815,11 +807,11 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   common::visit(
       common::visitors{
           [&](const parser::OmpBlockConstruct &c) {
-            const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
-            source = beginSpec.DirName().source;
-            if (beginSpec.DirId() == llvm::omp::Directive::OMPD_target_data) {
+            const parser::OmpDirectiveName &beginName{c.BeginDir().DirName()};
+            source = beginName.source;
+            if (beginName.v == llvm::omp::Directive::OMPD_target_data) {
               eligibleTarget = false;
-              ineligibleTargetDir = beginSpec.DirId();
+              ineligibleTargetDir = beginName.v;
             }
           },
           [&](const parser::OpenMPStandaloneConstruct &c) {
@@ -843,14 +835,11 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
                 c.u);
           },
           [&](const parser::OpenMPLoopConstruct &c) {
-            const auto &beginLoopDir{
-                std::get<parser::OmpBeginLoopDirective>(c.t)};
-            const auto &beginDir{
-                std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-            source = beginLoopDir.source;
-            if (llvm::omp::allTargetSet.test(beginDir.v)) {
+            const parser::OmpDirectiveName &beginName{c.BeginDir().DirName()};
+            source = beginName.source;
+            if (llvm::omp::allTargetSet.test(beginName.v)) {
               eligibleTarget = false;
-              ineligibleTargetDir = beginDir.v;
+              ineligibleTargetDir = beginName.v;
             }
           },
           [&](const auto &c) {},
@@ -874,22 +863,8 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   // Missing mandatory end block: this is checked in semantics because that
   // makes it easier to control the error messages.
   // The end block is mandatory when the construct is not applied to a strictly
-  // structured block (aka it is applied to a loosely structured block). In
-  // other words, the body doesn't contain exactly one parser::BlockConstruct.
-  auto isStrictlyStructuredBlock{[](const parser::Block &block) -> bool {
-    if (block.size() != 1) {
-      return false;
-    }
-    const parser::ExecutionPartConstruct &contents{block.front()};
-    auto *executableConstruct{
-        std::get_if<parser::ExecutableConstruct>(&contents.u)};
-    if (!executableConstruct) {
-      return false;
-    }
-    return std::holds_alternative<common::Indirection<parser::BlockConstruct>>(
-        executableConstruct->u);
-  }};
-  if (!endSpec && !isStrictlyStructuredBlock(block)) {
+  // structured block (aka it is applied to a loosely structured block).
+  if (!endSpec && !IsStrictlyStructuredBlock(block)) {
     llvm::omp::Directive dirId{beginSpec.DirId()};
     auto &msg{context_.Say(beginSpec.source,
         "Expected OpenMP END %s directive"_err_en_US,
@@ -1171,34 +1146,30 @@ void OmpStructureChecker::Leave(const parser::OmpBeginDirective &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
-  const auto &beginSectionsDir{
-      std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &endSectionsDir{
-      std::get<std::optional<parser::OmpEndSectionsDirective>>(x.t)};
-  const auto &beginDir{
-      std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  PushContextAndClauseSets(beginDir.source, beginDir.v);
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+  const auto &endSpec{x.EndDir()};
+  PushContextAndClauseSets(beginName.source, beginName.v);
 
-  if (!endSectionsDir) {
-    context_.Say(beginSectionsDir.source,
-        "Expected OpenMP END SECTIONS directive"_err_en_US);
+  if (!endSpec) {
+    context_.Say(
+        beginName.source, "Expected OpenMP END SECTIONS directive"_err_en_US);
     // Following code assumes the option is present.
     return;
   }
 
-  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir->t)};
-  CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
+  CheckMatching<parser::OmpDirectiveName>(beginName, endSpec->DirName());
 
-  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir->t));
+  AddEndDirectiveClauses(endSpec->Clauses());
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
     auto &section{std::get<parser::OpenMPSectionConstruct>(construct.u)};
     CheckNoBranching(
-        std::get<parser::Block>(section.t), beginDir.v, beginDir.source);
+        std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
   HasInvalidWorksharingNesting(
-      beginDir.source, llvm::omp::nestedWorkshareErrSet);
+      beginName.source, llvm::omp::nestedWorkshareErrSet);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
@@ -1206,13 +1177,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
-  const auto &dir{std::get<parser::OmpSectionsDirective>(x.t)};
-  ResetPartialContext(dir.source);
-  switch (dir.v) {
+  const parser::OmpDirectiveName &dirName{x.DirName()};
+  ResetPartialContext(dirName.source);
+  switch (dirName.v) {
     // 2.7.2 end-sections -> END SECTIONS [nowait-clause]
   case llvm::omp::Directive::OMPD_sections:
     PushContextAndClauseSets(
-        dir.source, llvm::omp::Directive::OMPD_end_sections);
+        dirName.source, llvm::omp::Directive::OMPD_end_sections);
     break;
   default:
     // no clauses are allowed
@@ -2804,6 +2775,7 @@ CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
 CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
 CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
+CHECK_SIMPLE_CLAUSE(Groupprivate, OMPC_groupprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
@@ -2845,6 +2817,8 @@ CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
+CHECK_SIMPLE_CLAUSE(Replayable, OMPC_replayable)
+CHECK_SIMPLE_CLAUSE(Transparent, OMPC_transparent)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
@@ -3980,16 +3954,6 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
   // Ignore any mismatch between the size of the iteration vector and the
   // number of DO constructs on the stack. This is checked elsewhere.
 
-  auto GetLoopDirective{[](const parser::OpenMPLoopConstruct &x) {
-    auto &begin{std::get<parser::OmpBeginLoopDirective>(x.t)};
-    return std::get<parser::OmpLoopDirective>(begin.t).v;
-  }};
-  auto GetLoopClauses{[](const parser::OpenMPLoopConstruct &x)
-                          -> const std::list<parser::OmpClause> & {
-    auto &begin{std::get<parser::OmpBeginLoopDirective>(x.t)};
-    return std::get<parser::OmpClauseList>(begin.t).v;
-  }};
-
   std::set<const Symbol *> inductionVars;
   for (const LoopConstruct &loop : llvm::reverse(loopStack_)) {
     if (auto *doc{std::get_if<const parser::DoConstruct *>(&loop)}) {
@@ -4003,13 +3967,14 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       // Omp-loop-construct, check if it's do/simd with an ORDERED clause.
       auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&loop)};
       assert(loopc && "Expecting OpenMPLoopConstruct");
-      llvm::omp::Directive loopDir{GetLoopDirective(**loopc)};
+      const parser::OmpDirectiveSpecification &beginSpec{(*loopc)->BeginDir()};
+      llvm::omp::Directive loopDir{beginSpec.DirId()};
       if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
         auto IsOrdered{[](const parser::OmpClause &c) {
           return c.Id() == llvm::omp::OMPC_ordered;
         }};
         // If it has ORDERED clause, stop the traversal.
-        if (llvm::any_of(GetLoopClauses(**loopc), IsOrdered)) {
+        if (llvm::any_of(beginSpec.Clauses().v, IsOrdered)) {
           break;
         }
       }
@@ -4667,20 +4632,11 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         } else if (const auto *ompLoopConstruct{
                        std::get_if<parser::OpenMPLoopConstruct>(
                            &ompConstruct->u)}) {
-          const auto &beginLoopDir{
-              std::get<parser::OmpBeginLoopDirective>(ompLoopConstruct->t)};
-          const auto &beginDir{
-              std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-          currentDir = beginDir.v;
+          currentDir = ompLoopConstruct->BeginDir().DirId();
         } else if (const auto *ompSectionsConstruct{
                        std::get_if<parser::OpenMPSectionsConstruct>(
                            &ompConstruct->u)}) {
-          const auto &beginSectionsDir{
-              std::get<parser::OmpBeginSectionsDirective>(
-                  ompSectionsConstruct->t)};
-          const auto &beginDir{
-              std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-          currentDir = beginDir.v;
+          currentDir = ompSectionsConstruct->BeginDir().DirId();
         }
 
         if (!llvm::omp::topParallelSet.test(currentDir)) {

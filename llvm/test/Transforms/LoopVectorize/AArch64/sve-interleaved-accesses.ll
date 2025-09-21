@@ -24,7 +24,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 define void @test_array_load2_store2(i32 %C, i32 %D) #1 {
 ; CHECK-LABEL: @test_array_load2_store2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -50,7 +50,7 @@ define void @test_array_load2_store2(i32 %C, i32 %D) #1 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -97,7 +97,7 @@ for.end:                                          ; preds = %for.body
 define void @test_array_load2_i16_store2(i32 %C, i32 %D) #1 {
 ; CHECK-LABEL: @test_array_load2_i16_store2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -132,7 +132,7 @@ define void @test_array_load2_i16_store2(i32 %C, i32 %D) #1 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -181,7 +181,7 @@ for.end:                                 ; preds = %for.body
 define void @test_array_load2_store2_i16(i32 noundef %C, i32 noundef %D) #1 {
 ; CHECK-LABEL: @test_array_load2_store2_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -218,7 +218,7 @@ define void @test_array_load2_store2_i16(i32 noundef %C, i32 noundef %D) #1 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -255,7 +255,7 @@ for.end:                                 ; preds = %for.body
 define i32 @test_struct_load6(ptr %S) #1 {
 ; CHECK-LABEL: @test_struct_load6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -295,8 +295,7 @@ define i32 @test_struct_load6(ptr %S) #1 {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP16]])
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -356,7 +355,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1 {
 ; CHECK-LABEL: @test_reversed_load2_store2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -396,7 +395,7 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -437,7 +436,7 @@ for.body:                                         ; preds = %for.body, %entry
 define void @even_load_static_tc(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1 {
 ; CHECK-LABEL: @even_load_static_tc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -459,7 +458,7 @@ define void @even_load_static_tc(ptr noalias nocapture readonly %A, ptr noalias 
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -572,7 +571,7 @@ for.body:                                         ; preds = %for.body, %entry
 define void @load_gap_reverse(ptr noalias nocapture readonly %P1, ptr noalias nocapture readonly %P2, i64 %X) #1 {
 ; CHECK-LABEL: @load_gap_reverse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -600,7 +599,7 @@ define void @load_gap_reverse(ptr noalias nocapture readonly %P1, ptr noalias no
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -636,7 +635,7 @@ for.exit:
 define void @mixed_load2_store2(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1 {
 ; CHECK-LABEL: @mixed_load2_store2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -661,7 +660,7 @@ define void @mixed_load2_store2(ptr noalias nocapture readonly %A, ptr noalias n
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -722,7 +721,7 @@ for.body:                                         ; preds = %for.body, %entry
 define void @int_float_struct(ptr nocapture readonly %p) #0 {
 ; CHECK-LABEL: @int_float_struct(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -743,9 +742,7 @@ define void @int_float_struct(ptr nocapture readonly %p) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> [[TMP7]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP6]])
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -1549,7 +1546,7 @@ for.end:
 define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1{
 ; CHECK-LABEL: @interleave_deinterleave_reverse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
@@ -1597,7 +1594,7 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP45:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ;
 entry:

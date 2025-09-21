@@ -631,7 +631,7 @@ private:
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
-
+  void verifyUnknownProfileMetadata(MDNode *MD);
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
   void visitConstantPtrAuth(const ConstantPtrAuth *CPA);
@@ -999,6 +999,18 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
 }
 
 void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
+  visitGlobalValue(GI);
+
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  GI.getAllMetadata(MDs);
+  for (const auto &I : MDs) {
+    CheckDI(I.first != LLVMContext::MD_dbg,
+            "an ifunc may not have a !dbg attachment", &GI);
+    Check(I.first != LLVMContext::MD_prof,
+          "an ifunc may not have a !prof attachment", &GI);
+    visitMDNode(*I.second, AreDebugLocsAllowed::No);
+  }
+
   Check(GlobalIFunc::isValidLinkage(GI.getLinkage()),
         "IFunc should have private, internal, linkonce, weak, linkonce_odr, "
         "weak_odr, or external linkage!",
@@ -1074,6 +1086,18 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
       visitValueAsMetadata(*V, nullptr);
       continue;
     }
+  }
+
+  // Check llvm.loop.estimated_trip_count.
+  if (MD.getNumOperands() > 0 &&
+      MD.getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
+    Check(MD.getNumOperands() == 2, "Expected two operands", &MD);
+    auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
+    Check(Count && Count->getType()->isIntegerTy() &&
+              cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
+          "Expected second operand to be an integer constant of type i32 or "
+          "smaller",
+          &MD);
   }
 
   // Check these last, so we diagnose problems in operands first.
@@ -2515,19 +2539,31 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                   V);
   }
 }
+void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
+  Check(MD->getNumOperands() == 2,
+        "'unknown' !prof should have a single additional operand", MD);
+  auto *PassName = dyn_cast<MDString>(MD->getOperand(1));
+  Check(PassName != nullptr,
+        "'unknown' !prof should have an additional operand of type "
+        "string");
+  Check(!PassName->getString().empty(),
+        "the 'unknown' !prof operand should not be an empty string");
+}
 
 void Verifier::verifyFunctionMetadata(
     ArrayRef<std::pair<unsigned, MDNode *>> MDs) {
   for (const auto &Pair : MDs) {
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
-      // We may have functions that are synthesized by the compiler, e.g. in
-      // WPD, that we can't currently determine the entry count.
-      if (isExplicitlyUnknownProfileMetadata(*MD))
-        continue;
-
       Check(MD->getNumOperands() >= 2,
             "!prof annotations should have no less than 2 operands", MD);
+      // We may have functions that are synthesized by the compiler, e.g. in
+      // WPD, that we can't currently determine the entry count.
+      if (MD->getOperand(0).equalsStr(
+              MDProfLabels::UnknownBranchWeightsMarker)) {
+        verifyUnknownProfileMetadata(MD);
+        continue;
+      }
 
       // Check first operand.
       Check(MD->getOperand(0) != nullptr, "first operand should not be null",
@@ -4375,7 +4411,7 @@ void Verifier::visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range,
 }
 
 void Verifier::checkAtomicMemAccessSize(Type *Ty, const Instruction *I) {
-  unsigned Size = DL.getTypeSizeInBits(Ty);
+  unsigned Size = DL.getTypeSizeInBits(Ty).getFixedValue();
   Check(Size >= 8, "atomic memory access' size must be byte-sized", Ty, I);
   Check(!(Size & (Size - 1)),
         "atomic memory access' operand must have a power-of-two size", Ty, I);
@@ -5054,8 +5090,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
           "'unknown' !prof should only appear on instructions on which "
           "'branch_weights' would",
           MD);
-    Check(MD->getNumOperands() == 1,
-          "'unknown' !prof should have no additional operands", MD);
+    verifyUnknownProfileMetadata(MD);
     return;
   }
 
@@ -6507,7 +6542,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
-  case Intrinsic::experimental_vector_partial_reduce_add: {
+  case Intrinsic::vector_partial_reduce_add: {
     VectorType *AccTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
 

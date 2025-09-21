@@ -203,6 +203,8 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
              "to be live in"));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -329,6 +331,17 @@ public:
     return true;
   }
 };
+
+// we synthesize a || b as select a, true, b
+// we synthesize a && b as select a, b, false
+// this function determines if SI is playing one of those roles.
+[[maybe_unused]] bool
+isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
+  return ((isa<ConstantInt>(SI->getTrueValue()) &&
+           (dyn_cast<ConstantInt>(SI->getTrueValue())->isOne())) ||
+          (isa<ConstantInt>(SI->getFalseValue()) &&
+           (dyn_cast<ConstantInt>(SI->getFalseValue())->isNullValue())));
+}
 
 } // end anonymous namespace
 
@@ -3379,7 +3392,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      I.setDebugLoc(DebugLoc::getDropped());
+      I.dropLocation();
     }
     I.dropUBImplyingAttrsAndMetadata();
 
@@ -4031,6 +4044,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  SmallVector<uint32_t, 2> MDWeights;
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
     SmallVector<uint64_t, 8> NewWeights;
@@ -4061,7 +4075,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     // Halve the weights if any of them cannot fit in an uint32_t
     fitWeights(NewWeights);
 
-    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+    append_range(MDWeights, NewWeights);
     setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
@@ -4098,6 +4112,13 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
+  if (!ProfcheckDisableMetadataFixes)
+    if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+      if (!MDWeights.empty()) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        setBranchWeights(SI, MDWeights[0], MDWeights[1],
+                         /*IsExpected=*/false);
+      }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4438,6 +4459,20 @@ static bool mergeConditionalStoreToAddress(
   auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
+  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch) &&
+      !ProfcheckDisableMetadataFixes) {
+    SmallVector<uint32_t, 2> PWeights, QWeights;
+    extractBranchWeights(*PBranch, PWeights);
+    extractBranchWeights(*QBranch, QWeights);
+    if (InvertPCond)
+      std::swap(PWeights[0], PWeights[1]);
+    if (InvertQCond)
+      std::swap(QWeights[0], QWeights[1]);
+    auto CombinedWeights = getDisjunctionWeights(PWeights, QWeights);
+    setBranchWeights(PostBB->getTerminator(), CombinedWeights[0],
+                     CombinedWeights[1],
+                     /*IsExpected=*/false);
+  }
 
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
@@ -4796,6 +4831,18 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     fitWeights(NewWeights);
 
     setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
+    // Cond may be a select instruction with the first operand set to "true", or
+    // the second to "false" (see how createLogicalOp works for `and` and `or`)
+    if (!ProfcheckDisableMetadataFixes)
+      if (auto *SI = dyn_cast<SelectInst>(Cond)) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        // The select is predicated on PBICond
+        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        // The corresponding probabilities are what was referred to above as
+        // PredCommon and PredOther.
+        setBranchWeights(SI, PredCommon, PredOther,
+                         /*IsExpected=*/false);
+      }
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
