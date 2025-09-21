@@ -476,13 +476,10 @@ template <typename RangeT> hash_code hash_combine_range(RangeT &&R) {
 namespace hashing {
 namespace detail {
 
-/// Helper class to manage the recursive combining of hash_combine
-/// arguments.
+/// Helper class to manage the combining of `hash_combine` arguments.
 ///
-/// This class exists to manage the state and various calls involved in the
-/// recursive combining of arguments used in hash_combine. It is particularly
-/// useful at minimizing the code in the recursive calls to ease the pain
-/// caused by a lack of variadic functions.
+/// This class manages the state and various calls involved in combining a
+/// variadic argument list into a single hash.
 struct hash_combine_helper {
   char buffer[64] = {};
   char *buffer_ptr;
@@ -492,10 +489,10 @@ struct hash_combine_helper {
   const uint64_t seed;
 
 public:
-  /// Construct a recursive hash combining helper.
+  /// Construct a hash combining helper.
   ///
-  /// This sets up the state for a recursive hash combine, including getting
-  /// the seed and buffer setup.
+  /// This sets up the state for a hash combine, including getting the seed and
+  /// buffer setup.
   hash_combine_helper()
       : buffer_ptr(buffer), buffer_end(buffer + 64),
         seed(get_execution_seed()) {}
@@ -539,10 +536,9 @@ public:
     }
   }
 
-  /// Recursive, variadic combining method.
+  /// Variadic combining method.
   ///
-  /// This function recurses through each argument, combining that argument
-  /// into a single hash.
+  /// This function combines each argument into a single hash.
   template <typename... Ts> hash_code combine(const Ts &...args) {
     (combine_data(get_hashable_data(args)), ...);
 
@@ -582,7 +578,7 @@ public:
 /// *implementation* for their user-defined type. Consumers of a type should
 /// *not* call this routine, they should instead call 'hash_value'.
 template <typename... Ts> hash_code hash_combine(const Ts &...args) {
-  // Recursively hash each argument using a helper class.
+  // Hash each argument using a helper class.
   ::llvm::hashing::detail::hash_combine_helper helper;
   return helper.combine(args...);
 }
