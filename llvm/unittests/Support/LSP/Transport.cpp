@@ -200,6 +200,6 @@ TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
              "{\"jsonrpc\":\"2.0\",\"id\":109,\"result\":{\"line\":3,"
              "\"character\":2}}\n");
   runTransport();
-  EXPECT_EQ(responseCallbackInvoked, 1);
+  EXPECT_EQ(responseCallbackInvoked, 1u);
 }
 } // namespace
