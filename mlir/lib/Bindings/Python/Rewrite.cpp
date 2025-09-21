@@ -42,18 +42,14 @@ public:
   MlirPDLPatternModule get() { return module; }
 
   static nb::object fromPDLValue(MlirPDLValue value) {
-    if (mlirPDLValueIsValue(value)) {
+    if (mlirPDLValueIsValue(value))
       return nb::cast(mlirPDLValueAsValue(value));
-    }
-    if (mlirPDLValueIsOperation(value)) {
+    if (mlirPDLValueIsOperation(value))
       return nb::cast(mlirPDLValueAsOperation(value));
-    }
-    if (mlirPDLValueIsAttribute(value)) {
+    if (mlirPDLValueIsAttribute(value))
       return nb::cast(mlirPDLValueAsAttribute(value));
-    }
-    if (mlirPDLValueIsType(value)) {
+    if (mlirPDLValueIsType(value))
       return nb::cast(mlirPDLValueAsType(value));
-    }
 
     throw std::runtime_error("unsupported PDL value type");
   }
