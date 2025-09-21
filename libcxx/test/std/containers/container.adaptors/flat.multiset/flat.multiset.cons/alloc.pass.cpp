@@ -14,6 +14,7 @@
 //   explicit flat_multiset(const Allocator& a);
 
 #include <cassert>
+#include <deque>
 #include <flat_set>
 #include <functional>
 #include <vector>
@@ -22,7 +23,19 @@
 #include "test_allocator.h"
 #include "../../../test_compare.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
+  {
+    using A = test_allocator<short>;
+    using M = std::flat_multiset<int, std::less<int>, KeyContainer<int, test_allocator<int>>>;
+    M m(A(0, 5));
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(std::move(m).extract().get_allocator().get_id() == 5);
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true
@@ -46,18 +59,21 @@ void test() {
     static_assert(std::is_constructible_v<M, test_allocator<int>>);
     static_assert(!std::is_convertible_v<test_allocator<int>, M>);
   }
-  {
-    using A = test_allocator<short>;
-    using M = std::flat_multiset<int, std::less<int>, std::vector<int, test_allocator<int>>>;
-    M m(A(0, 5));
-    assert(m.empty());
-    assert(m.begin() == m.end());
-    assert(std::move(m).extract().get_allocator().get_id() == 5);
-  }
+
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
