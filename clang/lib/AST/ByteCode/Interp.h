@@ -78,7 +78,8 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if the Descriptor is of a constexpr or const global variable.
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc, bool NoDiag = false);
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   bool NoDiag = false);
 
 /// Checks if a pointer points to a mutable field.
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
