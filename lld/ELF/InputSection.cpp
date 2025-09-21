@@ -806,6 +806,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return ctx.in.gotPlt->getVA() + a - p;
   case R_GOTREL:
   case RE_PPC64_RELAX_TOC:
+  case R_RELAX_GOT_OFF:
     return r.sym->getVA(ctx, a) - ctx.in.got->getVA();
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();

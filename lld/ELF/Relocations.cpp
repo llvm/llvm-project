@@ -883,14 +883,18 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
 template <class PltSection, class GotPltSection>
 static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
+  RelExpr expr = sym.isPreemptible ? R_ADDEND : R_ABS;
   plt.addEntry(sym);
-  gotPlt.addEntry(sym);
-  if (sym.isPreemptible)
+  if (ctx.target->usesGotPlt) {
+    gotPlt.addEntry(sym);
+    // The relocation is applied to the .got.plt entry.
+    rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx), !!sym.isPreemptible,
+                  sym, 0, expr});
+  } else {
+    // The relocation is applied to the .plt entry.
     rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
-  else
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
+        {type, &plt, sym.getPltOffset(ctx), !!sym.isPreemptible, sym, 0, expr});
+  }
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1058,25 +1062,32 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // indirection.
   const bool isIfunc = sym.isGnuIFunc();
   if (!sym.isPreemptible && (!isIfunc || ctx.arg.zIfuncNoplt)) {
-    if (expr != R_GOT_PC) {
+    if (expr != R_GOT_PC && expr != R_GOT_OFF) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
       if (ctx.arg.emachine == EM_PPC && expr == RE_PPC32_PLTREL)
         addend &= ~0x8000;
       // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
       // call __tls_get_addr even if the symbol is non-preemptible.
+      // Same deal for R_SPARC_TLS_LDM_CALL (call x@TLSPLT).
       if (!(ctx.arg.emachine == EM_HEXAGON &&
             (type == R_HEX_GD_PLT_B22_PCREL ||
              type == R_HEX_GD_PLT_B22_PCREL_X ||
-             type == R_HEX_GD_PLT_B32_PCREL_X)))
+             type == R_HEX_GD_PLT_B32_PCREL_X)) &&
+          !(ctx.arg.emachine == EM_SPARCV9 && type == R_SPARC_TLS_LDM_CALL))
         expr = fromPlt(expr);
     } else if (!isAbsoluteValue(sym) ||
                (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
-      expr = ctx.target->adjustGotPcExpr(type, addend,
-                                         sec->content().data() + offset);
-      // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
+      if (expr == R_GOT_PC)
+        expr = ctx.target->adjustGotPcExpr(type, addend,
+                                           sec->content().data() + offset);
+      else if (expr == R_GOT_OFF)
+        expr = ctx.target->adjustGotOffExpr(type, sym, addend,
+                                            sec->content().data() + offset);
+
+      // If the target adjusted the expression to R_RELAX_GOT_*, we may end up
       // needing the GOT if we can't relax everything.
-      if (expr == R_RELAX_GOT_PC)
+      if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_OFF)
         ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
     }
   }
@@ -1366,12 +1377,13 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
 
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
   // optimizations.
+  // SPARC support for GD/LD to IE/LE optimizations is not yet implemented.
   // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON &&
+      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_SPARCV9 &&
       (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
@@ -2520,11 +2532,11 @@ bool ThunkCreator::createThunks(uint32_t pass,
   return addressesChanged;
 }
 
-// The following aid in the conversion of call x@GDPLT to call __tls_get_addr
-// hexagonNeedsTLSSymbol scans for relocations would require a call to
-// __tls_get_addr.
-// hexagonTLSSymbolUpdate rebinds the relocation to __tls_get_addr.
-bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
+// The following aid in the conversion of call x@GDPLT (Hexagon) and
+// call x@TLSPLT (SPARC) to call __tls_get_addr. needsTLSSymbol scans
+// for relocations that would require a call to __tls_get_addr.
+// tlsSymbolUpdate rebinds the relocation to __tls_get_addr.
+bool elf::needsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
   bool needTlsSymbol = false;
   forEachInputSectionDescription(
       outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
@@ -2538,7 +2550,7 @@ bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
   return needTlsSymbol;
 }
 
-void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
+void elf::tlsSymbolUpdate(Ctx &ctx) {
   Symbol *sym = ctx.symtab->find("__tls_get_addr");
   if (!sym)
     return;

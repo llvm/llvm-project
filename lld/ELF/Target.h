@@ -124,7 +124,8 @@ public:
 
   uint64_t getImageBase() const;
 
-  // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
+  // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got. If
+  // true, usesGotPlt must also be true.
   bool gotBaseSymInGotPlt = false;
 
   static constexpr RelType noneRel = 0;
@@ -150,6 +151,8 @@ public:
   // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
   unsigned gotHeaderEntriesNum = 0;
 
+  bool usesGotPlt = true;
+
   // On PPC ELF V2 abi, the dynamic section needs DT_PPC64_OPT (DT_LOPROC + 3)
   // to be set to 0x2 if there can be multiple TOC's. Although we do not emit
   // multiple TOC's, there can be a mix of TOC and NOTOC addressing which
@@ -174,6 +177,8 @@ public:
   virtual RelExpr adjustTlsExpr(RelType type, RelExpr expr) const;
   virtual RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                                   const uint8_t *loc) const;
+  virtual RelExpr adjustGotOffExpr(RelType type, const Symbol &sym,
+                                   int64_t addend, const uint8_t *loc) const;
 
 protected:
   // On FreeBSD x86_64 the first page cannot be mmaped.
