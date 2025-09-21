@@ -57,6 +57,7 @@ static SignpostEmitter &signposts();
 static sys::SmartMutex<true> &timerLock();
 static TimerGroup &defaultTimerGroup();
 static Name2PairMap &namedGroupedTimers();
+static bool isTimerGlobalsConstructed();
 
 //===----------------------------------------------------------------------===//
 //
@@ -305,13 +306,23 @@ TimerGroup::~TimerGroup() {
     PrintQueuedTimers(*OutStream);
   }
 
+  auto unlink = [&]() {
+    *Prev = Next;
+    if (Next)
+      Next->Prev = Prev;
+  };
+
+  // If the managed instance is already dead, it means we're in the CRT
+  // destruction, so no need to lock.
+  if (!isTimerGlobalsConstructed()) {
+    unlink();
+    return;
+  }
+
   // Remove the group from the TimerGroupList.
   sys::SmartScopedLock<true> L(timerLock());
-  *Prev = Next;
-  if (Next)
-    Next->Prev = Prev;
+  unlink();
 }
-
 
 void TimerGroup::removeTimer(Timer &T) {
   sys::SmartScopedLock<true> L(timerLock());
@@ -557,3 +568,7 @@ void TimerGroup::constructForStatistics() {
 }
 
 void *TimerGroup::acquireTimerGlobals() { return ManagedTimerGlobals.claim(); }
+
+static bool isTimerGlobalsConstructed() {
+  return ManagedTimerGlobals.isConstructed();
+}
