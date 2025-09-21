@@ -60,7 +60,8 @@ struct KernelPropertiesTy {
   /// Check if we can reuse group parameters.
   bool reuseGroupParams(const TgtNDRangeDescTy *LoopDescPtr,
                         const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        uint32_t *GroupSizesOut, ze_group_count_t &GroupCountsOut,
+                        uint32_t *GroupSizesOut,
+                        ze_group_count_t &GroupCountsOut,
                         bool &AllowCooperativeOut) const {
     if (!LoopDescPtr && memcmp(&LoopDescInit, &LoopDesc, sizeof(LoopDesc)))
       return false;

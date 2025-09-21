@@ -574,8 +574,9 @@ public:
   int32_t makeMemoryResident(void *Mem, size_t Size);
 
   // Generic device interface implementation
-  Expected<DeviceImageTy *> loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                                           int32_t ImageId) override;
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
   void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) override;
   int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;

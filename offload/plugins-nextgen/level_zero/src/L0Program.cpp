@@ -301,8 +301,7 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   };
   std::unordered_map<uint64_t, V1ImageInfo> AuxInfo;
 
-  auto ExpectedNewE =
-      ELFObjectFileBase::createELFObjectFile(Image);
+  auto ExpectedNewE = ELFObjectFileBase::createELFObjectFile(Image);
   assert(ExpectedNewE &&
          "isValidOneOmpImage() returns true for invalid ELF image");
   auto processELF = [&](auto *EObj) {
