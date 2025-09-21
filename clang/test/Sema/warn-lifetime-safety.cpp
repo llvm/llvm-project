@@ -6,6 +6,12 @@ struct MyObj {
   MyObj operator+(MyObj);
 };
 
+struct [[gsl::Pointer()]] View {
+  View(const MyObj&); // Borrows from MyObj
+  View();
+  void use() const;
+};
+
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
 // These are cases where the pointer is guaranteed to be dangling at the use site.
@@ -20,12 +26,31 @@ void definite_simple_case() {
   (void)*p;     // expected-note {{later used here}}
 }
 
+void definite_simple_case_gsl() {
+  View v;
+  {
+    MyObj s;
+    v = s;      // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  v.use();      // expected-note {{later used here}}
+}
+
 void no_use_no_error() {
   MyObj* p;
   {
     MyObj s;
     p = &s;
   }
+  // 'p' is dangling here, but since it is never used, no warning is issued.
+}
+
+void no_use_no_error_gsl() {
+  View v;
+  {
+    MyObj s;
+    v = s;
+  }
+  // 'v' is dangling here, but since it is never used, no warning is issued.
 }
 
 void definite_pointer_chain() {
@@ -37,6 +62,16 @@ void definite_pointer_chain() {
     q = p;
   }             // expected-note {{destroyed here}}
   (void)*q;     // expected-note {{later used here}}
+}
+
+void definite_propagation_gsl() {
+  View v1, v2;
+  {
+    MyObj s;
+    v1 = s;     // expected-warning {{object whose reference is captured does not live long enough}}
+    v2 = v1;
+  }             // expected-note {{destroyed here}}
+  v2.use();     // expected-note {{later used here}}
 }
 
 void definite_multiple_uses_one_warning() {
@@ -78,6 +113,19 @@ void definite_single_pointer_multiple_loans(bool cond) {
   (void)*p;     // expected-note 2  {{later used here}}
 }
 
+void definite_single_pointer_multiple_loans_gsl(bool cond) {
+  View v;
+  if (cond){
+    MyObj s;
+    v = s;      // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  else {
+    MyObj t;
+    v = t;      // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  v.use();      // expected-note 2 {{later used here}}
+}
+
 
 //===----------------------------------------------------------------------===//
 // Potential (Maybe) Use-After-Free (-W...strict)
@@ -94,18 +142,14 @@ void potential_if_branch(bool cond) {
   (void)*p;     // expected-note {{later used here}}
 }
 
-// If all paths lead to a dangle, it becomes a definite error.
-void potential_becomes_definite(bool cond) {
-  MyObj* p;
+void potential_if_branch_gsl(bool cond) {
+  MyObj safe;
+  View v = safe;
   if (cond) {
-    MyObj temp1;
-    p = &temp1; // expected-warning {{does not live long enough}}
+    MyObj temp;
+    v = temp;   // expected-warning {{object whose reference is captured may not live long enough}}
   }             // expected-note {{destroyed here}}
-  else {      
-    MyObj temp2;
-    p = &temp2; // expected-warning {{does not live long enough}}
-  }             // expected-note {{destroyed here}}
-  (void)*p;     // expected-note 2 {{later used here}}
+  v.use();      // expected-note {{later used here}}
 }
 
 void definite_potential_together(bool cond) {
@@ -159,6 +203,16 @@ void potential_for_loop_use_after_loop_body(MyObj safe) {
   (void)*p;     // expected-note {{later used here}}
 }
 
+void potential_for_loop_gsl() {
+  MyObj safe;
+  View v = safe;
+  for (int i = 0; i < 1; ++i) {
+    MyObj s;
+    v = s;      // expected-warning {{object whose reference is captured may not live long enough}}
+  }             // expected-note {{destroyed here}}
+  v.use();      // expected-note {{later used here}}
+}
+
 void potential_for_loop_use_before_loop_body(MyObj safe) {
   MyObj* p = &safe;
   for (int i = 0; i < 1; ++i) {
@@ -180,6 +234,19 @@ void potential_loop_with_break(bool cond) {
     }           
   } 
   (void)*p;     // expected-note {{later used here}}
+}
+
+void potential_loop_with_break_gsl(bool cond) {
+  MyObj safe;
+  View v = safe;
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      MyObj temp;
+      v = temp;   // expected-warning {{object whose reference is captured may not live long enough}}
+      break;      // expected-note {{destroyed here}}
+    }
+  }
+  v.use();      // expected-note {{later used here}}
 }
 
 void potential_multiple_expiry_of_same_loan(bool cond) {
@@ -258,6 +325,28 @@ void definite_switch(int mode) {
   (void)*p;     // expected-note 3 {{later used here}}
 }
 
+void definite_switch_gsl(int mode) {
+  View v;
+  switch (mode) {
+  case 1: {
+    MyObj temp1;
+    v = temp1;  // expected-warning {{object whose reference is captured does not live long enough}}
+    break;      // expected-note {{destroyed here}}
+  }
+  case 2: {
+    MyObj temp2;
+    v = temp2;  // expected-warning {{object whose reference is captured does not live long enough}}
+    break;      // expected-note {{destroyed here}}
+  }
+  default: {
+    MyObj temp3;
+    v = temp3;  // expected-warning {{object whose reference is captured does not live long enough}}
+    break;      // expected-note {{destroyed here}}
+  }
+  }
+  v.use();      // expected-note 3 {{later used here}}
+}
+
 //===----------------------------------------------------------------------===//
 // No-Error Cases
 //===----------------------------------------------------------------------===//
@@ -270,4 +359,15 @@ void no_error_if_dangle_then_rescue() {
   }
   p = &safe;    // p is "rescued" before use.
   (void)*p;     // This is safe.
+}
+
+void no_error_if_dangle_then_rescue_gsl() {
+  MyObj safe;
+  View v;
+  {
+    MyObj temp;
+    v = temp;  // 'v' is temporarily dangling.
+  }
+  v = safe;    // 'v' is "rescued" before use by reassigning to a valid object.
+  v.use();     // This is safe.
 }

@@ -279,6 +279,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_stdlib_macros",
+    hdrs = ["hdr/stdlib_macros.h"],
+    deps = [
+        ":hdr_stdlib_overlay",
+    ],
+)
+
+libc_support_library(
     name = "hdr_stdlib_overlay",
     hdrs = ["hdr/stdlib_overlay.h"],
 )
@@ -2297,6 +2305,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_rsqrtf16",
+    hdrs = ["src/__support/math/rsqrtf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_manipulation_functions",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_asin_utils",
     hdrs = ["src/__support/math/asin_utils.h"],
     deps = [
@@ -2622,6 +2646,14 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_math_sincosf16_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dsqrtl",
+    hdrs = ["src/__support/math/dsqrtl.h"],
+    deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
@@ -3245,6 +3277,14 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "rsqrtf16",
+    additional_deps = [
+        ":__support_math_rsqrtf16",
+        ":errno",
+    ],
+)
+
+libc_math_function(
     name = "acoshf16",
     additional_deps = [
         ":__support_math_acoshf16",
@@ -3493,7 +3533,7 @@ libc_math_function(name = "dmulf128")
 libc_math_function(
     name = "dsqrtl",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_dsqrtl",
     ],
 )
 
@@ -3810,7 +3850,19 @@ libc_math_function(name = "floorf128")
 
 libc_math_function(name = "floorf16")
 
-# TODO: Add fma, fmaf, fmal, fmaf128 functions.
+libc_math_function(
+    name = "fma",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
+
+libc_math_function(
+    name = "fmaf",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
 
 libc_math_function(
     name = "fmaf16",
@@ -5031,6 +5083,41 @@ libc_function(
 )
 
 libc_support_library(
+    name = "rand_util",
+    srcs = ["src/stdlib/rand_util.cpp"],
+    hdrs = ["src/stdlib/rand_util.h"],
+    deps = [
+        ":__support_cpp_atomic",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "rand",
+    srcs = ["src/stdlib/rand.cpp"],
+    hdrs = ["src/stdlib/rand.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_threads_sleep",
+        ":hdr_stdlib_macros",
+        ":rand_util",
+    ],
+)
+
+libc_function(
+    name = "srand",
+    srcs = ["src/stdlib/srand.cpp"],
+    hdrs = ["src/stdlib/srand.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":rand_util",
+    ],
+)
+
+libc_support_library(
     name = "str_from_util",
     hdrs = ["src/stdlib/str_from_util.h"],
     deps = [
@@ -5226,6 +5313,27 @@ libc_support_library(
 )
 
 libc_function(
+    name = "index",
+    srcs = ["src/strings/index.cpp"],
+    hdrs = ["src/strings/index.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "rindex",
+    srcs = ["src/strings/rindex.cpp"],
+    hdrs = ["src/strings/rindex.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_utils",
+    ],
+)
+
+libc_function(
     name = "memchr",
     srcs = ["src/string/memchr.cpp"],
     hdrs = ["src/string/memchr.h"],
@@ -5248,6 +5356,16 @@ libc_function(
 )
 
 libc_function(
+    name = "memccpy",
+    srcs = ["src/string/memccpy.cpp"],
+    hdrs = ["src/string/memccpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+    ],
+)
+
+libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
@@ -5259,9 +5377,31 @@ libc_function(
 )
 
 libc_function(
+    name = "memset_explicit",
+    srcs = ["src/string/memset_explicit.cpp"],
+    hdrs = ["src/string/memset_explicit.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memmem",
+    srcs = ["src/string/memmem.cpp"],
+    hdrs = ["src/string/memmem.h"],
     deps = [
         ":__support_common",
         ":__support_macros_null_check",
@@ -5334,6 +5474,30 @@ libc_function(
 )
 
 libc_function(
+    name = "stpcpy",
+    srcs = ["src/string/stpcpy.cpp"],
+    hdrs = ["src/string/stpcpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "stpncpy",
+    srcs = ["src/string/stpncpy.cpp"],
+    hdrs = ["src/string/stpncpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
     name = "strlen",
     srcs = ["src/string/strlen.cpp"],
     hdrs = ["src/string/strlen.h"],
@@ -5352,6 +5516,17 @@ libc_function(
         ":__support_common",
         ":__support_macros_null_check",
         ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strlcpy",
+    srcs = ["src/string/strlcpy.cpp"],
+    hdrs = ["src/string/strlcpy.h"],
+    deps = [
+        ":__support_common",
+        ":llvm_libc_types_size_t",
         ":string_utils",
     ],
 )
@@ -5378,6 +5553,40 @@ libc_function(
 )
 
 libc_function(
+    name = "strncmp",
+    srcs = ["src/string/strncmp.cpp"],
+    hdrs = ["src/string/strncmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcasecmp",
+    srcs = ["src/strings/strcasecmp.cpp"],
+    hdrs = ["src/strings/strcasecmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strncasecmp",
+    srcs = ["src/strings/strncasecmp.cpp"],
+    hdrs = ["src/strings/strncasecmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
     name = "strchr",
     srcs = ["src/string/strchr.cpp"],
     hdrs = ["src/string/strchr.h"],
@@ -5391,6 +5600,16 @@ libc_function(
     name = "strrchr",
     srcs = ["src/string/strrchr.cpp"],
     hdrs = ["src/string/strrchr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strchrnul",
+    srcs = ["src/string/strchrnul.cpp"],
+    hdrs = ["src/string/strchrnul.h"],
     deps = [
         ":__support_common",
         ":string_utils",
@@ -5418,6 +5637,51 @@ libc_function(
         ":__support_common",
         ":__support_macros_null_check",
         ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcasestr",
+    srcs = ["src/string/strcasestr.cpp"],
+    hdrs = ["src/string/strcasestr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcat",
+    srcs = ["src/string/strcat.cpp"],
+    hdrs = ["src/string/strcat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strlcat",
+    srcs = ["src/string/strlcat.cpp"],
+    hdrs = ["src/string/strlcat.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strncat",
+    srcs = ["src/string/strncat.cpp"],
+    hdrs = ["src/string/strncat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
         ":string_utils",
     ],
 )
@@ -6115,6 +6379,31 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "vasprintf_internal",
+    hdrs = ["src/stdio/printf_core/vasprintf_internal.h"],
+    deps = [
+        ":__support_arg_list",
+        ":__support_macros_attributes",
+        ":func_free",
+        ":func_malloc",
+        ":func_realloc",
+        ":printf_main",
+        ":printf_writer",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "asprintf",
+    srcs = ["src/stdio/asprintf.cpp"],
+    hdrs = ["src/stdio/asprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
+    ],
+)
+
 libc_function(
     name = "sprintf",
     srcs = ["src/stdio/sprintf.cpp"],
@@ -6163,6 +6452,16 @@ libc_function(
         ":errno",
         ":types_FILE",
         ":vfprintf_internal",
+    ],
+)
+
+libc_function(
+    name = "vasprintf",
+    srcs = ["src/stdio/vasprintf.cpp"],
+    hdrs = ["src/stdio/vasprintf.h"],
+    deps = [
+        ":__support_arg_list",
+        ":vasprintf_internal",
     ],
 )
 

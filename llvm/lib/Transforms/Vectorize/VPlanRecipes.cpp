@@ -328,7 +328,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // Pick out opcode, type/ext information and use sub side effects from a widen
   // recipe.
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
-    if (match(Widen, m_Sub(m_SpecificInt(0), m_VPValue(Op)))) {
+    if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
       Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
     }
     Opcode = Widen->getOpcode();
@@ -375,9 +375,9 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   Type *RetTy = PhiVal->getType();
 
-  CallInst *V = Builder.CreateIntrinsic(
-      RetTy, Intrinsic::experimental_vector_partial_reduce_add,
-      {PhiVal, BinOpVal}, nullptr, "partial.reduce");
+  CallInst *V =
+      Builder.CreateIntrinsic(RetTy, Intrinsic::vector_partial_reduce_add,
+                              {PhiVal, BinOpVal}, nullptr, "partial.reduce");
 
   State.set(this, V);
 }
@@ -978,7 +978,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
 }
 
-std::optional<InstructionCost> VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
+InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     unsigned Opcode, ElementCount VF, VPCostContext &Ctx) const {
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
   Type *ResultTy = VF.isVector() ? toVectorTy(ScalarTy, VF) : ScalarTy;
@@ -1044,7 +1044,7 @@ std::optional<InstructionCost> VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
   }
-  return std::nullopt;
+  llvm_unreachable("called for unsupported opcode");
 }
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
@@ -1059,7 +1059,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
-    return *getCostForRecipeWithOpcode(
+    return getCostForRecipeWithOpcode(
         getOpcode(),
         vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   }
@@ -2206,7 +2206,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::ExtractValue:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return *getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -3151,9 +3151,35 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return *getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                       Ctx) *
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+  case Instruction::SRem:
+  case Instruction::URem: {
+    InstructionCost ScalarCost =
+        getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1), Ctx);
+    if (isSingleScalar())
+      return ScalarCost;
+
+    ScalarCost = ScalarCost * VF.getFixedValue() +
+                 Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
+                                              to_vector(operands()), VF);
+    // If the recipe is not predicated (i.e. not in a replicate region), return
+    // the scalar cost. Otherwise handle predicated cost.
+    if (!getParent()->getParent()->isReplicator())
+      return ScalarCost;
+
+    // Account for the phi nodes that we will create.
+    ScalarCost += VF.getFixedValue() *
+                  Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+    // Scale the cost by the probability of executing the predicated blocks.
+    // This assumes the predicated block for each vector lane is equally
+    // likely.
+    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    return ScalarCost;
+  }
   case Instruction::Load:
   case Instruction::Store: {
     if (isSingleScalar()) {

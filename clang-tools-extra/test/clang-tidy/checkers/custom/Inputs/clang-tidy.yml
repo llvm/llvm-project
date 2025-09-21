@@ -1,0 +1,22 @@
+CustomChecks:
+  - Name: test-diag-level
+    Query: |
+      match varDecl(
+          hasType(asString("long")),
+          hasTypeLoc(typeLoc().bind("long"))
+      ).bind("decl")
+    Diagnostic:
+      - BindName: long
+        Message: use 'int' instead of 'long'
+        Level: Warning
+      - BindName: decl
+        Message: declaration of 'long'
+        Level: Note
+  - Name: test-let-bind
+    Query: |
+      let expr varDecl(isStaticStorageClass()).bind("vd")
+      match expr
+    Diagnostic:
+      - BindName: vd
+        Message: find static variable
+        Level: Warning

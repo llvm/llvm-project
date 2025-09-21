@@ -535,6 +535,7 @@ struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
     IO.enumCase(Value, "None", FormatStyle::PPDIS_None);
     IO.enumCase(Value, "AfterHash", FormatStyle::PPDIS_AfterHash);
     IO.enumCase(Value, "BeforeHash", FormatStyle::PPDIS_BeforeHash);
+    IO.enumCase(Value, "Leave", FormatStyle::PPDIS_Leave);
   }
 };
 
@@ -3157,6 +3158,7 @@ private:
         "UIImage",
         "UIView",
     };
+    assert(llvm::is_sorted(FoundationIdentifiers));
 
     for (auto *Line : AnnotatedLines) {
       if (Line->First && (Line->First->TokenText.starts_with("#") ||
@@ -4116,6 +4118,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   switch (Style.Language) {
   case FormatStyle::LK_C:
     LangOpts.C11 = 1;
+    LangOpts.C23 = 1;
     break;
   case FormatStyle::LK_Cpp:
   case FormatStyle::LK_ObjC:

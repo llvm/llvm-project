@@ -61,6 +61,16 @@ TEST(PackedVectorTest, Operation) {
   EXPECT_EQ(3U, Vec[1]);
 }
 
+TEST(PackedVectorTest, RawBitsSize) {
+  PackedVector<unsigned, 3> Vec;
+  EXPECT_EQ(0u, Vec.raw_bits().size());
+  Vec.push_back(2);
+  Vec.push_back(0);
+  Vec.push_back(1);
+  Vec.push_back(3);
+  EXPECT_EQ(12u, Vec.raw_bits().size());
+}
+
 #ifdef EXPECT_DEBUG_DEATH
 
 TEST(PackedVectorTest, UnsignedValues) {
