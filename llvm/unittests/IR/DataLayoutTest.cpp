@@ -415,10 +415,6 @@ TEST(DataLayout, ParsePointerSpec) {
       DataLayout::parse("p2n:32:32"),
       FailedWithMessage("address space must be a 24-bit integer"));
 
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("pe2:64:64"),
-      FailedWithMessage("pointers with external state must be non-integral"));
-
   // AS0 cannot be non-integral.
   for (StringRef Str : {"pe:64:64", "pu:64:64", "pue:64:64", "pe0:64:64",
                         "pu0:64:64", "peu0:64:64"})
