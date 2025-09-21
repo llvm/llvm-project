@@ -323,17 +323,9 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
               // Check if MFMA register is dead at current instruction
               const LiveInterval &MFMAInterval = LIS->getInterval(MFMAReg);
               if (!MFMAInterval.liveAt(CurrentSlot)) {
-
-                // Add bidirectional avoidance hint
-                MFI->addRegisterToAvoid(CandidateReg, MFMAReg);
-                MFI->addRegisterToAvoid(MFMAReg, CandidateReg);
-
-                // Set hint if we found registers to avoid
-                MRI->setRegAllocationHint(
-                    MFMAReg, AMDGPURI::HasRegisterAvoidanceList, Register());
-                MRI->setRegAllocationHint(CandidateReg,
-                                          AMDGPURI::HasRegisterAvoidanceList,
-                                          Register());
+                // Add bidirectional antihints
+                MRI->addRegAllocationAntiHints(CandidateReg, MFMARegs);
+                MRI->addRegAllocationAntiHints(MFMAReg, CandidateReg);
               }
             }
           }
