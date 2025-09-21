@@ -436,6 +436,34 @@ define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
   ret <3 x i5> %not
 }
 
+define i8 @not_or_neg_nsw(i8 %x, i8 %y)  {
+; CHECK-LABEL: @not_or_neg_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = and i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i8 [[NOT]]
+;
+  %s = sub nsw i8 0, %y
+  %o = or i8 %s, %x
+  %not = xor i8 %o, -1
+  ret i8 %not
+}
+
+define <3 x i5> @not_or_neg_commute_vec_nsw(<3 x i5> %x, <3 x i5> %p)  {
+; CHECK-LABEL: @not_or_neg_commute_vec_nsw(
+; CHECK-NEXT:    [[Y:%.*]] = mul <3 x i5> [[P:%.*]], <i5 1, i5 2, i5 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <3 x i5> [[X:%.*]], splat (i5 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i5> [[Y]], splat (i5 -1)
+; CHECK-NEXT:    [[NOT:%.*]] = and <3 x i5> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <3 x i5> [[NOT]]
+;
+  %y = mul <3 x i5> %p, <i5 1, i5 2, i5 3> ; thwart complexity-based-canonicalization
+  %s = sub nsw <3 x i5> <i5 0, i5 0, i5 poison>, %x
+  %o = or <3 x i5> %y, %s
+  %not = xor <3 x i5> %o, <i5 -1, i5 poison, i5 -1>
+  ret <3 x i5> %not
+}
+
 ; negative test
 
 define i8 @not_or_neg_use1(i8 %x, i8 %y)  {
