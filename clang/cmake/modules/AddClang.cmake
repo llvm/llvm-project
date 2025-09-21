@@ -217,7 +217,7 @@ endmacro()
 
 function(clang_target_link_libraries target type)
   if (TARGET obj.${target})
-    target_link_libraries(obj.${target} ${ARGN})
+    target_link_libraries(obj.${target} ${type} ${ARGN})
   endif()
 
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
