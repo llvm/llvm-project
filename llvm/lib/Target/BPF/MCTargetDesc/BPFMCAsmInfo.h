@@ -47,6 +47,10 @@ public:
   void setDwarfUsesRelocationsAcrossSections(bool enable) {
     DwarfUsesRelocationsAcrossSections = enable;
   }
+
+  MCSection *getNonexecutableStackSection(MCContext &Ctx) const override {
+    return nullptr;
+  }
 };
 }
 
