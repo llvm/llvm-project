@@ -15,6 +15,7 @@ add_subdirectory(IR)
 add_subdirectory(RegisterEverything)
 add_subdirectory(Transforms)
 add_subdirectory(Target)
+add_subdirectory(Presburger)
 
 if(MLIR_ENABLE_EXECUTION_ENGINE)
   add_subdirectory(ExecutionEngine)
