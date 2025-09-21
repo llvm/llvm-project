@@ -1615,46 +1615,56 @@ bool ARMBaseInstrInfo::expandCtSelectThumb(MachineInstr &MI) const {
   Register Src2Reg = MI.getOperand(3).getReg();
   Register CondReg = MI.getOperand(4).getReg();
 
-  // The following sequence of steps yields: (src1 & mask) | (src2 & ~mask)
-  // 1. mask = -cond
-  BuildMI(*MBB, MI, DL, get(ARM::tRSB), MaskReg)
-    .add(t1CondCodeOp())
+  // Access register info
+  MachineFunction *MF = MBB->getParent();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  unsigned RegSize = TRI->getRegSizeInBits(MaskReg, MRI);
+  unsigned ShiftAmount = RegSize - 1;
+
+  // Option 1: Shift-based mask (preferred - no flag modification)
+  BuildMI(*MBB, MI, DL, get(ARM::tMOVr), MaskReg)
     .addReg(CondReg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
+  // Instead of using RSB, we can use LSL and ASR to get the mask. This is to avoid the flag modification caused by RSB.
+  BuildMI(*MBB, MI, DL, get(ARM::tLSLri), MaskReg)
+    .addReg(MaskReg)
+    .addImm(ShiftAmount)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(ARM::tASRri), MaskReg)
+    .addReg(MaskReg)
+    .addImm(ShiftAmount)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // 2. xor_diff = src1 ^ src2
   BuildMI(*MBB, MI, DL, get(ARM::tMOVr), DestReg)
     .addReg(Src1Reg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
-    
-  // 2. A = src1 & mask
-  BuildMI(*MBB, MI, DL, get(ARM::tAND), DestReg)
-    .add(t1CondCodeOp())
-    .addReg(DestReg, RegState::Kill)
-    .addReg(MaskReg)
-    .add(predOps(ARMCC::AL))
-    .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
-  // 3. B = src2 & ~mask
-  Register BICScratch = Src1Reg;
-  BuildMI(*MBB, MI, DL, get(ARM::tMOVr), BICScratch)
+  BuildMI(*MBB, MI, DL, get(ARM::tEOR), DestReg)
+    .addReg(DestReg)
     .addReg(Src2Reg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
-    
-  BuildMI(*MBB, MI, DL, get(ARM::tBIC), BICScratch)
-    .add(t1CondCodeOp())
-    .addReg(BICScratch, RegState::Kill)
-    .addReg(MaskReg)
+
+  // 3. masked_xor = xor_diff & mask
+  BuildMI(*MBB, MI, DL, get(ARM::tAND), DestReg)
+    .addReg(DestReg)
+    .addReg(MaskReg, RegState::Kill)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
-  // 4. result = A | B
-  BuildMI(*MBB, MI, DL, get(ARM::tORR), DestReg)
-    .add(t1CondCodeOp())
-    .addReg(DestReg, RegState::Kill)
-    .addReg(BICScratch)
+  // 4. result = src2 ^ masked_xor
+  BuildMI(*MBB, MI, DL, get(ARM::tEOR), DestReg)
+    .addReg(DestReg)
+    .addReg(Src2Reg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 

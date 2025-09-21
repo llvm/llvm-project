@@ -88,73 +88,81 @@ define <8 x i8> @ct_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; THUMB1-NEXT:    ands r4, r1
 ; THUMB1-NEXT:    ldr r1, [sp, #76]
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #7]
 ; THUMB1-NEXT:    ldr r1, [sp, #72]
 ; THUMB1-NEXT:    ldr r5, [sp, #40]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #6]
 ; THUMB1-NEXT:    ldr r1, [sp, #68]
 ; THUMB1-NEXT:    ldr r5, [sp, #36]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #5]
 ; THUMB1-NEXT:    ldr r1, [sp, #64]
 ; THUMB1-NEXT:    ldr r5, [sp, #32]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #4]
 ; THUMB1-NEXT:    ldr r1, [sp, #60]
 ; THUMB1-NEXT:    ldr r5, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #3]
 ; THUMB1-NEXT:    ldr r1, [sp, #56]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #2]
 ; THUMB1-NEXT:    ldr r1, [sp, #52]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    eors r5, r1
 ; THUMB1-NEXT:    ands r5, r6
-; THUMB1-NEXT:    mov r3, r1
-; THUMB1-NEXT:    bics r3, r6
-; THUMB1-NEXT:    orrs r5, r3
+; THUMB1-NEXT:    eors r5, r1
 ; THUMB1-NEXT:    strb r5, [r0, #1]
 ; THUMB1-NEXT:    ldr r1, [sp, #48]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    eors r3, r1
 ; THUMB1-NEXT:    ands r3, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r3, r2
+; THUMB1-NEXT:    eors r3, r1
 ; THUMB1-NEXT:    strb r3, [r0]
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
@@ -219,7 +227,6 @@ define <8 x i8> @ct_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    strb r3, [r0]
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <8 x i8> @llvm.ct.select.v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b)
   ret <8 x i8> %sel
@@ -276,35 +283,39 @@ define <4 x i16> @ct_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #32]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #36]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ldr r3, [sp, #40]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ands r2, r6
-; THUMB1-NEXT:    mov r5, r3
-; THUMB1-NEXT:    bics r5, r6
-; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
 ; THUMB1-NEXT:    ldr r6, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    ands r3, r7
-; THUMB1-NEXT:    mov r6, r5
-; THUMB1-NEXT:    bics r6, r7
-; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -336,7 +347,6 @@ define <4 x i16> @ct_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; THUMB2-NEXT:    bic.w r5, lr, r5
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <4 x i16> @llvm.ct.select.v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b)
   ret <4 x i16> %sel
@@ -379,19 +389,21 @@ define <2 x i32> @ct_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #20]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_v2i32:
@@ -410,7 +422,6 @@ define <2 x i32> @ct_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; THUMB2-NEXT:    bic.w lr, r2, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <2 x i32> @llvm.ct.select.v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b)
   ret <2 x i32> %sel
@@ -453,19 +464,21 @@ define <1 x i64> @ct_v1i64(i1 %cond, <1 x i64> %a, <1 x i64> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #20]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_v1i64:
@@ -484,7 +497,6 @@ define <1 x i64> @ct_v1i64(i1 %cond, <1 x i64> %a, <1 x i64> %b) {
 ; THUMB2-NEXT:    bic.w lr, r2, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <1 x i64> @llvm.ct.select.v1i64(i1 %cond, <1 x i64> %a, <1 x i64> %b)
   ret <1 x i64> %sel
@@ -527,19 +539,21 @@ define <2 x float> @ct_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #20]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_v2f32:
@@ -558,7 +572,6 @@ define <2 x float> @ct_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b) {
 ; THUMB2-NEXT:    bic.w lr, r2, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <2 x float> @llvm.ct.select.v2f32(i1 %cond, <2 x float> %a, <2 x float> %b)
   ret <2 x float> %sel
@@ -707,145 +720,161 @@ define <16 x i8> @ct_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
 ; THUMB1-NEXT:    ands r4, r1
 ; THUMB1-NEXT:    ldr r1, [sp, #140]
 ; THUMB1-NEXT:    ldr r5, [sp, #76]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #15]
 ; THUMB1-NEXT:    ldr r1, [sp, #136]
 ; THUMB1-NEXT:    ldr r5, [sp, #72]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #14]
 ; THUMB1-NEXT:    ldr r1, [sp, #132]
 ; THUMB1-NEXT:    ldr r5, [sp, #68]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #13]
 ; THUMB1-NEXT:    ldr r1, [sp, #128]
 ; THUMB1-NEXT:    ldr r5, [sp, #64]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #12]
 ; THUMB1-NEXT:    ldr r1, [sp, #124]
 ; THUMB1-NEXT:    ldr r5, [sp, #60]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #11]
 ; THUMB1-NEXT:    ldr r1, [sp, #120]
 ; THUMB1-NEXT:    ldr r5, [sp, #56]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #10]
 ; THUMB1-NEXT:    ldr r1, [sp, #116]
 ; THUMB1-NEXT:    ldr r5, [sp, #52]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #9]
 ; THUMB1-NEXT:    ldr r1, [sp, #112]
 ; THUMB1-NEXT:    ldr r5, [sp, #48]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #8]
 ; THUMB1-NEXT:    ldr r1, [sp, #108]
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #7]
 ; THUMB1-NEXT:    ldr r1, [sp, #104]
 ; THUMB1-NEXT:    ldr r5, [sp, #40]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #6]
 ; THUMB1-NEXT:    ldr r1, [sp, #100]
 ; THUMB1-NEXT:    ldr r5, [sp, #36]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #5]
 ; THUMB1-NEXT:    ldr r1, [sp, #96]
 ; THUMB1-NEXT:    ldr r5, [sp, #32]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #4]
 ; THUMB1-NEXT:    ldr r1, [sp, #92]
 ; THUMB1-NEXT:    ldr r5, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #3]
 ; THUMB1-NEXT:    ldr r1, [sp, #88]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strb r6, [r0, #2]
 ; THUMB1-NEXT:    ldr r1, [sp, #84]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    eors r5, r1
 ; THUMB1-NEXT:    ands r5, r6
-; THUMB1-NEXT:    mov r3, r1
-; THUMB1-NEXT:    bics r3, r6
-; THUMB1-NEXT:    orrs r5, r3
+; THUMB1-NEXT:    eors r5, r1
 ; THUMB1-NEXT:    strb r5, [r0, #1]
 ; THUMB1-NEXT:    ldr r1, [sp, #80]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    eors r3, r1
 ; THUMB1-NEXT:    ands r3, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r3, r2
+; THUMB1-NEXT:    eors r3, r1
 ; THUMB1-NEXT:    strb r3, [r0]
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
@@ -966,7 +995,6 @@ define <16 x i8> @ct_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    strb r3, [r0]
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <16 x i8> @llvm.ct.select.v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %sel
@@ -1059,73 +1087,81 @@ define <8 x i16> @ct_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
 ; THUMB1-NEXT:    ands r4, r1
 ; THUMB1-NEXT:    ldr r1, [sp, #76]
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strh r6, [r0, #14]
 ; THUMB1-NEXT:    ldr r1, [sp, #72]
 ; THUMB1-NEXT:    ldr r5, [sp, #40]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strh r6, [r0, #12]
 ; THUMB1-NEXT:    ldr r1, [sp, #68]
 ; THUMB1-NEXT:    ldr r5, [sp, #36]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strh r6, [r0, #10]
 ; THUMB1-NEXT:    ldr r1, [sp, #64]
 ; THUMB1-NEXT:    ldr r5, [sp, #32]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strh r6, [r0, #8]
 ; THUMB1-NEXT:    ldr r1, [sp, #60]
 ; THUMB1-NEXT:    ldr r5, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strh r6, [r0, #6]
 ; THUMB1-NEXT:    ldr r1, [sp, #56]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    ands r6, r7
-; THUMB1-NEXT:    mov r5, r1
-; THUMB1-NEXT:    bics r5, r7
-; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    eors r6, r1
 ; THUMB1-NEXT:    strh r6, [r0, #4]
 ; THUMB1-NEXT:    ldr r1, [sp, #52]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    eors r5, r1
 ; THUMB1-NEXT:    ands r5, r6
-; THUMB1-NEXT:    mov r3, r1
-; THUMB1-NEXT:    bics r3, r6
-; THUMB1-NEXT:    orrs r5, r3
+; THUMB1-NEXT:    eors r5, r1
 ; THUMB1-NEXT:    strh r5, [r0, #2]
 ; THUMB1-NEXT:    ldr r1, [sp, #48]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    eors r3, r1
 ; THUMB1-NEXT:    ands r3, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r3, r2
+; THUMB1-NEXT:    eors r3, r1
 ; THUMB1-NEXT:    strh r3, [r0]
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
@@ -1190,7 +1226,6 @@ define <8 x i16> @ct_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    strh r3, [r0]
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <8 x i16> @llvm.ct.select.v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b)
   ret <8 x i16> %sel
@@ -1250,35 +1285,39 @@ define <4 x i32> @ct_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #32]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #36]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ldr r3, [sp, #40]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ands r2, r6
-; THUMB1-NEXT:    mov r5, r3
-; THUMB1-NEXT:    bics r5, r6
-; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
 ; THUMB1-NEXT:    ldr r6, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    ands r3, r7
-; THUMB1-NEXT:    mov r6, r5
-; THUMB1-NEXT:    bics r6, r7
-; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -1310,7 +1349,6 @@ define <4 x i32> @ct_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 ; THUMB2-NEXT:    bic.w r5, lr, r5
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
   ret <4 x i32> %sel
@@ -1370,35 +1408,39 @@ define <2 x i64> @ct_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #32]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #36]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ldr r3, [sp, #40]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ands r2, r6
-; THUMB1-NEXT:    mov r5, r3
-; THUMB1-NEXT:    bics r5, r6
-; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
 ; THUMB1-NEXT:    ldr r6, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    ands r3, r7
-; THUMB1-NEXT:    mov r6, r5
-; THUMB1-NEXT:    bics r6, r7
-; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -1430,7 +1472,6 @@ define <2 x i64> @ct_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
 ; THUMB2-NEXT:    bic.w r5, lr, r5
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <2 x i64> @llvm.ct.select.v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %sel
@@ -1490,35 +1531,39 @@ define <4 x float> @ct_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #32]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #36]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ldr r3, [sp, #40]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ands r2, r6
-; THUMB1-NEXT:    mov r5, r3
-; THUMB1-NEXT:    bics r5, r6
-; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
 ; THUMB1-NEXT:    ldr r6, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    ands r3, r7
-; THUMB1-NEXT:    mov r6, r5
-; THUMB1-NEXT:    bics r6, r7
-; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -1550,7 +1595,6 @@ define <4 x float> @ct_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; THUMB2-NEXT:    bic.w r5, lr, r5
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <4 x float> @llvm.ct.select.v4f32(i1 %cond, <4 x float> %a, <4 x float> %b)
   ret <4 x float> %sel
@@ -1610,35 +1654,39 @@ define <2 x double> @ct_v2f64(i1 %cond, <2 x double> %a, <2 x double> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #32]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #36]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ldr r3, [sp, #40]
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ands r2, r6
-; THUMB1-NEXT:    mov r5, r3
-; THUMB1-NEXT:    bics r5, r6
-; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    eors r2, r3
 ; THUMB1-NEXT:    ldr r5, [sp, #44]
 ; THUMB1-NEXT:    ldr r6, [sp, #28]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    ands r3, r7
-; THUMB1-NEXT:    mov r6, r5
-; THUMB1-NEXT:    bics r6, r7
-; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    add sp, #4
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -1670,7 +1718,6 @@ define <2 x double> @ct_v2f64(i1 %cond, <2 x double> %a, <2 x double> %b) {
 ; THUMB2-NEXT:    bic.w r5, lr, r5
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <2 x double> @llvm.ct.select.v2f64(i1 %cond, <2 x double> %a, <2 x double> %b)
   ret <2 x double> %sel
@@ -1704,12 +1751,13 @@ define <1 x i8> @ct_v1i8(i1 %cond, <1 x i8> %a, <1 x i8> %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_v1i8:
@@ -1720,7 +1768,6 @@ define <1 x i8> @ct_v1i8(i1 %cond, <1 x i8> %a, <1 x i8> %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <1 x i8> @llvm.ct.select.i8(i1 %cond, <1 x i8> %a, <1 x i8> %b)
   ret <1 x i8> %sel
@@ -1761,19 +1808,21 @@ define <2 x i8> @ct_v2i8(i1 %cond, <2 x i8> %a, <2 x i8> %b) {
 ; THUMB1-NEXT:    push {r4, r5, r7, lr}
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r3
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r1, r3
-; THUMB1-NEXT:    bics r1, r5
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r3
 ; THUMB1-NEXT:    ldr r3, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r2
+; THUMB1-NEXT:    eors r1, r3
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r2, r3
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r1, r2
+; THUMB1-NEXT:    eors r1, r3
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_v2i8:
@@ -1791,7 +1840,6 @@ define <2 x i8> @ct_v2i8(i1 %cond, <2 x i8> %a, <2 x i8> %b) {
 ; THUMB2-NEXT:    bic.w lr, r3, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <2 x i8> @llvm.ct.select.i16(i1 %cond, <2 x i8> %a, <2 x i8> %b)
   ret <2 x i8> %sel
@@ -1845,34 +1893,38 @@ define <4 x i8> @ct_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r5, [sp, #24]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r5
 ; THUMB1-NEXT:    ands r0, r6
-; THUMB1-NEXT:    mov r1, r5
-; THUMB1-NEXT:    bics r1, r6
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r5
 ; THUMB1-NEXT:    ldr r5, [sp, #28]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r1, r2
+; THUMB1-NEXT:    eors r1, r5
 ; THUMB1-NEXT:    ands r1, r6
-; THUMB1-NEXT:    mov r2, r5
-; THUMB1-NEXT:    bics r2, r6
-; THUMB1-NEXT:    orrs r1, r2
+; THUMB1-NEXT:    eors r1, r5
 ; THUMB1-NEXT:    ldr r5, [sp, #32]
-; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r6, r4
+; THUMB1-NEXT:    lsls r6, r6, #31
+; THUMB1-NEXT:    asrs r6, r6, #31
 ; THUMB1-NEXT:    mov r2, r3
+; THUMB1-NEXT:    eors r2, r5
 ; THUMB1-NEXT:    ands r2, r6
-; THUMB1-NEXT:    mov r3, r5
-; THUMB1-NEXT:    bics r3, r6
-; THUMB1-NEXT:    orrs r2, r3
+; THUMB1-NEXT:    eors r2, r5
 ; THUMB1-NEXT:    ldr r5, [sp, #36]
 ; THUMB1-NEXT:    ldr r6, [sp, #20]
-; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r7, r4
+; THUMB1-NEXT:    lsls r7, r7, #31
+; THUMB1-NEXT:    asrs r7, r7, #31
 ; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    ands r3, r7
-; THUMB1-NEXT:    mov r6, r5
-; THUMB1-NEXT:    bics r6, r7
-; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    eors r3, r5
 ; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
 ; THUMB2-LABEL: ct_v4i8:
@@ -1902,7 +1954,6 @@ define <4 x i8> @ct_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; THUMB2-NEXT:    bic.w r5, lr, r5
 ; THUMB2-NEXT:    orrs r3, r5
 ; THUMB2-NEXT:    pop {r4, r5, r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <4 x i8> @llvm.ct.select.i32(i1 %cond, <4 x i8> %a, <4 x i8> %b)
   ret <4 x i8> %sel
@@ -1933,12 +1984,13 @@ define <1 x i16> @ct_v1i16(i1 %cond, <1 x i16> %a, <1 x i16> %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_v1i16:
@@ -1949,7 +2001,6 @@ define <1 x i16> @ct_v1i16(i1 %cond, <1 x i16> %a, <1 x i16> %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <1 x i16> @llvm.ct.select.i16(i1 %cond, <1 x i16> %a, <1 x i16> %b)
   ret <1 x i16> %sel
@@ -1990,19 +2041,21 @@ define <2 x i16> @ct_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; THUMB1-NEXT:    push {r4, r5, r7, lr}
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r3
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r1, r3
-; THUMB1-NEXT:    bics r1, r5
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r3
 ; THUMB1-NEXT:    ldr r3, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r2
+; THUMB1-NEXT:    eors r1, r3
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r2, r3
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r1, r2
+; THUMB1-NEXT:    eors r1, r3
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_v2i16:
@@ -2020,7 +2073,6 @@ define <2 x i16> @ct_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; THUMB2-NEXT:    bic.w lr, r3, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <2 x i16> @llvm.ct.select.i32(i1 %cond, <2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %sel
@@ -2051,12 +2103,13 @@ define <1 x i32> @ct_v1i32(i1 %cond, <1 x i32> %a, <1 x i32> %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_v1i32:
@@ -2067,7 +2120,6 @@ define <1 x i32> @ct_v1i32(i1 %cond, <1 x i32> %a, <1 x i32> %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <1 x i32> @llvm.ct.select.i32(i1 %cond, <1 x i32> %a, <1 x i32> %b)
   ret <1 x i32> %sel
@@ -2104,12 +2156,13 @@ define <1 x float> @ct_v1f32(i1 %cond, <1 x float> %a, <1 x float> %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_v1f32:
@@ -2120,7 +2173,6 @@ define <1 x float> @ct_v1f32(i1 %cond, <1 x float> %a, <1 x float> %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <1 x float> @llvm.ct.select.f32(i1 %cond, <1 x float> %a, <1 x float> %b)
   ret <1 x float> %sel

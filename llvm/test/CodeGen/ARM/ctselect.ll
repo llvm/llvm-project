@@ -31,12 +31,13 @@ define i1 @ct_i1(i1 %cond, i1 %a, i1 %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_i1:
@@ -47,7 +48,6 @@ define i1 @ct_i1(i1 %cond, i1 %a, i1 %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_i1:
 ; CORTEXA9:       @ %bb.0: @ %entry
@@ -96,12 +96,13 @@ define i8 @ct_int8(i1 %cond, i8 %a, i8 %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_int8:
@@ -112,7 +113,6 @@ define i8 @ct_int8(i1 %cond, i8 %a, i8 %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_int8:
 ; CORTEXA9:       @ %bb.0: @ %entry
@@ -161,12 +161,13 @@ define i16 @ct_int16(i1 %cond, i16 %a, i16 %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_int16:
@@ -177,7 +178,6 @@ define i16 @ct_int16(i1 %cond, i16 %a, i16 %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_int16:
 ; CORTEXA9:       @ %bb.0: @ %entry
@@ -226,12 +226,13 @@ define i32 @ct_int32(i1 %cond, i32 %a, i32 %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_int32:
@@ -242,7 +243,6 @@ define i32 @ct_int32(i1 %cond, i32 %a, i32 %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_int32:
 ; CORTEXA9:       @ %bb.0: @ %entry
@@ -307,19 +307,21 @@ define i64 @ct_int64(i1 %cond, i64 %a, i64 %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #20]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_int64:
@@ -338,7 +340,6 @@ define i64 @ct_int64(i1 %cond, i64 %a, i64 %b) {
 ; THUMB2-NEXT:    bic.w lr, r2, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_int64:
 ; CORTEXA9:       @ %bb.0: @ %entry
@@ -408,12 +409,13 @@ define float @ct_float(i1 %cond, float %a, float %b) {
 ; THUMB1-NEXT:    push {r4, lr}
 ; THUMB1-NEXT:    movs r3, #1
 ; THUMB1-NEXT:    ands r3, r0
-; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r4, r3
+; THUMB1-NEXT:    lsls r4, r4, #31
+; THUMB1-NEXT:    asrs r4, r4, #31
 ; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    ands r0, r4
-; THUMB1-NEXT:    mov r1, r2
-; THUMB1-NEXT:    bics r1, r4
-; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    eors r0, r2
 ; THUMB1-NEXT:    pop {r4, pc}
 ;
 ; THUMB2-LABEL: ct_float:
@@ -424,7 +426,6 @@ define float @ct_float(i1 %cond, float %a, float %b) {
 ; THUMB2-NEXT:    bic.w r12, r2, r12
 ; THUMB2-NEXT:    orr.w r0, r0, r12
 ; THUMB2-NEXT:    bx lr
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_float:
 ; CORTEXA9:       @ %bb.0: @ %entry
@@ -493,19 +494,21 @@ define double @ct_f64(i1 %cond, double %a, double %b) {
 ; THUMB1-NEXT:    movs r4, #1
 ; THUMB1-NEXT:    ands r4, r0
 ; THUMB1-NEXT:    ldr r1, [sp, #16]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ands r0, r5
-; THUMB1-NEXT:    mov r2, r1
-; THUMB1-NEXT:    bics r2, r5
-; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    eors r0, r1
 ; THUMB1-NEXT:    ldr r2, [sp, #20]
-; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r5, r4
+; THUMB1-NEXT:    lsls r5, r5, #31
+; THUMB1-NEXT:    asrs r5, r5, #31
 ; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    ands r1, r5
-; THUMB1-NEXT:    mov r3, r2
-; THUMB1-NEXT:    bics r3, r5
-; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    eors r1, r2
 ; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB2-LABEL: ct_f64:
@@ -524,7 +527,6 @@ define double @ct_f64(i1 %cond, double %a, double %b) {
 ; THUMB2-NEXT:    bic.w lr, r2, lr
 ; THUMB2-NEXT:    orr.w r1, r1, lr
 ; THUMB2-NEXT:    pop {r7, pc}
-; THUMB2-NOT: it{{[te]+}}
 ;
 ; CORTEXA9-LABEL: ct_f64:
 ; CORTEXA9:       @ %bb.0: @ %entry
