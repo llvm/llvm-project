@@ -1144,6 +1144,11 @@ feature_test_macros = [
             "values": {"c++23": 202202},
             "headers": ["ranges"],
         },
+		{
+            "name": "__cpp_lib_ranges_to_input",
+            "values": {"c++26":202502}, # P3137R3 views::to_input
+            "headers": ["ranges"]
+		},
         {
             "name": "__cpp_lib_ranges_zip",
             "values": {"c++23": 202110},
