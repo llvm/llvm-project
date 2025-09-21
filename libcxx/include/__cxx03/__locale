@@ -578,7 +578,7 @@ public:
 #ifdef _CACHED_RUNES
   static const size_t table_size = _CACHED_RUNES;
 #else
-  static const size_t table_size = 256; // FIXME: Don't hardcode this.
+  static const size_t table_size = 256;
 #endif
   _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
   static const mask* classic_table() _NOEXCEPT;
