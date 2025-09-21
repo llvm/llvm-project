@@ -147,7 +147,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   // we don't want any CommandObject instances to keep any of these objects
   // around longer than for a single command. Every command should call
   // CommandObject::Cleanup() after it has completed.
-  assert(!m_exe_ctx.GetTargetPtr());
+  assert(!m_exe_ctx.GetTargetPtr() || m_exe_ctx.GetTargetRef().IsDummyTarget());
   assert(!m_exe_ctx.GetProcessPtr());
   assert(!m_exe_ctx.GetThreadPtr());
   assert(!m_exe_ctx.GetFramePtr());
