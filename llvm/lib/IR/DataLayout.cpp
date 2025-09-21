@@ -461,10 +461,6 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
-  if (ExternalState && BitWidth == IndexBitWidth)
-    return createStringError(
-        "pointers with external state must be non-integral");
-
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
                  UnstableRepr, ExternalState);
   return Error::success();

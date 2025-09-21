@@ -78,13 +78,6 @@ else()
     set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
   endif()
 
-  # Check for flang
-  if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
-  else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
-  endif()
-
   # Set fortran test compiler if flang is found
   if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
     message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
@@ -102,6 +95,14 @@ endif()
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
+
+# Check for flang
+set(OPENMP_TEST_Fortran_COMPILER_default "")
+if (CMAKE_Fortran_COMPILER)
+  set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
+endif ()
+set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
+  "Fortran compiler to use for testing OpenMP runtime libraries.")
 
 # Set up testing infrastructure.
 include(OpenMPTesting)

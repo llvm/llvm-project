@@ -622,9 +622,8 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
                 ::testing::ElementsAreArray({2U}));
   }
 
-  // Non-integral pointers with external state ('e' flag, requires index width
-  // != representation width).
-  for (const auto *Layout : {"pe2:64:64:64:32", "pe2:128:64:64:64"}) {
+  // Non-integral pointers with external state ('e' flag).
+  for (const auto *Layout : {"pe2:64:64:64:32", "pe2:64:64:64:64"}) {
     const DataLayout DL = cantFail(DataLayout::parse(Layout));
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_TRUE(DL.hasExternalState(2));
@@ -634,9 +633,6 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
     EXPECT_THAT(DL.getNonStandardAddressSpaces(),
                 ::testing::ElementsAreArray({2U}));
   }
-  EXPECT_THAT_EXPECTED(
-      DataLayout::parse("pe2:64:64:64:64"),
-      FailedWithMessage("pointers with external state must be non-integral"));
 
   // It is also possible to have both unstable representation and external state
   for (const auto *Layout : {"peu2:64:64:64:32", "pue2:128:64:64:64"}) {
