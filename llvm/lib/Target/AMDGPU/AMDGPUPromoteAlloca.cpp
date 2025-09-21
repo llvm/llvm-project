@@ -522,19 +522,68 @@ static Value *promoteAllocaUserToVector(
     return Dummy;
   };
 
-  const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
-                                                   Type *PtrTy) -> Value * {
+  const auto CreateCastBetweenUnequalNumVecElems = [&Builder, DL, Inst]
+      (Value *Val, Type *ResultTy) -> Value * {
+    // Can already cast between vectors of integers.
+    if (isa<IntegerType>(Val->getType()->getScalarType()) &&
+        isa<IntegerType>(ResultTy->getScalarType()))
+      return Builder.CreateBitOrPointerCast(Val, ResultTy);
+
+    // Insert casts between vectors/scalars of an unequal number of elements.
+    FixedVectorType *ValVTy = dyn_cast<FixedVectorType>(Val->getType());
+    FixedVectorType *ResultVTy = dyn_cast<FixedVectorType>(ResultTy);
+    if (isa<PointerType>(Val->getType()->getScalarType())) {
+      Type *IntTy;
+      if (ValVTy) {
+        Type *IntElemTy = Builder.getIntNTy(
+            DL.getTypeAllocSizeInBits(ValVTy->getScalarType()));
+        IntTy = FixedVectorType::get(IntElemTy, ValVTy->getNumElements());
+      } else
+        IntTy = IntegerType::get(Inst->getParent()->getParent()->getContext(),
+                                 DL.getTypeAllocSizeInBits(Val->getType()));
+      // Insert ptrtoint if casting to <m x ptr> or if Val is a ptr.
+      const bool IsToScalar = !ResultVTy;
+      const bool IsToVector = ResultVTy->getNumElements() !=
+          ValVTy->getNumElements();
+      if (IsToScalar || IsToVector)
+        Val = Builder.CreatePtrToInt(Val, IntTy);
+    }
+
+    const bool IsScalarToVector = ResultVTy && !ValVTy;
+    const bool IsVectorToVector = ResultVTy &&
+        ValVTy->getNumElements() != ResultVTy->getNumElements();
+    if (IsScalarToVector || IsVectorToVector) {
+      Type *IntTy = Builder.getIntNTy(
+          DL.getTypeAllocSizeInBits(Val->getType()));
+      // Insert bitcast to cast from integer, iM, to vector, <m x iN>.
+      Val = Builder.CreateBitCast(Val, IntTy);
+      // If result is a ptr, insert bitcast from <m x iN> to <n x ptr>.
+      if (isa<PointerType>(ResultVTy->getScalarType())) {
+        FixedVectorType *VectorIntTy =
+            FixedVectorType::get(Builder.getIntNTy(
+                DL.getTypeAllocSizeInBits(ResultVTy->getScalarType())),
+                ResultVTy->getNumElements());
+        Val = Builder.CreateBitCast(Val, VectorIntTy);
+      }
+    }
+    return Builder.CreateBitOrPointerCast(Val, ResultTy);
+  };
+
+  const auto CreateTempPtrIntCast = [&Builder, DL,
+                                     CreateCastBetweenUnequalNumVecElems]
+                                    (Value *Val, Type *PtrTy) -> Value * {
     assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
     const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
-    if (!PtrTy->isVectorTy())
-      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
+    if (!PtrTy->isVectorTy()) {
+      return CreateCastBetweenUnequalNumVecElems(Val, Builder.getIntNTy(Size));
+    }
     const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
     // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need to
     // first cast the ptr vector to <2 x i64>.
     assert((Size % NumPtrElts == 0) && "Vector size not divisble");
     Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
-    return Builder.CreateBitOrPointerCast(
-        Val, FixedVectorType::get(EltTy, NumPtrElts));
+    FixedVectorType *ResultVTy = FixedVectorType::get(EltTy, NumPtrElts);
+    return CreateCastBetweenUnequalNumVecElems(Val, ResultVTy);
   };
 
   Type *VecEltTy = VectorTy->getElementType();
@@ -616,7 +665,7 @@ static Value *promoteAllocaUserToVector(
           Val = CreateTempPtrIntCast(Val, AccessTy);
         else if (VectorTy->isPtrOrPtrVectorTy())
           Val = CreateTempPtrIntCast(Val, VectorTy);
-        return Builder.CreateBitOrPointerCast(Val, VectorTy);
+        return CreateCastBetweenUnequalNumVecElems(Val, VectorTy);
       }
     }
 
