@@ -557,6 +557,23 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+static bool hasLifetimeBoundAttribute(const Decl *D) {
+  if (D->hasAttr<LifetimeBoundAttr>())
+    return true;
+  if (const auto *AI = D->getAttr<LifetimeBoundIfAttr>()) {
+    bool Result;
+    // FIXME: we pay the cost of evaluating the binary condition everytime we
+    // check the existence of the attribute. Cache the result.
+    if (AI->getCond()->EvaluateAsBooleanCondition(Result, D->getASTContext())) {
+      if (Result)
+        return true;
+    } else {
+      // FIXME: emits an error.
+    }
+  }
+  return false;
+}
+
 // Visit lifetimebound or gsl-pointer arguments.
 static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
                                        LocalVisitor Visit) {
@@ -659,7 +676,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       Arg = DAE->getExpr();
     }
     if (CheckCoroCall ||
-        CanonCallee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+        hasLifetimeBoundAttribute(CanonCallee->getParamDecl(I)))
       VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (const auto *CaptureAttr =
                  CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
@@ -1279,7 +1296,7 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
 static bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
   CMD = getDeclWithMergedLifetimeBoundAttrs(CMD);
   return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
-         CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
+         hasLifetimeBoundAttribute(CMD->getParamDecl(0));
 }
 
 static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
