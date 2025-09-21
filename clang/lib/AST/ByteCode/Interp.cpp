@@ -1493,9 +1493,12 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
+  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  if (!Definition)
+    return;
+
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Func->getDecl()->getMostRecentDecl(),
-                   const_cast<Function *>(Func));
+      .compileFunc(Definition, const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1747,9 +1750,8 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   if (Ptr.isZero()) {
-    const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
-    S.FFDiag(E, diag::note_constexpr_null_callee)
-        << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_null_callee)
+        << const_cast<Expr *>(CE->getCallee()) << CE->getSourceRange();
     return false;
   }
 
@@ -1773,6 +1775,14 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   if (F->hasNonNullAttr()) {
     if (!CheckNonNullArgs(S, OpPC, F, CE, ArgSize))
       return false;
+  }
+
+  // Can happen when casting function pointers around.
+  QualType CalleeType = CE->getCallee()->getType();
+  if (CalleeType->isPointerType() &&
+      !S.getASTContext().hasSameFunctionTypeIgnoringExceptionSpec(
+          F->getDecl()->getType(), CalleeType->getPointeeType())) {
+    return false;
   }
 
   assert(ArgSize >= F->getWrittenArgSize());

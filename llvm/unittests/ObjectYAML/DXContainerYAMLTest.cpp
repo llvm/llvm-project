@@ -172,8 +172,8 @@ TEST(RootSignature, HeaderData) {
         NumStaticSamplers: 0
         StaticSamplersOffset: 48
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -224,8 +224,8 @@ TEST(RootSignature, ParseRootConstants) {
         NumStaticSamplers: 0
         StaticSamplersOffset: 48
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -276,8 +276,8 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 44
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV 
+        ShaderVisibility: Domain 
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -327,8 +327,8 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 48
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -379,12 +379,12 @@ TEST(RootSignature, ParseDescriptorTableV10) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 64
       Parameters:         
-      - ParameterType: 0 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: 41
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -435,12 +435,12 @@ TEST(RootSignature, ParseDescriptorTableV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 68
       Parameters:         
-      - ParameterType: 0 # Descriptor Table
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: -1
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -492,19 +492,19 @@ Parts:
       StaticSamplersOffset: 24
       Parameters: []
       Samplers: 
-        - Filter: 16 
-          AddressU: 1
-          AddressV: 2
-          AddressW: 5
+        - Filter: MinLinearMagMipPoint 
+          AddressU: Wrap
+          AddressV: Mirror
+          AddressW: MirrorOnce
           MipLODBias: 1.23
           MaxAnisotropy: 20
-          ComparisonFunc: 4
-          BorderColor: 0
+          ComparisonFunc: LessEqual
+          BorderColor: TransparentBlack
           MinLOD: 4.56
           MaxLOD: 8.90
           ShaderRegister: 31 
           RegisterSpace: 32
-          ShaderVisibility:  7
+          ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
     )"));

@@ -185,8 +185,7 @@ LLVM_ABI bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *,
                           TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
                           ScalarEvolution *, ICFLoopSafetyInfo *,
                           SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                          bool, bool AllowSpeculation,
-                          bool HasCoroSuspendInst = false);
+                          bool, bool AllowSpeculation);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
@@ -533,23 +532,6 @@ LLVM_ABI int rewriteLoopExitValues(Loop *L, LoopInfo *LI,
                                    SCEVExpander &Rewriter, DominatorTree *DT,
                                    ReplaceExitVal ReplaceExitValue,
                                    SmallVector<WeakTrackingVH, 16> &DeadInsts);
-
-/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
-/// \p OrigLoop and the following distribution of \p OrigLoop iteration among \p
-/// UnrolledLoop and \p RemainderLoop. \p UnrolledLoop receives weights that
-/// reflect TC/UF iterations, and \p RemainderLoop receives weights that reflect
-/// the remaining TC%UF iterations.
-///
-/// Note that \p OrigLoop may be equal to either \p UnrolledLoop or \p
-/// RemainderLoop in which case weights for \p OrigLoop are updated accordingly.
-/// Note also behavior is undefined if \p UnrolledLoop and \p RemainderLoop are
-/// equal. \p UF must be greater than zero.
-/// If \p OrigLoop has no profile info associated nothing happens.
-///
-/// This utility may be useful for such optimizations as unroller and
-/// vectorizer as it's typical transformation for them.
-LLVM_ABI void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
-                                           Loop *RemainderLoop, uint64_t UF);
 
 /// Utility that implements appending of loops onto a worklist given a range.
 /// We want to process loops in postorder, but the worklist is a LIFO data
