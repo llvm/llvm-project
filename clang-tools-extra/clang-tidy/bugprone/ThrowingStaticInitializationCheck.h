@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_ERR58_CPP_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_ERR58_CPP_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_THROWINGSTATICINITIALIZATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_THROWINGSTATICINITIALIZATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 /// Checks whether the constructor for a static or thread_local object will
 /// throw.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/err58-cpp.html
-class StaticObjectExceptionCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/throwing-static-initialization.html
+class ThrowingStaticInitializationCheck : public ClangTidyCheck {
 public:
-  StaticObjectExceptionCheck(StringRef Name, ClangTidyContext *Context)
+  ThrowingStaticInitializationCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return getLangOpts().CPlusPlus && getLangOpts().CXXExceptions;
@@ -29,6 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_ERR58_CPP_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_THROWINGSTATICINITIALIZATIONCHECK_H
