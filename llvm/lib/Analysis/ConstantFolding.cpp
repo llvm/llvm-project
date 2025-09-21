@@ -959,7 +959,6 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     }
   }
 
-  auto *PTy = cast<PointerType>(Ptr->getType());
   if ((Ptr->isNullValue() || BaseIntVal != 0) &&
       !DL.shouldAvoidIntToPtr(Ptr->getType())) {
 

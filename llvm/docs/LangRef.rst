@@ -665,22 +665,39 @@ bitwise representation to the address of the underlying memory allocation.
 Such pointers are considered "integral", and any pointers where the
 representation is not just an integer address are called "non-integral".
 
-In most cases pointers with a non-integral representation behave exactly the
-same as an integral pointer, the only difference is that it is not possible to
-create a pointer just from an address unless all the non-address bits were
-also recreated correctly in a target-specific way.
-Since the address width of a non-integral pointer is not equal to the bitwise
+Non-integral pointers have at least one of the following three properties:
+
+* the pointer representation contains non-address bits
+* the pointer representation is unstable (may changed at any time in a
+  target-specific way)
+* the pointer representation has external state
+
+These properties (or combinations thereof) can be applied to pointers via the
+:ref:`datalayout string<langref_datalayout>`.
+
+The exact implications of these properties are target-specific. The following
+subsections describe the IR semantics and restrictions to optimization passes
+for each of these properties.
+
+Pointers with non-address bits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pointers in this address space have a bitwise representation that not only
+has address bits, but also some other target-specific metadata.
+In most cases pointers with a non-address bits behave exactly the same as an
+integral pointer, the only difference is that it is not possible to create a
+pointer just from an address unless all the non-address bits are also recreated
+correctly in a target-specific way.
+Since the address width such a pointer is not equal to the bitwise
 representation, extracting the address will need to truncate to the index width
 of the pointer.
-An example of such a non-integral pointer representation are the AMDGPU buffer
-descriptors which are a 128-bit fat pointer and a 32-bit offset.
 
-Additionally, LLVM IR optionally allows the frontend to denote pointers in
-certain address spaces as "unstable" or having "external state"
-(or combinations of these) via the :ref:`datalayout string<langref_datalayout>`.
+An example of pointers with non-address bits are the AMDGPU buffer descriptors
+which are 160 bits: a 128-bit fat pointer and a 32-bit offset.
+Similarly, CHERI capabilities contain a 32 or 64 bit address as well as the
+same number of metadata bits, but unlike the AMDGPU buffer descriptors they have
+external state in addition to non-address bits.
 
-The exact implications of these properties are target-specific, but the
-following IR semantics and restrictions to optimization passes apply:
 
 Unstable pointer representation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -722,8 +739,8 @@ The alignment information provided by the frontend for an "unstable" pointer
 (typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
 
-Non-integral pointers with external state
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Pointers with external state
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A further special case of non-integral pointers is ones that include external
 state (such as bounds information or a type tag) with a target-defined size.
@@ -748,9 +765,6 @@ yield a capability with the external state (the validity tag bit) set to zero,
 which will cause any dereference to trap.
 The ``ptrtoint`` instruction also only returns the "in-band" state and omits
 all external  state.
-These two properties mean that ``inttoptr(ptrtoint(x))`` cannot be folded to
-``x`` since the ``ptrtoint`` operation does not include the external state
-needed to reconstruct the original pointer and ``inttoptr`` cannot set it.
 
 When a ``store ptr addrspace(N) %p, ptr @dst`` of such a non-integral pointer
 is performed, the external metadata is also stored to an implementation-defined
@@ -3277,9 +3291,8 @@ as follows:
     default address space 0. The value of ``<as>`` must be in the range [1,2^24).
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
-    representation, ``n`` marks pointers as non-integral (i.e. having
-    additional metadata), ``e`` marks pointers having external state
-    (``n`` must also be set). See :ref:`Non-Integral Pointer Types <nointptrtype>`.
+    representation, and ``e`` marks pointers having external state. See
+    :ref:`Non-Integral Pointer Types <nointptrtype>`.
 
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
