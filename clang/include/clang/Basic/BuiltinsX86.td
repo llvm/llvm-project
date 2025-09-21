@@ -3083,15 +3083,15 @@ let Features = "avx512bw", Attributes = [NoThrow, Const] in {
   def kadddi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kandqi : X86Builtin<"unsigned char(unsigned char, unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kandhi : X86Builtin<"unsigned short(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kandsi : X86Builtin<"unsigned int(unsigned int, unsigned int)">;
   def kanddi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }

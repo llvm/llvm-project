@@ -35,9 +35,8 @@ _knot_mask8(__mmask8 __M)
   return __builtin_ia32_knotqi(__M);
 }
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kand_mask8(__mmask8 __A, __mmask8 __B)
-{
+static __inline__ __mmask8 __DEFAULT_FN_ATTRS_CONSTEXPR
+_kand_mask8(__mmask8 __A, __mmask8 __B) {
   return (__mmask8)__builtin_ia32_kandqi((__mmask8)__A, (__mmask8)__B);
 }
 

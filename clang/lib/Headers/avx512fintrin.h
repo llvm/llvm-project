@@ -8116,9 +8116,8 @@ _mm512_mask_permutexvar_epi32 (__m512i __W, __mmask16 __M, __m512i __X,
 
 #define _mm512_mask_permutevar_epi32 _mm512_mask_permutexvar_epi32
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kand (__mmask16 __A, __mmask16 __B)
-{
+static __inline__ __mmask16
+    __DEFAULT_FN_ATTRS_CONSTEXPR _mm512_kand(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_kandhi ((__mmask16) __A, (__mmask16) __B);
 }
 

@@ -29,6 +29,12 @@ __mmask8 test_kand_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m
                                                    __E, __F);
 }
 
+TEST_CONSTEXPR(_kand_mask8(0x0C, 0x0A) == 0x08);        // data correctness
+TEST_CONSTEXPR(_kand_mask8(0x123, 0xFF) == 0x23);       // should be truncated
+TEST_CONSTEXPR(_kand_mask8(0xAB, 0x00) == 0x00);        // all-zero
+TEST_CONSTEXPR(_kand_mask8(0x56, 0xFF) == 0x56);        // all-one
+TEST_CONSTEXPR(_kand_mask8(0xAA, 0x55) == 0x00);        // disjoint
+
 __mmask8 test_kandn_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
