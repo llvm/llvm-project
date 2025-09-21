@@ -92,7 +92,6 @@ endif()
 ################################################################################
 # Looking for Level0
 ################################################################################
-message(STATUS "Looking for Level0 includes.")
 find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS NAMES level_zero/ze_api.h)
 
 if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS)

@@ -249,7 +249,7 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
       continue;
     Mem = Block->alloc();
     assert(Mem && "Inconsistent state while allocating memory from pool");
-    PtrToBlock.emplace(Mem, Block);
+    PtrToBlock.try_emplace(Mem, Block);
     break;
   }
 
@@ -276,7 +276,7 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
     BlockTy *Block = new BlockTy(Base, BlockSize, ChunkSize);
     Blocks.push_back(Block);
     Mem = Block->alloc();
-    PtrToBlock.emplace(Mem, Block);
+    PtrToBlock.try_emplace(Mem, Block);
     if (IsFull)
       SmallPoolSize += BlockSize;
     else

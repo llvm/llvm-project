@@ -195,7 +195,7 @@ class MemAllocatorTy {
     /// List of bucket parameters
     std::vector<std::pair<size_t, size_t>> BucketParams;
     /// Map from allocated pointer to corresponding block.
-    std::unordered_map<void *, BlockTy *> PtrToBlock;
+    llvm::DenseMap<void *, BlockTy *> PtrToBlock;
     /// Simple stats counting miss/hit in each bucket.
     std::vector<std::pair<uint64_t, uint64_t>> BucketStats;
     /// Need to zero-initialize after L0 allocation
@@ -300,7 +300,7 @@ class MemAllocatorTy {
   /// Allocation information map
   MemAllocInfoMapTy AllocInfo;
   /// RTL-owned memory that needs to be freed automatically
-  std::list<void *> MemOwned;
+  std::vector<void *> MemOwned;
   /// Lock protection
   std::mutex Mtx;
   /// Allocator only supports host memory

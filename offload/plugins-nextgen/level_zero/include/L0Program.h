@@ -57,7 +57,8 @@ class L0ProgramTy : public DeviceImageTy {
 
   /// Build a single module with the given image, build option, and format.
   int32_t addModule(const size_t Size, const uint8_t *Image,
-                    const std::string &BuildOption, ze_module_format_t Format);
+                    const std::string_view BuildOption,
+                    ze_module_format_t Format);
   /// Read file and return the size of the binary if successful.
   size_t readFile(const char *FileName, std::vector<uint8_t> &OutFile) const;
   void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
@@ -87,7 +88,7 @@ public:
   }
 
   /// Build modules from the target image description
-  int32_t buildModules(std::string &BuildOptions);
+  int32_t buildModules(const std::string_view BuildOptions);
 
   /// Link modules stored in \p Modules.
   int32_t linkModules();

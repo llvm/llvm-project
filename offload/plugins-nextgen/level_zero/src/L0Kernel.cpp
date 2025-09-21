@@ -58,15 +58,15 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
 /// are subject to change at any program point, so every kernel execution
 /// needs to read the most recent values.
 static std::tuple<int32_t, int32_t> readTeamsThreadLimit() {
-  int ThrLimit;
-  ThrLimit = omp_get_teams_thread_limit();
-  DP("omp_get_teams_thread_limit() returned %" PRId32 "\n", ThrLimit);
+  int32_t ThreadLimit;
+  ThreadLimit = omp_get_teams_thread_limit();
+  DP("omp_get_teams_thread_limit() returned %" PRId32 "\n", ThreadLimit);
   // omp_get_thread_limit() would return INT_MAX by default.
   // NOTE: Windows.h defines max() macro, so we have to guard
   //       the call with parentheses.
-  int32_t ThreadLimit =
-      (ThrLimit > 0 && ThrLimit != (std::numeric_limits<int32_t>::max)())
-          ? ThrLimit
+  ThreadLimit =
+      (ThreadLimit > 0 && ThreadLimit != (std::numeric_limits<int32_t>::max)())
+          ? ThreadLimit
           : 0;
 
   int NTeams = omp_get_max_teams();
@@ -215,10 +215,14 @@ void L0KernelTy::decideKernelGroupArguments(
 // a loop kernel compiled with the given SIMDWidth, and the given
 // loop(s) trip counts and group sizes.
 // Returns UINT64_MAX, if computations overflow.
-static uint64_t computeThreadsNeeded(const size_t (&TripCounts)[3],
-                                     const uint32_t (&GroupSizes)[3],
+static uint64_t computeThreadsNeeded(const llvm::ArrayRef<size_t> TripCounts,
+                                     const llvm::ArrayRef<uint32_t> GroupSizes,
                                      uint32_t SIMDWidth) {
-  uint64_t GroupCount[3];
+  assert(TripCounts.size() == 3 && "Invalid trip counts array size");
+  assert(GroupSizes.size() == 3 && "Invalid group sizes array size");
+  // Compute the number of groups in each dimension.
+  std::array<uint64_t, 3> GroupCount;
+
   for (int I = 0; I < 3; ++I) {
     if (TripCounts[I] == 0 || GroupSizes[I] == 0)
       return (std::numeric_limits<uint64_t>::max)();

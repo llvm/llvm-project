@@ -287,7 +287,7 @@ class L0DeviceTy final : public GenericDeviceTy {
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
-             const std::string &zeId, int32_t ComputeIndex)
+             const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, {}),
         l0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
         ComputeIndex(ComputeIndex) {
@@ -301,10 +301,9 @@ public:
     CacheProperties.pNext = nullptr;
 
     auto Err = internalInit();
-    if (Err) {
+    if (Err)
       FATAL_MESSAGE(DeviceId, "Couldn't initialize device: %s\n",
                     toString(std::move(Err)).c_str());
-    }
   }
 
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
@@ -329,10 +328,10 @@ public:
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
 
-  const std::string &getName() const { return DeviceName; }
+  const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
 
-  const std::string &getZeId() const { return zeId; }
+  const std::string_view getZeId() const { return zeId; }
   const char *getZeIdCStr() const { return zeId.c_str(); }
 
   std::mutex &getMutex() { return Mutex; }
@@ -429,7 +428,7 @@ public:
   bool isDiscreteDevice() { return isDiscrete(getPCIId()); }
   bool isDeviceIPorNewer(uint32_t Version) const;
 
-  const std::string &getUuid() const { return DeviceUuid; }
+  const std::string_view getUuid() const { return DeviceUuid; }
 
   uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
   uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
@@ -458,13 +457,13 @@ public:
                                          ze_device_handle_t Device,
                                          uint32_t Ordinal,
                                          ze_command_list_flags_t Flags,
-                                         const std::string &DeviceIdStr);
+                                         const std::string_view DeviceIdStr);
 
   /// Create a command list with default flags
   ze_command_list_handle_t createCmdList(ze_context_handle_t Context,
                                          ze_device_handle_t Device,
                                          uint32_t Ordinal,
-                                         const std::string &DeviceIdStr);
+                                         const std::string_view DeviceIdStr);
 
   ze_command_list_handle_t getCmdList();
 
@@ -473,13 +472,13 @@ public:
                                            ze_device_handle_t Device,
                                            uint32_t Ordinal, uint32_t Index,
                                            ze_command_queue_flags_t Flags,
-                                           const std::string &DeviceIdStr);
+                                           const std::string_view DeviceIdStr);
 
   /// Create a command queue with default flags
   ze_command_queue_handle_t createCmdQueue(ze_context_handle_t Context,
                                            ze_device_handle_t Device,
                                            uint32_t Ordinal, uint32_t Index,
-                                           const std::string &DeviceIdStr,
+                                           const std::string_view DeviceIdStr,
                                            bool InOrder = false);
 
   /// Create a new command queue for the given OpenMP device ID

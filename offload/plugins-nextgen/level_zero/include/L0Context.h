@@ -55,7 +55,7 @@ class L0ContextTy {
 
   /// Imported external pointers. Track this only for user-directed
   /// imports/releases.
-  std::unordered_map<uintptr_t, size_t> ImportedPtrs;
+  llvm::DenseMap<uintptr_t, size_t> ImportedPtrs;
 
   /// Common event pool
   EventPoolTy EventPool;
@@ -92,7 +92,7 @@ public:
 
   /// Add imported external pointer region.
   void addImported(void *Ptr, size_t Size) {
-    (void)ImportedPtrs.emplace((uintptr_t)Ptr, Size);
+    (void)ImportedPtrs.try_emplace((uintptr_t)Ptr, Size);
   }
 
   /// Remove imported external pointer region

@@ -159,7 +159,7 @@ void L0DeviceTy::reportDeviceInfo() const {
   DP("Device %" PRIu32 "\n", DeviceId);
   DP("-- Name                         : %s\n", getNameCStr());
   DP("-- PCI ID                       : 0x%" PRIx32 "\n", getPCIId());
-  DP("-- UUID                         : %s\n", getUuid().c_str());
+  DP("-- UUID                         : %s\n", getUuid().data());
   DP("-- Number of total EUs          : %" PRIu32 "\n", getNumEUs());
   DP("-- Number of threads per EU     : %" PRIu32 "\n", getNumThreadsPerEU());
   DP("-- EU SIMD width                : %" PRIu32 "\n", getSIMDWidth());
@@ -558,7 +558,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Device Number", getDeviceId());
   Info.add("Device Name", getNameCStr());
   Info.add("Device PCI ID", getPCIId());
-  Info.add("Device UUID", getUuid().c_str());
+  Info.add("Device UUID", getUuid().data());
   Info.add("Number of total EUs", getNumEUs());
   Info.add("Number of threads per EU", getNumThreadsPerEU());
   Info.add("EU SIMD width", getSIMDWidth());
@@ -814,7 +814,7 @@ int32_t L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 /// Create a command list with given ordinal and flags
 ze_command_list_handle_t L0DeviceTy::createCmdList(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    ze_command_list_flags_t Flags, const std::string &DeviceIdStr) {
+    ze_command_list_flags_t Flags, const std::string_view DeviceIdStr) {
   ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
                                         nullptr, // extension
                                         Ordinal, Flags};
@@ -823,7 +823,7 @@ ze_command_list_handle_t L0DeviceTy::createCmdList(
                    &cmdList);
   DP("Created a command list " DPxMOD " (Ordinal: %" PRIu32
      ") for device %s.\n",
-     DPxPTR(cmdList), Ordinal, DeviceIdStr.c_str());
+     DPxPTR(cmdList), Ordinal, DeviceIdStr.data());
   return cmdList;
 }
 
@@ -831,7 +831,7 @@ ze_command_list_handle_t L0DeviceTy::createCmdList(
 ze_command_list_handle_t
 L0DeviceTy::createCmdList(ze_context_handle_t Context,
                           ze_device_handle_t Device, uint32_t Ordinal,
-                          const std::string &DeviceIdStr) {
+                          const std::string_view DeviceIdStr) {
   return (Ordinal == UINT32_MAX)
              ? nullptr
              : createCmdList(Context, Device, Ordinal, 0, DeviceIdStr);
@@ -853,7 +853,7 @@ ze_command_queue_handle_t
 L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
                            ze_device_handle_t Device, uint32_t Ordinal,
                            uint32_t Index, ze_command_queue_flags_t Flags,
-                           const std::string &DeviceIdStr) {
+                           const std::string_view DeviceIdStr) {
   ze_command_queue_desc_t cmdQueueDesc = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
                                           nullptr, // extension
                                           Ordinal,
@@ -866,14 +866,14 @@ L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
                    &cmdQueue);
   DP("Created a command queue " DPxMOD " (Ordinal: %" PRIu32 ", Index: %" PRIu32
      ", Flags: %" PRIu32 ") for device %s.\n",
-     DPxPTR(cmdQueue), Ordinal, Index, Flags, DeviceIdStr.c_str());
+     DPxPTR(cmdQueue), Ordinal, Index, Flags, DeviceIdStr.data());
   return cmdQueue;
 }
 
 /// Create a command queue with default flags
 ze_command_queue_handle_t L0DeviceTy::createCmdQueue(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    uint32_t Index, const std::string &DeviceIdStr, bool InOrder) {
+    uint32_t Index, const std::string_view DeviceIdStr, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
   return (Ordinal == UINT32_MAX) ? nullptr
                                  : createCmdQueue(Context, Device, Ordinal,

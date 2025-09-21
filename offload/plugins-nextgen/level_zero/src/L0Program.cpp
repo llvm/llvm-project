@@ -64,7 +64,7 @@ void L0ProgramTy::setLibModule() {
   return;
 #else
   // Check if the image belongs to a dynamic library
-  Dl_info DLI{nullptr};
+  Dl_info DLI{nullptr, nullptr, nullptr, nullptr};
   if (dladdr(getStart(), &DLI) && DLI.dli_fname) {
     std::vector<uint8_t> FileBin;
     auto Size = readFile(DLI.dli_fname, FileBin);
@@ -88,7 +88,7 @@ void L0ProgramTy::setLibModule() {
 }
 
 int32_t L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
-                               const std::string &CommonBuildOptions,
+                               const std::string_view CommonBuildOptions,
                                ze_module_format_t Format) {
   const ze_module_constants_t SpecConstants =
       LevelZeroPluginTy::getOptions().CommonSpecConstants.getModuleConstants();
@@ -266,7 +266,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   return Res;
 }
 
-int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
+int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   auto &l0Device = getL0Device();
   auto Image = getMemoryBuffer();
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
@@ -456,7 +456,7 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
     const bool IsBinary = (It->second.Format == 0);
     const auto ModuleFormat =
         IsBinary ? ZE_MODULE_FORMAT_NATIVE : ZE_MODULE_FORMAT_IL_SPIRV;
-    std::string Options = BuildOptions;
+    std::string Options(BuildOptions);
     {
       Options += " " + It->second.CompileOpts + " " + It->second.LinkOpts;
       replaceDriverOptsWithBackendOpts(l0Device, Options);
@@ -476,9 +476,7 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
         return OFFLOAD_FAIL;
       }
     }
-
     DP("Created module from image #%" PRIu64 ".\n", Idx);
-    BuildOptions = std::move(Options);
 
     return OFFLOAD_SUCCESS;
   }
@@ -538,7 +536,6 @@ int32_t L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
 int32_t L0ProgramTy::loadModuleKernels() {
   // We need to build kernels here before filling the offload entries since we
   // don't know which module contains a specific kernel with a name.
-  std::unordered_map<std::string, ze_kernel_handle_t> ModuleKernels;
   for (auto Module : Modules) {
     uint32_t Count = 0;
     CALL_ZE_RET_FAIL(zeModuleGetKernelNames, Module, &Count, nullptr);

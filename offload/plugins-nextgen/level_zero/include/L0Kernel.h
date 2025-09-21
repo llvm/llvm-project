@@ -59,34 +59,34 @@ struct KernelPropertiesTy {
 
   /// Check if we can reuse group parameters.
   bool reuseGroupParams(const TgtNDRangeDescTy *LoopDescPtr,
-                        const int32_t _NumTeams, const int32_t _ThreadLimit,
-                        uint32_t *_GroupSizes, ze_group_count_t &_GroupCounts,
-                        bool &_AllowCooperative) const {
+                        const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
+                        uint32_t *GroupSizesOut, ze_group_count_t &GroupCountsOut,
+                        bool &AllowCooperativeOut) const {
     if (!LoopDescPtr && memcmp(&LoopDescInit, &LoopDesc, sizeof(LoopDesc)))
       return false;
     if (LoopDescPtr && memcmp(LoopDescPtr, &LoopDesc, sizeof(LoopDesc)))
       return false;
-    if (_NumTeams != NumTeams || _ThreadLimit != ThreadLimit)
+    if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
       return false;
     // Found matching input parameters.
-    std::copy_n(GroupSizes, 3, _GroupSizes);
-    _GroupCounts = GroupCounts;
-    _AllowCooperative = AllowCooperative;
+    std::copy_n(GroupSizes, 3, GroupSizesOut);
+    GroupCountsOut = GroupCounts;
+    AllowCooperativeOut = AllowCooperative;
     return true;
   }
 
   /// Update cached group parameters.
   void cacheGroupParams(const TgtNDRangeDescTy *LoopDescPtr,
-                        const int32_t _NumTeams, const int32_t _ThreadLimit,
-                        const uint32_t *_GroupSizes,
-                        const ze_group_count_t &_GroupCounts,
-                        const bool &_AllowCooperative) {
+                        const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
+                        const uint32_t *GroupSizesIn,
+                        const ze_group_count_t &GroupCountsIn,
+                        const bool &AllowCooperativeIn) {
     LoopDesc = LoopDescPtr ? *LoopDescPtr : LoopDescInit;
-    NumTeams = _NumTeams;
-    ThreadLimit = _ThreadLimit;
-    std::copy_n(_GroupSizes, 3, GroupSizes);
-    GroupCounts = _GroupCounts;
-    AllowCooperative = _AllowCooperative;
+    NumTeams = NumTeamsIn;
+    ThreadLimit = ThreadLimitIn;
+    std::copy_n(GroupSizesIn, 3, GroupSizes);
+    GroupCounts = GroupCountsIn;
+    AllowCooperative = AllowCooperativeIn;
   }
 };
 

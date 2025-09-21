@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
-#include <list>
 #include <tuple>
-#include <vector>
 
 #include "L0Memory.h"
 
@@ -27,11 +25,11 @@ namespace plugin {
 /// Abstract queue that supports asynchronous command submission
 struct AsyncQueueTy {
   /// List of events attahced to submitted commands
-  std::vector<ze_event_handle_t> WaitEvents;
+  llvm::SmallVector<ze_event_handle_t> WaitEvents;
   /// Pending staging buffer to host copies
-  std::list<std::tuple<void *, void *, size_t>> H2MList;
+  llvm::SmallVector<std::tuple<void *, void *, size_t>> H2MList;
   /// Pending USM memory copy commands that must wait for kernel completion
-  std::list<std::tuple<const void *, void *, size_t>> USM2MList;
+  llvm::SmallVector<std::tuple<const void *, void *, size_t>> USM2MList;
   /// Kernel event not signaled
   ze_event_handle_t KernelEvent = nullptr;
   /// Is this queue being used currently

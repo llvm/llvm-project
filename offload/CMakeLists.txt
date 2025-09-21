@@ -180,13 +180,12 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64)$" AND
         CMAKE_SYSTEM_NAME MATCHES "Linux|Windows"))
   if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building Level Zero plugin: it is only supported on "
-	           "Linux/Windows x86_64 or ppc64le hosts")
+                   "Linux/Windows x86_64 or ppc64le hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
   endif()
 endif()
 if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD AND
 		NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-    message(STATUS "Not building Level Zero plugin: dependencies not found")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
 endif()
 message(STATUS "Building the offload library with support for "

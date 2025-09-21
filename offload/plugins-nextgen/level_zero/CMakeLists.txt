@@ -25,7 +25,6 @@ target_sources(omptarget.rtl.level_zero PRIVATE
 
 target_include_directories(omptarget.rtl.level_zero PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_include_directories(omptarget.rtl.level_zero PRIVATE
