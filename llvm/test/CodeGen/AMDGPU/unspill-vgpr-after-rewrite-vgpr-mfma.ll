@@ -101,8 +101,13 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a3
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[6:9]
+; CHECK-NEXT:    ; def v[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
@@ -112,37 +117,75 @@ define void @eliminate_spill_after_mfma_rewrite(i32 %x, i32 %y, <4 x i32> %arg, 
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[60:63], s[16:17] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[56:59], s[16:17] offset:96
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a32
+; CHECK-NEXT:    v_mov_b32_e32 v60, 0
+; CHECK-NEXT:    v_accvgpr_read_b32 v24, a56
+; CHECK-NEXT:    v_accvgpr_read_b32 v25, a57
+; CHECK-NEXT:    v_accvgpr_read_b32 v26, a58
+; CHECK-NEXT:    v_accvgpr_read_b32 v27, a59
+; CHECK-NEXT:    global_store_dwordx4 v60, v[56:59], s[16:17] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[52:55], s[16:17] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v60, v[52:55], s[16:17] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[48:51], s[16:17] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v60, v[48:51], s[16:17] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[44:47], s[16:17] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v60, v[44:47], s[16:17] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[40:43], s[16:17] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v60, v[40:43], s[16:17] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[36:39], s[16:17] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v60, v[36:39], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[32:35], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v60, v[32:35], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[56:59], s[16:17] offset:96
+; CHECK-NEXT:    v_accvgpr_read_b32 v1, a33
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a34
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a35
+; CHECK-NEXT:    v_accvgpr_read_b32 v4, a36
+; CHECK-NEXT:    v_accvgpr_read_b32 v5, a37
+; CHECK-NEXT:    v_accvgpr_read_b32 v6, a38
+; CHECK-NEXT:    v_accvgpr_read_b32 v7, a39
+; CHECK-NEXT:    v_accvgpr_read_b32 v8, a40
+; CHECK-NEXT:    v_accvgpr_read_b32 v9, a41
+; CHECK-NEXT:    v_accvgpr_read_b32 v10, a42
+; CHECK-NEXT:    v_accvgpr_read_b32 v11, a43
+; CHECK-NEXT:    v_accvgpr_read_b32 v12, a44
+; CHECK-NEXT:    v_accvgpr_read_b32 v13, a45
+; CHECK-NEXT:    v_accvgpr_read_b32 v14, a46
+; CHECK-NEXT:    v_accvgpr_read_b32 v15, a47
+; CHECK-NEXT:    v_accvgpr_read_b32 v16, a48
+; CHECK-NEXT:    v_accvgpr_read_b32 v17, a49
+; CHECK-NEXT:    v_accvgpr_read_b32 v18, a50
+; CHECK-NEXT:    v_accvgpr_read_b32 v19, a51
+; CHECK-NEXT:    v_accvgpr_read_b32 v20, a52
+; CHECK-NEXT:    v_accvgpr_read_b32 v21, a53
+; CHECK-NEXT:    v_accvgpr_read_b32 v22, a54
+; CHECK-NEXT:    v_accvgpr_read_b32 v23, a55
+; CHECK-NEXT:    v_accvgpr_read_b32 v28, a60
+; CHECK-NEXT:    v_accvgpr_read_b32 v29, a61
+; CHECK-NEXT:    v_accvgpr_read_b32 v30, a62
+; CHECK-NEXT:    v_accvgpr_read_b32 v31, a63
+; CHECK-NEXT:    global_store_dwordx4 v60, v[24:27], s[16:17] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[60:63], s[16:17] offset:112
+; CHECK-NEXT:    global_store_dwordx4 v60, v[28:31], s[16:17] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[48:51], s[16:17] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v60, v[16:19], s[16:17] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[52:55], s[16:17] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v60, v[20:23], s[16:17] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[40:43], s[16:17] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v60, v[8:11], s[16:17] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[44:47], s[16:17] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v60, v[12:15], s[16:17] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[32:35], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v60, v[0:3], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[36:39], s[16:17] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v60, v[4:7], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[6:9], s[16:17]
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_dwordx4 v60, v[0:3], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword a63, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword a62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
@@ -301,16 +344,26 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
 ; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v7, a3
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v6, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[8:11]
+; CHECK-NEXT:    ; def v[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[12:15]
+; CHECK-NEXT:    ; def v[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -319,39 +372,82 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[60:63], s[16:17] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[56:59], s[16:17] offset:96
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a32
+; CHECK-NEXT:    v_mov_b32_e32 v60, 0
+; CHECK-NEXT:    v_accvgpr_read_b32 v24, a56
+; CHECK-NEXT:    v_accvgpr_read_b32 v25, a57
+; CHECK-NEXT:    v_accvgpr_read_b32 v26, a58
+; CHECK-NEXT:    v_accvgpr_read_b32 v27, a59
+; CHECK-NEXT:    global_store_dwordx4 v60, v[56:59], s[16:17] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[52:55], s[16:17] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v60, v[52:55], s[16:17] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[48:51], s[16:17] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v60, v[48:51], s[16:17] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[44:47], s[16:17] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v60, v[44:47], s[16:17] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[40:43], s[16:17] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v60, v[40:43], s[16:17] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[36:39], s[16:17] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v60, v[36:39], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[32:35], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v60, v[32:35], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[56:59], s[16:17] offset:96
+; CHECK-NEXT:    v_accvgpr_read_b32 v1, a33
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a34
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a35
+; CHECK-NEXT:    v_accvgpr_read_b32 v4, a36
+; CHECK-NEXT:    v_accvgpr_read_b32 v5, a37
+; CHECK-NEXT:    v_accvgpr_read_b32 v6, a38
+; CHECK-NEXT:    v_accvgpr_read_b32 v7, a39
+; CHECK-NEXT:    v_accvgpr_read_b32 v8, a40
+; CHECK-NEXT:    v_accvgpr_read_b32 v9, a41
+; CHECK-NEXT:    v_accvgpr_read_b32 v10, a42
+; CHECK-NEXT:    v_accvgpr_read_b32 v11, a43
+; CHECK-NEXT:    v_accvgpr_read_b32 v12, a44
+; CHECK-NEXT:    v_accvgpr_read_b32 v13, a45
+; CHECK-NEXT:    v_accvgpr_read_b32 v14, a46
+; CHECK-NEXT:    v_accvgpr_read_b32 v15, a47
+; CHECK-NEXT:    v_accvgpr_read_b32 v16, a48
+; CHECK-NEXT:    v_accvgpr_read_b32 v17, a49
+; CHECK-NEXT:    v_accvgpr_read_b32 v18, a50
+; CHECK-NEXT:    v_accvgpr_read_b32 v19, a51
+; CHECK-NEXT:    v_accvgpr_read_b32 v20, a52
+; CHECK-NEXT:    v_accvgpr_read_b32 v21, a53
+; CHECK-NEXT:    v_accvgpr_read_b32 v22, a54
+; CHECK-NEXT:    v_accvgpr_read_b32 v23, a55
+; CHECK-NEXT:    v_accvgpr_read_b32 v28, a60
+; CHECK-NEXT:    v_accvgpr_read_b32 v29, a61
+; CHECK-NEXT:    v_accvgpr_read_b32 v30, a62
+; CHECK-NEXT:    v_accvgpr_read_b32 v31, a63
+; CHECK-NEXT:    global_store_dwordx4 v60, v[24:27], s[16:17] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[60:63], s[16:17] offset:112
+; CHECK-NEXT:    global_store_dwordx4 v60, v[28:31], s[16:17] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[48:51], s[16:17] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v60, v[16:19], s[16:17] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[52:55], s[16:17] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v60, v[20:23], s[16:17] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[40:43], s[16:17] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v60, v[8:11], s[16:17] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[44:47], s[16:17] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v60, v[12:15], s[16:17] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[32:35], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v60, v[0:3], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, a[36:39], s[16:17] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v60, v[4:7], s[16:17] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[8:11], s[16:17]
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:192 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:196 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:200 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:204 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[12:15], s[16:17]
+; CHECK-NEXT:    global_store_dwordx4 v60, v[0:3], s[16:17]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:208 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:212 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:216 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:220 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_store_dwordx4 v60, v[0:3], s[16:17]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword a63, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword a62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
