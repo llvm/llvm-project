@@ -64,9 +64,8 @@ public:
           auto f = nb::handle(static_cast<PyObject *>(userData));
           std::vector<nb::object> args;
           args.reserve(nValues);
-          for (size_t i = 0; i < nValues; ++i) {
+          for (size_t i = 0; i < nValues; ++i)
             args.push_back(fromPDLValue(values[i]));
-          }
           return nb::cast<bool>(f(rewriter, results, args))
                      ? mlirLogicalResultSuccess()
                      : mlirLogicalResultFailure();
