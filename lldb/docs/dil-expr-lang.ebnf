@@ -8,7 +8,7 @@ expression = unary_expression ;
 unary_expression = postfix_expression
                  | unary_operator expression ;
 
-unary_operator = "*" | "&" ;
+unary_operator = "*" | "&" | "+" | "-";
 
 postfix_expression = primary_expression
                    | postfix_expression "[" integer_literal "]"

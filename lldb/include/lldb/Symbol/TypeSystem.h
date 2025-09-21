@@ -412,6 +412,13 @@ public:
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
                               bool expand_pack);
 
+  // DIL
+
+  virtual bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type);
+
+  virtual llvm::Expected<CompilerType>
+  DoIntegralPromotion(CompilerType from, ExecutionContextScope *exe_scope);
+
   // Dumping types
 
 #ifndef NDEBUG
