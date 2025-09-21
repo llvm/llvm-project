@@ -51,9 +51,6 @@ in a range-based for loop:
     // use x and y
   }
 
-The check also supports custom pair-like types via the :option:`PairTypes`
-option.
-
 Limitations
 -----------
 
