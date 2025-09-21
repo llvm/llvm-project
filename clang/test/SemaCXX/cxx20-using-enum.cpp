@@ -288,4 +288,14 @@ struct S {
   };
 };
 }
+
+namespace Redecl {
+  enum class A : int { X };
+  enum class A : int;
+  template <class> struct B {
+    using enum A;
+    using Z = decltype(X);
+  };
+  template struct B<int>;
+} // namespace Redecl
 #endif
