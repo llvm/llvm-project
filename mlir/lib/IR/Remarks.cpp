@@ -238,7 +238,7 @@ void RemarkEngine::reportImpl(const Remark &remark) {
 void RemarkEngine::report(const Remark &&remark) {
   // Postponed remarks are deferred to the end of pipeline.
   if (remarkPolicy == RemarkPolicy::RemarkPolicyFinal) {
-    bool erased = postponedRemarks.erase(remark);
+    postponedRemarks.erase(remark);
     postponedRemarks.insert(remark);
     return;
   }
