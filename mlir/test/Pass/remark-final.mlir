@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --test-remark --remarks-filter="category.*" --remark-policy=final --remark-format=yaml --remarks-output-file=%t.yaml
-// RUN: FileCheck %t.yaml < %s 
+// RUN: FileCheck %s < %t.yaml
 module @foo {
   "test.op"() : () -> ()
   
