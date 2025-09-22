@@ -486,12 +486,13 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
       p->r_addend = rel.addend;
 
     // Output section VA is zero for -r, so r_offset is an offset within the
-    // section, but for --emit-relocs it is a virtual address.
+    // section, but for --emit-relocs it is a virtual address.3333
     p->r_offset = sec->getVA(rel.offset);
     p->setSymbolAndType(ctx.in.symTab->getSymbolIndex(sym), type,
                         ctx.arg.isMips64EL);
 
-    // Discard the invalid pieces among those named "DW.ref.__gxx_personality_v0".
+    // Discard the invalid pieces among those named
+    // "DW.ref.__gxx_personality_v0".
     StringRef symName = sym.getName();
     if (symName == "DW.ref.__gxx_personality_v0") {
       if (auto *es = dyn_cast<EhInputSection>(sec)) {
@@ -517,7 +518,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
         }
       }
     }
-    
+
     if (sym.type == STT_SECTION) {
       // We combine multiple section symbols into only one per
       // section. This means we have to update the addend. That is
