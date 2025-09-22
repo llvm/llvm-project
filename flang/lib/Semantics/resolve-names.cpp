@@ -1685,9 +1685,9 @@ public:
     }
   }
   bool Pre(const parser::OmpMapperSpecifier &x) {
-    // OmpMapperSpecifier is handled explicitly, and the Walk infrastructure
-    // should not reach the point where it calls this function.
-    llvm_unreachable("This function should not be reached by 'Walk'");
+    // OmpMapperSpecifier is handled explicitly, and the AST traversal
+    // should not reach a point where it calls this function.
+    llvm_unreachable("This function should not be reached by AST traversal");
   }
   bool Pre(const parser::OmpDirectiveSpecification &x);
   void Post(const parser::OmpDirectiveSpecification &) {
