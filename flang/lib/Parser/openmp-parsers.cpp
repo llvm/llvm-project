@@ -1008,11 +1008,11 @@ TYPE_PARSER(construct<OmpMatchClause>(
     Parser<traits::OmpContextSelectorSpecification>{}))
 
 TYPE_PARSER(construct<OmpOtherwiseClause>(
-    maybe(indirect(sourced(Parser<OmpDirectiveSpecification>{})))))
+    maybe(indirect(Parser<OmpDirectiveSpecification>{}))))
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
-    maybe(indirect(sourced(Parser<OmpDirectiveSpecification>{})))))
+    maybe(indirect(Parser<OmpDirectiveSpecification>{}))))
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(
@@ -1304,9 +1304,9 @@ OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
       std::move(clauses), std::move(flags)};
 }
 
-TYPE_PARSER(sourced(
+TYPE_PARSER(
     // Parse the old syntax: FLUSH [clauses] [(objects)]
-    construct<OmpDirectiveSpecification>(
+    sourced(construct<OmpDirectiveSpecification>(
         // Force this old-syntax parser to fail for FLUSH followed by '('.
         // Otherwise it could succeed on the new syntax but have one of
         // lists absent in the parsed result.
@@ -1316,9 +1316,9 @@ TYPE_PARSER(sourced(
             verbatim("FLUSH"_tok) / !lookAhead("("_tok),
             maybe(Parser<OmpClauseList>{}),
             maybe(parenthesized(Parser<OmpArgumentList>{})),
-            pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax))) ||
+            pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax)))) ||
     // Parse the standard syntax: directive [(arguments)] [clauses]
-    construct<OmpDirectiveSpecification>( //
+    sourced(construct<OmpDirectiveSpecification>( //
         sourced(OmpDirectiveNameParser{}),
         maybe(parenthesized(Parser<OmpArgumentList>{})),
         maybe(Parser<OmpClauseList>{}),
@@ -1376,8 +1376,10 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
     sourced(construct<OpenMPUtilityConstruct>(
         sourced(Parser<OmpNothingDirective>{}))))))
 
-TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
-    verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
+TYPE_PARSER(construct<OmpMetadirectiveDirective>(
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_metadirective)) >=
+    Parser<OmpDirectiveSpecification>{}))
 
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
