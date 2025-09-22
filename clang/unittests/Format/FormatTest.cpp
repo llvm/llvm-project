@@ -20323,6 +20323,61 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "void f2(void);\n"
                "size_t f3(void);",
                Alignment);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFreeVariableDeclarations = false;
+  verifyFormat("int func() { //\n"
+               "  int local1;\n"
+               "  unsigned local2;\n"
+               "}\n"
+               "class Z {\n"
+               "  int      member1;\n"
+               "  unsigned member2;\n"
+               "  int funcInClass() {\n"
+               "    int localInClass1;\n"
+               "    unsigned localInClass2;\n"
+               "  }\n"
+               "};\n"
+               "int global1;\n"
+               "unsigned global2;",
+               Alignment);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFreeVariableDeclarations = true;
+  Alignment.AlignConsecutiveDeclarations.AlignMemberVariableDeclarations =
+      false;
+  verifyFormat("int func() { //\n"
+               "  int      local1;\n"
+               "  unsigned local2;\n"
+               "}\n"
+               "class Z {\n"
+               "  int member1;\n"
+               "  unsigned member2;\n"
+               "  int funcInClass() {\n"
+               "    int      localInClass1;\n"
+               "    unsigned localInClass2;\n"
+               "  }\n"
+               "};\n"
+               "int      global1;\n"
+               "unsigned global2;",
+               Alignment);
+
+  Alignment.AlignConsecutiveDeclarations.AlignFreeVariableDeclarations = false;
+  Alignment.AlignConsecutiveDeclarations.AlignMemberVariableDeclarations =
+      false;
+  verifyFormat("int func() { //\n"
+               "  int local1;\n"
+               "  unsigned local2;\n"
+               "}\n"
+               "class Z {\n"
+               "  int member1;\n"
+               "  unsigned member2;\n"
+               "  int funcInClass() {\n"
+               "    int localInClass1;\n"
+               "    unsigned localInClass2;\n"
+               "  }\n"
+               "};\n"
+               "int global1;\n"
+               "unsigned global2;",
+               Alignment);
 }
 
 TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
@@ -20566,15 +20621,19 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFreeVariableDeclarations=*/false,
                  /*AlignFunctionDeclarations=*/false,
                  /*AlignFunctionPointers=*/false,
+                 /*AlignMemberVariableDeclarations=*/false,
                  /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
+                 /*AlignFreeVariableDeclarations=*/true,
                  /*AlignFunctionDeclarations=*/true,
                  /*AlignFunctionPointers=*/false,
+                 /*AlignMemberVariableDeclarations=*/true,
                  /*PadOperators=*/false}));
   verifyFormat("void foo() {\n"
                "  int myVar = 5;\n"

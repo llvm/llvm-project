@@ -226,6 +226,20 @@ struct FormatStyle {
     ///   bbb = 2;
     /// \endcode
     bool AlignCompound;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether non-member variable
+    /// declarations are aligned.
+    /// \code
+    ///   true:
+    ///   unsigned int v1;
+    ///   float        v2;
+    ///   size_t       v3;
+    ///
+    ///   false:
+    ///   unsigned int v1;
+    ///   float v2;
+    ///   size_t v3;
+    /// \endcode
+    bool AlignFreeVariableDeclarations;
     /// Only for ``AlignConsecutiveDeclarations``. Whether function declarations
     /// are aligned.
     /// \code
@@ -256,6 +270,20 @@ struct FormatStyle {
     ///   int (*f)();
     /// \endcode
     bool AlignFunctionPointers;
+    /// Only for ``AlignConsecutiveDeclarations``. Whether class/struct member
+    /// variable declarations are aligned.
+    /// \code
+    ///   true:
+    ///   unsigned int member1;
+    ///   float        member2;
+    ///   size_t       member3;
+    ///
+    ///   false:
+    ///   unsigned int member1;
+    ///   float member2;
+    ///   size_t member3;
+    /// \endcode
+    bool AlignMemberVariableDeclarations;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     /// operators are left-padded to the same length as long ones in order to
     /// put all assignment operators to the right of the left hand side.
@@ -279,8 +307,11 @@ struct FormatStyle {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
              AlignCompound == R.AlignCompound &&
+             AlignFreeVariableDeclarations == R.AlignFreeVariableDeclarations &&
              AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
+             AlignMemberVariableDeclarations ==
+                 R.AlignMemberVariableDeclarations &&
              PadOperators == R.PadOperators;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
