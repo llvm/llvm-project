@@ -661,6 +661,18 @@ static bool handleModuleResult(StringRef ModuleName,
   return false;
 }
 
+static void handleCompilerInstanceWithContextError(StringRef Info,
+                                                   llvm::Error E,
+                                                   SharedStream &OS,
+                                                   SharedStream &Errs) {
+  llvm::handleAllErrors(std::move(E), [&Info, &Errs](llvm::StringError &Err) {
+    Errs.applyLocked([&](raw_ostream &OS) {
+      OS << "Error: " << Info << ":\n";
+      OS << Err.getMessage();
+    });
+  });
+}
+
 class P1689Deps {
 public:
   void printDependencies(raw_ostream &OS) {
@@ -1077,8 +1089,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       } else if (ModuleName) {
         if (llvm::Error Err = WorkerTool.initializeCompilerInstacneWithContext(
                 CWD, Input->CommandLine)) {
-          llvm::errs() << "ERROR: compiler instance with context setup error "
-                       << Err << "\n";
+          handleCompilerInstanceWithContextError(
+              "Compiler instance with context setup error", std::move(Err),
+              DependencyOS, Errs);
           HadErrors = true;
           continue;
         }
@@ -1090,9 +1103,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           HadErrors = true;
         if (llvm::Error Err =
                 WorkerTool.finalizeCompilerInstanceWithContext()) {
-          llvm::errs()
-              << "ERROR: compiler instance with context finialization error "
-              << Err << "\n";
+          handleCompilerInstanceWithContextError(
+              "Compiler instance with context finialization error",
+              std::move(Err), DependencyOS, Errs);
           HadErrors = true;
         }
       } else {
