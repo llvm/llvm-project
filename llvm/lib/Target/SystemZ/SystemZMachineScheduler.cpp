@@ -185,7 +185,6 @@ void SystemZPreRASchedStrategy::initializeStoresGroup() {
   }
 
   // Value of 8 handles a known regression (with group of 20).
-  // TODO: Would some other value be better?
   if (StoresGroup.size() < 8)
     StoresGroup.clear();
 }
@@ -334,7 +333,6 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   if (TinyRegion) {
     // Prioritize instructions that read unbuffered resources by stall cycles.
-    // TODO: Try this in bigger regions as well.
     if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
                 Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
       return TryCand.Reason != NoCand;
