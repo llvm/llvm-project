@@ -226,8 +226,8 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32F-ILP32D:       # %bb.0:
 ; LA32F-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA32F-ILP32D-NEXT:    lu12i.w $a0, -12
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32F-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32F-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32F-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -264,8 +264,8 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA32D-ILP32D:       # %bb.0:
 ; LA32D-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA32D-ILP32D-NEXT:    lu12i.w $a0, -12
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32D-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32D-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32D-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -283,8 +283,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64S:       # %bb.0:
 ; LA64S-NEXT:    addi.d $sp, $sp, -16
 ; LA64S-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA64S-NEXT:    lu12i.w $a0, -12
+; LA64S-NEXT:    lu32i.d $a0, 0
+; LA64S-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64S-NEXT:    ori $a0, $zero, 1
 ; LA64S-NEXT:    ori $a1, $zero, 2
 ; LA64S-NEXT:    ori $a2, $zero, 3
@@ -324,8 +325,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64F-LP64D:       # %bb.0:
 ; LA64F-LP64D-NEXT:    addi.d $sp, $sp, -16
 ; LA64F-LP64D-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA64F-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA64F-LP64D-NEXT:    lu12i.w $a0, -12
+; LA64F-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64F-LP64D-NEXT:    ori $a0, $zero, 1
 ; LA64F-LP64D-NEXT:    ori $a1, $zero, 2
 ; LA64F-LP64D-NEXT:    ori $a2, $zero, 3
@@ -365,8 +367,9 @@ define i32 @caller_half_in_fregs() nounwind {
 ; LA64D-LP64D:       # %bb.0:
 ; LA64D-LP64D-NEXT:    addi.d $sp, $sp, -16
 ; LA64D-LP64D-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA64D-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI1_0)
+; LA64D-LP64D-NEXT:    lu12i.w $a0, -12
+; LA64D-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64D-LP64D-NEXT:    ori $a0, $zero, 1
 ; LA64D-LP64D-NEXT:    ori $a1, $zero, 2
 ; LA64D-LP64D-NEXT:    ori $a2, $zero, 3
@@ -606,24 +609,24 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA32F-ILP32D:       # %bb.0:
 ; LA32F-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA32F-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_1)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA32F-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_2)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA32F-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_3)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA32F-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_4)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA32F-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_5)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA32F-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_6)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA32F-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_7)
-; LA32F-ILP32D-NEXT:    lu12i.w $a0, -12
-; LA32F-ILP32D-NEXT:    ori $a0, $a0, 2176
+; LA32F-ILP32D-NEXT:    lu12i.w $a1, -12
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa1, $a1
+; LA32F-ILP32D-NEXT:    ori $a0, $a1, 2176
+; LA32F-ILP32D-NEXT:    lu12i.w $a2, -13
+; LA32F-ILP32D-NEXT:    ori $a2, $a2, 3072
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa0, $a2
+; LA32F-ILP32D-NEXT:    ori $a2, $a1, 512
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa2, $a2
+; LA32F-ILP32D-NEXT:    ori $a2, $a1, 1024
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa3, $a2
+; LA32F-ILP32D-NEXT:    ori $a2, $a1, 1280
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa4, $a2
+; LA32F-ILP32D-NEXT:    ori $a2, $a1, 1536
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa5, $a2
+; LA32F-ILP32D-NEXT:    ori $a2, $a1, 1792
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa6, $a2
+; LA32F-ILP32D-NEXT:    ori $a1, $a1, 2048
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa7, $a1
 ; LA32F-ILP32D-NEXT:    ori $a1, $zero, 10
 ; LA32F-ILP32D-NEXT:    bl callee_half_in_gregs
 ; LA32F-ILP32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
@@ -656,24 +659,24 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA32D-ILP32D:       # %bb.0:
 ; LA32D-ILP32D-NEXT:    addi.w $sp, $sp, -16
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA32D-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_1)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA32D-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_2)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA32D-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_3)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA32D-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_4)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA32D-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_5)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA32D-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_6)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA32D-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_7)
-; LA32D-ILP32D-NEXT:    lu12i.w $a0, -12
-; LA32D-ILP32D-NEXT:    ori $a0, $a0, 2176
+; LA32D-ILP32D-NEXT:    lu12i.w $a1, -12
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa1, $a1
+; LA32D-ILP32D-NEXT:    ori $a0, $a1, 2176
+; LA32D-ILP32D-NEXT:    lu12i.w $a2, -13
+; LA32D-ILP32D-NEXT:    ori $a2, $a2, 3072
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa0, $a2
+; LA32D-ILP32D-NEXT:    ori $a2, $a1, 512
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa2, $a2
+; LA32D-ILP32D-NEXT:    ori $a2, $a1, 1024
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa3, $a2
+; LA32D-ILP32D-NEXT:    ori $a2, $a1, 1280
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa4, $a2
+; LA32D-ILP32D-NEXT:    ori $a2, $a1, 1536
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa5, $a2
+; LA32D-ILP32D-NEXT:    ori $a2, $a1, 1792
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa6, $a2
+; LA32D-ILP32D-NEXT:    ori $a1, $a1, 2048
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa7, $a1
 ; LA32D-ILP32D-NEXT:    ori $a1, $zero, 10
 ; LA32D-ILP32D-NEXT:    bl callee_half_in_gregs
 ; LA32D-ILP32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
@@ -684,25 +687,33 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA64S:       # %bb.0:
 ; LA64S-NEXT:    addi.d $sp, $sp, -16
 ; LA64S-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64S-NEXT:    fld.s $ft0, $a0, %pc_lo12(.LCPI3_0)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_1)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA64S-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_2)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA64S-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_3)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA64S-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_4)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA64S-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_5)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA64S-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_6)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA64S-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_7)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_8)
-; LA64S-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_8)
-; LA64S-NEXT:    movfr2gr.s $a0, $ft0
+; LA64S-NEXT:    lu12i.w $a1, -12
+; LA64S-NEXT:    ori $a0, $a1, 2176
+; LA64S-NEXT:    ori $a2, $a1, 512
+; LA64S-NEXT:    ori $a3, $a1, 1024
+; LA64S-NEXT:    ori $a4, $a1, 1280
+; LA64S-NEXT:    ori $a5, $a1, 1536
+; LA64S-NEXT:    ori $a6, $a1, 1792
+; LA64S-NEXT:    ori $a7, $a1, 2048
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa1, $a1
+; LA64S-NEXT:    lu12i.w $a1, -13
+; LA64S-NEXT:    ori $a1, $a1, 3072
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa0, $a1
+; LA64S-NEXT:    lu32i.d $a2, 0
+; LA64S-NEXT:    movgr2fr.w $fa2, $a2
+; LA64S-NEXT:    lu32i.d $a3, 0
+; LA64S-NEXT:    movgr2fr.w $fa3, $a3
+; LA64S-NEXT:    lu32i.d $a4, 0
+; LA64S-NEXT:    movgr2fr.w $fa4, $a4
+; LA64S-NEXT:    lu32i.d $a5, 0
+; LA64S-NEXT:    movgr2fr.w $fa5, $a5
+; LA64S-NEXT:    lu32i.d $a0, 0
+; LA64S-NEXT:    lu32i.d $a6, 0
+; LA64S-NEXT:    movgr2fr.w $fa6, $a6
+; LA64S-NEXT:    lu32i.d $a7, 0
+; LA64S-NEXT:    movgr2fr.w $fa7, $a7
 ; LA64S-NEXT:    ori $a1, $zero, 10
 ; LA64S-NEXT:    pcaddu18i $ra, %call36(callee_half_in_gregs)
 ; LA64S-NEXT:    jirl $ra, $ra, 0
@@ -714,35 +725,27 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA64F-LP64S:       # %bb.0:
 ; LA64F-LP64S-NEXT:    addi.d $sp, $sp, -32
 ; LA64F-LP64S-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
-; LA64F-LP64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64F-LP64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
-; LA64F-LP64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA64F-LP64S-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_1)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a0, $fa0
-; LA64F-LP64S-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_2)
-; LA64F-LP64S-NEXT:    fld.s $fa0, $a1, %pc_lo12(.LCPI3_2)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a1, $fa1
-; LA64F-LP64S-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_3)
-; LA64F-LP64S-NEXT:    fld.s $fa1, $a2, %pc_lo12(.LCPI3_3)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-LP64S-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI3_4)
-; LA64F-LP64S-NEXT:    fld.s $fa0, $a3, %pc_lo12(.LCPI3_4)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a3, $fa1
-; LA64F-LP64S-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI3_5)
-; LA64F-LP64S-NEXT:    fld.s $fa1, $a4, %pc_lo12(.LCPI3_5)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a4, $fa0
-; LA64F-LP64S-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI3_6)
-; LA64F-LP64S-NEXT:    fld.s $fa0, $a5, %pc_lo12(.LCPI3_6)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a5, $fa1
-; LA64F-LP64S-NEXT:    ori $a6, $zero, 10
-; LA64F-LP64S-NEXT:    st.d $a6, $sp, 8
-; LA64F-LP64S-NEXT:    movfr2gr.s $a6, $fa0
-; LA64F-LP64S-NEXT:    pcalau12i $a7, %pc_hi20(.LCPI3_7)
-; LA64F-LP64S-NEXT:    fld.s $fa0, $a7, %pc_lo12(.LCPI3_7)
-; LA64F-LP64S-NEXT:    lu12i.w $a7, -12
-; LA64F-LP64S-NEXT:    ori $t0, $a7, 2176
+; LA64F-LP64S-NEXT:    ori $a0, $zero, 10
+; LA64F-LP64S-NEXT:    st.d $a0, $sp, 8
+; LA64F-LP64S-NEXT:    lu12i.w $a1, -12
+; LA64F-LP64S-NEXT:    ori $t0, $a1, 2176
 ; LA64F-LP64S-NEXT:    lu32i.d $t0, 0
-; LA64F-LP64S-NEXT:    movfr2gr.s $a7, $fa0
+; LA64F-LP64S-NEXT:    ori $a2, $a1, 512
+; LA64F-LP64S-NEXT:    ori $a3, $a1, 1024
+; LA64F-LP64S-NEXT:    ori $a4, $a1, 1280
+; LA64F-LP64S-NEXT:    ori $a5, $a1, 1536
+; LA64F-LP64S-NEXT:    ori $a6, $a1, 1792
+; LA64F-LP64S-NEXT:    ori $a7, $a1, 2048
+; LA64F-LP64S-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64S-NEXT:    lu12i.w $a0, -13
+; LA64F-LP64S-NEXT:    ori $a0, $a0, 3072
+; LA64F-LP64S-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64S-NEXT:    lu32i.d $a2, 0
+; LA64F-LP64S-NEXT:    lu32i.d $a3, 0
+; LA64F-LP64S-NEXT:    lu32i.d $a4, 0
+; LA64F-LP64S-NEXT:    lu32i.d $a5, 0
+; LA64F-LP64S-NEXT:    lu32i.d $a6, 0
+; LA64F-LP64S-NEXT:    lu32i.d $a7, 0
 ; LA64F-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64F-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_in_gregs)
 ; LA64F-LP64S-NEXT:    jirl $ra, $ra, 0
@@ -754,25 +757,33 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA64F-LP64D:       # %bb.0:
 ; LA64F-LP64D-NEXT:    addi.d $sp, $sp, -16
 ; LA64F-LP64D-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64F-LP64D-NEXT:    fld.s $ft0, $a0, %pc_lo12(.LCPI3_0)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA64F-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_1)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA64F-LP64D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_2)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA64F-LP64D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_3)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA64F-LP64D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_4)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA64F-LP64D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_5)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA64F-LP64D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_6)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA64F-LP64D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_7)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_8)
-; LA64F-LP64D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_8)
-; LA64F-LP64D-NEXT:    movfr2gr.s $a0, $ft0
+; LA64F-LP64D-NEXT:    lu12i.w $a1, -12
+; LA64F-LP64D-NEXT:    ori $a0, $a1, 2176
+; LA64F-LP64D-NEXT:    ori $a2, $a1, 512
+; LA64F-LP64D-NEXT:    ori $a3, $a1, 1024
+; LA64F-LP64D-NEXT:    ori $a4, $a1, 1280
+; LA64F-LP64D-NEXT:    ori $a5, $a1, 1536
+; LA64F-LP64D-NEXT:    ori $a6, $a1, 1792
+; LA64F-LP64D-NEXT:    ori $a7, $a1, 2048
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa1, $a1
+; LA64F-LP64D-NEXT:    lu12i.w $a1, -13
+; LA64F-LP64D-NEXT:    ori $a1, $a1, 3072
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa0, $a1
+; LA64F-LP64D-NEXT:    lu32i.d $a2, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa2, $a2
+; LA64F-LP64D-NEXT:    lu32i.d $a3, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa3, $a3
+; LA64F-LP64D-NEXT:    lu32i.d $a4, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa4, $a4
+; LA64F-LP64D-NEXT:    lu32i.d $a5, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa5, $a5
+; LA64F-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64D-NEXT:    lu32i.d $a6, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa6, $a6
+; LA64F-LP64D-NEXT:    lu32i.d $a7, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa7, $a7
 ; LA64F-LP64D-NEXT:    ori $a1, $zero, 10
 ; LA64F-LP64D-NEXT:    pcaddu18i $ra, %call36(callee_half_in_gregs)
 ; LA64F-LP64D-NEXT:    jirl $ra, $ra, 0
@@ -784,35 +795,27 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA64D-LP64S:       # %bb.0:
 ; LA64D-LP64S-NEXT:    addi.d $sp, $sp, -32
 ; LA64D-LP64S-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
-; LA64D-LP64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64D-LP64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_0)
-; LA64D-LP64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA64D-LP64S-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_1)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a0, $fa0
-; LA64D-LP64S-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_2)
-; LA64D-LP64S-NEXT:    fld.s $fa0, $a1, %pc_lo12(.LCPI3_2)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a1, $fa1
-; LA64D-LP64S-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_3)
-; LA64D-LP64S-NEXT:    fld.s $fa1, $a2, %pc_lo12(.LCPI3_3)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-LP64S-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI3_4)
-; LA64D-LP64S-NEXT:    fld.s $fa0, $a3, %pc_lo12(.LCPI3_4)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a3, $fa1
-; LA64D-LP64S-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI3_5)
-; LA64D-LP64S-NEXT:    fld.s $fa1, $a4, %pc_lo12(.LCPI3_5)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a4, $fa0
-; LA64D-LP64S-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI3_6)
-; LA64D-LP64S-NEXT:    fld.s $fa0, $a5, %pc_lo12(.LCPI3_6)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a5, $fa1
-; LA64D-LP64S-NEXT:    ori $a6, $zero, 10
-; LA64D-LP64S-NEXT:    st.d $a6, $sp, 8
-; LA64D-LP64S-NEXT:    movfr2gr.s $a6, $fa0
-; LA64D-LP64S-NEXT:    pcalau12i $a7, %pc_hi20(.LCPI3_7)
-; LA64D-LP64S-NEXT:    fld.s $fa0, $a7, %pc_lo12(.LCPI3_7)
-; LA64D-LP64S-NEXT:    lu12i.w $a7, -12
-; LA64D-LP64S-NEXT:    ori $t0, $a7, 2176
+; LA64D-LP64S-NEXT:    ori $a0, $zero, 10
+; LA64D-LP64S-NEXT:    st.d $a0, $sp, 8
+; LA64D-LP64S-NEXT:    lu12i.w $a1, -12
+; LA64D-LP64S-NEXT:    ori $t0, $a1, 2176
 ; LA64D-LP64S-NEXT:    lu32i.d $t0, 0
-; LA64D-LP64S-NEXT:    movfr2gr.s $a7, $fa0
+; LA64D-LP64S-NEXT:    ori $a2, $a1, 512
+; LA64D-LP64S-NEXT:    ori $a3, $a1, 1024
+; LA64D-LP64S-NEXT:    ori $a4, $a1, 1280
+; LA64D-LP64S-NEXT:    ori $a5, $a1, 1536
+; LA64D-LP64S-NEXT:    ori $a6, $a1, 1792
+; LA64D-LP64S-NEXT:    ori $a7, $a1, 2048
+; LA64D-LP64S-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64S-NEXT:    lu12i.w $a0, -13
+; LA64D-LP64S-NEXT:    ori $a0, $a0, 3072
+; LA64D-LP64S-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64S-NEXT:    lu32i.d $a2, 0
+; LA64D-LP64S-NEXT:    lu32i.d $a3, 0
+; LA64D-LP64S-NEXT:    lu32i.d $a4, 0
+; LA64D-LP64S-NEXT:    lu32i.d $a5, 0
+; LA64D-LP64S-NEXT:    lu32i.d $a6, 0
+; LA64D-LP64S-NEXT:    lu32i.d $a7, 0
 ; LA64D-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64D-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_in_gregs)
 ; LA64D-LP64S-NEXT:    jirl $ra, $ra, 0
@@ -824,25 +827,33 @@ define i32 @caller_half_in_gregs() nounwind {
 ; LA64D-LP64D:       # %bb.0:
 ; LA64D-LP64D-NEXT:    addi.d $sp, $sp, -16
 ; LA64D-LP64D-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; LA64D-LP64D-NEXT:    fld.s $ft0, $a0, %pc_lo12(.LCPI3_0)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; LA64D-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI3_1)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; LA64D-LP64D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI3_2)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; LA64D-LP64D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI3_3)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; LA64D-LP64D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI3_4)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; LA64D-LP64D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI3_5)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; LA64D-LP64D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI3_6)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_7)
-; LA64D-LP64D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI3_7)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_8)
-; LA64D-LP64D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI3_8)
-; LA64D-LP64D-NEXT:    movfr2gr.s $a0, $ft0
+; LA64D-LP64D-NEXT:    lu12i.w $a1, -12
+; LA64D-LP64D-NEXT:    ori $a0, $a1, 2176
+; LA64D-LP64D-NEXT:    ori $a2, $a1, 512
+; LA64D-LP64D-NEXT:    ori $a3, $a1, 1024
+; LA64D-LP64D-NEXT:    ori $a4, $a1, 1280
+; LA64D-LP64D-NEXT:    ori $a5, $a1, 1536
+; LA64D-LP64D-NEXT:    ori $a6, $a1, 1792
+; LA64D-LP64D-NEXT:    ori $a7, $a1, 2048
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa1, $a1
+; LA64D-LP64D-NEXT:    lu12i.w $a1, -13
+; LA64D-LP64D-NEXT:    ori $a1, $a1, 3072
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa0, $a1
+; LA64D-LP64D-NEXT:    lu32i.d $a2, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa2, $a2
+; LA64D-LP64D-NEXT:    lu32i.d $a3, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa3, $a3
+; LA64D-LP64D-NEXT:    lu32i.d $a4, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa4, $a4
+; LA64D-LP64D-NEXT:    lu32i.d $a5, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa5, $a5
+; LA64D-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64D-NEXT:    lu32i.d $a6, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa6, $a6
+; LA64D-LP64D-NEXT:    lu32i.d $a7, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa7, $a7
 ; LA64D-LP64D-NEXT:    ori $a1, $zero, 10
 ; LA64D-LP64D-NEXT:    pcaddu18i $ra, %call36(callee_half_in_gregs)
 ; LA64D-LP64D-NEXT:    jirl $ra, $ra, 0
@@ -1110,22 +1121,22 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32F-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32F-ILP32D-NEXT:    lu12i.w $a0, -12
 ; LA32F-ILP32D-NEXT:    ori $t0, $a0, 3200
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA32F-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA32F-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA32F-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA32F-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA32F-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA32F-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA32F-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2304
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa0, $a1
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2432
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa1, $a1
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2560
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa2, $a1
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2688
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa3, $a1
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2816
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa4, $a1
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 2944
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa5, $a1
+; LA32F-ILP32D-NEXT:    ori $a1, $a0, 3072
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa6, $a1
+; LA32F-ILP32D-NEXT:    ori $a0, $a0, 3136
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa7, $a0
 ; LA32F-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32F-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32F-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -1182,22 +1193,22 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA32D-ILP32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32D-ILP32D-NEXT:    lu12i.w $a0, -12
 ; LA32D-ILP32D-NEXT:    ori $t0, $a0, 3200
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA32D-ILP32D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA32D-ILP32D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA32D-ILP32D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA32D-ILP32D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA32D-ILP32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA32D-ILP32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA32D-ILP32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2304
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa0, $a1
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2432
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa1, $a1
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2560
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa2, $a1
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2688
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa3, $a1
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2816
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa4, $a1
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 2944
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa5, $a1
+; LA32D-ILP32D-NEXT:    ori $a1, $a0, 3072
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa6, $a1
+; LA32D-ILP32D-NEXT:    ori $a0, $a0, 3136
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa7, $a0
 ; LA32D-ILP32D-NEXT:    ori $a0, $zero, 1
 ; LA32D-ILP32D-NEXT:    ori $a1, $zero, 2
 ; LA32D-ILP32D-NEXT:    ori $a2, $zero, 3
@@ -1219,22 +1230,30 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64S-NEXT:    lu12i.w $a0, -12
 ; LA64S-NEXT:    ori $t0, $a0, 3200
 ; LA64S-NEXT:    lu32i.d $t0, 0
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA64S-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA64S-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA64S-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA64S-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA64S-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA64S-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA64S-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA64S-NEXT:    ori $a1, $a0, 2304
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa0, $a1
+; LA64S-NEXT:    ori $a1, $a0, 2432
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa1, $a1
+; LA64S-NEXT:    ori $a1, $a0, 2560
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa2, $a1
+; LA64S-NEXT:    ori $a1, $a0, 2688
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa3, $a1
+; LA64S-NEXT:    ori $a1, $a0, 2816
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa4, $a1
+; LA64S-NEXT:    ori $a1, $a0, 2944
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa5, $a1
+; LA64S-NEXT:    ori $a1, $a0, 3072
+; LA64S-NEXT:    lu32i.d $a1, 0
+; LA64S-NEXT:    movgr2fr.w $fa6, $a1
+; LA64S-NEXT:    ori $a0, $a0, 3136
+; LA64S-NEXT:    lu32i.d $a0, 0
+; LA64S-NEXT:    movgr2fr.w $fa7, $a0
 ; LA64S-NEXT:    ori $a0, $zero, 1
 ; LA64S-NEXT:    ori $a1, $zero, 2
 ; LA64S-NEXT:    ori $a2, $zero, 3
@@ -1303,22 +1322,30 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64F-LP64D-NEXT:    lu12i.w $a0, -12
 ; LA64F-LP64D-NEXT:    ori $t0, $a0, 3200
 ; LA64F-LP64D-NEXT:    lu32i.d $t0, 0
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA64F-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA64F-LP64D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA64F-LP64D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA64F-LP64D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA64F-LP64D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA64F-LP64D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA64F-LP64D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA64F-LP64D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 2304
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa0, $a1
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 2432
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa1, $a1
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 2560
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa2, $a1
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 2688
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa3, $a1
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 2816
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa4, $a1
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 2944
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa5, $a1
+; LA64F-LP64D-NEXT:    ori $a1, $a0, 3072
+; LA64F-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa6, $a1
+; LA64F-LP64D-NEXT:    ori $a0, $a0, 3136
+; LA64F-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa7, $a0
 ; LA64F-LP64D-NEXT:    ori $a0, $zero, 1
 ; LA64F-LP64D-NEXT:    ori $a1, $zero, 2
 ; LA64F-LP64D-NEXT:    ori $a2, $zero, 3
@@ -1387,22 +1414,30 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64D-LP64D-NEXT:    lu12i.w $a0, -12
 ; LA64D-LP64D-NEXT:    ori $t0, $a0, 3200
 ; LA64D-LP64D-NEXT:    lu32i.d $t0, 0
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA64D-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI5_0)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA64D-LP64D-NEXT:    fld.s $fa1, $a0, %pc_lo12(.LCPI5_1)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA64D-LP64D-NEXT:    fld.s $fa2, $a0, %pc_lo12(.LCPI5_2)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; LA64D-LP64D-NEXT:    fld.s $fa3, $a0, %pc_lo12(.LCPI5_3)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; LA64D-LP64D-NEXT:    fld.s $fa4, $a0, %pc_lo12(.LCPI5_4)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; LA64D-LP64D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI5_5)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; LA64D-LP64D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI5_6)
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_7)
-; LA64D-LP64D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI5_7)
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 2304
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa0, $a1
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 2432
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa1, $a1
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 2560
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa2, $a1
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 2688
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa3, $a1
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 2816
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa4, $a1
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 2944
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa5, $a1
+; LA64D-LP64D-NEXT:    ori $a1, $a0, 3072
+; LA64D-LP64D-NEXT:    lu32i.d $a1, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa6, $a1
+; LA64D-LP64D-NEXT:    ori $a0, $a0, 3136
+; LA64D-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa7, $a0
 ; LA64D-LP64D-NEXT:    ori $a0, $zero, 1
 ; LA64D-LP64D-NEXT:    ori $a1, $zero, 2
 ; LA64D-LP64D-NEXT:    ori $a2, $zero, 3
@@ -1436,8 +1471,9 @@ define half @callee_half_ret() nounwind {
 ;
 ; LA32F-ILP32D-LABEL: callee_half_ret:
 ; LA32F-ILP32D:       # %bb.0:
-; LA32F-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32F-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA32F-ILP32D-NEXT:    lu12i.w $a0, -13
+; LA32F-ILP32D-NEXT:    ori $a0, $a0, 3072
+; LA32F-ILP32D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32F-ILP32D-NEXT:    ret
 ;
 ; LA32D-ILP32S-LABEL: callee_half_ret:
@@ -1448,40 +1484,47 @@ define half @callee_half_ret() nounwind {
 ;
 ; LA32D-ILP32D-LABEL: callee_half_ret:
 ; LA32D-ILP32D:       # %bb.0:
-; LA32D-ILP32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA32D-ILP32D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA32D-ILP32D-NEXT:    lu12i.w $a0, -13
+; LA32D-ILP32D-NEXT:    ori $a0, $a0, 3072
+; LA32D-ILP32D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32D-ILP32D-NEXT:    ret
 ;
 ; LA64S-LABEL: callee_half_ret:
 ; LA64S:       # %bb.0:
-; LA64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA64S-NEXT:    lu12i.w $a0, -13
+; LA64S-NEXT:    ori $a0, $a0, 3072
+; LA64S-NEXT:    lu32i.d $a0, 0
+; LA64S-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64S-NEXT:    ret
 ;
 ; LA64F-LP64S-LABEL: callee_half_ret:
 ; LA64F-LP64S:       # %bb.0:
-; LA64F-LP64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA64F-LP64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
-; LA64F-LP64S-NEXT:    movfr2gr.s $a0, $fa0
+; LA64F-LP64S-NEXT:    lu12i.w $a0, -13
+; LA64F-LP64S-NEXT:    ori $a0, $a0, 3072
+; LA64F-LP64S-NEXT:    lu32i.d $a0, 0
 ; LA64F-LP64S-NEXT:    ret
 ;
 ; LA64F-LP64D-LABEL: callee_half_ret:
 ; LA64F-LP64D:       # %bb.0:
-; LA64F-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA64F-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA64F-LP64D-NEXT:    lu12i.w $a0, -13
+; LA64F-LP64D-NEXT:    ori $a0, $a0, 3072
+; LA64F-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64F-LP64D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64F-LP64D-NEXT:    ret
 ;
 ; LA64D-LP64S-LABEL: callee_half_ret:
 ; LA64D-LP64S:       # %bb.0:
-; LA64D-LP64S-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA64D-LP64S-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
-; LA64D-LP64S-NEXT:    movfr2gr.s $a0, $fa0
+; LA64D-LP64S-NEXT:    lu12i.w $a0, -13
+; LA64D-LP64S-NEXT:    ori $a0, $a0, 3072
+; LA64D-LP64S-NEXT:    lu32i.d $a0, 0
 ; LA64D-LP64S-NEXT:    ret
 ;
 ; LA64D-LP64D-LABEL: callee_half_ret:
 ; LA64D-LP64D:       # %bb.0:
-; LA64D-LP64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; LA64D-LP64D-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI6_0)
+; LA64D-LP64D-NEXT:    lu12i.w $a0, -13
+; LA64D-LP64D-NEXT:    ori $a0, $a0, 3072
+; LA64D-LP64D-NEXT:    lu32i.d $a0, 0
+; LA64D-LP64D-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64D-LP64D-NEXT:    ret
   ret half 1.0
 }

@@ -2755,7 +2755,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (!mayTranslateUserTypes(U))
+  if (!MF->getTarget().getTargetTriple().isSPIRV() && !mayTranslateUserTypes(U))
     return false;
 
   const CallInst &CI = cast<CallInst>(U);

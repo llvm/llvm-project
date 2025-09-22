@@ -536,7 +536,8 @@ void OmpStructureChecker::CheckTraitSimd(
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
+  PushContextAndClauseSets(
+      x.v.source, llvm::omp::Directive::OMPD_metadirective);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {

@@ -17,7 +17,7 @@ namespace clang::tidy::modernize {
 /// replaced with a ranges version instead
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-ranges.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-ranges.html
 class UseRangesCheck : public utils::UseRangesCheck {
 public:
   UseRangesCheck(StringRef CheckName, ClangTidyContext *Context);
