@@ -1170,7 +1170,7 @@ bool InferAddressSpacesImpl::isSafeToCastConstAddrSpace(Constant *C,
   if (SrcAS != FlatAddrSpace && NewAS != FlatAddrSpace)
     return false;
 
-  if (isa<ConstantPointerNull>(C))
+  if (isa<ConstantPointerNull>(C) || isa<ConstantAggregateZero>(C))
     return true;
 
   if (auto *Op = dyn_cast<Operator>(C)) {
