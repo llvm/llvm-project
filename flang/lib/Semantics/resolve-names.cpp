@@ -1625,25 +1625,33 @@ public:
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
     const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-    auto populateDeclareTargetNames{
-        [this](const parser::OmpObjectList &objectList) {
-          for (const auto &ompObject : objectList.v) {
-            common::visit(
-                common::visitors{
-                    [&](const parser::Designator &designator) {
-                      if (const auto *name{
-                              semantics::getDesignatorNameIfDataRef(
-                                  designator)}) {
-                        specPartState_.declareTargetNames.insert(name->source);
-                      }
-                    },
-                    [&](const parser::Name &name) {
-                      specPartState_.declareTargetNames.insert(name.source);
-                    },
+    auto populateDeclareTargetNames{[this](const parser::OmpObjectList
+                                            &objectList) {
+      for (const auto &ompObject : objectList.v) {
+        common::visit(
+            common::visitors{
+                [&](const parser::Designator &designator) {
+                  if (const auto *name{
+                          semantics::getDesignatorNameIfDataRef(designator)}) {
+                    specPartState_.declareTargetNames.insert(name->source);
+                  }
                 },
-                ompObject.u);
-          }
-        }};
+                [&](const parser::Name &name) {
+                  specPartState_.declareTargetNames.insert(name.source);
+                },
+                [&](const parser::OmpObject::Invalid &invalid) {
+                  switch (invalid.v) {
+                    SWITCH_COVERS_ALL_CASES
+                  case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+                    context().Say(invalid.source,
+                        "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+                    break;
+                  }
+                },
+            },
+            ompObject.u);
+      }
+    }};
 
     if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
       populateDeclareTargetNames(*objectList);

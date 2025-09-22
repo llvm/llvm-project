@@ -269,7 +269,8 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
-  if (std::holds_alternative<parser::Name>(object.u)) {
+  if (std::holds_alternative<parser::Name>(object.u) ||
+      std::holds_alternative<parser::OmpObject::Invalid>(object.u)) {
     // Do not analyze common block names. The analyzer will flag an error
     // on those.
     return;
@@ -294,7 +295,12 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
   }
   evaluate::ExpressionAnalyzer ea{context_};
   auto restore{ea.AllowWholeAssumedSizeArray(true)};
-  common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
+  common::visit( //
+      common::visitors{
+          [&](auto &&s) { ea.Analyze(s); },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
 }
 
 void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
@@ -538,6 +544,7 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
             [&](const parser::Name &name) {
               CheckPredefinedAllocatorRestriction(source, name);
             },
+            [&](const parser::OmpObject::Invalid &invalid) {},
         },
         ompObject.u);
   }
@@ -612,11 +619,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
-  bool Pre(const parser::OmpMetadirectiveDirective &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_metadirective);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclarativeAssumes &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
     return false;
@@ -648,11 +650,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   }
   bool Pre(const parser::OpenMPGroupprivate &x) {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
-    return false;
-  }
-  bool Pre(const parser::OpenMPThreadprivate &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_threadprivate);
     return false;
   }
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
@@ -1280,10 +1277,19 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 }
 
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
+    const parser::OmpObject &object) {
+  common::visit( //
+      common::visitors{
+          [&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
+}
+
+void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
-    common::visit([&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
-        ompObject.u);
+    CheckThreadprivateOrDeclareTargetVar(ompObject);
   }
 }
 
@@ -1343,18 +1349,20 @@ void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &c) {
-  const auto &dir{std::get<parser::Verbatim>(c.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_threadprivate);
+void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &x) {
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &c) {
-  const auto &dir{std::get<parser::Verbatim>(c.t)};
-  const auto &objectList{std::get<parser::OmpObjectList>(c.t)};
-  CheckSymbolNames(dir.source, objectList);
-  CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
-  CheckThreadprivateOrDeclareTargetVar(objectList);
+void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
+  const parser::OmpDirectiveSpecification &dirSpec{x.v};
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{GetArgumentObject(arg)}) {
+      CheckSymbolName(dirSpec.source, *object);
+      CheckVarIsNotPartOfAnotherVar(dirSpec.source, *object);
+      CheckThreadprivateOrDeclareTargetVar(*object);
+    }
+  }
   dirContext_.pop_back();
 }
 
@@ -1414,8 +1422,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   // refer to the same depend object as the depobj argument of the construct.
   if (clause.Id() == llvm::omp::Clause::OMPC_destroy) {
     auto getObjSymbol{[&](const parser::OmpObject &obj) {
-      return common::visit(
-          [&](auto &&s) { return GetLastName(s).symbol; }, obj.u);
+      return common::visit( //
+          common::visitors{
+              [&](auto &&s) { return GetLastName(s).symbol; },
+              [&](const parser::OmpObject::Invalid &invalid) {
+                return static_cast<Symbol *>(nullptr);
+              },
+          },
+          obj.u);
     }};
     auto getArgSymbol{[&](const parser::OmpArgument &arg) {
       if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
@@ -1430,9 +1444,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
       const Symbol *constrSym{getArgSymbol(arguments.v.front())};
       const Symbol *clauseSym{getObjSymbol(destroy->v)};
-      assert(constrSym && "Unresolved depobj construct symbol");
-      assert(clauseSym && "Unresolved destroy symbol on depobj construct");
-      if (constrSym != clauseSym) {
+      if (constrSym && clauseSym && constrSym != clauseSym) {
         context_.Say(x.source,
             "The DESTROY clause must refer to the same object as the "
             "DEPOBJ construct"_err_en_US);
@@ -1649,29 +1661,35 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithList &x) {
   }
 }
 
-void OmpStructureChecker::CheckSymbolNames(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
-  for (const auto &ompObject : objList.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
-              if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-                if (!name->symbol) {
-                  context_.Say(source,
-                      "The given %s directive clause has an invalid argument"_err_en_US,
-                      ContextDirectiveAsFortran());
-                }
-              }
-            },
-            [&](const parser::Name &name) {
-              if (!name.symbol) {
+void OmpStructureChecker::CheckSymbolName(
+    const parser::CharBlock &source, const parser::OmpObject &object) {
+  common::visit(
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            if (const auto *name{parser::Unwrap<parser::Name>(object)}) {
+              if (!name->symbol) {
                 context_.Say(source,
                     "The given %s directive clause has an invalid argument"_err_en_US,
                     ContextDirectiveAsFortran());
               }
-            },
-        },
-        ompObject.u);
+            }
+          },
+          [&](const parser::Name &name) {
+            if (!name.symbol) {
+              context_.Say(source,
+                  "The given %s directive clause has an invalid argument"_err_en_US,
+                  ContextDirectiveAsFortran());
+            }
+          },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
+}
+
+void OmpStructureChecker::CheckSymbolNames(
+    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
+  for (const auto &ompObject : objList.v) {
+    CheckSymbolName(source, ompObject);
   }
 }
 
@@ -2699,6 +2717,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                       }
                     }
                   },
+                  [&](const parser::OmpObject::Invalid &invalid) {},
               },
               ompObject.u);
         }
@@ -3406,6 +3425,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
             }
           },
           [&](const parser::Name &name) {},
+          [&](const parser::OmpObject::Invalid &invalid) {},
       },
       ompObject.u);
 }
@@ -4091,11 +4111,11 @@ void OmpStructureChecker::CheckStructureComponent(
   }};
 
   for (const auto &object : objects.v) {
-    common::visit(
-        common::visitors{
-            CheckComponent,
-            [&](const parser::Name &name) {},
-        },
+    common::visit(common::visitors{
+                      CheckComponent,
+                      [&](const parser::Name &name) {},
+                      [&](const parser::OmpObject::Invalid &invalid) {},
+                  },
         object.u);
   }
 }

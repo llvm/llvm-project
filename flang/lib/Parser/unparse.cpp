@@ -2168,10 +2168,22 @@ public:
   void Unparse(const OmpContextSelectorSpecification &x) { Walk(x.v, ", "); }
 
   void Unparse(const OmpObject &x) {
-    common::visit(common::visitors{
-                      [&](const Designator &y) { Walk(y); },
-                      [&](const Name &y) { Put("/"), Walk(y), Put("/"); },
-                  },
+    common::visit( //
+        common::visitors{
+            [&](const Designator &y) { Walk(y); },
+            [&](const Name &y) {
+              Put("/");
+              Walk(y);
+              Put("/");
+            },
+            [&](const OmpObject::Invalid &y) {
+              switch (y.v) {
+              case OmpObject::Invalid::Kind::BlankCommonBlock:
+                Put("//");
+                break;
+              }
+            },
+        },
         x.u);
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
@@ -2599,12 +2611,11 @@ public:
   }
   void Unparse(const OpenMPThreadprivate &x) {
     BeginOpenMP();
-    Word("!$OMP THREADPRIVATE (");
-    Walk(std::get<parser::OmpObjectList>(x.t));
-    Put(")\n");
+    Word("!$OMP ");
+    Walk(x.v);
+    Put("\n");
     EndOpenMP();
   }
-
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
@@ -2666,8 +2677,8 @@ public:
   void Unparse(const OmpFailClause &x) { Walk(x.v); }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
-    Word("!$OMP METADIRECTIVE ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
