@@ -3832,7 +3832,7 @@ Important Subclasses of the ``Instruction`` class
 
 * ``BinaryOperator``
 
-  This subclasses represents all two operand instructions whose operands must be
+  This subclass represents all two operand instructions whose operands must be
   the same type, except for the comparison instructions.
 
 .. _CastInst:
