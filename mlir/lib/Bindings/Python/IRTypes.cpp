@@ -731,7 +731,8 @@ public:
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;
-          return PyAttribute(self.getContext(), encoding).maybeDownCast();
+          return nb::cast<nb::typed<nb::object, PyAttribute>>(
+              PyAttribute(self.getContext(), encoding).maybeDownCast());
         });
   }
 };
@@ -793,9 +794,9 @@ public:
         .def_prop_ro(
             "layout",
             [](PyMemRefType &self) -> nb::typed<nb::object, PyAttribute> {
-              return PyAttribute(self.getContext(),
-                                 mlirMemRefTypeGetLayout(self))
-                  .maybeDownCast();
+              return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                  PyAttribute(self.getContext(), mlirMemRefTypeGetLayout(self))
+                      .maybeDownCast());
             },
             "The layout of the MemRef type.")
         .def(
@@ -824,7 +825,8 @@ public:
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return PyAttribute(self.getContext(), a).maybeDownCast();
+              return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                  PyAttribute(self.getContext(), a).maybeDownCast());
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -865,7 +867,8 @@ public:
               MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return PyAttribute(self.getContext(), a).maybeDownCast();
+              return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                  PyAttribute(self.getContext(), a).maybeDownCast());
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }

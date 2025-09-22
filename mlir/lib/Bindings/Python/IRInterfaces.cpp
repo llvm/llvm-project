@@ -223,7 +223,7 @@ public:
   /// Returns the opview of the operation instance from which this object was
   /// constructed. Throws a type error if this object was constructed form a
   /// subclass of OpView.
-  nb::typed<nb::object, PyOpView> getOpView() {
+  nb::object getOpView() {
     if (operation == nullptr) {
       throw nb::type_error("Cannot get an opview from a static interface");
     }
