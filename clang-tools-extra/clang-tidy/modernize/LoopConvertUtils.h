@@ -72,7 +72,8 @@ public:
   /// Accessor for DeclParents.
   const DeclParentMap &getDeclToParentStmtMap() { return DeclParents; }
 
-  friend class clang::RecursiveASTVisitorBase<StmtAncestorASTVisitor, /*Const=*/false>;
+  friend class clang::RecursiveASTVisitorBase<StmtAncestorASTVisitor,
+                                              /*Const=*/false>;
 
 private:
   StmtParentMap StmtAncestors;
@@ -98,7 +99,8 @@ public:
   /// Accessor for Components.
   const ComponentVector &getComponents() { return Components; }
 
-  friend class clang::RecursiveASTVisitorBase<ComponentFinderASTVisitor, /*Const=*/false>;
+  friend class clang::RecursiveASTVisitorBase<ComponentFinderASTVisitor,
+                                              /*Const=*/false>;
 
 private:
   ComponentVector Components;
@@ -155,7 +157,8 @@ public:
     return DependsOnInsideVariable;
   }
 
-  friend class clang::RecursiveASTVisitorBase<DependencyFinderASTVisitor, /*Const=*/false>;
+  friend class clang::RecursiveASTVisitorBase<DependencyFinderASTVisitor,
+                                              /*Const=*/false>;
 
 private:
   const StmtParentMap *StmtParents;
@@ -188,7 +191,8 @@ public:
     return Found;
   }
 
-  friend class clang::RecursiveASTVisitorBase<DeclFinderASTVisitor, /*Const=*/false>;
+  friend class clang::RecursiveASTVisitorBase<DeclFinderASTVisitor,
+                                              /*Const=*/false>;
 
 private:
   std::string Name;

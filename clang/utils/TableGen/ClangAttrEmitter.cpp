@@ -3983,10 +3983,10 @@ void EmitClangAttrASTVisitor(const RecordKeeper &Records, raw_ostream &OS) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
       continue;
-    OS << "  bool Traverse" << R.getName()
-       << "Attr(MaybeConst<" << R.getName() << "Attr> *A);\n";
-    OS << "  bool Visit" << R.getName()
-       << "Attr(MaybeConst<" << R.getName() << "Attr> *A) {\n"
+    OS << "  bool Traverse" << R.getName() << "Attr(MaybeConst<" << R.getName()
+       << "Attr> *A);\n";
+    OS << "  bool Visit" << R.getName() << "Attr(MaybeConst<" << R.getName()
+       << "Attr> *A) {\n"
        << "    return true; \n"
        << "  }\n";
   }
