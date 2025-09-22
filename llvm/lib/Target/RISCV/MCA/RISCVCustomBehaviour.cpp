@@ -87,7 +87,7 @@ bool RISCVInstrumentManager::supportsInstrumentType(
     llvm::StringRef Type) const {
   return Type == RISCVLMULInstrument::DESC_NAME ||
          Type == RISCVSEWInstrument::DESC_NAME ||
-         InstrumentManager::supportsInstrumentType(Type);;
+         InstrumentManager::supportsInstrumentType(Type);
 }
 
 UniqueInstrument
@@ -95,8 +95,8 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
                                          llvm::StringRef Data) {
   if (Desc == RISCVLMULInstrument::DESC_NAME) {
     if (!RISCVLMULInstrument::isDataValid(Data)) {
-      LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc << ": "
-                        << Data << '\n');
+      LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc
+                        << ": " << Data << '\n');
       return nullptr;
     }
     return std::make_unique<RISCVLMULInstrument>(Data);
