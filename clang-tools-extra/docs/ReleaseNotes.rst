@@ -259,7 +259,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
-  on Windows when the check was enabled with a 32-bit :program:`clang-tidy` binary.
+  on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
+  binary.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
