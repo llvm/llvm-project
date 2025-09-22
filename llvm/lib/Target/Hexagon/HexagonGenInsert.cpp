@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
+#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -16,7 +17,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -167,7 +167,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register::virtReg2Index(v);
+      return Register(v).virtRegIndex();
     }
 
     static inline unsigned x2v(unsigned x) {
@@ -271,7 +271,7 @@ namespace {
     CellMapShadow(const BitTracker &T) : BT(T) {}
 
     const BitTracker::RegisterCell &lookup(unsigned VR) {
-      unsigned RInd = Register::virtReg2Index(VR);
+      unsigned RInd = Register(VR).virtRegIndex();
       // Grow the vector to at least 32 elements.
       if (RInd >= CVect.size())
         CVect.resize(std::max(RInd+16, 32U), nullptr);
@@ -493,22 +493,13 @@ namespace {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-  void initializeHexagonGenInsertPass(PassRegistry&);
-  FunctionPass *createHexagonGenInsert();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonGenInsert : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonGenInsert() : MachineFunctionPass(ID) {
-      initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonGenInsert() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon generate \"insert\" instructions";
@@ -1281,7 +1272,7 @@ void HexagonGenInsert::selectCandidates() {
 
   for (unsigned R = AllRMs.find_first(); R; R = AllRMs.find_next(R)) {
     using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
-    using InstrSet = SmallSet<const MachineInstr *, 16>;
+    using InstrSet = SmallPtrSet<const MachineInstr *, 16>;
 
     InstrSet UIs;
     // Count as the number of instructions in which R is used, not the
@@ -1578,7 +1569,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
 
     IterListType Out;
     for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-      unsigned Idx = Register::virtReg2Index(I->first);
+      unsigned Idx = Register(I->first).virtRegIndex();
       if (Idx >= Cutoff)
         Out.push_back(I);
     }

@@ -25,9 +25,6 @@
 #include "Target.h"
 #include "Thunks.h"
 #include "Writer.h"
-#include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/DWARF.h"
-#include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -325,14 +322,27 @@ GnuPropertySection::GnuPropertySection(Ctx &ctx)
                        ctx.arg.wordsize) {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
+  uint32_t featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_386:
+  case EM_X86_64:
+    featureAndType = GNU_PROPERTY_X86_FEATURE_1_AND;
+    break;
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
+    llvm_unreachable(
+        "target machine does not support .note.gnu.property section");
+  }
+
   write32(ctx, buf, 4);                          // Name size
   write32(ctx, buf + 4, getSize() - 16);         // Content size
   write32(ctx, buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
   memcpy(buf + 12, "GNU", 4);               // Name string
-
-  uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                : GNU_PROPERTY_X86_FEATURE_1_AND;
 
   unsigned offset = 16;
   if (ctx.arg.andFeatures != 0) {
@@ -344,11 +354,11 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
     offset += 16;
   }
 
-  if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
+  if (ctx.aarch64PauthAbiCoreInfo) {
     write32(ctx, buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
-    write32(ctx, buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
-    memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
-           ctx.aarch64PauthAbiCoreInfo.size());
+    write32(ctx, buf + offset + 4, AArch64PauthAbiCoreInfo::size());
+    write64(ctx, buf + offset + 8, ctx.aarch64PauthAbiCoreInfo->platform);
+    write64(ctx, buf + offset + 16, ctx.aarch64PauthAbiCoreInfo->version);
   }
 }
 
@@ -356,8 +366,8 @@ size_t GnuPropertySection::getSize() const {
   uint32_t contentSize = 0;
   if (ctx.arg.andFeatures != 0)
     contentSize += ctx.arg.is64 ? 16 : 12;
-  if (!ctx.aarch64PauthAbiCoreInfo.empty())
-    contentSize += 4 + 4 + ctx.aarch64PauthAbiCoreInfo.size();
+  if (ctx.aarch64PauthAbiCoreInfo)
+    contentSize += 4 + 4 + AArch64PauthAbiCoreInfo::size();
   assert(contentSize != 0);
   return contentSize + 16;
 }
@@ -590,7 +600,7 @@ SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   auto eq = [](const FdeData &a, const FdeData &b) {
     return a.pcRel == b.pcRel;
   };
-  ret.erase(std::unique(ret.begin(), ret.end(), eq), ret.end());
+  ret.erase(llvm::unique(ret, eq), ret.end());
 
   return ret;
 }
@@ -670,11 +680,21 @@ void GotSection::addEntry(const Symbol &sym) {
   ctx.symAux.back().gotIdx = numEntries++;
 }
 
+void GotSection::addAuthEntry(const Symbol &sym) {
+  authEntries.push_back(
+      {(numEntries - 1) * ctx.target->gotEntrySize, sym.isFunc()});
+}
+
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
   return true;
+}
+
+void GotSection::addTlsDescAuthEntry() {
+  authEntries.push_back({(numEntries - 2) * ctx.target->gotEntrySize, true});
+  authEntries.push_back({(numEntries - 1) * ctx.target->gotEntrySize, false});
 }
 
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
@@ -690,13 +710,13 @@ bool GotSection::addDynTlsEntry(const Symbol &sym) {
 bool GotSection::addTlsIndex() {
   if (tlsIndexOff != uint32_t(-1))
     return false;
-  tlsIndexOff = numEntries * ctx.arg.wordsize;
+  tlsIndexOff = numEntries * ctx.target->gotEntrySize;
   numEntries += 2;
   return true;
 }
 
 uint32_t GotSection::getTlsDescOffset(const Symbol &sym) const {
-  return sym.getTlsDescIdx(ctx) * ctx.arg.wordsize;
+  return sym.getTlsDescIdx(ctx) * ctx.target->gotEntrySize;
 }
 
 uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
@@ -704,11 +724,11 @@ uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
 }
 
 uint64_t GotSection::getGlobalDynAddr(const Symbol &b) const {
-  return this->getVA() + b.getTlsGdIdx(ctx) * ctx.arg.wordsize;
+  return this->getVA() + b.getTlsGdIdx(ctx) * ctx.target->gotEntrySize;
 }
 
 uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
-  return b.getTlsGdIdx(ctx) * ctx.arg.wordsize;
+  return b.getTlsGdIdx(ctx) * ctx.target->gotEntrySize;
 }
 
 void GotSection::finalizeContents() {
@@ -717,7 +737,7 @@ void GotSection::finalizeContents() {
       !ctx.sym.globalOffsetTable)
     size = 0;
   else
-    size = numEntries * ctx.arg.wordsize;
+    size = numEntries * ctx.target->gotEntrySize;
 }
 
 bool GotSection::isNeeded() const {
@@ -732,10 +752,21 @@ void GotSection::writeTo(uint8_t *buf) {
     return;
   ctx.target->writeGotHeader(buf);
   ctx.target->relocateAlloc(*this, buf);
-}
-
-static uint64_t getMipsPageAddr(uint64_t addr) {
-  return (addr + 0x8000) & ~0xffff;
+  for (const AuthEntryInfo &authEntry : authEntries) {
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#default-signing-schema
+    //   Signed GOT entries use the IA key for symbols of type STT_FUNC and the
+    //   DA key for all other symbol types, with the address of the GOT entry as
+    //   the modifier. The static linker must encode the signing schema into the
+    //   GOT slot.
+    //
+    // https://github.com/ARM-software/abi-aa/blob/2024Q3/pauthabielf64/pauthabielf64.rst#encoding-the-signing-schema
+    //   If address diversity is set and the discriminator
+    //   is 0 then modifier = Place
+    uint8_t *dest = buf + authEntry.offset;
+    uint64_t key = authEntry.isSymbolFunc ? /*IA=*/0b00 : /*DA=*/0b10;
+    uint64_t addrDiversity = 1;
+    write64(ctx, dest, (addrDiversity << 63) | (key << 60));
+  }
 }
 
 static uint64_t getMipsPageCount(uint64_t size) {
@@ -749,9 +780,9 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);
-  if (expr == R_MIPS_GOT_LOCAL_PAGE) {
+  if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
-      g.pagesMap.insert({os, {}});
+      g.pagesMap.insert({os, {&sym}});
     else
       g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
@@ -760,7 +791,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
     g.relocs.insert({&sym, 0});
   else if (sym.isPreemptible)
     g.global.insert({&sym, 0});
-  else if (expr == R_MIPS_GOT_OFF32)
+  else if (expr == RE_MIPS_GOT_OFF32)
     g.local32.insert({{&sym, addend}, 0});
   else
     g.local16.insert({{&sym, addend}, 0});
@@ -1031,8 +1062,7 @@ void MipsGotSection::build() {
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
         ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+            {ctx.target->tlsGotRel, this, offset, true, *s, 0, R_ABS});
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1080,15 +1110,16 @@ void MipsGotSection::build() {
       size_t pageCount = l.second.count;
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                         l.first, int64_t(pi * 0x10000)});
+        ctx.mainPart->relaDyn->addReloc(
+            {ctx.target->relativeRel, this, offset, false, *l.second.repSym,
+             int64_t(pi * 0x10000), RE_MIPS_OSEC_LOCAL_PAGE});
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * ctx.arg.wordsize;
       ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                       DynamicReloc::AddendOnlyWithTargetVA,
-                                       *p.first.first, p.first.second, R_ABS});
+                                       false, *p.first.first, p.first.second,
+                                       R_ABS});
     }
   }
 }
@@ -1178,7 +1209,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
 // consistent across both 64-bit PowerPC ABIs as well as the 32-bit PowerPC ABI.
 GotPltSection::GotPltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
-                       ctx.arg.wordsize) {
+                       ctx.target->gotEntrySize) {
   if (ctx.arg.emachine == EM_PPC) {
     name = ".plt";
   } else if (ctx.arg.emachine == EM_PPC64) {
@@ -1611,24 +1642,10 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
-  switch (kind) {
-  case AddendOnly:
-    assert(sym == nullptr);
-    return addend;
-  case AgainstSymbol:
-    assert(sym != nullptr);
-    return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
-    uint64_t ca = inputSec->getRelocTargetVA(
-        ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
-    return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
-  }
-  case MipsMultiGotPage:
-    assert(sym == nullptr);
-    return getMipsPageAddr(outputSec->addr) + addend;
-  }
-  llvm_unreachable("Unknown DynamicReloc::Kind enum");
+  assert(!isFinal && "addend already computed");
+  uint64_t ca = inputSec->getRelocTargetVA(
+      ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
+  return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
@@ -1656,8 +1673,8 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
 void RelocationBaseSection::addSymbolReloc(
     RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
     int64_t addend, std::optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
-           R_ADDEND, addendRelType ? *addendRelType : ctx.target->noneRel);
+  addReloc(true, dynType, isec, offsetInSec, sym, addend, R_ADDEND,
+           addendRelType ? *addendRelType : ctx.target->noneRel);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1665,11 +1682,9 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
     RelType addendRelType) {
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
-    addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ABS});
+    addReloc({dynType, &isec, offsetInSec, true, sym, 0, R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
-             sym, 0, R_ABS, addendRelType);
+    addReloc(false, dynType, isec, offsetInSec, sym, 0, R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
@@ -1709,17 +1724,17 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
+void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = AddendOnly; // Catch errors
+  isFinal = true; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
-    rel.computeRaw(ctx, symTab);
+    rel.finalize(ctx, symTab);
   });
 
   auto irelative = std::stable_partition(
@@ -1904,11 +1919,8 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // For Rela, we also want to sort by r_addend when r_info is the same. This
   // enables us to group by r_addend as well.
   llvm::sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
-    if (a.r_info != b.r_info)
-      return a.r_info < b.r_info;
-    if (a.r_addend != b.r_addend)
-      return a.r_addend < b.r_addend;
-    return a.r_offset < b.r_offset;
+    return std::tie(a.r_info, a.r_addend, a.r_offset) <
+           std::tie(b.r_info, b.r_addend, b.r_offset);
   });
 
   // Group relocations with the same r_info. Note that each group emits a group
@@ -2570,6 +2582,11 @@ PltSection::PltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".plt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
                        16),
       headerSize(ctx.target->pltHeaderSize) {
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .plt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
+
   // On PowerPC, this section contains lazy symbol resolvers.
   if (ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
@@ -2630,6 +2647,11 @@ void PltSection::addSymbols() {
 IpltSection::IpltSection(Ctx &ctx)
     : SyntheticSection(ctx, ".iplt", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR,
                        16) {
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .iplt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
+
   if (ctx.arg.emachine == EM_PPC || ctx.arg.emachine == EM_PPC64) {
     name = ".glink";
     addralign = 4;
@@ -2752,6 +2774,21 @@ bool IBTPltSection::isNeeded() const { return ctx.in.plt->getNumEntries() > 0; }
 RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
+
+RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
+                                                 OutputSection *parent)
+    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
+      size(size) {
+  this->parent = parent;
+}
+
+void RandomizePaddingSection::writeTo(uint8_t *buf) {
+  std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
+  uint8_t *end = buf + size;
+  for (; buf + 4 <= end; buf += 4)
+    memcpy(buf, &filler[0], 4);
+  memcpy(buf, &filler[0], end - buf);
+}
 
 // The string hash function for .gdb_index.
 static uint32_t computeGdbHash(StringRef s) {
@@ -3764,9 +3801,8 @@ VersionTableSection::VersionTableSection(Ctx &ctx)
 }
 
 void VersionTableSection::finalizeContents() {
-  // At the moment of june 2016 GNU docs does not mention that sh_link field
-  // should be set, but Sun docs do. Also readelf relies on this field.
-  getParent()->link = getPartition(ctx).dynSymTab->getParent()->sectionIndex;
+  if (OutputSection *osec = getPartition(ctx).dynSymTab->getParent())
+    getParent()->link = osec->sectionIndex;
 }
 
 size_t VersionTableSection::getSize() const {
@@ -3970,10 +4006,9 @@ void MergeNoTailSection::finalizeContents() {
   // So far, section pieces have offsets from beginning of shards, but
   // we want offsets from beginning of the whole section. Fix them.
   parallelForEach(sections, [&](MergeInputSection *sec) {
-    for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
-      if (sec->pieces[i].live)
-        sec->pieces[i].outputOff +=
-            shardOffsets[getShardId(sec->pieces[i].hash)];
+    for (SectionPiece &piece : sec->pieces)
+      if (piece.live)
+        piece.outputOff += shardOffsets[getShardId(piece.hash)];
   });
 }
 
@@ -4279,14 +4314,20 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
+  bool changed = false;
   for (Thunk *t : thunks) {
+    if (t->alignment > addralign) {
+      addralign = t->alignment;
+      changed = true;
+    }
     off = alignToPowerOf2(off, t->alignment);
     t->setOffset(off);
     uint32_t size = t->size();
     t->getThunkTargetSym()->size = size;
     off += size;
   }
-  bool changed = off != size;
+  if (off != size)
+    changed = true;
   size = off;
   return changed;
 }
@@ -4623,10 +4664,9 @@ createMemtagGlobalDescriptors(Ctx &ctx,
 
 bool MemtagGlobalDescriptors::updateAllocSize(Ctx &ctx) {
   size_t oldSize = getSize();
-  std::stable_sort(symbols.begin(), symbols.end(),
-                   [&ctx = ctx](const Symbol *s1, const Symbol *s2) {
-                     return s1->getVA(ctx) < s2->getVA(ctx);
-                   });
+  llvm::stable_sort(symbols, [&ctx = ctx](const Symbol *s1, const Symbol *s2) {
+    return s1->getVA(ctx) < s2->getVA(ctx);
+  });
   return oldSize != getSize();
 }
 
@@ -4702,7 +4742,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
 
   // Add MIPS-specific sections.
   if (ctx.arg.emachine == EM_MIPS) {
-    if (!ctx.arg.shared && ctx.arg.hasDynSymTab) {
+    if (!ctx.arg.shared && ctx.hasDynsym) {
       ctx.in.mipsRldMap = std::make_unique<MipsRldMapSection>(ctx);
       add(*ctx.in.mipsRldMap);
     }
@@ -4738,8 +4778,8 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       add(*part.buildId);
     }
 
-    // dynSymTab is always present to simplify sym->includeInDynsym(ctx) in
-    // finalizeSections.
+    // dynSymTab is always present to simplify several finalizeSections
+    // functions.
     part.dynStrTab = std::make_unique<StringTableSection>(ctx, ".dynstr", true);
     part.dynSymTab =
         std::make_unique<SymbolTableSection<ELFT>>(ctx, *part.dynStrTab);
@@ -4765,7 +4805,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
       part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
           ctx, relaDynName, ctx.arg.zCombreloc, threadCount);
 
-    if (ctx.arg.hasDynSymTab) {
+    if (ctx.hasDynsym) {
       add(*part.dynSymTab);
 
       part.verSym = std::make_unique<VersionTableSection>(ctx);
@@ -4906,7 +4946,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   ctx.in.iplt = std::make_unique<IpltSection>(ctx);
   add(*ctx.in.iplt);
 
-  if (ctx.arg.andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty()) {
+  if (ctx.arg.andFeatures || ctx.aarch64PauthAbiCoreInfo) {
     ctx.in.gnuProperty = std::make_unique<GnuPropertySection>(ctx);
     add(*ctx.in.gnuProperty);
   }

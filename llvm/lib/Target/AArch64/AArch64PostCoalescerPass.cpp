@@ -21,9 +21,7 @@ namespace {
 struct AArch64PostCoalescer : public MachineFunctionPass {
   static char ID;
 
-  AArch64PostCoalescer() : MachineFunctionPass(ID) {
-    initializeAArch64PostCoalescerPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PostCoalescer() : MachineFunctionPass(ID) {}
 
   LiveIntervals *LIS;
   MachineRegisterInfo *MRI;

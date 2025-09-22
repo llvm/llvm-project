@@ -35,6 +35,49 @@ struct RenameOptions {
   bool RenameVirtual = true;
 };
 
+/// A name of a symbol that should be renamed.
+///
+/// Symbol's name can be composed of multiple strings. For example, Objective-C
+/// methods can contain multiple argument labels:
+///
+/// \code
+/// - (void) myMethodNamePiece: (int)x anotherNamePieces:(int)y;
+///          ^~ string 0 ~~~~~         ^~ string 1 ~~~~~
+/// \endcode
+class RenameSymbolName {
+  llvm::SmallVector<std::string, 1> NamePieces;
+
+public:
+  RenameSymbolName();
+
+  /// Create a new \c SymbolName with the specified pieces.
+  explicit RenameSymbolName(ArrayRef<std::string> NamePieces);
+
+  explicit RenameSymbolName(const DeclarationName &Name);
+
+  ArrayRef<std::string> getNamePieces() const { return NamePieces; }
+
+  /// If this symbol consists of a single piece return it, otherwise return
+  /// `None`.
+  ///
+  /// Only symbols in Objective-C can consist of multiple pieces, so this
+  /// function always returns a value for non-Objective-C symbols.
+  std::optional<std::string> getSinglePiece() const;
+
+  /// Returns a human-readable version of this symbol name.
+  ///
+  /// If the symbol consists of multiple pieces (aka. it is an Objective-C
+  /// selector/method name), the pieces are separated by `:`, otherwise just an
+  /// identifier name.
+  std::string getAsString() const;
+
+  void print(raw_ostream &OS) const;
+
+  bool operator==(const RenameSymbolName &Other) const {
+    return NamePieces == Other.NamePieces;
+  }
+};
+
 struct RenameInputs {
   Position Pos; // the position triggering the rename
   llvm::StringRef NewName;
@@ -108,9 +151,8 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 /// occurrence has the same length).
 /// REQUIRED: Indexed is sorted.
 std::optional<std::vector<SymbolRange>>
-adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
-                   std::vector<Range> Indexed, const LangOptions &LangOpts,
-                   std::optional<Selector> Selector);
+adjustRenameRanges(llvm::StringRef DraftCode, const RenameSymbolName &Name,
+                   std::vector<Range> Indexed, const LangOptions &LangOpts);
 
 /// Calculates the lexed occurrences that the given indexed occurrences map to.
 /// Returns std::nullopt if we don't find a mapping.

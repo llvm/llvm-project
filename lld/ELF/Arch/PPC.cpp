@@ -11,8 +11,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Common/ErrorHandler.h"
-#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::support::endian;
@@ -250,7 +248,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_REL24:
     return R_PLT_PC;
   case R_PPC_PLTREL24:
-    return R_PPC32_PLTREL;
+    return RE_PPC32_PLTREL;
   case R_PPC_GOT_TLSGD16:
     return R_TLSGD_GOT;
   case R_PPC_GOT_TLSLD16:

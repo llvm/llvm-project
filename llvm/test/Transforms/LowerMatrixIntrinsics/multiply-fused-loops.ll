@@ -305,15 +305,15 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[TMP3]], i64 [[TMP9]]
+; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INNER_IV]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[DOTIDX1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP7]], i64 [[TMP12]]
+; CHECK-NEXT:    [[DOTIDX24:%.*]] = shl i64 [[COLS_IV]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[DOTIDX24]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <2 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr i8, ptr [[TMP13]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <2 x float>, ptr [[VEC_GEP10]], align 4

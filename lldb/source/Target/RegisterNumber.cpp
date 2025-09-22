@@ -47,6 +47,7 @@ const RegisterNumber &RegisterNumber::operator=(const RegisterNumber &rhs) {
   m_reg_ctx_sp = rhs.m_reg_ctx_sp;
   m_regnum = rhs.m_regnum;
   m_kind = rhs.m_kind;
+  m_kind_regnum_map.clear();
   for (auto it : rhs.m_kind_regnum_map)
     m_kind_regnum_map[it.first] = it.second;
   m_name = rhs.m_name;

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DocGenUtilities.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -95,9 +96,9 @@ protected:
   void emitConceptDecl(const Interface &interface);
   void emitModelDecl(const Interface &interface);
   void emitModelMethodsDef(const Interface &interface);
-  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
-                     StringRef interfaceTraitsName);
+  void forwardDeclareInterface(const Interface &interface);
   void emitInterfaceDecl(const Interface &interface);
+  void emitInterfaceTraitDecl(const Interface &interface);
 
   /// The set of interface records to emit.
   std::vector<const Record *> defs;
@@ -444,9 +445,16 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     os << "} // namespace " << ns << "\n";
 }
 
-void InterfaceGenerator::emitTraitDecl(const Interface &interface,
-                                       StringRef interfaceName,
-                                       StringRef interfaceTraitsName) {
+void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  os << "namespace detail {\n";
+
+  StringRef interfaceName = interface.getName();
+  auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
   os << llvm::formatv("  template <typename {3}>\n"
                       "  struct {0}Trait : public ::mlir::{2}<{0},"
                       " detail::{1}>::Trait<{3}> {{\n",
@@ -493,6 +501,10 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
+  os << "}// namespace detail\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 static void emitInterfaceDeclMethods(const Interface &interface,
@@ -516,6 +528,27 @@ static void emitInterfaceDeclMethods(const Interface &interface,
     os << tblgen::tgfmt(extraDecls->rtrim(), &extraDeclsFmt) << "\n";
 }
 
+void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  // Emit a forward declaration of the interface class so that it becomes usable
+  // in the signature of its methods.
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
+
+  StringRef interfaceName = interface.getName();
+  os << "class " << interfaceName << ";\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
+}
+
 void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
@@ -527,7 +560,11 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
-  os << "class " << interfaceName << ";\n";
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
@@ -589,16 +626,13 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
        << "    auto* interface = getInterfaceFor(base);\n"
        << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
+          "    "
+       << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }
 
   os << "};\n";
-
-  os << "namespace detail {\n";
-  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
-  os << "}// namespace detail\n";
 
   for (StringRef ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
@@ -613,9 +647,14 @@ bool InterfaceGenerator::emitInterfaceDecls() {
     return lhs->getID() < rhs->getID();
   });
   for (const Record *def : sortedDefs)
+    forwardDeclareInterface(Interface(def));
+  for (const Record *def : sortedDefs)
     emitInterfaceDecl(Interface(def));
   for (const Record *def : sortedDefs)
+    emitInterfaceTraitDecl(Interface(def));
+  for (const Record *def : sortedDefs)
     emitModelMethodsDef(Interface(def));
+
   return false;
 }
 
@@ -627,8 +666,8 @@ static void emitInterfaceDoc(const Record &interfaceDef, raw_ostream &os) {
   Interface interface(&interfaceDef);
 
   // Emit the interface name followed by the description.
-  os << "## " << interface.getName() << " (`" << interfaceDef.getName()
-     << "`)\n\n";
+  os << "\n## " << interface.getName() << " (`" << interfaceDef.getName()
+     << "`)\n";
   if (auto description = interface.getDescription())
     mlir::tblgen::emitDescription(*description, os);
 
@@ -636,7 +675,7 @@ static void emitInterfaceDoc(const Record &interfaceDef, raw_ostream &os) {
   os << "\n### Methods:\n";
   for (const auto &method : interface.getMethods()) {
     // Emit the method name.
-    os << "#### `" << method.getName() << "`\n\n```c++\n";
+    os << "\n#### `" << method.getName() << "`\n\n```c++\n";
 
     // Emit the method signature.
     if (method.isStatic())
@@ -656,13 +695,13 @@ static void emitInterfaceDoc(const Record &interfaceDef, raw_ostream &os) {
     if (!method.getBody())
       os << "\nNOTE: This method *must* be implemented by the user.";
 
-    os << "\n\n";
+    os << "\n";
   }
 }
 
 bool InterfaceGenerator::emitInterfaceDocs() {
   os << "<!-- Autogenerated by mlir-tblgen; don't manually edit -->\n";
-  os << "# " << interfaceBaseType << " definitions\n";
+  os << "\n# " << interfaceBaseType << " definitions\n";
 
   for (const auto *def : defs)
     emitInterfaceDoc(*def, os);

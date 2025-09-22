@@ -11,10 +11,12 @@ add_clang_library(clangLex
   HeaderSearch.cpp
   InitHeaderSearch.cpp
   Lexer.cpp
+  LexHLSLRootSignature.cpp
   LiteralSupport.cpp
   MacroArgs.cpp
   MacroInfo.cpp
   ModuleMap.cpp
+  ModuleMapFile.cpp
   PPCaching.cpp
   PPCallbacks.cpp
   PPConditionalDirectiveRecord.cpp

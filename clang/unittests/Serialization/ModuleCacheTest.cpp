@@ -108,8 +108,9 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   MCPArg.append(ModuleCachePath);
   CreateInvocationOptions CIOpts;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
   CIOpts.Diags = Diags;
 
   // First run should pass with no errors
@@ -119,9 +120,9 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   std::shared_ptr<CompilerInvocation> Invocation =
       createInvocationAndEnableFree(Args, CIOpts);
   ASSERT_TRUE(Invocation);
-  CompilerInstance Instance;
-  Instance.setDiagnostics(Diags.get());
-  Instance.setInvocation(Invocation);
+  CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(CIOpts.VFS);
+  Instance.setDiagnostics(Diags);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
@@ -142,10 +143,11 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   std::shared_ptr<CompilerInvocation> Invocation2 =
       createInvocationAndEnableFree(Args2, CIOpts);
   ASSERT_TRUE(Invocation2);
-  CompilerInstance Instance2(Instance.getPCHContainerOperations(),
+  CompilerInstance Instance2(std::move(Invocation2),
+                             Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
-  Instance2.setDiagnostics(Diags.get());
-  Instance2.setInvocation(Invocation2);
+  Instance2.setVirtualFileSystem(CIOpts.VFS);
+  Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());
@@ -158,8 +160,9 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   MCPArg.append(ModuleCachePath);
   CreateInvocationOptions CIOpts;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
   CIOpts.Diags = Diags;
 
   // First run should pass with no errors
@@ -169,9 +172,9 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   std::shared_ptr<CompilerInvocation> Invocation =
       createInvocationAndEnableFree(Args, CIOpts);
   ASSERT_TRUE(Invocation);
-  CompilerInstance Instance;
-  Instance.setDiagnostics(Diags.get());
-  Instance.setInvocation(Invocation);
+  CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(CIOpts.VFS);
+  Instance.setDiagnostics(Diags);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
@@ -186,10 +189,11 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   std::shared_ptr<CompilerInvocation> Invocation2 =
       createInvocationAndEnableFree(Args2, CIOpts);
   ASSERT_TRUE(Invocation2);
-  CompilerInstance Instance2(Instance.getPCHContainerOperations(),
+  CompilerInstance Instance2(std::move(Invocation2),
+                             Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
-  Instance2.setDiagnostics(Diags.get());
-  Instance2.setInvocation(Invocation2);
+  Instance2.setVirtualFileSystem(CIOpts.VFS);
+  Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());

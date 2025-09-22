@@ -14,6 +14,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/InitializePasses.h"
@@ -60,11 +62,17 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
     if (Name.starts_with("__dtrace"))
       return false;
   }
-  if (isCalleeOperand(CI, OpIdx) &&
-      CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value()) {
+  if (isCalleeOperand(CI, OpIdx)) {
     // The operand is the callee and it has already been signed. Ignore this
     // because we cannot add another ptrauth bundle to the call instruction.
-    return false;
+    if (CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value())
+      return false;
+  } else {
+    // The target of the arc-attached call must be a constant and cannot be
+    // parameterized.
+    if (CI->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
+                                  OpIdx))
+      return false;
   }
   return true;
 }
@@ -85,6 +93,10 @@ bool isEligibleFunction(Function *F) {
     return false;
 
   if (F->getCallingConv() == CallingConv::SwiftTail)
+    return false;
+
+  // Unnamed functions are skipped for simplicity.
+  if (!F->hasName())
     return false;
 
   // If function contains callsites with musttail, if we merge
@@ -132,44 +144,6 @@ static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
     return canParameterizeCallOperand(CI, OpIdx);
 
   return true;
-}
-
-static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
-  Type *SrcTy = V->getType();
-  if (SrcTy->isStructTy()) {
-    assert(DestTy->isStructTy());
-    assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
-    Value *Result = PoisonValue::get(DestTy);
-    for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
-      Value *Element =
-          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
-                     DestTy->getStructElementType(I));
-
-      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
-    }
-    return Result;
-  }
-  assert(!DestTy->isStructTy());
-  if (auto *SrcAT = dyn_cast<ArrayType>(SrcTy)) {
-    auto *DestAT = dyn_cast<ArrayType>(DestTy);
-    assert(DestAT);
-    assert(SrcAT->getNumElements() == DestAT->getNumElements());
-    Value *Result = UndefValue::get(DestTy);
-    for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
-      Value *Element =
-          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
-                     DestAT->getElementType());
-
-      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
-    }
-    return Result;
-  }
-  assert(!DestTy->isArrayTy());
-  if (SrcTy->isIntegerTy() && DestTy->isPointerTy())
-    return Builder.CreateIntToPtr(V, DestTy);
-  if (SrcTy->isPointerTy() && DestTy->isIntegerTy())
-    return Builder.CreatePtrToInt(V, DestTy);
-  return Builder.CreateBitCast(V, DestTy);
 }
 
 void GlobalMergeFunc::analyze(Module &M) {
@@ -262,7 +236,7 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
       if (OrigC->getType() != NewArg->getType()) {
         IRBuilder<> Builder(Inst->getParent(), Inst->getIterator());
         Inst->setOperand(OpndIndex,
-                         createCast(Builder, NewArg, OrigC->getType()));
+                         Builder.CreateAggregateCast(NewArg, OrigC->getType()));
       } else {
         Inst->setOperand(OpndIndex, NewArg);
       }
@@ -291,7 +265,8 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
 
   // Add arguments which are passed through Thunk.
   for (Argument &AI : Thunk->args()) {
-    Args.push_back(createCast(Builder, &AI, ToFuncTy->getParamType(ParamIdx)));
+    Args.push_back(
+        Builder.CreateAggregateCast(&AI, ToFuncTy->getParamType(ParamIdx)));
     ++ParamIdx;
   }
 
@@ -299,7 +274,7 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
   for (auto *Param : Params) {
     assert(ParamIdx < ToFuncTy->getNumParams());
     Args.push_back(
-        createCast(Builder, Param, ToFuncTy->getParamType(ParamIdx)));
+        Builder.CreateAggregateCast(Param, ToFuncTy->getParamType(ParamIdx)));
     ++ParamIdx;
   }
 
@@ -313,7 +288,7 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
   if (Thunk->getReturnType()->isVoidTy())
     Builder.CreateRetVoid();
   else
-    Builder.CreateRet(createCast(Builder, CI, Thunk->getReturnType()));
+    Builder.CreateRet(Builder.CreateAggregateCast(CI, Thunk->getReturnType()));
 }
 
 // Check if the old merged/optimized IndexOperandHashMap is compatible with
@@ -359,7 +334,7 @@ checkConstLocationCompatible(const StableFunctionMap::StableFunctionEntry &SF,
     std::optional<Constant *> OldConst;
     for (auto &Loc : ParamLocs) {
       assert(SF.IndexOperandHashMap->count(Loc));
-      auto CurrHash = SF.IndexOperandHashMap.get()->at(Loc);
+      auto CurrHash = SF.IndexOperandHashMap->at(Loc);
       auto [InstIndex, OpndIndex] = Loc;
       assert(InstIndex < IndexInstruction.size());
       const auto *Inst = IndexInstruction.lookup(InstIndex);
@@ -375,9 +350,8 @@ checkConstLocationCompatible(const StableFunctionMap::StableFunctionEntry &SF,
   return true;
 }
 
-static ParamLocsVecTy computeParamInfo(
-    const SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>>
-        &SFS) {
+static ParamLocsVecTy
+computeParamInfo(const StableFunctionMap::StableFunctionEntries &SFS) {
   std::map<std::vector<stable_hash>, ParamLocs> HashSeqToLocs;
   auto &RSF = *SFS[0];
   unsigned StableFunctionCount = SFS.size();
@@ -421,19 +395,18 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   // Collect stable functions related to the current module.
   DenseMap<stable_hash, SmallVector<std::pair<Function *, FunctionHashInfo>>>
       HashToFuncs;
-  auto &Maps = FunctionMap->getFunctionMap();
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
     auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
-    if (Maps.contains(FI.FunctionHash))
+    if (FunctionMap->contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
 
   for (auto &[Hash, Funcs] : HashToFuncs) {
     std::optional<ParamLocsVecTy> ParamLocsVec;
     SmallVector<FuncMergeInfo> FuncMergeInfos;
-    auto &SFS = Maps.at(Hash);
+    auto &SFS = FunctionMap->at(Hash);
     assert(!SFS.empty());
     auto &RFS = SFS[0];
 
@@ -557,13 +530,16 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
   SmallVector<char> Buf;
   raw_svector_ostream OS(Buf);
 
-  StableFunctionMapRecord::serialize(OS, LocalFunctionMap.get());
+  std::vector<CGDataPatchItem> PatchItems;
+  StableFunctionMapRecord::serialize(OS, LocalFunctionMap.get(), PatchItems);
+  CGDataOStream COS(OS);
+  COS.patch(PatchItems);
 
   std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
       OS.str(), "in-memory stable function map", false);
 
   Triple TT(M.getTargetTriple());
-  embedBufferInModule(M, *Buffer.get(),
+  embedBufferInModule(M, *Buffer,
                       getCodeGenDataSectionName(CG_merge, TT.getObjectFormat()),
                       Align(4));
 }

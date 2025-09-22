@@ -4,17 +4,22 @@ import("//third-party/unittest/unittest.gni")
 unittest("CoreTests") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
+    "//bolt/include/bolt/Core:TargetConfig.def",
     "//bolt/lib/Core",
+    "//bolt/lib/Profile",
     "//bolt/lib/Rewrite",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "BinaryContext.cpp",
+    "ClusteredRows.cpp",
     "DynoStats.cpp",
     "MCPlusBuilder.cpp",
+    "MemoryMaps.cpp",
   ]
 
   defines = []
@@ -29,6 +34,7 @@ unittest("CoreTests") {
     # those headers here.
     include_dirs += [ "//llvm/lib/Target/AArch64" ]
     deps += [
+      "//llvm/lib/Target/AArch64:AArch64GenSDNodeInfo",
       "//llvm/lib/Target/AArch64/MCTargetDesc",
       "//llvm/lib/Target/AArch64/Utils",
     ]

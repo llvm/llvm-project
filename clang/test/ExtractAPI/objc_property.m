@@ -11,7 +11,7 @@
 
 @interface Interface
 @property(class) int myInterfaceTypeProp;
-// CHECk-DAG: "!testRelLabel": "memberOf $ c:objc(cs)Interface(cpy)myInterfaceTypeProp $ c:objc(cs)Interface"
+// CHECK-DAG: "!testRelLabel": "memberOf $ c:objc(cs)Interface(cpy)myInterfaceTypeProp $ c:objc(cs)Interface"
 @property int myInterfaceInstanceProp;
 // CHECK-DAG: "!testRelLabel": "memberOf $ c:objc(cs)Interface(py)myInterfaceInstanceProp $ c:objc(cs)Interface"
 @end

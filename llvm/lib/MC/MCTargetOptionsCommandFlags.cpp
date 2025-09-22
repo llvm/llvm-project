@@ -41,6 +41,7 @@ MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
 MCOPT(bool, EmitCompactUnwindNonCanonical)
+MCOPT(bool, EmitSFrameUnwind)
 MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
@@ -105,6 +106,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
           false)); // By default, use DWARF for non-canonical personalities.
   MCBINDOPT(EmitCompactUnwindNonCanonical);
 
+  static cl::opt<bool> EmitSFrameUnwind(
+      "gsframe", cl::desc("Whether to emit .sframe unwind sections."),
+      cl::init(false));
+  MCBINDOPT(EmitSFrameUnwind);
+
   static cl::opt<bool> ShowMCInst(
       "asm-show-inst",
       cl::desc("Emit internal instruction representation to assembly file"));
@@ -156,7 +162,7 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
   MCBINDOPT(X86Sse2Avx);
 
   static cl::opt<std::string> ABIName(
-      "target-abi", cl::Hidden,
+      "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
       cl::init(""));
   MCBINDOPT(ABIName);
@@ -188,6 +194,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
+  Options.EmitSFrameUnwind = getEmitSFrameUnwind();
   Options.AsSecureLogFile = getAsSecureLogFile();
 
   return Options;

@@ -1,7 +1,7 @@
-; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,-nooddspreg \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,-nooddspreg \
 ; RUN:   -verify-machineinstrs -no-integrated-as -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,ODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg \
 ; RUN:   -verify-machineinstrs -no-integrated-as -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,NOODDSPREG
 

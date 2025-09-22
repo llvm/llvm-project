@@ -1,0 +1,39 @@
+# Test the ${function.is-inlined} frame-format variable.
+
+# Windows' link.exe does not preserve DWARF information, and we cannot get
+# inlining information from PDB at this time, see:
+# https://github.com/llvm/llvm-project/issues/143104
+# REQUIRES: (system-windows && lld) || !system-windows
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out %if system-windows %{-fuse-ld=lld%}
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+void regular();
+
+[[clang::always_inline]] void inlined1() {
+  regular();
+}
+void regular() {inlined1();}
+[[clang::always_inline]] void inlined2() {regular();}
+
+int main() {
+  inlined2();
+  return 0;
+}
+
+#--- commands.input
+
+settings set frame-format "frame '${function.name}{${function.is-inlined} (Inlined)}'\n"
+breakpoint set -n inlined1
+run
+bt
+
+# CHECK:      (lldb) bt
+# CHECK:      frame '{{.*}}inlined1({{.*}}) (Inlined)'
+# CHECK-NEXT: frame '{{.*}}regular({{.*}})'
+# CHECK-NEXT: frame '{{.*}}inlined2({{.*}}) (Inlined)'
+# CHECK-NEXT: frame 'main'

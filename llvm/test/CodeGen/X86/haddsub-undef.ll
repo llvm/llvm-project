@@ -694,9 +694,9 @@ define <4 x double> @add_pd_011(<4 x double> %0, <4 x double> %1) {
 ;
 ; AVX1-FAST-LABEL: add_pd_011:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm2
-; AVX1-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-FAST-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX1-FAST-NEXT:    vhaddpd %xmm0, %xmm1, %xmm2
+; AVX1-FAST-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    retq
 ;
 ; AVX512-LABEL: add_pd_011:
@@ -1272,9 +1272,9 @@ define <4 x double> @PR34724_add_v4f64_012u(<4 x double> %0, <4 x double> %1) {
 ; AVX-FAST-LABEL: PR34724_add_v4f64_012u:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-FAST-NEXT:    vhaddpd %xmm2, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddpd %xmm1, %xmm1, %xmm1
 ; AVX-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX-FAST-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; AVX-FAST-NEXT:    retq
   %3 = shufflevector <4 x double> %0, <4 x double> undef, <2 x i32> <i32 0, i32 2>
   %4 = shufflevector <4 x double> %0, <4 x double> undef, <2 x i32> <i32 1, i32 3>

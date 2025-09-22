@@ -76,8 +76,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return "X86 FP Stackifier"; }
@@ -462,7 +461,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     // Get dead variables list now because the MI pointer may be deleted as part
     // of processing!
-    SmallVector<unsigned, 8> DeadRegs;
+    SmallVector<Register, 8> DeadRegs;
     for (const MachineOperand &MO : MI.operands())
       if (MO.isReg() && MO.isDead())
         DeadRegs.push_back(MO.getReg());
@@ -480,7 +479,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     // Check to see if any of the values defined by this instruction are dead
     // after definition.  If so, pop them.
-    for (unsigned Reg : DeadRegs) {
+    for (Register Reg : DeadRegs) {
       // Check if Reg is live on the stack. An inline-asm register operand that
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
@@ -1652,24 +1651,25 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     }
 
     if (STUses && !isMask_32(STUses))
-      MI.emitError("fixed input regs must be last on the x87 stack");
+      MI.emitGenericError("fixed input regs must be last on the x87 stack");
     unsigned NumSTUses = llvm::countr_one(STUses);
 
     // Defs must be contiguous from the stack top. ST0-STn.
     if (STDefs && !isMask_32(STDefs)) {
-      MI.emitError("output regs must be last on the x87 stack");
+      MI.emitGenericError("output regs must be last on the x87 stack");
       STDefs = NextPowerOf2(STDefs) - 1;
     }
     unsigned NumSTDefs = llvm::countr_one(STDefs);
 
     // So must the clobbered stack slots. ST0-STm, m >= n.
     if (STClobbers && !isMask_32(STDefs | STClobbers))
-      MI.emitError("clobbers must be last on the x87 stack");
+      MI.emitGenericError("clobbers must be last on the x87 stack");
 
     // Popped inputs are the ones that are also clobbered or defined.
     unsigned STPopped = STUses & (STDefs | STClobbers);
     if (STPopped && !isMask_32(STPopped))
-      MI.emitError("implicitly popped regs must be last on the x87 stack");
+      MI.emitGenericError(
+          "implicitly popped regs must be last on the x87 stack");
     unsigned NumSTPopped = llvm::countr_one(STPopped);
 
     LLVM_DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "

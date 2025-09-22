@@ -81,7 +81,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-NEXT:    .cfi_def_cfa_offset 32
 ; LIN-NEXT:    pop2 %rbp, %r15
 ; LIN-NEXT:    .cfi_def_cfa_offset 16
-; LIN-NEXT:    popq %rcx
+; LIN-NEXT:    popq %rax
 ; LIN-NEXT:    .cfi_def_cfa_offset 8
 ; LIN-NEXT:    retq
 ;
@@ -116,7 +116,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 32
 ; LIN-PPX-NEXT:    pop2p %rbp, %r15
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 16
-; LIN-PPX-NEXT:    popq %rcx
+; LIN-PPX-NEXT:    popq %rax
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 8
 ; LIN-PPX-NEXT:    retq
 ;
@@ -142,6 +142,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-REF-NEXT:    xorl %eax, %eax
 ; WIN-REF-NEXT:    callq *%rax
 ; WIN-REF-NEXT:    nop
+; WIN-REF-NEXT:    .seh_startepilogue
 ; WIN-REF-NEXT:    addq $56, %rsp
 ; WIN-REF-NEXT:    popq %rbx
 ; WIN-REF-NEXT:    popq %rbp
@@ -149,6 +150,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-REF-NEXT:    popq %r13
 ; WIN-REF-NEXT:    popq %r14
 ; WIN-REF-NEXT:    popq %r15
+; WIN-REF-NEXT:    .seh_endepilogue
 ; WIN-REF-NEXT:    retq
 ; WIN-REF-NEXT:    .seh_endproc
 ;
@@ -173,11 +175,13 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-NEXT:    xorl %eax, %eax
 ; WIN-NEXT:    callq *%rax
 ; WIN-NEXT:    nop
+; WIN-NEXT:    .seh_startepilogue
 ; WIN-NEXT:    addq $64, %rsp
 ; WIN-NEXT:    pop2 %rbp, %rbx
 ; WIN-NEXT:    pop2 %r13, %r12
 ; WIN-NEXT:    pop2 %r15, %r14
-; WIN-NEXT:    popq %rcx
+; WIN-NEXT:    popq %rax
+; WIN-NEXT:    .seh_endepilogue
 ; WIN-NEXT:    retq
 ; WIN-NEXT:    .seh_endproc
 ;
@@ -202,11 +206,13 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX-NEXT:    xorl %eax, %eax
 ; WIN-PPX-NEXT:    callq *%rax
 ; WIN-PPX-NEXT:    nop
+; WIN-PPX-NEXT:    .seh_startepilogue
 ; WIN-PPX-NEXT:    addq $64, %rsp
 ; WIN-PPX-NEXT:    pop2p %rbp, %rbx
 ; WIN-PPX-NEXT:    pop2p %r13, %r12
 ; WIN-PPX-NEXT:    pop2p %r15, %r14
-; WIN-PPX-NEXT:    popq %rcx
+; WIN-PPX-NEXT:    popq %rax
+; WIN-PPX-NEXT:    .seh_endepilogue
 ; WIN-PPX-NEXT:    retq
 ; WIN-PPX-NEXT:    .seh_endproc
 entry:

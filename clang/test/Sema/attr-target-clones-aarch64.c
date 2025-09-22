@@ -13,6 +13,8 @@ int redecl(void);
 int __attribute__((target_clones("frintts", "simd+fp", "default"))) redecl(void) { return 1; }
 
 int __attribute__((target_clones("jscvt+fcma", "rcpc", "default"))) redecl2(void);
+// expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
+// expected-note@-2 {{previous declaration is here}}
 int __attribute__((target_clones("jscvt+fcma", "rcpc"))) redecl2(void) { return 1; }
 
 int __attribute__((target_clones("sve+dotprod"))) redecl3(void);

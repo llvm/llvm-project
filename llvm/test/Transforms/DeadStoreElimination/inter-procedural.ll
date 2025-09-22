@@ -39,6 +39,25 @@ define i16 @p1_write_then_read_caller() {
   ret i16 %l
 }
 
+declare void @fn_capture(ptr)
+define i16 @p1_write_then_read_caller_escape() {
+; CHECK-LABEL: @p1_write_then_read_caller_escape(
+; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
+; CHECK-NEXT:    call void @fn_capture(ptr [[PTR]])
+; CHECK-NEXT:    call void @p1_write_then_read(ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  %ptr = alloca i16
+  store i16 0, ptr %ptr
+  call void @fn_capture(ptr %ptr)
+  call void @p1_write_then_read(ptr %ptr)
+  %l = load i16, ptr %ptr
+  ret i16 %l
+}
+
+
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @p1_write_then_read_caller_with_clobber() {
 ; CHECK-LABEL: @p1_write_then_read_caller_with_clobber(
@@ -221,15 +240,17 @@ declare void @large_p2(ptr nocapture noundef initializes((0, 200)), ptr nocaptur
 ; Function Attrs: mustprogress nounwind uwtable
 define i16 @large_p1_caller() {
 ; CHECK-LABEL: @large_p1_caller(
-; CHECK-NEXT:    [[PTR:%.*]] = alloca [200 x i8], align 1
-; CHECK-NEXT:    call void @large_p1(ptr [[PTR]])
-; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [300 x i8], align 1
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[PTR]], i64 100
+; CHECK-NEXT:    call void @large_p1(ptr [[TMP]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[TMP]], align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
-  %ptr = alloca [200 x i8]
-  call void @llvm.memset.p0.i64(ptr %ptr, i8 42, i64 100, i1 false)
-  call void @large_p1(ptr %ptr)
-  %l = load i16, ptr %ptr
+  %ptr = alloca [300 x i8]
+  %tmp = getelementptr i8, ptr %ptr, i64 100
+  call void @llvm.memset.p0.i64(ptr %tmp, i8 42, i64 100, i1 false)
+  call void @large_p1(ptr %tmp)
+  %l = load i16, ptr %tmp
   ret i16 %l
 }
 
@@ -299,3 +320,35 @@ define i16 @large_p2_may_or_partial_alias_caller2(ptr %base1, ptr %base2) {
   ret i16 %l
 }
 
+@g = global i16 123, align 2
+
+declare void @read_global(ptr nocapture noundef initializes((0, 2))) nounwind
+  memory(read, argmem: write, inaccessiblemem: none) nounwind
+
+define i16 @global_var_alias() {
+; CHECK-LABEL: @global_var_alias(
+; CHECK-NEXT:    store i16 0, ptr @g, align 4
+; CHECK-NEXT:    call void @read_global(ptr @g)
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr @g, align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
+  store i16 0, ptr @g, align 4
+  call void @read_global(ptr @g)
+  %l = load i16, ptr @g
+  ret i16 %l
+}
+
+declare void @byval_fn(ptr byval(i32) initializes((0, 4)) %am)
+
+define void @test_byval() {
+; CHECK-LABEL: @test_byval(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @byval_fn(ptr [[A]])
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @byval_fn(ptr %a)
+  ret void
+}

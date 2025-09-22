@@ -8,10 +8,11 @@
 
 #include "M68kInstrInfo.h"
 #include "M68kRegisterInfo.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -31,7 +32,6 @@ static cl::opt<bool> RegisterPrefixOptional(
 namespace {
 /// Parses M68k assembly from a stream.
 class M68kAsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
@@ -57,7 +57,7 @@ class M68kAsmParser : public MCTargetAsmParser {
 public:
   M68kAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -144,7 +144,7 @@ public:
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   bool isMem() const override { return false; }
   bool isMemOp() const { return Kind == KindTy::MemOp; }
@@ -258,6 +258,7 @@ static inline unsigned getRegisterIndex(unsigned Register) {
   // We don't care about the indices of these registers.
   case M68k::PC:
   case M68k::CCR:
+  case M68k::SR:
   case M68k::FPC:
   case M68k::FPS:
   case M68k::FPIAR:
@@ -636,9 +637,12 @@ bool M68kAsmParser::parseRegisterName(MCRegister &RegNo, SMLoc Loc,
                                       StringRef RegisterName) {
   auto RegisterNameLower = RegisterName.lower();
 
-  // CCR register
+  // CCR and SR register
   if (RegisterNameLower == "ccr") {
     RegNo = M68k::CCR;
+    return true;
+  } else if (RegisterNameLower == "sr") {
+    RegNo = M68k::SR;
     return true;
   }
 
@@ -1019,7 +1023,7 @@ bool M68kAsmParser::missingFeature(llvm::SMLoc const &Loc,
 bool M68kAsmParser::emit(MCInst &Inst, SMLoc const &Loc,
                          MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
+  Out.emitInstruction(Inst, *STI);
 
   return false;
 }
@@ -1047,7 +1051,7 @@ bool M68kAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   }
 }
 
-void M68kOperand::print(raw_ostream &OS) const {
+void M68kOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case KindTy::Invalid:
     OS << "invalid";

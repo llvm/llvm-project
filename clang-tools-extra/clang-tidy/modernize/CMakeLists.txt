@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyModernizeModule STATIC
   AvoidBindCheck.cpp
   AvoidCArraysCheck.cpp
+  AvoidVariadicFunctionsCheck.cpp
   ConcatNestedNamespacesCheck.cpp
   DeprecatedHeadersCheck.cpp
   DeprecatedIosBaseAliasesCheck.cpp
@@ -36,11 +37,13 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseEmplaceCheck.cpp
   UseEqualsDefaultCheck.cpp
   UseEqualsDeleteCheck.cpp
+  UseIntegerSignComparisonCheck.cpp
   UseNodiscardCheck.cpp
   UseNoexceptCheck.cpp
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
   UseRangesCheck.cpp
+  UseScopedLockCheck.cpp
   UseStartsEndsWithCheck.cpp
   UseStdFormatCheck.cpp
   UseStdNumbersCheck.cpp

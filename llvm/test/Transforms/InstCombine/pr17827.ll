@@ -5,8 +5,7 @@
 define i1 @test_shift_and_cmp_not_changed1(i8 %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_not_changed1(
 ; CHECK-NEXT:    [[SHLP:%.*]] = shl i8 [[P:%.*]], 5
-; CHECK-NEXT:    [[ANDP:%.*]] = and i8 [[SHLP]], -64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[ANDP]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHLP]], 64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlp = shl i8 %p, 5
@@ -18,10 +17,7 @@ define i1 @test_shift_and_cmp_not_changed1(i8 %p) {
 ; With arithmetic right shift, the comparison should not be modified.
 define i1 @test_shift_and_cmp_not_changed2(i8 %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_not_changed2(
-; CHECK-NEXT:    [[SHLP:%.*]] = ashr i8 [[P:%.*]], 5
-; CHECK-NEXT:    [[ANDP:%.*]] = and i8 [[SHLP]], -64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[ANDP]], 32
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shlp = ashr i8 %p, 5
   %andp = and i8 %shlp, -64
@@ -34,8 +30,7 @@ define i1 @test_shift_and_cmp_not_changed2(i8 %p) {
 define i1 @test_shift_and_cmp_changed1(i8 %p, i8 %q) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed1(
 ; CHECK-NEXT:    [[ANDP:%.*]] = shl i8 [[P:%.*]], 5
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[ANDP]], -64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[ANDP]], 33
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %andp = and i8 %p, 6
@@ -50,8 +45,7 @@ define i1 @test_shift_and_cmp_changed1(i8 %p, i8 %q) {
 define <2 x i1> @test_shift_and_cmp_changed1_vec(<2 x i8> %p, <2 x i8> %q) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed1_vec(
 ; CHECK-NEXT:    [[ANDP:%.*]] = shl <2 x i8> [[P:%.*]], splat (i8 5)
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[ANDP]], splat (i8 -64)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[TMP1]], splat (i8 32)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[ANDP]], splat (i8 33)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %andp = and <2 x i8> %p, <i8 6, i8 6>
@@ -91,9 +85,7 @@ define <2 x i1> @test_shift_and_cmp_changed2_vec(<2 x i8> %p) {
 ; nsw on the shift should not affect the comparison.
 define i1 @test_shift_and_cmp_changed3(i8 %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed3(
-; CHECK-NEXT:    [[SHLP:%.*]] = shl nsw i8 [[P:%.*]], 5
-; CHECK-NEXT:    [[ANDP:%.*]] = and i8 [[SHLP]], -64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[ANDP]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[P:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlp = shl nsw i8 %p, 5

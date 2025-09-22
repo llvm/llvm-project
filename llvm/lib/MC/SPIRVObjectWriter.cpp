@@ -35,11 +35,11 @@ void SPIRVObjectWriter::setBuildVersion(unsigned Major, unsigned Minor,
   VersionInfo.Bound = Bound;
 }
 
-uint64_t SPIRVObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t SPIRVObjectWriter::writeObject() {
   uint64_t StartOffset = W.OS.tell();
-  writeHeader(Asm);
-  for (const MCSection &S : Asm)
-    Asm.writeSectionData(W.OS, &S);
+  writeHeader(*Asm);
+  for (const MCSection &S : *Asm)
+    Asm->writeSectionData(W.OS, &S);
   return W.OS.tell() - StartOffset;
 }
 

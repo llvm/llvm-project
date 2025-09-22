@@ -1,7 +1,7 @@
-; RUN: llc %s -march=sparc -o - | FileCheck --check-prefix=CHECK --check-prefix=DEFAULT %s
-; RUN: llc %s -march=sparc -mattr=no-fmuls -o - | FileCheck --check-prefix=CHECK --check-prefix=NO-FMULS %s
-; RUN: llc %s -march=sparc -mattr=no-fsmuld -o - | FileCheck --check-prefix=CHECK --check-prefix=NO-FSMULD %s
-; RUN: llc %s -march=sparc -mattr=no-fsmuld,no-fmuls -o - | FileCheck --check-prefix=CHECK --check-prefix=NO-BOTH %s
+; RUN: llc %s -mtriple=sparc -o - | FileCheck --check-prefix=CHECK --check-prefix=DEFAULT %s
+; RUN: llc %s -mtriple=sparc -mattr=no-fmuls -o - | FileCheck --check-prefix=CHECK --check-prefix=NO-FMULS %s
+; RUN: llc %s -mtriple=sparc -mattr=no-fsmuld -o - | FileCheck --check-prefix=CHECK --check-prefix=NO-FSMULD %s
+; RUN: llc %s -mtriple=sparc -mattr=no-fsmuld,no-fmuls -o - | FileCheck --check-prefix=CHECK --check-prefix=NO-BOTH %s
 
 ;;; Test case ensures that the no-fsmuld and no-fmuls features disable
 ;;; the relevant instruction, and alternative sequences get emitted

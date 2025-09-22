@@ -264,11 +264,30 @@ Fortran also has no rule against associating read-only data with a pointer.
 Cray pointers are, or were, an extension that attempted to provide
 some of the capabilities of modern pointers and allocatables before those
 features were standardized.
-They had some aliasing restrictions; in particular, Cray pointers were
-not allowed to alias each other.
 
-They are now more or less obsolete and we have no plan in place to
-support them.
+They had some aliasing restrictions; in particular, Cray pointers were not
+allowed to alias each other.
+
+In this example, `handle` aliases with `target`.
+
+```
+integer(kind=8) :: target(10)
+integer(kind=8) :: ptr
+integer(kind=8) :: handle(10)
+pointer(ptr, handle)
+target = 1
+ptr = loc(target)
+print *, target
+end
+```
+
+Optimizations assume that Cray pointers do not alias any other variables.
+In the above example, it is assumed that `handle` and `target` do not alias,
+and optimizations will treat them as separate entities.
+
+In order to disable optimizations that assume that there is no aliasing between
+Cray pointer targets and entities they alias with, add the TARGET attribute to
+variables aliasing with a Cray pointer (the `target` variable in this example).
 
 ## Type considerations
 

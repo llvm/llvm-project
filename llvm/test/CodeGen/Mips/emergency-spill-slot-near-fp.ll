@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -O0 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -O0 -relocation-model=pic < %s | FileCheck %s
 ; Check that register scavenging spill slot is close to $fp.
 target triple="mipsel--"
 

@@ -113,7 +113,7 @@ private:
 
 public:
   ExternalASTMerger(const ImporterTarget &Target,
-                    llvm::ArrayRef<ImporterSource> Sources);
+                    ArrayRef<ImporterSource> Sources);
 
   /// Asks all connected ASTImporters if any of them imported the given
   /// declaration. If any ASTImporter did import the given declaration,
@@ -128,7 +128,7 @@ public:
   /// newly-parsed source files).
   ///
   /// Ensures that Importers does not gain duplicate entries as a result.
-  void AddSources(llvm::ArrayRef<ImporterSource> Sources);
+  void AddSources(ArrayRef<ImporterSource> Sources);
 
   /// Remove a set of ASTContexts as possible origins.
   ///
@@ -137,11 +137,12 @@ public:
   ///
   /// The caller is responsible for ensuring that this doesn't leave
   /// DeclContexts that can't be completed.
-  void RemoveSources(llvm::ArrayRef<ImporterSource> Sources);
+  void RemoveSources(ArrayRef<ImporterSource> Sources);
 
   /// Implementation of the ExternalASTSource API.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
 
   /// Implementation of the ExternalASTSource API.
   void

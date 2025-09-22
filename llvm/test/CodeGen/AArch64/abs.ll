@@ -247,8 +247,7 @@ define <1 x i32> @abs_v1i32(<1 x i32> %a){
 ; CHECK-GI-NEXT:    fmov w9, s0
 ; CHECK-GI-NEXT:    cmp w8, #0
 ; CHECK-GI-NEXT:    cneg w8, w9, le
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call <1 x i32> @llvm.abs.v1i32(<1 x i32> %a, i1 0)

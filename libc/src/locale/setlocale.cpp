@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/locale/setlocale.h"
-#include "include/llvm-libc-macros/locale-macros.h"
-#include "src/locale/locale.h"
-
+#include "hdr/locale_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

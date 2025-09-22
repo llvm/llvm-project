@@ -50,3 +50,12 @@ Modern C++ needs ``goto`` only to jump out of nested loops.
   some_operation();
 
 All other uses of ``goto`` are diagnosed in `C++`.
+
+
+Options
+-------
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not warn if a ``goto`` statement is
+   expanded from a macro. Default is `false`.

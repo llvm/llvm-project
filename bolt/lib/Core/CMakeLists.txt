@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Demangle
   MC
   MCDisassembler
@@ -35,6 +36,7 @@ add_llvm_library(LLVMBOLTCore
   ParallelUtilities.cpp
   Relocation.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}

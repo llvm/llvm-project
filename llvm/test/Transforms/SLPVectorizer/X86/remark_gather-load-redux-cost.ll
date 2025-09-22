@@ -5,10 +5,9 @@
 define i32 @test(ptr noalias %p, ptr noalias %addr) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ADDR:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <8 x ptr> [[TMP1]], <8 x i32> <i32 3, i32 1, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP2]], i32 8, <8 x i1> splat (i1 true), <8 x i32> poison)
+; CHECK-NEXT:    [[OFF0_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = call <15 x i32> @llvm.masked.load.v15i32.p0(ptr [[OFF0_1]], i32 8, <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <15 x i32> [[TMP0]], <15 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[P:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, <8 x ptr> [[TMP5]], <8 x i32> [[TMP3]]
@@ -22,9 +21,9 @@ define i32 @test(ptr noalias %p, ptr noalias %addr) {
   ; YAML-NEXT: Function:        test
   ; YAML-NEXT: Args:
   ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-  ; YAML-NEXT:   - Cost:            '-1'
+  ; YAML-NEXT:   - Cost:            '-10'
   ; YAML-NEXT:   - String:          ' and with tree size '
-  ; YAML-NEXT:   - TreeSize:        '8'
+  ; YAML-NEXT:   - TreeSize:        '5'
 entry:
   %off0.1 = getelementptr inbounds i32, ptr %addr, i32 1
   %idx0 = load i32, ptr %off0.1, align 8

@@ -13,10 +13,10 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Pass/Pass.h"
 #include <type_traits>
 
 namespace mlir {
@@ -53,30 +53,22 @@ struct ConstrainedVectorConvertToLLVMPattern
   }
 };
 
-template <typename SourceOp, typename TargetOp,
-          template <typename, typename> typename AttrConvert =
-              AttrConvertPassThrough>
-struct DenormalOpConversionToLLVMPattern
-    : public VectorConvertToLLVMPattern<SourceOp, TargetOp, AttrConvert> {
-  using VectorConvertToLLVMPattern<SourceOp, TargetOp,
-                                   AttrConvert>::VectorConvertToLLVMPattern;
+/// No-op bitcast. Propagate type input arg if converted source and dest types
+/// are the same.
+struct IdentityBitcastLowering final
+    : public OpConversionPattern<arith::BitcastOp> {
+  using Base::Base;
 
   LogicalResult
-  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // TODO: Here, we need a legalization step. LLVM provides a function-level
-    // attribute for denormal; here, we need to move this information from the
-    // operation to the function, making sure all the operations in the same
-    // function are consistent.
-    if (op.getDenormalModeAttr().getValue() != arith::DenormalMode::ieee)
-      return rewriter.notifyMatchFailure(
-          op, "only ieee denormal mode is supported at the moment");
+  matchAndRewrite(arith::BitcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Value src = adaptor.getIn();
+    Type resultType = getTypeConverter()->convertType(op.getType());
+    if (src.getType() != resultType)
+      return rewriter.notifyMatchFailure(op, "Types are different");
 
-    StringRef arithDenormalAttrName = SourceOp::getDenormalModeAttrName();
-    op->removeAttr(arithDenormalAttrName);
-    return VectorConvertToLLVMPattern<SourceOp, TargetOp,
-                                      AttrConvert>::matchAndRewrite(op, adaptor,
-                                                                    rewriter);
+    rewriter.replaceOp(op, src);
+    return success();
   }
 };
 
@@ -85,8 +77,8 @@ struct DenormalOpConversionToLLVMPattern
 //===----------------------------------------------------------------------===//
 
 using AddFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using AddIOpLowering =
     VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp,
                                arith::AttrConvertOverflowToLLVM>;
@@ -94,8 +86,8 @@ using AndIOpLowering = VectorConvertToLLVMPattern<arith::AndIOp, LLVM::AndOp>;
 using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
 using DivFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
@@ -110,38 +102,38 @@ using FPToSIOpLowering =
 using FPToUIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToUIOp, LLVM::FPToUIOp>;
 using MaximumFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::MaximumFOp, LLVM::MaximumOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::MaximumFOp, LLVM::MaximumOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using MaxNumFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxUIOp, LLVM::UMaxOp>;
 using MinimumFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::MinimumFOp, LLVM::MinimumOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::MinimumFOp, LLVM::MinimumOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using MinNumFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using MinSIOpLowering =
     VectorConvertToLLVMPattern<arith::MinSIOp, LLVM::SMinOp>;
 using MinUIOpLowering =
     VectorConvertToLLVMPattern<arith::MinUIOp, LLVM::UMinOp>;
 using MulFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using MulIOpLowering =
     VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp,
                                arith::AttrConvertOverflowToLLVM>;
 using NegFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::NegFOp, LLVM::FNegOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::NegFOp, LLVM::FNegOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using OrIOpLowering = VectorConvertToLLVMPattern<arith::OrIOp, LLVM::OrOp>;
 using RemFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using RemSIOpLowering =
     VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
 using RemUIOpLowering =
@@ -158,8 +150,8 @@ using ShRUIOpLowering =
 using SIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
 using SubFOpLowering =
-    DenormalOpConversionToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
-                                      arith::AttrConvertFastMathToLLVM>;
+    VectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
+                               arith::AttrConvertFastMathToLLVM>;
 using SubIOpLowering =
     VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp,
                                arith::AttrConvertOverflowToLLVM>;
@@ -170,7 +162,8 @@ using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
     arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, true,
     arith::AttrConverterConstrainedFPToLLVM>;
 using TruncIOpLowering =
-    VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp>;
+    VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using UIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::UIToFPOp, LLVM::UIToFPOp>;
 using XOrIOpLowering = VectorConvertToLLVMPattern<arith::XOrIOp, LLVM::XOrOp>;
@@ -245,6 +238,16 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<arith::CmpFOp> {
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+struct SelectOpOneToNLowering : public ConvertOpToLLVMPattern<arith::SelectOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  using Adaptor =
+      typename ConvertOpToLLVMPattern<arith::SelectOp>::OneToNOpAdaptor;
+
+  LogicalResult
+  matchAndRewrite(arith::SelectOp op, Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -300,11 +303,11 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
       [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
         typename OpTy::Adaptor adaptor(operands);
         if (targetBits < sourceBits) {
-          return rewriter.create<LLVM::TruncOp>(op.getLoc(), llvm1DVectorTy,
-                                                adaptor.getIn());
+          return LLVM::TruncOp::create(rewriter, op.getLoc(), llvm1DVectorTy,
+                                       adaptor.getIn());
         }
-        return rewriter.create<ExtCastTy>(op.getLoc(), llvm1DVectorTy,
-                                          adaptor.getIn());
+        return ExtCastTy::create(rewriter, op.getLoc(), llvm1DVectorTy,
+                                 adaptor.getIn());
       },
       rewriter);
 }
@@ -331,12 +334,12 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
     Type newOverflowType = typeConverter->convertType(overflowResultType);
     Type structType =
         LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newOverflowType});
-    Value addOverflow = rewriter.create<LLVM::UAddWithOverflowOp>(
-        loc, structType, adaptor.getLhs(), adaptor.getRhs());
+    Value addOverflow = LLVM::UAddWithOverflowOp::create(
+        rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
     Value sumExtracted =
-        rewriter.create<LLVM::ExtractValueOp>(loc, addOverflow, 0);
+        LLVM::ExtractValueOp::create(rewriter, loc, addOverflow, 0);
     Value overflowExtracted =
-        rewriter.create<LLVM::ExtractValueOp>(loc, addOverflow, 1);
+        LLVM::ExtractValueOp::create(rewriter, loc, addOverflow, 1);
     rewriter.replaceOp(op, {sumExtracted, overflowExtracted});
     return success();
   }
@@ -388,15 +391,15 @@ LogicalResult MulIExtendedOpLowering<ArithMulOp, IsSigned>::matchAndRewrite(
            "LLVM dialect should support all signless integer types");
 
     using LLVMExtOp = std::conditional_t<IsSigned, LLVM::SExtOp, LLVM::ZExtOp>;
-    Value lhsExt = rewriter.create<LLVMExtOp>(loc, wideType, adaptor.getLhs());
-    Value rhsExt = rewriter.create<LLVMExtOp>(loc, wideType, adaptor.getRhs());
-    Value mulExt = rewriter.create<LLVM::MulOp>(loc, wideType, lhsExt, rhsExt);
+    Value lhsExt = LLVMExtOp::create(rewriter, loc, wideType, adaptor.getLhs());
+    Value rhsExt = LLVMExtOp::create(rewriter, loc, wideType, adaptor.getRhs());
+    Value mulExt = LLVM::MulOp::create(rewriter, loc, wideType, lhsExt, rhsExt);
 
     // Split the 2*N-bit wide result into two N-bit values.
-    Value low = rewriter.create<LLVM::TruncOp>(loc, resultType, mulExt);
-    Value shiftVal = rewriter.create<LLVM::ConstantOp>(loc, shiftValAttr);
-    Value highExt = rewriter.create<LLVM::LShrOp>(loc, mulExt, shiftVal);
-    Value high = rewriter.create<LLVM::TruncOp>(loc, resultType, highExt);
+    Value low = LLVM::TruncOp::create(rewriter, loc, resultType, mulExt);
+    Value shiftVal = LLVM::ConstantOp::create(rewriter, loc, shiftValAttr);
+    Value highExt = LLVM::LShrOp::create(rewriter, loc, mulExt, shiftVal);
+    Value high = LLVM::TruncOp::create(rewriter, loc, resultType, highExt);
 
     rewriter.replaceOp(op, {low, high});
     return success();
@@ -442,8 +445,8 @@ CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
       op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
       [&](Type llvm1DVectorTy, ValueRange operands) {
         OpAdaptor adaptor(operands);
-        return rewriter.create<LLVM::ICmpOp>(
-            op.getLoc(), llvm1DVectorTy,
+        return LLVM::ICmpOp::create(
+            rewriter, op.getLoc(), llvm1DVectorTy,
             convertCmpPredicate<LLVM::ICmpPredicate>(op.getPredicate()),
             adaptor.getLhs(), adaptor.getRhs());
       },
@@ -478,12 +481,38 @@ CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
       op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
       [&](Type llvm1DVectorTy, ValueRange operands) {
         OpAdaptor adaptor(operands);
-        return rewriter.create<LLVM::FCmpOp>(
-            op.getLoc(), llvm1DVectorTy,
+        return LLVM::FCmpOp::create(
+            rewriter, op.getLoc(), llvm1DVectorTy,
             convertCmpPredicate<LLVM::FCmpPredicate>(op.getPredicate()),
             adaptor.getLhs(), adaptor.getRhs(), fmf);
       },
       rewriter);
+}
+
+//===----------------------------------------------------------------------===//
+// SelectOpOneToNLowering
+//===----------------------------------------------------------------------===//
+
+/// Pattern for arith.select where the true/false values lower to multiple
+/// SSA values (1:N conversion). This pattern generates multiple arith.select
+/// than can be lowered by the 1:1 arith.select pattern.
+LogicalResult SelectOpOneToNLowering::matchAndRewrite(
+    arith::SelectOp op, Adaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  // In case of a 1:1 conversion, the 1:1 pattern will match.
+  if (llvm::hasSingleElement(adaptor.getTrueValue()))
+    return rewriter.notifyMatchFailure(
+        op, "not a 1:N conversion, 1:1 pattern will match");
+  if (!op.getCondition().getType().isInteger(1))
+    return rewriter.notifyMatchFailure(op,
+                                       "non-i1 conditions are not supported");
+  SmallVector<Value> results;
+  for (auto [trueValue, falseValue] :
+       llvm::zip_equal(adaptor.getTrueValue(), adaptor.getFalseValue()))
+    results.push_back(arith::SelectOp::create(
+        rewriter, op.getLoc(), op.getCondition(), trueValue, falseValue));
+  rewriter.replaceOpWithMultiple(op, {results});
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -504,7 +533,8 @@ struct ArithToLLVMConversionPass
       options.overrideIndexBitwidth(indexBitwidth);
 
     LLVMTypeConverter converter(&getContext(), options);
-    mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
+    arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -530,6 +560,7 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   }
 };
@@ -548,6 +579,12 @@ void mlir::arith::registerConvertArithToLLVMInterface(
 
 void mlir::arith::populateArithToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+
+  // Set a higher pattern benefit for IdentityBitcastLowering so it will run
+  // before BitcastOpLowering.
+  patterns.add<IdentityBitcastLowering>(converter, patterns.getContext(),
+                                        /*patternBenefit*/ 10);
+
   // clang-format off
   patterns.add<
     AddFOpLowering,
@@ -586,6 +623,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     RemSIOpLowering,
     RemUIOpLowering,
     SelectOpLowering,
+    SelectOpOneToNLowering,
     ShLIOpLowering,
     ShRSIOpLowering,
     ShRUIOpLowering,

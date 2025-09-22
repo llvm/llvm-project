@@ -128,9 +128,12 @@ public:
   std::string InstallName;
   /// Differences found from each file.
   std::vector<DiffOutput> DocValues;
-  InlineDoc(StringRef InstName, std::vector<DiffOutput> Diff)
+  /// Whether document only exists for one input.
+  bool IsMissingDoc;
+  InlineDoc(StringRef InstName, std::vector<DiffOutput> Diff,
+            bool IsMissingDoc = false)
       : AttributeDiff(AD_Inline_Doc), InstallName(InstName),
-        DocValues(std::move(Diff)){};
+        DocValues(std::move(Diff)), IsMissingDoc(IsMissingDoc) {};
 
   static bool classof(const AttributeDiff *A) {
     return A->getKind() == AD_Inline_Doc;

@@ -106,7 +106,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       return true;
     }
     // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
-    int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
+    int64_t Reg = TRI.getDwarfRegNumForVirtReg(MachineReg, false);
     if (Reg > 0) {
       DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
       return true;
@@ -192,6 +192,15 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 void DwarfExpression::addStackValue() {
   if (DwarfVersion >= 4)
     emitOp(dwarf::DW_OP_stack_value);
+}
+
+void DwarfExpression::addBooleanConstant(int64_t Value) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  LocationKind = Implicit;
+  if (Value == 0)
+    emitOp(dwarf::DW_OP_lit0);
+  else
+    emitOp(dwarf::DW_OP_lit1);
 }
 
 void DwarfExpression::addSignedConstant(int64_t Value) {

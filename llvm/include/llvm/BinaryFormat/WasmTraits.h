@@ -64,10 +64,10 @@ template <> struct DenseMapInfo<wasm::WasmGlobalType, void> {
 // Traits for using WasmLimits in a DenseMap
 template <> struct DenseMapInfo<wasm::WasmLimits, void> {
   static wasm::WasmLimits getEmptyKey() {
-    return wasm::WasmLimits{0xff, 0xff, 0xff};
+    return wasm::WasmLimits{0xff, 0xff, 0xff, 0xff};
   }
   static wasm::WasmLimits getTombstoneKey() {
-    return wasm::WasmLimits{0xee, 0xee, 0xee};
+    return wasm::WasmLimits{0xee, 0xee, 0xee, 0xee};
   }
   static unsigned getHashValue(const wasm::WasmLimits &Limits) {
     unsigned Hash = hash_value(Limits.Flags);

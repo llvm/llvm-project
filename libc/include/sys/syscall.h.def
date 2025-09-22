@@ -1517,6 +1517,10 @@
 #define SYS_ppoll __NR_ppoll
 #endif
 
+#ifdef __NR_ppoll_time64
+#define SYS_ppoll_time64 __NR_ppoll_time64
+#endif
+
 #ifdef __NR_prctl
 #define SYS_prctl __NR_prctl
 #endif
@@ -2301,6 +2305,10 @@
 #define SYS_utimes __NR_utimes
 #endif
 
+#ifdef __NR_utimensat_time64
+#define SYS_utimensat_time64 __NR_utimensat_time64
+#endif
+
 #ifdef __NR_utrap_install
 #define SYS_utrap_install __NR_utrap_install
 #endif
@@ -2349,12 +2357,5 @@
 #define SYS_writev __NR_writev
 #endif
 
-#ifdef __NR_process_mrelease
-#define SYS_process_mrelease __NR_process_mrelease
-#endif
-
-#ifdef __NR_pidfd_open
-#define SYS_pidfd_open __NR_pidfd_open
-#endif
 
 #endif // LLVM_LIBC_SYS_SYSCALL_H

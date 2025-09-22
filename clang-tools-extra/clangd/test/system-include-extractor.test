@@ -52,7 +52,7 @@
 # Bless the mock driver we've just created so that clangd can execute it.
 # Note: include clangd's stderr in the FileCheck input with "2>&1" so that we
 # can match output lines like "ASTWorker building file"
-# RUN: clangd -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
+# RUN: clangd --clang-tidy=false -lit-test -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
 ---
 {
@@ -88,4 +88,4 @@
 
 # Run clangd a second time, to make sure it picks up the driver name from the config file
 # Note, we need to pass -enable-config because -lit-test otherwise disables it
-# RUN: clangd -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test
+# RUN: clangd --clang-tidy=false -lit-test -enable-config -query-driver="**.test,**.sh" < %t.test 2>&1 | FileCheck -strict-whitespace %t.test

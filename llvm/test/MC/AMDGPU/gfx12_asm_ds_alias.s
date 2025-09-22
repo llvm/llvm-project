@@ -35,3 +35,6 @@ ds_subrev_u64 v1, v[2:3]
 
 ds_subrev_rtn_u64 v[5:6], v1, v[2:3]
 // GFX12: ds_rsub_rtn_u64 v[5:6], v1, v[2:3]      ; encoding: [0x00,0x00,0x88,0xd9,0x01,0x02,0x00,0x05]
+
+ds_bvh_stack_rtn_b32 v1, v0, v1, v[2:5]
+// GFX12: ds_bvh_stack_push4_pop1_rtn_b32 v1, v0, v1, v[2:5] ; encoding: [0x00,0x00,0x80,0xdb,0x00,0x01,0x02,0x01]

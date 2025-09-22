@@ -57,6 +57,12 @@ static const int16_t cSledLength = 64;
 static const int16_t cSledLength = 8;
 #elif defined(__hexagon__)
 static const int16_t cSledLength = 20;
+#elif defined(__riscv) && (__riscv_xlen == 64)
+static const int16_t cSledLength = 68;
+#elif defined(__riscv) && (__riscv_xlen == 32)
+static const int16_t cSledLength = 52;
+#elif defined(__s390x__)
+static const int16_t cSledLength = 18;
 #else
 #error "Unsupported CPU Architecture"
 #endif /* CPU architecture */
@@ -302,7 +308,8 @@ XRayPatchingStatus controlPatchingObjectUnchecked(bool Enable, int32_t ObjId) {
     return XRayPatchingStatus::NOT_INITIALIZED;
 
   if (Verbosity())
-    Report("Patching object %d with %d functions.\n", ObjId, InstrMap.Entries);
+    Report("Patching object %d with %d functions.\n", ObjId,
+           (int)InstrMap.Entries);
 
   // Check if the corresponding DSO has been unloaded.
   if (!InstrMap.Loaded) {

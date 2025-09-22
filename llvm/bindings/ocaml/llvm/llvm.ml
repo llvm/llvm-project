@@ -302,6 +302,8 @@ module AtomicRMWBinOp = struct
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 module ValueKind = struct
@@ -525,6 +527,9 @@ external vector_size : lltype -> int = "llvm_vector_size"
 (*--... Operations on other types ..........................................--*)
 external void_type : llcontext -> lltype = "llvm_void_type"
 external label_type : llcontext -> lltype = "llvm_label_type"
+external x86_amx_type : llcontext -> lltype = "llvm_x86_amx_type"
+external token_type : llcontext -> lltype = "llvm_token_type"
+external metadata_type : llcontext -> lltype = "llvm_metadata_type"
 external type_by_name : llmodule -> string -> lltype option = "llvm_type_by_name"
 
 external classify_value : llvalue -> ValueKind.t = "llvm_classify_value"
@@ -652,9 +657,6 @@ external const_nuw_add : llvalue -> llvalue -> llvalue = "llvm_const_nuw_add"
 external const_sub : llvalue -> llvalue -> llvalue = "llvm_const_sub"
 external const_nsw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nsw_sub"
 external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
-external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
-external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
-external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"
@@ -700,6 +702,8 @@ external global_copy_all_metadata : llvalue -> (llmdkind * llmetadata) array
 external is_global_constant : llvalue -> bool = "llvm_is_global_constant"
 external set_global_constant : bool -> llvalue -> unit
                              = "llvm_set_global_constant"
+external global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
+                             = "llvm_global_set_metadata"
 
 (*--... Operations on global variables .....................................--*)
 external declare_global : lltype -> string -> llmodule -> llvalue

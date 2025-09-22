@@ -10,7 +10,6 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -31,26 +30,38 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
-TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
-  // TODO: Allow arrays and structs, if all members are barriers
-  // in the same scope.
-  // TODO: Disallow other uses of target("amdgcn.named.barrier") including:
-  // - Structs containing barriers in different scope.
-  // - Structs containing a mixture of barriers and other data.
-  // - Globals in other address spaces.
-  // - Allocas.
+// Returns the target extension type of a global variable,
+// which can only be a TargetExtType, an array or single-element struct of it,
+// or their nesting combination.
+// TODO: allow struct of multiple TargetExtType elements of the same type.
+// TODO: Disallow other uses of target("amdgcn.named.barrier") including:
+// - Structs containing barriers in different scope/rank
+// - Structs containing a mixture of barriers and other data.
+// - Globals in other address spaces.
+// - Allocas.
+static TargetExtType *getTargetExtType(const GlobalVariable &GV) {
   Type *Ty = GV.getValueType();
   while (true) {
     if (auto *TTy = dyn_cast<TargetExtType>(Ty))
-      return TTy->getName() == "amdgcn.named.barrier" ? TTy : nullptr;
+      return TTy;
     if (auto *STy = dyn_cast<StructType>(Ty)) {
-      if (STy->getNumElements() == 0)
+      if (STy->getNumElements() != 1)
         return nullptr;
       Ty = STy->getElementType(0);
       continue;
     }
+    if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
+      Ty = ATy->getElementType();
+      continue;
+    }
     return nullptr;
   }
+}
+
+TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
+  if (TargetExtType *Ty = getTargetExtType(GV))
+    return Ty->getName() == "amdgcn.named.barrier" ? Ty : nullptr;
+  return nullptr;
 }
 
 bool isDynamicLDS(const GlobalVariable &GV) {
@@ -125,13 +136,6 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
 }
 
 bool isKernelLDS(const Function *F) {
-  // Some weirdness here. AMDGPU::isKernelCC does not call into
-  // AMDGPU::isKernel with the calling conv, it instead calls into
-  // isModuleEntryFunction which returns true for more calling conventions
-  // than AMDGPU::isKernel does. There's a FIXME on AMDGPU::isKernel.
-  // There's also a test that checks that the LDS lowering does not hit on
-  // a graphics shader, denoted amdgpu_ps, so stay with the limited case.
-  // Putting LDS in the name of the function to draw attention to this.
   return AMDGPU::isKernel(F->getCallingConv());
 }
 
@@ -141,8 +145,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   FunctionVariableMap DirectMapFunction;
   getUsesOfLDSByFunction(CG, M, DirectMapKernel, DirectMapFunction);
 
-  // Collect variables that are used by functions whose address has escaped
-  DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
+  // Collect functions whose address has escaped
+  DenseSet<Function *> AddressTakenFuncs;
   for (Function &F : M.functions()) {
     if (!isKernelLDS(&F))
       if (F.hasAddressTaken(nullptr,
@@ -150,9 +154,14 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
                             /* IgnoreAssumeLikeCalls */ false,
                             /* IgnoreLLVMUsed */ true,
                             /* IgnoreArcAttachedCall */ false)) {
-        set_union(VariablesReachableThroughFunctionPointer,
-                  DirectMapFunction[&F]);
+        AddressTakenFuncs.insert(&F);
       }
+  }
+
+  // Collect variables that are used by functions whose address has escaped
+  DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
+  for (Function *F : AddressTakenFuncs) {
+    set_union(VariablesReachableThroughFunctionPointer, DirectMapFunction[F]);
   }
 
   auto FunctionMakesUnknownCall = [&](const Function *F) -> bool {
@@ -206,6 +215,13 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
     }
   }
 
+  // Collect variables that are transitively used by functions whose address has
+  // escaped
+  for (Function *F : AddressTakenFuncs) {
+    set_union(VariablesReachableThroughFunctionPointer,
+              TransitiveMapFunction[F]);
+  }
+
   // DirectMapKernel lists which variables are used by the kernel
   // find the variables which are used through a function call
   FunctionVariableMap IndirectMapKernel;
@@ -218,10 +234,36 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
       Function *Ith = R.second->getFunction();
       if (Ith) {
         set_union(IndirectMapKernel[&Func], TransitiveMapFunction[Ith]);
-      } else {
-        set_union(IndirectMapKernel[&Func],
-                  VariablesReachableThroughFunctionPointer);
       }
+    }
+
+    // Check if the kernel encounters unknows calls, wheher directly or
+    // indirectly.
+    bool SeesUnknownCalls = [&]() {
+      SmallVector<Function *> WorkList = {CG[&Func]->getFunction()};
+      SmallPtrSet<Function *, 8> Visited;
+
+      while (!WorkList.empty()) {
+        Function *F = WorkList.pop_back_val();
+
+        for (const CallGraphNode::CallRecord &CallRecord : *CG[F]) {
+          if (!CallRecord.second)
+            continue;
+
+          Function *Callee = CallRecord.second->getFunction();
+          if (!Callee)
+            return true;
+
+          if (Visited.insert(Callee).second)
+            WorkList.push_back(Callee);
+        }
+      }
+      return false;
+    }();
+
+    if (SeesUnknownCalls) {
+      set_union(IndirectMapKernel[&Func],
+                VariablesReachableThroughFunctionPointer);
     }
   }
 
@@ -247,8 +289,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         }
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
-            report_fatal_error(
-                "Module cannot mix absolute and non-absolute LDS GVs");
+            reportFatalUsageError(
+                "module cannot mix absolute and non-absolute LDS GVs");
           }
         } else
           HasAbsoluteGVs = IsAbsolute;
@@ -318,6 +360,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
+    case Intrinsic::amdgcn_s_cluster_barrier:
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
@@ -326,10 +369,10 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_wait:
     case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:
+    case Intrinsic::amdgcn_iglp_opt:
       return false;
     default:
       break;
@@ -353,7 +396,7 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA) {
   MemorySSAWalker *Walker = MSSA->getWalker();
   SmallVector<MemoryAccess *> WorkList{Walker->getClobberingMemoryAccess(Load)};
-  SmallSet<MemoryAccess *, 8> Visited;
+  SmallPtrSet<MemoryAccess *, 8> Visited;
   MemoryLocation Loc(MemoryLocation::get(Load));
 
   LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *Load << '\n');

@@ -125,7 +125,7 @@ entry:
   %tmp12 = icmp eq i32 %tmp9, 0
   %tmp13 = select i1 %tmp12, i32 32, i32 %tmp9
   %tmp14 = getelementptr inbounds i32, ptr %tmp4, i64 %tmp6
-  %tmp15 = insertelement <2 x i32> undef, i32 %tmp11, i32 0
+  %tmp15 = insertelement <2 x i32> poison, i32 %tmp11, i32 0
   %tmp16 = insertelement <2 x i32> %tmp15, i32 %tmp13, i32 1
   store <2 x i32> %tmp16, ptr %tmp14, align 4
   ret void

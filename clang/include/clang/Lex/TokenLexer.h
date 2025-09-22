@@ -65,7 +65,7 @@ class TokenLexer {
 
   /// The offset of the macro expansion in the
   /// "source location address space".
-  unsigned MacroStartSLocOffset;
+  SourceLocation::UIntTy MacroStartSLocOffset;
 
   /// Location of the macro definition.
   SourceLocation MacroDefStart;
@@ -139,10 +139,10 @@ public:
   void Init(const Token *TokArray, unsigned NumToks, bool DisableMacroExpansion,
             bool OwnsTokens, bool IsReinject);
 
-  /// If the next token lexed will pop this macro off the
-  /// expansion stack, return 2.  If the next unexpanded token is a '(', return
-  /// 1, otherwise return 0.
-  unsigned isNextTokenLParen() const;
+  /// If TokenLexer::isAtEnd returns true(the next token lexed will pop this
+  /// macro off the expansion stack), return std::nullopt, otherwise return the
+  /// next unexpanded token.
+  std::optional<Token> peekNextPPToken() const;
 
   /// Lex and return a token from this macro stream.
   bool Lex(Token &Tok);

@@ -18,6 +18,7 @@ add_lld_library(lldMachO
   ICF.cpp
   InputFiles.cpp
   InputSection.cpp
+  LinkerOptimizationHints.cpp
   LTO.cpp
   MapFile.cpp
   MarkLive.cpp

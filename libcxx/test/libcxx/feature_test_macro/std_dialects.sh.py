@@ -9,22 +9,31 @@
 # RUN: %{python} %s %{libcxx-dir}/utils %{libcxx-dir}/test/libcxx/feature_test_macro/test_data.json
 
 import sys
+import unittest
 
-sys.path.append(sys.argv[1])
+UTILS = sys.argv[1]
+TEST_DATA = sys.argv[2]
+del sys.argv[1:3]
+
+sys.path.append(UTILS)
 from generate_feature_test_macro_components import FeatureTestMacros
 
 
-def test(output, expected):
-    assert output == expected, f"expected\n{expected}\n\noutput\n{output}"
+class Test(unittest.TestCase):
+    def setUp(self):
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
+        self.maxDiff = None  # This causes the diff to be printed when the test fails
+
+    def test_implementation(self):
+        expected = [
+            "c++17",
+            "c++20",
+            "c++23",
+            "c++26",
+        ]
+
+        self.assertEqual(self.ftm.std_dialects, expected)
 
 
-ftm = FeatureTestMacros(sys.argv[2])
-test(
-    ftm.std_dialects,
-    [
-        "c++17",
-        "c++20",
-        "c++23",
-        "c++26",
-    ],
-)
+if __name__ == "__main__":
+    unittest.main()

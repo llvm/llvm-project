@@ -7,7 +7,7 @@ struct Bork {
   unsigned int f2 : 30;
 };
 
-int Foo(Bork *hdr) {
+void Foo(Bork *hdr) {
   hdr->f1 = 7;
   hdr->f2 = 927;
 }

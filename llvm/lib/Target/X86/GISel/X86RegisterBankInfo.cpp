@@ -111,6 +111,7 @@ bool X86RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
+  case X86::G_FIST:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_INTRINSIC_TRUNC:
@@ -129,6 +130,7 @@ bool X86RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
+  case X86::G_FILD:
     return true;
   default:
     break;
@@ -288,6 +290,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
 
   switch (Opc) {
+  case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
@@ -295,6 +298,16 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
     break;
+  case X86::G_FIST:
+  case X86::G_FILD: {
+    auto &Op0 = MI.getOperand(0);
+    auto &Op1 = MI.getOperand(1);
+    const LLT Ty0 = MRI.getType(Op0.getReg());
+    const LLT Ty1 = MRI.getType(Op1.getReg());
+    OpRegBankIdx[0] = getPartialMappingIdx(MI, Ty0, /* isFP= */ true);
+    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ false);
+    break;
+  }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_UITOFP:
@@ -321,13 +334,14 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     unsigned Size = Ty1.getSizeInBits();
     (void)Size;
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
-
+    assert((Size == 32 || Size == 64 || Size == 80) &&
+           "Unsupported size for G_FCMP");
     auto FpRegBank = getPartialMappingIdx(MI, Ty1, /* isFP= */ true);
     OpRegBankIdx = {PMI_GPR8,
                     /* Predicate */ PMI_None, FpRegBank, FpRegBank};
     break;
   }
+  case TargetOpcode::G_FABS:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_ANYEXT: {
     auto &Op0 = MI.getOperand(0);
@@ -341,9 +355,9 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         Ty0.getSizeInBits() == 128 &&
         (Ty1.getSizeInBits() == 32 || Ty1.getSizeInBits() == 64) &&
         Opc == TargetOpcode::G_ANYEXT;
-
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt,
-                               OpRegBankIdx);
+    bool isFAbs = (Opc == TargetOpcode::G_FABS);
+    getInstrPartialMappingIdxs(
+        MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt || isFAbs, OpRegBankIdx);
     break;
   }
   case TargetOpcode::G_LOAD: {

@@ -51,63 +51,40 @@ sub silent_system {
 # Compiler command setup.
 ##===----------------------------------------------------------------------===##
 
-# Search in the PATH if the compiler exists
-sub SearchInPath {
-    my $file = shift;
-    foreach my $dir (split (':', $ENV{PATH})) {
-        if (-x "$dir/$file") {
-            return 1;
-        }
-    }
-    return 0;
-}
+{
+  my ($DefaultCCompiler, $DefaultCXXCompiler);
 
-my $Compiler;
-my $Clang;
-my $DefaultCCompiler;
-my $DefaultCXXCompiler;
-my $IsCXX;
-my $AnalyzerTarget;
-
-# If on OSX, use xcrun to determine the SDK root.
-my $UseXCRUN = 0;
-
-if (`uname -s` =~ m/Darwin/) {
-  $DefaultCCompiler = 'clang';
-  $DefaultCXXCompiler = 'clang++';
-  # Older versions of OSX do not have xcrun to
-  # query the SDK location.
-  if (-x "/usr/bin/xcrun") {
-    $UseXCRUN = 1;
+  my $os = `uname -s`;
+  if ($os =~ m/Darwin/) {
+    $DefaultCCompiler = 'clang';
+    $DefaultCXXCompiler = 'clang++';
+  } elsif ($os =~ m/(FreeBSD|OpenBSD)/) {
+    $DefaultCCompiler = 'cc';
+    $DefaultCXXCompiler = 'c++';
+  } else {
+    $DefaultCCompiler = 'gcc';
+    $DefaultCXXCompiler = 'g++';
   }
-} elsif (`uname -s` =~ m/(FreeBSD|OpenBSD)/) {
-  $DefaultCCompiler = 'cc';
-  $DefaultCXXCompiler = 'c++';
-} else {
-  $DefaultCCompiler = 'gcc';
-  $DefaultCXXCompiler = 'g++';
+
+  sub DetermineCompiler {
+    my ($is_cxx) = @_;
+    my $default = $is_cxx ? $DefaultCXXCompiler : $DefaultCCompiler;
+    my $opt = $ENV{$is_cxx ? 'CCC_CXX' : 'CCC_CC'};
+    return defined $opt ? shellwords($opt) : $default;
+  }
 }
 
-if ($FindBin::Script =~ /c\+\+-analyzer/) {
-  $Compiler = $ENV{'CCC_CXX'};
-  if (!defined $Compiler || (! -x $Compiler && ! SearchInPath($Compiler))) { $Compiler = $DefaultCXXCompiler; }
-
-  $Clang = $ENV{'CLANG_CXX'};
-  if (!defined $Clang || ! -x $Clang) { $Clang = 'clang++'; }
-
-  $IsCXX = 1
-}
-else {
-  $Compiler = $ENV{'CCC_CC'};
-  if (!defined $Compiler || (! -x $Compiler && ! SearchInPath($Compiler))) { $Compiler = $DefaultCCompiler; }
-
-  $Clang = $ENV{'CLANG'};
-  if (!defined $Clang || ! -x $Clang) { $Clang = 'clang'; }
-
-  $IsCXX = 0
+sub DetermineClang {
+  my ($is_cxx) = @_;
+  my $default = $is_cxx ? 'clang++' : 'clang';
+  my $opt = $ENV{$is_cxx ? 'CLANG_CXX' : 'CLANG'};
+  return defined $opt ? $opt : $default;
 }
 
-$AnalyzerTarget = $ENV{'CLANG_ANALYZER_TARGET'};
+my $IsCXX = $FindBin::Script =~ /c\+\+-analyzer/;
+my ($Compiler, @CompilerArgs) = DetermineCompiler($IsCXX);
+my $Clang = DetermineClang($IsCXX);
+my $AnalyzerTarget = $ENV{'CLANG_ANALYZER_TARGET'};
 
 ##===----------------------------------------------------------------------===##
 # Cleanup.
@@ -199,7 +176,7 @@ sub GetCCArgs {
   die "could not find clang line\n" if (!defined $line);
   # Strip leading and trailing whitespace characters.
   $line =~ s/^\s+|\s+$//g;
-  my @items = quotewords('\s+', 0, $line);
+  my @items = shellwords($line);
   my $cmd = shift @items;
   die "cannot find 'clang' in 'clang' command\n" if (!($cmd =~ /clang/ || basename($cmd) =~ /llvm/));
   # If this is the llvm-driver the internal command will look like "llvm clang ...".
@@ -462,9 +439,9 @@ my $Output;
 my %Uniqued;
 
 # Forward arguments to gcc.
-my $Status = system($Compiler,@ARGV);
+my $Status = system($Compiler,@CompilerArgs,@ARGV);
 if (defined $ENV{'CCC_ANALYZER_LOG'}) {
-  print STDERR "$Compiler @ARGV\n";
+  print STDERR "$Compiler @CompilerArgs @ARGV\n";
 }
 if ($Status) { exit($Status >> 8); }
 
@@ -698,8 +675,9 @@ if ($ForceAnalyzeDebugCode) {
 
 # If we are on OSX and have an installation where the
 # default SDK is inferred by xcrun use xcrun to infer
-# the SDK.
-if (not $HasSDK and $UseXCRUN) {
+# the SDK. Older versions of OSX do not have xcrun to
+# query the SDK location.
+if (not $HasSDK and -x '/usr/bin/xcrun') {
   my $sdk = `/usr/bin/xcrun --show-sdk-path -sdk macosx`;
   chomp $sdk;
   push @CompileOpts, "-isysroot", $sdk;

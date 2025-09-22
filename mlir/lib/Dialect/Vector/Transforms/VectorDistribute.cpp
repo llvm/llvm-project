@@ -9,16 +9,19 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <numeric>
 #include <utility>
 
 using namespace mlir;
@@ -50,6 +53,25 @@ static AffineMap calculateImplicitMap(VectorType sequentialType,
   auto map = AffineMap::get(sequentialType.getRank(), 0, perm,
                             distributedType.getContext());
   return map;
+}
+
+/// Given a sequential and distributed vector type, returns the distributed
+/// dimension. This function expects that only a single dimension is
+/// distributed.
+static int getDistributedDim(VectorType sequentialType,
+                             VectorType distributedType) {
+  assert(sequentialType.getRank() == distributedType.getRank() &&
+         "sequential and distributed vector types must have the same rank");
+  int64_t distributedDim = -1;
+  for (int64_t i = 0; i < sequentialType.getRank(); ++i) {
+    if (distributedType.getDimSize(i) != sequentialType.getDimSize(i)) {
+      // Keep this assert here in case WarpExecuteOnLane0Op gets extended to
+      // support distributing multiple dimensions in the future.
+      assert(distributedDim == -1 && "found multiple distributed dims");
+      distributedDim = i;
+    }
+  }
+  return distributedDim;
 }
 
 namespace {
@@ -92,7 +114,7 @@ struct DistributedLoadStoreHelper {
            "preregistered sequential value.");
     // Scalar case can directly use memref.store.
     if (!isa<VectorType>(val.getType()))
-      return b.create<memref::StoreOp>(loc, val, buffer, zero);
+      return memref::StoreOp::create(b, loc, val, buffer, zero);
 
     // Vector case must use vector::TransferWriteOp which will later lower to
     //   vector.store of memref.store depending on further lowerings.
@@ -105,8 +127,8 @@ struct DistributedLoadStoreHelper {
       }
     }
     SmallVector<bool> inBounds(indices.size(), true);
-    return b.create<vector::TransferWriteOp>(
-        loc, val, buffer, indices,
+    return vector::TransferWriteOp::create(
+        b, loc, val, buffer, indices,
         ArrayRef<bool>(inBounds.begin(), inBounds.end()));
   }
 
@@ -134,7 +156,7 @@ struct DistributedLoadStoreHelper {
 
     // Scalar case can directly use memref.store.
     if (!isa<VectorType>(type))
-      return b.create<memref::LoadOp>(loc, buffer, zero);
+      return memref::LoadOp::create(b, loc, buffer, zero);
 
     // Other cases must be vector atm.
     // Vector case must use vector::TransferReadOp which will later lower to
@@ -150,8 +172,9 @@ struct DistributedLoadStoreHelper {
       }
     }
     SmallVector<bool> inBounds(indices.size(), true);
-    return b.create<vector::TransferReadOp>(
-        loc, cast<VectorType>(type), buffer, indices,
+    return vector::TransferReadOp::create(
+        b, loc, cast<VectorType>(type), buffer, indices,
+        /*padding=*/std::nullopt,
         ArrayRef<bool>(inBounds.begin(), inBounds.end()));
   }
 
@@ -161,92 +184,6 @@ struct DistributedLoadStoreHelper {
 };
 
 } // namespace
-
-/// Helper to create a new WarpExecuteOnLane0Op with different signature.
-static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndReplaceReturns(
-    RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
-    ValueRange newYieldedValues, TypeRange newReturnTypes) {
-  // Create a new op before the existing one, with the extra operands.
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(warpOp);
-  auto newWarpOp = rewriter.create<WarpExecuteOnLane0Op>(
-      warpOp.getLoc(), newReturnTypes, warpOp.getLaneid(), warpOp.getWarpSize(),
-      warpOp.getArgs(), warpOp.getBody()->getArgumentTypes());
-
-  Region &opBody = warpOp.getBodyRegion();
-  Region &newOpBody = newWarpOp.getBodyRegion();
-  Block &newOpFirstBlock = newOpBody.front();
-  rewriter.inlineRegionBefore(opBody, newOpBody, newOpBody.begin());
-  rewriter.eraseBlock(&newOpFirstBlock);
-  assert(newWarpOp.getWarpRegion().hasOneBlock() &&
-         "expected WarpOp with single block");
-
-  auto yield =
-      cast<gpu::YieldOp>(newOpBody.getBlocks().begin()->getTerminator());
-
-  rewriter.modifyOpInPlace(
-      yield, [&]() { yield.getValuesMutable().assign(newYieldedValues); });
-  return newWarpOp;
-}
-
-/// Helper to create a new WarpExecuteOnLane0Op region with extra outputs.
-/// `indices` return the index of each new output.
-static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
-    RewriterBase &rewriter, WarpExecuteOnLane0Op warpOp,
-    ValueRange newYieldedValues, TypeRange newReturnTypes,
-    llvm::SmallVector<size_t> &indices) {
-  SmallVector<Type> types(warpOp.getResultTypes().begin(),
-                          warpOp.getResultTypes().end());
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-  llvm::SmallSetVector<Value, 32> yieldValues(yield.getOperands().begin(),
-                                              yield.getOperands().end());
-  for (auto newRet : llvm::zip(newYieldedValues, newReturnTypes)) {
-    if (yieldValues.insert(std::get<0>(newRet))) {
-      types.push_back(std::get<1>(newRet));
-      indices.push_back(yieldValues.size() - 1);
-    } else {
-      // If the value already exit the region don't create a new output.
-      for (auto [idx, yieldOperand] :
-           llvm::enumerate(yieldValues.getArrayRef())) {
-        if (yieldOperand == std::get<0>(newRet)) {
-          indices.push_back(idx);
-          break;
-        }
-      }
-    }
-  }
-  yieldValues.insert(newYieldedValues.begin(), newYieldedValues.end());
-  WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
-      rewriter, warpOp, yieldValues.getArrayRef(), types);
-  rewriter.replaceOp(warpOp,
-                     newWarpOp.getResults().take_front(warpOp.getNumResults()));
-  return newWarpOp;
-}
-
-/// Helper to know if an op can be hoisted out of the region.
-static bool canBeHoisted(Operation *op,
-                         function_ref<bool(Value)> definedOutside) {
-  return llvm::all_of(op->getOperands(), definedOutside) &&
-         isMemoryEffectFree(op) && op->getNumRegions() == 0;
-}
-
-/// Return a value yielded by `warpOp` which statifies the filter lamdba
-/// condition and is not dead.
-static OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
-                                const std::function<bool(Operation *)> &fn) {
-  auto yield = cast<gpu::YieldOp>(
-      warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-  for (OpOperand &yieldOperand : yield->getOpOperands()) {
-    Value yieldValues = yieldOperand.get();
-    Operation *definedOp = yieldValues.getDefiningOp();
-    if (definedOp && fn(definedOp)) {
-      if (!warpOp.getResult(yieldOperand.getOperandNumber()).use_empty())
-        return &yieldOperand;
-    }
-  }
-  return {};
-}
 
 // Clones `op` into a new operation that takes `operands` and returns
 // `resultTypes`.
@@ -289,12 +226,11 @@ namespace {
 ///
 /// All this assumes the vector distribution occurs along the most minor
 /// distributed vector dimension.
-struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
+struct WarpOpToScfIfPattern : public WarpDistributionPattern {
   WarpOpToScfIfPattern(MLIRContext *context,
                        const WarpExecuteOnLane0LoweringOptions &options,
                        PatternBenefit benefit = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(context, benefit),
-        options(options) {}
+      : WarpDistributionPattern(context, benefit), options(options) {}
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -308,11 +244,11 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.setInsertionPoint(warpOp);
 
     // Step 1: Create scf.if op.
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value isLane0 = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::eq, warpOp.getLaneid(), c0);
-    auto ifOp = rewriter.create<scf::IfOp>(loc, isLane0,
-                                           /*withElseRegion=*/false);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value isLane0 = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, warpOp.getLaneid(), c0);
+    auto ifOp = scf::IfOp::create(rewriter, loc, isLane0,
+                                  /*withElseRegion=*/false);
     rewriter.eraseOp(ifOp.thenBlock()->getTerminator());
 
     // Step 2: insert appropriate (alloc, write)-pairs before the scf.if and
@@ -390,7 +326,7 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // Step 7. Delete terminator and add empty scf.yield.
     rewriter.eraseOp(yieldOp);
     rewriter.setInsertionPointToEnd(ifOp.thenBlock());
-    rewriter.create<scf::YieldOp>(yieldLoc);
+    scf::YieldOp::create(rewriter, yieldLoc);
 
     // Compute replacements for WarpOp results.
     rewriter.replaceOp(warpOp, replacements);
@@ -401,39 +337,6 @@ struct WarpOpToScfIfPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
 private:
   const WarpExecuteOnLane0LoweringOptions &options;
 };
-
-/// Clone `writeOp` assumed to be nested under `warpOp` into a new warp execute
-/// op with the proper return type.
-/// The new write op is updated to write the result of the new warp execute op.
-/// The old `writeOp` is deleted.
-static vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
-                                            WarpExecuteOnLane0Op warpOp,
-                                            vector::TransferWriteOp writeOp,
-                                            VectorType targetType,
-                                            VectorType maybeMaskType) {
-  assert(writeOp->getParentOp() == warpOp &&
-         "write must be nested immediately under warp");
-  OpBuilder::InsertionGuard g(rewriter);
-  SmallVector<size_t> newRetIndices;
-  WarpExecuteOnLane0Op newWarpOp;
-  if (maybeMaskType) {
-    newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, ValueRange{writeOp.getVector(), writeOp.getMask()},
-        TypeRange{targetType, maybeMaskType}, newRetIndices);
-  } else {
-    newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, ValueRange{{writeOp.getVector()}},
-        TypeRange{targetType}, newRetIndices);
-  }
-  rewriter.setInsertionPointAfter(newWarpOp);
-  auto newWriteOp =
-      cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
-  rewriter.eraseOp(writeOp);
-  newWriteOp.getVectorMutable().assign(newWarpOp.getResult(newRetIndices[0]));
-  if (maybeMaskType)
-    newWriteOp.getMaskMutable().assign(newWarpOp.getResult(newRetIndices[1]));
-  return newWriteOp;
-}
 
 /// Return the distributed vector type based on the original type and the
 /// distribution map. The map is expected to have a dimension equal to the
@@ -468,6 +371,38 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
   return targetType;
 }
 
+/// Given a warpOp that contains ops with regions, the corresponding op's
+/// "inner" region and the distributionMapFn, get all values used by the op's
+/// region that are defined within the warpOp, but outside the inner region.
+/// Return the set of values, their types and their distributed types.
+std::tuple<llvm::SmallSetVector<Value, 32>, SmallVector<Type>,
+           SmallVector<Type>>
+getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
+                             DistributionMapFn distributionMapFn) {
+  llvm::SmallSetVector<Value, 32> escapingValues;
+  SmallVector<Type> escapingValueTypes;
+  SmallVector<Type> escapingValueDistTypes; // to yield from the new warpOp
+  if (innerRegion.empty())
+    return {std::move(escapingValues), std::move(escapingValueTypes),
+            std::move(escapingValueDistTypes)};
+  mlir::visitUsedValuesDefinedAbove(innerRegion, [&](OpOperand *operand) {
+    Operation *parent = operand->get().getParentRegion()->getParentOp();
+    if (warpOp->isAncestor(parent)) {
+      if (!escapingValues.insert(operand->get()))
+        return;
+      Type distType = operand->get().getType();
+      if (auto vecType = dyn_cast<VectorType>(distType)) {
+        AffineMap map = distributionMapFn(operand->get());
+        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+      }
+      escapingValueTypes.push_back(operand->get().getType());
+      escapingValueDistTypes.push_back(distType);
+    }
+  });
+  return {std::move(escapingValues), std::move(escapingValueTypes),
+          std::move(escapingValueDistTypes)};
+}
+
 /// Distribute transfer_write ops based on the affine map returned by
 /// `distributionMapFn`. Writes of size more than `maxNumElementToExtract`
 /// will not be distributed (it should be less than the warp size).
@@ -487,11 +422,10 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 ///   gpu.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
-struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
+struct WarpOpTransferWrite : public WarpDistributionPattern {
   WarpOpTransferWrite(MLIRContext *ctx, DistributionMapFn fn,
                       unsigned maxNumElementsToExtract, PatternBenefit b = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b),
-        distributionMapFn(std::move(fn)),
+      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)),
         maxNumElementsToExtract(maxNumElementsToExtract) {}
 
   /// Distribute the TransferWriteOp. Only 1D distributions and vector dims that
@@ -549,10 +483,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     }
     SmallVector<Value> delinearized;
     if (map.getNumResults() > 1) {
-      delinearized = rewriter
-                         .create<mlir::affine::AffineDelinearizeIndexOp>(
-                             newWarpOp.getLoc(), newWarpOp.getLaneid(),
-                             delinearizedIdSizes)
+      delinearized = mlir::affine::AffineDelinearizeIndexOp::create(
+                         rewriter, newWarpOp.getLoc(), newWarpOp.getLaneid(),
+                         delinearizedIdSizes)
                          .getResults();
     } else {
       // If there is only one map result, we can elide the delinearization
@@ -611,22 +544,23 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     rewriter.setInsertionPointAfter(newWarpOp);
 
     // Create a second warp op that contains only writeOp.
-    auto secondWarpOp = rewriter.create<WarpExecuteOnLane0Op>(
-        loc, TypeRange(), newWarpOp.getLaneid(), newWarpOp.getWarpSize());
+    auto secondWarpOp = WarpExecuteOnLane0Op::create(rewriter, loc, TypeRange(),
+                                                     newWarpOp.getLaneid(),
+                                                     newWarpOp.getWarpSize());
     Block &body = secondWarpOp.getBodyRegion().front();
     rewriter.setInsertionPointToStart(&body);
     auto newWriteOp =
         cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
-    newWriteOp.getVectorMutable().assign(newWarpOp.getResult(newRetIndices[0]));
+    newWriteOp.getValueToStoreMutable().assign(
+        newWarpOp.getResult(newRetIndices[0]));
     rewriter.eraseOp(writeOp);
-    rewriter.create<gpu::YieldOp>(newWarpOp.getLoc());
+    gpu::YieldOp::create(rewriter, newWarpOp.getLoc());
     return success();
   }
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Operation *lastNode = yield->getPrevNode();
     auto writeOp = dyn_cast_or_null<vector::TransferWriteOp>(lastNode);
     if (!writeOp)
@@ -654,6 +588,39 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
   }
 
 private:
+  /// Clone `writeOp` assumed to be nested under `warpOp` into a new warp
+  /// execute op with the proper return type. The new write op is updated to
+  /// write the result of the new warp execute op. The old `writeOp` is deleted.
+  vector::TransferWriteOp cloneWriteOp(RewriterBase &rewriter,
+                                       WarpExecuteOnLane0Op warpOp,
+                                       vector::TransferWriteOp writeOp,
+                                       VectorType targetType,
+                                       VectorType maybeMaskType) const {
+    assert(writeOp->getParentOp() == warpOp &&
+           "write must be nested immediately under warp");
+    OpBuilder::InsertionGuard g(rewriter);
+    SmallVector<size_t> newRetIndices;
+    WarpExecuteOnLane0Op newWarpOp;
+    if (maybeMaskType) {
+      newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+          rewriter, warpOp, ValueRange{writeOp.getVector(), writeOp.getMask()},
+          TypeRange{targetType, maybeMaskType}, newRetIndices);
+    } else {
+      newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+          rewriter, warpOp, ValueRange{{writeOp.getVector()}},
+          TypeRange{targetType}, newRetIndices);
+    }
+    rewriter.setInsertionPointAfter(newWarpOp);
+    auto newWriteOp =
+        cast<vector::TransferWriteOp>(rewriter.clone(*writeOp.getOperation()));
+    rewriter.eraseOp(writeOp);
+    newWriteOp.getValueToStoreMutable().assign(
+        newWarpOp.getResult(newRetIndices[0]));
+    if (maybeMaskType)
+      newWriteOp.getMaskMutable().assign(newWarpOp.getResult(newRetIndices[1]));
+    return newWriteOp;
+  }
+
   DistributionMapFn distributionMapFn;
   unsigned maxNumElementsToExtract = 1;
 };
@@ -676,8 +643,8 @@ private:
 ///   vector<32xf32>
 /// }
 /// %0 = arith.addf %r#1, %r#2 : vector<1xf32>
-struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpElementwise : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand = getWarpResult(warpOp, [](Operation *op) {
@@ -742,8 +709,8 @@ struct WarpOpElementwise : public OpRewritePattern<WarpExecuteOnLane0Op> {
 ///   ...
 /// }
 /// %0 = arith.constant dense<2.0> : vector<1xf32>
-struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpConstant : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
@@ -763,63 +730,58 @@ struct WarpOpConstant : public OpRewritePattern<WarpExecuteOnLane0Op> {
         cast<ShapedType>(warpOp.getResult(operandIndex).getType()), scalarAttr);
     Location loc = warpOp.getLoc();
     rewriter.setInsertionPointAfter(warpOp);
-    Value distConstant = rewriter.create<arith::ConstantOp>(loc, newAttr);
+    Value distConstant = arith::ConstantOp::create(rewriter, loc, newAttr);
     rewriter.replaceAllUsesWith(warpOp.getResult(operandIndex), distConstant);
     rewriter.finalizeOpModification(warpOp);
     return success();
   }
 };
 
-/// Delinearize the given `laneId` into multiple dimensions, where each
-/// dimension's size is determined by `originalShape` and `distributedShape`
-/// together. This function expects the total numbers of threads needed for
-/// distribution is equal to `warpSize`. Returns true and updates
-/// `delinearizedIds` if so.
-bool delinearizeLaneId(OpBuilder &builder, Location loc,
-                       ArrayRef<int64_t> originalShape,
-                       ArrayRef<int64_t> distributedShape, int64_t warpSize,
-                       Value laneId, SmallVectorImpl<Value> &delinearizedIds) {
-  // If the original shape and the distributed shape is the same, we don't
-  // distribute at all--every thread is handling the whole. For such case, we
-  // should not rely on lane IDs later. So just return an empty lane ID vector.
-  if (originalShape == distributedShape) {
-    delinearizedIds.clear();
-    return true;
+/// Sink out step op feeding into a warp op yield.
+/// Vector step op is treated similar to arith.constant, apart from
+/// the result that represents a sequence [0, vec_size).
+/// Due to the to vec_size == warp_size limitation,
+/// we can simply wrap the lane id into a vector (i.e., broadcast).
+/// Supporting vec_size != warp_size may involve preserving the step
+/// result and using additional arith ops (the exact details are TBD).
+/// ```
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xindex>) {
+///   ...
+///   %cst = vector.step : vector<32xindex>
+///   gpu.yield %cst : vector<1xindex>
+/// }
+/// ```
+/// To
+/// ```
+/// gpu.warp_execute_on_lane_0(%arg0) {
+///   ...
+/// }
+/// %lane_id_vec = vector.broadcast %arg0 : index to vector<1xindex>
+struct WarpOpStep final : public WarpDistributionPattern {
+  using Base::Base;
+  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::StepOp>);
+    if (!yieldOperand)
+      return failure();
+    const unsigned operandIdx = yieldOperand->getOperandNumber();
+    auto stepOp = yieldOperand->get().getDefiningOp<vector::StepOp>();
+    VectorType resTy = stepOp.getResult().getType();
+    if (resTy.getNumElements() != static_cast<int64_t>(warpOp.getWarpSize()))
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          llvm::formatv("Expected result size ({0}) to be of warp size ({1})",
+                        resTy.getNumElements(), warpOp.getWarpSize()));
+    VectorType newVecTy =
+        cast<VectorType>(warpOp.getResult(operandIdx).getType());
+    rewriter.setInsertionPointAfter(warpOp);
+    Value laneIdVec = vector::BroadcastOp::create(rewriter, warpOp.getLoc(),
+                                                  newVecTy, warpOp.getLaneid());
+    rewriter.replaceAllUsesWith(warpOp.getResult(operandIdx), laneIdVec);
+    return success();
   }
-
-  SmallVector<int64_t> sizes;
-  for (auto [large, small] : llvm::zip_equal(originalShape, distributedShape)) {
-    if (large % small != 0)
-      return false;
-    sizes.push_back(large / small);
-  }
-  if (std::accumulate(sizes.begin(), sizes.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
-    return false;
-
-  AffineExpr s0, s1;
-  bindSymbols(builder.getContext(), s0, s1);
-
-  int64_t usedThreads = 1;
-
-  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-  delinearizedIds.assign(sizes.size(), zero);
-
-  for (int i = sizes.size() - 1; i >= 0; --i) {
-    usedThreads *= sizes[i];
-    if (usedThreads == warpSize) {
-      // We've used up all available threads. Don't need to perform modulo
-      // anymore. And we can stop the calculation for further dimensions.
-      delinearizedIds[i] = laneId;
-      break;
-    }
-    delinearizedIds[i] =
-        affine::makeComposedAffineApply(builder, loc, s0 % sizes[i], {laneId});
-    laneId = affine::makeComposedAffineApply(
-        builder, loc, s0.floorDiv(usedThreads), {laneId});
-  }
-  return true;
-}
+};
 
 /// Sink out transfer_read op feeding into a warp op yield.
 /// ```
@@ -839,8 +801,8 @@ bool delinearizeLaneId(OpBuilder &builder, Location loc,
 ///   vector<32xf32> gpu.yield %2 : vector<32xf32>
 /// }
 /// %0 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<1xf32>
-struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpTransferRead : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     // Try to find a distributable yielded read. Note that this pattern can
@@ -856,7 +818,7 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto read = operand->get().getDefiningOp<vector::TransferReadOp>();
 
     // Source must be defined outside of the region.
-    if (!warpOp.isDefinedOutsideOfRegion(read.getSource()))
+    if (!warpOp.isDefinedOutsideOfRegion(read.getBase()))
       return rewriter.notifyMatchFailure(
           read, "source must be defined outside of the region");
 
@@ -939,9 +901,9 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Value newMask =
         hasMask ? newWarpOp.getResult(newRetIndices[newRetIndices.size() - 1])
                 : Value();
-    auto newRead = rewriter.create<vector::TransferReadOp>(
-        read.getLoc(), distributedVal.getType(), read.getSource(), newIndices,
-        read.getPermutationMapAttr(), newPadding, newMask,
+    auto newRead = vector::TransferReadOp::create(
+        rewriter, read.getLoc(), distributedVal.getType(), read.getBase(),
+        newIndices, read.getPermutationMapAttr(), newPadding, newMask,
         read.getInBoundsAttr());
 
     rewriter.replaceAllUsesWith(distributedVal, newRead);
@@ -951,8 +913,8 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 /// Remove any result that has no use along with the matching yieldOp operand.
 // TODO: Move this in WarpExecuteOnLane0Op canonicalization.
-struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpDeadResult : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Type> newResultTypes;
@@ -961,8 +923,7 @@ struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
     newYieldValues.reserve(warpOp->getNumResults());
     DenseMap<Value, int64_t> dedupYieldOperandPositionMap;
     DenseMap<OpResult, int64_t> dedupResultPositionMap;
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
 
     // Some values may be yielded multiple times and correspond to multiple
     // results. Deduplicating occurs by taking each result with its matching
@@ -1012,14 +973,11 @@ struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 // If an operand is directly yielded out of the region we can forward it
 // directly and it doesn't need to go through the region.
-struct WarpOpForwardOperand : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpForwardOperand : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Type> resultTypes;
-    SmallVector<Value> yieldValues;
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+    gpu::YieldOp yield = warpOp.getTerminator();
     Value valForwarded;
     unsigned resultIndex;
     for (OpOperand &operand : yield->getOpOperands()) {
@@ -1056,8 +1014,8 @@ struct WarpOpForwardOperand : public OpRewritePattern<WarpExecuteOnLane0Op> {
   }
 };
 
-struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpBroadcast : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1083,8 +1041,8 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, {broadcastSrc}, {broadcastSrcType}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value broadcasted = rewriter.create<vector::BroadcastOp>(
-        loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
+    Value broadcasted = vector::BroadcastOp::create(
+        rewriter, loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                 broadcasted);
     return success();
@@ -1093,8 +1051,8 @@ struct WarpOpBroadcast : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 /// Pattern to move shape cast out of the warp op. shape cast is basically a
 /// no-op for warp distribution; we need to handle the shape though.
-struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpShapeCast : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1126,8 +1084,8 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
         rewriter, warpOp, {oldCastOp.getSource()}, {castDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value newCast = rewriter.create<vector::ShapeCastOp>(
-        oldCastOp.getLoc(), castResultType,
+    Value newCast = vector::ShapeCastOp::create(
+        rewriter, oldCastOp.getLoc(), castResultType,
         newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newCast);
     return success();
@@ -1152,8 +1110,8 @@ struct WarpOpShapeCast : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// %cmp = arith.cmpi ult, %laneid, %0
 /// %ub = arith.select %cmp, %c0, %c1
 /// %1 = vector.create_mask %ub : vector<1xi1>
-struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern::OpRewritePattern;
+struct WarpOpCreateMask : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *yieldOperand =
@@ -1209,17 +1167,208 @@ struct WarpOpCreateMask : public OpRewritePattern<WarpExecuteOnLane0Op> {
     }
 
     auto newMask =
-        rewriter.create<vector::CreateMaskOp>(loc, distType, newOperands);
+        vector::CreateMaskOp::create(rewriter, loc, distType, newOperands);
     rewriter.replaceAllUsesWith(warpOp.getResult(operandIndex), newMask);
     rewriter.finalizeOpModification(warpOp);
     return success();
   }
 };
 
+/// Sink out insert_strided_slice op feeding into a warp op yield.
+/// ```
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<8x1xf32>) {
+///   ...
+///   %src = ... : vector<4x32xf32>
+///   %dest = ... : vector<8x32xf32>
+///   %insert = vector.insert_strided_slice %src, %dest, offsets = [0, 0],
+///     strides = [1, 1] : vector<4x32xf32> into vector<8x32xf32>
+///   gpu.yield %insert : vector<8x32xf32>
+/// }
+/// ```
+/// To
+/// ```
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<4x1xf32>,
+/// vector<8x1xf32>) {
+///   ...
+///   %src = ... : vector<4x32xf32>
+///   %dest = ... : vector<8x32xf32>
+///   gpu.yield %src, %dest : vector<4x16xf32>, vector<8x16xf32>
+/// }
+/// %insert = vector.insert_strided_slice %0#0, %0#1,
+///   offsets = [0, 0], strides = [1, 1] : vector<4x1xf32> into vector<8x1xf32>
+/// ```
+/// NOTE: Current support assumes that both src and dest vectors are distributed
+/// to lanes and sinking the insert op does not require any cross lane
+/// communication.
+struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
+  using Base::Base;
+  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::InsertStridedSliceOp>);
+    if (!operand)
+      return failure();
+    unsigned int operandNumber = operand->getOperandNumber();
+    auto insertOp =
+        operand->get().getDefiningOp<vector::InsertStridedSliceOp>();
+    auto distributedType =
+        cast<VectorType>(warpOp.getResult(operandNumber).getType());
+    // Distributed type must be 2D or higher.
+    // TODO: Support 1D distributed types.
+    if (distributedType.getRank() < 2)
+      return rewriter.notifyMatchFailure(
+          insertOp, "result vector type must be 2D or higher");
+    // Find the distributed dimension of the dest vector. There should be
+    // exactly one.
+    auto yieldedType = cast<VectorType>(operand->get().getType());
+    int64_t destDistributedDim =
+        getDistributedDim(yieldedType, distributedType);
+    assert(destDistributedDim != -1 && "could not find distributed dimension");
+
+    VectorType srcType = insertOp.getSourceVectorType();
+    VectorType destType = insertOp.getDestVectorType();
+    // Currently we require that both source (kD) and dest (nD) vectors are
+    // distributed. This requires that distributedDim (d) is contained in the
+    // last k dims of the dest vector (d >= n - k).
+    // TODO: Add support for case where source vector is not distributed.
+    int64_t sourceDistributedDim =
+        destDistributedDim - (destType.getRank() - srcType.getRank());
+    if (sourceDistributedDim < 0)
+      return rewriter.notifyMatchFailure(
+          insertOp,
+          "distributed dimension must be in the last k dims of dest vector");
+    // Distributed dimension must be fully inserted.
+    if (srcType.getDimSize(sourceDistributedDim) !=
+        destType.getDimSize(destDistributedDim))
+      return rewriter.notifyMatchFailure(
+          insertOp, "distributed dimension must be fully inserted");
+    SmallVector<int64_t> newSourceDistShape(
+        insertOp.getSourceVectorType().getShape());
+    newSourceDistShape[sourceDistributedDim] =
+        distributedType.getDimSize(destDistributedDim);
+    auto newSourceTy =
+        VectorType::get(newSourceDistShape, distributedType.getElementType());
+    VectorType newDestTy = distributedType;
+    SmallVector<size_t> newRetIndices;
+    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {insertOp.getValueToStore(), insertOp.getDest()},
+        {newSourceTy, newDestTy}, newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    Value distributedSource = newWarpOp->getResult(newRetIndices[0]);
+    Value distributedDest = newWarpOp->getResult(newRetIndices[1]);
+    // Create a new insert strided slice op that inserts distributed source into
+    // distributed dest.
+    Value newInsert = vector::InsertStridedSliceOp::create(
+        rewriter, insertOp.getLoc(), distributedDest.getType(),
+        distributedSource, distributedDest, insertOp.getOffsets(),
+        insertOp.getStrides());
+    rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newInsert);
+    return success();
+  }
+};
+
+/// Sink out extract_strided_slice op feeding into a warp op yield.
+/// ```
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<16x1xf32>) {
+///   ...
+///   %src = ... : vector<64x32xf32>
+///   %extract = vector.extract_strided_slice %src, offsets = [0], sizes = [16],
+///     strides = [1] : vector<64x32xf32> to vector<16x32xf32>
+///   gpu.yield %extract : vector<16x32xf32>
+/// }
+/// ```
+/// To
+/// ```
+/// %0 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<64x1xf32>) {
+///   ...
+///   %src = ... : vector<64x32xf32>
+///   gpu.yield %src : vector<64x32xf32>
+/// }
+/// %extract = vector.extract_strided_slice %0, offsets = [0], sizes = [16],
+///   strides = [1] : vector<64x1xf32> to vector<16x1xf32>
+/// ```
+/// NOTE: Current support assumes that the extraction happens only on non
+/// distributed dimensions (does not require cross lane communication).
+struct WarpOpExtractStridedSlice : public WarpDistributionPattern {
+  using Base::Base;
+  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::ExtractStridedSliceOp>);
+    if (!operand)
+      return failure();
+    unsigned int operandNumber = operand->getOperandNumber();
+    auto extractOp =
+        operand->get().getDefiningOp<vector::ExtractStridedSliceOp>();
+    auto distributedType =
+        cast<VectorType>(warpOp.getResult(operandNumber).getType());
+    // Distributed type must be 2D or higher.
+    // TODO: Support 1D distributed types.
+    if (distributedType.getRank() < 2)
+      return rewriter.notifyMatchFailure(
+          extractOp, "result vector type must be 2D or higher");
+
+    // Find the distributed dimension. There should be exactly one.
+    auto yieldedType = cast<VectorType>(operand->get().getType());
+    int64_t distributedDim = getDistributedDim(yieldedType, distributedType);
+    assert(distributedDim != -1 && "could not find distributed dimension");
+
+    int64_t numOfExtractedDims =
+        static_cast<int64_t>(extractOp.getSizes().size());
+    // If the distributed dim is included in the extracted dims,  then we make
+    // sure distributed dim is fully extracted. If distributed dim is not
+    // included in extracted dims, it is guaranteed to be fully extracted (i.e.
+    // distributed dim comes after all the extracted dims)
+    // TODO: Partial extraction from distributed dimension require cross lane
+    // communication.
+    if (distributedDim < numOfExtractedDims) {
+      int64_t distributedDimOffset =
+          llvm::cast<IntegerAttr>(extractOp.getOffsets()[distributedDim])
+              .getInt();
+      int64_t distributedDimSize =
+          llvm::cast<IntegerAttr>(extractOp.getSizes()[distributedDim])
+              .getInt();
+      if (distributedDimOffset != 0 ||
+          distributedDimSize != yieldedType.getDimSize(distributedDim))
+        return rewriter.notifyMatchFailure(
+            extractOp, "distributed dimension must be fully extracted");
+    }
+    SmallVector<int64_t> newDistributedShape(
+        extractOp.getSourceVectorType().getShape());
+    newDistributedShape[distributedDim] =
+        distributedType.getDimSize(distributedDim);
+    auto newDistributedType =
+        VectorType::get(newDistributedShape, distributedType.getElementType());
+    SmallVector<size_t> newRetIndices;
+    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {extractOp.getSource()}, {newDistributedType},
+        newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    SmallVector<Attribute> distributedSizes = llvm::map_to_vector(
+        extractOp.getSizes(), [](Attribute attr) { return attr; });
+    // Update the distributed sizes to match the distributed type.
+    if (distributedDim < static_cast<int64_t>(distributedSizes.size()))
+      distributedSizes[distributedDim] = rewriter.getI64IntegerAttr(
+          distributedType.getDimSize(distributedDim));
+
+    // Create a new extract strided slice op that extracts from the
+    // distributed vector.
+    Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
+    Value newExtract = vector::ExtractStridedSliceOp::create(
+        rewriter, extractOp.getLoc(), distributedType, distributedVec,
+        extractOp.getOffsets(),
+        ArrayAttr::get(rewriter.getContext(), distributedSizes),
+        extractOp.getStrides());
+    rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
+                                newExtract);
+    return success();
+  }
+};
+
 /// Pattern to move out vector.extract of single element vector. Those don't
 /// need to be distributed and can just be propagated outside of the region.
-struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpExtract : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1246,13 +1395,13 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
       // the 1d case).
       SmallVector<size_t> newRetIndices;
       WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-          rewriter, warpOp, {extractOp.getVector()},
+          rewriter, warpOp, {extractOp.getSource()},
           {extractOp.getSourceVectorType()}, newRetIndices);
       rewriter.setInsertionPointAfter(newWarpOp);
       Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
       // Extract from distributed vector.
-      Value newExtract = rewriter.create<vector::ExtractOp>(
-          loc, distributedVec, extractOp.getMixedPosition());
+      Value newExtract = vector::ExtractOp::create(
+          rewriter, loc, distributedVec, extractOp.getMixedPosition());
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newExtract);
       return success();
@@ -1262,15 +1411,7 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
     auto distributedType =
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     auto yieldedType = cast<VectorType>(operand->get().getType());
-    int64_t distributedDim = -1;
-    for (int64_t i = 0; i < yieldedType.getRank(); ++i) {
-      if (distributedType.getDimSize(i) != yieldedType.getDimSize(i)) {
-        // Keep this assert here in case WarpExecuteOnLane0Op gets extended to
-        // support distributing multiple dimensions in the future.
-        assert(distributedDim == -1 && "found multiple distributed dims");
-        distributedDim = i;
-      }
-    }
+    int64_t distributedDim = getDistributedDim(yieldedType, distributedType);
     assert(distributedDim != -1 && "could not find distributed dimension");
     (void)distributedDim;
 
@@ -1283,13 +1424,13 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
         VectorType::get(newDistributedShape, distributedType.getElementType());
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {extractOp.getVector()}, {newDistributedType},
+        rewriter, warpOp, {extractOp.getSource()}, {newDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
     // Extract from distributed vector.
-    Value newExtract = rewriter.create<vector::ExtractOp>(
-        loc, distributedVec, extractOp.getMixedPosition());
+    Value newExtract = vector::ExtractOp::create(rewriter, loc, distributedVec,
+                                                 extractOp.getMixedPosition());
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                 newExtract);
     return success();
@@ -1298,11 +1439,10 @@ struct WarpOpExtract : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 /// Pattern to move out vector.extract with a scalar result.
 /// Only supports 1-D and 0-D sources for now.
-struct WarpOpExtractScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
+struct WarpOpExtractScalar : public WarpDistributionPattern {
   WarpOpExtractScalar(MLIRContext *ctx, WarpShuffleFromIdxFn fn,
                       PatternBenefit b = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b),
-        warpShuffleFromIdxFn(std::move(fn)) {}
+      : WarpDistributionPattern(ctx, b), warpShuffleFromIdxFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand =
@@ -1338,7 +1478,7 @@ struct WarpOpExtractScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
       distributedVecType = extractSrcType;
     }
     // Yield source vector and position (if present) from warp op.
-    SmallVector<Value> additionalResults{extractOp.getVector()};
+    SmallVector<Value> additionalResults{extractOp.getSource()};
     SmallVector<Type> additionalResultTypes{distributedVecType};
     additionalResults.append(
         SmallVector<Value>(extractOp.getDynamicPosition()));
@@ -1359,7 +1499,7 @@ struct WarpOpExtractScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
       Value newExtract;
       SmallVector<int64_t> indices(extractSrcType.getRank(), 0);
       newExtract =
-          rewriter.create<vector::ExtractOp>(loc, distributedVec, indices);
+          vector::ExtractOp::create(rewriter, loc, distributedVec, indices);
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newExtract);
       return success();
@@ -1379,11 +1519,11 @@ struct WarpOpExtractScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // Extract at position: pos % elementsPerLane
     Value newPos =
         elementsPerLane == 1
-            ? rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult()
+            ? arith::ConstantIndexOp::create(rewriter, loc, 0).getResult()
             : affine::makeComposedAffineApply(rewriter, loc,
                                               sym0 % elementsPerLane, pos);
     Value extracted =
-        rewriter.create<vector::ExtractOp>(loc, distributedVec, newPos);
+        vector::ExtractOp::create(rewriter, loc, distributedVec, newPos);
 
     // Shuffle the extracted value to all lanes.
     Value shuffled = warpShuffleFromIdxFn(
@@ -1396,33 +1536,10 @@ private:
   WarpShuffleFromIdxFn warpShuffleFromIdxFn;
 };
 
-/// Pattern to convert vector.extractelement to vector.extract.
-struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  WarpOpExtractElement(MLIRContext *ctx, PatternBenefit b = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b) {}
-  LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
-                                PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::ExtractElementOp>);
-    if (!operand)
-      return failure();
-    auto extractOp = operand->get().getDefiningOp<vector::ExtractElementOp>();
-    SmallVector<OpFoldResult> indices;
-    if (auto pos = extractOp.getPosition()) {
-      indices.push_back(pos);
-    }
-    rewriter.setInsertionPoint(extractOp);
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, extractOp.getVector(), indices);
-    return success();
-  }
-};
-
 /// Pattern to move out vector.insert with a scalar input.
 /// Only supports 1-D and 0-D destinations for now.
-struct WarpOpInsertScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
-
+struct WarpOpInsertScalar : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::InsertOp>);
@@ -1442,9 +1559,9 @@ struct WarpOpInsertScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
     // Yield destination vector, source scalar and position from warp op.
     SmallVector<Value> additionalResults{insertOp.getDest(),
-                                         insertOp.getSource()};
-    SmallVector<Type> additionalResultTypes{distrType,
-                                            insertOp.getSource().getType()};
+                                         insertOp.getValueToStore()};
+    SmallVector<Type> additionalResultTypes{
+        distrType, insertOp.getValueToStore().getType()};
     additionalResults.append(SmallVector<Value>(insertOp.getDynamicPosition()));
     additionalResultTypes.append(
         SmallVector<Type>(insertOp.getDynamicPosition().getTypes()));
@@ -1474,8 +1591,8 @@ struct WarpOpInsertScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
       if (pos) {
         indices.push_back(pos);
       }
-      newInsert = rewriter.create<vector::InsertOp>(loc, newSource,
-                                                    distributedVec, indices);
+      newInsert = vector::InsertOp::create(rewriter, loc, newSource,
+                                           distributedVec, indices);
       // Broadcast: Simply move the vector.insert op out.
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newInsert);
@@ -1491,31 +1608,30 @@ struct WarpOpInsertScalar : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // Insert position: pos % elementsPerLane
     OpFoldResult newPos = affine::makeComposedFoldedAffineApply(
         rewriter, loc, sym0 % elementsPerLane, pos);
-    Value isInsertingLane = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::eq, newWarpOp.getLaneid(), insertingLane);
+    Value isInsertingLane =
+        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                              newWarpOp.getLaneid(), insertingLane);
     Value newResult =
-        rewriter
-            .create<scf::IfOp>(
-                loc, isInsertingLane,
-                /*thenBuilder=*/
-                [&](OpBuilder &builder, Location loc) {
-                  Value newInsert = builder.create<vector::InsertOp>(
-                      loc, newSource, distributedVec, newPos);
-                  builder.create<scf::YieldOp>(loc, newInsert);
-                },
-                /*elseBuilder=*/
-                [&](OpBuilder &builder, Location loc) {
-                  builder.create<scf::YieldOp>(loc, distributedVec);
-                })
+        scf::IfOp::create(
+            rewriter, loc, isInsertingLane,
+            /*thenBuilder=*/
+            [&](OpBuilder &builder, Location loc) {
+              Value newInsert = vector::InsertOp::create(
+                  builder, loc, newSource, distributedVec, newPos);
+              scf::YieldOp::create(builder, loc, newInsert);
+            },
+            /*elseBuilder=*/
+            [&](OpBuilder &builder, Location loc) {
+              scf::YieldOp::create(builder, loc, distributedVec);
+            })
             .getResult(0);
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newResult);
     return success();
   }
 };
 
-struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
-
+struct WarpOpInsert : public WarpDistributionPattern {
+  using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
     OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::InsertOp>);
@@ -1537,14 +1653,15 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
       // out of the warp op.
       SmallVector<size_t> newRetIndices;
       WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-          rewriter, warpOp, {insertOp.getSource(), insertOp.getDest()},
-          {insertOp.getSourceType(), insertOp.getDestVectorType()},
+          rewriter, warpOp, {insertOp.getValueToStore(), insertOp.getDest()},
+          {insertOp.getValueToStoreType(), insertOp.getDestVectorType()},
           newRetIndices);
       rewriter.setInsertionPointAfter(newWarpOp);
       Value distributedSrc = newWarpOp->getResult(newRetIndices[0]);
       Value distributedDest = newWarpOp->getResult(newRetIndices[1]);
-      Value newResult = rewriter.create<vector::InsertOp>(
-          loc, distributedSrc, distributedDest, insertOp.getMixedPosition());
+      Value newResult = vector::InsertOp::create(rewriter, loc, distributedSrc,
+                                                 distributedDest,
+                                                 insertOp.getMixedPosition());
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newResult);
       return success();
@@ -1566,7 +1683,7 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
     assert(distrDestDim != -1 && "could not find distributed dimension");
 
     // Compute the distributed source vector type.
-    VectorType srcVecType = cast<VectorType>(insertOp.getSourceType());
+    VectorType srcVecType = cast<VectorType>(insertOp.getValueToStoreType());
     SmallVector<int64_t> distrSrcShape(srcVecType.getShape());
     // E.g.: vector.insert %s, %d [2] : vector<96xf32> into vector<128x96xf32>
     // Case 1: distrDestDim = 1 (dim of size 96). In that case, each lane will
@@ -1583,7 +1700,7 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
     // Yield source and dest vectors from warp op.
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {insertOp.getSource(), insertOp.getDest()},
+        rewriter, warpOp, {insertOp.getValueToStore(), insertOp.getDest()},
         {distrSrcType, distrDestType}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value distributedSrc = newWarpOp->getResult(newRetIndices[0]);
@@ -1593,32 +1710,33 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Value newResult;
     if (distrSrcDim >= 0) {
       // Every lane inserts a small piece.
-      newResult = rewriter.create<vector::InsertOp>(
-          loc, distributedSrc, distributedDest, insertOp.getMixedPosition());
+      newResult = vector::InsertOp::create(rewriter, loc, distributedSrc,
+                                           distributedDest,
+                                           insertOp.getMixedPosition());
     } else {
       // One lane inserts the entire source vector.
       int64_t elementsPerLane = distrDestType.getDimSize(distrDestDim);
       SmallVector<OpFoldResult> pos = insertOp.getMixedPosition();
       SmallVector<int64_t> newPos = getAsIntegers(pos);
       // tid of inserting lane: pos / elementsPerLane
-      Value insertingLane = rewriter.create<arith::ConstantIndexOp>(
-          loc, newPos[distrDestDim] / elementsPerLane);
-      Value isInsertingLane = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, newWarpOp.getLaneid(), insertingLane);
+      Value insertingLane = arith::ConstantIndexOp::create(
+          rewriter, loc, newPos[distrDestDim] / elementsPerLane);
+      Value isInsertingLane =
+          arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                newWarpOp.getLaneid(), insertingLane);
       // Insert position: pos % elementsPerLane
       newPos[distrDestDim] %= elementsPerLane;
       auto insertingBuilder = [&](OpBuilder &builder, Location loc) {
-        Value newInsert = builder.create<vector::InsertOp>(
-            loc, distributedSrc, distributedDest, newPos);
-        builder.create<scf::YieldOp>(loc, newInsert);
+        Value newInsert = vector::InsertOp::create(builder, loc, distributedSrc,
+                                                   distributedDest, newPos);
+        scf::YieldOp::create(builder, loc, newInsert);
       };
       auto nonInsertingBuilder = [&](OpBuilder &builder, Location loc) {
-        builder.create<scf::YieldOp>(loc, distributedDest);
+        scf::YieldOp::create(builder, loc, distributedDest);
       };
-      newResult = rewriter
-                      .create<scf::IfOp>(loc, isInsertingLane,
-                                         /*thenBuilder=*/insertingBuilder,
-                                         /*elseBuilder=*/nonInsertingBuilder)
+      newResult = scf::IfOp::create(rewriter, loc, isInsertingLane,
+                                    /*thenBuilder=*/insertingBuilder,
+                                    /*elseBuilder=*/nonInsertingBuilder)
                       .getResult(0);
     }
 
@@ -1627,25 +1745,213 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
   }
 };
 
-struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
-
+/// Sink scf.if out of WarpExecuteOnLane0Op. This can be done only if
+/// the scf.if is the last operation in the region so that it doesn't
+/// change the order of execution. This creates a new scf.if after the
+/// WarpExecuteOnLane0Op. Each branch of the new scf.if is enclosed in
+/// the "inner" WarpExecuteOnLane0Op. Example:
+/// ```
+/// gpu.warp_execute_on_lane_0(%laneid)[32] {
+///   %payload = ... : vector<32xindex>
+///   scf.if %pred {
+///     vector.store %payload, %buffer[%idx] : memref<128xindex>,
+///     vector<32xindex>
+///   }
+///   gpu.yield
+/// }
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] {
+///   %payload = ... : vector<32xindex>
+///   gpu.yield %payload : vector<32xindex>
+/// }
+/// scf.if %pred {
+///   gpu.warp_execute_on_lane_0(%laneid)[32] args(%r : vector<1xindex>) {
+///     ^bb0(%arg1: vector<32xindex>):
+///     vector.store %arg1, %buffer[%idx] : memref<128xindex>, vector<32xindex>
+///   }
+/// }
+/// ```
+struct WarpOpScfIfOp : public WarpDistributionPattern {
+  WarpOpScfIfOp(MLIRContext *ctx, DistributionMapFn fn, PatternBenefit b = 1)
+      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::InsertElementOp>);
-    if (!operand)
+    gpu::YieldOp warpOpYield = warpOp.getTerminator();
+    // Only pick up `IfOp` if it is the last op in the region.
+    Operation *lastNode = warpOpYield->getPrevNode();
+    auto ifOp = dyn_cast_or_null<scf::IfOp>(lastNode);
+    if (!ifOp)
       return failure();
-    auto insertOp = operand->get().getDefiningOp<vector::InsertElementOp>();
-    SmallVector<OpFoldResult> indices;
-    if (auto pos = insertOp.getPosition()) {
-      indices.push_back(pos);
+
+    // The current `WarpOp` can yield two types of values:
+    // 1. Not results of `IfOp`:
+    //     Preserve them in the new `WarpOp`.
+    //     Collect their yield index to remap the usages.
+    // 2. Results of `IfOp`:
+    //     They are not part of the new `WarpOp` results.
+    //     Map current warp's yield operand index to `IfOp` result idx.
+    SmallVector<Value> nonIfYieldValues;
+    SmallVector<unsigned> nonIfYieldIndices;
+    llvm::SmallDenseMap<unsigned, unsigned> ifResultMapping;
+    llvm::SmallDenseMap<unsigned, VectorType> ifResultDistTypes;
+    for (OpOperand &yieldOperand : warpOpYield->getOpOperands()) {
+      const unsigned yieldOperandIdx = yieldOperand.getOperandNumber();
+      if (yieldOperand.get().getDefiningOp() != ifOp.getOperation()) {
+        nonIfYieldValues.push_back(yieldOperand.get());
+        nonIfYieldIndices.push_back(yieldOperandIdx);
+        continue;
+      }
+      OpResult ifResult = cast<OpResult>(yieldOperand.get());
+      const unsigned ifResultIdx = ifResult.getResultNumber();
+      ifResultMapping[yieldOperandIdx] = ifResultIdx;
+      // If this `ifOp` result is vector type and it is yielded by the
+      // `WarpOp`, we keep track the distributed type for this result.
+      if (!isa<VectorType>(ifResult.getType()))
+        continue;
+      VectorType distType =
+          cast<VectorType>(warpOp.getResult(yieldOperandIdx).getType());
+      ifResultDistTypes[ifResultIdx] = distType;
     }
-    rewriter.setInsertionPoint(insertOp);
-    rewriter.replaceOpWithNewOp<vector::InsertOp>(
-        insertOp, insertOp.getSource(), insertOp.getDest(), indices);
+
+    // Collect `WarpOp`-defined values used in `ifOp`, the new warp op returns
+    // them
+    auto [escapingValuesThen, escapingValueInputTypesThen,
+          escapingValueDistTypesThen] =
+        getInnerRegionEscapingValues(warpOp, ifOp.getThenRegion(),
+                                     distributionMapFn);
+    auto [escapingValuesElse, escapingValueInputTypesElse,
+          escapingValueDistTypesElse] =
+        getInnerRegionEscapingValues(warpOp, ifOp.getElseRegion(),
+                                     distributionMapFn);
+    if (llvm::is_contained(escapingValueDistTypesThen, Type{}) ||
+        llvm::is_contained(escapingValueDistTypesElse, Type{}))
+      return failure();
+
+    // The new `WarpOp` groups yields values in following order:
+    // 1. Branch condition
+    // 2. Escaping values then branch
+    // 3. Escaping values else branch
+    // 4. All non-`ifOp` yielded values.
+    SmallVector<Value> newWarpOpYieldValues{ifOp.getCondition()};
+    newWarpOpYieldValues.append(escapingValuesThen.begin(),
+                                escapingValuesThen.end());
+    newWarpOpYieldValues.append(escapingValuesElse.begin(),
+                                escapingValuesElse.end());
+    SmallVector<Type> newWarpOpDistTypes{ifOp.getCondition().getType()};
+    newWarpOpDistTypes.append(escapingValueDistTypesThen.begin(),
+                              escapingValueDistTypesThen.end());
+    newWarpOpDistTypes.append(escapingValueDistTypesElse.begin(),
+                              escapingValueDistTypesElse.end());
+
+    llvm::SmallDenseMap<unsigned, unsigned> origToNewYieldIdx;
+    for (auto [idx, val] :
+         llvm::zip_equal(nonIfYieldIndices, nonIfYieldValues)) {
+      origToNewYieldIdx[idx] = newWarpOpYieldValues.size();
+      newWarpOpYieldValues.push_back(val);
+      newWarpOpDistTypes.push_back(warpOp.getResult(idx).getType());
+    }
+    // Create the new `WarpOp` with the updated yield values and types.
+    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
+        rewriter, warpOp, newWarpOpYieldValues, newWarpOpDistTypes);
+    // `ifOp` returns the result of the inner warp op.
+    SmallVector<Type> newIfOpDistResTypes;
+    for (auto [i, res] : llvm::enumerate(ifOp.getResults())) {
+      Type distType = cast<Value>(res).getType();
+      if (auto vecType = dyn_cast<VectorType>(distType)) {
+        AffineMap map = distributionMapFn(cast<Value>(res));
+        // Fallback to affine map if the dist result was not previously recorded
+        distType = ifResultDistTypes.count(i)
+                       ? ifResultDistTypes[i]
+                       : getDistributedType(vecType, map, warpOp.getWarpSize());
+      }
+      newIfOpDistResTypes.push_back(distType);
+    }
+    // Create a new `IfOp` outside the new `WarpOp` region.
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    auto newIfOp = scf::IfOp::create(
+        rewriter, ifOp.getLoc(), newIfOpDistResTypes, newWarpOp.getResult(0),
+        static_cast<bool>(ifOp.thenBlock()),
+        static_cast<bool>(ifOp.elseBlock()));
+    auto encloseRegionInWarpOp =
+        [&](Block *oldIfBranch, Block *newIfBranch,
+            llvm::SmallSetVector<Value, 32> &escapingValues,
+            SmallVector<Type> &escapingValueInputTypes,
+            size_t warpResRangeStart) {
+          OpBuilder::InsertionGuard g(rewriter);
+          if (!newIfBranch)
+            return;
+          rewriter.setInsertionPointToStart(newIfBranch);
+          llvm::SmallDenseMap<Value, int64_t> escapeValToBlockArgIndex;
+          SmallVector<Value> innerWarpInputVals;
+          SmallVector<Type> innerWarpInputTypes;
+          for (size_t i = 0; i < escapingValues.size();
+               ++i, ++warpResRangeStart) {
+            innerWarpInputVals.push_back(
+                newWarpOp.getResult(warpResRangeStart));
+            escapeValToBlockArgIndex[escapingValues[i]] =
+                innerWarpInputTypes.size();
+            innerWarpInputTypes.push_back(escapingValueInputTypes[i]);
+          }
+          auto innerWarp = WarpExecuteOnLane0Op::create(
+              rewriter, newWarpOp.getLoc(), newIfOp.getResultTypes(),
+              newWarpOp.getLaneid(), newWarpOp.getWarpSize(),
+              innerWarpInputVals, innerWarpInputTypes);
+
+          innerWarp.getWarpRegion().takeBody(*oldIfBranch->getParent());
+          innerWarp.getWarpRegion().addArguments(
+              innerWarpInputTypes,
+              SmallVector<Location>(innerWarpInputTypes.size(), ifOp.getLoc()));
+
+          SmallVector<Value> yieldOperands;
+          for (Value operand : oldIfBranch->getTerminator()->getOperands())
+            yieldOperands.push_back(operand);
+          rewriter.eraseOp(oldIfBranch->getTerminator());
+
+          rewriter.setInsertionPointToEnd(innerWarp.getBody());
+          gpu::YieldOp::create(rewriter, innerWarp.getLoc(), yieldOperands);
+          rewriter.setInsertionPointAfter(innerWarp);
+          scf::YieldOp::create(rewriter, ifOp.getLoc(), innerWarp.getResults());
+
+          // Update any users of escaping values that were forwarded to the
+          // inner `WarpOp`. These values are arguments of the inner `WarpOp`.
+          innerWarp.walk([&](Operation *op) {
+            for (OpOperand &operand : op->getOpOperands()) {
+              auto it = escapeValToBlockArgIndex.find(operand.get());
+              if (it == escapeValToBlockArgIndex.end())
+                continue;
+              operand.set(innerWarp.getBodyRegion().getArgument(it->second));
+            }
+          });
+          mlir::vector::moveScalarUniformCode(innerWarp);
+        };
+    encloseRegionInWarpOp(&ifOp.getThenRegion().front(),
+                          &newIfOp.getThenRegion().front(), escapingValuesThen,
+                          escapingValueInputTypesThen, 1);
+    if (!ifOp.getElseRegion().empty())
+      encloseRegionInWarpOp(&ifOp.getElseRegion().front(),
+                            &newIfOp.getElseRegion().front(),
+                            escapingValuesElse, escapingValueInputTypesElse,
+                            1 + escapingValuesThen.size());
+    // Update the users of `<- WarpOp.yield <- IfOp.yield` to use the new `IfOp`
+    // result.
+    for (auto [origIdx, newIdx] : ifResultMapping)
+      rewriter.replaceAllUsesExcept(warpOp.getResult(origIdx),
+                                    newIfOp.getResult(newIdx), newIfOp);
+    // Similarly, update any users of the `WarpOp` results that were not
+    // results of the `IfOp`.
+    for (auto [origIdx, newIdx] : origToNewYieldIdx)
+      rewriter.replaceAllUsesWith(warpOp.getResult(origIdx),
+                                  newWarpOp.getResult(newIdx));
+    // Remove the original `WarpOp` and `IfOp`, they should not have any uses
+    // at this point.
+    rewriter.eraseOp(ifOp);
+    rewriter.eraseOp(warpOp);
     return success();
   }
+
+private:
+  DistributionMapFn distributionMapFn;
 };
 
 /// Sink scf.for region out of WarpExecuteOnLane0Op. This can be done only if
@@ -1680,113 +1986,182 @@ struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
 ///     scf.yield %iw : vector<4xf32>
 ///  }
 /// ```
-struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
+struct WarpOpScfForOp : public WarpDistributionPattern {
 
   WarpOpScfForOp(MLIRContext *ctx, DistributionMapFn fn, PatternBenefit b = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b),
-        distributionMapFn(std::move(fn)) {}
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+      : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
-        warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-    // Only pick up forOp if it is the last op in the region.
-    Operation *lastNode = yield->getPrevNode();
+    gpu::YieldOp warpOpYield = warpOp.getTerminator();
+    // Only pick up `ForOp` if it is the last op in the region.
+    Operation *lastNode = warpOpYield->getPrevNode();
     auto forOp = dyn_cast_or_null<scf::ForOp>(lastNode);
     if (!forOp)
       return failure();
-    // Collect Values that come from the warp op but are outside the forOp.
-    // Those Value needs to be returned by the original warpOp and passed to
-    // the new op.
-    llvm::SmallSetVector<Value, 32> escapingValues;
-    SmallVector<Type> inputTypes;
-    SmallVector<Type> distTypes;
-    mlir::visitUsedValuesDefinedAbove(
-        forOp.getBodyRegion(), [&](OpOperand *operand) {
-          Operation *parent = operand->get().getParentRegion()->getParentOp();
-          if (warpOp->isAncestor(parent)) {
-            if (!escapingValues.insert(operand->get()))
-              return;
-            Type distType = operand->get().getType();
-            if (auto vecType = dyn_cast<VectorType>(distType)) {
-              AffineMap map = distributionMapFn(operand->get());
-              distType = getDistributedType(vecType, map, warpOp.getWarpSize());
-            }
-            inputTypes.push_back(operand->get().getType());
-            distTypes.push_back(distType);
-          }
-        });
-
-    if (llvm::is_contained(distTypes, Type{}))
+    // Collect Values that come from the `WarpOp` but are outside the `ForOp`.
+    // Those Values need to be returned by the new warp op.
+    auto [escapingValues, escapingValueInputTypes, escapingValueDistTypes] =
+        getInnerRegionEscapingValues(warpOp, forOp.getBodyRegion(),
+                                     distributionMapFn);
+    if (llvm::is_contained(escapingValueDistTypes, Type{}))
       return failure();
-
-    SmallVector<size_t> newRetIndices;
-    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, escapingValues.getArrayRef(), distTypes,
-        newRetIndices);
-    yield = cast<gpu::YieldOp>(
-        newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-
-    SmallVector<Value> newOperands;
-    SmallVector<unsigned> resultIdx;
-    // Collect all the outputs coming from the forOp.
-    for (OpOperand &yieldOperand : yield->getOpOperands()) {
-      if (yieldOperand.get().getDefiningOp() != forOp.getOperation())
+    // `WarpOp` can yield two types of values:
+    // 1. Values that are not results of the `ForOp`:
+    //    These values must also be yielded by the new `WarpOp`. Also, we need
+    //    to record the index mapping for these values to replace them later.
+    // 2. Values that are results of the `ForOp`:
+    //    In this case, we record the index mapping between the `WarpOp` result
+    //    index and matching `ForOp` result index.
+    // Additionally, we keep track of the distributed types for all `ForOp`
+    // vector results.
+    SmallVector<Value> nonForYieldedValues;
+    SmallVector<unsigned> nonForResultIndices;
+    llvm::SmallDenseMap<unsigned, unsigned> forResultMapping;
+    llvm::SmallDenseMap<unsigned, VectorType> forResultDistTypes;
+    for (OpOperand &yieldOperand : warpOpYield->getOpOperands()) {
+      // Yielded value is not a result of the forOp.
+      if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
+        nonForYieldedValues.push_back(yieldOperand.get());
+        nonForResultIndices.push_back(yieldOperand.getOperandNumber());
         continue;
-      auto forResult = cast<OpResult>(yieldOperand.get());
-      newOperands.push_back(
-          newWarpOp.getResult(yieldOperand.getOperandNumber()));
-      yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
-      resultIdx.push_back(yieldOperand.getOperandNumber());
+      }
+      OpResult forResult = cast<OpResult>(yieldOperand.get());
+      unsigned int forResultNumber = forResult.getResultNumber();
+      forResultMapping[yieldOperand.getOperandNumber()] = forResultNumber;
+      // If this `ForOp` result is vector type and it is yielded by the
+      // `WarpOp`, we keep track the distributed type for this result.
+      if (!isa<VectorType>(forResult.getType()))
+        continue;
+      VectorType distType = cast<VectorType>(
+          warpOp.getResult(yieldOperand.getOperandNumber()).getType());
+      forResultDistTypes[forResultNumber] = distType;
     }
 
+    // Newly created `WarpOp` will yield values in following order:
+    // 1. All init args of the `ForOp`.
+    // 2. All escaping values.
+    // 3. All non-`ForOp` yielded values.
+    SmallVector<Value> newWarpOpYieldValues;
+    SmallVector<Type> newWarpOpDistTypes;
+    for (auto [i, initArg] : llvm::enumerate(forOp.getInitArgs())) {
+      newWarpOpYieldValues.push_back(initArg);
+      // Compute the distributed type for this init arg.
+      Type distType = initArg.getType();
+      if (auto vecType = dyn_cast<VectorType>(distType)) {
+        // If the `ForOp` result corresponds to this init arg is already yielded
+        // we can get the distributed type from `forResultDistTypes` map.
+        // Otherwise, we compute it using distributionMapFn.
+        AffineMap map = distributionMapFn(initArg);
+        distType = forResultDistTypes.count(i)
+                       ? forResultDistTypes[i]
+                       : getDistributedType(vecType, map, warpOp.getWarpSize());
+      }
+      newWarpOpDistTypes.push_back(distType);
+    }
+    // Insert escaping values and their distributed types.
+    newWarpOpYieldValues.insert(newWarpOpYieldValues.end(),
+                                escapingValues.begin(), escapingValues.end());
+    newWarpOpDistTypes.insert(newWarpOpDistTypes.end(),
+                              escapingValueDistTypes.begin(),
+                              escapingValueDistTypes.end());
+    // Next, we insert all non-`ForOp` yielded values and their distributed
+    // types. We also create a mapping between the non-`ForOp` yielded value
+    // index and the corresponding new `WarpOp` yield value index (needed to
+    // update users later).
+    llvm::SmallDenseMap<unsigned, unsigned> nonForResultMapping;
+    for (auto [i, v] :
+         llvm::zip_equal(nonForResultIndices, nonForYieldedValues)) {
+      nonForResultMapping[i] = newWarpOpYieldValues.size();
+      newWarpOpYieldValues.push_back(v);
+      newWarpOpDistTypes.push_back(warpOp.getResult(i).getType());
+    }
+    // Create the new `WarpOp` with the updated yield values and types.
+    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
+        rewriter, warpOp, newWarpOpYieldValues, newWarpOpDistTypes);
+
+    // Next, we create a new `ForOp` with the init args yielded by the new
+    // `WarpOp`.
+    const unsigned escapingValuesStartIdx =
+        forOp.getInitArgs().size(); // `ForOp` init args are positioned before
+                                    // escaping values in the new `WarpOp`.
+    SmallVector<Value> newForOpOperands;
+    for (size_t i = 0; i < escapingValuesStartIdx; ++i)
+      newForOpOperands.push_back(newWarpOp.getResult(i));
+
+    // Create a new `ForOp` outside the new `WarpOp` region.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
-
-    // Create a new for op outside the region with a WarpExecuteOnLane0Op
-    // region inside.
-    auto newForOp = rewriter.create<scf::ForOp>(
-        forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newOperands);
+    auto newForOp = scf::ForOp::create(
+        rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+        forOp.getStep(), newForOpOperands, /*bodyBuilder=*/nullptr,
+        forOp.getUnsignedCmp());
+    // Next, we insert a new `WarpOp` (called inner `WarpOp`) inside the
+    // newly created `ForOp`. This `WarpOp` will contain all ops that were
+    // contained within the original `ForOp` body.
     rewriter.setInsertionPointToStart(newForOp.getBody());
 
-    SmallVector<Value> warpInput(newForOp.getRegionIterArgs().begin(),
-                                 newForOp.getRegionIterArgs().end());
-    SmallVector<Type> warpInputType(forOp.getResultTypes().begin(),
-                                    forOp.getResultTypes().end());
+    SmallVector<Value> innerWarpInput(newForOp.getRegionIterArgs().begin(),
+                                      newForOp.getRegionIterArgs().end());
+    SmallVector<Type> innerWarpInputType(forOp.getResultTypes().begin(),
+                                         forOp.getResultTypes().end());
+    // Escaping values are forwarded to the inner `WarpOp` as its (additional)
+    // arguments. We keep track of the mapping between these values and their
+    // argument index in the inner `WarpOp` (to replace users later).
     llvm::SmallDenseMap<Value, int64_t> argIndexMapping;
-    for (auto [i, retIdx] : llvm::enumerate(newRetIndices)) {
-      warpInput.push_back(newWarpOp.getResult(retIdx));
-      argIndexMapping[escapingValues[i]] = warpInputType.size();
-      warpInputType.push_back(inputTypes[i]);
+    for (size_t i = escapingValuesStartIdx;
+         i < escapingValuesStartIdx + escapingValues.size(); ++i) {
+      innerWarpInput.push_back(newWarpOp.getResult(i));
+      argIndexMapping[escapingValues[i - escapingValuesStartIdx]] =
+          innerWarpInputType.size();
+      innerWarpInputType.push_back(
+          escapingValueInputTypes[i - escapingValuesStartIdx]);
     }
-    auto innerWarp = rewriter.create<WarpExecuteOnLane0Op>(
-        newWarpOp.getLoc(), newForOp.getResultTypes(), newWarpOp.getLaneid(),
-        newWarpOp.getWarpSize(), warpInput, warpInputType);
+    // Create the inner `WarpOp` with the new input values and types.
+    auto innerWarp = WarpExecuteOnLane0Op::create(
+        rewriter, newWarpOp.getLoc(), newForOp.getResultTypes(),
+        newWarpOp.getLaneid(), newWarpOp.getWarpSize(), innerWarpInput,
+        innerWarpInputType);
 
+    // Inline the `ForOp` body into the inner `WarpOp` body.
     SmallVector<Value> argMapping;
     argMapping.push_back(newForOp.getInductionVar());
-    for (Value args : innerWarp.getBody()->getArguments()) {
+    for (Value args : innerWarp.getBody()->getArguments())
       argMapping.push_back(args);
-    }
+
     argMapping.resize(forOp.getBody()->getNumArguments());
     SmallVector<Value> yieldOperands;
     for (Value operand : forOp.getBody()->getTerminator()->getOperands())
       yieldOperands.push_back(operand);
+
     rewriter.eraseOp(forOp.getBody()->getTerminator());
     rewriter.mergeBlocks(forOp.getBody(), innerWarp.getBody(), argMapping);
+
+    // Insert a gpu `YieldOp` at the end of the inner `WarpOp` body that yields
+    // original `ForOp` results.
     rewriter.setInsertionPointToEnd(innerWarp.getBody());
-    rewriter.create<gpu::YieldOp>(innerWarp.getLoc(), yieldOperands);
+    gpu::YieldOp::create(rewriter, innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
+    // Insert a scf.yield op at the end of the new `ForOp` body that yields
+    // the inner `WarpOp` results.
     if (!innerWarp.getResults().empty())
-      rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
+      scf::YieldOp::create(rewriter, forOp.getLoc(), innerWarp.getResults());
+
+    // Update the users of original `WarpOp` results that were coming from the
+    // original `ForOp` to the corresponding new `ForOp` result.
+    for (auto [origIdx, newIdx] : forResultMapping)
+      rewriter.replaceAllUsesExcept(warpOp.getResult(origIdx),
+                                    newForOp.getResult(newIdx), newForOp);
+    // Similarly, update any users of the `WarpOp` results that were not
+    // results of the `ForOp`.
+    for (auto [origIdx, newIdx] : nonForResultMapping)
+      rewriter.replaceAllUsesWith(warpOp.getResult(origIdx),
+                                  newWarpOp.getResult(newIdx));
+    // Remove the original `WarpOp` and `ForOp`, they should not have any uses
+    // at this point.
     rewriter.eraseOp(forOp);
-    // Replace the warpOp result coming from the original ForOp.
-    for (const auto &res : llvm::enumerate(resultIdx)) {
-      rewriter.replaceAllUsesWith(newWarpOp.getResult(res.value()),
-                                  newForOp.getResult(res.index()));
-      newForOp->setOperand(res.index() + 3, newWarpOp.getResult(res.value()));
-    }
+    rewriter.eraseOp(warpOp);
+    // Update any users of escaping values that were forwarded to the
+    // inner `WarpOp`. These values are now arguments of the inner `WarpOp`.
     newForOp.walk([&](Operation *op) {
       for (OpOperand &operand : op->getOpOperands()) {
         auto it = argIndexMapping.find(operand.get());
@@ -1796,7 +2171,7 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
       }
     });
 
-    // Finally, hoist out any now uniform code from the inner warp op.
+    // Finally, hoist out any now uniform code from the inner `WarpOp`.
     mlir::vector::moveScalarUniformCode(innerWarp);
     return success();
   }
@@ -1824,11 +2199,11 @@ private:
 /// %a = vector.extract %0[0] : f32 from vector<1xf32>
 /// %r = ("warp.reduction %a")
 /// ```
-struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
+struct WarpOpReduction : public WarpDistributionPattern {
   WarpOpReduction(MLIRContext *context,
                   DistributedReductionFn distributedReductionFn,
                   PatternBenefit benefit = 1)
-      : OpRewritePattern<WarpExecuteOnLane0Op>(context, benefit),
+      : WarpDistributionPattern(context, benefit),
         distributedReductionFn(std::move(distributedReductionFn)) {}
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
@@ -1908,15 +2283,18 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
-               WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand,
-               WarpOpConstant, WarpOpExtractElement, WarpOpInsertElement,
-               WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask>(
-      patterns.getContext(), benefit);
+  patterns
+      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+           WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand, WarpOpConstant,
+           WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask,
+           WarpOpExtractStridedSlice, WarpOpInsertStridedSlice, WarpOpStep>(
+          patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
                                benefit);
+  patterns.add<WarpOpScfIfOp>(patterns.getContext(), distributionMapFn,
+                              benefit);
 }
 
 void mlir::vector::populateDistributeReduction(
@@ -1925,6 +2303,13 @@ void mlir::vector::populateDistributeReduction(
     PatternBenefit benefit) {
   patterns.add<WarpOpReduction>(patterns.getContext(), distributedReductionFn,
                                 benefit);
+}
+
+/// Helper to know if an op can be hoisted out of the region.
+static bool canBeHoisted(Operation *op,
+                         function_ref<bool(Value)> definedOutside) {
+  return llvm::all_of(op->getOperands(), definedOutside) &&
+         isMemoryEffectFree(op) && op->getNumRegions() == 0;
 }
 
 void mlir::vector::moveScalarUniformCode(WarpExecuteOnLane0Op warpOp) {

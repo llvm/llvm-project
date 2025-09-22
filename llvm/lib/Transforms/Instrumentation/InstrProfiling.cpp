@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -46,6 +47,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
@@ -75,7 +77,7 @@ cl::opt<bool> DebugInfoCorrelate(
              "-profile-correlate=debug-info)"),
     cl::init(false));
 
-cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
@@ -253,7 +255,7 @@ public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                bool IsCS)
-      : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
+      : M(M), Options(Options), TT(M.getTargetTriple()), IsCS(IsCS),
         GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
@@ -775,7 +777,7 @@ void InstrLowerer::doSampling(Instruction *I) {
     NewSamplingVarVal =
         IncBuilder.CreateAdd(LoadSamplingVar, GetConstant(IncBuilder, 1));
     SamplingVarIncr = IncBuilder.CreateStore(NewSamplingVarVal, SamplingVar);
-    I->moveBefore(ThenTerm);
+    I->moveBefore(ThenTerm->getIterator());
   }
 
   if (config.IsFastSampling)
@@ -792,11 +794,11 @@ void InstrLowerer::doSampling(Instruction *I) {
 
   // For the simple sampling, the counter update happens in sampling var reset.
   if (config.IsSimpleSampling)
-    I->moveBefore(ThenTerm);
+    I->moveBefore(ThenTerm->getIterator());
 
   IRBuilder<> ResetBuilder(ThenTerm);
   ResetBuilder.CreateStore(GetConstant(ResetBuilder, 0), SamplingVar);
-  SamplingVarIncr->moveBefore(ElseTerm);
+  SamplingVarIncr->moveBefore(ElseTerm->getIterator());
 }
 
 bool InstrLowerer::lowerIntrinsics(Function *F) {
@@ -1494,13 +1496,11 @@ static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
 // FIXME: Introduce an internal alias like what's done for functions to reduce
 // the number of relocation entries.
 static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
-  auto *Int8PtrTy = PointerType::getUnqual(GV->getContext());
-
   // Store a nullptr in __profvt_ if a real address shouldn't be used.
   if (!shouldRecordVTableAddr(GV))
-    return ConstantPointerNull::get(Int8PtrTy);
+    return ConstantPointerNull::get(PointerType::getUnqual(GV->getContext()));
 
-  return ConstantExpr::getBitCast(GV, Int8PtrTy);
+  return GV;
 }
 
 void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
@@ -1939,8 +1939,6 @@ void InstrLowerer::emitVNodes() {
 }
 
 void InstrLowerer::emitNameData() {
-  std::string UncompressedData;
-
   if (ReferencedNames.empty())
     return;
 
@@ -1956,12 +1954,6 @@ void InstrLowerer::emitNameData() {
   NamesVar = new GlobalVariable(M, NamesVal->getType(), true,
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
-
-  // Make names variable public if current target is a GPU
-  if (isGPUProfTarget(M)) {
-    NamesVar->setLinkage(GlobalValue::ExternalLinkage);
-    NamesVar->setVisibility(GlobalValue::VisibilityTypes::ProtectedVisibility);
-  }
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);

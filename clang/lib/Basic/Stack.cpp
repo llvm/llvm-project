@@ -13,33 +13,13 @@
 
 #include "clang/Basic/Stack.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/ProgramStack.h"
 
-#ifdef _MSC_VER
-#include <intrin.h>  // for _AddressOfReturnAddress
-#endif
+static LLVM_THREAD_LOCAL uintptr_t BottomOfStack = 0;
 
-static LLVM_THREAD_LOCAL void *BottomOfStack = nullptr;
-
-static void *getStackPointer() {
-#if __GNUC__ || __has_builtin(__builtin_frame_address)
-  return __builtin_frame_address(0);
-#elif defined(_MSC_VER)
-  return _AddressOfReturnAddress();
-#else
-  char CharOnStack = 0;
-  // The volatile store here is intended to escape the local variable, to
-  // prevent the compiler from optimizing CharOnStack into anything other
-  // than a char on the stack.
-  //
-  // Tested on: MSVC 2015 - 2019, GCC 4.9 - 9, Clang 3.2 - 9, ICC 13 - 19.
-  char *volatile Ptr = &CharOnStack;
-  return Ptr;
-#endif
-}
-
-void clang::noteBottomOfStack() {
-  if (!BottomOfStack)
-    BottomOfStack = getStackPointer();
+void clang::noteBottomOfStack(bool ForceSet) {
+  if (!BottomOfStack || ForceSet)
+    BottomOfStack = llvm::getStackPointer();
 }
 
 bool clang::isStackNearlyExhausted() {
@@ -51,7 +31,8 @@ bool clang::isStackNearlyExhausted() {
   if (!BottomOfStack)
     return false;
 
-  intptr_t StackDiff = (intptr_t)getStackPointer() - (intptr_t)BottomOfStack;
+  intptr_t StackDiff =
+      (intptr_t)llvm::getStackPointer() - (intptr_t)BottomOfStack;
   size_t StackUsage = (size_t)std::abs(StackDiff);
 
   // If the stack pointer has a surprising value, we do not understand this
@@ -66,9 +47,12 @@ bool clang::isStackNearlyExhausted() {
 void clang::runWithSufficientStackSpaceSlow(llvm::function_ref<void()> Diag,
                                             llvm::function_ref<void()> Fn) {
   llvm::CrashRecoveryContext CRC;
-  CRC.RunSafelyOnThread([&] {
-    noteBottomOfStack();
+  // Preserve the BottomOfStack in case RunSafelyOnNewStack uses split stacks.
+  uintptr_t PrevBottom = BottomOfStack;
+  CRC.RunSafelyOnNewStack([&] {
+    noteBottomOfStack(true);
     Diag();
     Fn();
   }, DesiredStackSize);
+  BottomOfStack = PrevBottom;
 }

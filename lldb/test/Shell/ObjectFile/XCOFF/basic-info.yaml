@@ -7,13 +7,34 @@
 # CHECK: Stripped: false
 # CHECK: Type: executable
 # CHECK: Strata: unknown
+# CHECK: Name: .text
+# CHECK-NEXT: Type: code
+# CHECK-NEXT: Permissions: r-x
+# CHECK: Name: .data
+# CHECK-NEXT: Type: data
+# CHECK-NEXT: Permissions: rw-
+# CHECK: Name: .bss
+# CHECK-NEXT: Type: zero-fill
+# CHECK-NEXT: Permissions: rw-
+# CHECK: Name: .loader
+# CHECK-NEXT: Type: regular
+# CHECK-NEXT: Permissions: r--
+# CHECK: Name: .dwline
+# CHECK-NEXT: Type: dwarf-line
+# CHECK-NEXT: Permissions: r--
+# CHECK: Name: .dwinfo
+# CHECK-NEXT: Type: dwarf-info
+# CHECK-NEXT: Permissions: r--
+# CHECK: Name: .dwabrev
+# CHECK-NEXT: Type: dwarf-abbrev
+# CHECK-NEXT: Permissions: r--
 
 --- !XCOFF
 FileHeader:
   MagicNumber:     0x1F7
-  NumberOfSections: 1 
+  NumberOfSections: 7 
   CreationTime:    000000000
-  Flags:           0x0000
+  Flags:           0x0002
 Sections:
   - Name:            .text
     Address:         0x100000438
@@ -22,6 +43,66 @@ Sections:
     FileOffsetToLineNumbers: 0x0
     NumberOfLineNumbers: 0x0
     Flags:           [ STYP_TEXT ]
-    SectionData:     E8C20000E94204  
+    SectionData:     E8C20000
+  - Name:            .data
+    Address:         0x1100008D2
+    Size:            0x2AE
+    FileOffsetToData: 0x8D2
+    FileOffsetToRelocations: 0x132E
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x22
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DATA ]
+    SectionData:     '' 
+  - Name:            .bss
+    Address:         0x110000B80
+    Size:            0x28
+    FileOffsetToData: 0x0
+    FileOffsetToRelocations: 0x0
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x0
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_BSS ]
+    SectionData:     ''
+  - Name:            .loader
+    Address:         0x0
+    Size:            0x413
+    FileOffsetToData: 0xB80
+    FileOffsetToRelocations: 0x0
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x0
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_LOADER ]
+    SectionData:     00000001
+  - Name:            .dwline
+    Address:         0x0
+    Size:            0x9C
+    FileOffsetToData: 0xF94
+    FileOffsetToRelocations: 0x150A
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x5
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DWARF ]
+    SectionData:     FFFFFFFF
+  - Name:            .dwinfo
+    Address:         0x0
+    Size:            0xDD
+    FileOffsetToData: 0x1030
+    FileOffsetToRelocations: 0x1550
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x6
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DWARF ]
+    SectionData:     FFFFFFFF
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x43
+    FileOffsetToData: 0x110E
+    FileOffsetToRelocations: 0x0
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x0
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DWARF ]
+    SectionData:     01110125
 StringTable:     {}
 ...

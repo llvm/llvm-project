@@ -14,7 +14,7 @@ DESCRIPTION
 -----------
 :program:`llvm-debuginfo-analyzer` parses debug and text sections in
 binary object files and prints their contents in a logical view, which
-is a human readable representation that closely matches the structure
+is a human-readable representation that closely matches the structure
 of the original user source code. Supported object file formats include
 ELF, Mach-O, WebAssembly, PDB and COFF.
 
@@ -134,12 +134,13 @@ toolchain name, binary file format, etc.
  The following attributes describe the most common information for a
  logical element. They help to identify the lexical scope level; the
  element visibility across modules (global, local); the toolchain name
- that produced the binary file.
+ and source language that produced the binary file.
 
  .. code-block:: text
 
    =global: Element referenced across Compile Units.
    =format: Object file format name.
+   =language: Source language name.
    =level: Lexical scope level (File=0, Compile Unit=1).
    =local: Element referenced only in the Compile Unit.
    =producer: Toolchain identification name.
@@ -161,7 +162,8 @@ toolchain name, binary file format, etc.
  transformations, in order to display built-in types (int, bool, etc.);
  parameters and arguments used during template instantiation; parent
  name hierarchy; array dimensions information; compiler generated
- elements and the underlying types associated with the types aliases.
+ elements; type sizes and the underlying types associated with the types
+ aliases.
 
  .. code-block:: text
 
@@ -171,6 +173,7 @@ toolchain name, binary file format, etc.
    =encoded: Template arguments encoded in the template name.
    =qualified: The element type include parents in its name.
    =reference: Element declaration and definition references.
+   =size: Sizes for compound and base types.
    =subrange: Subrange encoding information for arrays.
    =typename: Template parameters.
    =underlying: Underlying type for type definitions.
@@ -229,6 +232,7 @@ toolchain name, binary file format, etc.
    =filename
    =files
    =format
+   =language
    =level
    =producer
    =publics
@@ -258,6 +262,7 @@ toolchain name, binary file format, etc.
    =qualified
    =qualifier
    =register
+   =size
    =subrange
    =system
    =typename
@@ -360,6 +365,8 @@ output for a single compilation unit.
 
  .. code-block:: text
 
+   =none: Unsorted output (i.e. as read from input).
+   =id: Sort by unique element ID.
    =kind: Sort by element kind.
    =line: Sort by element line number.
    =name: Sort by element name.
@@ -489,8 +496,8 @@ The given criteria describes the debug line state machine registers.
    =Discriminator: Line that has a discriminator.
    =EndSequence: Marks the end in the sequence of lines.
    =EpilogueBegin: Marks the start of a function epilogue.
-   =LineDebug: Lines that correspond to debug lines.
    =LineAssembler: Lines that correspond to disassembly text.
+   =LineDebug: Lines that correspond to debug lines.
    =NeverStepInto: marks a never step into.
    =NewStatement: Marks a new statement.
    =PrologueEnd: Marks the end of a function prologue.
@@ -519,6 +526,7 @@ The following options allow printing of scopes that match the given <kind>.
     =InlinedFunction: An inlined function.
     =Label: A label.
     =LexicalBlock: A lexical block.
+    =Module: A module.
     =Namespace: A namespace.
     =Root: The element representing the main scope.
     =Structure: A structure.
@@ -670,8 +678,7 @@ INTERNAL
  Typically these kind of options are available only in *debug* builds.
 
  :program:`llvm-debuginfo-analyzer` supports these advanced options in
- both *release* and *debug* builds, with the exception of the unique ID
- that is generated only in *debug* builds.
+ both *release* and *debug* builds.
 
 .. option:: --internal=<value[,value,...]>
 

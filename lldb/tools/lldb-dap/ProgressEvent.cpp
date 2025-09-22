@@ -86,7 +86,7 @@ ProgressEvent::Create(uint64_t progress_id, std::optional<StringRef> message,
 bool ProgressEvent::EqualsForIDE(const ProgressEvent &other) const {
   return m_progress_id == other.m_progress_id &&
          m_event_type == other.m_event_type &&
-         m_percentage == other.m_percentage;
+         m_percentage == other.m_percentage && m_message == other.m_message;
 }
 
 ProgressEventType ProgressEvent::GetEventType() const { return m_event_type; }
@@ -116,6 +116,9 @@ json::Value ProgressEvent::ToJSON() const {
     EmplaceSafeString(body, "title", m_message);
     body.try_emplace("cancellable", false);
   }
+
+  if (m_event_type == progressUpdate)
+    EmplaceSafeString(body, "message", m_message);
 
   std::string timestamp(llvm::formatv("{0:f9}", m_creation_time.count()));
   EmplaceSafeString(body, "timestamp", timestamp);
@@ -164,10 +167,10 @@ const ProgressEvent &ProgressEventManager::GetMostRecentEvent() const {
   return m_last_update_event ? *m_last_update_event : m_start_event;
 }
 
-void ProgressEventManager::Update(uint64_t progress_id, uint64_t completed,
-                                  uint64_t total) {
+void ProgressEventManager::Update(uint64_t progress_id, llvm::StringRef message,
+                                  uint64_t completed, uint64_t total) {
   if (std::optional<ProgressEvent> event = ProgressEvent::Create(
-          progress_id, std::nullopt, completed, total, &GetMostRecentEvent())) {
+          progress_id, message, completed, total, &GetMostRecentEvent())) {
     if (event->GetEventType() == progressEnd)
       m_finished = true;
 
@@ -227,7 +230,7 @@ void ProgressEventReporter::Push(uint64_t progress_id, const char *message,
       m_unreported_start_events.push(event_manager);
     }
   } else {
-    it->second->Update(progress_id, completed, total);
+    it->second->Update(progress_id, StringRef(message), completed, total);
     if (it->second->Finished())
       m_event_managers.erase(it);
   }

@@ -11,13 +11,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/sanitizer.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -37,10 +37,10 @@ LIBC_INLINE constexpr cpp::enable_if_t<
     To>
 bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
-#if __has_builtin(__builtin_bit_cast)
+#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
   return __builtin_bit_cast(To, from);
 #else
-  To to;
+  To to{};
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
 #if __has_builtin(__builtin_memcpy_inline)
@@ -101,14 +101,20 @@ countr_zero(T value) {
     shift >>= 1;
     mask >>= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
 #if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
-#endif
+#endif // __has_builtin(__builtin_ctzs)
+#if __has_builtin(__builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
+#endif // __has_builtin(__builtin_ctz)
+#if __has_builtin(__builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
+#endif // __has_builtin(__builtin_ctzl)
+#if __has_builtin(__builtin_ctzll)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzll)
 #endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
@@ -140,14 +146,20 @@ countl_zero(T value) {
     else
       zero_bits |= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
 #if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
-#endif
+#endif // __has_builtin(__builtin_clzs)
+#if __has_builtin(__builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
+#endif // __has_builtin(__builtin_clz)
+#if __has_builtin(__builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
+#endif // __has_builtin(__builtin_clzl)
+#if __has_builtin(__builtin_clzll)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
+#endif // __has_builtin(__builtin_clzll)
 #endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
@@ -162,7 +174,7 @@ ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countl_one(T value) {
-  return cpp::countl_zero<T>(~value);
+  return cpp::countl_zero<T>(static_cast<T>(~value));
 }
 
 /// Count the number of ones from the least significant bit to the first
@@ -175,7 +187,7 @@ countl_one(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countr_one(T value) {
-  return cpp::countr_zero<T>(~value);
+  return cpp::countr_zero<T>(static_cast<T>(~value));
 }
 
 /// Returns the number of bits needed to represent value if value is nonzero.
@@ -226,25 +238,25 @@ rotr(T value, int rotate);
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 rotl(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+  return static_cast<T>((value << rotate) | (value >> (N - rotate)));
 }
 
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 rotr(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+  return static_cast<T>((value >> rotate) | (value << (N - rotate)));
 }
 
 // TODO: Do we need this function at all? How is it different from
@@ -284,11 +296,17 @@ popcount(T value) {
   [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {         \
     return BUILTIN(value);                                                     \
   }
+#if __has_builtin(__builtin_popcount)
 ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned, __builtin_popcount)
+#endif // __builtin_popcount
+#if __has_builtin(__builtin_popcountl)
 ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
+#endif // __builtin_popcountl
+#if __has_builtin(__builtin_popcountll)
 ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
+#endif // __builtin_popcountll
 #endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
 

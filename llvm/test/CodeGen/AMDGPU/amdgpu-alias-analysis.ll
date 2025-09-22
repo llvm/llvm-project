@@ -176,7 +176,7 @@ define void @test_7_7(ptr addrspace(7) %p, ptr addrspace(7) %p1) {
   ret void
 }
 
-@cst = internal addrspace(4) global ptr undef, align 4
+@cst = internal addrspace(4) global ptr poison, align 4
 
 ; CHECK-LABEL: Function: test_8_0
 ; CHECK-DAG: NoAlias:   i8 addrspace(3)* %p, i8* %p1
@@ -220,7 +220,7 @@ define void @test_8_3(ptr %p) {
   ret void
 }
 
-@shm = internal addrspace(3) global [2 x i8] undef, align 4
+@shm = internal addrspace(3) global [2 x i8] poison, align 4
 
 ; CHECK-LABEL: Function: test_8_4
 ; CHECK: NoAlias:   i8* %p, i8 addrspace(3)* %p1
@@ -316,5 +316,22 @@ define void @test_9_8(ptr addrspace(9) %p, ptr addrspace(8) %p1) {
 define void @test_9_9(ptr addrspace(9) %p, ptr addrspace(9) %p1) {
   load i8, ptr addrspace(9) %p
   load i8, ptr addrspace(9) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_kernel_arg_local_ptr
+; CHECK: MayAlias:   i32 addrspace(3)* %arg, i32 addrspace(3)* %arg1
+; CHECK: MayAlias:   i32 addrspace(3)* %arg, i32* %arg2
+; CHECK: MayAlias:   i32 addrspace(3)* %arg1, i32* %arg2
+define amdgpu_kernel void @test_kernel_arg_local_ptr(ptr addrspace(3) %arg) {
+entry:
+  %load1 = load i32, ptr addrspace(3) %arg, align 4
+  %arg.plus.1 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg, i64 1
+  %arg1 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg.plus.1, i64 -1
+  %load2 = load i32, ptr addrspace(3) %arg1, align 4
+  %arg.plus.4 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg, i64 4
+  %acast = addrspacecast ptr addrspace(3) %arg.plus.4 to ptr
+  %arg2 = getelementptr inbounds i8, ptr %acast, i64 -4
+  %load3 = load i32, ptr %arg2, align 4
   ret void
 }

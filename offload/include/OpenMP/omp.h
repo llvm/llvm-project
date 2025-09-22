@@ -80,15 +80,18 @@ typedef enum omp_interop_rc {
   omp_irc_other = -6
 } omp_interop_rc_t;
 
-typedef enum omp_interop_fr {
-  omp_ifr_cuda = 1,
-  omp_ifr_cuda_driver = 2,
-  omp_ifr_opencl = 3,
-  omp_ifr_sycl = 4,
-  omp_ifr_hip = 5,
-  omp_ifr_level_zero = 6,
-  omp_ifr_last = 7
-} omp_interop_fr_t;
+/* Foreign runtime values from OpenMP Additional Definitions document v2.1 */
+typedef enum tgt_foreign_runtime_id_t {
+  tgt_fr_none = 0,
+  tgt_fr_cuda = 1,
+  tgt_fr_cuda_driver = 2,
+  tgt_fr_opencl = 3,
+  tgt_fr_sycl = 4,
+  tgt_fr_hip = 5,
+  tgt_fr_level_zero = 6,
+  tgt_fr_hsa = 7,
+  tgt_fr_last = 8
+} tgt_foreign_runtime_id_t;
 
 typedef void *omp_interop_t;
 
@@ -134,19 +137,23 @@ omp_get_interop_type_desc(const omp_interop_t, omp_interop_property_t);
 extern const char *__KAI_KMPC_CONVENTION
 omp_get_interop_rc_desc(const omp_interop_t, omp_interop_rc_t);
 
-typedef enum omp_interop_backend_type_t {
-  // reserve 0
-  omp_interop_backend_type_cuda_1 = 1,
-} omp_interop_backend_type_t;
-
-typedef enum omp_foreign_runtime_ids {
-  cuda = 1,
-  cuda_driver = 2,
-  opencl = 3,
-  sycl = 4,
-  hip = 5,
-  level_zero = 6,
-} omp_foreign_runtime_ids_t;
+/* Vendor defined values from OpenMP Additional Definitions document v2.1*/
+typedef enum omp_vendor_id {
+  omp_vendor_unknown = 0,
+  omp_vendor_amd = 1,
+  omp_vendor_arm = 2,
+  omp_vendor_bsc = 3,
+  omp_vendor_fujitsu = 4,
+  omp_vendor_gnu = 5,
+  omp_vendor_hpe = 6,
+  omp_vendor_ibm = 7,
+  omp_vendor_intel = 8,
+  omp_vendor_llvm = 9,
+  omp_vendor_nec = 10,
+  omp_vendor_nvidia = 11,
+  omp_vendor_ti = 12,
+  omp_vendor_last = 13
+} omp_vendor_id_t;
 
 ///} InteropAPI
 

@@ -90,7 +90,7 @@ public:
   // Process Control
   lldb_private::Status WillResume() override;
 
-  lldb_private::Status DoResume() override;
+  lldb_private::Status DoResume(lldb::RunDirection direction) override;
 
   lldb_private::Status DoHalt(bool &caused_stop) override;
 

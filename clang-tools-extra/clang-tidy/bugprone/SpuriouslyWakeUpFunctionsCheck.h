@@ -1,4 +1,4 @@
-//===--- SpuriouslyWakeUpFunctionsCheck.h - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,9 +13,9 @@
 
 namespace clang::tidy::bugprone {
 
-/// Finds ``cnd_wait``, ``cnd_timedwait``, ``wait``, ``wait_for``, or 
-/// ``wait_until`` function calls when the function is not invoked from a loop 
-/// that checks whether a condition predicate holds or the function has a 
+/// Finds ``cnd_wait``, ``cnd_timedwait``, ``wait``, ``wait_for``, or
+/// ``wait_until`` function calls when the function is not invoked from a loop
+/// that checks whether a condition predicate holds or the function has a
 /// condition parameter.
 ///
 /// For the user-facing documentation see:

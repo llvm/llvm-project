@@ -75,6 +75,104 @@ unsigned OmpModifierDescriptor::since(llvm::omp::Clause id) const {
 // generated in the future.
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignment>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"alignment",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique, OmpProperty::Ultimate, OmpProperty::Post}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_aligned}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlignModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"align-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_allocate}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpAllocatorComplexModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"allocator-complex-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_allocate}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpAllocatorSimpleModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"allocator-simple-modifier",
+      /*props=*/
+      {
+          {50, {OmpProperty::Exclusive, OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {50, {Clause::OMPC_allocate}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlwaysModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"always-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAutomapModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"automap-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_enter}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"chunk-modifier",
@@ -85,6 +183,56 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpCloseModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"close-modifier",
+      /*props=*/
+      {
+          {50, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {50, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpContextSelector>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"context-selector",
+      /*props=*/
+      {
+          {50, {OmpProperty::Required, OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          // The MATCH clause takes a selector as an argument, not modifier.
+          {50, {Clause::OMPC_when}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeleteModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"delete-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique, OmpProperty::Ultimate}},
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_map}},
       },
   };
   return desc;
@@ -109,6 +257,39 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeviceModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"device-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_device}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpDirectiveNameModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"directive-name-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_if}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"expectation",
@@ -119,6 +300,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
       /*clauses=*/
       {
           {51, {Clause::OMPC_from, Clause::OMPC_to}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropPreference>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"interop-preference",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropType>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"interop-type",
+      /*props=*/
+      {
+          {52, {OmpProperty::Required}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
       },
   };
   return desc;
@@ -138,6 +351,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpIterator>() {
           {51,
               {Clause::OMPC_affinity, Clause::OMPC_depend, Clause::OMPC_from,
                   Clause::OMPC_map, Clause::OMPC_to}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpLastprivateModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"lastprivate-modifier",
+      /*props=*/
+      {
+          {50, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {50, {Clause::OMPC_lastprivate}},
       },
   };
   return desc;
@@ -182,6 +412,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMapType>() {
       /*props=*/
       {
           {45, {OmpProperty::Ultimate}},
+          {60, {OmpProperty::Unique}},
       },
       /*clauses=*/
       {
@@ -202,6 +433,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMapTypeModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_map}},
+          {60, {}},
       },
   };
   return desc;
@@ -234,6 +466,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPrescriptiveness>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"prescriptiveness",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPresentModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"present-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_map}},
       },
   };
   return desc;
@@ -276,16 +540,82 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpRefModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"ref-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpSelfModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"self-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpStepComplexModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"step-complex-modifier",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpStepSimpleModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"step-simple-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique, OmpProperty::Exclusive}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"task-dependence-type",
       /*props=*/
       {
-          {52, {OmpProperty::Required, OmpProperty::Ultimate}},
+          {45, {OmpProperty::Required, OmpProperty::Ultimate}},
       },
       /*clauses=*/
       {
-          {52, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {45, {Clause::OMPC_depend}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
       },
   };
   return desc;
@@ -303,6 +633,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpVariableCategory>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_defaultmap}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpxHoldModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"ompx-hold-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_map}},
       },
   };
   return desc;

@@ -7,13 +7,12 @@ define void @test(ptr %a, i64 %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[TMP0]], i32 0
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, <2 x ptr> [[TMP2]], <2 x i64> [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX17_I28_1:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX17_I28_1:%.*]] = extractelement <2 x ptr> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[TMP6]], i32 8, <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, ptr [[A]], align 8

@@ -254,3 +254,87 @@ svfloat64x3_t test_svset3_f64(svfloat64x3_t tuple, svfloat64_t x) ATTR
 {
   return SVE_ACLE_FUNC(svset3,_f64,,)(tuple, 2, x);
 }
+
+// CHECK-LABEL: @test_svset3_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[X:%.*]], 1
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
+//
+// CPP-CHECK-LABEL: @_Z15test_svset3_mf813svmfloat8x3_tu13__SVMfloat8_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[X:%.*]], 1
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
+//
+svmfloat8x3_t test_svset3_mf8(svmfloat8x3_t tuple, svmfloat8_t x) ATTR
+{
+  return SVE_ACLE_FUNC(svset3,_mf8,,)(tuple, 1, x);
+}
+
+// CHECK-LABEL: @test_svset3_bf16_0(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[X:%.*]], 0
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svset3_bf16_014svbfloat16x3_tu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[X:%.*]], 0
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+//
+svbfloat16x3_t test_svset3_bf16_0(svbfloat16x3_t tuple, svbfloat16_t x) ATTR
+{
+  return SVE_ACLE_FUNC(svset3,_bf16,,)(tuple, 0, x);
+}
+
+// CHECK-LABEL: @test_svset3_bf16_1(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[X:%.*]], 1
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svset3_bf16_114svbfloat16x3_tu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[X:%.*]], 1
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+//
+svbfloat16x3_t test_svset3_bf16_1(svbfloat16x3_t tuple, svbfloat16_t x) ATTR
+{
+  return SVE_ACLE_FUNC(svset3,_bf16,,)(tuple, 1, x);
+}
+
+// CHECK-LABEL: @test_svset3_bf16_2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[TUPLE_COERCE2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[X:%.*]], 2
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svset3_bf16_214svbfloat16x3_tu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[TUPLE_COERCE2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[X:%.*]], 2
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+//
+svbfloat16x3_t test_svset3_bf16_2(svbfloat16x3_t tuple, svbfloat16_t x) ATTR
+{
+  return SVE_ACLE_FUNC(svset3,_bf16,,)(tuple, 2, x);
+}

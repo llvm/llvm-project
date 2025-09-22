@@ -107,6 +107,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.lower_masked_transfers
+      transform.apply_patterns.vector.sink_ops
     } : !transform.op<"func.func">
 
     // Step 4: Lower vector.contract to vector.fma

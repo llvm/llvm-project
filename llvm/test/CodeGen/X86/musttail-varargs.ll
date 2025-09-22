@@ -2,6 +2,7 @@
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-linux | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=LINUX-X32
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-windows | FileCheck %s --check-prefix=WINDOWS
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-uefi | FileCheck %s --check-prefix=WINDOWS
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=i686-windows | FileCheck %s --check-prefix=X86 --check-prefix=X86-NOSSE
 ; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=i686-windows -mattr=+sse2 | FileCheck %s --check-prefix=X86 --check-prefix=X86-SSE
 
@@ -228,11 +229,13 @@ define void @f_thunk(ptr %this, ...) {
 ; WINDOWS-NEXT:    movq %rbx, %rdx
 ; WINDOWS-NEXT:    movq %rdi, %r8
 ; WINDOWS-NEXT:    movq %rsi, %r9
+; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $72, %rsp
 ; WINDOWS-NEXT:    popq %rbx
 ; WINDOWS-NEXT:    popq %rdi
 ; WINDOWS-NEXT:    popq %rsi
 ; WINDOWS-NEXT:    popq %r14
+; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:    .seh_endproc
 ;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
-#define _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#ifndef _LIBCPP___CXX03___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#define _LIBCPP___CXX03___CONDITION_VARIABLE_CONDITION_VARIABLE_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__chrono/steady_clock.h>
@@ -43,7 +43,7 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI condition_variable() _NOEXCEPT = default;
 
 #  ifdef _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
   ~condition_variable() = default;
@@ -241,4 +241,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#endif // _LIBCPP___CXX03___CONDITION_VARIABLE_CONDITION_VARIABLE_H

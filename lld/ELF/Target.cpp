@@ -28,7 +28,6 @@
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 
@@ -106,10 +105,10 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
     if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
       std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
-      // TODO: Refactor getSrcMsg not to take a variable.
-      Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
-      return {isec, objLoc + ": ",
-              isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
+      ELFSyncStream msg(ctx, DiagLevel::None);
+      if (isec->file)
+        msg << isec->getSrcMsg(*ctx.dummySym, loc - isecLoc);
+      return {isec, objLoc + ": ", std::string(msg.str())};
     }
   }
   return {};

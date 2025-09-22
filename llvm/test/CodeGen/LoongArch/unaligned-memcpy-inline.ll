@@ -15,7 +15,7 @@ define void @t0(ptr %out, ptr %in) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a2, $zero, 16
-; LA32-NEXT:    bl %plt(memcpy)
+; LA32-NEXT:    bl memcpy
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -27,7 +27,8 @@ define void @t0(ptr %out, ptr %in) {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    ori $a2, $zero, 16
-; LA64-NEXT:    bl %plt(memcpy)
+; LA64-NEXT:    pcaddu18i $ra, %call36(memcpy)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -120,19 +121,19 @@ define void @t3() {
 ;
 ; LA64-LABEL: t3:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.d $sp, $sp, -64
-; LA64-NEXT:    .cfi_def_cfa_offset 64
+; LA64-NEXT:    addi.d $sp, $sp, -80
+; LA64-NEXT:    .cfi_def_cfa_offset 80
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.L.str)
 ; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(.L.str)
 ; LA64-NEXT:    ld.h $a1, $a0, 20
 ; LA64-NEXT:    ld.w $a2, $a0, 16
 ; LA64-NEXT:    ld.d $a3, $a0, 8
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    st.h $a1, $sp, 20
-; LA64-NEXT:    st.w $a2, $sp, 16
-; LA64-NEXT:    st.d $a3, $sp, 8
-; LA64-NEXT:    st.d $a0, $sp, 0
-; LA64-NEXT:    addi.d $sp, $sp, 64
+; LA64-NEXT:    st.h $a1, $sp, 36
+; LA64-NEXT:    st.w $a2, $sp, 32
+; LA64-NEXT:    st.d $a3, $sp, 24
+; LA64-NEXT:    st.d $a0, $sp, 16
+; LA64-NEXT:    addi.d $sp, $sp, 80
 ; LA64-NEXT:    ret
 entry:
   %msgbuf = alloca [64 x i8], align 1

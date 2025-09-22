@@ -9,8 +9,6 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputFiles.h"
-#include "ObjC.h"
-#include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -34,13 +32,14 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+// Create prefix string literals used in Options.td
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr OptTable::Info optInfo[] = {
@@ -65,7 +64,8 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
+MachOOptTable::MachOOptTable()
+    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -225,6 +225,18 @@ std::optional<StringRef> macho::resolveDylibPath(StringRef dylibPath) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
+static StringRef realPathIfDifferent(StringRef path) {
+  SmallString<128> realPathBuf;
+  if (fs::real_path(path, realPathBuf))
+    return StringRef();
+
+  SmallString<128> absPathBuf = path;
+  if (!fs::make_absolute(absPathBuf) && realPathBuf == absPathBuf)
+    return StringRef();
+
+  return uniqueSaver().save(StringRef(realPathBuf));
+}
+
 DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
                             bool isBundleLoader, bool explicitlyLinked) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
@@ -233,6 +245,22 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     if (explicitlyLinked)
       file->setExplicitlyLinked();
     return file;
+  }
+
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks and look up in the dylib cache.
+  CachedHashStringRef realPath(
+      realPathIfDifferent(mbref.getBufferIdentifier()));
+  if (!realPath.val().empty()) {
+    // Avoid map insertions here so that we do not invalidate the "file"
+    // reference.
+    auto it = loadedDylibs.find(realPath);
+    if (it != loadedDylibs.end()) {
+      DylibFile *realfile = it->second;
+      if (explicitlyLinked)
+        realfile->setExplicitlyLinked();
+      return realfile;
+    }
   }
 
   DylibFile *newFile;
@@ -270,9 +298,8 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   }
 
   if (explicitlyLinked && !newFile->allowableClients.empty()) {
-    bool allowed = std::any_of(
-        newFile->allowableClients.begin(), newFile->allowableClients.end(),
-        [&](StringRef allowableClient) {
+    bool allowed =
+        llvm::any_of(newFile->allowableClients, [&](StringRef allowableClient) {
           // We only do a prefix match to match LD64's behaviour.
           return allowableClient.starts_with(config->clientName);
         });
@@ -288,6 +315,11 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
             sys::path::filename(newFile->installName) + "' because " +
             config->clientName + " is not an allowed client");
   }
+
+  // If the load path was a symlink, cache the real path too.
+  if (!realPath.val().empty())
+    loadedDylibs[realPath] = newFile;
+
   return newFile;
 }
 

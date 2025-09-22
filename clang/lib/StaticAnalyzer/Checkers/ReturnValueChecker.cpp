@@ -22,7 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
@@ -60,7 +59,7 @@ private:
 };
 } // namespace
 
-static std::string getName(const CallEvent &Call) {
+static std::string getFunctionName(const CallEvent &Call) {
   std::string Name;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Call.getDecl()))
     if (const CXXRecordDecl *RD = MD->getParent())
@@ -84,7 +83,7 @@ void ReturnValueChecker::checkPostCall(const CallEvent &Call,
   if (ProgramStateRef StTrue = State->assume(*ReturnV, true)) {
     // The return value can be true, so transition to a state where it's true.
     std::string Msg =
-        formatv("'{0}' returns true (by convention)", getName(Call));
+        formatv("'{0}' returns true (by convention)", getFunctionName(Call));
     C.addTransition(StTrue, C.getNoteTag(Msg, /*IsPrunable=*/true));
     return;
   }
@@ -94,7 +93,7 @@ void ReturnValueChecker::checkPostCall(const CallEvent &Call,
   // Note that this checker is 'hidden' so it cannot produce a bug report.
   std::string Msg = formatv("'{0}' returned false, breaking the convention "
                             "that it always returns true",
-                            getName(Call));
+                            getFunctionName(Call));
   C.addTransition(State, C.getNoteTag(Msg, /*IsPrunable=*/true));
 }
 
