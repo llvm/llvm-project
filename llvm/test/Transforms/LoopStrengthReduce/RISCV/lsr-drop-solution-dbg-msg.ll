@@ -7,7 +7,7 @@ target triple = "riscv64-unknown-linux-gnu"
 
 define ptr @foo(ptr %a0, ptr %a1, i64 %a2) {
 ;DEBUG: The baseline solution requires 2 instructions 4 regs, with addrec cost 2, plus 3 setup cost
-;DEBUG: The chosen solution requires 3 instructions 6 regs, with addrec cost 1, plus 2 base adds, plus 5 setup cost
+;DEBUG: The chosen solution requires 3 instructions 7 regs, with addrec cost 3, plus 7 setup cost
 ;DEBUG: Baseline is more profitable than chosen solution, dropping LSR solution.
 
 ;DEBUG2: Baseline is more profitable than chosen solution, add option 'lsr-drop-solution' to drop LSR solution.
