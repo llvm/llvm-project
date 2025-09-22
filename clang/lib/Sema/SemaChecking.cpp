@@ -12797,7 +12797,7 @@ static void CheckCommaOperand(
     S.CheckImplicitConversion(E, T, CC);
 }
 
-static Expr* IgnoreExplicitCastForImplicitConversionCheck(ExplicitCastExpr *E) {
+static Expr *IgnoreExplicitCastForImplicitConversionCheck(ExplicitCastExpr *E) {
   // In the special case of C++ function-style cast with braces,
   // CXXFunctionalCastExpr has InitListExpr as direct child with a single
   // initializer. It basically belongs to the cast itself, so for the purposes
