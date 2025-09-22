@@ -537,7 +537,7 @@ performActions(raw_ostream &os,
       config.getRemarksFailedFilter()};
   remark::RemarkPolicy policy =
       config.getRemarkPolicy() == RemarkPolicy::REMARK_POLICY_FINAL
-          ? policy = remark::RemarkPolicy::RemarkPolicyFinal
+          ? remark::RemarkPolicy::RemarkPolicyFinal
           : remark::RemarkPolicy::RemarkPolicyAll;
   remark::RemarkEngineOpts opts{cats, policy};
 
