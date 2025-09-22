@@ -123,7 +123,6 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
-
 struct RootParameterView {
   const dxbc::RTS0::v1::RootParameterHeader &Header;
   StringRef ParamData;
@@ -180,7 +179,6 @@ struct RootDescriptorView : RootParameterView {
     return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
-
 template <typename T> struct DescriptorTable {
   uint32_t NumRanges;
   uint32_t RangesOffset;
@@ -249,11 +247,9 @@ public:
   llvm::iterator_range<param_header_iterator> param_headers() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
-
   llvm::iterator_range<samplers_iterator> samplers() const {
     return llvm::make_range(StaticSamplers.begin(), StaticSamplers.end());
   }
-
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>
