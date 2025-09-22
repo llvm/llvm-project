@@ -31,3 +31,8 @@
 #if 0
 #elif (1, 2) // expected-error {{comma operator in operand of #if}}
 #endif
+
+// Test 6: Leading comma (syntax error)
+// expected-error@+1 {{invalid token at start of a preprocessor expression}}
+#if ,
+#endif
