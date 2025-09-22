@@ -4044,6 +4044,24 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     }
   }
 
+  unsigned Enc = TSFlags & X86II::EncodingMask;
+  if (Enc == X86II::VEX || Enc == X86II::EVEX || Enc == X86II::XOP) {
+    unsigned NumOps = Inst.getNumOperands();
+    for (unsigned i = 0; i != NumOps; ++i) {
+      const MCOperand &MO = Inst.getOperand(i);
+      if (!MO.isReg())
+        continue;
+      MCRegister Reg = MO.getReg();
+      if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH ||
+          Reg == X86::DH) {
+        StringRef RegName = X86IntelInstPrinter::getRegisterName(Reg);
+        return Error(Ops[0]->getStartLoc(),
+                     "can't encode '" + RegName +
+                         "' in a VEX/EVEX-prefixed instruction");
+      }
+    }
+  }
+
   if ((Opcode == X86::PREFETCHIT0 || Opcode == X86::PREFETCHIT1)) {
     const MCOperand &MO = Inst.getOperand(X86::AddrBaseReg);
     if (!MO.isReg() || MO.getReg() != X86::RIP)
