@@ -107,7 +107,7 @@ static void assignValues(ValueRange values, ValueRange variables,
     emitc::AssignOp::create(rewriter, loc, var, value);
 }
 
-SmallVector<Value> loadValues(const SmallVector<Value> &variables,
+SmallVector<Value> loadValues(ArrayRef<Value> variables,
                               PatternRewriter &rewriter, Location loc) {
   return llvm::map_to_vector<>(variables, [&](Value var) {
     Type type = cast<emitc::LValueType>(var.getType()).getValueType();
@@ -351,7 +351,8 @@ struct WhileLowering : public OpConversionPattern<WhileOp> {
     // Create variable storage for loop-carried values to enable imperative
     // updates while maintaining SSA semantics at conversion boundaries.
     SmallVector<Value> variables;
-    if (failed(createInitVariables(whileOp, rewriter, variables, loc, context)))
+    if (failed(createVariablesForLoopCarriedValues(whileOp, rewriter, variables,
+                                                   loc, context)))
       return failure();
 
     if (failed(lowerDoWhile(whileOp, variables, context, rewriter, loc)))
@@ -379,38 +380,24 @@ struct WhileLowering : public OpConversionPattern<WhileOp> {
 private:
   // Initialize variables for loop-carried values to enable state updates
   // across iterations without SSA argument passing.
-  static LogicalResult createInitVariables(WhileOp whileOp,
-                                           ConversionPatternRewriter &rewriter,
-                                           SmallVectorImpl<Value> &outVars,
-                                           Location loc, MLIRContext *context) {
+  LogicalResult createVariablesForLoopCarriedValues(
+      WhileOp whileOp, ConversionPatternRewriter &rewriter,
+      SmallVectorImpl<Value> &outVars, Location loc,
+      MLIRContext *context) const {
     emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
 
     for (Value init : whileOp.getInits()) {
+      Type convertedType = getTypeConverter()->convertType(init.getType());
+      if (!convertedType)
+        return rewriter.notifyMatchFailure(whileOp, "type conversion failed");
+
       emitc::VariableOp var = rewriter.create<emitc::VariableOp>(
-          loc, emitc::LValueType::get(init.getType()), noInit);
+          loc, emitc::LValueType::get(convertedType), noInit);
       rewriter.create<emitc::AssignOp>(loc, var.getResult(), init);
       outVars.push_back(var.getResult());
     }
 
     return success();
-  }
-
-  // Transition from SSA block arguments to variable-based state management by
-  // replacing argument uses with variable loads and cleaning up block
-  // interface.
-  void replaceBlockArgsWithVarLoads(Block *block, ArrayRef<Value> vars,
-                                    ConversionPatternRewriter &rewriter,
-                                    Location loc) const {
-    rewriter.setInsertionPointToStart(block);
-
-    for (auto [arg, var] : llvm::zip(block->getArguments(), vars)) {
-      Type loadedType = cast<emitc::LValueType>(var.getType()).getValueType();
-      Value load = rewriter.create<emitc::LoadOp>(loc, loadedType, var);
-      arg.replaceAllUsesWith(load);
-    }
-
-    // Remove arguments after replacement to simplify block structure.
-    block->eraseArguments(0, block->getNumArguments());
   }
 
   // Transfers final loop state from mutable variables to result variables,
@@ -445,6 +432,7 @@ private:
                              MLIRContext *context,
                              ConversionPatternRewriter &rewriter,
                              Location loc) const {
+    // Create a global boolean variable to store the loop condition state.
     Type i1Type = IntegerType::get(context, 1);
     auto globalCondition =
         rewriter.create<emitc::VariableOp>(loc, emitc::LValueType::get(i1Type),
@@ -453,12 +441,24 @@ private:
 
     auto loweredDo = rewriter.create<emitc::DoOp>(loc);
 
-    // Lower before-region as body.
-    rewriter.inlineRegionBefore(whileOp.getBefore(), loweredDo.getBodyRegion(),
-                                loweredDo.getBodyRegion().end());
+    // Convert region types to match the target dialect type system.
+    if (failed(rewriter.convertRegionTypes(&whileOp.getBefore(),
+                                           *getTypeConverter(), nullptr)) ||
+        failed(rewriter.convertRegionTypes(&whileOp.getAfter(),
+                                           *getTypeConverter(), nullptr))) {
+      return rewriter.notifyMatchFailure(whileOp,
+                                         "region types conversion failed");
+    }
 
-    Block *bodyBlock = &loweredDo.getBodyRegion().front();
-    replaceBlockArgsWithVarLoads(bodyBlock, vars, rewriter, loc);
+    // Prepare the before region (condition evaluation) for merging.
+    Block *beforeBlock = &whileOp.getBefore().front();
+    Block *bodyBlock = rewriter.createBlock(&loweredDo.getBodyRegion());
+    rewriter.setInsertionPointToStart(bodyBlock);
+
+    // Load current variable values to use as initial arguments for the
+    // condition block.
+    SmallVector<Value> replacingValues = loadValues(vars, rewriter, loc);
+    rewriter.mergeBlocks(beforeBlock, bodyBlock, replacingValues);
 
     // Convert scf.condition to condition variable assignment.
     Operation *condTerminator =
@@ -472,20 +472,20 @@ private:
     // ifOp if after-region is non-empty.
     if (whileOp.getAfterBody()->getOperations().size() > 1) {
       auto ifOp = rewriter.create<emitc::IfOp>(loc, condition, false, false);
-      rewriter.inlineRegionBefore(whileOp.getAfter(), ifOp.getBodyRegion(),
-                                  ifOp.getBodyRegion().begin());
 
-      Block *ifBlock = &ifOp.getBodyRegion().front();
+      // Prepare the after region (loop body) for merging.
+      Block *afterBlock = &whileOp.getAfter().front();
+      Block *ifBodyBlock = rewriter.createBlock(&ifOp.getBodyRegion());
 
-      // Handle argument mapping from condition op to body region.
-      auto args = condOp.getArgs();
-      for (auto [arg, val] : llvm::zip(ifBlock->getArguments(), args))
-        arg.replaceAllUsesWith(rewriter.getRemappedValue(val));
+      // Replacement values for after block using condition op arguments.
+      SmallVector<Value> afterReplacingValues;
+      for (Value arg : condOp.getArgs())
+        afterReplacingValues.push_back(rewriter.getRemappedValue(arg));
 
-      ifBlock->eraseArguments(0, ifBlock->getNumArguments());
+      rewriter.mergeBlocks(afterBlock, ifBodyBlock, afterReplacingValues);
 
       if (failed(lowerYield(whileOp, vars, rewriter,
-                            cast<scf::YieldOp>(ifBlock->getTerminator()))))
+                            cast<scf::YieldOp>(ifBodyBlock->getTerminator()))))
         return failure();
     }
 
@@ -500,13 +500,16 @@ private:
         loc, i1Type, conditionVal, /*do_not_inline=*/false);
     Block *exprBlock = rewriter.createBlock(&exprOp.getBodyRegion());
 
+    // Set up the expression block to load the condition variable.
     exprBlock->addArgument(conditionVal.getType(), loc);
     rewriter.setInsertionPointToStart(exprBlock);
 
+    // Load the condition value and yield it as the expression result.
     Value cond =
         rewriter.create<emitc::LoadOp>(loc, i1Type, exprBlock->getArgument(0));
     rewriter.create<emitc::YieldOp>(loc, cond);
 
+    // Yield the expression as the condition region result.
     rewriter.setInsertionPointToEnd(condBlock);
     rewriter.create<emitc::YieldOp>(loc, exprOp);
 
