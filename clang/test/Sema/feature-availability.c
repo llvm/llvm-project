@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -ffeature-availability=feature1:1 -ffeature-availability=feature2:0 -ffeature-availability=feature3:on -fsyntax-only -Wunreachable-code -verify %s
-// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -fsyntax-only -Wunreachable-code -verify -DUSE_DOMAIN %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -ffeature-availability=feature1:1 -ffeature-availability=feature2:0 -ffeature-availability=feature3:on -fsyntax-only -Wunreachable-code -verify=expected,redecl %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -ffeature-availability=feature1:1 -ffeature-availability=feature2:0 -ffeature-availability=feature3:on -fsyntax-only -Wunreachable-code -Wno-domain-availability-redeclaration -verify=expected %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -fsyntax-only -Wunreachable-code -verify=expected,redecl -DUSE_DOMAIN %s
 
 #include <availability_domain.h>
 
@@ -75,12 +76,12 @@ void (* __attribute__((availability(domain:feature2, AVAIL))) fp3)(void) = func6
 void func6(void);
 __attribute__((availability(domain:feature1, AVAIL))) void func6(void); // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
 __attribute__((availability(domain:feature1, UNAVAIL))) void func6(void); // expected-error {{cannot merge incompatible feature attribute to this decl}} expected-note {{feature attribute __attribute__((availability(domain:feature1, 1)))}}
-__attribute__((availability(domain:feature1, AVAIL))) void func8(void); // expected-error {{new domain availability attributes cannot be added to redeclarations}}
+__attribute__((availability(domain:feature1, AVAIL))) void func8(void); // redecl-error {{new domain availability attributes cannot be added to redeclarations}}
 
 int g0;
 __attribute__((availability(domain:feature1, AVAIL))) int g0; // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
 __attribute__((availability(domain:feature1, UNAVAIL))) int g0; // expected-error {{cannot merge incompatible feature attribute to this decl}} expected-note {{feature attribute __attribute__((availability(domain:feature1, 1)))}}
-__attribute__((availability(domain:feature1, AVAIL))) int g2;// expected-error {{new domain availability attributes cannot be added to redeclarations}}
+__attribute__((availability(domain:feature1, AVAIL))) int g2;// redecl-error {{new domain availability attributes cannot be added to redeclarations}}
 
 typedef int INT0 __attribute__((availability(domain:feature2, AVAIL)));
 typedef INT0 INT1 __attribute__((availability(domain:feature2, AVAIL)));

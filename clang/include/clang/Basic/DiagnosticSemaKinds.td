@@ -4115,7 +4115,8 @@ def err_feature_invalid_for_decl : Error<
 def err_feature_merge_incompatible : Error<
   "cannot merge incompatible feature attribute to this decl">;
 def warn_new_feature_redeclaration : Warning<
-  "new domain availability attributes cannot be added to redeclarations">, DefaultError;
+  "new domain availability attributes cannot be added to redeclarations">,
+  InGroup<DiagGroup<"domain-availability-redeclaration">>, DefaultError;
 def err_feature_invalid_added : Error<
   "cannot add feature availability to this decl">;
 def note_feature_incompatible0 : Note<
