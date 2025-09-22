@@ -64,3 +64,69 @@ entry:
   %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
   ret <4 x float> %partial.reduce
 }
+
+define <8 x half> @partial_reduce_half(<8 x half> %acc, <16 x half> %a) {
+; CHECK-LABEL: partial_reduce_half:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    fadd v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <8 x half> @llvm.vector.partial.reduce.fadd(<8 x half> %acc, <16 x half> %a)
+  ret <8 x half> %partial.reduce
+}
+
+define <4 x float> @partial_reduce_float(<4 x float> %acc, <8 x float> %a) {
+; CHECK-LABEL: partial_reduce_float:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %a)
+  ret <4 x float> %partial.reduce
+}
+
+define <2 x double> @partial_reduce_double(<2 x double> %acc, <4 x double> %a) {
+; CHECK-LABEL: partial_reduce_double:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    fadd v0.2d, v0.2d, v2.2d
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <2 x double> @llvm.vector.partial.reduce.fadd(<2 x double> %acc, <4 x double> %a)
+  ret <2 x double> %partial.reduce
+}
+
+define <vscale x 8 x half> @partial_reduce_half_vl128(<vscale x 8 x half> %acc, <vscale x 16 x half> %a) {
+; CHECK-LABEL: partial_reduce_half_vl128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
+; CHECK-NEXT:    fadd z0.h, z0.h, z2.h
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <vscale x 8 x half> @llvm.vector.partial.reduce.fadd(<vscale x 8 x half> %acc, <vscale x 16 x half> %a)
+  ret <vscale x 8 x half> %partial.reduce
+}
+
+define <vscale x 4 x float> @partial_reduce_float_vl128(<vscale x 4 x float> %acc, <vscale x 8 x float> %a) {
+; CHECK-LABEL: partial_reduce_float_vl128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-NEXT:    fadd z0.s, z0.s, z2.s
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %a)
+  ret <vscale x 4 x float> %partial.reduce
+}
+
+define <vscale x 2 x double> @partial_reduce_double_vl128(<vscale x 2 x double> %acc, <vscale x 4 x double> %a) {
+; CHECK-LABEL: partial_reduce_double_vl128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z2.d
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 4 x double> %a)
+  ret <vscale x 2 x double> %partial.reduce
+}

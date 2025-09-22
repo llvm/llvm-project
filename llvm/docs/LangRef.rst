@@ -20789,8 +20789,8 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x f32> @llvm.vector.partial.reduce.fadd.v4f32.v4f32.v8f32(<4 x f32> %a, <8 x f32> %b)
-      declare <vscale x 4 x f32> @llvm.vector.partial.reduce.add.nxv4f32.nxv4f32.nxv8f32(<vscale x 4 x f32> %a, <vscale x 8 x f32> %b)
+      declare <4 x f32> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x f32> %a, <8 x f32> %b)
+      declare <vscale x 4 x f32> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x f32> %a, <vscale x 8 x f32> %b)
 
 Overview:
 """""""""
@@ -20810,7 +20810,7 @@ of the result's type, while maintaining the same element type.
 Semantics:
 """"""""""
 
-Other than the reduction operator (e.g. add) the way in which the concatenated
+Other than the reduction operator (e.g. fadd) the way in which the concatenated
 arguments is reduced is entirely unspecified. By their nature these intrinsics
 are not expected to be useful in isolation but instead implement the first phase
 of an overall reduction operation.
