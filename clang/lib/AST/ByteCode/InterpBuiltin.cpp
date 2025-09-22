@@ -2583,6 +2583,12 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_pmadd(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call,
+                                      unsigned BuiltinID) {
+  return true; // TODO: Implement the builtin.
+}
+
 static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
                                       const CallExpr *Call,
                                       unsigned BuiltinID) {
@@ -3493,6 +3499,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pavgw512:
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::avgCeilU);
+
+  case clang::X86::BI__builtin_ia32_pmaddubsw128:
+  case clang::X86::BI__builtin_ia32_pmaddubsw256:
+  case clang::X86::BI__builtin_ia32_pmaddubsw512:
+    return true; // TODO: Use interp__builtin_i32_pmadd.
+  
+  case clang::X86::BI__builtin_ia32_pmaddwd128:
+  case clang::X86::BI__builtin_ia32_pmaddwd256:
+  case clang::X86::BI__builtin_ia32_pmaddwd512:
+    return true; // TODO: Use interp__builtin_i32_pmadd.
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
