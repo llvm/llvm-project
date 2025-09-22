@@ -89,11 +89,6 @@ public:
   /// Returns true if the given float type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-
   std::optional<int64_t> getSizeInBytes();
 };
 
@@ -117,11 +112,6 @@ public:
   /// Return true if the number of elements is known at compile time and is not
   /// implementation dependent.
   bool hasCompileTimeKnownNumElements() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 
   std::optional<int64_t> getSizeInBytes();
 };
@@ -147,11 +137,6 @@ public:
   /// Returns the array stride in bytes. 0 means no stride decorated on this
   /// type.
   unsigned getArrayStride() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 
   /// Returns the array size in bytes. Since array type may have an explicit
   /// stride declaration (in bytes), we also include it in the calculation.
@@ -192,11 +177,6 @@ public:
   ImageSamplerUseInfo getSamplerUseInfo() const;
   ImageFormat getImageFormat() const;
   // TODO: Add support for Access qualifier
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 // SPIR-V pointer type
@@ -212,11 +192,6 @@ public:
   Type getPointeeType() const;
 
   StorageClass getStorageClass() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 // SPIR-V run-time array type
@@ -238,11 +213,6 @@ public:
   /// Returns the array stride in bytes. 0 means no stride decorated on this
   /// type.
   unsigned getArrayStride() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 // SPIR-V sampled image type
@@ -264,12 +234,6 @@ public:
                    Type imageType);
 
   Type getImageType() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<spirv::StorageClass> storage = std::nullopt);
-  void
-  getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                  std::optional<spirv::StorageClass> storage = std::nullopt);
 };
 
 /// SPIR-V struct type. Two kinds of struct types are supported:
@@ -419,11 +383,6 @@ public:
   trySetBody(ArrayRef<Type> memberTypes, ArrayRef<OffsetInfo> offsetInfo = {},
              ArrayRef<MemberDecorationInfo> memberDecorations = {},
              ArrayRef<StructDecorationInfo> structDecorations = {});
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 llvm::hash_code
@@ -455,11 +414,6 @@ public:
   uint32_t getColumns() const;
   /// Returns the use parameter of the cooperative matrix.
   CooperativeMatrixUseKHR getUse() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 
@@ -511,11 +465,6 @@ public:
 
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 /// SPIR-V TensorARM Type
@@ -551,11 +500,6 @@ public:
   ArrayRef<int64_t> getShape() const;
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
 };
 
 } // namespace spirv
