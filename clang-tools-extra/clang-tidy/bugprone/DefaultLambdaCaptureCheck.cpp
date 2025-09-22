@@ -15,7 +15,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void DefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
-  // Match any lambda expression
   Finder->addMatcher(lambdaExpr().bind("lambda"), this);
 }
 
@@ -24,7 +23,6 @@ void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Lambda)
     return;
 
-  // Check if lambda has a default capture
   if (Lambda->getCaptureDefault() == LCD_None)
     return;
 
