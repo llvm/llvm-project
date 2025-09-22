@@ -406,8 +406,8 @@ getPointerOperands(const Value &V, const DataLayout &DL,
           GV, cast<LoadInst>(&V)->getFunction()));
       SmallVector<Value *, 2> PtrOps;
       for (const auto *U : GV->users())
-        if (isa<StoreInst>(U))
-          PtrOps.push_back(cast<Operator>(U)->getOperand(0));
+        if (auto *SI = dyn_cast<StoreInst>(U))
+          PtrOps.push_back(const_cast<Value *>(SI->getValueOperand()));
       return PtrOps;
     }
     return {};
