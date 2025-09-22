@@ -11,7 +11,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sstream>
+#include <string>
 
 using namespace llvm;
 
@@ -78,17 +78,16 @@ bool RangeUtils::contains(ArrayRef<Range> Ranges, int64_t Value) {
 
 void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges,
                              char Separator) {
-  if (Ranges.empty())
+  if (Ranges.empty()) {
     OS << "empty";
-  else {
-    bool IsFirst = true;
-    for (const Range &R : Ranges) {
-      if (!IsFirst)
-        OS << Separator;
-      else
-        IsFirst = false;
-      R.print(OS);
-    }
+    return;
+  }
+
+  std::string Sep(1, Separator);
+  ListSeparator LS(Sep);
+  for (const Range &R : Ranges) {
+    OS << LS;
+    R.print(OS);
   }
 }
 
