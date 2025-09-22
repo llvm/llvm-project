@@ -58,10 +58,6 @@ public:
   bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
 
-  // For vendor-specific relocations.
-  void relocateVendor(uint8_t *loc, const Relocation &rel, uint64_t val,
-                      StringRef vendor = "") const;
-
   // The following two variables are used by synthesized ALIGN relocations.
   InputSection *baseSec = nullptr;
   // r_offset and r_addend pairs.
@@ -572,15 +568,6 @@ RelExpr RISCV::getVendorRelExpr(const RelType type, const Symbol &s,
   return R_NONE;
 }
 
-void RISCV::relocateVendor(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           StringRef vendor) const {
-  llvm_unreachable("unknown vendor relocation");
-  Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation type "
-           << llvm::utostr(rel.type.v) << " in vendor namespace \"" << vendor
-           << "\"";
-  return;
-}
-
 static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
   return i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX;
 }
@@ -642,26 +629,6 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     const Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
     uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
-
-    if (rel.type == R_RISCV_VENDOR) {
-      // Vendor-specific relocations are indicated by a pair of a R_RISCV_VENDOR
-      // relocation followed by relocation in the vendor's private namespace.
-      // The vendor name is identified by the symbol name referenced by the
-      // R_RISCV_VENDOR relocation.
-      StringRef vendor = rel.sym->getName();
-
-      // Consume the second relocation as well.
-      assert(i != size - 1 &&
-             "R_RISCV_VENDOR relocation cannot be the final relocation!");
-      i += 1;
-
-      const Relocation &rel2 = relocs[i];
-      uint8_t *loc2 = buf + rel2.offset;
-      uint64_t val2 = sec.getRelocTargetVA(ctx, rel2, secAddr + rel2.offset);
-
-      relocateVendor(loc2, rel2, val2, vendor);
-      continue;
-    }
 
     switch (rel.expr) {
     case R_RELAX_HINT:
