@@ -16,56 +16,46 @@
 ---
 name:            test_software_pipelining
 registers:
-  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-                                                                                '%27',
-                                                                                '%4',
-                                                                                '%26',
-                                                                                '%25',
-                                                                                '%5',
-                                                                                '%24',
-                                                                                '%22',
-                                                                                '%6',
-                                                                                '%20',
-                                                                                '%19',
-                                                                                '%7',
-                                                                                '%18',
-                                                                                '%16',
+  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [ 
+                                                                                '%4', 
+                                                                                '%25', 
+                                                                                '%5', 
+                                                                                '%22', 
+                                                                                '%6', 
+                                                                                '%19', 
+                                                                                '%7', 
+                                                                                '%18', 
+                                                                                '%16', 
                                                                                 '%8' ] }
-  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-                                                                                '%16',
-                                                                                '%8',
-                                                                                '%22',
-                                                                                '%6',
-                                                                                '%20',
-                                                                                '%19',
-                                                                                '%7',
-                                                                                '%18' ] }
+  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [ 
+                                                                                '%8', 
+                                                                                '%6', 
+                                                                                '%19', 
+                                                                                '%7', 
+                                                                                '%18', 
+                                                                                '%16' ] }
   - { id: 2, class: sgpr_128, preferred-register: '', flags: [  ] }
   - { id: 3, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 4, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 4, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 5, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 5, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 6, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 6, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%23', '%1', '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 7, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 7, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%23', '%1', '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 8, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 8, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%17', '%1', '%23', '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 9, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-                                                                                '%27',
-                                                                                '%4',
-                                                                                '%26',
-                                                                                '%25',
-                                                                                '%5',
-                                                                                '%24',
-                                                                                '%22',
-                                                                                '%6',
-                                                                                '%20',
-                                                                                '%19',
-                                                                                '%7',
-                                                                                '%18',
-                                                                                '%16',
+  - { id: 9, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [ 
+                                                                                '%4', 
+                                                                                '%25', 
+                                                                                '%5', 
+                                                                                '%22', 
+                                                                                '%6', 
+                                                                                '%19', 
+                                                                                '%7', 
+                                                                                '%18', 
+                                                                                '%16', 
                                                                                 '%8' ] }
   - { id: 10, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 11, class: vgpr_32, preferred-register: '', flags: [  ] }
@@ -73,58 +63,50 @@ registers:
   - { id: 13, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 14, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 15, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 16, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 16, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%23', '%1', '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 17, class: vreg_128_align2, preferred-register: '', flags: [  ],
-      anti-hints: [ '%16', '%8' ] }
-  - { id: 18, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 17, class: vreg_128_align2, preferred-register: '', flags: [  ], 
+      anti-hints: [ '%8' ] }
+  - { id: 18, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%23', '%1', '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 19, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 19, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%23', '%1', '%29', '%0', '%28', '%30', '%9' ] }
   - { id: 20, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 21, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 22, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 22, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%29', '%0', '%28', '%30', '%9' ] }
-  - { id: 23, class: vreg_128_align2, preferred-register: '', flags: [  ],
-      anti-hints: [ '%22', '%6', '%20', '%19', '%7', '%18', '%16', '%8' ] }
+  - { id: 23, class: vreg_128_align2, preferred-register: '', flags: [  ], 
+      anti-hints: [ '%6', '%19', '%7', '%18', '%16', '%8' ] }
   - { id: 24, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 25, class: vreg_128_align2, preferred-register: '', flags: [  ],
+  - { id: 25, class: vreg_128_align2, preferred-register: '', flags: [  ], 
       anti-hints: [ '%29', '%0', '%28', '%30', '%9' ] }
   - { id: 26, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 27, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 28, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-                                                                                 '%27',
-                                                                                 '%4',
-                                                                                 '%26',
-                                                                                 '%25',
-                                                                                 '%5',
-                                                                                 '%24',
-                                                                                 '%22',
-                                                                                 '%6',
-                                                                                 '%20',
-                                                                                 '%19',
-                                                                                 '%7',
-                                                                                 '%18',
-                                                                                 '%16',
+  - { id: 28, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [ 
+                                                                                 '%4', 
+                                                                                 '%25', 
+                                                                                 '%5', 
+                                                                                 '%22', 
+                                                                                 '%6', 
+                                                                                 '%19', 
+                                                                                 '%7', 
+                                                                                 '%18', 
+                                                                                 '%16', 
                                                                                  '%8' ] }
-  - { id: 29, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-                                                                                 '%27',
-                                                                                 '%4',
-                                                                                 '%26',
-                                                                                 '%25',
-                                                                                 '%5',
-                                                                                 '%24',
-                                                                                 '%22',
-                                                                                 '%6',
-                                                                                 '%20',
-                                                                                 '%19',
-                                                                                 '%7',
-                                                                                 '%18',
-                                                                                 '%16',
+  - { id: 29, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [ 
+                                                                                 '%4', 
+                                                                                 '%25', 
+                                                                                 '%5', 
+                                                                                 '%22', 
+                                                                                 '%6', 
+                                                                                 '%19', 
+                                                                                 '%7', 
+                                                                                 '%18', 
+                                                                                 '%16', 
                                                                                  '%8' ] }
-  - { id: 30, class: vreg_128_align2, preferred-register: '', flags: [  ],
-      anti-hints: [ '%27', '%4', '%26', '%25', '%5', '%24', '%22', '%6',
-                    '%20', '%19', '%7', '%18', '%16', '%8' ] }
+  - { id: 30, class: vreg_128_align2, preferred-register: '', flags: [  ], 
+      anti-hints: [ '%4', '%25', '%5', '%22', '%6', '%19', '%7', '%18', 
+                    '%16', '%8' ] }
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_software_pipelining
