@@ -819,9 +819,8 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
     Out.erase(MVT::pAny);
     Out.insert(MVT::iPTR);
     for (MVT T : MVT::cheri_capability_valuetypes()) {
-      if (Legal.count(T)) {
+      if (Legal.count(T))
         Out.insert(MVT::cPTR);
-      }
     }
   } else if (Out.count(MVT::iAny)) {
     Out.erase(MVT::iAny);
@@ -1656,7 +1655,7 @@ bool SDTypeConstraint::ApplyTypeConstraint(TreePatternNode &N,
     return NodeToApply.UpdateNodeType(ResNo, VVT, TP);
   case SDTCisPtrTy: {
     // Operand must be a legal pointer (iPTR, or possibly cPTR) type.
-    const auto &PtrTys = TP.getDAGPatterns().getLegalPtrTypes();
+    const TypeSetByHwMode &PtrTys = TP.getDAGPatterns().getLegalPtrTypes();
     return NodeToApply.UpdateNodeType(ResNo, PtrTys, TP);
   }
   case SDTCisInt:
@@ -3320,7 +3319,7 @@ TypeSetByHwMode CodeGenDAGPatterns::ComputeLegalPtrTypes() const {
     return Out;
   };
 
-  const auto &LegalTypes = getLegalTypes();
+  const TypeSetByHwMode &LegalTypes = getLegalTypes();
   MachineValueTypeSet LegalPtrsDefault =
       LegalPtrsForSet(LegalTypes.get(DefaultMode));
 
