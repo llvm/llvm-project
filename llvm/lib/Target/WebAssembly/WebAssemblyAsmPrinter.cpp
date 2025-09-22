@@ -42,6 +42,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -461,33 +462,35 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
 void WebAssemblyAsmPrinter::emitBranchHintSection() const {
   MCSectionWasm *BranchHintsSection = OutContext.getWasmSection(
       ".custom_section.metadata.code.branch_hint", SectionKind::getMetadata());
-  const uint32_t NumFunctionHints =
-      std::count_if(BranchHints.begin(), BranchHints.end(),
-                    [](const auto &BHR) { return !BHR.Hints.empty(); });
+  const uint32_t NumFunctionHints = BranchHints.size();
   if (NumFunctionHints == 0)
     return;
   OutStreamer->pushSection();
   OutStreamer->switchSection(BranchHintsSection);
   OutStreamer->emitULEB128IntValue(NumFunctionHints);
-  for (const auto &BHR : BranchHints) {
-    if (BHR.Hints.empty())
-      continue;
-    // emit relocatable function index for the function symbol
-    OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
-        BHR.FuncSym, WebAssembly::S_FUNCINDEX, OutContext));
-    // emit the number of hints for this function (is constant -> does not need
-    // handling by target streamer for reloc)
-    OutStreamer->emitULEB128IntValue(BHR.Hints.size());
-    for (const auto &[instrSym, hint] : BHR.Hints) {
-      assert(static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
-                 wasm::WasmCodeMetadataBranchHint::LIKELY ||
-             static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
-                 wasm::WasmCodeMetadataBranchHint::UNLIKELY);
-      // offset from function start
-      OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
-          instrSym, WebAssembly::S_DEBUG_REF, OutContext));
-      OutStreamer->emitULEB128IntValue(1); // hint size
-      OutStreamer->emitULEB128IntValue(hint);
+
+  const auto &AssemblerSymbols = OutStreamer->getAssemblerPtr()->getSymbols();
+  for (const auto &Sym : AssemblerSymbols) {
+    if (auto FuncEntry = BranchHints.find(Sym);
+        FuncEntry != BranchHints.end()) {
+      assert(!FuncEntry->second.empty());
+      // emit relocatable function index for the function symbol
+      OutStreamer->emitULEB128Value(
+          MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext));
+      // emit the number of hints for this function (is constant -> does not
+      // need handling by target streamer for reloc)
+      OutStreamer->emitULEB128IntValue(FuncEntry->second.size());
+      for (const auto &[instrSym, hint] : FuncEntry->second) {
+        assert(static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
+                   wasm::WasmCodeMetadataBranchHint::LIKELY ||
+               static_cast<wasm::WasmCodeMetadataBranchHint>(hint) ==
+                   wasm::WasmCodeMetadataBranchHint::UNLIKELY);
+        // offset from function start
+        OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
+            instrSym, WebAssembly::S_DEBUG_REF, OutContext));
+        OutStreamer->emitULEB128IntValue(1); // hint size
+        OutStreamer->emitULEB128IntValue(hint);
+      }
     }
   }
   OutStreamer->popSection();
@@ -772,12 +775,11 @@ void WebAssemblyAsmPrinter::recordBranchHint(const MachineInstr *MI) {
   // we know that we only emit branch hints for internal functions,
   // therefore we can directly cast and don't need getMCSymbolForFunction
   MCSymbol *FuncSym = getSymbol(&MF->getFunction());
-  const uint32_t LocalFuncIdx = MF->getFunctionNumber();
-  if (BranchHints.size() <= LocalFuncIdx) {
-    BranchHints.resize(LocalFuncIdx + 1);
-    BranchHints[LocalFuncIdx].FuncSym = FuncSym;
+  auto FuncEntry = BranchHints.find(FuncSym);
+  if (FuncEntry == BranchHints.end()) {
+    FuncEntry = BranchHints.insert({FuncSym, {}}).first;
   }
-  BranchHints[LocalFuncIdx].Hints.emplace_back(BrIfSym, HintValue);
+  FuncEntry->second.emplace_back(BrIfSym, HintValue);
 }
 
 void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {

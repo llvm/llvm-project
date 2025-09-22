@@ -20,10 +20,7 @@
 namespace llvm {
 class WebAssemblyTargetStreamer;
 
-struct BranchHintRecord {
-  MCSymbol *FuncSym;
-  SmallVector<std::pair<MCSymbol *, uint8_t>, 0> Hints;
-};
+using BranchHintRecord = SmallVector<std::pair<MCSymbol *, uint8_t>, 0>;
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
 public:
@@ -36,7 +33,7 @@ private:
   bool signaturesEmitted = false;
 
   // vec idx == local func_idx
-  SmallVector<BranchHintRecord> BranchHints;
+  SmallDenseMap<MCSymbol *, BranchHintRecord> BranchHints;
 
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,
@@ -58,12 +55,6 @@ public:
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();
     MRI = &MF.getRegInfo();
     MFI = MF.getInfo<WebAssemblyFunctionInfo>();
-
-    if (Subtarget->hasBranchHinting()) {
-      const uint32_t LocalFuncIdx = MF.getFunctionNumber();
-      BranchHints.resize(MMI->getModule()->getFunctionList().size());
-      BranchHints[LocalFuncIdx].FuncSym = getSymbol(&MF.getFunction());
-    }
     return AsmPrinter::runOnMachineFunction(MF);
   }
 
