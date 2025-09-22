@@ -1766,7 +1766,7 @@ public:
 #  endif
 
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT, _Traits>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT, _Traits>
   subview(size_type __pos = 0, size_type __n = npos) const {
     return basic_string_view<_CharT, _Traits>(*this).subview(__pos, __n);
   }

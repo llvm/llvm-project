@@ -21,6 +21,7 @@
 #include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 #define CS(S) MAKE_CSTRING(CharT, S)
 
@@ -59,33 +60,33 @@ constexpr void test() {
     { // With a position that is out of range.
       try {
         sv.subview(sv.size() + 1);
-        assert(false && "Expected std::out_of_range exception");
+        assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
-        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::subview");
+        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
       } catch (...) {
-        assert(false && "Expected std::out_of_range exception");
+        assert(false);
       }
     }
 
     { // With a position that is out of range and a 0 character length.
       try {
         sv.subview(sv.size() + 1, 0);
-        assert(false && "Expected std::out_of_range exception");
+        assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
-        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::subview");
+        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
       } catch (...) {
-        assert(false && "Expected std::out_of_range exception");
+        assert(false);
       }
     }
 
     { // With a position that is out of range and a some character length.
       try {
         sv.subview(sv.size() + 1, 1);
-        assert(false && "Expected std::out_of_range exception");
+        assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
-        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::subview");
+        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
       } catch (...) {
-        assert(false && "Expected std::out_of_range exception");
+        assert(false);
       }
     }
   }
@@ -105,16 +106,16 @@ constexpr void test() {
   test<CharT, constexpr_char_traits<CharT>>();
 }
 
+class Test {
+public:
+  template <typename CharT>
+  constexpr void operator()() const {
+    test<CharT>();
+  }
+};
+
 constexpr bool test() {
-  test<char>();
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
-#endif
-#ifndef TEST_HAS_NO_CHAR8_T
-  test<char8_t>();
-#endif
-  test<char16_t>();
-  test<char32_t>();
+  types::for_each(types::character_types(), Test{});
 
   return true;
 }
