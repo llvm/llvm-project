@@ -713,18 +713,19 @@ private:
 
 public:
   // [istringstream.cons] Constructors:
-  _LIBCPP_HIDE_FROM_ABI basic_istringstream() : basic_istream<_CharT, _Traits>(&__sb_), __sb_(ios_base::in) {}
+  _LIBCPP_HIDE_FROM_ABI basic_istringstream()
+      : basic_istream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(ios_base::in) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_istringstream(ios_base::openmode __wch)
-      : basic_istream<_CharT, _Traits>(&__sb_), __sb_(__wch | ios_base::in) {}
+      : basic_istream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__wch | ios_base::in) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_istringstream(const string_type& __s, ios_base::openmode __wch = ios_base::in)
-      : basic_istream<_CharT, _Traits>(&__sb_), __sb_(__s, __wch | ios_base::in) {}
+      : basic_istream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__s, __wch | ios_base::in) {}
 
   basic_istringstream(const basic_istringstream&) = delete;
   _LIBCPP_HIDE_FROM_ABI basic_istringstream(basic_istringstream&& __rhs)
       : basic_istream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-    basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
+    basic_istream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
   // [istringstream.assign] Assign and swap:
@@ -741,7 +742,7 @@ public:
 
   // [istringstream.members] Member functions:
   _LIBCPP_HIDE_FROM_ABI basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
-    return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(&__sb_);
+    return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(std::addressof(__sb_));
   }
 
   _LIBCPP_HIDE_FROM_ABI string_type str() const { return __sb_.str(); }
@@ -774,18 +775,19 @@ private:
 
 public:
   // [ostringstream.cons] Constructors:
-  _LIBCPP_HIDE_FROM_ABI basic_ostringstream() : basic_ostream<_CharT, _Traits>(&__sb_), __sb_(ios_base::out) {}
+  _LIBCPP_HIDE_FROM_ABI basic_ostringstream()
+      : basic_ostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(ios_base::out) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_ostringstream(ios_base::openmode __wch)
-      : basic_ostream<_CharT, _Traits>(&__sb_), __sb_(__wch | ios_base::out) {}
+      : basic_ostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__wch | ios_base::out) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_ostringstream(const string_type& __s, ios_base::openmode __wch = ios_base::out)
-      : basic_ostream<_CharT, _Traits>(&__sb_), __sb_(__s, __wch | ios_base::out) {}
+      : basic_ostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__s, __wch | ios_base::out) {}
 
   basic_ostringstream(const basic_ostringstream&) = delete;
   _LIBCPP_HIDE_FROM_ABI basic_ostringstream(basic_ostringstream&& __rhs)
       : basic_ostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-    basic_ostream<_CharT, _Traits>::set_rdbuf(&__sb_);
+    basic_ostream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
   // [ostringstream.assign] Assign and swap:
@@ -803,7 +805,7 @@ public:
 
   // [ostringstream.members] Member functions:
   _LIBCPP_HIDE_FROM_ABI basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
-    return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(&__sb_);
+    return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(std::addressof(__sb_));
   }
 
   _LIBCPP_HIDE_FROM_ABI string_type str() const { return __sb_.str(); }
@@ -836,19 +838,19 @@ private:
 public:
   // [stringstream.cons] constructors
   _LIBCPP_HIDE_FROM_ABI basic_stringstream()
-      : basic_iostream<_CharT, _Traits>(&__sb_), __sb_(ios_base::in | ios_base::out) {}
+      : basic_iostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(ios_base::in | ios_base::out) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stringstream(ios_base::openmode __wch)
-      : basic_iostream<_CharT, _Traits>(&__sb_), __sb_(__wch) {}
+      : basic_iostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__wch) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stringstream(const string_type& __s,
                                                     ios_base::openmode __wch = ios_base::in | ios_base::out)
-      : basic_iostream<_CharT, _Traits>(&__sb_), __sb_(__s, __wch) {}
+      : basic_iostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__s, __wch) {}
 
   basic_stringstream(const basic_stringstream&) = delete;
   _LIBCPP_HIDE_FROM_ABI basic_stringstream(basic_stringstream&& __rhs)
       : basic_iostream<_CharT, _Traits>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-    basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
+    basic_istream<_CharT, _Traits>::set_rdbuf(std::addressof(__sb_));
   }
 
   // [stringstream.assign] Assign and swap:
@@ -865,7 +867,7 @@ public:
 
   // [stringstream.members] Member functions:
   _LIBCPP_HIDE_FROM_ABI basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
-    return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(&__sb_);
+    return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(std::addressof(__sb_));
   }
 
   _LIBCPP_HIDE_FROM_ABI string_type str() const { return __sb_.str(); }

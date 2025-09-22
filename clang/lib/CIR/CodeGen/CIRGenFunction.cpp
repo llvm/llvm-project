@@ -206,8 +206,10 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
-                             /*insertIntoFnEntryBlock=*/false);
+    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
+                                  /*insertIntoFnEntryBlock=*/false);
+    fnRetAlloca = addr;
+    returnValue = Address(addr, alignment);
   }
 }
 
@@ -655,6 +657,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (dtorType) {
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor");
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:

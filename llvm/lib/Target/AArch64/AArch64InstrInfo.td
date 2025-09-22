@@ -3844,7 +3844,7 @@ let AddedComplexity = 10 in {
 }
 
 
-// zextload -> i64
+// zextload -> i32
 multiclass ExtLoadTo32ROPat<ROAddrMode ro, SDPatternOperator loadop,
                             Instruction INSTW, Instruction INSTX> {
   def : Pat<(i32 (loadop (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))),
@@ -3852,14 +3852,12 @@ multiclass ExtLoadTo32ROPat<ROAddrMode ro, SDPatternOperator loadop,
 
   def : Pat<(i32 (loadop (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))),
             (INSTX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
-
 }
 
 let AddedComplexity = 10 in {
   // extload -> zextload
   defm : ExtLoadTo32ROPat<ro8,  extloadi8,   LDRBBroW, LDRBBroX>;
   defm : ExtLoadTo32ROPat<ro16, extloadi16,  LDRHHroW, LDRHHroX>;
-  defm : ExtLoadTo32ROPat<ro32, extloadi32,  LDRWroW,  LDRWroX>;
 
   // zextloadi1 -> zextloadi8
   defm : ExtLoadTo32ROPat<ro8, zextloadi1, LDRBBroW, LDRBBroX>;
@@ -4751,6 +4749,26 @@ let Predicates = [IsLE] in {
             (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
 }
 
+// truncstorei32 of f64 bitcasted to i64
+def : Pat<(truncstorei32 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
+          (STRSui (EXTRACT_SUBREG FPR64:$Rt, ssub), GPR64sp:$Rn, uimm12s4:$offset)>;
+
+// truncstorei16 of f64 bitcasted to i64
+def : Pat<(truncstorei16 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
+          (STRHui (f16 (EXTRACT_SUBREG FPR64:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$offset)>;      
+
+  // truncstorei16 of f32 bitcasted to i32
+def : Pat<(truncstorei16 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$off)),
+          (STRHui (f16 (EXTRACT_SUBREG FPR32:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$off)>;
+
+  // truncstorei8 of f64 bitcasted to i64
+def : Pat<(truncstorei8 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$off)),
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG FPR64:$Rt, bsub)), GPR64sp:$Rn, uimm12s1:$off)>;
+
+  // truncstorei8 of f32 bitcasted to i32
+def : Pat<(truncstorei8 (i32 (bitconvert (f32 FPR32:$Rt))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$off)),
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG FPR32:$Rt, bsub)), GPR64sp:$Rn, uimm12s1:$off)>;
+
 // truncstore i64
 def : Pat<(truncstorei32 GPR64:$Rt,
                          (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
@@ -5389,6 +5407,11 @@ defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 let Predicates = [HasNEON, HasFPRCVT] in {
   defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
   defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
+
+  def : Pat<(v1f64 (extract_subvector (v2f64 (sint_to_fp (v2i64 (sext (v2i32 V64:$Rn))))), (i64 0))),
+          (SCVTFDSr (EXTRACT_SUBREG V64:$Rn, ssub))>;
+  def : Pat<(v1f64 (extract_subvector (v2f64 (uint_to_fp (v2i64 (zext (v2i32 V64:$Rn))))), (i64 0))),
+          (UCVTFDSr (EXTRACT_SUBREG V64:$Rn, ssub))>;
 }
 
 def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
@@ -8303,6 +8326,29 @@ def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
 }
 
+// SABA patterns for add(x, abs(y)) -> saba(x, y, 0)
+def : Pat<(v8i8 (add V64:$Vn, (abs V64:$Vm))),
+          (SABAv8i8 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v4i16 (add V64:$Vn, (abs V64:$Vm))),
+          (SABAv4i16 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v2i32 (add V64:$Vn, (abs V64:$Vm))),
+          (SABAv2i32 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v16i8 (add V128:$Vn, (abs V128:$Vm))),
+          (SABAv16i8 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
+def : Pat<(v8i16 (add V128:$Vn, (abs V128:$Vm))),
+          (SABAv8i16 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
+def : Pat<(v4i32 (add V128:$Vn, (abs V128:$Vm))),
+          (SABAv4i32 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
+
+// SABAL patterns for add(x, zext(abs(y))) -> sabal(x, y, 0)
+def : Pat<(v8i16 (add V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
+          (SABALv8i8_v8i16 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v4i32 (add V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
+          (SABALv4i16_v4i32 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v2i64 (add V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
+          (SABALv2i32_v2i64 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+
+
 //----------------------------------------------------------------------------
 // AdvSIMD indexed element
 //----------------------------------------------------------------------------
@@ -9641,17 +9687,17 @@ def : Pat<(i64 (bitconvert (v1f64 V64:$Vn))),
 }
 let Predicates = [IsBE] in {
 def : Pat<(v8i8  (bitconvert GPR64:$Xn)),
-                 (REV64v8i8 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
+          (REV64v8i8 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
 def : Pat<(v4i16 (bitconvert GPR64:$Xn)),
-                 (REV64v4i16 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
+          (REV64v4i16 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
 def : Pat<(v2i32 (bitconvert GPR64:$Xn)),
-                 (REV64v2i32 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
+          (REV64v2i32 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
 def : Pat<(v4f16 (bitconvert GPR64:$Xn)),
-                 (REV64v4i16 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
+          (REV64v4i16 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
 def : Pat<(v4bf16 (bitconvert GPR64:$Xn)),
-                  (REV64v4i16 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
+          (REV64v4i16 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
 def : Pat<(v2f32 (bitconvert GPR64:$Xn)),
-                 (REV64v2i32 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
+          (REV64v2i32 (COPY_TO_REGCLASS GPR64:$Xn, FPR64))>;
 
 def : Pat<(i64 (bitconvert (v8i8  V64:$Vn))),
           (REV64v8i8 (COPY_TO_REGCLASS V64:$Vn, GPR64))>;
@@ -9700,17 +9746,17 @@ def : Pat<(v1i64 (bitconvert (v2f32 FPR64:$src))), (v1i64 FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v1i64 (bitconvert (v2i32 FPR64:$src))),
-                             (v1i64 (REV64v2i32 FPR64:$src))>;
+          (v1i64 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v1i64 (bitconvert (v4i16 FPR64:$src))),
-                             (v1i64 (REV64v4i16 FPR64:$src))>;
+          (v1i64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v1i64 (bitconvert (v8i8  FPR64:$src))),
-                             (v1i64 (REV64v8i8 FPR64:$src))>;
+          (v1i64 (REV64v8i8 FPR64:$src))>;
 def : Pat<(v1i64 (bitconvert (v4f16 FPR64:$src))),
-                             (v1i64 (REV64v4i16 FPR64:$src))>;
+          (v1i64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v1i64 (bitconvert (v4bf16 FPR64:$src))),
-                             (v1i64 (REV64v4i16 FPR64:$src))>;
+          (v1i64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v1i64 (bitconvert (v2f32 FPR64:$src))),
-                             (v1i64 (REV64v2i32 FPR64:$src))>;
+          (v1i64 (REV64v2i32 FPR64:$src))>;
 }
 def : Pat<(v1i64 (bitconvert (v1f64 FPR64:$src))), (v1i64 FPR64:$src)>;
 def : Pat<(v1i64 (bitconvert (f64   FPR64:$src))), (v1i64 FPR64:$src)>;
@@ -9726,19 +9772,19 @@ def : Pat<(v2i32 (bitconvert (v4bf16 FPR64:$src))), (v2i32 FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v2i32 (bitconvert (v1i64 FPR64:$src))),
-                             (v2i32 (REV64v2i32 FPR64:$src))>;
+          (v2i32 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v2i32 (bitconvert (v4i16 FPR64:$src))),
-                             (v2i32 (REV32v4i16 FPR64:$src))>;
+          (v2i32 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v2i32 (bitconvert (v8i8  FPR64:$src))),
-                             (v2i32 (REV32v8i8 FPR64:$src))>;
+          (v2i32 (REV32v8i8 FPR64:$src))>;
 def : Pat<(v2i32 (bitconvert (f64   FPR64:$src))),
-                             (v2i32 (REV64v2i32 FPR64:$src))>;
+          (v2i32 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v2i32 (bitconvert (v1f64 FPR64:$src))),
-                             (v2i32 (REV64v2i32 FPR64:$src))>;
+          (v2i32 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v2i32 (bitconvert (v4f16 FPR64:$src))),
-                             (v2i32 (REV32v4i16 FPR64:$src))>;
+          (v2i32 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v2i32 (bitconvert (v4bf16 FPR64:$src))),
-                             (v2i32 (REV32v4i16 FPR64:$src))>;
+          (v2i32 (REV32v4i16 FPR64:$src))>;
 }
 def : Pat<(v2i32 (bitconvert (v2f32 FPR64:$src))), (v2i32 FPR64:$src)>;
 
@@ -9752,17 +9798,17 @@ def : Pat<(v4i16 (bitconvert (v1f64 FPR64:$src))), (v4i16 FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v4i16 (bitconvert (v1i64 FPR64:$src))),
-                             (v4i16 (REV64v4i16 FPR64:$src))>;
+          (v4i16 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v4i16 (bitconvert (v2i32 FPR64:$src))),
-                             (v4i16 (REV32v4i16 FPR64:$src))>;
+          (v4i16 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v4i16 (bitconvert (v8i8  FPR64:$src))),
-                             (v4i16 (REV16v8i8 FPR64:$src))>;
+          (v4i16 (REV16v8i8 FPR64:$src))>;
 def : Pat<(v4i16 (bitconvert (f64   FPR64:$src))),
-                             (v4i16 (REV64v4i16 FPR64:$src))>;
+          (v4i16 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v4i16 (bitconvert (v2f32 FPR64:$src))),
-                             (v4i16 (REV32v4i16 FPR64:$src))>;
+          (v4i16 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v4i16 (bitconvert (v1f64 FPR64:$src))),
-                             (v4i16 (REV64v4i16 FPR64:$src))>;
+          (v4i16 (REV64v4i16 FPR64:$src))>;
 }
 def : Pat<(v4i16 (bitconvert (v4f16 FPR64:$src))), (v4i16 FPR64:$src)>;
 def : Pat<(v4i16 (bitconvert (v4bf16 FPR64:$src))), (v4i16 FPR64:$src)>;
@@ -9784,30 +9830,30 @@ def : Pat<(v4bf16 (bitconvert (v1f64 FPR64:$src))), (v4bf16 FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v4f16 (bitconvert (v1i64 FPR64:$src))),
-                             (v4f16 (REV64v4i16 FPR64:$src))>;
+          (v4f16 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v4f16 (bitconvert (v2i32 FPR64:$src))),
-                             (v4f16 (REV32v4i16 FPR64:$src))>;
+          (v4f16 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v4f16 (bitconvert (v8i8  FPR64:$src))),
-                             (v4f16 (REV16v8i8 FPR64:$src))>;
+          (v4f16 (REV16v8i8 FPR64:$src))>;
 def : Pat<(v4f16 (bitconvert (f64   FPR64:$src))),
-                             (v4f16 (REV64v4i16 FPR64:$src))>;
+          (v4f16 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v4f16 (bitconvert (v2f32 FPR64:$src))),
-                             (v4f16 (REV32v4i16 FPR64:$src))>;
+          (v4f16 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v4f16 (bitconvert (v1f64 FPR64:$src))),
-                             (v4f16 (REV64v4i16 FPR64:$src))>;
+          (v4f16 (REV64v4i16 FPR64:$src))>;
 
 def : Pat<(v4bf16 (bitconvert (v1i64 FPR64:$src))),
-                             (v4bf16 (REV64v4i16 FPR64:$src))>;
+          (v4bf16 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v4bf16 (bitconvert (v2i32 FPR64:$src))),
-                             (v4bf16 (REV32v4i16 FPR64:$src))>;
+          (v4bf16 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v4bf16 (bitconvert (v8i8  FPR64:$src))),
-                             (v4bf16 (REV16v8i8 FPR64:$src))>;
+          (v4bf16 (REV16v8i8 FPR64:$src))>;
 def : Pat<(v4bf16 (bitconvert (f64   FPR64:$src))),
-                             (v4bf16 (REV64v4i16 FPR64:$src))>;
+          (v4bf16 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v4bf16 (bitconvert (v2f32 FPR64:$src))),
-                             (v4bf16 (REV32v4i16 FPR64:$src))>;
+          (v4bf16 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v4bf16 (bitconvert (v1f64 FPR64:$src))),
-                             (v4bf16 (REV64v4i16 FPR64:$src))>;
+          (v4bf16 (REV64v4i16 FPR64:$src))>;
 }
 def : Pat<(v4f16 (bitconvert (v4i16 FPR64:$src))), (v4f16 FPR64:$src)>;
 def : Pat<(v4bf16 (bitconvert (v4i16 FPR64:$src))), (v4bf16 FPR64:$src)>;
@@ -9824,21 +9870,21 @@ def : Pat<(v8i8  (bitconvert (v4bf16 FPR64:$src))), (v8i8  FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v8i8  (bitconvert (v1i64 FPR64:$src))),
-                             (v8i8 (REV64v8i8 FPR64:$src))>;
+          (v8i8 (REV64v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (v2i32 FPR64:$src))),
-                             (v8i8 (REV32v8i8 FPR64:$src))>;
+          (v8i8 (REV32v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (v4i16 FPR64:$src))),
-                             (v8i8 (REV16v8i8 FPR64:$src))>;
+          (v8i8 (REV16v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (f64   FPR64:$src))),
-                             (v8i8 (REV64v8i8 FPR64:$src))>;
+          (v8i8 (REV64v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (v2f32 FPR64:$src))),
-                             (v8i8 (REV32v8i8 FPR64:$src))>;
+          (v8i8 (REV32v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (v1f64 FPR64:$src))),
-                             (v8i8 (REV64v8i8 FPR64:$src))>;
+          (v8i8 (REV64v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (v4f16 FPR64:$src))),
-                             (v8i8 (REV16v8i8 FPR64:$src))>;
+          (v8i8 (REV16v8i8 FPR64:$src))>;
 def : Pat<(v8i8  (bitconvert (v4bf16 FPR64:$src))),
-                             (v8i8 (REV16v8i8 FPR64:$src))>;
+          (v8i8 (REV16v8i8 FPR64:$src))>;
 }
 
 let Predicates = [IsLE] in {
@@ -9851,17 +9897,17 @@ def : Pat<(f64   (bitconvert (v4bf16 FPR64:$src))), (f64   FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(f64   (bitconvert (v2i32 FPR64:$src))),
-                             (f64 (REV64v2i32 FPR64:$src))>;
+          (f64 (REV64v2i32 FPR64:$src))>;
 def : Pat<(f64   (bitconvert (v4i16 FPR64:$src))),
-                             (f64 (REV64v4i16 FPR64:$src))>;
+          (f64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(f64   (bitconvert (v2f32 FPR64:$src))),
-                             (f64 (REV64v2i32 FPR64:$src))>;
+          (f64 (REV64v2i32 FPR64:$src))>;
 def : Pat<(f64   (bitconvert (v8i8  FPR64:$src))),
-                             (f64 (REV64v8i8 FPR64:$src))>;
+          (f64 (REV64v8i8 FPR64:$src))>;
 def : Pat<(f64   (bitconvert (v4f16 FPR64:$src))),
-                             (f64 (REV64v4i16 FPR64:$src))>;
+          (f64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(f64   (bitconvert (v4bf16 FPR64:$src))),
-                             (f64 (REV64v4i16 FPR64:$src))>;
+          (f64 (REV64v4i16 FPR64:$src))>;
 }
 def : Pat<(f64   (bitconvert (v1i64 FPR64:$src))), (f64   FPR64:$src)>;
 def : Pat<(f64   (bitconvert (v1f64 FPR64:$src))), (f64   FPR64:$src)>;
@@ -9876,17 +9922,17 @@ def : Pat<(v1f64 (bitconvert (v4bf16 FPR64:$src))), (v1f64 FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v1f64 (bitconvert (v2i32 FPR64:$src))),
-                             (v1f64 (REV64v2i32 FPR64:$src))>;
+          (v1f64 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v1f64 (bitconvert (v4i16 FPR64:$src))),
-                             (v1f64 (REV64v4i16 FPR64:$src))>;
+          (v1f64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v1f64 (bitconvert (v8i8  FPR64:$src))),
-                             (v1f64 (REV64v8i8 FPR64:$src))>;
+          (v1f64 (REV64v8i8 FPR64:$src))>;
 def : Pat<(v1f64 (bitconvert (v2f32 FPR64:$src))),
-                             (v1f64 (REV64v2i32 FPR64:$src))>;
+          (v1f64 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v1f64 (bitconvert (v4f16 FPR64:$src))),
-                             (v1f64 (REV64v4i16 FPR64:$src))>;
+          (v1f64 (REV64v4i16 FPR64:$src))>;
 def : Pat<(v1f64 (bitconvert (v4bf16 FPR64:$src))),
-                             (v1f64 (REV64v4i16 FPR64:$src))>;
+          (v1f64 (REV64v4i16 FPR64:$src))>;
 }
 def : Pat<(v1f64 (bitconvert (v1i64 FPR64:$src))), (v1f64 FPR64:$src)>;
 def : Pat<(v1f64 (bitconvert (f64   FPR64:$src))), (v1f64 FPR64:$src)>;
@@ -9902,19 +9948,19 @@ def : Pat<(v2f32 (bitconvert (v4bf16 FPR64:$src))), (v2f32 FPR64:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v2f32 (bitconvert (v1i64 FPR64:$src))),
-                             (v2f32 (REV64v2i32 FPR64:$src))>;
+          (v2f32 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v2f32 (bitconvert (v4i16 FPR64:$src))),
-                             (v2f32 (REV32v4i16 FPR64:$src))>;
+          (v2f32 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v2f32 (bitconvert (v8i8  FPR64:$src))),
-                             (v2f32 (REV32v8i8 FPR64:$src))>;
+          (v2f32 (REV32v8i8 FPR64:$src))>;
 def : Pat<(v2f32 (bitconvert (v1f64 FPR64:$src))),
-                             (v2f32 (REV64v2i32 FPR64:$src))>;
+          (v2f32 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v2f32 (bitconvert (f64   FPR64:$src))),
-                             (v2f32 (REV64v2i32 FPR64:$src))>;
+          (v2f32 (REV64v2i32 FPR64:$src))>;
 def : Pat<(v2f32 (bitconvert (v4f16 FPR64:$src))),
-                             (v2f32 (REV32v4i16 FPR64:$src))>;
+          (v2f32 (REV32v4i16 FPR64:$src))>;
 def : Pat<(v2f32 (bitconvert (v4bf16 FPR64:$src))),
-                             (v2f32 (REV32v4i16 FPR64:$src))>;
+          (v2f32 (REV32v4i16 FPR64:$src))>;
 }
 def : Pat<(v2f32 (bitconvert (v2i32 FPR64:$src))), (v2f32 FPR64:$src)>;
 
@@ -9930,27 +9976,27 @@ def : Pat<(f128 (bitconvert (v16i8 FPR128:$src))), (f128 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(f128 (bitconvert (v2i64 FPR128:$src))),
-                            (f128 (EXTv16i8 FPR128:$src, FPR128:$src, (i32 8)))>;
+          (f128 (EXTv16i8 FPR128:$src, FPR128:$src, (i32 8)))>;
 def : Pat<(f128 (bitconvert (v4i32 FPR128:$src))),
-                            (f128 (EXTv16i8 (REV64v4i32 FPR128:$src),
-                                            (REV64v4i32 FPR128:$src), (i32 8)))>;
+          (f128 (EXTv16i8 (REV64v4i32 FPR128:$src),
+                          (REV64v4i32 FPR128:$src), (i32 8)))>;
 def : Pat<(f128 (bitconvert (v8i16 FPR128:$src))),
-                            (f128 (EXTv16i8 (REV64v8i16 FPR128:$src),
-                                            (REV64v8i16 FPR128:$src), (i32 8)))>;
+          (f128 (EXTv16i8 (REV64v8i16 FPR128:$src),
+                          (REV64v8i16 FPR128:$src), (i32 8)))>;
 def : Pat<(f128 (bitconvert (v8f16 FPR128:$src))),
-                            (f128 (EXTv16i8 (REV64v8i16 FPR128:$src),
-                                            (REV64v8i16 FPR128:$src), (i32 8)))>;
+          (f128 (EXTv16i8 (REV64v8i16 FPR128:$src),
+                          (REV64v8i16 FPR128:$src), (i32 8)))>;
 def : Pat<(f128 (bitconvert (v8bf16 FPR128:$src))),
-                            (f128 (EXTv16i8 (REV64v8i16 FPR128:$src),
-                                            (REV64v8i16 FPR128:$src), (i32 8)))>;
+          (f128 (EXTv16i8 (REV64v8i16 FPR128:$src),
+                          (REV64v8i16 FPR128:$src), (i32 8)))>;
 def : Pat<(f128 (bitconvert (v2f64 FPR128:$src))),
-                            (f128 (EXTv16i8 FPR128:$src, FPR128:$src, (i32 8)))>;
+          (f128 (EXTv16i8 FPR128:$src, FPR128:$src, (i32 8)))>;
 def : Pat<(f128 (bitconvert (v4f32 FPR128:$src))),
-                            (f128 (EXTv16i8 (REV64v4i32 FPR128:$src),
-                                            (REV64v4i32 FPR128:$src), (i32 8)))>;
+          (f128 (EXTv16i8 (REV64v4i32 FPR128:$src),
+                          (REV64v4i32 FPR128:$src), (i32 8)))>;
 def : Pat<(f128 (bitconvert (v16i8 FPR128:$src))),
-                            (f128 (EXTv16i8 (REV64v16i8 FPR128:$src),
-                                            (REV64v16i8 FPR128:$src), (i32 8)))>;
+          (f128 (EXTv16i8 (REV64v16i8 FPR128:$src),
+                          (REV64v16i8 FPR128:$src), (i32 8)))>;
 }
 
 let Predicates = [IsLE] in {
@@ -9964,20 +10010,19 @@ def : Pat<(v2f64 (bitconvert (v4f32 FPR128:$src))), (v2f64 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v2f64 (bitconvert (f128  FPR128:$src))),
-                             (v2f64 (EXTv16i8 FPR128:$src,
-                                              FPR128:$src, (i32 8)))>;
+          (v2f64 (EXTv16i8 FPR128:$src, FPR128:$src, (i32 8)))>;
 def : Pat<(v2f64 (bitconvert (v4i32 FPR128:$src))),
-                             (v2f64 (REV64v4i32 FPR128:$src))>;
+          (v2f64 (REV64v4i32 FPR128:$src))>;
 def : Pat<(v2f64 (bitconvert (v8i16 FPR128:$src))),
-                             (v2f64 (REV64v8i16 FPR128:$src))>;
+          (v2f64 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v2f64 (bitconvert (v8f16 FPR128:$src))),
-                             (v2f64 (REV64v8i16 FPR128:$src))>;
+          (v2f64 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v2f64 (bitconvert (v8bf16 FPR128:$src))),
-                             (v2f64 (REV64v8i16 FPR128:$src))>;
+          (v2f64 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v2f64 (bitconvert (v16i8 FPR128:$src))),
-                             (v2f64 (REV64v16i8 FPR128:$src))>;
+          (v2f64 (REV64v16i8 FPR128:$src))>;
 def : Pat<(v2f64 (bitconvert (v4f32 FPR128:$src))),
-                             (v2f64 (REV64v4i32 FPR128:$src))>;
+          (v2f64 (REV64v4i32 FPR128:$src))>;
 }
 def : Pat<(v2f64 (bitconvert (v2i64 FPR128:$src))), (v2f64 FPR128:$src)>;
 
@@ -9992,20 +10037,20 @@ def : Pat<(v4f32 (bitconvert (v2f64 FPR128:$src))), (v4f32 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v4f32 (bitconvert (f128  FPR128:$src))),
-                             (v4f32 (EXTv16i8 (REV64v4i32 FPR128:$src),
-                                    (REV64v4i32 FPR128:$src), (i32 8)))>;
+          (v4f32 (EXTv16i8 (REV64v4i32 FPR128:$src),
+                           (REV64v4i32 FPR128:$src), (i32 8)))>;
 def : Pat<(v4f32 (bitconvert (v8i16 FPR128:$src))),
-                             (v4f32 (REV32v8i16 FPR128:$src))>;
+          (v4f32 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v4f32 (bitconvert (v8f16 FPR128:$src))),
-                             (v4f32 (REV32v8i16 FPR128:$src))>;
+          (v4f32 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v4f32 (bitconvert (v8bf16 FPR128:$src))),
-                             (v4f32 (REV32v8i16 FPR128:$src))>;
+          (v4f32 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v4f32 (bitconvert (v16i8 FPR128:$src))),
-                             (v4f32 (REV32v16i8 FPR128:$src))>;
+          (v4f32 (REV32v16i8 FPR128:$src))>;
 def : Pat<(v4f32 (bitconvert (v2i64 FPR128:$src))),
-                             (v4f32 (REV64v4i32 FPR128:$src))>;
+          (v4f32 (REV64v4i32 FPR128:$src))>;
 def : Pat<(v4f32 (bitconvert (v2f64 FPR128:$src))),
-                             (v4f32 (REV64v4i32 FPR128:$src))>;
+          (v4f32 (REV64v4i32 FPR128:$src))>;
 }
 def : Pat<(v4f32 (bitconvert (v4i32 FPR128:$src))), (v4f32 FPR128:$src)>;
 
@@ -10020,20 +10065,20 @@ def : Pat<(v2i64 (bitconvert (v8bf16 FPR128:$src))), (v2i64 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v2i64 (bitconvert (f128  FPR128:$src))),
-                             (v2i64 (EXTv16i8 FPR128:$src,
-                                              FPR128:$src, (i32 8)))>;
+          (v2i64 (EXTv16i8 FPR128:$src,
+                           FPR128:$src, (i32 8)))>;
 def : Pat<(v2i64 (bitconvert (v4i32 FPR128:$src))),
-                             (v2i64 (REV64v4i32 FPR128:$src))>;
+          (v2i64 (REV64v4i32 FPR128:$src))>;
 def : Pat<(v2i64 (bitconvert (v8i16 FPR128:$src))),
-                             (v2i64 (REV64v8i16 FPR128:$src))>;
+          (v2i64 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v2i64 (bitconvert (v16i8 FPR128:$src))),
-                             (v2i64 (REV64v16i8 FPR128:$src))>;
+          (v2i64 (REV64v16i8 FPR128:$src))>;
 def : Pat<(v2i64 (bitconvert (v4f32 FPR128:$src))),
-                             (v2i64 (REV64v4i32 FPR128:$src))>;
+          (v2i64 (REV64v4i32 FPR128:$src))>;
 def : Pat<(v2i64 (bitconvert (v8f16 FPR128:$src))),
-                             (v2i64 (REV64v8i16 FPR128:$src))>;
+          (v2i64 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v2i64 (bitconvert (v8bf16 FPR128:$src))),
-                             (v2i64 (REV64v8i16 FPR128:$src))>;
+          (v2i64 (REV64v8i16 FPR128:$src))>;
 }
 def : Pat<(v2i64 (bitconvert (v2f64 FPR128:$src))), (v2i64 FPR128:$src)>;
 
@@ -10048,21 +10093,21 @@ def : Pat<(v4i32 (bitconvert (v8bf16 FPR128:$src))), (v4i32 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v4i32 (bitconvert (f128  FPR128:$src))),
-                             (v4i32 (EXTv16i8 (REV64v4i32 FPR128:$src),
-                                              (REV64v4i32 FPR128:$src),
-                                              (i32 8)))>;
+          (v4i32 (EXTv16i8 (REV64v4i32 FPR128:$src),
+                           (REV64v4i32 FPR128:$src),
+                           (i32 8)))>;
 def : Pat<(v4i32 (bitconvert (v2i64 FPR128:$src))),
-                             (v4i32 (REV64v4i32 FPR128:$src))>;
+          (v4i32 (REV64v4i32 FPR128:$src))>;
 def : Pat<(v4i32 (bitconvert (v8i16 FPR128:$src))),
-                             (v4i32 (REV32v8i16 FPR128:$src))>;
+          (v4i32 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v4i32 (bitconvert (v16i8 FPR128:$src))),
-                             (v4i32 (REV32v16i8 FPR128:$src))>;
+          (v4i32 (REV32v16i8 FPR128:$src))>;
 def : Pat<(v4i32 (bitconvert (v2f64 FPR128:$src))),
-                             (v4i32 (REV64v4i32 FPR128:$src))>;
+          (v4i32 (REV64v4i32 FPR128:$src))>;
 def : Pat<(v4i32 (bitconvert (v8f16 FPR128:$src))),
-                             (v4i32 (REV32v8i16 FPR128:$src))>;
+          (v4i32 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v4i32 (bitconvert (v8bf16 FPR128:$src))),
-                             (v4i32 (REV32v8i16 FPR128:$src))>;
+          (v4i32 (REV32v8i16 FPR128:$src))>;
 }
 def : Pat<(v4i32 (bitconvert (v4f32 FPR128:$src))), (v4i32 FPR128:$src)>;
 
@@ -10076,19 +10121,19 @@ def : Pat<(v8i16 (bitconvert (v4f32 FPR128:$src))), (v8i16 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v8i16 (bitconvert (f128  FPR128:$src))),
-                             (v8i16 (EXTv16i8 (REV64v8i16 FPR128:$src),
-                                              (REV64v8i16 FPR128:$src),
-                                              (i32 8)))>;
+          (v8i16 (EXTv16i8 (REV64v8i16 FPR128:$src),
+                           (REV64v8i16 FPR128:$src),
+                           (i32 8)))>;
 def : Pat<(v8i16 (bitconvert (v2i64 FPR128:$src))),
-                             (v8i16 (REV64v8i16 FPR128:$src))>;
+          (v8i16 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v8i16 (bitconvert (v4i32 FPR128:$src))),
-                             (v8i16 (REV32v8i16 FPR128:$src))>;
+          (v8i16 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v8i16 (bitconvert (v16i8 FPR128:$src))),
-                             (v8i16 (REV16v16i8 FPR128:$src))>;
+          (v8i16 (REV16v16i8 FPR128:$src))>;
 def : Pat<(v8i16 (bitconvert (v2f64 FPR128:$src))),
-                             (v8i16 (REV64v8i16 FPR128:$src))>;
+          (v8i16 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v8i16 (bitconvert (v4f32 FPR128:$src))),
-                             (v8i16 (REV32v8i16 FPR128:$src))>;
+          (v8i16 (REV32v8i16 FPR128:$src))>;
 }
 def : Pat<(v8i16 (bitconvert (v8f16 FPR128:$src))), (v8i16 FPR128:$src)>;
 def : Pat<(v8i16 (bitconvert (v8bf16 FPR128:$src))), (v8i16 FPR128:$src)>;
@@ -10110,34 +10155,34 @@ def : Pat<(v8bf16 (bitconvert (v4f32 FPR128:$src))), (v8bf16 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v8f16 (bitconvert (f128  FPR128:$src))),
-                             (v8f16 (EXTv16i8 (REV64v8i16 FPR128:$src),
-                                              (REV64v8i16 FPR128:$src),
-                                              (i32 8)))>;
+          (v8f16 (EXTv16i8 (REV64v8i16 FPR128:$src),
+                           (REV64v8i16 FPR128:$src),
+                           (i32 8)))>;
 def : Pat<(v8f16 (bitconvert (v2i64 FPR128:$src))),
-                             (v8f16 (REV64v8i16 FPR128:$src))>;
+          (v8f16 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v8f16 (bitconvert (v4i32 FPR128:$src))),
-                             (v8f16 (REV32v8i16 FPR128:$src))>;
+          (v8f16 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v8f16 (bitconvert (v16i8 FPR128:$src))),
-                             (v8f16 (REV16v16i8 FPR128:$src))>;
+          (v8f16 (REV16v16i8 FPR128:$src))>;
 def : Pat<(v8f16 (bitconvert (v2f64 FPR128:$src))),
-                             (v8f16 (REV64v8i16 FPR128:$src))>;
+          (v8f16 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v8f16 (bitconvert (v4f32 FPR128:$src))),
-                             (v8f16 (REV32v8i16 FPR128:$src))>;
+          (v8f16 (REV32v8i16 FPR128:$src))>;
 
 def : Pat<(v8bf16 (bitconvert (f128  FPR128:$src))),
-                             (v8bf16 (EXTv16i8 (REV64v8i16 FPR128:$src),
-                                              (REV64v8i16 FPR128:$src),
-                                              (i32 8)))>;
+          (v8bf16 (EXTv16i8 (REV64v8i16 FPR128:$src),
+                            (REV64v8i16 FPR128:$src),
+                            (i32 8)))>;
 def : Pat<(v8bf16 (bitconvert (v2i64 FPR128:$src))),
-                             (v8bf16 (REV64v8i16 FPR128:$src))>;
+          (v8bf16 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v8bf16 (bitconvert (v4i32 FPR128:$src))),
-                             (v8bf16 (REV32v8i16 FPR128:$src))>;
+          (v8bf16 (REV32v8i16 FPR128:$src))>;
 def : Pat<(v8bf16 (bitconvert (v16i8 FPR128:$src))),
-                             (v8bf16 (REV16v16i8 FPR128:$src))>;
+          (v8bf16 (REV16v16i8 FPR128:$src))>;
 def : Pat<(v8bf16 (bitconvert (v2f64 FPR128:$src))),
-                             (v8bf16 (REV64v8i16 FPR128:$src))>;
+          (v8bf16 (REV64v8i16 FPR128:$src))>;
 def : Pat<(v8bf16 (bitconvert (v4f32 FPR128:$src))),
-                             (v8bf16 (REV32v8i16 FPR128:$src))>;
+          (v8bf16 (REV32v8i16 FPR128:$src))>;
 }
 def : Pat<(v8f16 (bitconvert (v8i16 FPR128:$src))), (v8f16 FPR128:$src)>;
 def : Pat<(v8bf16 (bitconvert (v8i16 FPR128:$src))), (v8bf16 FPR128:$src)>;
@@ -10154,23 +10199,23 @@ def : Pat<(v16i8 (bitconvert (v8bf16 FPR128:$src))), (v16i8 FPR128:$src)>;
 }
 let Predicates = [IsBE] in {
 def : Pat<(v16i8 (bitconvert (f128  FPR128:$src))),
-                             (v16i8 (EXTv16i8 (REV64v16i8 FPR128:$src),
-                                              (REV64v16i8 FPR128:$src),
-                                              (i32 8)))>;
+          (v16i8 (EXTv16i8 (REV64v16i8 FPR128:$src),
+                           (REV64v16i8 FPR128:$src),
+                           (i32 8)))>;
 def : Pat<(v16i8 (bitconvert (v2i64 FPR128:$src))),
-                             (v16i8 (REV64v16i8 FPR128:$src))>;
+          (v16i8 (REV64v16i8 FPR128:$src))>;
 def : Pat<(v16i8 (bitconvert (v4i32 FPR128:$src))),
-                             (v16i8 (REV32v16i8 FPR128:$src))>;
+          (v16i8 (REV32v16i8 FPR128:$src))>;
 def : Pat<(v16i8 (bitconvert (v8i16 FPR128:$src))),
-                             (v16i8 (REV16v16i8 FPR128:$src))>;
+          (v16i8 (REV16v16i8 FPR128:$src))>;
 def : Pat<(v16i8 (bitconvert (v2f64 FPR128:$src))),
-                             (v16i8 (REV64v16i8 FPR128:$src))>;
+          (v16i8 (REV64v16i8 FPR128:$src))>;
 def : Pat<(v16i8 (bitconvert (v4f32 FPR128:$src))),
-                             (v16i8 (REV32v16i8 FPR128:$src))>;
+          (v16i8 (REV32v16i8 FPR128:$src))>;
 def : Pat<(v16i8 (bitconvert (v8f16 FPR128:$src))),
-                             (v16i8 (REV16v16i8 FPR128:$src))>;
+          (v16i8 (REV16v16i8 FPR128:$src))>;
 def : Pat<(v16i8 (bitconvert (v8bf16 FPR128:$src))),
-                             (v16i8 (REV16v16i8 FPR128:$src))>;
+          (v16i8 (REV16v16i8 FPR128:$src))>;
 }
 
 def : Pat<(v4i16 (extract_subvector V128:$Rn, (i64 0))),

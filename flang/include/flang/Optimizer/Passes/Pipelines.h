@@ -102,7 +102,7 @@ void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm);
 void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,
                       llvm::OptimizationLevel optLevel,
-                      llvm::StringRef inputFilename);
+                      llvm::StringRef inputFilename, int32_t dwarfVersion);
 
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config);
@@ -158,7 +158,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 void createDebugPasses(mlir::PassManager &pm,
                        llvm::codegenoptions::DebugInfoKind debugLevel,
                        llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename);
+                       llvm::StringRef inputFilename, int32_t dwarfVersion);
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,

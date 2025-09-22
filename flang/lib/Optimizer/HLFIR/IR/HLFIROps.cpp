@@ -879,6 +879,28 @@ void hlfir::CharTrimOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// IndexOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::IndexOp::verify() {
+  mlir::Value substr = getSubstr();
+  mlir::Value str = getStr();
+
+  unsigned charKind = getCharacterKind(substr.getType());
+  if (charKind != getCharacterKind(str.getType()))
+    return emitOpError("character arguments must have the same KIND");
+
+  return mlir::success();
+}
+
+void hlfir::IndexOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // NumericalReductionOp
 //===----------------------------------------------------------------------===//
 
@@ -1596,12 +1618,15 @@ static llvm::LogicalResult verifyArrayShift(Op op) {
     if (mlir::Value boundary = op.getBoundary()) {
       mlir::Type boundaryTy =
           hlfir::getFortranElementOrSequenceType(boundary.getType());
-      if (auto match = areMatchingTypes(
-              op, eleTy, hlfir::getFortranElementType(boundaryTy),
-              /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
-          match.failed())
-        return op.emitOpError(
-            "ARRAY and BOUNDARY operands must have the same element type");
+      // In case of polymorphic ARRAY type, the BOUNDARY's element type
+      // may not match the ARRAY's element type.
+      if (!hlfir::isPolymorphicType(array.getType()))
+        if (auto match = areMatchingTypes(
+                op, eleTy, hlfir::getFortranElementType(boundaryTy),
+                /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
+            match.failed())
+          return op.emitOpError(
+              "ARRAY and BOUNDARY operands must have the same element type");
       if (failed(verifyOperandTypeShape(boundaryTy, "BOUNDARY")))
         return mlir::failure();
     }

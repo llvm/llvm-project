@@ -12,7 +12,7 @@ define void @test(ptr %dst) personality ptr null {
 ; CHECK-NEXT:    [[STEP:%.*]] = invoke i32 @foo()
 ; CHECK-NEXT:            to label %[[LOOP_PREHEADER:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -36,14 +36,12 @@ define void @test(ptr %dst) personality ptr null {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 160
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 160, %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[ADD:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[ADD:%.*]], %[[LOOP]] ], [ 160, %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[TMP0]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADD]] = add i64 [[IV_1]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV_1]]
 ; CHECK-NEXT:    store i32 [[IV_2]], ptr [[GEP]], align 8

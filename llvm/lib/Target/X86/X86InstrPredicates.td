@@ -195,6 +195,12 @@ def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
+
+def IsX32Mode  : Predicate<"Subtarget->getTargetTriple().isX32()">,
+                            AssemblerPredicate<(all_of IsX32), "x32 ABI">;
+def NotX32Mode  : Predicate<"!Subtarget->getTargetTriple().isX32()">,
+                            AssemblerPredicate<(all_of (not IsX32)), "not x32 ABI">;
+
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
@@ -230,6 +236,13 @@ let RecomputePerFunction = 1 in {
                                         "!Subtarget->hasSSE41()">;
   def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
   def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+
+  def IsWin64CCFunc : Predicate<"Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
+  def IsNotWin64CCFunc : Predicate<"!Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
+  def IsHiPECCFunc : Predicate<"MF->getFunction().getCallingConv() == CallingConv::HiPE">;
+
+  def IsNotHiPECCFunc : Predicate<
+    "MF->getFunction().getCallingConv() != CallingConv::HiPE">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
@@ -243,3 +256,11 @@ def HasMFence    : Predicate<"Subtarget->hasMFence()">;
 def HasFastDPWSSD: Predicate<"Subtarget->hasFastDPWSSD()">;
 def UseIndirectThunkCalls : Predicate<"Subtarget->useIndirectThunkCalls()">;
 def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar X86_32 = DefaultMode;
+def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
+def X86_64_X32 : HwMode<[IsX32Mode]>;

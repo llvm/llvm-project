@@ -208,6 +208,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::SPLAT_VECTOR,   T, Legal);
     setOperationAction(ISD::UADDSAT, T, Legal);
     setOperationAction(ISD::SADDSAT, T, Legal);
+    setOperationAction(ISD::USUBSAT, T, Legal);
+    setOperationAction(ISD::SSUBSAT, T, Legal);
     if (T != ByteV) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
@@ -302,6 +304,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::UADDSAT, T, Legal);
     setOperationAction(ISD::SADDSAT, T, Legal);
     setOperationAction(ISD::SUB,      T, Legal);
+    setOperationAction(ISD::USUBSAT, T, Legal);
+    setOperationAction(ISD::SSUBSAT, T, Legal);
     setOperationAction(ISD::MUL,      T, Custom);
     setOperationAction(ISD::MULHS,    T, Custom);
     setOperationAction(ISD::MULHU,    T, Custom);
@@ -441,6 +445,10 @@ HexagonTargetLowering::initializeHVXLowering() {
       }
     }
   }
+
+  // Include cases which are not hander earlier
+  setOperationAction(ISD::UINT_TO_FP, MVT::v32i1, Custom);
+  setOperationAction(ISD::UINT_TO_FP, MVT::v64i1, Custom);
 
   setTargetDAGCombine({ISD::CONCAT_VECTORS, ISD::TRUNCATE, ISD::VSELECT});
 }
@@ -2329,6 +2337,123 @@ HexagonTargetLowering::LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
   return ExpandHvxFpToInt(Op, DAG);
 }
 
+// For vector type v32i1 uint_to_fp to v32f32:
+// R1 = #1, R2 holds the v32i1 param
+// V1 = vsplat(R1)
+// V2 = vsplat(R2)
+// Q0 = vand(V1,R1)
+// V0.w=prefixsum(Q0)
+// V0.w=vsub(V0.w,V1.w)
+// V2.w = vlsr(V2.w,V0.w)
+// V2 = vand(V2,V1)
+// V2.sf = V2.w
+SDValue HexagonTargetLowering::LowerHvxPred32ToFp(SDValue PredOp,
+                                                  SelectionDAG &DAG) const {
+
+  MVT ResTy = ty(PredOp);
+  const SDLoc &dl(PredOp);
+
+  SDValue Const = DAG.getTargetConstant(0x1, dl, MVT::i32);
+  SDNode *RegConst = DAG.getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, Const);
+  SDNode *SplatConst = DAG.getMachineNode(Hexagon::V6_lvsplatw, dl, MVT::v32i32,
+                                          SDValue(RegConst, 0));
+  SDNode *PredTransfer =
+      DAG.getMachineNode(Hexagon::V6_vandvrt, dl, MVT::v32i1,
+                         SDValue(SplatConst, 0), SDValue(RegConst, 0));
+  SDNode *PrefixSum = DAG.getMachineNode(Hexagon::V6_vprefixqw, dl, MVT::v32i32,
+                                         SDValue(PredTransfer, 0));
+  SDNode *SplatParam = DAG.getMachineNode(
+      Hexagon::V6_lvsplatw, dl, MVT::v32i32,
+      DAG.getNode(ISD::BITCAST, dl, MVT::i32, PredOp.getOperand(0)));
+  SDNode *Vsub =
+      DAG.getMachineNode(Hexagon::V6_vsubw, dl, MVT::v32i32,
+                         SDValue(PrefixSum, 0), SDValue(SplatConst, 0));
+  SDNode *IndexShift =
+      DAG.getMachineNode(Hexagon::V6_vlsrwv, dl, MVT::v32i32,
+                         SDValue(SplatParam, 0), SDValue(Vsub, 0));
+  SDNode *MaskOff =
+      DAG.getMachineNode(Hexagon::V6_vand, dl, MVT::v32i32,
+                         SDValue(IndexShift, 0), SDValue(SplatConst, 0));
+  SDNode *Convert = DAG.getMachineNode(Hexagon::V6_vconv_sf_w, dl, ResTy,
+                                       SDValue(MaskOff, 0));
+  return SDValue(Convert, 0);
+}
+
+// For vector type v64i1 uint_to_fo to v64f16:
+// i64 R32 = bitcast v64i1 R3:2 (R3:2 holds v64i1)
+// R3 = subreg_high (R32)
+// R2 = subreg_low (R32)
+// R1 = #1
+// V1 = vsplat(R1)
+// V2 = vsplat(R2)
+// V3 = vsplat(R3)
+// Q0 = vand(V1,R1)
+// V0.w=prefixsum(Q0)
+// V0.w=vsub(V0.w,V1.w)
+// V2.w = vlsr(V2.w,V0.w)
+// V3.w = vlsr(V3.w,V0.w)
+// V2 = vand(V2,V1)
+// V3 = vand(V3,V1)
+// V2.h = vpacke(V3.w,V2.w)
+// V2.hf = V2.h
+SDValue HexagonTargetLowering::LowerHvxPred64ToFp(SDValue PredOp,
+                                                  SelectionDAG &DAG) const {
+
+  MVT ResTy = ty(PredOp);
+  const SDLoc &dl(PredOp);
+
+  SDValue Inp = DAG.getNode(ISD::BITCAST, dl, MVT::i64, PredOp.getOperand(0));
+  // Get the hi and lo regs
+  SDValue HiReg =
+      DAG.getTargetExtractSubreg(Hexagon::isub_hi, dl, MVT::i32, Inp);
+  SDValue LoReg =
+      DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::i32, Inp);
+  // Get constant #1 and splat into vector V1
+  SDValue Const = DAG.getTargetConstant(0x1, dl, MVT::i32);
+  SDNode *RegConst = DAG.getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, Const);
+  SDNode *SplatConst = DAG.getMachineNode(Hexagon::V6_lvsplatw, dl, MVT::v32i32,
+                                          SDValue(RegConst, 0));
+  // Splat the hi and lo args
+  SDNode *SplatHi =
+      DAG.getMachineNode(Hexagon::V6_lvsplatw, dl, MVT::v32i32,
+                         DAG.getNode(ISD::BITCAST, dl, MVT::i32, HiReg));
+  SDNode *SplatLo =
+      DAG.getMachineNode(Hexagon::V6_lvsplatw, dl, MVT::v32i32,
+                         DAG.getNode(ISD::BITCAST, dl, MVT::i32, LoReg));
+  // vand between splatted const and const
+  SDNode *PredTransfer =
+      DAG.getMachineNode(Hexagon::V6_vandvrt, dl, MVT::v32i1,
+                         SDValue(SplatConst, 0), SDValue(RegConst, 0));
+  // Get the prefixsum
+  SDNode *PrefixSum = DAG.getMachineNode(Hexagon::V6_vprefixqw, dl, MVT::v32i32,
+                                         SDValue(PredTransfer, 0));
+  // Get the vsub
+  SDNode *Vsub =
+      DAG.getMachineNode(Hexagon::V6_vsubw, dl, MVT::v32i32,
+                         SDValue(PrefixSum, 0), SDValue(SplatConst, 0));
+  // Get vlsr for hi and lo
+  SDNode *IndexShift_hi =
+      DAG.getMachineNode(Hexagon::V6_vlsrwv, dl, MVT::v32i32,
+                         SDValue(SplatHi, 0), SDValue(Vsub, 0));
+  SDNode *IndexShift_lo =
+      DAG.getMachineNode(Hexagon::V6_vlsrwv, dl, MVT::v32i32,
+                         SDValue(SplatLo, 0), SDValue(Vsub, 0));
+  // Get vand of hi and lo
+  SDNode *MaskOff_hi =
+      DAG.getMachineNode(Hexagon::V6_vand, dl, MVT::v32i32,
+                         SDValue(IndexShift_hi, 0), SDValue(SplatConst, 0));
+  SDNode *MaskOff_lo =
+      DAG.getMachineNode(Hexagon::V6_vand, dl, MVT::v32i32,
+                         SDValue(IndexShift_lo, 0), SDValue(SplatConst, 0));
+  // Pack them
+  SDNode *Pack =
+      DAG.getMachineNode(Hexagon::V6_vpackeh, dl, MVT::v64i16,
+                         SDValue(MaskOff_hi, 0), SDValue(MaskOff_lo, 0));
+  SDNode *Convert =
+      DAG.getMachineNode(Hexagon::V6_vconv_hf_h, dl, ResTy, SDValue(Pack, 0));
+  return SDValue(Convert, 0);
+}
+
 SDValue
 HexagonTargetLowering::LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const {
   // Catch invalid conversion ops (just in case).
@@ -2338,6 +2463,13 @@ HexagonTargetLowering::LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const {
   MVT ResTy = ty(Op);
   MVT IntTy = ty(Op.getOperand(0)).getVectorElementType();
   MVT FpTy = ResTy.getVectorElementType();
+
+  if (Op.getOpcode() == ISD::UINT_TO_FP) {
+    if (ResTy == MVT::v32f32 && ty(Op.getOperand(0)) == MVT::v32i1)
+      return LowerHvxPred32ToFp(Op, DAG);
+    if (ResTy == MVT::v64f16 && ty(Op.getOperand(0)) == MVT::v64i1)
+      return LowerHvxPred64ToFp(Op, DAG);
+  }
 
   if (Subtarget.useHVXIEEEFPOps()) {
     // There are only conversions to f16.

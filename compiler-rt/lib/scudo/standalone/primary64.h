@@ -22,6 +22,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 
 namespace scudo {
 
@@ -1307,6 +1308,8 @@ uptr SizeClassAllocator64<Config>::tryReleaseToOS(uptr ClassId,
 
 template <typename Config>
 uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSTraceName(ReleaseType));
+
   uptr TotalReleasedBytes = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     if (I == SizeClassMap::BatchClassId)
@@ -1439,6 +1442,12 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   //    Then we can tell which pages are in-use by querying
   //    `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context =
       markFreeBlocks(Region, BlockSize, AllocatedUserEnd,
                      getCompactPtrBaseByClassId(ClassId), GroupsToRelease);

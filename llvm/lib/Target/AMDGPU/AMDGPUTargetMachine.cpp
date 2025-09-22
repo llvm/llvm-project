@@ -720,25 +720,6 @@ static MachineSchedRegistry GCNILPSchedRegistry(
     "Run GCN iterative scheduler for ILP scheduling (experimental)",
     createIterativeILPMachineScheduler);
 
-static StringRef computeDataLayout(const Triple &TT) {
-  if (TT.getArch() == Triple::r600) {
-    // 32-bit pointers.
-    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
-           "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1";
-  }
-
-  // 32-bit private, local, and region pointers. 64-bit global, constant and
-  // flat. 160-bit non-integral fat buffer pointers that include a 128-bit
-  // buffer descriptor and a 32-bit offset, which are indexed by 32-bit values
-  // (address space 7), and 128-bit non-integral buffer resourcees (address
-  // space 8) which cannot be non-trivilally accessed by LLVM memory operations
-  // like getelementptr.
-  return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
-         "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
-         "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
-}
-
 LLVM_READNONE
 static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   if (!GPU.empty())
@@ -764,7 +745,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OptLevel)
     : CodeGenTargetMachineImpl(
-          T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU), FS, Options,
+          T, TT.computeDataLayout(), TT, getGPUOrDefault(TT, CPU), FS, Options,
           getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
       TLOF(createTLOF(getTargetTriple())) {

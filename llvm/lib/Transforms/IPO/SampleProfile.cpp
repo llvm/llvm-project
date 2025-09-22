@@ -485,11 +485,11 @@ public:
         UseFlattenedProfile(UseFlattenedProfile) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
-  bool runOnModule(Module &M, ModuleAnalysisManager *AM,
+  bool runOnModule(Module &M, ModuleAnalysisManager &AM,
                    ProfileSummaryInfo *_PSI);
 
 protected:
-  bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
+  bool runOnFunction(Function &F, ModuleAnalysisManager &AM);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
@@ -2160,7 +2160,7 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
   }
 }
 
-bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
+bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
                                       ProfileSummaryInfo *_PSI) {
   GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
@@ -2238,7 +2238,8 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   return retval;
 }
 
-bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
+bool SampleProfileLoader::runOnFunction(Function &F,
+                                        ModuleAnalysisManager &AM) {
   LLVM_DEBUG(dbgs() << "\n\nProcessing Function " << F.getName() << "\n");
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
@@ -2290,15 +2291,9 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   if (!F.getEntryCount())
     F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
-  if (AM) {
-    auto &FAM =
-        AM->getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
-            .getManager();
-    ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  } else {
-    OwnedORE = std::make_unique<OptimizationRemarkEmitter>(&F);
-    ORE = OwnedORE.get();
-  }
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+                  .getManager();
+  ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   if (FunctionSamples::ProfileIsCS)
     Samples = ContextTracker->getBaseSamplesFor(F);
@@ -2363,7 +2358,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
     return PreservedAnalyses::all();
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
-  if (!SampleLoader.runOnModule(M, &AM, PSI))
+  if (!SampleLoader.runOnModule(M, AM, PSI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

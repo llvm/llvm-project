@@ -44,9 +44,6 @@ def SDT_RISCVIntUnaryOpW : SDTypeProfile<1, 1, [
 def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
-def SDT_RISCVIntShiftDOpW : SDTypeProfile<1, 3, [
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>, SDTCisVT<3, i64>
-]>;
 
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -2328,8 +2325,8 @@ include "RISCVInstrInfoZalasr.td"
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZicfiss.td"
 include "RISCVInstrInfoZilsd.td"
+include "RISCVInstrInfoZibi.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2347,6 +2344,7 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
+include "RISCVInstrInfoZvfofp8min.td"
 
 // Packed SIMD
 include "RISCVInstrInfoP.td"
@@ -2356,6 +2354,9 @@ include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoZcmop.td"
 include "RISCVInstrInfoZclsd.td"
+
+// Control Flow Integriy, this requires Zimop/Zcmop
+include "RISCVInstrInfoZicfiss.td"
 
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"

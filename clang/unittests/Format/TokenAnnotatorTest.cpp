@@ -4105,6 +4105,13 @@ TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
   EXPECT_TOKEN(Tokens[1], tok::utf8_string_literal, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, C23DigitSeparator) {
+  auto Tokens = annotate("return 1'000;", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_EQ(Tokens[1]->TokenText, "1'000");
+  EXPECT_TOKEN(Tokens[2], tok::semi, TT_Unknown);
+}
+
 TEST_F(TokenAnnotatorTest, IdentifierPackage) {
   auto Tokens = annotate("auto package;");
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
@@ -4150,6 +4157,29 @@ TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
                          "// b");
   ASSERT_EQ(Tokens.size(), 3u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
+}
+
+TEST_F(TokenAnnotatorTest, KeywordedFunctionLikeMacro) {
+  auto Style = getLLVMStyle();
+  Style.AllowBreakBeforeQtProperty = true;
+
+  auto Tokens = annotate(
+      "Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)",
+      Style);
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_QtProperty);
+
+  Tokens = annotate(
+      "struct S {\n"
+      "  Q_OBJECT Q_PROPERTY(int value READ value WRITE setValue NOTIFY foo)\n"
+      "};",
+      Style);
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_QtProperty);
+  EXPECT_TOKEN(Tokens[12], tok::identifier, TT_QtProperty);
 }
 
 } // namespace

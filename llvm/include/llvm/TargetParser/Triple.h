@@ -305,6 +305,7 @@ public:
     Callable,
     Mesh,
     Amplification,
+    RootSignature,
     OpenCL,
     OpenHOS,
     Mlibc,
@@ -872,7 +873,7 @@ public:
            Env == Triple::Intersection || Env == Triple::AnyHit ||
            Env == Triple::ClosestHit || Env == Triple::Miss ||
            Env == Triple::Callable || Env == Triple::Mesh ||
-           Env == Triple::Amplification;
+           Env == Triple::Amplification || Env == Triple::RootSignature;
   }
 
   /// Tests whether the target is SPIR (32- or 64-bit).
@@ -1102,6 +1103,12 @@ public:
     return getArch() == Triple::x86 || getArch() == Triple::x86_64;
   }
 
+  /// Tests whether the target is x86 (32-bit).
+  bool isX86_32() const { return getArch() == Triple::x86; }
+
+  /// Tests whether the target is x86 (64-bit).
+  bool isX86_64() const { return getArch() == Triple::x86_64; }
+
   /// Tests whether the target is VE
   bool isVE() const {
     return getArch() == Triple::ve;
@@ -1327,6 +1334,10 @@ public:
                                            const VersionTuple &Version);
 
   LLVM_ABI ExceptionHandling getDefaultExceptionHandling() const;
+
+  /// Compute the LLVM IR data layout string based on the triple. Some targets
+  /// customize the layout based on the ABIName string.
+  LLVM_ABI std::string computeDataLayout(StringRef ABIName = "") const;
 };
 
 } // End llvm namespace

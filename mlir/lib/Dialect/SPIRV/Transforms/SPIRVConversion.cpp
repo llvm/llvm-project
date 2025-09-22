@@ -984,7 +984,7 @@ getOrInsertPushConstantVariable(Location loc, Block &block,
 /// A pattern for rewriting function signature to convert arguments of functions
 /// to be of valid SPIR-V types.
 struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
-  using OpConversionPattern<func::FuncOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
@@ -1036,7 +1036,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
 /// A pattern for rewriting function signature to convert vector arguments of
 /// functions to be of valid types
 struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -1192,7 +1192,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
 /// A pattern for rewriting function signature and the return op to convert
 /// vectors to be of valid types.
 struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(func::ReturnOp returnOp,
                                 PatternRewriter &rewriter) const override {

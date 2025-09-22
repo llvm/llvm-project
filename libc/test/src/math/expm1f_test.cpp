@@ -21,8 +21,6 @@ using LlvmLibcExpm1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -40,7 +38,6 @@ TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExpm1fTest, Overflow) {
-  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::expm1f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -55,7 +52,6 @@ TEST_F(LlvmLibcExpm1fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExpm1fTest, Underflow) {
-  libc_errno = 0;
   EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::expm1f(FPBits(0xff7fffffU).get_val()));
 
   float x = FPBits(0xc2cffff8U).get_val();
@@ -70,7 +66,6 @@ TEST_F(LlvmLibcExpm1fTest, Underflow) {
 TEST_F(LlvmLibcExpm1fTest, Borderline) {
   float x;
 
-  libc_errno = 0;
   x = FPBits(0x42affff8U).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                  LIBC_NAMESPACE::expm1f(x), 0.5);

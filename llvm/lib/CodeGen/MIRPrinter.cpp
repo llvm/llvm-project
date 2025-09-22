@@ -627,7 +627,7 @@ convertSRPoints(ModuleSlotTracker &MST,
     StrOS << printMBBReference(*MBB);
     Entry.Point = StrOS.str().str();
     Str.clear();
-    YamlSRPoints.push_back(Entry);
+    YamlSRPoints.push_back(std::move(Entry));
   }
 }
 

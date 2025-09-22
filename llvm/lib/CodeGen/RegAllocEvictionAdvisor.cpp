@@ -308,7 +308,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       Cost.BrokenHints += BreaksHint;
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
       // Abort if this would be too expensive.
-      if (!(Cost < MaxCost))
+      if (Cost >= MaxCost)
         return false;
       if (Urgent)
         continue;

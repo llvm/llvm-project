@@ -205,6 +205,7 @@ void LinkerDriver::addFile(InputFile *file) {
     else
       cast<ObjFile>(file)->parseLazy();
   } else {
+    ctx.consumedInputsSize += file->mb.getBufferSize();
     file->parse();
     if (auto *f = dyn_cast<ObjFile>(file)) {
       ctx.objFileInstances.push_back(f);
@@ -403,7 +404,11 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
 
-  auto reportBufferError = [=](Error &&e, StringRef childName) {
+  auto reportBufferError = [=](Error &&e) {
+    StringRef childName =
+      CHECK(c.getName(),
+            "could not get child name for archive " + parentName +
+            " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -413,7 +418,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     uint64_t offsetInArchive = c.getChildOffset();
     Expected<MemoryBufferRef> mbOrErr = c.getMemoryBufferRef();
     if (!mbOrErr)
-      reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
+      reportBufferError(mbOrErr.takeError());
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
@@ -432,7 +437,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
-      reportBufferError(errorCodeToError(mbOrErr.second), childName);
+      reportBufferError(errorCodeToError(mbOrErr.second));
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
     ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
@@ -2336,6 +2341,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->highEntropyVA =
       config->is64() &&
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
+
+  // Handle /nodbgdirmerge
+  config->mergeDebugDirectory = !args.hasArg(OPT_nodbgdirmerge);
 
   if (!config->dynamicBase &&
       (config->machine == ARMNT || isAnyArm64(config->machine)))

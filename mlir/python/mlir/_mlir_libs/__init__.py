@@ -147,7 +147,9 @@ def _site_initialize():
         if not process_initializer_module(module_name):
             break
 
-    class Context(ir._BaseContext):
+    ir._Context = ir.Context
+
+    class Context(ir._Context):
         def __init__(
             self, load_on_create_dialects=None, thread_pool=None, *args, **kwargs
         ):

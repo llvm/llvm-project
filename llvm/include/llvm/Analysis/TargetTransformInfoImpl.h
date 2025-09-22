@@ -1105,6 +1105,8 @@ public:
 
   virtual bool preferEpilogueVectorization() const { return true; }
 
+  virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
+
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;
   }

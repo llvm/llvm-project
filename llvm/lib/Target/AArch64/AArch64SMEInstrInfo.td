@@ -48,6 +48,17 @@ let usesCustomInserter = 1 in {
 }
 def : Pat<(i64 (AArch64EntryPStateSM)), (EntryPStateSM)>;
 
+// Pseudo-instruction that compares the current SVE vector length (VL) with the
+// streaming vector length (SVL). If the two lengths do not match, the check
+// lowers to a `brk`, causing a trap.
+let hasSideEffects = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def CHECK_MATCHING_VL_PSEUDO : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+def AArch64_check_matching_vl
+  : SDNode<"AArch64ISD::CHECK_MATCHING_VL", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_check_matching_vl), (CHECK_MATCHING_VL_PSEUDO)>;
+
 //===----------------------------------------------------------------------===//
 // Old SME ABI lowering ISD nodes/pseudos (deprecated)
 //===----------------------------------------------------------------------===//
@@ -93,6 +104,8 @@ let hasSideEffects = 1, isMeta = 1 in {
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
+def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+
 def CommitZASavePseudo
   : Pseudo<(outs),
            (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
@@ -107,6 +120,11 @@ def AArch64_requires_za_save
   : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
            [SDNPHasChain, SDNPInGlue]>;
 def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
+
+def AArch64_sme_state_alloc
+  : SDNode<"AArch64ISD::SME_STATE_ALLOC", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain]>;
+def : Pat<(AArch64_sme_state_alloc), (SMEStateAllocPseudo)>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -127,10 +145,15 @@ def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
 def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
 
+def sme_rdsvl_shl_imm : ComplexPattern<i64, 1, "SelectRDSVLShiftImm<1, 31>">;
+
 let Predicates = [HasSMEandIsNonStreamingSafe] in {
 def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
 def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
+
+def : Pat<(i64 (shl (AArch64rdsvl (i32 1)), (sme_rdsvl_shl_imm i64:$imm))),
+          (RDSVLI_XI (!cast<SDNodeXForm>("trunc_imm") $imm))>;
 
 def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }

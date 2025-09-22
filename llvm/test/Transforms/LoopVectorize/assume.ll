@@ -5,7 +5,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -35,7 +35,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br [[FOR_END:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %for.body
@@ -71,7 +71,7 @@ define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[PTRINT2:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[MASKEDPTR3:%.*]] = and i64 [[PTRINT2]], 31
 ; CHECK-NEXT:    [[MASKCOND4:%.*]] = icmp eq i64 [[MASKEDPTR3]], 0
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -95,7 +95,7 @@ define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br [[FOR_END:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 entry:
   %ptrint = ptrtoint ptr %a to i64

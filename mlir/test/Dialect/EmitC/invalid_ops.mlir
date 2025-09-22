@@ -532,6 +532,16 @@ func.func @use_global() {
 
 // -----
 
+emitc.global @myglobal_value : f32
+
+func.func @use_global() {
+  // expected-error @+1 {{'emitc.get_global' op on non-array type expects result type to be an lvalue type for the global @myglobal_value}}
+  %0 = emitc.get_global @myglobal_value : !emitc.array<2xf32>
+  return
+}
+
+// -----
+
 func.func @member(%arg0: !emitc.lvalue<i32>) {
   // expected-error @+1 {{'emitc.member' op operand #0 must be emitc.lvalue of EmitC opaque type values, but got '!emitc.lvalue<i32>'}}
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<i32>) -> !emitc.lvalue<i32>

@@ -173,6 +173,7 @@ constexpr bool test() {
       auto end   = adl::Iterator::TrackSwaps(in.data() + in.size(), swaps);
 
       for (std::size_t mid = 0; mid != input.size(); ++mid) {
+        swaps = 0;
         std::ranges::rotate(begin, begin + mid, end);
         assert(swaps <= expected);
       }
@@ -186,6 +187,7 @@ constexpr bool test() {
       auto range = std::ranges::subrange(begin, end);
 
       for (std::size_t mid = 0; mid != input.size(); ++mid) {
+        swaps = 0;
         std::ranges::rotate(range, begin + mid);
         assert(swaps <= expected);
       }

@@ -230,8 +230,8 @@ void check_wide_string(char* b, ...)
   va_list ap;
   va_start(ap,b);
 
-  printf(L"foo %d",2); // expected-warning {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
-  vsprintf(b,L"bar %d",ap); // expected-warning {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
+  printf(L"foo %d",2); // expected-error {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
+  vsprintf(b,L"bar %d",ap); // expected-error {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
 }
 
 void check_asterisk_precision_width(int x) {
