@@ -507,20 +507,32 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
                                          bool IsSigned,
                                          llvm::Value *OldVal,
                                          llvm::Value *RHS) {
+  llvm::Type *ValTy = OldVal->getType();
+
   llvm::CmpInst::Predicate Pred;
+  bool IsFP = ValTy->isFloatingPointTy();
+
   switch (Op) {
   default:
     llvm_unreachable("Unexpected min/max operation");
+
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
-    Pred = IsSigned ? llvm::CmpInst::ICMP_SGT : llvm::CmpInst::ICMP_UGT;
+    Pred = IsFP ? llvm::CmpInst::FCMP_OGT
+                : (IsSigned ? llvm::CmpInst::ICMP_SGT : llvm::CmpInst::ICMP_UGT);
     break;
+
   case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
-    Pred = IsSigned ? llvm::CmpInst::ICMP_SLT : llvm::CmpInst::ICMP_ULT;
+    Pred = IsFP ? llvm::CmpInst::FCMP_OLT
+                : (IsSigned ? llvm::CmpInst::ICMP_SLT : llvm::CmpInst::ICMP_ULT);
     break;
   }
-  llvm::Value *Cmp = Builder.CreateICmp(Pred, OldVal, RHS, "tst");
+
+  llvm::Value *Cmp = IsFP
+      ? static_cast<llvm::Value*>(Builder.CreateFCmp(Pred, OldVal, RHS, "tst"))
+      : static_cast<llvm::Value*>(Builder.CreateICmp(Pred, OldVal, RHS, "tst"));
+
   return Builder.CreateSelect(Cmp, OldVal, RHS, "newval");
 }
 
