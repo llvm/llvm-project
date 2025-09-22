@@ -1685,7 +1685,6 @@ void OmpStructureChecker::CheckSymbolName(
                     "The given %s directive clause has an invalid argument"_err_en_US,
                     ContextDirectiveAsFortran());
               }
-
             }
           },
           [&](const parser::Name &name) {
