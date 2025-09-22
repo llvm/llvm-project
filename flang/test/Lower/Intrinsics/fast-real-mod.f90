@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -ffast-real-mod -emit-mlir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -ffast-real-mod -emit-mlir -o - %s | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 ! CHECK: module attributes {{{.*}}fir.fast_real_mod = true{{.*}}}
 
@@ -42,16 +42,34 @@ end subroutine mod_real8
 subroutine mod_real10(r, a, p)
     implicit none
     real(kind=10) :: r, a, p
-! CHECK: %[[A:.*]] = fir.declare{{.*}}a"
-! CHECK: %[[P:.*]] = fir.declare{{.*}}p"
-! CHECK: %[[R:.*]] = fir.declare{{.*}}r"
-! CHECK: %[[A_LOAD:.*]] = fir.load %[[A]]
-! CHECK: %[[P_LOAD:.*]] = fir.load %[[P]]
-! CHECK: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f80
-! CHECK: %[[CV1:.*]] = fir.convert %[[DIV]] : (f80) -> si80
-! CHECK: %[[CV2:.*]] = fir.convert %[[CV1]] : (si80) -> f80
-! CHECK: %[[MUL:.*]] = arith.mulf %8, %5 fastmath<contract> : f80
-! CHECK: %[[SUB:.*]] = arith.subf %4, %9 fastmath<contract> : f80
-! CHECK: fir.store %[[SUB]] to %[[R]] : !fir.ref<f80>
+! CHECK-KIND10: %[[A:.*]] = fir.declare{{.*}}a"
+! CHECK-KIND10: %[[P:.*]] = fir.declare{{.*}}p"
+! CHECK-KIND10: %[[R:.*]] = fir.declare{{.*}}r"
+! CHECK-KIND10: %[[A_LOAD:.*]] = fir.load %[[A]]
+! CHECK-KIND10: %[[P_LOAD:.*]] = fir.load %[[P]]
+! CHECK-KIND10: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f80
+! CHECK-KIND10: %[[CV1:.*]] = fir.convert %[[DIV]] : (f80) -> si80
+! CHECK-KIND10: %[[CV2:.*]] = fir.convert %[[CV1]] : (si80) -> f80
+! CHECK-KIND10: %[[MUL:.*]] = arith.mulf %8, %5 fastmath<contract> : f80
+! CHECK-KIND10: %[[SUB:.*]] = arith.subf %4, %9 fastmath<contract> : f80
+! CHECK-KIND10: fir.store %[[SUB]] to %[[R]] : !fir.ref<f80>
     r = mod(a, p)
 end subroutine mod_real10
+
+! CHECK-LABEL: @_QPmod_real16
+subroutine mod_real16(r, a, p)
+    implicit none
+    real(kind=16) :: r, a, p
+! CHECK-KIND16: %[[A:.*]] = fir.declare{{.*}}a"
+! CHECK-KIND16: %[[P:.*]] = fir.declare{{.*}}p"
+! CHECK-KIND16: %[[R:.*]] = fir.declare{{.*}}r"
+! CHECK-KIND16: %[[A_LOAD:.*]] = fir.load %[[A]]
+! CHECK-KIND16: %[[P_LOAD:.*]] = fir.load %[[P]]
+! CHECK-KIND16: %[[DIV:.*]] = arith.divf %[[A_LOAD]], %[[P_LOAD]] fastmath<contract> : f128
+! CHECK-KIND16: %[[CV1:.*]] = fir.convert %[[DIV]] : (f128) -> si128
+! CHECK-KIND16: %[[CV2:.*]] = fir.convert %[[CV1]] : (si128) -> f128
+! CHECK-KIND16: %[[MUL:.*]] = arith.mulf %8, %5 fastmath<contract> : f128
+! CHECK-KIND16: %[[SUB:.*]] = arith.subf %4, %9 fastmath<contract> : f128
+! CHECK-KIND16: fir.store %[[SUB]] to %[[R]] : !fir.ref<f128>
+    r = mod(a, p)
+end subroutine mod_real16
