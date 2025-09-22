@@ -3127,7 +3127,7 @@ void DWARFASTParserClang::ParseSingleMember(
     member_clang_type.GetCompleteType();
 
   if (attrs.member_byte_offset != UINT32_MAX
-      && attrs.member_byte_offset > parent_byte_size
+      && attrs.member_byte_offset >= parent_byte_size
       && llvm::expectedToOptional(member_clang_type.GetByteSize(nullptr)).value_or(0) > 0)
     module_sp->ReportError(
         "{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
