@@ -819,49 +819,6 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   return false;
 }
 
-// (xor X, (and (xor X, C1), C2))
-// -> (qc.insbi X, (C1 >> ShAmt), Width, ShAmt)
-// where C2 is a shifted mask with width=Width and shift=ShAmt
-bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromXor(SDNode *Node) {
-
-  if (!Subtarget->hasVendorXqcibm())
-    return false;
-
-  using namespace SDPatternMatch;
-
-  SDValue X;
-  APInt CImm, CMask;
-  if (!sd_match(
-          Node,
-          m_Xor(m_Value(X),
-                m_OneUse(m_And(m_OneUse(m_Xor(m_Deferred(X), m_ConstInt(CImm))),
-                               m_ConstInt(CMask))))))
-    return false;
-
-  unsigned Width, ShAmt;
-  if (!CMask.isShiftedMask(ShAmt, Width))
-    return false;
-
-  int64_t Imm = CImm.getSExtValue();
-  Imm >>= ShAmt;
-
-  SDLoc DL(Node);
-  SDValue ImmNode;
-  auto Opc = RISCV::QC_INSB;
-
-  if (isInt<5>(Imm)) {
-    Opc = RISCV::QC_INSBI;
-    ImmNode = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
-  } else {
-    ImmNode = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
-  }
-  SDValue Ops[] = {X, ImmNode, CurDAG->getTargetConstant(Width, DL, MVT::i32),
-                   CurDAG->getTargetConstant(ShAmt, DL, MVT::i32)};
-  ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, MVT::i32, Ops));
-
-  return true;
-}
-
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
                                                    const SDLoc &DL, MVT VT,
                                                    SDValue X, unsigned Msb,
@@ -1095,7 +1052,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  bool HasBitTest = Subtarget->hasStdExtZbs() || Subtarget->hasVendorXTHeadBs();
+  bool HasBitTest = Subtarget->hasBEXTILike();
 
   switch (Opcode) {
   case ISD::Constant: {
@@ -1440,9 +1397,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
-      return;
-
-    if (tryBitfieldInsertOpFromXor(Node))
       return;
 
     break;
@@ -2951,6 +2905,65 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
+bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
+  switch (User->getOpcode()) {
+  default:
+    return false;
+  case ISD::LOAD:
+  case RISCVISD::LD_RV32:
+  case ISD::ATOMIC_LOAD:
+    break;
+  case ISD::STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<StoreSDNode>(User)->getValue() == Add)
+      return false;
+    break;
+  case RISCVISD::SD_RV32:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
+      return false;
+    break;
+  case ISD::ATOMIC_STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    break;
+  }
+
+  return true;
+}
+
+// To prevent SelectAddrRegImm from folding offsets that conflict with the
+// fusion of PseudoMovAddr, check if the offset of every use of a given address
+// is within the alignment.
+bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
+                                                  Align Alignment) {
+  assert(Addr->getOpcode() == RISCVISD::ADD_LO);
+  for (auto *User : Addr->users()) {
+    // If the user is a load or store, then the offset is 0 which is always
+    // within alignment.
+    if (isRegImmLoadOrStore(User, Addr))
+      continue;
+
+    if (CurDAG->isBaseWithConstantOffset(SDValue(User, 0))) {
+      int64_t CVal = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (!isInt<12>(CVal) || Alignment <= CVal)
+        return false;
+
+      // Make sure all uses are foldable load/stores.
+      for (auto *AddUser : User->users())
+        if (!isRegImmLoadOrStore(AddUser, SDValue(User, 0)))
+          return false;
+
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2960,9 +2973,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
+    bool CanFold = true;
+    // Unconditionally fold if operand 1 is not a global address (e.g.
+    // externsymbol)
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = commonAlignment(
+          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
+      if (!areOffsetsWithinAlignment(Addr, Alignment))
+        CanFold = false;
+    }
+    if (CanFold) {
+      Base = Addr.getOperand(0);
+      Offset = Addr.getOperand(1);
+      return true;
+    }
   }
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
@@ -2980,7 +3005,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal)) {
+          if ((CVal == 0 || Alignment > CVal) &&
+              areOffsetsWithinAlignment(Base, Alignment)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -3178,9 +3204,7 @@ static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
     // If we have a SHXADD instruction, prefer that over reassociating an ADDI.
     assert(Shift.getOpcode() == ISD::SHL);
     unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-    if ((ShiftAmt <= 3 &&
-         (Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa())) ||
-        (ShiftAmt >= 4 && ShiftAmt <= 7 && Subtarget.hasVendorXqciac()))
+    if (Subtarget.hasShlAdd(ShiftAmt))
       return false;
 
     // All users of the ADDI should be load/store.
@@ -3983,6 +4007,15 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
+    case RISCV::TH_EXT:
+    case RISCV::TH_EXTU: {
+      unsigned Msb = User->getConstantOperandVal(1);
+      unsigned Lsb = User->getConstantOperandVal(2);
+      // Behavior of Msb < Lsb is not well documented.
+      if (Msb >= Lsb && Bits > Msb)
+        break;
+      return false;
+    }
     }
   }
 

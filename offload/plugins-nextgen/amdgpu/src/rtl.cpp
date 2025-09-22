@@ -99,7 +99,7 @@ namespace hsa_utils {
 /// Iterate elements using an HSA iterate function. Do not use this function
 /// directly but the specialized ones below instead.
 template <typename ElemTy, typename IterFuncTy, typename CallbackTy>
-hsa_status_t iterate(IterFuncTy Func, CallbackTy Cb) {
+static hsa_status_t iterate(IterFuncTy Func, CallbackTy Cb) {
   auto L = [](ElemTy Elem, void *Data) -> hsa_status_t {
     CallbackTy *Unwrapped = static_cast<CallbackTy *>(Data);
     return (*Unwrapped)(Elem);
@@ -111,7 +111,8 @@ hsa_status_t iterate(IterFuncTy Func, CallbackTy Cb) {
 /// use this function directly but the specialized ones below instead.
 template <typename ElemTy, typename IterFuncTy, typename IterFuncArgTy,
           typename CallbackTy>
-hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg, CallbackTy Cb) {
+static hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg,
+                            CallbackTy Cb) {
   auto L = [](ElemTy Elem, void *Data) -> hsa_status_t {
     CallbackTy *Unwrapped = static_cast<CallbackTy *>(Data);
     return (*Unwrapped)(Elem);
@@ -123,7 +124,8 @@ hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg, CallbackTy Cb) {
 /// use this function directly but the specialized ones below instead.
 template <typename Elem1Ty, typename Elem2Ty, typename IterFuncTy,
           typename IterFuncArgTy, typename CallbackTy>
-hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg, CallbackTy Cb) {
+static hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg,
+                            CallbackTy Cb) {
   auto L = [](Elem1Ty Elem1, Elem2Ty Elem2, void *Data) -> hsa_status_t {
     CallbackTy *Unwrapped = static_cast<CallbackTy *>(Data);
     return (*Unwrapped)(Elem1, Elem2);
@@ -132,21 +134,21 @@ hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg, CallbackTy Cb) {
 }
 
 /// Iterate agents.
-template <typename CallbackTy> Error iterateAgents(CallbackTy Callback) {
+template <typename CallbackTy> static Error iterateAgents(CallbackTy Callback) {
   hsa_status_t Status = iterate<hsa_agent_t>(hsa_iterate_agents, Callback);
   return Plugin::check(Status, "error in hsa_iterate_agents: %s");
 }
 
 /// Iterate ISAs of an agent.
 template <typename CallbackTy>
-Error iterateAgentISAs(hsa_agent_t Agent, CallbackTy Cb) {
+static Error iterateAgentISAs(hsa_agent_t Agent, CallbackTy Cb) {
   hsa_status_t Status = iterate<hsa_isa_t>(hsa_agent_iterate_isas, Agent, Cb);
   return Plugin::check(Status, "error in hsa_agent_iterate_isas: %s");
 }
 
 /// Iterate memory pools of an agent.
 template <typename CallbackTy>
-Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
+static Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
   hsa_status_t Status = iterate<hsa_amd_memory_pool_t>(
       hsa_amd_agent_iterate_memory_pools, Agent, Cb);
   return Plugin::check(Status,
@@ -155,10 +157,12 @@ Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
 
 /// Dispatches an asynchronous memory copy.
 /// Enables different SDMA engines for the dispatch in a round-robin fashion.
-Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
-                   const void *Src, hsa_agent_t SrcAgent, size_t Size,
-                   uint32_t NumDepSignals, const hsa_signal_t *DepSignals,
-                   hsa_signal_t CompletionSignal) {
+static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
+                          hsa_agent_t DstAgent, const void *Src,
+                          hsa_agent_t SrcAgent, size_t Size,
+                          uint32_t NumDepSignals,
+                          const hsa_signal_t *DepSignals,
+                          hsa_signal_t CompletionSignal) {
   if (!UseMultipleSdmaEngines) {
     hsa_status_t S =
         hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, Size,
@@ -193,8 +197,8 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 #endif
 }
 
-Error getTargetTripleAndFeatures(hsa_agent_t Agent,
-                                 SmallVector<SmallString<32>> &Targets) {
+static Error getTargetTripleAndFeatures(hsa_agent_t Agent,
+                                        SmallVector<SmallString<32>> &Targets) {
   auto Err = hsa_utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
     uint32_t Length;
     hsa_status_t Status;
@@ -464,8 +468,8 @@ private:
 struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Create the AMDGPU image with the id and the target image pointer.
   AMDGPUDeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
-                      const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, Device, TgtImage) {}
+                      std::unique_ptr<MemoryBuffer> &&TgtImage)
+      : DeviceImageTy(ImageId, Device, std::move(TgtImage)) {}
 
   /// Prepare and load the executable corresponding to the image.
   Error loadExecutable(const AMDGPUDeviceTy &Device);
@@ -924,6 +928,7 @@ private:
     void *Dst;
     const void *Src;
     size_t Size;
+    size_t NumTimes;
   };
 
   /// Utility struct holding arguments for freeing buffers to memory managers.
@@ -974,9 +979,14 @@ private:
     StreamSlotTy() : Signal(nullptr), Callbacks({}), ActionArgs({}) {}
 
     /// Schedule a host memory copy action on the slot.
-    Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size) {
+    ///
+    /// Num times will repeat the copy that many times, sequentually in the dest
+    /// buffer.
+    Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size,
+                              size_t NumTimes = 1) {
       Callbacks.emplace_back(memcpyAction);
-      ActionArgs.emplace_back().MemcpyArgs = MemcpyArgsTy{Dst, Src, Size};
+      ActionArgs.emplace_back().MemcpyArgs =
+          MemcpyArgsTy{Dst, Src, Size, NumTimes};
       return Plugin::success();
     }
 
@@ -1216,7 +1226,11 @@ private:
     assert(Args->Dst && "Invalid destination buffer");
     assert(Args->Src && "Invalid source buffer");
 
-    std::memcpy(Args->Dst, Args->Src, Args->Size);
+    auto *BasePtr = Args->Dst;
+    for (size_t I = 0; I < Args->NumTimes; I++) {
+      std::memcpy(BasePtr, Args->Src, Args->Size);
+      BasePtr = reinterpret_cast<uint8_t *>(BasePtr) + Args->Size;
+    }
 
     return Plugin::success();
   }
@@ -1421,7 +1435,8 @@ public:
   /// manager once the operation completes.
   Error pushMemoryCopyH2DAsync(void *Dst, const void *Src, void *Inter,
                                uint64_t CopySize,
-                               AMDGPUMemoryManagerTy &MemoryManager) {
+                               AMDGPUMemoryManagerTy &MemoryManager,
+                               size_t NumTimes = 1) {
     // Retrieve available signals for the operation's outputs.
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
@@ -1443,7 +1458,8 @@ public:
       // The std::memcpy is done asynchronously using an async handler. We store
       // the function's information in the action but it is not actually a
       // post action.
-      if (auto Err = Slots[Curr].schedHostMemoryCopy(Inter, Src, CopySize))
+      if (auto Err =
+              Slots[Curr].schedHostMemoryCopy(Inter, Src, CopySize, NumTimes))
         return Err;
 
       // Make changes on this slot visible to the async handler's thread.
@@ -1464,7 +1480,11 @@ public:
       std::tie(Curr, InputSignal) = consume(OutputSignal);
     } else {
       // All preceding operations completed, copy the memory synchronously.
-      std::memcpy(Inter, Src, CopySize);
+      auto *InterPtr = Inter;
+      for (size_t I = 0; I < NumTimes; I++) {
+        std::memcpy(InterPtr, Src, CopySize);
+        InterPtr = reinterpret_cast<uint8_t *>(InterPtr) + CopySize;
+      }
 
       // Return the second signal because it will not be used.
       OutputSignals[1]->decreaseUseCount();
@@ -1481,11 +1501,11 @@ public:
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
       return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                     Agent, CopySize, 1, &InputSignalRaw,
-                                     OutputSignal->get());
+                                     Agent, CopySize * NumTimes, 1,
+                                     &InputSignalRaw, OutputSignal->get());
     }
     return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                   Agent, CopySize, 0, nullptr,
+                                   Agent, CopySize * NumTimes, 0, nullptr,
                                    OutputSignal->get());
   }
 
@@ -2144,7 +2164,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     AMDGPUDeviceImageTy &AMDImage = static_cast<AMDGPUDeviceImageTy &>(*Image);
 
     // Unload the executable of the image.
-    return AMDImage.unloadExecutable();
+    if (auto Err = AMDImage.unloadExecutable())
+      return Err;
+
+    // Destroy the associated memory and invalidate the object.
+    Plugin.free(Image);
+    return Error::success();
   }
 
   /// Deinitialize the device and release its resources.
@@ -2167,18 +2192,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
-    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (Handler.isSymbolInImage(*this, Image, "amdgcn.device.fini"))
-      Image.setPendingGlobalDtors();
-
     return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
   }
 
   virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) override {
-    if (Image.hasPendingGlobalDtors())
-      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
-    return Plugin::success();
+    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
   }
 
   uint64_t getStreamBusyWaitMicroseconds() const { return OMPX_StreamBusyWait; }
@@ -2305,11 +2324,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Load the binary image into the device and allocate an image object.
-  Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
-                                           int32_t ImageId) override {
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override {
     // Allocate and initialize the image object.
     AMDGPUDeviceImageTy *AMDImage = Plugin.allocate<AMDGPUDeviceImageTy>();
-    new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, TgtImage);
+    new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, std::move(TgtImage));
 
     // Load the HSA executable.
     if (Error Err = AMDImage->loadExecutable(*this))
@@ -2330,7 +2350,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
     case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
     case TARGET_ALLOC_HOST:
@@ -2611,26 +2630,72 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    hsa_status_t Status;
+    // Fast case, where we can use the 4 byte hsa_amd_memory_fill
+    if (Size % 4 == 0 &&
+        (PatternSize == 4 || PatternSize == 2 || PatternSize == 1)) {
+      uint32_t Pattern;
+      if (PatternSize == 1) {
+        auto *Byte = reinterpret_cast<const uint8_t *>(PatternPtr);
+        Pattern = *Byte | *Byte << 8 | *Byte << 16 | *Byte << 24;
+      } else if (PatternSize == 2) {
+        auto *Word = reinterpret_cast<const uint16_t *>(PatternPtr);
+        Pattern = *Word | (*Word << 16);
+      } else if (PatternSize == 4) {
+        Pattern = *reinterpret_cast<const uint32_t *>(PatternPtr);
+      } else {
+        // Shouldn't be here if the pattern size is outwith those values
+        llvm_unreachable("Invalid pattern size");
+      }
 
-    // We can use hsa_amd_memory_fill for this size, but it's not async so the
-    // queue needs to be synchronized first
-    if (PatternSize == 4) {
-      if (AsyncInfoWrapper.hasQueue())
-        if (auto Err = synchronize(AsyncInfoWrapper))
+      if (hasPendingWorkImpl(AsyncInfoWrapper)) {
+        AMDGPUStreamTy *Stream = nullptr;
+        if (auto Err = getStream(AsyncInfoWrapper, Stream))
           return Err;
-      Status = hsa_amd_memory_fill(TgtPtr,
-                                   *static_cast<const uint32_t *>(PatternPtr),
-                                   Size / PatternSize);
 
-      if (auto Err =
-              Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n"))
-        return Err;
-    } else {
-      // TODO: Implement for AMDGPU. Most likely by doing the fill in pinned
-      // memory and copying to the device in one go.
-      return Plugin::error(ErrorCode::UNSUPPORTED, "Unsupported fill size");
+        struct MemFillArgsTy {
+          void *Dst;
+          uint32_t Pattern;
+          int64_t Size;
+        };
+        auto *Args = new MemFillArgsTy{TgtPtr, Pattern, Size / 4};
+        auto Fill = [](void *Data) {
+          MemFillArgsTy *Args = reinterpret_cast<MemFillArgsTy *>(Data);
+          assert(Args && "Invalid arguments");
+
+          auto Status =
+              hsa_amd_memory_fill(Args->Dst, Args->Pattern, Args->Size);
+          delete Args;
+          auto Err =
+              Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
+          if (Err) {
+            FATAL_MESSAGE(1, "error performing async fill: %s",
+                          toString(std::move(Err)).data());
+          }
+        };
+
+        // hsa_amd_memory_fill doesn't signal completion using a signal, so use
+        // the existing host callback logic to handle that instead
+        return Stream->pushHostCallback(Fill, Args);
+      }
+      // If there is no pending work, do the fill synchronously
+      auto Status = hsa_amd_memory_fill(TgtPtr, Pattern, Size / 4);
+      return Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
     }
+
+    // Slow case; allocate an appropriate memory size and enqueue copies
+    void *PinnedPtr = nullptr;
+    AMDGPUMemoryManagerTy &PinnedMemoryManager =
+        HostDevice.getPinnedMemoryManager();
+    if (auto Err = PinnedMemoryManager.allocate(Size, &PinnedPtr))
+      return Err;
+
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    return Stream->pushMemoryCopyH2DAsync(TgtPtr, PatternPtr, PinnedPtr,
+                                          PatternSize, PinnedMemoryManager,
+                                          Size / PatternSize);
   }
 
   /// Initialize the async info for interoperability purposes.
@@ -2696,7 +2761,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    auto Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
+    auto *Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
     if (!Stream)
       return false;
 
@@ -2709,7 +2774,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Expected<bool> isEventCompleteImpl(void *EventPtr,
                                      AsyncInfoWrapperTy &AsyncInfo) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
-    auto Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
+    auto *Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
     return Stream && Stream->isEventComplete(*Event);
   }
 
@@ -2744,7 +2809,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_PRODUCT_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Product Name", TmpChar);
+      Info.add("Product Name", TmpChar, "", DeviceInfo::PRODUCT_NAME);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
@@ -2766,7 +2831,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     hsa_device_type_t DevType;
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_DEVICE, DevType);
     if (Status == HSA_STATUS_SUCCESS) {
-      switch (DevType) {
+      switch (static_cast<int>(DevType)) {
       case HSA_DEVICE_TYPE_CPU:
         TmpCharPtr = "CPU";
         break;
@@ -2861,11 +2926,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Grid Max Size", TmpUInt);
+      Info.add("Grid Max Size", TmpUInt, "", DeviceInfo::MAX_WORK_SIZE);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      auto &MaxDim = *Info.add("Grid Max Size per Dimension");
+      auto &MaxDim = *Info.add("Grid Max Size per Dimension", std::monostate{},
+                               "", DeviceInfo::MAX_WORK_SIZE_PER_DIMENSION);
       MaxDim.add("x", GridMaxDim.x);
       MaxDim.add("y", GridMaxDim.y);
       MaxDim.add("z", GridMaxDim.z);
@@ -3041,7 +3107,7 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'amdgpu-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
+    if (!Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
 
     // Allocate and construct the AMDGPU kernel.
@@ -3682,8 +3748,8 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
     return Plugin::success();
 
   // General Info
-  auto NumGroups = NumBlocks;
-  auto ThreadsPerGroup = NumThreads;
+  auto *NumGroups = NumBlocks;
+  auto *ThreadsPerGroup = NumThreads;
 
   // Kernel Arguments Info
   auto ArgNum = KernelArgs.NumArgs;
@@ -3780,7 +3846,6 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
-  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
   case TARGET_ALLOC_HOST:

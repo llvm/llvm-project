@@ -237,7 +237,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
     case Type::DependentName:
-    case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
     case Type::ObjCTypeParam:
     case Type::ObjCInterface:
@@ -1836,22 +1835,6 @@ void TypePrinter::printDependentNameBefore(const DependentNameType *T,
 void TypePrinter::printDependentNameAfter(const DependentNameType *T,
                                           raw_ostream &OS) {}
 
-void TypePrinter::printDependentTemplateSpecializationBefore(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {
-  IncludeStrongLifetimeRAII Strong(Policy);
-
-  OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ElaboratedTypeKeyword::None)
-    OS << " ";
-
-  T->getDependentTemplateName().print(OS, Policy);
-  printTemplateArgumentList(OS, T->template_arguments(), Policy);
-  spaceBeforePlaceHolder(OS);
-}
-
-void TypePrinter::printDependentTemplateSpecializationAfter(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {}
-
 void TypePrinter::printPackExpansionBefore(const PackExpansionType *T,
                                            raw_ostream &OS) {
   printBefore(T->getPattern(), OS);
@@ -2382,7 +2365,7 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     return true;
 
   // A type parameter matches its argument.
-  if (auto *TTPT = Pattern->getAs<TemplateTypeParmType>()) {
+  if (auto *TTPT = Pattern->getAsCanonical<TemplateTypeParmType>()) {
     if (TTPT->getDepth() == Depth && TTPT->getIndex() < Args.size() &&
         Args[TTPT->getIndex()].getKind() == TemplateArgument::Type) {
       QualType SubstArg = Ctx.getQualifiedType(

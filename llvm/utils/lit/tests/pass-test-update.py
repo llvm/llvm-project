@@ -12,8 +12,8 @@
 # CHECK: Exception occurred in test updater:
 # CHECK: Traceback (most recent call last):
 # CHECK:   File {{.*}}, line {{.*}}, in {{.*}}
-# CHECK:     update_output = test_updater(result, test)
-# CHECK:   File "{{.*}}/should_not_run.py", line {{.*}}, in should_not_run
+# CHECK:     update_output = test_updater(result, test, commands)
+# CHECK:   File "{{.*}}{{/|\\}}should_not_run.py", line {{.*}}, in should_not_run
 # CHECK:     raise Exception("this test updater should only run on failure")
 # CHECK: Exception: this test updater should only run on failure
 # CHECK: ********************

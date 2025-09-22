@@ -17,15 +17,15 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_EXPORTED_FROM_ABI defer_lock_t {
+struct defer_lock_t {
   explicit defer_lock_t() = default;
 };
 
-struct _LIBCPP_EXPORTED_FROM_ABI try_to_lock_t {
+struct try_to_lock_t {
   explicit try_to_lock_t() = default;
 };
 
-struct _LIBCPP_EXPORTED_FROM_ABI adopt_lock_t {
+struct adopt_lock_t {
   explicit adopt_lock_t() = default;
 };
 

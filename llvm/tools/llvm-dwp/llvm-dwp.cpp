@@ -217,20 +217,21 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!TheTarget)
     return error(ErrorStr, Context);
   std::string TripleName = ErrOrTriple->getTriple();
+  Triple TheTriple(TripleName);
 
   // Create all the MC Objects.
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return error(Twine("no register info for target ") + TripleName, Context);
 
   MCTargetOptions MCOptions = llvm::mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return error("no asm info for target " + TripleName, Context);
 
   std::unique_ptr<MCSubtargetInfo> MSTI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context);
 

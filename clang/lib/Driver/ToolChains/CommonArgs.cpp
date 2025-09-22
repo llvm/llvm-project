@@ -156,6 +156,9 @@ static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
       (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
+  if ((Triple.isARM() || Triple.isThumb()) && Triple.isOSBinFormatMachO())
+    return false;
+
   return true;
 }
 
@@ -3331,14 +3334,8 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
-  // implement a separate function to infer loop interchange from opt level.
-  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
-  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier InterchangeAliasOption =
-      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
-  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
-                   options::OPT_fno_loop_interchange, EnableInterchange))
+  if (Args.hasFlag(options::OPT_floop_interchange,
+                   options::OPT_fno_loop_interchange, false))
     CmdArgs.push_back("-floop-interchange");
 }
 
@@ -3519,9 +3516,11 @@ std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   case LangOptions::ComplexRangeKind::CX_Promoted:
     return "promoted";
     break;
-  default:
-    return "";
+  case LangOptions::ComplexRangeKind::CX_None:
+    return "none";
+    break;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 std::string

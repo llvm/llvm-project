@@ -1,4 +1,4 @@
-//===---------- ExprSequence.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -258,7 +258,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
 }
 
 const Stmt *ExprSequence::resolveSyntheticStmt(const Stmt *S) const {
-  if (SyntheticStmtSourceMap.count(S))
+  if (SyntheticStmtSourceMap.contains(S))
     return SyntheticStmtSourceMap.lookup(S);
   return S;
 }
@@ -274,7 +274,7 @@ StmtToBlockMap::StmtToBlockMap(const CFG *TheCFG, ASTContext *TheContext)
 }
 
 const CFGBlock *StmtToBlockMap::blockContainingStmt(const Stmt *S) const {
-  while (!Map.count(S)) {
+  while (!Map.contains(S)) {
     SmallVector<const Stmt *, 1> Parents = getParentStmts(S, Context);
     if (Parents.empty())
       return nullptr;

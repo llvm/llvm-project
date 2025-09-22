@@ -116,6 +116,8 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
   {{"MSG_RTN_GET_TBA_TO_PC"},   ID_RTN_GET_TBA_TO_PC,       isGFX11Plus},
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
+  {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
+                                                            isGFX1250},
 };
 
 static constexpr CustomOperand SysMsgOperands[] = {

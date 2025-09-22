@@ -6,13 +6,13 @@ define void @vec_reduce_xor_v16i8(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.d $vr1, $vr0, 32
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vshuf4i.b $vr1, $vr0, 14
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vreplvei.b $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <16 x i8>, ptr %src
@@ -26,12 +26,12 @@ define void @vec_reduce_xor_v8i8(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; CHECK-NEXT:    vsrli.d $vr1, $vr0, 32
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vshuf4i.b $vr1, $vr0, 14
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vreplvei.b $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <8 x i8>, ptr %src
@@ -45,10 +45,10 @@ define void @vec_reduce_xor_v4i8(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vshuf4i.b $vr1, $vr0, 14
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vreplvei.b $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, ptr %src
@@ -62,8 +62,8 @@ define void @vec_reduce_xor_v2i8(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.h $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
-; CHECK-NEXT:    vreplvei.b $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %src
@@ -77,11 +77,11 @@ define void @vec_reduce_xor_v8i16(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vshuf4i.h $vr1, $vr0, 14
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <8 x i16>, ptr %src
@@ -95,10 +95,10 @@ define void @vec_reduce_xor_v4i16(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; CHECK-NEXT:    vshuf4i.h $vr1, $vr0, 14
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i16>, ptr %src
@@ -112,8 +112,8 @@ define void @vec_reduce_xor_v2i16(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, ptr %src
@@ -126,10 +126,10 @@ define void @vec_reduce_xor_v4i32(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_xor_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vshuf4i.w $vr1, $vr0, 14
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <4 x i32>, ptr %src
@@ -143,8 +143,8 @@ define void @vec_reduce_xor_v2i32(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <2 x i32>, ptr %src
@@ -157,8 +157,8 @@ define void @vec_reduce_xor_v2i64(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_xor_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.d $vr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
   %v = load <2 x i64>, ptr %src

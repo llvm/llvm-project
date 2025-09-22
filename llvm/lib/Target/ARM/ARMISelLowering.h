@@ -534,8 +534,6 @@ class VectorType;
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
 
-    bool ExpandInlineAsm(CallInst *CI) const override;
-
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
     /// Examine constraint string and operand type and determine a weight value.
@@ -688,8 +686,8 @@ class VectorType;
                               ArrayRef<unsigned> Indices, unsigned Factor,
                               const APInt &GapMask) const override;
     bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                               ShuffleVectorInst *SVI,
-                               unsigned Factor) const override;
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;
     TargetLoweringBase::AtomicExpansionKind
@@ -708,6 +706,10 @@ class VectorType;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
+
+    bool canCreateUndefOrPoisonForTargetNode(
+        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {
@@ -906,6 +908,7 @@ class VectorType;
                    SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;

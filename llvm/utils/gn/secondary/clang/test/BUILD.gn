@@ -54,7 +54,7 @@ write_lit_config("lit_site_cfg") {
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_DEFAULT_PIE_ON_LINUX=0",
     "CLANG_ENABLE_CIR=0",
-    "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_ENABLE_OBJC_REWRITER=0",
     "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
