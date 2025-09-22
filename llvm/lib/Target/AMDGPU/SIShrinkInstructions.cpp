@@ -733,6 +733,8 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     MachineInstr *MovX = nullptr;
     for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
          I != IY; ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (instReadsReg(&*I, X, Xsub) || instModifiesReg(&*I, Y, Ysub) ||
           instModifiesReg(&*I, T, Tsub) ||
           (MovX && instModifiesReg(&*I, X, Xsub))) {
