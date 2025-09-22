@@ -1024,8 +1024,11 @@ TYPE_PARSER(construct<OmpNumTasksClause>(
     maybe(nonemptyList(Parser<OmpNumTasksClause::Modifier>{}) / ":"),
     scalarIntExpr))
 
-TYPE_PARSER(
-    construct<OmpObject>(designator) || "/" >> construct<OmpObject>(name) / "/")
+TYPE_PARSER( //
+    construct<OmpObject>(designator) ||
+    "/" >> construct<OmpObject>(name) / "/" ||
+    construct<OmpObject>(sourced(construct<OmpObject::Invalid>(
+        "//"_tok >> pure(OmpObject::Invalid::Kind::BlankCommonBlock)))))
 
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(
