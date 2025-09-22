@@ -6773,7 +6773,7 @@ class MappableExprsHandler {
 public:
   /// Custom comparator for attach-pointer expressions that compares them by
   /// complexity (i.e. their component-depth) first, then by the order in which
-  /// they were computed by findAttachPtrExpr(), if they are semantically
+  /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
     const MappableExprsHandler *Handler;
@@ -6842,7 +6842,8 @@ public:
     }
 
     /// Compare the two attach-ptr expressions by their computation order.
-    /// Returns true iff LHS was computed before RHS by findAttachPtrExpr.
+    /// Returns true iff LHS was computed before RHS by
+    /// collectAttachPtrExprInfo().
     bool wasComputedBefore(const Expr *LHS, const Expr *RHS) const {
       const size_t &OrderLHS = Handler->AttachPtrComputationOrderMap.at(LHS);
       const size_t &OrderRHS = Handler->AttachPtrComputationOrderMap.at(RHS);
@@ -7209,7 +7210,7 @@ private:
       AttachPtrComponentDepthMap = {{nullptr, std::nullopt}};
 
   /// Map from attach pointer expressions to the order they were computed in, in
-  /// findAttachPtrExpr().
+  /// collectAttachPtrExprInfo().
   llvm::DenseMap<const Expr *, size_t> AttachPtrComputationOrderMap = {
       {nullptr, 0}};
 
