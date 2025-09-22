@@ -164,7 +164,6 @@ private:
     case ePDBReaderDIA:
       return false;
     default:
-    case ePDBReaderDefault:
       return ShouldUseNativeReaderByDefault();
     }
   }
