@@ -262,8 +262,7 @@ class SFrameEmitterImpl {
       // mismatch here is an implementation error.
       assert(!FDE.SaveState.empty() &&
              "cfi_restore_state without cfi_save_state");
-      FRE = FDE.SaveState.back();
-      FDE.SaveState.pop_back();
+      FRE = FDE.SaveState.pop_back_val();
       return true;
     case MCCFIInstruction::OpEscape:
       // TODO: Implement. Will use FDE.
