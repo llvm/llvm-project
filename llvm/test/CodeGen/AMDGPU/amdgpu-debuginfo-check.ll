@@ -2,7 +2,7 @@
 ; RUN: llvm-debuginfo-analyzer --debugger-view --debugger-view-vars %t.o | FileCheck %s
 
 ; This test compiles this module with AMDGPU backend under -O0,
-; and makes sure llvm-debuginfo-check works for it.
+; and makes sure llvm-debuginfo-analyzer --debugger-view works for it.
 
 ; CHECK: FUNCTION: main
 ; CHECK: LINE: {{.+}}basic_var.hlsl:7
