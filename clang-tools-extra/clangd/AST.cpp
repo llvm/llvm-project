@@ -479,7 +479,7 @@ namespace {
 /// not have the deduced type set. Instead, we have to go to the appropriate
 /// DeclaratorDecl/FunctionDecl and work our back to the AutoType that does have
 /// a deduced type set. The AST should be improved to simplify this scenario.
-class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
+class DeducedTypeVisitor : public ConstRecursiveASTVisitor<DeducedTypeVisitor> {
   SourceLocation SearchedLocation;
   const HeuristicResolver *Resolver;
 
@@ -493,7 +493,7 @@ public:
   //- decltype(auto) i = 1;
   //- auto& i = 1;
   //- auto* i = &a;
-  bool VisitDeclaratorDecl(DeclaratorDecl *D) {
+  bool VisitDeclaratorDecl(const DeclaratorDecl *D) {
     if (!D->getTypeSourceInfo() ||
         !D->getTypeSourceInfo()->getTypeLoc().getContainedAutoTypeLoc() ||
         D->getTypeSourceInfo()
@@ -522,7 +522,7 @@ public:
   //- auto foo() -> int {}
   //- auto foo() -> decltype(1+1) {}
   //- operator auto() const { return 10; }
-  bool VisitFunctionDecl(FunctionDecl *D) {
+  bool VisitFunctionDecl(const FunctionDecl *D) {
     if (!D->getTypeSourceInfo())
       return true;
     // Loc of auto in return type (c++14).
@@ -553,7 +553,7 @@ public:
   // Handle non-auto decltype, e.g.:
   // - auto foo() -> decltype(expr) {}
   // - decltype(expr);
-  bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+  bool VisitDecltypeTypeLoc(const DecltypeTypeLoc TL) {
     if (TL.getBeginLoc() != SearchedLocation)
       return true;
 
@@ -571,7 +571,7 @@ public:
 
   // Handle functions/lambdas with `auto` typed parameters.
   // We deduce the type if there's exactly one instantiation visible.
-  bool VisitParmVarDecl(ParmVarDecl *PVD) {
+  bool VisitParmVarDecl(const ParmVarDecl *PVD) {
     if (!PVD->getType()->isDependentType())
       return true;
     // 'auto' here does not name an AutoType, but an implicit template param.
@@ -606,7 +606,7 @@ public:
     return true;
   }
 
-  static int paramIndex(const TemplateDecl &TD, NamedDecl &Param) {
+  static int paramIndex(const TemplateDecl &TD, const NamedDecl &Param) {
     unsigned I = 0;
     for (auto *ND : *TD.getTemplateParameters()) {
       if (&Param == ND)
@@ -620,7 +620,7 @@ public:
 };
 } // namespace
 
-std::optional<QualType> getDeducedType(ASTContext &ASTCtx,
+std::optional<QualType> getDeducedType(const ASTContext &ASTCtx,
                                        const HeuristicResolver *Resolver,
                                        SourceLocation Loc) {
   if (!Loc.isValid())
@@ -659,7 +659,7 @@ static NamedDecl *getOnlyInstantiationImpl(TemplateDeclTy *TD) {
   return Only;
 }
 
-NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl) {
+NamedDecl *getOnlyInstantiation(const NamedDecl *TemplatedDecl) {
   if (TemplateDecl *TD = TemplatedDecl->getDescribedTemplate()) {
     if (auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(TD))
       return getOnlyInstantiationImpl(CTD);

@@ -168,7 +168,7 @@ QualType declaredType(const TypeDecl *D);
 /// Retrieves the deduced type at a given location (auto, decltype).
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
-std::optional<QualType> getDeducedType(ASTContext &, const HeuristicResolver *,
+std::optional<QualType> getDeducedType(const ASTContext &, const HeuristicResolver *,
                                        SourceLocation Loc);
 
 // Find the abbreviated-function-template `auto` within a type, or returns null.
@@ -180,7 +180,7 @@ TemplateTypeParmTypeLoc getContainedAutoParamType(TypeLoc TL);
 
 // If TemplatedDecl is the generic body of a template, and the template has
 // exactly one visible instantiation, return the instantiated body.
-NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl);
+NamedDecl *getOnlyInstantiation(const NamedDecl *TemplatedDecl);
 
 /// Return attributes attached directly to a node.
 std::vector<const Attr *> getAttributes(const DynTypedNode &);
