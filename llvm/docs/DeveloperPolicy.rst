@@ -1207,8 +1207,7 @@ incrementally. The recommended workflow is:
    enabled, it becomes easier to identify the specific change that has caused a
    regression in correctness, optimization quality or compile-time.
 
-When enabling a pass, regardless of whether it is old or new, certain
-requirements must be met (in no particular order):
+When enabling a pass, certain requirements must be met (in no particular order):
 
  * **Maintenance:** The pass (and any analyses it depends on) must have at
    least one maintainer.
