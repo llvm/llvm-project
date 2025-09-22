@@ -13589,29 +13589,30 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
 
-  auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)> Fn) {
-    APValue SourceLHS, SourceRHS;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
-      return false;
+  auto EvalTestOp =
+      [&](llvm::function_ref<bool(const APInt &, const APInt &)> Fn) {
+        APValue SourceLHS, SourceRHS;
+        if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+            !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+          return false;
 
-    unsigned SourceLen = SourceLHS.getVectorLength();
-    bool Flag = true;
-    for (unsigned I = 0; I < SourceLen; ++I) {
-      const APInt &A = SourceLHS.getVectorElt(I).getInt();
-      const APInt &B = SourceRHS.getVectorElt(I).getInt();
-      if (!Fn(A, B)) {
-        Flag = false;
-        break;
-      }
-    }
+        unsigned SourceLen = SourceLHS.getVectorLength();
+        bool Flag = true;
+        for (unsigned I = 0; I < SourceLen; ++I) {
+          const APInt &A = SourceLHS.getVectorElt(I).getInt();
+          const APInt &B = SourceRHS.getVectorElt(I).getInt();
+          if (!Fn(A, B)) {
+            Flag = false;
+            break;
+          }
+        }
 
-    QualType ResultType = E->getType();
-    unsigned BitWidth = Info.Ctx.getIntWidth(ResultType);
-    bool ResultSigned = ResultType->isUnsignedIntegerOrEnumerationType();
-    APSInt Result(APInt(BitWidth, Flag), ResultSigned);
-    return Success(Result, E);
-  };                                              
+        QualType ResultType = E->getType();
+        unsigned BitWidth = Info.Ctx.getIntWidth(ResultType);
+        bool ResultSigned = ResultType->isUnsignedIntegerOrEnumerationType();
+        APSInt Result(APInt(BitWidth, Flag), ResultSigned);
+        return Success(Result, E);
+      };
   switch (BuiltinOp) {
   default:
     return false;
@@ -14711,11 +14712,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         Result.setBitVal(P++, Val[I]);
     return Success(Result, E);
   }
-  case X86::BI__builtin_ia32_ptestz128: 
+  case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256: {
-    return EvalTestOp([](const APInt& A, const APInt& B){
-        return (A & B) == 0;
-    });
+    return EvalTestOp(
+        [](const APInt &A, const APInt &B) { return (A & B) == 0; });
   }
 
     // case X86::BI__builtin_ia32_ptestc128:
