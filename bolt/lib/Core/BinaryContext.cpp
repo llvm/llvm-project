@@ -2517,8 +2517,16 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
     return nullptr;
 
   BinaryFunction *BF = BFI->second;
-  if (EntryDesc)
+  if (EntryDesc) {
+    const uint64_t Address = BF->getAddress() + Symbol->getOffset();
+    if (BF->isInConstantIsland(Address)) {
+      this->outs() << "BOLT-WARNING: symbol " << Symbol->getName()
+                   << " is in data region of function 0x"
+                   << Twine::utohexstr(Address) << ".\n";
+      return nullptr;
+    }
     *EntryDesc = BF->getEntryIDForSymbol(Symbol);
+  }
 
   return BF;
 }
