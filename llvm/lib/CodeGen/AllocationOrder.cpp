@@ -62,7 +62,7 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   // Create allocation order object
   AllocationOrder AO(std::move(Hints), Order, HardHints);
   
-  // Apply anti-hint filtering if needed
+  // Apply anti-hints filtering if needed
   if (!AntiHintedPhysRegs.empty()) {
     AO.applyAntiHints(AntiHintedPhysRegs, TRI);
     
@@ -103,7 +103,7 @@ void AllocationOrder::applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs,
     }
   }
   
-  // Update Order to point to our filtered storage
+  // Update Order
   Order = FilteredOrderStorage;
   
   LLVM_DEBUG({
