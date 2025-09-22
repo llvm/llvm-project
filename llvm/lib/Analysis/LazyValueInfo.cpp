@@ -111,7 +111,7 @@ using NonNullPointerSet = SmallDenseSet<AssertingVH<Value>, 2>;
 using BBLatticeElementMap =
     SmallDenseMap<PoisoningVH<BasicBlock>, ValueLatticeElement, 4>;
 using PredecessorValueLatticeMap =
-    SmallDenseMap<AssertingVH<Value>, BBLatticeElementMap, 4>;
+    SmallDenseMap<AssertingVH<Value>, BBLatticeElementMap, 2>;
 
 /// This is the cache kept by LazyValueInfo which
 /// maintains information about queries across the clients' queries.
@@ -129,7 +129,7 @@ class LazyValueInfoCache {
     // This is an extension of the above LatticeElements, caching, for each
     // Value, a ValueLatticeElement, for each predecessor of the BB tracked by
     // this entry.
-    PredecessorValueLatticeMap PredecessorLatticeElements;
+    std::optional<PredecessorValueLatticeMap> PredecessorLatticeElements;
   };
 
   /// Cached information per basic block.
@@ -147,8 +147,14 @@ class LazyValueInfoCache {
 
   BlockCacheEntry *getOrCreateBlockEntry(BasicBlock *BB) {
     auto It = BlockCache.find_as(BB);
-    if (It == BlockCache.end())
-      It = BlockCache.insert({BB, std::make_unique<BlockCacheEntry>()}).first;
+    if (It == BlockCache.end()) {
+      std::unique_ptr<BlockCacheEntry> BCE =
+          std::make_unique<BlockCacheEntry>();
+      if (PerPredRanges)
+        BCE->PredecessorLatticeElements =
+            std::make_optional<PredecessorValueLatticeMap>();
+      It = BlockCache.insert({BB, std::move(BCE)}).first;
+    }
 
     return It->second.get();
   }
@@ -178,7 +184,7 @@ public:
                                 BBLatticeElementMap &PredLatticeElements) {
     BlockCacheEntry *Entry = getOrCreateBlockEntry(BB);
 
-    Entry->PredecessorLatticeElements.insert({Val, PredLatticeElements});
+    Entry->PredecessorLatticeElements->insert({Val, PredLatticeElements});
 
     addValueHandle(Val);
   }
@@ -189,8 +195,8 @@ public:
     if (!Entry)
       return std::nullopt;
 
-    auto LatticeIt = Entry->PredecessorLatticeElements.find_as(V);
-    if (LatticeIt == Entry->PredecessorLatticeElements.end())
+    auto LatticeIt = Entry->PredecessorLatticeElements->find_as(V);
+    if (LatticeIt == Entry->PredecessorLatticeElements->end())
       return std::nullopt;
 
     return LatticeIt->second;
@@ -252,7 +258,7 @@ void LazyValueInfoCache::eraseValue(Value *V) {
     if (Pair.second->NonNullPointers)
       Pair.second->NonNullPointers->erase(V);
     if (PerPredRanges)
-      Pair.second->PredecessorLatticeElements.erase(V);
+      Pair.second->PredecessorLatticeElements->erase(V);
   }
 
   auto HandleIt = ValueHandles.find_as(V);
@@ -270,7 +276,7 @@ void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
   // Clear all when a BB is removed.
   if (PerPredRanges)
     for (auto &Pair : BlockCache)
-      Pair.second->PredecessorLatticeElements.clear();
+      Pair.second->PredecessorLatticeElements->clear();
   BlockCache.erase(BB);
 }
 
@@ -732,7 +738,9 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   // find a path to function entry.  TODO: We should consider explicitly
   // canonicalizing to make this true rather than relying on this happy
   // accident.
-  BBLatticeElementMap PredLatticeElements;
+  std::optional<BBLatticeElementMap> PredLatticeElements;
+  if (PerPredRanges)
+    PredLatticeElements = std::make_optional<BBLatticeElementMap>();
   for (BasicBlock *Pred : predecessors(BB)) {
     // Skip self loops.
     if (Pred == BB)
@@ -753,11 +761,11 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
       return Result;
     }
     if (PerPredRanges)
-      PredLatticeElements.insert({Pred, *EdgeResult});
+      PredLatticeElements->insert({Pred, *EdgeResult});
   }
 
   if (PerPredRanges)
-    TheCache.insertPredecessorResults(Val, BB, PredLatticeElements);
+    TheCache.insertPredecessorResults(Val, BB, *PredLatticeElements);
 
   // Return the merged value, which is more precise than 'overdefined'.
   assert(!Result.isOverdefined());
@@ -771,7 +779,9 @@ LazyValueInfoImpl::solveBlockValuePHINode(PHINode *PN, BasicBlock *BB) {
   // Loop over all of our predecessors, merging what we know from them into
   // result.  See the comment about the chosen traversal order in
   // solveBlockValueNonLocal; the same reasoning applies here.
-  BBLatticeElementMap PredLatticeElements;
+  std::optional<BBLatticeElementMap> PredLatticeElements;
+  if (PerPredRanges)
+    PredLatticeElements = std::make_optional<BBLatticeElementMap>();
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     BasicBlock *PhiBB = PN->getIncomingBlock(i);
     Value *PhiVal = PN->getIncomingValue(i);
@@ -796,11 +806,11 @@ LazyValueInfoImpl::solveBlockValuePHINode(PHINode *PN, BasicBlock *BB) {
     }
 
     if (PerPredRanges)
-      PredLatticeElements.insert({PhiBB, *EdgeResult});
+      PredLatticeElements->insert({PhiBB, *EdgeResult});
   }
 
   if (PerPredRanges)
-    TheCache.insertPredecessorResults(PN, BB, PredLatticeElements);
+    TheCache.insertPredecessorResults(PN, BB, *PredLatticeElements);
 
   // Return the merged value, which is more precise than 'overdefined'.
   assert(!Result.isOverdefined() && "Possible PHI in entry block?");
