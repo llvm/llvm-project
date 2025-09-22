@@ -371,22 +371,18 @@ OMPForDirective *OMPForDirective::Create(
 }
 
 Stmt *OMPLoopTransformationDirective::getTransformedStmt() const {
-  if (auto *D = dyn_cast<OMPCanonicalLoopNestTransformationDirective>(S)) {
+  if (auto *D = dyn_cast<OMPCanonicalLoopNestTransformationDirective>(S))
     return D->getTransformedStmt();
-  }
-  if (auto *D = dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S)) {
+  if (auto *D = dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S))
     return D->getTransformedStmt();
-  }
   llvm_unreachable("unexpected object type");
 }
 
 Stmt *OMPLoopTransformationDirective::getPreInits() const {
-  if (auto *D = dyn_cast<OMPCanonicalLoopNestTransformationDirective>(S)) {
+  if (auto *D = dyn_cast<OMPCanonicalLoopNestTransformationDirective>(S))
     return D->getPreInits();
-  }
-  if (auto *D = dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S)) {
+  if (auto *D = dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S))
     return D->getPreInits();
-  }
   llvm_unreachable("unexpected object type");
 }
 

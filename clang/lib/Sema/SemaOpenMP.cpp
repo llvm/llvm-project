@@ -14564,11 +14564,11 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
   auto StoreLoopStatements = [](LoopAnalysis &Analysis, Stmt *LoopStmt) {
     if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
       Analysis.OriginalInits.push_back(For->getInit());
-      Analysis.ForStmt = For;
+      Analysis.TheForStmt = For;
     } else {
       auto *CXXFor = cast<CXXForRangeStmt>(LoopStmt);
       Analysis.OriginalInits.push_back(CXXFor->getBeginStmt());
-      Analysis.ForStmt = CXXFor;
+      Analysis.TheForStmt = CXXFor;
     }
   };
 
@@ -16019,7 +16019,9 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
   // SeqAnalysis.LoopSeqSize exists mostly to handle dependent contexts,
   // otherwise it must be the same as SeqAnalysis.Loops.size().
-  assert(SeqAnalysis.LoopSeqSize == SeqAnalysis.Loops.size());
+  assert(SeqAnalysis.LoopSeqSize == SeqAnalysis.Loops.size() &&
+         "Inconsistent size of the loop sequence and the number of loops "
+         "found in the sequence");
 
   // Handle clauses, which can be any of the following: [looprange, apply]
   const OMPLoopRangeClause *LRC =
@@ -16084,7 +16086,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // Select the type with the largest bit width among all induction variables
   QualType IVType =
       SeqAnalysis.Loops[FirstVal - 1].HelperExprs.IterationVarRef->getType();
-  for (unsigned I = FirstVal; I < LastVal; ++I) {
+  for (unsigned I : llvm::seq<unsigned>(FirstVal, LastVal)) {
     QualType CurrentIVType =
         SeqAnalysis.Loops[I].HelperExprs.IterationVarRef->getType();
     if (Context.getTypeSize(CurrentIVType) > Context.getTypeSize(IVType)) {
@@ -16146,9 +16148,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //  original loop. The preinit structure must ensure that hidden variables
   //  like '.omp.fuse.max' are still properly handled.
   // Transformations that apply this concept: Loopranged Fuse, Split
-  if (!SeqAnalysis.LoopSequencePreInits.empty()) {
-    llvm::append_range(PreInits, SeqAnalysis.LoopSequencePreInits);
-  }
+  llvm::append_range(PreInits, SeqAnalysis.LoopSequencePreInits);
 
   // Process each single loop to generate and collect declarations
   // and statements for all helper expressions related to
@@ -16170,7 +16170,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
     if (SeqAnalysis.Loops[I].isRegularLoop()) {
       addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
-                      SeqAnalysis.Loops[I].ForStmt,
+                      SeqAnalysis.Loops[I].TheForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
     } else if (SeqAnalysis.Loops[I].isLoopTransformation()) {
       // For transformed loops, insert both pre-inits and original inits.
@@ -16178,11 +16178,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       // inits such as upper bounds...
       SmallVector<Stmt *> &TransformPreInit =
           SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
-      if (!TransformPreInit.empty())
-        llvm::append_range(PreInits, TransformPreInit);
+      llvm::append_range(PreInits, TransformPreInit);
 
       addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
-                      SeqAnalysis.Loops[I].ForStmt,
+                      SeqAnalysis.Loops[I].TheForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
     }
     auto [UBVD, UBDStmt] =
@@ -16270,7 +16269,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //   omp.fuse.max = max(omp.temp1, omp.temp0)
 
   ExprResult MaxExpr;
-  // I is the true
+  // I is the range of loops in the sequence that we fuse.
   for (unsigned I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
     DeclRefExpr *NIRef = MakeVarDeclRef(NIVarDecls[J]);
     QualType NITy = NIRef->getType();
@@ -16382,13 +16381,13 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
     // If the loop is a CXXForRangeStmt then the iterator variable is needed
     if (auto *SourceCXXFor =
-            dyn_cast<CXXForRangeStmt>(SeqAnalysis.Loops[I].ForStmt))
+            dyn_cast<CXXForRangeStmt>(SeqAnalysis.Loops[I].TheForStmt))
       BodyStmts.push_back(SourceCXXFor->getLoopVarStmt());
 
     Stmt *Body =
-        (isa<ForStmt>(SeqAnalysis.Loops[I].ForStmt))
-            ? cast<ForStmt>(SeqAnalysis.Loops[I].ForStmt)->getBody()
-            : cast<CXXForRangeStmt>(SeqAnalysis.Loops[I].ForStmt)->getBody();
+        (isa<ForStmt>(SeqAnalysis.Loops[I].TheForStmt))
+            ? cast<ForStmt>(SeqAnalysis.Loops[I].TheForStmt)->getBody()
+            : cast<CXXForRangeStmt>(SeqAnalysis.Loops[I].TheForStmt)->getBody();
     BodyStmts.push_back(Body);
 
     CompoundStmt *CombinedBody =
@@ -16457,7 +16456,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
           llvm::append_range(PreInits, TransformPreInit);
       }
 
-      FinalLoops.push_back(SeqAnalysis.Loops[I].ForStmt);
+      FinalLoops.push_back(SeqAnalysis.Loops[I].TheForStmt);
     }
 
     FinalLoops.insert(FinalLoops.begin() + (FirstVal - 1), FusedForStmt);

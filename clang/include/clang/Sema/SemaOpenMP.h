@@ -1503,12 +1503,12 @@ private:
   /// Holds the result of the analysis of a (possibly canonical) loop.
   struct LoopAnalysis {
     /// The analyzed loop or loop transformation.
-    Stmt *AStmt;
+    Stmt *AStmt = nullptr;
     /// Loop analyses results.
     OMPLoopBasedDirective::HelperExprs HelperExprs;
-    /// The for-statement of the loop. ForStmt equals AStmt only when the latter
-    /// is a canonical loop (i.e. not a loop transformation).
-    Stmt *ForStmt;
+    /// The for-statement of the loop. TheForStmt equals AStmt only when the
+    /// latter is a canonical loop (i.e. not a loop transformation).
+    Stmt *TheForStmt = nullptr;
     /// Initialization statements before transformations.
     SmallVector<Stmt *> OriginalInits;
     /// Initialization statements required after transformation of this loop.
@@ -1521,7 +1521,7 @@ private:
 
     // Convenience functions used when building LoopSequenceAnalysis.
     static bool isRegularLoop(Stmt *S) {
-      return isa<clang::ForStmt, CXXForRangeStmt>(S);
+      return isa<ForStmt, CXXForRangeStmt>(S);
     }
     static bool isLoopTransformation(Stmt *S) {
       return isa<OMPLoopTransformationDirective>(S);
