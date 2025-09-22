@@ -120,6 +120,8 @@ public:
   void Leave(const parser::OpenMPDispatchConstruct &);
   void Enter(const parser::OmpErrorDirective &);
   void Leave(const parser::OmpErrorDirective &);
+  void Enter(const parser::OmpNothingDirective &);
+  void Leave(const parser::OmpNothingDirective &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);
@@ -228,7 +230,10 @@ private:
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
+  void CheckSymbolName(
+      const parser::CharBlock &source, const parser::OmpObject &object);
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
