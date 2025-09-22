@@ -23,6 +23,11 @@ class Region;
 class RewriterBase;
 class Value;
 
+/// Alias for map used in LICM pass to track which memory resources have
+/// conflicts due to sequence of memory effects applied to them in the region of
+/// interest.  
+using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>; 
+
 /// Gathers potential conflicts on all memory resources used within loop.
 ///
 /// Given a target loop and an op within it (or the loop op itself),
@@ -101,7 +106,8 @@ void gatherResourceConflicts(
 size_t moveLoopInvariantCode(
     LoopLikeOpInterface loopLike,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
-    function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
+    function_ref<bool(Operation *, Region *)> shouldMoveSpeculatable,
+    function_ref<bool(Operation *, MemoryConflictMap *)> shouldMoveMemoryEffect,
     function_ref<void(Operation *, Region *)> moveOutOfRegion);
 
 /// Move side-effect free loop invariant code out of a loop-like op using
