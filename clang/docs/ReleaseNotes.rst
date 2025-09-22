@@ -213,6 +213,10 @@ Non-comprehensive list of changes in this release
   conditional memory loads from vectors. Binds to the LLVM intrinsics of the
   same name.
 
+- Added ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` for
+  conditional gathering and scattering operations on vectors. Binds to the LLVM
+  intrinsics of the same name.
+
 - The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
   functions now accept fixed-size boolean vectors.
 
