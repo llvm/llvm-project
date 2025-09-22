@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -verify -fsyntax-only %s -Wdouble-promotion
-// expected-no-diagnostics
 
 using LongDouble = long double;
 
@@ -37,6 +36,52 @@ long double ReturnLongDoubleFromFloatWithFunctionStyleCast(float f) {
 
 long double ReturnLongDoubleFromDoubleWithFunctionStyleCast(double d) {
   return LongDouble(d);
+}
+
+void InitializationWithParens(float f, double d) {
+  {
+    double d(f);  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+    long double ld0(f);  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+    long double ld1(d);  // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  }
+  {
+    double d(static_cast<double>(f));
+    long double ld0(static_cast<long double>(f));
+    long double ld1(static_cast<long double>(d));
+  }
+  {
+    double d(double{f});
+    long double ld0(LongDouble{f});
+    long double ld1(LongDouble{d});
+  }
+  {
+    double d((double(f)));
+    long double ld0((LongDouble(f)));
+    long double ld1((LongDouble(d)));
+  }
+}
+
+void InitializationWithBraces(float f, double d) {
+  {
+    double d{f};  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+    long double ld0{f};  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+    long double ld1{d};  // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  }
+  {
+    double d{static_cast<double>(f)};
+    long double ld0{static_cast<long double>(f)};
+    long double ld1{static_cast<long double>(d)};
+  }
+  {
+    double d{double{f}};
+    long double ld0{LongDouble{f}};
+    long double ld1{LongDouble{d}};
+  }
+  {
+    double d{double(f)};
+    long double ld0{LongDouble(f)};
+    long double ld1{LongDouble(d)};
+  }
 }
 
 void Assignment(float f, double d, long double ld) {
