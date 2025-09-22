@@ -619,6 +619,7 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   }
 }
 
+constexpr size_t MAX_ALLOC_TRIES = 50;
 Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                       size_t Size, void **AllocationOut) {
   SmallVector<void *> Rejects;
@@ -626,7 +627,7 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
   // Repeat the allocation up to a certain amount of times. If it happens to
   // already be allocated (e.g. by a device from another vendor) throw it away
   // and try again.
-  for (size_t Count = 0; Count < 10; Count++) {
+  for (size_t Count = 0; Count < MAX_ALLOC_TRIES; Count++) {
     auto NewAlloc = Device->Device->dataAlloc(Size, nullptr,
                                               convertOlToPluginAllocTy(Type));
     if (!NewAlloc)
