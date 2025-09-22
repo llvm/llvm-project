@@ -228,7 +228,10 @@ private:
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
+  void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
+  void CheckSymbolName(
+      const parser::CharBlock &source, const parser::OmpObject &object);
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);

@@ -58,9 +58,10 @@ const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
 const parser::ArrayElement *GetArrayElementFromObj(
     const parser::OmpObject &object);
 const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
 std::optional<parser::CharBlock> GetObjectSource(
     const parser::OmpObject &object);
+const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
+const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);

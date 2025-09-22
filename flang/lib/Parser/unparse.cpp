@@ -2611,12 +2611,11 @@ public:
   }
   void Unparse(const OpenMPThreadprivate &x) {
     BeginOpenMP();
-    Word("!$OMP THREADPRIVATE (");
-    Walk(std::get<parser::OmpObjectList>(x.t));
-    Put(")\n");
+    Word("!$OMP ");
+    Walk(x.v);
+    Put("\n");
     EndOpenMP();
   }
-
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
