@@ -8655,6 +8655,12 @@ __mmask16 test_mm512_kxor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    __E, __F);
 }
 
+TEST_CONSTEXPR(_mm512_kxor(0xC5, 0xAF) == 0x6A);
+TEST_CONSTEXPR(_mm512_kxor(0x12345, 0xFFFF) == 0xDCBA);
+TEST_CONSTEXPR(_mm512_kxor(0xABCD, 0x0000) == 0xABCD);
+TEST_CONSTEXPR(_mm512_kxor(0x5678, 0xFFFF) == 0xA987);
+TEST_CONSTEXPR(_mm512_kxor(0xAAAA, 0x5555) == 0xFFFF);
+
 __mmask16 test_knot_mask16(__mmask16 a) {
   // CHECK-LABEL: test_knot_mask16
   // CHECK: [[IN:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -8743,6 +8749,12 @@ __mmask16 test_kxor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     _mm512_cmpneq_epu32_mask(__C, __D)),
                                                     __E, __F);
 }
+
+TEST_CONSTEXPR(_kxor_mask16(0xC5, 0xAF) == 0x6A);
+TEST_CONSTEXPR(_kxor_mask16(0x12345, 0xFFFF) == 0xDCBA);
+TEST_CONSTEXPR(_kxor_mask16(0xABCD, 0x0000) == 0xABCD);
+TEST_CONSTEXPR(_kxor_mask16(0x5678, 0xFFFF) == 0xA987);
+TEST_CONSTEXPR(_kxor_mask16(0xAAAA, 0x5555) == 0xFFFF);
 
 __mmask16 test_kshiftli_mask16(__m512i A, __m512i B, __m512i C, __m512i D) {
   // CHECK-LABEL: test_kshiftli_mask16

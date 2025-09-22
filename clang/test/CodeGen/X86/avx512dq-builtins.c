@@ -95,6 +95,12 @@ __mmask8 test_kxor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m
                                                    __E, __F);
 }
 
+TEST_CONSTEXPR(_kxor_mask8(0xC5, 0xAF) == 0x6A);
+TEST_CONSTEXPR(_kxor_mask8(0x1234, 0xFFFF) == 0xCB);
+TEST_CONSTEXPR(_kxor_mask8(0xCD, 0x00) == 0xCD);
+TEST_CONSTEXPR(_kxor_mask8(0x78, 0xFF) == 0x87);
+TEST_CONSTEXPR(_kxor_mask8(0xAA, 0x55) == 0xFF);
+
 unsigned char test_kortestz_mask8_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestz_mask8_u8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>

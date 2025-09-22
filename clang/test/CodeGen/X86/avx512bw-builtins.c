@@ -68,8 +68,7 @@ __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      _mm512_cmpneq_epu16_mask(__C, __D)),
                                                      __E, __F);
 }
-// 1100
-//
+
 TEST_CONSTEXPR(_kandn_mask32(0xA0A0F0F0, 0xCCCCCCCC) == 0x4C4C0C0C);
 TEST_CONSTEXPR(_kandn_mask32(0x123456789, 0xFFFFFFFF) == 0xDCBA9876);
 TEST_CONSTEXPR(_kandn_mask32(0x00000000, 0x1234ABCD) == 0x1234ABCD);
@@ -169,6 +168,12 @@ __mmask32 test_kxor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
+TEST_CONSTEXPR(_kxor_mask32(0x1234ABCD, 0xFFFF0000) == 0xEDCBABCD);
+TEST_CONSTEXPR(_kxor_mask32(0x123456789ABCDEF0, 0x00000000) == 0x9ABCDEF0);
+TEST_CONSTEXPR(_kxor_mask32(0xAABBCCDD, 0x00000000) == 0xAABBCCDD);
+TEST_CONSTEXPR(_kxor_mask32(0x87654321, 0xFFFFFFFF) == 0x789ABCDE);
+TEST_CONSTEXPR(_kxor_mask32(0xAAAAAAAA, 0x55555555) == 0xFFFFFFFF);
+
 __mmask64 test_kxor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxor_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -178,6 +183,12 @@ __mmask64 test_kxor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                    _mm512_cmpneq_epu8_mask(__C, __D)),
                                                    __E, __F);
 }
+
+TEST_CONSTEXPR(_kxor_mask64(0x0123456789ABCDEF, 0xFFFFFFFF00000000) == 0xFEDCBA9889ABCDEF);
+TEST_CONSTEXPR(_kxor_mask64(0xF0F0F0F0F0F0F0F0, 0x0F0F0F0F0F0F0F0F) == 0xFFFFFFFFFFFFFFFF);
+TEST_CONSTEXPR(_kxor_mask64(0xFEDCBA9876543210, 0xFFFFFFFFFFFFFFFF) == 0x0123456789ABCDEF);
+TEST_CONSTEXPR(_kxor_mask64(0xAABBCCDD11223344, 0x0000000000000000) == 0xAABBCCDD11223344);
+TEST_CONSTEXPR(_kxor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0xFFFFFFFFFFFFFFFF);
 
 unsigned char test_kortestz_mask32_u8(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_kortestz_mask32_u8
