@@ -86,8 +86,6 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
   return false;
 }
 
-using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
-
 /// A listener that collects the imported modules and the input
 /// files. While visiting, collect vfsoverlays and file inputs that determine
 /// whether prebuilt modules fully resolve in stable directories.
@@ -201,81 +199,11 @@ private:
   const ArrayRef<StringRef> StableDirs;
 };
 
-/// Visit the given prebuilt module and collect all of the modules it
-/// transitively imports and contributing input files.
-static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
-                                CompilerInstance &CI,
-                                PrebuiltModuleFilesT &ModuleFiles,
-                                PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
-                                DiagnosticsEngine &Diags,
-                                const ArrayRef<StringRef> StableDirs) {
-  // List of module files to be processed.
-  llvm::SmallVector<std::string> Worklist;
-
-  PrebuiltModuleListener Listener(ModuleFiles, Worklist, PrebuiltModulesASTMap,
-                                  CI.getHeaderSearchOpts(), CI.getLangOpts(),
-                                  Diags, StableDirs);
-
-  Listener.visitModuleFile(PrebuiltModuleFilename,
-                           serialization::MK_ExplicitModule);
-  if (ASTReader::readASTFileControlBlock(
-          PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
-          CI.getPCHContainerReader(),
-          /*FindModuleFileExtensions=*/false, Listener,
-          /*ValidateDiagnosticOptions=*/false, ASTReader::ARR_OutOfDate))
-    return true;
-
-  while (!Worklist.empty()) {
-    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
-    if (ASTReader::readASTFileControlBlock(
-            Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
-            CI.getPCHContainerReader(),
-            /*FindModuleFileExtensions=*/false, Listener,
-            /*ValidateDiagnosticOptions=*/false))
-      return true;
-  }
-  return false;
-}
-
 /// Transform arbitrary file name into an object-like file name.
 static std::string makeObjFileName(StringRef FileName) {
   SmallString<128> ObjFileName(FileName);
   llvm::sys::path::replace_extension(ObjFileName, "o");
   return std::string(ObjFileName);
-}
-
-/// Deduce the dependency target based on the output file and input files.
-static std::string
-deduceDepTarget(const std::string &OutputFile,
-                const SmallVectorImpl<FrontendInputFile> &InputFiles) {
-  if (OutputFile != "-")
-    return OutputFile;
-
-  if (InputFiles.empty() || !InputFiles.front().isFile())
-    return "clang-scan-deps\\ dependency";
-
-  return makeObjFileName(InputFiles.front().getFile());
-}
-
-/// Sanitize diagnostic options for dependency scan.
-static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
-  // Don't print 'X warnings and Y errors generated'.
-  DiagOpts.ShowCarets = false;
-  // Don't write out diagnostic file.
-  DiagOpts.DiagnosticSerializationFile.clear();
-  // Don't emit warnings except for scanning specific warnings.
-  // TODO: It would be useful to add a more principled way to ignore all
-  //       warnings that come from source code. The issue is that we need to
-  //       ignore warnings that could be surpressed by
-  //       `#pragma clang diagnostic`, while still allowing some scanning
-  //       warnings for things we're not ready to turn into errors yet.
-  //       See `test/ClangScanDeps/diagnostic-pragmas.c` for an example.
-  llvm::erase_if(DiagOpts.Warnings, [](StringRef Warning) {
-    return llvm::StringSwitch<bool>(Warning)
-        .Cases("pch-vfs-diff", "error=pch-vfs-diff", false)
-        .StartsWith("no-error=", false)
-        .Default(true);
-  });
 }
 
 // Clang implements -D and -U by splatting text into a predefines buffer. This
@@ -315,64 +243,6 @@ static std::optional<StringRef> getSimpleMacroName(StringRef Macro) {
   }
   return FinishName();
 }
-
-static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
-  using MacroOpt = std::pair<StringRef, std::size_t>;
-  std::vector<MacroOpt> SimpleNames;
-  SimpleNames.reserve(PPOpts.Macros.size());
-  std::size_t Index = 0;
-  for (const auto &M : PPOpts.Macros) {
-    auto SName = getSimpleMacroName(M.first);
-    // Skip optimizing if we can't guarantee we can preserve relative order.
-    if (!SName)
-      return;
-    SimpleNames.emplace_back(*SName, Index);
-    ++Index;
-  }
-
-  llvm::stable_sort(SimpleNames, llvm::less_first());
-  // Keep the last instance of each macro name by going in reverse
-  auto NewEnd = std::unique(
-      SimpleNames.rbegin(), SimpleNames.rend(),
-      [](const MacroOpt &A, const MacroOpt &B) { return A.first == B.first; });
-  SimpleNames.erase(SimpleNames.begin(), NewEnd.base());
-
-  // Apply permutation.
-  decltype(PPOpts.Macros) NewMacros;
-  NewMacros.reserve(SimpleNames.size());
-  for (std::size_t I = 0, E = SimpleNames.size(); I != E; ++I) {
-    std::size_t OriginalIndex = SimpleNames[I].second;
-    // We still emit undefines here as they may be undefining a predefined macro
-    NewMacros.push_back(std::move(PPOpts.Macros[OriginalIndex]));
-  }
-  std::swap(PPOpts.Macros, NewMacros);
-}
-
-class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
-  DependencyScanningWorkerFilesystem *DepFS;
-
-public:
-  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
-    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
-      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
-      if (DFS) {
-        assert(!DepFS && "Found multiple scanning VFSs");
-        DepFS = DFS;
-      }
-    });
-    assert(DepFS && "Did not find scanning VFS");
-  }
-
-  std::unique_ptr<DependencyDirectivesGetter>
-  cloneFor(FileManager &FileMgr) override {
-    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
-  }
-
-  std::optional<ArrayRef<dependency_directives_scan::Directive>>
-  operator()(FileEntryRef File) override {
-    return DepFS->getDirectiveTokens(File.getName());
-  }
-};
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
@@ -592,6 +462,120 @@ private:
 
 } // end anonymous namespace
 
+/// Deduce the dependency target based on the output file and input files.
+std::string clang::tooling::dependencies::deduceDepTarget(
+    const std::string &OutputFile,
+    const SmallVectorImpl<FrontendInputFile> &InputFiles) {
+  if (OutputFile != "-")
+    return OutputFile;
+
+  if (InputFiles.empty() || !InputFiles.front().isFile())
+    return "clang-scan-deps\\ dependency";
+
+  return makeObjFileName(InputFiles.front().getFile());
+}
+
+/// Visit the given prebuilt module and collect all of the modules it
+/// transitively imports and contributing input files.
+bool clang::tooling::dependencies::visitPrebuiltModule(
+    StringRef PrebuiltModuleFilename, CompilerInstance &CI,
+    PrebuiltModuleFilesT &ModuleFiles,
+    PrebuiltModulesAttrsMap &PrebuiltModulesASTMap, DiagnosticsEngine &Diags,
+    const ArrayRef<StringRef> StableDirs) {
+  // List of module files to be processed.
+  llvm::SmallVector<std::string> Worklist;
+
+  PrebuiltModuleListener Listener(ModuleFiles, Worklist, PrebuiltModulesASTMap,
+                                  CI.getHeaderSearchOpts(), CI.getLangOpts(),
+                                  Diags, StableDirs);
+
+  Listener.visitModuleFile(PrebuiltModuleFilename,
+                           serialization::MK_ExplicitModule);
+  if (ASTReader::readASTFileControlBlock(
+          PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
+          CI.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Listener,
+          /*ValidateDiagnosticOptions=*/false, ASTReader::ARR_OutOfDate))
+    return true;
+
+  while (!Worklist.empty()) {
+    Listener.visitModuleFile(Worklist.back(), serialization::MK_ExplicitModule);
+    if (ASTReader::readASTFileControlBlock(
+            Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
+            CI.getPCHContainerReader(),
+            /*FindModuleFileExtensions=*/false, Listener,
+            /*ValidateDiagnosticOptions=*/false))
+      return true;
+  }
+  return false;
+}
+
+void clang::tooling::dependencies::canonicalizeDefines(
+    PreprocessorOptions &PPOpts) {
+  using MacroOpt = std::pair<StringRef, std::size_t>;
+  std::vector<MacroOpt> SimpleNames;
+  SimpleNames.reserve(PPOpts.Macros.size());
+  std::size_t Index = 0;
+  for (const auto &M : PPOpts.Macros) {
+    auto SName = getSimpleMacroName(M.first);
+    // Skip optimizing if we can't guarantee we can preserve relative order.
+    if (!SName)
+      return;
+    SimpleNames.emplace_back(*SName, Index);
+    ++Index;
+  }
+
+  llvm::stable_sort(SimpleNames, llvm::less_first());
+  // Keep the last instance of each macro name by going in reverse
+  auto NewEnd = std::unique(
+      SimpleNames.rbegin(), SimpleNames.rend(),
+      [](const MacroOpt &A, const MacroOpt &B) { return A.first == B.first; });
+  SimpleNames.erase(SimpleNames.begin(), NewEnd.base());
+
+  // Apply permutation.
+  decltype(PPOpts.Macros) NewMacros;
+  NewMacros.reserve(SimpleNames.size());
+  for (std::size_t I = 0, E = SimpleNames.size(); I != E; ++I) {
+    std::size_t OriginalIndex = SimpleNames[I].second;
+    // We still emit undefines here as they may be undefining a predefined macro
+    NewMacros.push_back(std::move(PPOpts.Macros[OriginalIndex]));
+  }
+  std::swap(PPOpts.Macros, NewMacros);
+}
+
+/// Sanitize diagnostic options for dependency scan.
+void clang::tooling::dependencies::sanitizeDiagOpts(
+    DiagnosticOptions &DiagOpts) {
+  // Don't print 'X warnings and Y errors generated'.
+  DiagOpts.ShowCarets = false;
+  // Don't write out diagnostic file.
+  DiagOpts.DiagnosticSerializationFile.clear();
+  // Don't emit warnings except for scanning specific warnings.
+  // TODO: It would be useful to add a more principled way to ignore all
+  //       warnings that come from source code. The issue is that we need to
+  //       ignore warnings that could be surpressed by
+  //       `#pragma clang diagnostic`, while still allowing some scanning
+  //       warnings for things we're not ready to turn into errors yet.
+  //       See `test/ClangScanDeps/diagnostic-pragmas.c` for an example.
+  llvm::erase_if(DiagOpts.Warnings, [](StringRef Warning) {
+    return llvm::StringSwitch<bool>(Warning)
+        .Cases("pch-vfs-diff", "error=pch-vfs-diff", false)
+        .StartsWith("no-error=", false)
+        .Default(true);
+  });
+}
+
+std::unique_ptr<DiagnosticOptions>
+clang::tooling::dependencies::createDiagOptions(
+    const std::vector<std::string> &CommandLine) {
+  std::vector<const char *> CLI;
+  for (const std::string &Arg : CommandLine)
+    CLI.push_back(Arg.c_str());
+  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
+  sanitizeDiagOpts(*DiagOpts);
+  return DiagOpts;
+}
+
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
@@ -617,16 +601,6 @@ DependencyScanningWorker::DependencyScanningWorker(
     BaseFS = FS;
     break;
   }
-}
-
-static std::unique_ptr<DiagnosticOptions>
-createDiagOptions(const std::vector<std::string> &CommandLine) {
-  std::vector<const char *> CLI;
-  for (const std::string &Arg : CommandLine)
-    CLI.push_back(Arg.c_str());
-  auto DiagOpts = CreateAndPopulateDiagOpts(CLI);
-  sanitizeDiagOpts(*DiagOpts);
-  return DiagOpts;
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(

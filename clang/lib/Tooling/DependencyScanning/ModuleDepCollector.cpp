@@ -951,17 +951,18 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    const PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
     const ArrayRef<StringRef> StableDirs)
     : Service(Service), ScanInstance(ScanInstance), Consumer(C),
-      Controller(Controller),
-      PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
+      Controller(Controller), PrebuiltModulesASTMap(PrebuiltModulesASTMap),
       StableDirs(StableDirs), Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));
+  auto CollectorPP = std::make_unique<ModuleDepCollectorPP>(*this);
+  CollectorPPPtr = CollectorPP.get();
+  PP.addPPCallbacks(std::move(CollectorPP));
 }
 
 void ModuleDepCollector::attachToASTReader(ASTReader &R) {}

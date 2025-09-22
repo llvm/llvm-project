@@ -13,6 +13,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Tooling/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
@@ -73,6 +74,22 @@ public:
   virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
 };
+
+/// Some helper functions for the dependency scanning worker.
+std::string
+deduceDepTarget(const std::string &OutputFile,
+                const SmallVectorImpl<FrontendInputFile> &InputFiles);
+void canonicalizeDefines(PreprocessorOptions &PPOpts);
+void sanitizeDiagOpts(DiagnosticOptions &DiagOpts);
+std::unique_ptr<DiagnosticOptions>
+createDiagOptions(const std::vector<std::string> &CommandLine);
+
+using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
+bool visitPrebuiltModule(StringRef PrebuiltModuleFilename, CompilerInstance &CI,
+                         PrebuiltModuleFilesT &ModuleFiles,
+                         PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
+                         DiagnosticsEngine &Diags,
+                         const ArrayRef<StringRef> StableDirs);
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
@@ -151,6 +168,9 @@ private:
   /// (passed in the constructor).
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
+  friend class CompilerInstanceWithContext;
+  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
+
   /// Private helper functions.
   bool scanDependencies(StringRef WorkingDirectory,
                         const std::vector<std::string> &CommandLine,
@@ -159,6 +179,32 @@ private:
                         DiagnosticConsumer &DC,
                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                         std::optional<StringRef> ModuleName);
+};
+
+class ScanningDependencyDirectivesGetter : public DependencyDirectivesGetter {
+  DependencyScanningWorkerFilesystem *DepFS;
+
+public:
+  ScanningDependencyDirectivesGetter(FileManager &FileMgr) : DepFS(nullptr) {
+    FileMgr.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
+      auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
+      if (DFS) {
+        assert(!DepFS && "Found multiple scanning VFSs");
+        DepFS = DFS;
+      }
+    });
+    assert(DepFS && "Did not find scanning VFS");
+  }
+
+  std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) override {
+    return std::make_unique<ScanningDependencyDirectivesGetter>(FileMgr);
+  }
+
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) override {
+    return DepFS->getDirectiveTokens(File.getName());
+  }
 };
 
 } // end namespace dependencies
