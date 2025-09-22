@@ -833,7 +833,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator insert_range(const_iterator __position, _Range&& __range) {
     if constexpr (ranges::bidirectional_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
-      return __insert_bidirectional(__position, ranges::begin(__range), ranges::end(__range), __n);
+      return __insert_bidirectional<_RangeAlgPolicy>(__position, ranges::begin(__range), ranges::end(__range), __n);
 
     } else if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
@@ -1203,10 +1203,10 @@ private:
   template <class _Iterator>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_with_size(const_iterator __p, _Iterator __f, size_type __n);
 
-  template <class _BiIter, class _Sentinel>
+  template <class _IterOpsPolicy, class _BiIter, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI iterator
   __insert_bidirectional(const_iterator __p, _BiIter __f, _Sentinel __sent, size_type __n);
-  template <class _BiIter>
+  template <class _IterOpsPolicy, class _BiIter>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n);
 
   template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> = 0>
@@ -1903,26 +1903,21 @@ deque<_Tp, _Allocator>::__insert_with_size(const_iterator __p, _Iterator __f, si
 template <class _Tp, class _Allocator>
 template <class _BiIter, __enable_if_t<__has_bidirectional_iterator_category<_BiIter>::value, int> >
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l) {
-  return __insert_bidirectional(__p, __f, __l, std::distance(__f, __l));
+  return __insert_bidirectional<_ClassicAlgPolicy>(__p, __f, __l, std::distance(__f, __l));
 }
 
 template <class _Tp, class _Allocator>
-template <class _BiIter, class _Sentinel>
+template <class _IterOpsPolicy, class _BiIter, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, _Sentinel, size_type __n) {
-  return __insert_bidirectional(__p, __f, std::next(__f, __n), __n);
+  return __insert_bidirectional<_IterOpsPolicy>(__p, __f, _IterOps<_IterOpsPolicy>::next(__f, __n), __n);
 }
 
 template <class _Tp, class _Allocator>
-template <class _BiIter>
+template <class _IterOpsPolicy, class _BiIter>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n) {
-#  if _LIBCPP_STD_VER >= 20
-  using _Ops = _IterOps<
-      conditional_t<__has_bidirectional_iterator_category<_BiIter>::value, _ClassicAlgPolicy, _RangeAlgPolicy>>;
-#  else
-  using _Ops = _IterOps<_ClassicAlgPolicy>;
-#  endif
+  using _Ops          = _IterOps<_IterOpsPolicy>;
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
