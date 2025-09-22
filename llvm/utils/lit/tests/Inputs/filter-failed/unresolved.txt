@@ -1,2 +1,0 @@
-# RUN: echo test
-# XFAIL: something-invalid
