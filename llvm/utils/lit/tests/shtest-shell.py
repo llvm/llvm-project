@@ -12,6 +12,10 @@
 
 # CHECK: -- Testing:
 
+# CHECK: UNRESOLVED: shtest-shell :: capital-t-error-message.txt
+# CHECK: *** TEST 'shtest-shell :: capital-t-error-message.txt' FAILED ***
+# CHECK: ValueError: %T is no longer supported. Please create directories with names based on %t.
+
 # CHECK: FAIL: shtest-shell :: colon-error.txt
 # CHECK: *** TEST 'shtest-shell :: colon-error.txt' FAILED ***
 # CHECK: :
@@ -633,5 +637,5 @@
 #      CHECK: ***
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Unresolved Tests (1)
+# CHECK: Unresolved Tests (2)
 # CHECK: Failed Tests (37)
