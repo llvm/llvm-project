@@ -3,7 +3,10 @@
 modernize-avoid-setjmp-longjmp
 ==============================
 
-Flags all call expressions involving ``setjmp()`` and ``longjmp()``.
+Flags all call expressions involving ``setjmp()`` and ``longjmp()`` in C++ code.
+
+References
+----------
 
 This check corresponds to the CERT C++ Coding Standard rule
 `ERR52-CPP. Do not use setjmp() or longjmp()

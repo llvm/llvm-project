@@ -3,7 +3,7 @@
 cert-err52-cpp
 ==============
 
-The cert-err52-cpp check is an alias, please see
+The `cert-err52-cpp` check is an alias, please see
 `modernize-avoid-setjmp-longjmp <../modernize/avoid-setjmp-longjmp.html>`_
 for more information.
 
