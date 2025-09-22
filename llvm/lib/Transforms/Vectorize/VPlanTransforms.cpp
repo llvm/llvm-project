@@ -1992,12 +1992,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // All VPInstructions that lower to GEPs must have the i8 source element
     // type (as they are PtrAdds), so we omit it.
     return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
-        .Case<VPReplicateRecipe, VPWidenGEPRecipe>([](auto *I) -> Type * {
+        .Case<VPReplicateRecipe>([](auto *I) -> Type * {
           if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
             return GEP->getSourceElementType();
           return nullptr;
         })
-        .Case<VPVectorPointerRecipe>(
+        .Case<VPVectorPointerRecipe, VPWidenGEPRecipe>(
             [](auto *I) { return I->getSourceElementType(); })
         .Default([](auto *) { return nullptr; });
   }

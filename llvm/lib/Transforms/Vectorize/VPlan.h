@@ -1763,6 +1763,8 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
 
 /// A recipe for handling GEP instructions.
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
+  Type *SourceElementTy;
+
   bool isPointerLoopInvariant() const {
     return getOperand(0)->isDefinedOutsideLoopRegions();
   }
@@ -1779,7 +1781,8 @@ class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
 
 public:
   VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP),
+        SourceElementTy(GEP->getSourceElementType()) {
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     getMetadataToPropagate(GEP, Metadata);
@@ -1800,6 +1803,8 @@ public:
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
+
+  Type *getSourceElementType() const { return SourceElementTy; }
 
   /// Return the cost of this VPWidenGEPRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -1889,20 +1894,20 @@ public:
 /// A recipe to compute the pointers for widened memory accesses of IndexTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
-  Type *IndexedTy;
+  Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, GEPNoWrapFlags GEPFlags,
-                        DebugLoc DL)
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+                        GEPNoWrapFlags GEPFlags, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
                             GEPFlags, DL),
-        IndexedTy(IndexedTy) {}
+        SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
   void execute(VPTransformState &State) override;
 
-  Type *getSourceElementType() const { return IndexedTy; }
+  Type *getSourceElementType() const { return SourceElementTy; }
 
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -1919,7 +1924,7 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy,
+    return new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
