@@ -4044,8 +4044,7 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     }
   }
 
-  unsigned Enc = TSFlags & X86II::EncodingMask;
-  if (Enc == X86II::VEX || Enc == X86II::EVEX || Enc == X86II::XOP) {
+  if ((TSFlags & X86II::EncodingMask) == X86II::EVEX) {
     unsigned NumOps = Inst.getNumOperands();
     for (unsigned i = 0; i != NumOps; ++i) {
       const MCOperand &MO = Inst.getOperand(i);
@@ -4057,7 +4056,7 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         StringRef RegName = X86IntelInstPrinter::getRegisterName(Reg);
         return Error(Ops[0]->getStartLoc(),
                      "can't encode '" + RegName +
-                         "' in a VEX/EVEX-prefixed instruction");
+                         "' in a EVEX-prefixed instruction");
       }
     }
   }
