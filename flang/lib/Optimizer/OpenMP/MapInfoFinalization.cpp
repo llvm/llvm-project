@@ -712,8 +712,7 @@ class MapInfoFinalizationPass
             if (op.getMembersIndexAttr())
               for (auto indexList : op.getMembersIndexAttr()) {
                 auto indexListAttr = mlir::cast<mlir::ArrayAttr>(indexList);
-                if (static_cast<int64_t>(indexListAttr.size()) !=
-                    static_cast<int64_t>(indexPath.size()))
+                if (indexListAttr.size() != indexPath.size())
                   continue;
                 bool allEq = true;
                 for (auto [i, attr] : llvm::enumerate(indexListAttr)) {
