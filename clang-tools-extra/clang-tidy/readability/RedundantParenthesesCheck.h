@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -11,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTPARENTHESESCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/Basic/LangOptions.h"
 
 namespace clang::tidy::readability {
 
@@ -24,6 +24,9 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus | LangOpts.C99;
+  }
 };
 
 } // namespace clang::tidy::readability
