@@ -483,7 +483,7 @@ define void @fptr_test1b(ptr %p, ptr %f) {
 define void @fptr_test1c(ptr %p, ptr %f) {
 ; FNATTRS: Function Attrs: nofree memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test1c
-; FNATTRS-SAME: (ptr readnone [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    call void [[F]](ptr readnone [[P]]) #[[ATTR2:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -547,7 +547,7 @@ define void @fptr_test2b(ptr %p, ptr %f) {
 define void @fptr_test2c(ptr %p, ptr %f) {
 ; FNATTRS: Function Attrs: nofree memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test2c
-; FNATTRS-SAME: (ptr readonly [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (ptr readonly captures(address) [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    call void [[F]](ptr readonly [[P]]) #[[ATTR2]]
 ; FNATTRS-NEXT:    ret void
 ;

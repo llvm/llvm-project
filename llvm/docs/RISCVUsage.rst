@@ -236,6 +236,7 @@ on support follow.
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
      ``Zvfhmin``       Supported
+     ``Zvfofp8min``    Assembly Support
      ``Zvkb``          Supported
      ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)

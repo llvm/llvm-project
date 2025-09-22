@@ -17,7 +17,9 @@ using namespace llvm::hlsl;
 
 static size_t getMemberOffset(GlobalVariable *Handle, size_t Index) {
   auto *HandleTy = cast<TargetExtType>(Handle->getValueType());
-  assert(HandleTy->getName().ends_with(".CBuffer") && "Not a cbuffer type");
+  assert((HandleTy->getName().ends_with(".CBuffer") ||
+          HandleTy->getName() == "spirv.VulkanBuffer") &&
+         "Not a cbuffer type");
   assert(HandleTy->getNumTypeParameters() == 1 && "Expected layout type");
 
   auto *LayoutTy = cast<TargetExtType>(HandleTy->getTypeParameter(0));
