@@ -1766,8 +1766,7 @@ public:
 #  endif
 
 #  if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __self_view
-  subview(size_type __pos = 0, size_type __n = npos) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __self_view subview(size_type __pos = 0, size_type __n = npos) const {
     return __self_view(*this).subview(__pos, __n);
   }
 #  endif
