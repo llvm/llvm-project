@@ -26,6 +26,8 @@ extern char **environ;
 using namespace llvm;
 using namespace llvm::cas;
 
+#if LLVM_ENABLE_ONDISK_CAS
+
 extern const char *TestMainArgv0;
 static char ProgramID = 0;
 
@@ -80,8 +82,6 @@ protected:
 
   ArrayRef<StringRef> getEnviron() const { return EnvTable; }
 };
-
-#if LLVM_ENABLE_ONDISK_CAS
 
 static Error emptyConstructor(MappedFileRegionArena &) {
   return Error::success();

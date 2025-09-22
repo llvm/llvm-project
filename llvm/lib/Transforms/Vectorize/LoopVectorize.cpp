@@ -2347,12 +2347,15 @@ Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
 }
 
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
-/// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
-/// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
-/// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
+/// VPBB are moved to the end of the newly created VPIRBasicBlock. All
+/// predecessors and successors of VPBB, if any, are rewired to the new
+/// VPIRBasicBlock. If \p VPBB may be unreachable, \p Plan must be passed.
 static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
-                                             BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
+                                             BasicBlock *IRBB,
+                                             VPlan *Plan = nullptr) {
+  if (!Plan)
+    Plan = VPBB->getPlan();
+  VPIRBasicBlock *IRVPBB = Plan->createVPIRBasicBlock(IRBB);
   auto IP = IRVPBB->begin();
   for (auto &R : make_early_inc_range(VPBB->phis()))
     R.moveBefore(*IRVPBB, IP);
@@ -2901,16 +2904,18 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // likely.
     ScalarizationCost = ScalarizationCost / getPredBlockCostDivisor(CostKind);
   }
+
   InstructionCost SafeDivisorCost = 0;
-
   auto *VecTy = toVectorTy(I->getType(), VF);
-
-  // The cost of the select guard to ensure all lanes are well defined
-  // after we speculate above any internal control flow.
-  SafeDivisorCost +=
-      TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
-                             toVectorTy(Type::getInt1Ty(I->getContext()), VF),
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  auto *DivisorI = dyn_cast<Instruction>(I->getOperand(1));
+  if (DivisorI && !Legal->isInvariant(DivisorI)) {
+    // The cost of the select guard to ensure all lanes are well defined
+    // after we speculate above any internal control flow.
+    SafeDivisorCost +=
+        TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
+                               toVectorTy(Type::getInt1Ty(I->getContext()), VF),
+                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  }
 
   SmallVector<const Value *, 4> Operands(I->operand_values());
   SafeDivisorCost += TTI.getArithmeticInstrCost(
@@ -3173,6 +3178,11 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       auto *Ptr = getLoadStorePointerOperand(&I);
       if (!Ptr)
         continue;
+
+      // If the pointer can be proven to be uniform, always add it to the
+      // worklist.
+      if (isa<Instruction>(Ptr) && Legal->isUniform(Ptr, VF))
+        AddToWorklistIfAllowed(cast<Instruction>(Ptr));
 
       if (IsUniformMemOpUse(&I))
         AddToWorklistIfAllowed(&I);
@@ -5144,9 +5154,10 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // Don't pass *I here, since it is scalar but will actually be part of a
   // vectorized loop where the user of it is a vectorized instruction.
   const Align Alignment = getLoadStoreAlignment(I);
-  Cost += VF.getFixedValue() * TTI.getMemoryOpCost(I->getOpcode(),
-                                                   ValTy->getScalarType(),
-                                                   Alignment, AS, CostKind);
+  TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
+  Cost += VF.getFixedValue() *
+          TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(), Alignment,
+                              AS, CostKind, OpInfo);
 
   // Get the overhead of the extractelement and insertelement instructions
   // we might create due to scalarization.
@@ -5663,9 +5674,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.
-      if (const auto *Group = getInterleavedAccessGroup(&I))
-        setWideningDecision(Group, VF, Decision, Cost);
-      else
+      if (const auto *Group = getInterleavedAccessGroup(&I)) {
+        if (Decision == CM_Scalarize) {
+          for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
+            if (auto *I = Group->getMember(Idx)) {
+              setWideningDecision(I, VF, Decision,
+                                  getMemInstScalarizationCost(I, VF));
+            }
+          }
+        } else {
+          setWideningDecision(Group, VF, Decision, Cost);
+        }
+      } else
         setWideningDecision(&I, VF, Decision, Cost);
     }
   }
@@ -5708,8 +5728,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // if the loaded register is involved in an address computation, it is
       // instead changed here when we know this is the case.
       InstWidening Decision = getWideningDecision(I, VF);
-      if (Decision == CM_Widen || Decision == CM_Widen_Reverse)
-        // Scalarize a widened load of address.
+      if (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
+          (!isPredicatedInst(I) && !Legal->isUniformMemOp(*I, VF) &&
+           Decision == CM_Scalarize))
+        // Scalarize a widened load of address or update the cost of a scalar
+        // load of an address.
         setWideningDecision(
             I, VF, CM_Scalarize,
             (VF.getKnownMinValue() *
@@ -6862,11 +6885,9 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
         using namespace VPlanPatternMatch;
-        if (none_of(
-                FOR->users(),
-                match_fn(
-                    m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
-                        m_VPValue(), m_VPValue()))))
+        if (none_of(FOR->users(),
+                    match_fn(m_VPInstruction<
+                             VPInstruction::FirstOrderRecurrenceSplice>())))
           return true;
       }
       // The VPlan-based cost model is more accurate for partial reduction and
@@ -7179,6 +7200,19 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::removeBranchOnConst(BestVPlan);
+  if (BestVPlan.getEntry()->getSingleSuccessor() ==
+      BestVPlan.getScalarPreheader()) {
+    // TODO: The vector loop would be dead, should not even try to vectorize.
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
+                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getHeader())
+             << "Created vector loop never executes due to insufficient trip "
+                "count.";
+    });
+    return DenseMap<const SCEV *, Value *>();
+  }
+
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -7221,7 +7255,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // middle block. The vector loop is created during VPlan execution.
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
-                        State.CFG.PrevBB->getSingleSuccessor());
+                        State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
@@ -7252,6 +7286,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   //
   //===------------------------------------------------===//
 
+  // Retrieve loop information before executing the plan, which may remove the
+  // original loop, if it becomes unreachable.
+  MDNode *LID = OrigLoop->getLoopID();
+  unsigned OrigLoopInvocationWeight = 0;
+  std::optional<unsigned> OrigAverageTripCount =
+      getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
+
   BestVPlan.execute(&State);
 
   // 2.6. Maintain Loop Hints
@@ -7265,7 +7306,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   updateLoopMetadataAndProfileInfo(
       HeaderVPBB ? LI->getLoopFor(State.CFG.VPBB2IRBB.lookup(HeaderVPBB))
                  : nullptr,
-      HeaderVPBB, VectorizingEpilogue,
+      HeaderVPBB, BestVPlan, VectorizingEpilogue, LID, OrigAverageTripCount,
+      OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, CM.getVScaleForTuning()),
       DisableRuntimeUnroll);
 

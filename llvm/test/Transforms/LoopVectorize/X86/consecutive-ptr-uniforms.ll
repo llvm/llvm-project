@@ -27,7 +27,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-LABEL: define void @PR31671(
 ; CHECK-SAME: float [[X:%.*]], ptr [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> poison, float [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> poison, <16 x i32> zeroinitializer
@@ -52,13 +52,13 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6384
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 ; FORCE-LABEL: define void @PR31671(
 ; FORCE-SAME: float [[X:%.*]], ptr [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FORCE-NEXT:  [[ENTRY:.*:]]
-; FORCE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; FORCE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; FORCE:       [[VECTOR_PH]]:
 ; FORCE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[X]], i64 0
 ; FORCE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
@@ -130,7 +130,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6392
 ; FORCE-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:
-; FORCE-NEXT:    br label %[[SCALAR_PH]]
+; FORCE-NEXT:    br label %[[SCALAR_PH:.*]]
 ; FORCE:       [[SCALAR_PH]]:
 ;
 entry:
@@ -175,7 +175,7 @@ define void @PR40816() #1 {
 ; CHECK-LABEL: define void @PR40816(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -189,24 +189,24 @@ define void @PR40816() #1 {
 ; CHECK-NEXT:    store i32 1, ptr @b, align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[PRED_STORE_IF3]]:
 ; CHECK-NEXT:    store i32 2, ptr @b, align 1
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[RETURN:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br [[RETURN1:label %.*]]
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 ; FORCE-LABEL: define void @PR40816(
 ; FORCE-SAME: ) #[[ATTR1:[0-9]+]] {
 ; FORCE-NEXT:  [[ENTRY:.*:]]
-; FORCE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; FORCE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; FORCE:       [[VECTOR_PH]]:
 ; FORCE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCE:       [[VECTOR_BODY]]:
@@ -233,7 +233,7 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:
 ; FORCE-NEXT:    br [[RETURN:label %.*]]
-; FORCE:       [[SCALAR_PH]]:
+; FORCE:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %for.body

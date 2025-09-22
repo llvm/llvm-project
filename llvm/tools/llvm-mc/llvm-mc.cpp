@@ -459,13 +459,22 @@ int main(int argc, char **argv) {
   MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
+  SubtargetFeatures Features;
   std::string FeaturesStr;
-  if (MAttrs.size()) {
-    SubtargetFeatures Features;
-    for (unsigned i = 0; i != MAttrs.size(); ++i)
-      Features.AddFeature(MAttrs[i]);
-    FeaturesStr = Features.getString();
+
+  // Replace -mcpu=native with Host CPU and features.
+  if (MCPU == "native") {
+    MCPU = std::string(llvm::sys::getHostCPUName());
+
+    llvm::StringMap<bool> TargetFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto const &[FeatureName, IsSupported] : TargetFeatures)
+      Features.AddFeature(FeatureName, IsSupported);
   }
+
+  // Handle features passed to target/subtarget.
+  for (unsigned i = 0; i != MAttrs.size(); ++i)
+    Features.AddFeature(MAttrs[i]);
+  FeaturesStr = Features.getString();
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
