@@ -588,11 +588,11 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
   EXPECT_FALSE(Custom.isNonIntegralAddressSpace(0));
   EXPECT_FALSE(Custom.isNonIntegralAddressSpace(1));
   EXPECT_TRUE(Custom.isNonIntegralAddressSpace(2));
-  EXPECT_TRUE(Custom.shouldAvoidIntToPtr(2));
-  EXPECT_TRUE(Custom.shouldAvoidPtrToInt(2));
+  EXPECT_TRUE(Custom.mustNotIntroduceIntToPtr(2));
+  EXPECT_TRUE(Custom.mustNotIntroducePtrToInt(2));
   EXPECT_TRUE(Custom.isNonIntegralAddressSpace(16777215));
-  EXPECT_TRUE(Custom.shouldAvoidIntToPtr(16777215));
-  EXPECT_TRUE(Custom.shouldAvoidPtrToInt(16777215));
+  EXPECT_TRUE(Custom.mustNotIntroduceIntToPtr(16777215));
+  EXPECT_TRUE(Custom.mustNotIntroducePtrToInt(16777215));
 
   // Pointers are marked as non-integral if the address size != total size
   for (const auto *Layout : {"p2:64:64:64:32", "p2:128:64:64:64"}) {
@@ -600,8 +600,8 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_FALSE(DL.hasUnstableRepresentation(2));
     EXPECT_FALSE(DL.hasExternalState(2));
-    EXPECT_FALSE(DL.shouldAvoidIntToPtr(2));
-    EXPECT_FALSE(DL.shouldAvoidPtrToInt(2));
+    EXPECT_FALSE(DL.mustNotIntroduceIntToPtr(2));
+    EXPECT_FALSE(DL.mustNotIntroducePtrToInt(2));
     EXPECT_THAT(DL.getNonStandardAddressSpaces(),
                 ::testing::ElementsAreArray({2U}));
   }
@@ -612,8 +612,8 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_TRUE(DL.hasUnstableRepresentation(2));
     EXPECT_FALSE(DL.hasExternalState(2));
-    EXPECT_TRUE(DL.shouldAvoidPtrToInt(2));
-    EXPECT_TRUE(DL.shouldAvoidIntToPtr(2));
+    EXPECT_TRUE(DL.mustNotIntroducePtrToInt(2));
+    EXPECT_TRUE(DL.mustNotIntroduceIntToPtr(2));
     EXPECT_THAT(DL.getNonStandardAddressSpaces(),
                 ::testing::ElementsAreArray({2U}));
   }
@@ -623,8 +623,8 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
     const DataLayout DL = cantFail(DataLayout::parse(Layout));
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_TRUE(DL.hasExternalState(2));
-    EXPECT_TRUE(DL.shouldAvoidIntToPtr(2));
-    EXPECT_FALSE(DL.shouldAvoidPtrToInt(2));
+    EXPECT_TRUE(DL.mustNotIntroduceIntToPtr(2));
+    EXPECT_FALSE(DL.mustNotIntroducePtrToInt(2));
     EXPECT_FALSE(DL.hasUnstableRepresentation(2));
     EXPECT_THAT(DL.getNonStandardAddressSpaces(),
                 ::testing::ElementsAreArray({2U}));
@@ -635,8 +635,8 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
     const DataLayout DL = cantFail(DataLayout::parse(Layout));
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
     EXPECT_TRUE(DL.hasExternalState(2));
-    EXPECT_TRUE(Custom.shouldAvoidIntToPtr(2));
-    EXPECT_TRUE(Custom.shouldAvoidPtrToInt(2));
+    EXPECT_TRUE(Custom.mustNotIntroduceIntToPtr(2));
+    EXPECT_TRUE(Custom.mustNotIntroducePtrToInt(2));
     EXPECT_TRUE(DL.hasUnstableRepresentation(2));
     EXPECT_THAT(DL.getNonStandardAddressSpaces(),
                 ::testing::ElementsAreArray({2U}));
@@ -681,22 +681,22 @@ TEST(DataLayout, NonIntegralHelpers) {
     EXPECT_EQ(Exp.Unstable, DL.hasUnstableRepresentation(Exp.Addrspace));
     EXPECT_EQ(Exp.ExternalState, DL.hasExternalState(Exp.Addrspace));
     bool AvoidIntToPtr = Exp.Unstable || Exp.ExternalState;
-    EXPECT_EQ(AvoidIntToPtr, DL.shouldAvoidIntToPtr(Exp.Addrspace));
+    EXPECT_EQ(AvoidIntToPtr, DL.mustNotIntroduceIntToPtr(Exp.Addrspace));
     bool AvoidPtrToInt = Exp.Unstable;
-    EXPECT_EQ(AvoidPtrToInt, DL.shouldAvoidPtrToInt(Exp.Addrspace));
+    EXPECT_EQ(AvoidPtrToInt, DL.mustNotIntroducePtrToInt(Exp.Addrspace));
     Type *PtrTy = PointerType::get(Ctx, Exp.Addrspace);
     Type *PtrVecTy = VectorType::get(PtrTy, 2, /*Scalable=*/false);
     Type *ScalablePtrVecTy = VectorType::get(PtrTy, 1, /*Scalable=*/true);
     for (Type *Ty : {PtrTy, PtrVecTy, ScalablePtrVecTy}) {
-      EXPECT_EQ(AvoidPtrToInt, DL.shouldAvoidPtrToInt(Ty));
-      EXPECT_EQ(AvoidIntToPtr, DL.shouldAvoidIntToPtr(Ty));
+      EXPECT_EQ(AvoidPtrToInt, DL.mustNotIntroducePtrToInt(Ty));
+      EXPECT_EQ(AvoidIntToPtr, DL.mustNotIntroduceIntToPtr(Ty));
       // The old API should return true for both unstable and non-integral.
       EXPECT_EQ(Exp.Unstable || Exp.NonIntegral,
                 DL.isNonIntegralPointerType(Ty));
     }
     // Both helpers gracefully handle non-pointer, non-vector-of-pointers:
-    EXPECT_FALSE(DL.shouldAvoidPtrToInt(IntegerType::getInt1Ty(Ctx)));
-    EXPECT_FALSE(DL.shouldAvoidIntToPtr(IntegerType::getInt1Ty(Ctx)));
+    EXPECT_FALSE(DL.mustNotIntroducePtrToInt(IntegerType::getInt1Ty(Ctx)));
+    EXPECT_FALSE(DL.mustNotIntroduceIntToPtr(IntegerType::getInt1Ty(Ctx)));
   }
 }
 

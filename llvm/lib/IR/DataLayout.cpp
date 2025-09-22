@@ -638,7 +638,7 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   true, false);
+                   /*HasUnstableRepr=*/true, /*HasExternalState=*/false);
   }
 
   return Error::success();

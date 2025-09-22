@@ -1353,9 +1353,8 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>,
-    _Compare   = _Compare(),
-    _Allocator = _Allocator()) -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
+    -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1374,8 +1373,8 @@ map(from_range_t, _Range&&, _Allocator)
 #    endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>,
-    _Allocator) -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>, _Allocator)
+    -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1911,9 +1910,8 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>,
-         _Compare   = _Compare(),
-         _Allocator = _Allocator()) -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
+    -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1932,8 +1930,8 @@ multimap(from_range_t, _Range&&, _Allocator)
 #    endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>,
-         _Allocator) -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
+    -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG

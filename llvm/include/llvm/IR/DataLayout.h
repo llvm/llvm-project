@@ -387,9 +387,10 @@ public:
   /// and a 32-bit offset or CHERI capabilities that contain bounds, permissions
   /// and an out-of-band validity bit.
   ///
-  /// In general, more specialized functions such as shouldAvoidIntToPtr(),
-  /// shouldAvoidPtrToInt(), or hasExternalState() should be preferred over
-  /// this one when reasoning about the behavior of IR analysis/transforms.
+  /// In general, more specialized functions such as mustNotIntroduceIntToPtr(),
+  /// mustNotIntroducePtrToIntPtrToInt(), or hasExternalState() should be
+  /// preferred over this one when reasoning about the behavior of IR
+  /// analysis/transforms.
   /// TODO: should remove/deprecate this once all uses have migrated.
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
     const auto &PS = getPointerSpec(AddrSpace);
@@ -426,8 +427,8 @@ public:
     return PTy && hasExternalState(PTy->getPointerAddressSpace());
   }
 
-  /// Returns whether passes should avoid introducing `inttoptr` instructions
-  /// for this address space.
+  /// Returns whether passes must avoid introducing `inttoptr` instructions
+  /// for this address space (unless they have target-specific knowledge).
   ///
   /// This is currently the case for non-integral pointer representations with
   /// external state (hasExternalState()) since `inttoptr` cannot recreate the
@@ -435,18 +436,18 @@ public:
   /// New `inttoptr` instructions should also be avoided for "unstable" bitwise
   /// representations (hasUnstableRepresentation()) unless the pass knows it is
   /// within a critical section that retains the current representation.
-  bool shouldAvoidIntToPtr(unsigned AddrSpace) const {
+  bool mustNotIntroduceIntToPtr(unsigned AddrSpace) const {
     return hasUnstableRepresentation(AddrSpace) || hasExternalState(AddrSpace);
   }
 
-  /// Returns whether passes should avoid introducing `ptrtoint` instructions
-  /// for this address space.
+  /// Returns whether passes must avoid introducing `ptrtoint` instructions
+  /// for this address space (unless they have target-specific knowledge).
   ///
   /// This is currently the case for pointer address spaces that have an
   /// "unstable" representation (hasUnstableRepresentation()) since the
   /// bitwise pattern of such pointers could change unless the pass knows it is
   /// within a critical section that retains the current representation.
-  bool shouldAvoidPtrToInt(unsigned AddrSpace) const {
+  bool mustNotIntroducePtrToIntPtrToInt(unsigned AddrSpace) const {
     return hasUnstableRepresentation(AddrSpace);
   }
 
@@ -459,14 +460,15 @@ public:
     return PTy && isNonIntegralPointerType(PTy);
   }
 
-  bool shouldAvoidPtrToInt(Type *Ty) const {
+  bool mustNotIntroducePtrToIntPtrToInt(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
-    return PTy && shouldAvoidPtrToInt(PTy->getPointerAddressSpace());
+    return PTy &&
+           mustNotIntroducePtrToIntPtrToInt(PTy->getPointerAddressSpace());
   }
 
-  bool shouldAvoidIntToPtr(Type *Ty) const {
+  bool mustNotIntroduceIntToPtr(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
-    return PTy && shouldAvoidIntToPtr(PTy->getPointerAddressSpace());
+    return PTy && mustNotIntroduceIntToPtr(PTy->getPointerAddressSpace());
   }
 
   /// The size in bits of the pointer representation in a given address space.
