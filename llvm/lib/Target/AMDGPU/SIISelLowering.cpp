@@ -11602,9 +11602,11 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
   SDValue NumRecords = Op->getOperand(3);
   SDValue Flags = Op->getOperand(4);
 
+  SDValue ExtStride = DAG.getAnyExtOrTrunc(Stride, Loc, MVT::i32);
   SDValue Rsrc;
 
   if (Subtarget->has45BitNumRecordsBufferResource()) {
+    SDValue Zero = DAG.getConstant(0, Loc, MVT::i32);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
     SDValue ExtPointer = DAG.getAnyExtOrTrunc(Pointer, Loc, MVT::i64);
@@ -11619,20 +11621,24 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
     SDValue NumRecordsRHS =
         DAG.getNode(ISD::SRL, Loc, MVT::i64, NumRecords,
                     DAG.getShiftAmountConstant(7, MVT::i32, Loc));
-    SDValue ExtStride = DAG.getAnyExtOrTrunc(Stride, Loc, MVT::i64);
     SDValue ShiftedStride =
-        DAG.getNode(ISD::SHL, Loc, MVT::i64, ExtStride,
-                    DAG.getShiftAmountConstant(44, MVT::i32, Loc));
-    SDValue ExtFlags = DAG.getAnyExtOrTrunc(Flags, Loc, MVT::i64);
-    SDValue NewFlags = DAG.getNode(ISD::AND, Loc, MVT::i64, ExtFlags,
-                                   DAG.getConstant(0x3, Loc, MVT::i64));
+        DAG.getNode(ISD::SHL, Loc, MVT::i32, ExtStride,
+                    DAG.getShiftAmountConstant(12, MVT::i32, Loc));
+    SDValue ExtShiftedStrideVec =
+        DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v2i32, Zero, ShiftedStride);
+    SDValue ExtShiftedStride =
+        DAG.getNode(ISD::BITCAST, Loc, MVT::i64, ExtShiftedStrideVec);
     SDValue ShiftedFlags =
-        DAG.getNode(ISD::SHL, Loc, MVT::i64, NewFlags,
-                    DAG.getShiftAmountConstant(60, MVT::i32, Loc));
+        DAG.getNode(ISD::SHL, Loc, MVT::i32, Flags,
+                    DAG.getShiftAmountConstant(28, MVT::i32, Loc));
+    SDValue ExtShiftedFlagsVec =
+        DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v2i32, Zero, ShiftedFlags);
+    SDValue ExtShiftedFlags =
+        DAG.getNode(ISD::BITCAST, Loc, MVT::i64, ExtShiftedFlagsVec);
     SDValue CombinedFields =
-        DAG.getNode(ISD::OR, Loc, MVT::i64, NumRecordsRHS, ShiftedStride);
+        DAG.getNode(ISD::OR, Loc, MVT::i64, NumRecordsRHS, ExtShiftedStride);
     SDValue HighHalf =
-        DAG.getNode(ISD::OR, Loc, MVT::i64, CombinedFields, ShiftedFlags);
+        DAG.getNode(ISD::OR, Loc, MVT::i64, CombinedFields, ExtShiftedFlags);
 
     Rsrc = DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v2i64, LowHalf, HighHalf);
   } else {
@@ -11641,7 +11647,6 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
         DAG.SplitScalar(Pointer, Loc, MVT::i32, MVT::i32);
     SDValue Mask = DAG.getConstant(0x0000ffff, Loc, MVT::i32);
     SDValue Masked = DAG.getNode(ISD::AND, Loc, MVT::i32, HighHalf, Mask);
-    SDValue ExtStride = DAG.getAnyExtOrTrunc(Stride, Loc, MVT::i32);
     SDValue ShiftedStride =
         DAG.getNode(ISD::SHL, Loc, MVT::i32, ExtStride,
                     DAG.getShiftAmountConstant(16, MVT::i32, Loc));

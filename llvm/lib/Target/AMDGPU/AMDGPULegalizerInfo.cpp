@@ -5909,7 +5909,10 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
 
   B.setInsertPt(B.getMBB(), ++B.getInsertPt());
 
+  auto ExtStride = B.buildAnyExt(S32, Stride);
+
   if (ST.has45BitNumRecordsBufferResource()) {
+    Register Zero = B.buildConstant(S32, 0).getReg(0);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
     LLT PtrIntTy = LLT::scalar(MRI.getType(Pointer).getSizeInBits());
@@ -5921,13 +5924,15 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
     // Build the higher 64-bit value, which has the higher 38-bit num_records,
     // 6-bit zero (omit), 16-bit stride and scale and 4-bit flag.
     auto NumRecordsRHS = B.buildLShr(S64, NumRecords, B.buildConstant(S32, 7));
-    auto ExtStride = B.buildAnyExt(S64, Stride);
-    auto ShiftedStride = B.buildShl(S64, ExtStride, B.buildConstant(S32, 44));
-    auto ExtFlags = B.buildAnyExt(S64, Flags);
-    auto NewFlags = B.buildAnd(S64, ExtFlags, B.buildConstant(S64, 0x3));
-    auto ShiftedFlags = B.buildShl(S64, NewFlags, B.buildConstant(S32, 60));
-    auto CombinedFields = B.buildOr(S64, NumRecordsRHS, ShiftedStride);
-    Register HighHalf = B.buildOr(S64, CombinedFields, ShiftedFlags).getReg(0);
+    auto ShiftedStride = B.buildShl(S32, ExtStride, B.buildConstant(S32, 12));
+    auto ExtShiftedStride =
+        B.buildMergeValues(S64, {Zero, ShiftedStride.getReg(0)});
+    auto ShiftedFlags = B.buildShl(S32, Flags, B.buildConstant(S32, 28));
+    auto ExtShiftedFlags =
+        B.buildMergeValues(S64, {Zero, ShiftedFlags.getReg(0)});
+    auto CombinedFields = B.buildOr(S64, NumRecordsRHS, ExtShiftedStride);
+    Register HighHalf =
+        B.buildOr(S64, CombinedFields, ExtShiftedFlags).getReg(0);
     B.buildMergeValues(Result, {LowHalf, HighHalf});
   } else {
     NumRecords = B.buildTrunc(S32, NumRecords).getReg(0);
@@ -5937,7 +5942,6 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
 
     auto AndMask = B.buildConstant(S32, 0x0000ffff);
     auto Masked = B.buildAnd(S32, HighHalf, AndMask);
-    auto ExtStride = B.buildAnyExt(S32, Stride);
     auto ShiftConst = B.buildConstant(S32, 16);
     auto ShiftedStride = B.buildShl(S32, ExtStride, ShiftConst);
     auto NewHighHalf = B.buildOr(S32, Masked, ShiftedStride);
