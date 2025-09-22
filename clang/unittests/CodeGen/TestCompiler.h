@@ -52,7 +52,7 @@ struct TestCompiler {
     PtrSize = TInfo.getPointerWidth(clang::LangAS::Default) / 8;
 
     compiler.createFileManager();
-    compiler.createSourceManager(compiler.getFileManager());
+    compiler.createSourceManager();
     compiler.createPreprocessor(clang::TU_Prefix);
 
     compiler.createASTContext();
