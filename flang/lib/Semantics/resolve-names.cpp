@@ -3376,7 +3376,8 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
       context().SetError(symbol);
       return true;
     }
-    if ((IsDummy(symbol) || FindCommonBlockContaining(symbol)) &&
+    if ((IsDummy(symbol) ||
+            (!symbol.has<UseDetails>() && FindCommonBlockContaining(symbol))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
       // Dummy or COMMON was implicitly typed despite IMPLICIT NONE(TYPE) in
