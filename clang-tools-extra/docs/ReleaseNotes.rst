@@ -167,6 +167,11 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`bugprone-default-lambda-capture
+  <clang-tidy/checks/bugprone/default-lambda-capture>` check.
+
+  Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
+
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
@@ -202,15 +207,6 @@ New checks
 
   Finds virtual function overrides with different visibility than the function
   in the base class.
-
-- New :doc:`bugprone-default-lambda-capture
-  <clang-tidy/checks/bugprone/default-lambda-capture>` check.
-
-  Finds lambda expressions that use default capture modes (``[=]`` or ``[&]``)
-  and suggests using explicit captures instead. Default captures can lead to
-  subtle bugs including dangling references with ``[&]``, unnecessary copies
-  with ``[=]``, and make code less maintainable by hiding which variables are
-  actually being captured.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

@@ -3,11 +3,11 @@
 bugprone-default-lambda-capture
 ===============================
 
-  Finds lambda expressions that use default capture modes (``[=]`` or ``[&]``)
-  and suggests using explicit captures instead. Default captures can lead to
-  subtle bugs including dangling references with ``[&]``, unnecessary copies
-  with ``[=]``, and make code less maintainable by hiding which variables are
-  actually being captured.
+Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
+  
+Default captures can lead to subtle bugs including dangling references with
+``[&]``, unnecessary copies with ``[=]``, and make code less maintainable by
+hiding which variables are actually being captured.
 
 Implements Item 31 of Effective Modern C++ by Scott Meyers.
 
