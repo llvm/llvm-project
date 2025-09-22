@@ -41,7 +41,7 @@ same. For example, when we write, in "C":
 
 it is natural to think that there is only one index, the selection of the field
 ``F``.  However, in this example, ``Foo`` is a pointer. That pointer
-must be indexed explicitly in LLVM. C, on the other hand, indices through it
+must be indexed explicitly in LLVM. C, on the other hand, indexes through it
 transparently.  To arrive at the same address location as the C code, you would
 provide the GEP instruction with two index operands. The first operand indexes
 through the pointer; the second operand indexes the field ``F`` of the

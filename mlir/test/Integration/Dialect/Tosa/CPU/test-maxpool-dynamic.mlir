@@ -6,7 +6,7 @@
 // RUN:     -one-shot-bufferize="bufferize-function-boundaries" \
 // RUN:     -buffer-deallocation-pipeline \
 // RUN:     -test-lower-to-llvm \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:     -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils \
 // RUN: | FileCheck %s
@@ -54,7 +54,7 @@ func.func @main() {
   %result_static  = func.call @max_pool_static(%A) : (!tensor_type) -> !tensor_type
   %result_dynamic = func.call @max_pool_dynamic(%A_dynamic) : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  %static_buffer = bufferization.to_memref %result_static : !tensor_type to !memref_type
+  %static_buffer = bufferization.to_buffer %result_static : !tensor_type to !memref_type
   %unranked_static_buffer = memref.cast %static_buffer : !memref_type to memref<*xf32>
 
   // CHECK: Unranked Memref base@ = {{.*}} rank = 4 offset = 0 sizes = [1, 4, 4, 1] strides = [16, 4, 1, 1] data =
@@ -81,7 +81,7 @@ func.func @main() {
 
   func.call @printMemrefF32(%unranked_static_buffer) : (memref<*xf32>) -> ()
 
-  %dynamic_buffer = bufferization.to_memref %result_dynamic : tensor<?x?x?x?xf32> to memref<?x?x?x?xf32>
+  %dynamic_buffer = bufferization.to_buffer %result_dynamic : tensor<?x?x?x?xf32> to memref<?x?x?x?xf32>
   %unranked_dynamic_buffer = memref.cast %dynamic_buffer : memref<?x?x?x?xf32> to memref<*xf32>
 
   // CHECK: Unranked Memref base@ = {{.*}} rank = 4 offset = 0 sizes = [1, 4, 4, 1] strides = [16, 4, 1, 1] data =

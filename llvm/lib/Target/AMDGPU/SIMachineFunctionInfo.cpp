@@ -29,6 +29,16 @@ enum { MAX_LANES = 64 };
 
 using namespace llvm;
 
+// TODO -- delete this flag once we have more robust mechanisms to allocate the
+// optimal RC for Opc and Dest of MFMA. In particular, there are high RP cases
+// where it is better to produce the VGPR form (e.g. if there are VGPR users
+// of the MFMA result).
+static cl::opt<bool> MFMAVGPRForm(
+    "amdgpu-mfma-vgpr-form", cl::Hidden,
+    cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
+             "unspecified, default to compiler heuristics"),
+    cl::init(false));
+
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
   const SITargetLowering *TLI = STI->getTargetLowering();
   return static_cast<const GCNTargetMachine &>(TLI->getTargetMachine());
@@ -41,14 +51,22 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
       WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
-  const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
+      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
+      IsWholeWaveFunction(F.getCallingConv() ==
+                          CallingConv::AMDGPU_Gfx_WholeWave) {
+  const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  Occupancy = ST.computeOccupancy(F, getLDSSize());
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is completely removed.
+  DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
+
+  Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
   VRegFlags.reserve(1024);
@@ -64,6 +82,14 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   MayNeedAGPRs = ST.hasMAIInsts();
+  if (ST.hasGFX90AInsts()) {
+    // FIXME: MayNeedAGPRs is a misnomer for how this is used. MFMA selection
+    // should be separated from availability of AGPRs
+    if (MFMAVGPRForm ||
+        (ST.getMaxNumVGPRs(F) <= ST.getAddressableNumArchVGPRs() &&
+         !mayUseAGPRs(F)))
+      MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+  }
 
   if (AMDGPU::isChainCC(CC)) {
     // Chain functions don't receive an SP from their caller, but are free to
@@ -79,7 +105,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
     ImplicitArgPtr = false;
   } else if (!isEntryFunction()) {
-    if (CC != CallingConv::AMDGPU_Gfx)
+    if (CC != CallingConv::AMDGPU_Gfx &&
+        CC != CallingConv::AMDGPU_Gfx_WholeWave)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
@@ -98,25 +125,23 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       ImplicitArgPtr = true;
   } else {
     ImplicitArgPtr = false;
-    MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
-                               MaxKernArgAlign);
-
-    if (ST.hasGFX90AInsts() &&
-        ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-        !mayUseAGPRs(F))
-      MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+    MaxKernArgAlign =
+        std::max(ST.getAlignmentForImplicitArgPtr(), MaxKernArgAlign);
   }
 
   if (!AMDGPU::isGraphics(CC) ||
       ((CC == CallingConv::AMDGPU_CS || CC == CallingConv::AMDGPU_Gfx) &&
        ST.hasArchitectedSGPRs())) {
-    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
+    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-x"))
       WorkGroupIDX = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y"))
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-y"))
       WorkGroupIDY = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z"))
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-z"))
       WorkGroupIDZ = true;
   }
 
@@ -173,6 +198,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
@@ -185,8 +212,7 @@ MachineFunctionInfo *SIMachineFunctionInfo::clone(
 void SIMachineFunctionInfo::limitOccupancy(const MachineFunction &MF) {
   limitOccupancy(getMaxWavesPerEU());
   const GCNSubtarget& ST = MF.getSubtarget<GCNSubtarget>();
-  limitOccupancy(ST.getOccupancyWithLocalMemSize(getLDSSize(),
-                 MF.getFunction()));
+  limitOccupancy(ST.getOccupancyWithWorkGroupSizes(MF).second);
 }
 
 Register SIMachineFunctionInfo::addPrivateSegmentBuffer(
@@ -256,28 +282,32 @@ Register SIMachineFunctionInfo::addLDSKernelId() {
 SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
     const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
     unsigned AllocSizeDWord, int KernArgIdx, int PaddingSGPRs) {
-  assert(!ArgInfo.PreloadKernArgs.count(KernArgIdx) &&
-         "Preload kernel argument allocated twice.");
+  auto [It, Inserted] = ArgInfo.PreloadKernArgs.try_emplace(KernArgIdx);
+  assert(Inserted && "Preload kernel argument allocated twice.");
   NumUserSGPRs += PaddingSGPRs;
   // If the available register tuples are aligned with the kernarg to be
   // preloaded use that register, otherwise we need to use a set of SGPRs and
   // merge them.
+  if (!ArgInfo.FirstKernArgPreloadReg)
+    ArgInfo.FirstKernArgPreloadReg = getNextUserSGPR();
   Register PreloadReg =
       TRI.getMatchingSuperReg(getNextUserSGPR(), AMDGPU::sub0, RC);
+  auto &Regs = It->second.Regs;
   if (PreloadReg &&
       (RC == &AMDGPU::SReg_32RegClass || RC == &AMDGPU::SReg_64RegClass)) {
-    ArgInfo.PreloadKernArgs[KernArgIdx].Regs.push_back(PreloadReg);
+    Regs.push_back(PreloadReg);
     NumUserSGPRs += AllocSizeDWord;
   } else {
+    Regs.reserve(AllocSizeDWord);
     for (unsigned I = 0; I < AllocSizeDWord; ++I) {
-      ArgInfo.PreloadKernArgs[KernArgIdx].Regs.push_back(getNextUserSGPR());
+      Regs.push_back(getNextUserSGPR());
       NumUserSGPRs++;
     }
   }
 
   // Track the actual number of SGPRs that HW will preload to.
   UserSGPRInfo.allocKernargPreloadSGPRs(AllocSizeDWord + PaddingSGPRs);
-  return &ArgInfo.PreloadKernArgs[KernArgIdx].Regs;
+  return &Regs;
 }
 
 void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
@@ -350,7 +380,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
 
     // Replace the register in SpillPhysVGPRs. This is needed to look for free
     // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
-    auto *RegItr = std::find(SpillPhysVGPRs.begin(), SpillPhysVGPRs.end(), Reg);
+    auto *RegItr = llvm::find(SpillPhysVGPRs, Reg);
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
@@ -703,6 +733,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
+      NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
       Occupancy(MFI.getOccupancy()),
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
@@ -713,7 +745,10 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()) {
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      IsWholeWaveFunction(MFI.isWholeWaveFunction()),
+      DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
+      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -756,8 +791,11 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
+  NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
+  IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());
@@ -780,46 +818,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 }
 
 bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  return !F.hasFnAttribute("amdgpu-no-agpr");
-}
-
-bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {
-  if (UsesAGPRs)
-    return *UsesAGPRs;
-
-  if (!mayNeedAGPRs()) {
-    UsesAGPRs = false;
-    return false;
-  }
-
-  if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) ||
-      MF.getFrameInfo().hasCalls()) {
-    UsesAGPRs = true;
-    return true;
-  }
-
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    const Register Reg = Register::index2VirtReg(I);
-    const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
-    if (RC && SIRegisterInfo::isAGPRClass(RC)) {
-      UsesAGPRs = true;
-      return true;
-    }
-    if (!RC && !MRI.use_empty(Reg) && MRI.getType(Reg).isValid()) {
-      // Defer caching UsesAGPRs, function might not yet been regbank selected.
-      return true;
-    }
-  }
-
-  for (MCRegister Reg : AMDGPU::AGPR_32RegClass) {
-    if (MRI.isPhysRegUsed(Reg)) {
-      UsesAGPRs = true;
-      return true;
-    }
-  }
-
-  UsesAGPRs = false;
-  return false;
+  auto [MinNumAGPR, MaxNumAGPR] =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                      /*OnlyFirstRequired=*/true);
+  return MinNumAGPR != 0u;
 }

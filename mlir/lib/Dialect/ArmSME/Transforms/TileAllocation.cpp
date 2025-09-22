@@ -52,10 +52,8 @@
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <algorithm>
 
 namespace mlir::arm_sme {
 #define GEN_PASS_DEF_TESTTILEALLOCATION
@@ -212,7 +210,7 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
 
   auto insertJump = [&](Location loc, Block *source, Block *dest, auto args) {
     rewriter.setInsertionPointToEnd(source);
-    rewriter.create<cf::BranchOp>(loc, dest, args);
+    cf::BranchOp::create(rewriter, loc, dest, args);
   };
 
   for (auto condBranch : worklist) {
@@ -255,7 +253,7 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
     for (OpOperand &operand : terminator->getOpOperands()) {
       if (isValidSMETileVectorType(operand.get().getType())) {
         auto copy =
-            rewriter.create<CopyTileOp>(terminator->getLoc(), operand.get());
+            CopyTileOp::create(rewriter, terminator->getLoc(), operand.get());
         rewriter.modifyOpInPlace(terminator, [&] { operand.assign(copy); });
       }
     }
@@ -497,8 +495,8 @@ coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
 
   // Sort the new live ranges by starting point (ready for tile allocation).
   auto coalescedLiveRanges = uniqueLiveRanges.takeVector();
-  std::sort(coalescedLiveRanges.begin(), coalescedLiveRanges.end(),
-            [](LiveRange *a, LiveRange *b) { return *a < *b; });
+  llvm::sort(coalescedLiveRanges,
+             [](LiveRange *a, LiveRange *b) { return *a < *b; });
   return std::move(coalescedLiveRanges);
 }
 
@@ -528,8 +526,7 @@ chooseSpillUsingHeuristics(OverlappingRangesIterator overlappingRanges,
            a.end() < b.end();
   };
   LiveRange &latestEndingLiveRange =
-      *std::max_element(overlappingRanges.begin(), overlappingRanges.end(),
-                        isSmallerTileTypeOrEndsEarlier);
+      *llvm::max_element(overlappingRanges, isSmallerTileTypeOrEndsEarlier);
   if (!isSmallerTileTypeOrEndsEarlier(latestEndingLiveRange, *newRange))
     return &latestEndingLiveRange;
   return newRange;
@@ -824,8 +821,8 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
         [&](LiveRange const &liveRange) { return !liveRange.empty(); });
     auto initialRanges = llvm::to_vector(llvm::map_range(
         nonEmpty, [](LiveRange const &liveRange) { return &liveRange; }));
-    std::sort(initialRanges.begin(), initialRanges.end(),
-              [](LiveRange const *a, LiveRange const *b) { return *a < *b; });
+    llvm::sort(initialRanges,
+               [](LiveRange const *a, LiveRange const *b) { return *a < *b; });
     llvm::errs() << "\n========== Initial Live Ranges:\n";
     dumpLiveRanges(operationToIndexMap, initialRanges, function);
   }

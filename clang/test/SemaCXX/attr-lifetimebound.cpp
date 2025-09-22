@@ -9,16 +9,34 @@ namespace usage_invalid {
     ~A() [[clang::lifetimebound]]; // expected-error {{cannot be applied to a destructor}}
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
     int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
-    int not_function [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
-    int [[clang::lifetimebound]] also_not_function; // expected-error {{cannot be applied to types}}
+    int attr_on_var [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
+    int [[clang::lifetimebound]] attr_on_int; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] attr_on_int_ptr; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] * attr_on_int_ptr_ptr; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int (* [[clang::lifetimebound]] attr_on_func_ptr)(); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
     void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
   };
   int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
+
+  void attr_on_ptr_arg(int * [[clang::lifetimebound]] ptr); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  static_assert((int [[clang::lifetimebound]]) 12); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int* attr_on_unnamed_arg(const int& [[clang::lifetimebound]]); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  template <typename T>
+  int* attr_on_template_ptr_arg(T * [[clang::lifetimebound]] ptr); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+
+  int (*func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  struct X {};
+  int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
 }
 
 namespace usage_ok {
   struct IntRef { int *target; };
 
+  const int &crefparam(const int &param); // Omitted in first decl
+  const int &crefparam(const int &param); // Omitted in second decl
+  const int &crefparam(const int &param [[clang::lifetimebound]]); // Add LB
+  const int &crefparam(const int &param) { return param; } // Omit in impl
   int &refparam(int &param [[clang::lifetimebound]]);
   int &classparam(IntRef param [[clang::lifetimebound]]);
 
@@ -48,12 +66,13 @@ namespace usage_ok {
   int *p = A().class_member(); // expected-warning {{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
   int *q = A(); // expected-warning {{temporary whose address is used as value of local variable 'q' will be destroyed at the end of the full-expression}}
   int *r = A(1); // expected-warning {{temporary whose address is used as value of local variable 'r' will be destroyed at the end of the full-expression}}
+  const int& s = crefparam(2); // expected-warning {{temporary bound to local reference 's' will be destroyed at the end of the full-expression}}
 
   void test_assignment() {
-    p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
-    p = {A().class_member()}; // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
-    q = A(); // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
-    r = A(1); // expected-warning {{object backing the pointer r will be destroyed at the end of the full-expression}}
+    p = A().class_member(); // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
+    p = {A().class_member()}; // expected-warning {{object backing the pointer 'p' will be destroyed at the end of the full-expression}}
+    q = A(); // expected-warning {{object backing the pointer 'q' will be destroyed at the end of the full-expression}}
+    r = A(1); // expected-warning {{object backing the pointer 'r' will be destroyed at the end of the full-expression}}
   }
 
   struct FieldCheck {
@@ -66,7 +85,7 @@ namespace usage_ok {
       Set c;
       int * d;
     };
-    Pair p;  
+    Pair p;
     FieldCheck(const int& a): p(a){}
     Pair& getR() [[clang::lifetimebound]] { return p; }
     Pair* getP() [[clang::lifetimebound]] { return &p; }
@@ -173,8 +192,9 @@ namespace p0936r0_examples {
 
   std::vector make_vector();
   void use_reversed_range() {
-    // FIXME: Don't expose the name of the internal range variable.
-    for (auto x : reversed(make_vector())) {} // expected-warning {{temporary implicitly bound to local reference will be destroyed at the end of the full-expression}}
+    // No warning here because C++23 extends the lifetime of the temporary
+    // in a range-based for loop.
+    for (auto x : reversed(make_vector())) {}
   }
 
   template <typename K, typename V>
@@ -337,8 +357,8 @@ struct StatusOr {
 };
 
 void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
-  foo1 = Foo(); // expected-warning {{object backing foo1 will be destroyed at the end}}
+  foo1 = Foo(); // expected-warning {{object backing 'foo1' will be destroyed at the end}}
   // This warning is triggered by the lifetimebound annotation, regardless of whether the class type is annotated with GSL.
-  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing foo2 will be destroyed at the end}}
+  foo2 = NonAnnotatedFoo(); // expected-warning {{object backing 'foo2' will be destroyed at the end}}
 }
 } // namespace GH106372

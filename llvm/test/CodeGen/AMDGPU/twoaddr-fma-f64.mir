@@ -1,8 +1,10 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx90a %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefixes=GCN,GFX90A %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx90a %s --passes=two-address-instruction -verify-each -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 %s -run-pass twoaddressinstruction -o - | FileCheck -check-prefixes=GCN,GFX1250 %s
 
 # GCN-LABEL: name: test_fmamk_reg_imm_f64
-# GCN: V_FMA_F64_e64 0, killed %0, 0, %2, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, killed %0, 0, %2, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 killed %0, 4607182418800017408, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f64
 registers:
@@ -21,7 +23,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_imm_reg_f64
-# GCN: V_FMA_F64_e64 0, %2, 0, killed %0.sub0_sub1, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %2, 0, killed %0.sub0_sub1, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 killed %0.sub0_sub1, 4607182418800017408, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f64
 registers:
@@ -40,7 +43,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_f64
-# GCN: V_FMA_F64_e64 0, killed %0.sub0_sub1, 0, %0.sub2_sub3, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, killed %0.sub0_sub1, 0, %0.sub2_sub3, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAAK_F64 killed %0.sub0_sub1, %0.sub2_sub3, 4607182418800017408, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f64
 registers:
@@ -57,7 +61,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_sgpr_src0_f64
-# GCN: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 killed %0, 4607182418800017408, %2, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_sgpr_src0_f64
@@ -77,7 +82,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_inlineimm_src0_f64
-# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 4611686018427387904, 4607182418800017408, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_inlineimm_src0_f64
@@ -95,7 +101,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f64
-# GCN: V_FMAC_F64_e32 4636737291354636288, %0, %2, implicit $mode, implicit $exec
+# GFX90A: V_FMAC_F64_e32 4636737291354636288, %0, %2, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 %0, 4636737291354636288, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_otherimm_src0_f64
@@ -134,7 +141,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_reg_unfoldable_literal_src0_f64
-# GCN: V_FMA_F64_e64 0, %2, 0, killed %0, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %2, 0, killed %0, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 killed %0, 123456, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_unfoldable_literal_src0_f64
 registers:
@@ -153,7 +161,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_reg_unfoldable_literal_src1_f64
-# GCN: V_FMA_F64_e64 0, killed %0, 0, %2, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, killed %0, 0, %2, 0, killed %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 killed %0, 123456, killed %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_unfoldable_literal_src1_f64
 registers:
@@ -172,7 +181,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_reg_unfoldable_literal_src2_f64
-# GCN: V_FMA_F64_e64 0, killed %0, 0, killed %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, killed %0, 0, killed %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAAK_F64 killed %0, killed %1, 123456, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_reg_unfoldable_literal_src2_f64
 registers:

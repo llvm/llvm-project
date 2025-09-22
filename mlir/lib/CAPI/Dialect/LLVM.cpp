@@ -55,6 +55,20 @@ MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
       unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
 }
 
+intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
+  return llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getNumParams();
+}
+
+MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
+  assert(pos >= 0 && "pos in array must be positive");
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type))
+                  .getParamType(static_cast<unsigned>(pos)));
+}
+
+MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getReturnType());
+}
+
 bool mlirTypeIsALLVMStructType(MlirType type) {
   return isa<LLVM::LLVMStructType>(unwrap(type));
 }
@@ -183,12 +197,12 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(file)), line,
       cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
       DIFlags(flags), sizeInBits, alignInBits,
-      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); }),
       cast<DIExpressionAttr>(unwrap(dataLocation)),
       cast<DIExpressionAttr>(unwrap(rank)),
       cast<DIExpressionAttr>(unwrap(allocated)),
-      cast<DIExpressionAttr>(unwrap(associated))));
+      cast<DIExpressionAttr>(unwrap(associated)),
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDIDerivedTypeAttrGet(

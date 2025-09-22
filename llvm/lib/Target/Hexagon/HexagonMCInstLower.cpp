@@ -44,40 +44,40 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
 
   // Populate the relocation type based on Hexagon target flags
   // set on an operand
-  MCSymbolRefExpr::VariantKind RelocationType;
+  HexagonMCExpr::VariantKind RelocationType;
   switch (MO.getTargetFlags() & ~HexagonII::HMOTF_ConstExtended) {
   default:
-    RelocationType = MCSymbolRefExpr::VK_None;
+    RelocationType = HexagonMCExpr::VK_None;
     break;
   case HexagonII::MO_PCREL:
-    RelocationType = MCSymbolRefExpr::VK_PCREL;
+    RelocationType = HexagonMCExpr::VK_PCREL;
     break;
   case HexagonII::MO_GOT:
-    RelocationType = MCSymbolRefExpr::VK_GOT;
+    RelocationType = HexagonMCExpr::VK_GOT;
     break;
   case HexagonII::MO_LO16:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_LO16;
+    RelocationType = HexagonMCExpr::VK_LO16;
     break;
   case HexagonII::MO_HI16:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_HI16;
+    RelocationType = HexagonMCExpr::VK_HI16;
     break;
   case HexagonII::MO_GPREL:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_GPREL;
+    RelocationType = HexagonMCExpr::VK_GPREL;
     break;
   case HexagonII::MO_GDGOT:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_GD_GOT;
+    RelocationType = HexagonMCExpr::VK_GD_GOT;
     break;
   case HexagonII::MO_GDPLT:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_GD_PLT;
+    RelocationType = HexagonMCExpr::VK_GD_PLT;
     break;
   case HexagonII::MO_IE:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_IE;
+    RelocationType = HexagonMCExpr::VK_IE;
     break;
   case HexagonII::MO_IEGOT:
-    RelocationType = MCSymbolRefExpr::VK_Hexagon_IE_GOT;
+    RelocationType = HexagonMCExpr::VK_IE_GOT;
     break;
   case HexagonII::MO_TPREL:
-    RelocationType = MCSymbolRefExpr::VK_TPREL;
+    RelocationType = HexagonMCExpr::VK_TPREL;
     break;
   }
 

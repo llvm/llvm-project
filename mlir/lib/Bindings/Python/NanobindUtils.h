@@ -10,12 +10,16 @@
 #ifndef MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
-#include <nanobind/nanobind.h>
-
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <string>
+#include <variant>
 
 template <>
 struct std::iterator_traits<nanobind::detail::fast_iterator> {
@@ -68,7 +72,7 @@ namespace detail {
 
 template <typename DefaultingTy>
 struct MlirDefaultingCaster {
-  NB_TYPE_CASTER(DefaultingTy, const_name(DefaultingTy::kTypeDescription));
+  NB_TYPE_CASTER(DefaultingTy, const_name(DefaultingTy::kTypeDescription))
 
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     if (src.is_none()) {
@@ -129,33 +133,59 @@ struct PyPrintAccumulator {
   }
 };
 
-/// Accumulates int a python file-like object, either writing text (default)
-/// or binary.
+/// Accumulates into a file, either writing text (default)
+/// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
 public:
-  PyFileAccumulator(const nanobind::object &fileObject, bool binary)
-      : pyWriteFunction(fileObject.attr("write")), binary(binary) {}
+  PyFileAccumulator(const nanobind::object &fileOrStringObject, bool binary)
+      : binary(binary) {
+    std::string filePath;
+    if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
+      std::error_code ec;
+      writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
+      if (ec) {
+        throw nanobind::value_error(
+            (std::string("Unable to open file for writing: ") + ec.message())
+                .c_str());
+      }
+    } else {
+      writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
+    }
+  }
+
+  MlirStringCallback getCallback() {
+    return writeTarget.index() == 0 ? getPyWriteCallback()
+                                    : getOstreamCallback();
+  }
 
   void *getUserData() { return this; }
 
-  MlirStringCallback getCallback() {
+private:
+  MlirStringCallback getPyWriteCallback() {
     return [](MlirStringRef part, void *userData) {
       nanobind::gil_scoped_acquire acquire;
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
       if (accum->binary) {
         // Note: Still has to copy and not avoidable with this API.
         nanobind::bytes pyBytes(part.data, part.length);
-        accum->pyWriteFunction(pyBytes);
+        std::get<nanobind::object>(accum->writeTarget)(pyBytes);
       } else {
         nanobind::str pyStr(part.data,
                             part.length); // Decodes as UTF-8 by default.
-        accum->pyWriteFunction(pyStr);
+        std::get<nanobind::object>(accum->writeTarget)(pyStr);
       }
     };
   }
 
-private:
-  nanobind::object pyWriteFunction;
+  MlirStringCallback getOstreamCallback() {
+    return [](MlirStringRef part, void *userData) {
+      PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
+      std::get<llvm::raw_fd_ostream>(accum->writeTarget)
+          .write(part.data, part.length);
+    };
+  }
+
+  std::variant<nanobind::object, llvm::raw_fd_ostream> writeTarget;
   bool binary;
 };
 
@@ -246,7 +276,7 @@ protected:
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
   /// of bounds.
-  nanobind::object getItem(intptr_t index) {
+  nanobind::typed<nanobind::object, ElementTy> getItem(intptr_t index) {
     // Negative indices mean we count from the end.
     index = wrapIndex(index);
     if (index < 0) {

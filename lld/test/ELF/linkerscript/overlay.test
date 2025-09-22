@@ -41,6 +41,23 @@
 # ERR2-NEXT:>>>     .out.aaa { *(.aaa) } > AX AT>FLASH
 # ERR2-NEXT:>>>                            ^
 
+# RUN: ld.lld a.o -T region.t -o region
+# RUN: llvm-readelf --sections -l region | FileCheck --check-prefix=REGION %s
+
+# REGION:      Name       Type     Address          Off    Size
+# REGION:      .big1      PROGBITS 0000000000001000 001000 000008
+# REGION-NEXT: .small1    PROGBITS 0000000000001000 002000 000004
+# REGION:      .big2      PROGBITS 0000000000001008 002008 000008
+# REGION-NEXT: .small2    PROGBITS 0000000000001008 003008 000004
+# REGION-NEXT: .text      PROGBITS 0000000000001010 003010 000001
+
+# REGION:      Program Headers:
+# REGION:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# REGION-NEXT: LOAD 0x001000 0x0000000000001000 0x0000000000001000 0x000008 0x000008 R   0x1000
+# REGION-NEXT: LOAD 0x002000 0x0000000000001000 0x0000000000001008 0x000010 0x000010 R   0x1000
+# REGION-NEXT: LOAD 0x003008 0x0000000000001008 0x0000000000001018 0x000004 0x000004 R   0x1000
+# REGION-NEXT: LOAD 0x003010 0x0000000000001010 0x0000000000001020 0x000001 0x000001 R E 0x1000
+
 #--- a.s
 .globl _start
 _start:
@@ -76,6 +93,22 @@ SECTIONS {
   .text : { *(.text) }
 }
 
+#--- region.t
+MEMORY { region : ORIGIN = 0x1000, LENGTH = 0x1000 }
+SECTIONS {
+## Memory region instead of explicit address.
+  OVERLAY : {
+    .big1 { *(.big1) }
+    .small1 { *(.small1) }
+  } >region
+  OVERLAY : {
+    .big2 { *(.big2) }
+    .small2 { *(.small2) }
+  } >region
+  .text : { *(.text) } >region
+  /DISCARD/ : { *(.big* .small*) }
+}
+
 #--- err1.t
 SECTIONS {
   OVERLAY 0x1000 : AT ( 0x2000 ) {
@@ -100,3 +133,11 @@ SECTIONS {
 # RUN: not ld.lld a.o -T unclosed.lds 2>&1 | FileCheck %s --check-prefix=UNCLOSED
 # UNCLOSED:     error: unclosed.lds:2: unexpected EOF
 # UNCLOSED-NOT: {{.}}
+
+#--- at-nocrossrefs-order.lds
+SECTIONS { OVERLAY 0x1000 : AT(0x1234) NOCROSSREFS {} }
+
+# RUN: not ld.lld a.o -T at-nocrossrefs-order.lds 2>&1 | FileCheck %s --check-prefix=AT-NOCROSSREFS-ORDER --strict-whitespace
+# AT-NOCROSSREFS-ORDER:{{.*}}error: at-nocrossrefs-order.lds:1: { expected, but got NOCROSSREFS
+# AT-NOCROSSREFS-ORDER-NEXT:>>> SECTIONS { OVERLAY 0x1000 : AT(0x1234) NOCROSSREFS {} }
+# AT-NOCROSSREFS-ORDER-NEXT:>>>                                        ^

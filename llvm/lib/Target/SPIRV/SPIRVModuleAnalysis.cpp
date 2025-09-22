@@ -44,17 +44,10 @@ static cl::list<SPIRV::Capability::Capability>
 // Use sets instead of cl::list to check "if contains" condition
 struct AvoidCapabilitiesSet {
   SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() {
-    for (auto Cap : AvoidCapabilities)
-      S.insert(Cap);
-  }
+  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
 };
 
 char llvm::SPIRVModuleAnalysis::ID = 0;
-
-namespace llvm {
-void initializeSPIRVModuleAnalysisPass(PassRegistry &);
-} // namespace llvm
 
 INITIALIZE_PASS(SPIRVModuleAnalysis, DEBUG_TYPE, "SPIRV module analysis", true,
                 true)
@@ -73,8 +66,12 @@ static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
-  static AvoidCapabilitiesSet
-      AvoidCaps; // contains capabilities to avoid if there is another option
+  // A set of capabilities to avoid if there is another option.
+  AvoidCapabilitiesSet AvoidCaps;
+  if (!ST.isShader())
+    AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
 
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
@@ -93,8 +90,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   } else if (MinVerOK && MaxVerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
-      if (Reqs.isCapabilityAvailable(Cap))
-        return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+      if (Reqs.isCapabilityAvailable(Cap)) {
+        ReqExts.append(getSymbolicOperandExtensions(
+            SPIRV::OperandCategory::CapabilityOperand, Cap));
+        return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+      }
     } else {
       // By SPIR-V specification: "If an instruction, enumerant, or other
       // feature specifies multiple enabling capabilities, only one such
@@ -108,8 +108,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
           UseCaps.push_back(Cap);
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
-        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
-          return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
+          ReqExts.append(getSymbolicOperandExtensions(
+              SPIRV::OperandCategory::CapabilityOperand, Cap));
+          return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+        }
       }
     }
   }
@@ -121,7 +124,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       })) {
     return {true,
             {},
-            ReqExts,
+            std::move(ReqExts),
             VersionTuple(),
             VersionTuple()}; // TODO: add versions to extensions.
   }
@@ -149,8 +152,8 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
         static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
     // TODO: Add support for VulkanMemoryModel.
-    MAI.Mem = ST->isOpenCLEnv() ? SPIRV::MemoryModel::OpenCL
-                                : SPIRV::MemoryModel::GLSL450;
+    MAI.Mem = ST->isShader() ? SPIRV::MemoryModel::GLSL450
+                             : SPIRV::MemoryModel::OpenCL;
     if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
       unsigned PtrSize = ST->getPointerSize();
       MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
@@ -180,7 +183,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
     // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
     // Translator avoids potential issues with run-times in a similar manner.
-    if (ST->isOpenCLEnv()) {
+    if (!ST->isShader()) {
       MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
       MAI.SrcLangVersion = 100000;
     } else {
@@ -208,110 +211,315 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
                                  MAI.Addr, *ST);
 
-  if (ST->isOpenCLEnv()) {
+  if (!ST->isShader()) {
     // TODO: check if it's required by default.
     MAI.ExtInstSetMap[static_cast<unsigned>(
-        SPIRV::InstructionSet::OpenCL_std)] =
-        Register::index2VirtReg(MAI.getNextID());
+        SPIRV::InstructionSet::OpenCL_std)] = MAI.getNextIDRegister();
   }
 }
 
-// Collect MI which defines the register in the given machine function.
-static void collectDefInstr(Register Reg, const MachineFunction *MF,
-                            SPIRV::ModuleAnalysisInfo *MAI,
-                            SPIRV::ModuleSectionType MSType,
-                            bool DoInsert = true) {
-  assert(MAI->hasRegisterAlias(MF, Reg) && "Cannot find register alias");
-  MachineInstr *MI = MF->getRegInfo().getUniqueVRegDef(Reg);
-  assert(MI && "There should be an instruction that defines the register");
-  MAI->setSkipEmission(MI);
-  if (DoInsert)
-    MAI->MS[MSType].push_back(MI);
+// Appends the signature of the decoration instructions that decorate R to
+// Signature.
+static void appendDecorationsForReg(const MachineRegisterInfo &MRI, Register R,
+                                    InstrSignature &Signature) {
+  for (MachineInstr &UseMI : MRI.use_instructions(R)) {
+    // We don't handle OpDecorateId because getting the register alias for the
+    // ID can cause problems, and we do not need it for now.
+    if (UseMI.getOpcode() != SPIRV::OpDecorate &&
+        UseMI.getOpcode() != SPIRV::OpMemberDecorate)
+      continue;
+
+    for (unsigned I = 0; I < UseMI.getNumOperands(); ++I) {
+      const MachineOperand &MO = UseMI.getOperand(I);
+      if (MO.isReg())
+        continue;
+      Signature.push_back(hash_value(MO));
+    }
+  }
 }
 
-void SPIRVModuleAnalysis::collectGlobalEntities(
-    const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
-    SPIRV::ModuleSectionType MSType,
-    std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
-    bool UsePreOrder = false) {
-  DenseSet<const SPIRV::DTSortableEntry *> Visited;
-  for (const auto *E : DepsGraph) {
-    std::function<void(const SPIRV::DTSortableEntry *)> RecHoistUtil;
-    // NOTE: here we prefer recursive approach over iterative because
-    // we don't expect depchains long enough to cause SO.
-    RecHoistUtil = [MSType, UsePreOrder, &Visited, &Pred,
-                    &RecHoistUtil](const SPIRV::DTSortableEntry *E) {
-      if (Visited.count(E) || !Pred(E))
-        return;
-      Visited.insert(E);
-
-      // Traversing deps graph in post-order allows us to get rid of
-      // register aliases preprocessing.
-      // But pre-order is required for correct processing of function
-      // declaration and arguments processing.
-      if (!UsePreOrder)
-        for (auto *S : E->getDeps())
-          RecHoistUtil(S);
-
-      Register GlobalReg = Register::index2VirtReg(MAI.getNextID());
-      bool IsFirst = true;
-      for (auto &U : *E) {
-        const MachineFunction *MF = U.first;
-        Register Reg = U.second;
-        MAI.setRegisterAlias(MF, Reg, GlobalReg);
-        if (!MF->getRegInfo().getUniqueVRegDef(Reg))
-          continue;
-        collectDefInstr(Reg, MF, &MAI, MSType, IsFirst);
-        IsFirst = false;
-        if (E->getIsGV())
-          MAI.GlobalVarList.push_back(MF->getRegInfo().getUniqueVRegDef(Reg));
+// Returns a representation of an instruction as a vector of MachineOperand
+// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
+// This creates a signature of the instruction with the same content
+// that MachineOperand::isIdenticalTo uses for comparison.
+static InstrSignature instrToSignature(const MachineInstr &MI,
+                                       SPIRV::ModuleAnalysisInfo &MAI,
+                                       bool UseDefReg) {
+  Register DefReg;
+  InstrSignature Signature{MI.getOpcode()};
+  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+    size_t h;
+    if (MO.isReg()) {
+      if (!UseDefReg && MO.isDef()) {
+        assert(!DefReg.isValid() && "Multiple def registers.");
+        DefReg = MO.getReg();
+        continue;
       }
-
-      if (UsePreOrder)
-        for (auto *S : E->getDeps())
-          RecHoistUtil(S);
-    };
-    RecHoistUtil(E);
+      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
+      if (!RegAlias.isValid()) {
+        LLVM_DEBUG({
+          dbgs() << "Unexpectedly, no global id found for the operand ";
+          MO.print(dbgs());
+          dbgs() << "\nInstruction: ";
+          MI.print(dbgs());
+          dbgs() << "\n";
+        });
+        report_fatal_error("All v-regs must have been mapped to global id's");
+      }
+      // mimic llvm::hash_value(const MachineOperand &MO)
+      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
+                       MO.isDef());
+    } else {
+      h = hash_value(MO);
+    }
+    Signature.push_back(h);
   }
+
+  if (DefReg.isValid()) {
+    // Decorations change the semantics of the current instruction. So two
+    // identical instruction with different decorations cannot be merged. That
+    // is why we add the decorations to the signature.
+    appendDecorationsForReg(MI.getMF()->getRegInfo(), DefReg, Signature);
+  }
+  return Signature;
 }
 
-// The function initializes global register alias table for types, consts,
-// global vars and func decls and collects these instruction for output
-// at module level. Also it collects explicit OpExtension/OpCapability
-// instructions.
-void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
-  std::vector<SPIRV::DTSortableEntry *> DepsGraph;
+bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
+                                        const MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  case SPIRV::OpTypeForwardPointer:
+    // omit now, collect later
+    return false;
+  case SPIRV::OpVariable:
+    return static_cast<SPIRV::StorageClass::StorageClass>(
+               MI.getOperand(2).getImm()) != SPIRV::StorageClass::Function;
+  case SPIRV::OpFunction:
+  case SPIRV::OpFunctionParameter:
+    return true;
+  }
+  if (GR->hasConstFunPtr() && Opcode == SPIRV::OpUndef) {
+    Register DefReg = MI.getOperand(0).getReg();
+    for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
+      if (UseMI.getOpcode() != SPIRV::OpConstantFunctionPointerINTEL)
+        continue;
+      // it's a dummy definition, FP constant refers to a function,
+      // and this is resolved in another way; let's skip this definition
+      assert(UseMI.getOperand(2).isReg() &&
+             UseMI.getOperand(2).getReg() == DefReg);
+      MAI.setSkipEmission(&MI);
+      return false;
+    }
+  }
+  return TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
+         TII->isInlineAsmDefInstr(MI);
+}
 
-  GR->buildDepsGraph(DepsGraph, TII, SPVDumpDeps ? MMI : nullptr);
+// This is a special case of a function pointer refering to a possibly
+// forward function declaration. The operand is a dummy OpUndef that
+// requires a special treatment.
+void SPIRVModuleAnalysis::visitFunPtrUse(
+    Register OpReg, InstrGRegsMap &SignatureToGReg,
+    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
+    const MachineInstr &MI) {
+  const MachineOperand *OpFunDef =
+      GR->getFunctionDefinitionByUse(&MI.getOperand(2));
+  assert(OpFunDef && OpFunDef->isReg());
+  // find the actual function definition and number it globally in advance
+  const MachineInstr *OpDefMI = OpFunDef->getParent();
+  assert(OpDefMI && OpDefMI->getOpcode() == SPIRV::OpFunction);
+  const MachineFunction *FunDefMF = OpDefMI->getParent()->getParent();
+  const MachineRegisterInfo &FunDefMRI = FunDefMF->getRegInfo();
+  do {
+    visitDecl(FunDefMRI, SignatureToGReg, GlobalToGReg, FunDefMF, *OpDefMI);
+    OpDefMI = OpDefMI->getNextNode();
+  } while (OpDefMI && (OpDefMI->getOpcode() == SPIRV::OpFunction ||
+                       OpDefMI->getOpcode() == SPIRV::OpFunctionParameter));
+  // associate the function pointer with the newly assigned global number
+  MCRegister GlobalFunDefReg =
+      MAI.getRegisterAlias(FunDefMF, OpFunDef->getReg());
+  assert(GlobalFunDefReg.isValid() &&
+         "Function definition must refer to a global register");
+  MAI.setRegisterAlias(MF, OpReg, GlobalFunDefReg);
+}
 
-  collectGlobalEntities(
-      DepsGraph, SPIRV::MB_TypeConstVars,
-      [](const SPIRV::DTSortableEntry *E) { return !E->getIsFunc(); });
+// Depth first recursive traversal of dependencies. Repeated visits are guarded
+// by MAI.hasRegisterAlias().
+void SPIRVModuleAnalysis::visitDecl(
+    const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
+    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
+    const MachineInstr &MI) {
+  unsigned Opcode = MI.getOpcode();
 
+  // Process each operand of the instruction to resolve dependencies
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || MO.isDef())
+      continue;
+    Register OpReg = MO.getReg();
+    // Handle function pointers special case
+    if (Opcode == SPIRV::OpConstantFunctionPointerINTEL &&
+        MRI.getRegClass(OpReg) == &SPIRV::pIDRegClass) {
+      visitFunPtrUse(OpReg, SignatureToGReg, GlobalToGReg, MF, MI);
+      continue;
+    }
+    // Skip already processed instructions
+    if (MAI.hasRegisterAlias(MF, MO.getReg()))
+      continue;
+    // Recursively visit dependencies
+    if (const MachineInstr *OpDefMI = MRI.getUniqueVRegDef(OpReg)) {
+      if (isDeclSection(MRI, *OpDefMI))
+        visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, *OpDefMI);
+      continue;
+    }
+    // Handle the unexpected case of no unique definition for the SPIR-V
+    // instruction
+    LLVM_DEBUG({
+      dbgs() << "Unexpectedly, no unique definition for the operand ";
+      MO.print(dbgs());
+      dbgs() << "\nInstruction: ";
+      MI.print(dbgs());
+      dbgs() << "\n";
+    });
+    report_fatal_error(
+        "No unique definition is found for the virtual register");
+  }
+
+  MCRegister GReg;
+  bool IsFunDef = false;
+  if (TII->isSpecConstantInstr(MI)) {
+    GReg = MAI.getNextIDRegister();
+    MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  } else if (Opcode == SPIRV::OpFunction ||
+             Opcode == SPIRV::OpFunctionParameter) {
+    GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
+  } else if (Opcode == SPIRV::OpTypeStruct ||
+             Opcode == SPIRV::OpConstantComposite) {
+    GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
+    const MachineInstr *NextInstr = MI.getNextNode();
+    while (NextInstr &&
+           ((Opcode == SPIRV::OpTypeStruct &&
+             NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) ||
+            (Opcode == SPIRV::OpConstantComposite &&
+             NextInstr->getOpcode() ==
+                 SPIRV::OpConstantCompositeContinuedINTEL))) {
+      MCRegister Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
+      MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
+      MAI.setSkipEmission(NextInstr);
+      NextInstr = NextInstr->getNextNode();
+    }
+  } else if (TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
+             TII->isInlineAsmDefInstr(MI)) {
+    GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
+  } else if (Opcode == SPIRV::OpVariable) {
+    GReg = handleVariable(MF, MI, GlobalToGReg);
+  } else {
+    LLVM_DEBUG({
+      dbgs() << "\nInstruction: ";
+      MI.print(dbgs());
+      dbgs() << "\n";
+    });
+    llvm_unreachable("Unexpected instruction is visited");
+  }
+  MAI.setRegisterAlias(MF, MI.getOperand(0).getReg(), GReg);
+  if (!IsFunDef)
+    MAI.setSkipEmission(&MI);
+}
+
+MCRegister SPIRVModuleAnalysis::handleFunctionOrParameter(
+    const MachineFunction *MF, const MachineInstr &MI,
+    std::map<const Value *, unsigned> &GlobalToGReg, bool &IsFunDef) {
+  const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
+  assert(GObj && "Unregistered global definition");
+  const Function *F = dyn_cast<Function>(GObj);
+  if (!F)
+    F = dyn_cast<Argument>(GObj)->getParent();
+  assert(F && "Expected a reference to a function or an argument");
+  IsFunDef = !F->isDeclaration();
+  auto [It, Inserted] = GlobalToGReg.try_emplace(GObj);
+  if (!Inserted)
+    return It->second;
+  MCRegister GReg = MAI.getNextIDRegister();
+  It->second = GReg;
+  if (!IsFunDef)
+    MAI.MS[SPIRV::MB_ExtFuncDecls].push_back(&MI);
+  return GReg;
+}
+
+MCRegister
+SPIRVModuleAnalysis::handleTypeDeclOrConstant(const MachineInstr &MI,
+                                              InstrGRegsMap &SignatureToGReg) {
+  InstrSignature MISign = instrToSignature(MI, MAI, false);
+  auto [It, Inserted] = SignatureToGReg.try_emplace(MISign);
+  if (!Inserted)
+    return It->second;
+  MCRegister GReg = MAI.getNextIDRegister();
+  It->second = GReg;
+  MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  return GReg;
+}
+
+MCRegister SPIRVModuleAnalysis::handleVariable(
+    const MachineFunction *MF, const MachineInstr &MI,
+    std::map<const Value *, unsigned> &GlobalToGReg) {
+  MAI.GlobalVarList.push_back(&MI);
+  const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
+  assert(GObj && "Unregistered global definition");
+  auto [It, Inserted] = GlobalToGReg.try_emplace(GObj);
+  if (!Inserted)
+    return It->second;
+  MCRegister GReg = MAI.getNextIDRegister();
+  It->second = GReg;
+  MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  return GReg;
+}
+
+void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
+  InstrGRegsMap SignatureToGReg;
+  std::map<const Value *, unsigned> GlobalToGReg;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     MachineFunction *MF = MMI->getMachineFunction(*F);
     if (!MF)
       continue;
-    // Iterate through and collect OpExtension/OpCapability instructions.
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    unsigned PastHeader = 0;
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() == SPIRV::OpExtension) {
-          // Here, OpExtension just has a single enum operand, not a string.
-          auto Ext = SPIRV::Extension::Extension(MI.getOperand(0).getImm());
-          MAI.Reqs.addExtension(Ext);
+        if (MI.getNumOperands() == 0)
+          continue;
+        unsigned Opcode = MI.getOpcode();
+        if (Opcode == SPIRV::OpFunction) {
+          if (PastHeader == 0) {
+            PastHeader = 1;
+            continue;
+          }
+        } else if (Opcode == SPIRV::OpFunctionParameter) {
+          if (PastHeader < 2)
+            continue;
+        } else if (PastHeader > 0) {
+          PastHeader = 2;
+        }
+
+        const MachineOperand &DefMO = MI.getOperand(0);
+        switch (Opcode) {
+        case SPIRV::OpExtension:
+          MAI.Reqs.addExtension(SPIRV::Extension::Extension(DefMO.getImm()));
           MAI.setSkipEmission(&MI);
-        } else if (MI.getOpcode() == SPIRV::OpCapability) {
-          auto Cap = SPIRV::Capability::Capability(MI.getOperand(0).getImm());
-          MAI.Reqs.addCapability(Cap);
+          break;
+        case SPIRV::OpCapability:
+          MAI.Reqs.addCapability(SPIRV::Capability::Capability(DefMO.getImm()));
           MAI.setSkipEmission(&MI);
+          if (PastHeader > 0)
+            PastHeader = 2;
+          break;
+        default:
+          if (DefMO.isReg() && isDeclSection(MRI, MI) &&
+              !MAI.hasRegisterAlias(MF, DefMO.getReg()))
+            visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
         }
       }
     }
   }
-
-  collectGlobalEntities(
-      DepsGraph, SPIRV::MB_ExtFuncDecls,
-      [](const SPIRV::DTSortableEntry *E) { return E->getIsFunc(); }, true);
 }
 
 // Look for IDs declared with Import linkage, and map the corresponding function
@@ -336,62 +544,10 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
     // Record all internal OpFunction declarations.
     Register Reg = MI.defs().begin()->getReg();
-    Register GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
+    MCRegister GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
     MAI.FuncMap[F] = GlobalReg;
   }
-}
-
-// References to a function via function pointers generate virtual
-// registers without a definition. We are able to resolve this
-// reference using Globar Register info into an OpFunction instruction
-// and replace dummy operands by the corresponding global register references.
-void SPIRVModuleAnalysis::collectFuncPtrs() {
-  for (auto &MI : MAI.MS[SPIRV::MB_TypeConstVars])
-    if (MI->getOpcode() == SPIRV::OpConstantFunctionPointerINTEL)
-      collectFuncPtrs(MI);
-}
-
-void SPIRVModuleAnalysis::collectFuncPtrs(MachineInstr *MI) {
-  const MachineOperand *FunUse = &MI->getOperand(2);
-  if (const MachineOperand *FunDef = GR->getFunctionDefinitionByUse(FunUse)) {
-    const MachineInstr *FunDefMI = FunDef->getParent();
-    assert(FunDefMI->getOpcode() == SPIRV::OpFunction &&
-           "Constant function pointer must refer to function definition");
-    Register FunDefReg = FunDef->getReg();
-    Register GlobalFunDefReg =
-        MAI.getRegisterAlias(FunDefMI->getMF(), FunDefReg);
-    assert(GlobalFunDefReg.isValid() &&
-           "Function definition must refer to a global register");
-    Register FunPtrReg = FunUse->getReg();
-    MAI.setRegisterAlias(MI->getMF(), FunPtrReg, GlobalFunDefReg);
-  }
-}
-
-using InstrSignature = SmallVector<size_t>;
-using InstrTraces = std::set<InstrSignature>;
-
-// Returns a representation of an instruction as a vector of MachineOperand
-// hash values, see llvm::hash_value(const MachineOperand &MO) for details.
-// This creates a signature of the instruction with the same content
-// that MachineOperand::isIdenticalTo uses for comparison.
-static InstrSignature instrToSignature(MachineInstr &MI,
-                                       SPIRV::ModuleAnalysisInfo &MAI) {
-  InstrSignature Signature;
-  for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
-    size_t h;
-    if (MO.isReg()) {
-      Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
-      // mimic llvm::hash_value(const MachineOperand &MO)
-      h = hash_combine(MO.getType(), (unsigned)RegAlias, MO.getSubReg(),
-                       MO.isDef());
-    } else {
-      h = hash_value(MO);
-    }
-    Signature.push_back(h);
-  }
-  return Signature;
 }
 
 // Collect the given instruction in the specified MS. We assume global register
@@ -401,8 +557,8 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
                               SPIRV::ModuleSectionType MSType, InstrTraces &IS,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
-  InstrSignature MISign = instrToSignature(MI, MAI);
-  auto FoundMI = IS.insert(MISign);
+  InstrSignature MISign = instrToSignature(MI, MAI, true);
+  auto FoundMI = IS.insert(std::move(MISign));
   if (!FoundMI.second)
     return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.
@@ -447,6 +603,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
+        } else if (TII->isAliasingInstr(MI)) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
@@ -465,7 +623,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
 
 // Number registers in all functions globally from 0 onwards and store
 // the result in global register alias table. Some registers are already
-// numbered in collectGlobalEntities.
+// numbered.
 void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
     if ((*F).isDeclaration())
@@ -480,14 +638,15 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
           Register Reg = Op.getReg();
           if (MAI.hasRegisterAlias(MF, Reg))
             continue;
-          Register NewReg = Register::index2VirtReg(MAI.getNextID());
+          MCRegister NewReg = MAI.getNextIDRegister();
           MAI.setRegisterAlias(MF, Reg, NewReg);
         }
         if (MI.getOpcode() != SPIRV::OpExtInst)
           continue;
         auto Set = MI.getOperand(2).getImm();
-        if (!MAI.ExtInstSetMap.contains(Set))
-          MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
+        auto [It, Inserted] = MAI.ExtInstSetMap.try_emplace(Set);
+        if (Inserted)
+          It->second = MAI.getNextIDRegister();
       }
     }
   }
@@ -585,8 +744,14 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
+  AvoidCapabilitiesSet AvoidCaps;
+  if (!ST.isShader())
+    AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
+
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
@@ -653,12 +818,12 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
     addAvailableCaps(EnabledCapabilities);
   }
 
-  if (ST.isOpenCLEnv()) {
+  if (!ST.isShader()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
   }
 
-  if (ST.isVulkanEnv()) {
+  if (ST.isShader()) {
     initAvailableCapabilitiesForVulkan(ST);
     return;
   }
@@ -766,6 +931,9 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   } else if (Dec == SPIRV::Decoration::NonUniformEXT) {
     Reqs.addRequirements(SPIRV::Capability::ShaderNonUniformEXT);
+  } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
   }
 }
 
@@ -815,7 +983,7 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
   }
 
   // Has optional access qualifier.
-  if (ST.isOpenCLEnv()) {
+  if (!ST.isShader()) {
     if (MI.getNumOperands() > 8 &&
         MI.getOperand(8).getImm() == SPIRV::AccessQualifier::ReadWrite)
       Reqs.addRequirements(SPIRV::Capability::ImageReadWrite);
@@ -1054,6 +1222,13 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   }
 }
 
+static bool isBFloat16Type(const SPIRVType *TypeDef) {
+  return TypeDef && TypeDef->getNumOperands() == 3 &&
+         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeDef->getOperand(1).getImm() == 16 &&
+         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::RequirementHandler &Reqs,
                           const SPIRVSubtarget &ST) {
@@ -1093,12 +1268,29 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int8);
     break;
   }
+  case SPIRV::OpDot: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
+    break;
+  }
   case SPIRV::OpTypeFloat: {
     unsigned BitWidth = MI.getOperand(1).getImm();
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
-    else if (BitWidth == 16)
-      Reqs.addCapability(SPIRV::Capability::Float16);
+    else if (BitWidth == 16) {
+      if (isBFloat16Type(&MI)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bfloat16))
+          report_fatal_error("OpTypeFloat type with bfloat requires the "
+                             "following SPIR-V extension: SPV_KHR_bfloat16",
+                             false);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+        Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::Float16);
+      }
+    }
     break;
   }
   case SPIRV::OpTypeVector: {
@@ -1113,13 +1305,14 @@ void addInstrRequirements(const MachineInstr &MI,
                                ST);
     // If it's a type of pointer to float16 targeting OpenCL, add Float16Buffer
     // capability.
-    if (!ST.isOpenCLEnv())
+    if (ST.isShader())
       break;
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
-        TypeDef->getOperand(1).getImm() == 16)
+    if ((TypeDef->getNumOperands() == 2) &&
+        (TypeDef->getOpcode() == SPIRV::OpTypeFloat) &&
+        (TypeDef->getOperand(1).getImm() == 16))
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
   }
@@ -1129,6 +1322,13 @@ void addInstrRequirements(const MachineInstr &MI,
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
     }
+    break;
+  }
+  case SPIRV::OpAliasDomainDeclINTEL:
+  case SPIRV::OpAliasScopeDeclINTEL:
+  case SPIRV::OpAliasScopeListDeclINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing);
+    Reqs.addCapability(SPIRV::Capability::MemoryAccessAliasingINTEL);
     break;
   }
   case SPIRV::OpBitReverse:
@@ -1181,7 +1381,7 @@ void addInstrRequirements(const MachineInstr &MI,
     addOpTypeImageReqs(MI, Reqs, ST);
     break;
   case SPIRV::OpTypeSampler:
-    if (!ST.isVulkanEnv()) {
+    if (!ST.isShader()) {
       Reqs.addCapability(SPIRV::Capability::ImageBasic);
     }
     break;
@@ -1244,9 +1444,7 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::Reduce:
     case SPIRV::GroupOperation::InclusiveScan:
     case SPIRV::GroupOperation::ExclusiveScan:
-      Reqs.addCapability(SPIRV::Capability::Kernel);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformArithmetic);
-      Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
       break;
     case SPIRV::GroupOperation::ClusteredReduce:
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformClustered);
@@ -1397,6 +1595,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
     }
     break;
+  case SPIRV::OpRoundFToTF32INTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_tensor_float32_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_tensor_float32_conversion);
+      Reqs.addCapability(SPIRV::Capability::TensorFloat32RoundingINTEL);
+    }
+    break;
   case SPIRV::OpVariableLengthArrayINTEL:
   case SPIRV::OpSaveMemoryINTEL:
   case SPIRV::OpRestoreMemoryINTEL:
@@ -1413,7 +1618,7 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
     break;
-  case SPIRV::OpTypeCooperativeMatrixKHR:
+  case SPIRV::OpTypeCooperativeMatrixKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error(
           "OpTypeCooperativeMatrixKHR type requires the "
@@ -1421,7 +1626,12 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
     break;
+  }
   case SPIRV::OpArithmeticFenceEXT:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
       report_fatal_error("OpArithmeticFenceEXT requires the "
@@ -1569,6 +1779,41 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixInvocationInstructionsINTEL);
     break;
+  case SPIRV::OpConvertHandleToImageINTEL:
+  case SPIRV::OpConvertHandleToSamplerINTEL:
+  case SPIRV::OpConvertHandleToSampledImageINTEL:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
+      report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
+                         "instructions require the following SPIR-V extension: "
+                         "SPV_INTEL_bindless_images",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
+    Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
+    break;
+  case SPIRV::OpSubgroup2DBlockLoadINTEL:
+  case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL:
+  case SPIRV::OpSubgroup2DBlockLoadTransformINTEL:
+  case SPIRV::OpSubgroup2DBlockPrefetchINTEL:
+  case SPIRV::OpSubgroup2DBlockStoreINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_2d_block_io))
+      report_fatal_error("OpSubgroup2DBlock[Load/LoadTranspose/LoadTransform/"
+                         "Prefetch/Store]INTEL instructions require the "
+                         "following SPIR-V extension: SPV_INTEL_2d_block_io",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_2d_block_io);
+    Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockIOINTEL);
+
+    const auto OpCode = MI.getOpcode();
+    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransposeINTEL) {
+      Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransposeINTEL);
+      break;
+    }
+    if (OpCode == SPIRV::OpSubgroup2DBlockLoadTransformINTEL) {
+      Reqs.addCapability(SPIRV::Capability::Subgroup2DBlockTransformINTEL);
+      break;
+    }
+    break;
+  }
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
   } break;
@@ -1584,20 +1829,81 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot:
+  case SPIRV::OpSUDot:
+  case SPIRV::OpSDotAccSat:
+  case SPIRV::OpUDotAccSat:
+  case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
-    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
-    if (isImageTypeWithUnknownFormat(TypeDef))
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
+        ImageReg, const_cast<MachineFunction *>(MI.getMF()));
+    // OpImageRead and OpImageWrite can use Unknown Image Formats
+    // when the Kernel capability is declared. In the OpenCL environment we are
+    // not allowed to produce
+    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
+    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+
+    if (isImageTypeWithUnknownFormat(TypeDef) && ST.isShader())
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
   case SPIRV::OpImageWrite: {
     Register ImageReg = MI.getOperand(0).getReg();
-    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
-    if (isImageTypeWithUnknownFormat(TypeDef))
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
+        ImageReg, const_cast<MachineFunction *>(MI.getMF()));
+    // OpImageRead and OpImageWrite can use Unknown Image Formats
+    // when the Kernel capability is declared. In the OpenCL environment we are
+    // not allowed to produce
+    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
+    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+
+    if (isImageTypeWithUnknownFormat(TypeDef) && ST.isShader())
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
+    break;
+  }
+  case SPIRV::OpTypeStructContinuedINTEL:
+  case SPIRV::OpConstantCompositeContinuedINTEL:
+  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
+  case SPIRV::OpCompositeConstructContinuedINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_long_composites))
+      report_fatal_error(
+          "Continued instructions require the "
+          "following SPIR-V extension: SPV_INTEL_long_composites",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_long_composites);
+    Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
+    break;
+  }
+  case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate))
+      report_fatal_error(
+          "OpSubgroupMatrixMultiplyAccumulateINTEL instruction requires the "
+          "following SPIR-V "
+          "extension: SPV_INTEL_subgroup_matrix_multiply_accumulate",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
+    Reqs.addCapability(
+        SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
+    break;
+  }
+  case SPIRV::OpBitwiseFunctionINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_ternary_bitwise_function))
+      report_fatal_error(
+          "OpBitwiseFunctionINTEL instruction requires the following SPIR-V "
+          "extension: SPV_INTEL_ternary_bitwise_function",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_ternary_bitwise_function);
+    Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
+    break;
+  }
+  case SPIRV::OpCopyMemorySized: {
+    Reqs.addCapability(SPIRV::Capability::Addresses);
+    // TODO: Add UntypedPointersKHR when implemented.
     break;
   }
 
@@ -1699,12 +2005,12 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::ExecutionMode::VecTypeHint, ST);
 
     if (F.hasOptNone()) {
-      if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
-        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
-        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
-      } else if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+      if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
         MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
         MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+      } else if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
       }
     }
   }
@@ -1723,6 +2029,14 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
   if (I.getFlag(MachineInstr::MIFlag::FmReassoc))
     Flags |= SPIRV::FPFastMathMode::Fast;
   return Flags;
+}
+
+static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
+  if (ST.isKernel())
+    return true;
+  if (ST.getSPIRVVersion() < VersionTuple(1, 2))
+    return false;
+  return ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
 }
 
 static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
@@ -1748,8 +2062,12 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   unsigned FMFlags = getFastMathFlags(I);
   if (FMFlags == SPIRV::FPFastMathMode::None)
     return;
-  Register DstReg = I.getOperand(0).getReg();
-  buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
+
+  if (isFastMathMathModeAvailable(ST)) {
+    Register DstReg = I.getOperand(0).getReg();
+    buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode,
+                    {FMFlags});
+  }
 }
 
 // Walk all functions and add decorations related to MI flags.
@@ -1781,7 +2099,7 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
       Register Reg = MRI.createGenericVirtualRegister(LLT::scalar(64));
       MRI.setRegClass(Reg, &SPIRV::IDRegClass);
       buildOpName(Reg, MBB.getName(), *std::prev(MBB.end()), TII);
-      Register GlobalReg = MAI.getOrCreateMBBRegister(MBB);
+      MCRegister GlobalReg = MAI.getOrCreateMBBRegister(MBB);
       MAI.setRegisterAlias(MF, Reg, GlobalReg);
     }
   }
@@ -1795,9 +2113,7 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
     if (!MF)
       continue;
     for (auto &MBB : *MF) {
-      for (MachineInstr &MI : MBB) {
-        if (MI.getOpcode() != TargetOpcode::PHI)
-          continue;
+      for (MachineInstr &MI : MBB.phis()) {
         MI.setDesc(TII.get(SPIRV::OpPhi));
         Register ResTypeReg = GR->getSPIRVTypeID(
             GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg(), MF));
@@ -1805,6 +2121,8 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
                   {MachineOperand::CreateReg(ResTypeReg, false)});
       }
     }
+
+    MF->getProperties().setNoPHIs();
   }
 }
 
@@ -1835,14 +2153,11 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  processDefInstrs(M);
+  collectReqs(M, MAI, MMI, *ST);
+  collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);
-
-  // Update references to OpFunction instructions to use Global Registers
-  if (GR->hasConstFunPtr())
-    collectFuncPtrs();
 
   // Collect OpName, OpEntryPoint, OpDecorate etc, process other instructions.
   processOtherInstrs(M);

@@ -170,40 +170,24 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   for (unsigned i = 0; i < N; ++i)
     BalancingQueue.push(std::make_pair(i, 0));
 
-  using SortType = std::pair<unsigned, ClusterMapType::iterator>;
-
-  SmallVector<SortType, 64> Sets;
   SmallPtrSet<const GlobalValue *, 32> Visited;
 
   // To guarantee determinism, we have to sort SCC according to size.
   // When size is the same, use leader's name.
-  for (ClusterMapType::iterator I = GVtoClusterMap.begin(),
-                                E = GVtoClusterMap.end();
-       I != E; ++I)
-    if (I->isLeader())
-      Sets.push_back(
-          std::make_pair(std::distance(GVtoClusterMap.member_begin(I),
-                                       GVtoClusterMap.member_end()),
-                         I));
+  for (const auto &C : GVtoClusterMap) {
+    if (!C->isLeader())
+      continue;
 
-  llvm::sort(Sets, [](const SortType &a, const SortType &b) {
-    if (a.first == b.first)
-      return a.second->getData()->getName() > b.second->getData()->getName();
-    else
-      return a.first > b.first;
-  });
-
-  for (auto &I : Sets) {
     unsigned CurrentClusterID = BalancingQueue.top().first;
     unsigned CurrentClusterSize = BalancingQueue.top().second;
     BalancingQueue.pop();
 
     LLVM_DEBUG(dbgs() << "Root[" << CurrentClusterID << "] cluster_size("
-                      << I.first << ") ----> " << I.second->getData()->getName()
-                      << "\n");
+                      << std::distance(GVtoClusterMap.member_begin(*C),
+                                       GVtoClusterMap.member_end())
+                      << ") ----> " << C->getData()->getName() << "\n");
 
-    for (ClusterMapType::member_iterator MI =
-             GVtoClusterMap.findLeader(I.second);
+    for (ClusterMapType::member_iterator MI = GVtoClusterMap.findLeader(*C);
          MI != GVtoClusterMap.member_end(); ++MI) {
       if (!Visited.insert(*MI).second)
         continue;

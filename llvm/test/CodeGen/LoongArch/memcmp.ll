@@ -12,7 +12,8 @@ define signext i32 @test1(ptr %buffer1, ptr %buffer2) {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 1, -8
 ; CHECK-NEXT:    ori $a2, $zero, 16
-; CHECK-NEXT:    bl %plt(memcmp)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(memcmp)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret

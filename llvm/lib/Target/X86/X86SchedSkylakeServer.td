@@ -70,6 +70,12 @@ def SKXPortAny : ProcResGroup<[SKXPort0, SKXPort1, SKXPort2, SKXPort3, SKXPort4,
   let BufferSize=60;
 }
 
+// Skylake can retire up to four (potentially fused) uops per cycle. Set the
+// limit to twice that given we do not model fused uops as only taking up one
+// retirement slot. I could not find any documented sources on how many
+// in-flight micro-ops can be tracked.
+def SKXRCU : RetireControlUnit<0, 8>;
+
 // Integer loads are 5 cycles, so ReadAfterLd registers needn't be available until 5
 // cycles after the memory operand.
 def : ReadAdvance<ReadAfterLd, 5>;

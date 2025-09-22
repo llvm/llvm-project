@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2c,post2b -fcxx-exceptions
 // RUN: not %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -emit-llvm-only -fcxx-exceptions
 
-struct S { int a, b, c; };
+struct S { int a, b, c; }; // expected-note 2 {{'S::a' declared here}}
 
 // A simple-declaration can be a decompsition declaration.
 namespace SimpleDecl {
@@ -32,21 +32,21 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
+  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error 1+{{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.
     // See commentary in test/Parser/decomposed-condition.cpp
-    for (; auto [a, b, c] = S(); ) {} // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
-    if (auto [a, b, c] = S()) {} // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
-    if (int n; auto [a, b, c] = S()) {} // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
-    switch (auto [a, b, c] = S()) {} // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{statement requires expression of integer type ('S' invalid)}}
-    switch (int n; auto [a, b, c] = S()) {} // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{statement requires expression of integer type ('S' invalid)}}
-    while (auto [a, b, c] = S()) {} // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
+    for (; auto [a, b, c] = S(); ) {} // pre2c-warning {{structured binding declaration in a condition is a C++2c extension}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
+    if (auto [a, b, c] = S()) {} // pre2c-warning {{structured binding declaration in a condition is a C++2c extension}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
+    if (int n; auto [a, b, c] = S()) {} // pre2c-warning {{structured binding declaration in a condition is a C++2c extension}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
+    switch (auto [a, b, c] = S()) {} // pre2c-warning {{structured binding declaration in a condition is a C++2c extension}} expected-error {{statement requires expression of integer type ('S' invalid)}}
+    switch (int n; auto [a, b, c] = S()) {} // pre2c-warning {{structured binding declaration in a condition is a C++2c extension}} expected-error {{statement requires expression of integer type ('S' invalid)}}
+    while (auto [a, b, c] = S()) {} // pre2c-warning {{structured binding declaration in a condition is a C++2c extension}} expected-error {{value of type 'S' is not contextually convertible to 'bool'}}
 
     // An exception-declaration is not a simple-declaration.
     try {}
-    catch (auto [a, b, c]) {} // expected-error {{'auto' not allowed in exception declaration}} expected-error {{'a'}}
+    catch (auto [a, b, c]) {} // expected-error {{'auto' not allowed in exception declaration}} expected-error 1+{{'a'}}
   }
 
   // A member-declaration is not a simple-declaration.
@@ -136,8 +136,8 @@ namespace MultiDeclarator {
 
 namespace Template {
   int n[3];
-  // FIXME: There's no actual rule against this...
-  template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration template not supported}}
+  // Structured binding template is not allowed.
+  template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration cannot be a template}}
 }
 
 namespace Init {

@@ -22,3 +22,24 @@
 using namespace llvm;
 
 DirectXRegisterInfo::~DirectXRegisterInfo() {}
+
+const MCPhysReg *
+DirectXRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+  return nullptr;
+}
+BitVector
+DirectXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+  return BitVector(getNumRegs());
+}
+
+bool DirectXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                              int SPAdj, unsigned FIOperandNum,
+                                              RegScavenger *RS) const {
+  return false;
+}
+
+// Debug information queries.
+Register
+DirectXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+  return Register();
+}

@@ -10,18 +10,12 @@
 
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTAFFINEFORTOGPU
-#define GEN_PASS_DEF_CONVERTPARALLELLOOPTOGPU
+#define GEN_PASS_DEF_CONVERTAFFINEFORTOGPUPASS
+#define GEN_PASS_DEF_CONVERTPARALLELLOOPTOGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -32,12 +26,9 @@ namespace {
 // A pass that traverses top-level loops in the function and converts them to
 // GPU launch operations.  Nested launches are not allowed, so this does not
 // walk the function recursively to avoid considering nested loops.
-struct ForLoopMapper : public impl::ConvertAffineForToGPUBase<ForLoopMapper> {
-  ForLoopMapper() = default;
-  ForLoopMapper(unsigned numBlockDims, unsigned numThreadDims) {
-    this->numBlockDims = numBlockDims;
-    this->numThreadDims = numThreadDims;
-  }
+struct ForLoopMapper
+    : public impl::ConvertAffineForToGPUPassBase<ForLoopMapper> {
+  using Base::Base;
 
   void runOnOperation() override {
     for (Operation &op : llvm::make_early_inc_range(
@@ -52,7 +43,7 @@ struct ForLoopMapper : public impl::ConvertAffineForToGPUBase<ForLoopMapper> {
 };
 
 struct ParallelLoopToGpuPass
-    : public impl::ConvertParallelLoopToGpuBase<ParallelLoopToGpuPass> {
+    : public impl::ConvertParallelLoopToGpuPassBase<ParallelLoopToGpuPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateParallelLoopToGPUPatterns(patterns);
@@ -67,16 +58,3 @@ struct ParallelLoopToGpuPass
 };
 
 } // namespace
-
-std::unique_ptr<InterfacePass<FunctionOpInterface>>
-mlir::createAffineForToGPUPass(unsigned numBlockDims, unsigned numThreadDims) {
-  return std::make_unique<ForLoopMapper>(numBlockDims, numThreadDims);
-}
-std::unique_ptr<InterfacePass<FunctionOpInterface>>
-mlir::createAffineForToGPUPass() {
-  return std::make_unique<ForLoopMapper>();
-}
-
-std::unique_ptr<Pass> mlir::createParallelLoopToGpuPass() {
-  return std::make_unique<ParallelLoopToGpuPass>();
-}

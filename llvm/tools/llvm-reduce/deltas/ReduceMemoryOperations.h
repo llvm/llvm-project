@@ -9,12 +9,12 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEMEMORYOPERATIONS_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEMEMORYOPERATIONS_H
 
-#include "TestRunner.h"
+#include "Delta.h"
 
 namespace llvm {
-void reduceVolatileInstructionsDeltaPass(TestRunner &Test);
-void reduceAtomicSyncScopesDeltaPass(TestRunner &Test);
-void reduceAtomicOrderingDeltaPass(TestRunner &Test);
+void reduceVolatileInstructionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceAtomicSyncScopesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceAtomicOrderingDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

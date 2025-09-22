@@ -1,3 +1,22 @@
+#ifndef std_move
+#define std_move
+
+namespace std {
+
+template <typename T> struct remove_reference {
+typedef T type;
+};
+
+template <typename T> struct remove_reference<T&> {
+typedef T type;
+};
+
+template<typename T> typename remove_reference<T>::type&& move(T&& t);
+
+}
+
+#endif
+
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
 
@@ -74,7 +93,10 @@ template<typename T> struct DefaultRefDerefTraits {
 template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> struct Ref {
   typename PtrTraits::StorageType t;
 
+  enum AdoptTag { Adopt };
+
   Ref() : t{} {};
+  Ref(T &t, AdoptTag) : t(&t) { }
   Ref(T &t) : t(&RefDerefTraits::ref(t)) { }
   Ref(const Ref& o) : t(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.t))) { }
   Ref(Ref&& o) : t(o.leakRef()) { }
@@ -101,10 +123,19 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   T* leakRef() { return PtrTraits::exchange(t, nullptr); }
 };
 
+template <typename T> Ref<T> adoptRef(T& t) {
+  using Ref = Ref<T>;
+  return Ref(t, Ref::Adopt);
+}
+
+template<typename T> class RefPtr;
+template<typename T> RefPtr<T> adoptRef(T*);
+
 template <typename T> struct RefPtr {
   T *t;
 
-  RefPtr() : t(new T) {}
+  RefPtr() : t(nullptr) { }
+
   RefPtr(T *t)
     : t(t) {
     if (t)
@@ -113,6 +144,26 @@ template <typename T> struct RefPtr {
   RefPtr(Ref<T>&& o)
     : t(o.leakRef())
   { }
+  RefPtr(RefPtr&& o)
+    : t(o.t)
+  {
+    o.t = nullptr;
+  }
+  RefPtr(const RefPtr& o)
+    : t(o.t)
+  {
+    if (t)
+      t->ref();
+  }
+  RefPtr operator=(const RefPtr& o)
+  {
+    if (t)
+      t->deref();
+    t = o.t;
+    if (t)
+      t->ref();
+    return *this;
+  }
   ~RefPtr() {
     if (t)
       t->deref();
@@ -138,7 +189,18 @@ template <typename T> struct RefPtr {
     return *this;
   }
   operator bool() const { return t; }
+
+private:
+  friend RefPtr adoptRef<T>(T*);
+
+  // call_with_adopt_ref in call-args.cpp requires this method to be private.
+  enum AdoptTag { Adopt };
+  RefPtr(T *t, AdoptTag) : t(t) { }
 };
+
+template <typename T> RefPtr<T> adoptRef(T* t) {
+  return RefPtr<T>(t, RefPtr<T>::Adopt);
+}
 
 template <typename T> bool operator==(const RefPtr<T> &, const RefPtr<T> &) {
   return false;
@@ -206,7 +268,7 @@ public:
   T *get() const { return t; }
   T *operator->() const { return t; }
   T &operator*() const { return *t; }
-  CheckedPtr &operator=(T *) { return *this; }
+  CheckedPtr &operator=(T *);
   operator bool() const { return t; }
 };
 
@@ -246,6 +308,7 @@ public:
     u.t = nullptr;
   }
   T &get() const { return *t; }
+  operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
 };

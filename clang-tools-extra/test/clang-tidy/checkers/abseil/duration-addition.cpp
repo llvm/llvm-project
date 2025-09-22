@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s abseil-duration-addition %t -- -- -I%S/Inputs
+// RUN: %check_clang_tidy --match-partial-fixes %s abseil-duration-addition %t -- -- -I%S/Inputs
 
 #include "absl/time/time.h"
 

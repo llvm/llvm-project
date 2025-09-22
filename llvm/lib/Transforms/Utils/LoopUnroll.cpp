@@ -41,6 +41,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -60,11 +61,9 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <assert.h>
 #include <numeric>
 #include <type_traits>
@@ -110,6 +109,9 @@ UnrollVerifyLoopInfo("unroll-verify-loopinfo", cl::Hidden,
 #endif
                     );
 
+static cl::opt<bool> UnrollAddParallelReductions(
+    "unroll-add-parallel-reductions", cl::init(false), cl::Hidden,
+    cl::desc("Allow unrolling to add parallel reduction phis."));
 
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
@@ -590,10 +592,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(
-          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
-          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-          PreserveLCSSA, ULO.SCEVExpansionBudget, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
+                                  EpilogProfitability, ULO.UnrollRemainder,
+                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
+                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -661,6 +664,41 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     OrigPHINode.push_back(cast<PHINode>(I));
   }
 
+  // Collect phi nodes for reductions for which we can introduce multiple
+  // parallel reduction phis and compute the final reduction result after the
+  // loop. This requires a single exit block after unrolling. This is ensured by
+  // restricting to single-block loops where the unrolled iterations are known
+  // to not exit.
+  DenseMap<PHINode *, RecurrenceDescriptor> Reductions;
+  bool CanAddAdditionalAccumulators =
+      (UnrollAddParallelReductions.getNumOccurrences() > 0
+           ? UnrollAddParallelReductions
+           : ULO.AddAdditionalAccumulators) &&
+      !CompletelyUnroll && L->getNumBlocks() == 1 &&
+      (ULO.Runtime ||
+       (ExitInfos.contains(Header) && ((ExitInfos[Header].TripCount != 0 &&
+                                        ExitInfos[Header].BreakoutTrip == 0))));
+
+  // Limit parallelizing reductions to unroll counts of 4 or less for now.
+  // TODO: The number of parallel reductions should depend on the number of
+  // execution units. We also don't have to add a parallel reduction phi per
+  // unrolled iteration, but could for example add a parallel phi for every 2
+  // unrolled iterations.
+  if (CanAddAdditionalAccumulators && ULO.Count <= 4) {
+    for (PHINode &Phi : Header->phis()) {
+      auto RdxDesc = canParallelizeReductionWhenUnrolling(Phi, L, SE);
+      if (!RdxDesc)
+        continue;
+
+      // Only handle duplicate phis for a single reduction for now.
+      // TODO: Handle any number of reductions
+      if (!Reductions.empty())
+        continue;
+
+      Reductions[&Phi] = *RdxDesc;
+    }
+  }
+
   std::vector<BasicBlock *> Headers;
   std::vector<BasicBlock *> Latches;
   Headers.push_back(Header);
@@ -683,8 +721,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // share the same exit blocks). We'll keep track of loops for which we can
   // break this so that later we can re-simplify them.
   SmallSetVector<Loop *, 4> LoopsToSimplify;
-  for (Loop *SubLoop : *L)
-    LoopsToSimplify.insert(SubLoop);
+  LoopsToSimplify.insert_range(*L);
 
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
@@ -712,6 +749,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // latch.  This is a reasonable default placement if we don't have block
   // frequencies, and if we do, well the layout will be adjusted later.
   auto BlockInsertPt = std::next(LatchBlock->getIterator());
+  SmallVector<Instruction *> PartialReductions;
   for (unsigned It = 1; It != ULO.Count; ++It) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -735,6 +773,31 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         for (PHINode *OrigPHI : OrigPHINode) {
           PHINode *NewPHI = cast<PHINode>(VMap[OrigPHI]);
           Value *InVal = NewPHI->getIncomingValueForBlock(LatchBlock);
+
+          // Use cloned phis as parallel phis for partial reductions, which will
+          // get combined to the final reduction result after the loop.
+          if (Reductions.contains(OrigPHI)) {
+            // Collect partial  reduction results.
+            if (PartialReductions.empty())
+              PartialReductions.push_back(cast<Instruction>(InVal));
+            PartialReductions.push_back(cast<Instruction>(VMap[InVal]));
+
+            // Update the start value for the cloned phis to use the identity
+            // value for the reduction.
+            const RecurrenceDescriptor &RdxDesc = Reductions[OrigPHI];
+            NewPHI->setIncomingValueForBlock(
+                L->getLoopPreheader(),
+                getRecurrenceIdentity(RdxDesc.getRecurrenceKind(),
+                                      OrigPHI->getType(),
+                                      RdxDesc.getFastMathFlags()));
+
+            // Update NewPHI to use the cloned value for the iteration and move
+            // to header.
+            NewPHI->replaceUsesOfWith(InVal, VMap[InVal]);
+            NewPHI->moveBefore(OrigPHI->getIterator());
+            continue;
+          }
+
           if (Instruction *InValI = dyn_cast<Instruction>(InVal))
             if (It > 1 && L->contains(InValI))
               InVal = LastValueMap[InValI];
@@ -751,6 +814,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           VMap.erase(it);
         }
       }
+
+      // Remap source location atom instance. Do this now, rather than
+      // when we remap instructions, because remap is called once we've
+      // cloned all blocks (all the clones would get the same atom
+      // number).
+      if (!VMap.AtomMap.empty())
+        for (Instruction &I : *New)
+          RemapSourceAtom(&I, VMap);
 
       // Update our running map of newest clones
       LastValueMap[*BB] = New;
@@ -802,7 +873,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       }
     }
 
-    // Remap all instructions in the most recent iteration
+    // Remap all instructions in the most recent iteration.
+    // Key Instructions: Nothing to do - we've already remapped the atoms.
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks)
       for (Instruction &I : *NewBlock)
@@ -825,6 +897,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       PN->eraseFromParent();
     } else if (ULO.Count > 1) {
+      if (Reductions.contains(PN))
+        continue;
+
       Value *InVal = PN->removeIncomingValue(LatchBlock, false);
       // If this value was defined in the loop, take the value defined by the
       // last iteration of the loop.
@@ -997,9 +1072,41 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                     /*PredecessorWithTwoSuccessors=*/false,
                                     DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
-        std::replace(Latches.begin(), Latches.end(), Dest, Fold);
+        llvm::replace(Latches, Dest, Fold);
         llvm::erase(UnrolledLoopBlocks, Dest);
       }
+    }
+  }
+
+  // If there are partial reductions, create code in the exit block to compute
+  // the final result and update users of the final result.
+  if (!PartialReductions.empty()) {
+    BasicBlock *ExitBlock = L->getExitBlock();
+    assert(ExitBlock &&
+           "Can only introduce parallel reduction phis with single exit block");
+    assert(Reductions.size() == 1 &&
+           "currently only a single reduction is supported");
+    Value *FinalRdxValue = PartialReductions.back();
+    Value *RdxResult = nullptr;
+    for (PHINode &Phi : ExitBlock->phis()) {
+      if (Phi.getIncomingValueForBlock(L->getLoopLatch()) != FinalRdxValue)
+        continue;
+      if (!RdxResult) {
+        RdxResult = PartialReductions.front();
+        IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
+        for (Instruction *RdxPart : drop_begin(PartialReductions)) {
+          RdxResult = Builder.CreateBinOp(
+              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+              RdxPart, RdxResult, "bin.rdx");
+        }
+        NeedToFixLCSSA = true;
+        for (Instruction *RdxPart : PartialReductions)
+          RdxPart->dropPoisonGeneratingFlags();
+      }
+
+      Phi.replaceAllUsesWith(RdxResult);
+      continue;
     }
   }
 
@@ -1103,4 +1210,42 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
       return MD;
   }
   return nullptr;
+}
+
+std::optional<RecurrenceDescriptor>
+llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
+                                           ScalarEvolution *SE) {
+  RecurrenceDescriptor RdxDesc;
+  if (!RecurrenceDescriptor::isReductionPHI(&Phi, L, RdxDesc,
+                                            /*DemandedBits=*/nullptr,
+                                            /*AC=*/nullptr, /*DT=*/nullptr, SE))
+    return std::nullopt;
+  RecurKind RK = RdxDesc.getRecurrenceKind();
+  // Skip unsupported reductions.
+  // TODO: Handle additional reductions, including FP and min-max
+  // reductions.
+  if (!RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+    return std::nullopt;
+
+  if (RdxDesc.IntermediateStore)
+    return std::nullopt;
+
+  // Don't unroll reductions with constant ops; those can be folded to a
+  // single induction update.
+  if (any_of(cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()))
+                 ->operands(),
+             IsaPred<Constant>))
+    return std::nullopt;
+
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch ||
+      !is_contained(
+          cast<Instruction>(Phi.getIncomingValueForBlock(Latch))->operands(),
+          &Phi))
+    return std::nullopt;
+
+  return RdxDesc;
 }

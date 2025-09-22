@@ -143,7 +143,7 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr nocapture readonly swiftasync %0, ptr %1, ptr nocapture readnone %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr readonly swiftasync captures(none) %0, ptr %1, ptr readnone captures(none) %2)
 ; CHECK-O0-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr swiftasync %0, ptr %1, ptr %2)
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
@@ -228,7 +228,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr nocapture readnone %1, ptr nocapture readonly %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr readnone captures(none) %1, ptr readonly captures(none) %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT:%.*]] = load ptr, ptr %2
@@ -238,7 +238,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr nocapture readonly %0, ptr %1, ptr nocapture readnone %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr readonly captures(none) %0, ptr %1, ptr readnone captures(none) %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}%1)
 ; CHECK: ret void
@@ -495,6 +495,35 @@ entry:
 ; CHECK-NOT: @llvm.coro.async.resume
 ; CHECK: call void @use(ptr null)
 ; CHECK: ret
+
+@simpleFuncTu = global <{i32, i32}> <{
+  i32 trunc (i64 sub (i64 ptrtoint (ptr @simpleFunc to i64),
+             i64 ptrtoint (ptr @simpleFuncTu to i64)) to i32), i32 16 }>
+
+define swifttailcc void @simpleFunc(ptr swiftasync %0) presplitcoroutine {
+entry:
+  %1 = alloca ptr, align 8
+  %2 = call token @llvm.coro.id.async(i32 16, i32 16, i32 0, ptr @simpleFuncTu)
+  %3 = call ptr @llvm.coro.begin(token %2, ptr null)
+  store ptr %0, ptr %1, align 8
+  %4 = load ptr, ptr %1, align 8
+  %5 = getelementptr inbounds <{ ptr, ptr }>, ptr %4, i32 0, i32 1
+  %6 = load ptr, ptr %5, align 8
+  %7 = load ptr, ptr %1, align 8
+  %8 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %3, i1 false, ptr @simpleFunc.0, ptr %6, ptr %7)
+  unreachable
+}
+
+; CHECK-LABEL: define swifttailcc void @simpleFunc(ptr swiftasync %0) {
+; CHECK-NOT: define
+; CHECK:  [[RESUME:%.*]] = load ptr
+; CHECK:  musttail call swifttailcc void [[RESUME]]
+
+define internal swifttailcc void @simpleFunc.0(ptr %0, ptr %1) alwaysinline {
+entry:
+  musttail call swifttailcc void %0(ptr swiftasync %1)
+  ret void
+}
 
 declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, ptr, ptr, ...)
 declare ptr @llvm.coro.prepare.async(ptr)

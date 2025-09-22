@@ -10,9 +10,12 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadJumpTestCase(TestBase):
+    def setUp(self):
+        TestBase.setUp(self)
+        self.build()
+
     def test(self):
         """Test thread jump handling."""
-        self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
@@ -61,6 +64,72 @@ class ThreadJumpTestCase(TestBase):
             error=True,
             substrs=["error"],
         )
+
+    @expectedFailureAll(compiler="clang", compiler_version=["<", "17.0"])
+    def test_jump_offset(self):
+        """Test Thread Jump by negative or positive offset"""
+        exe = self.getBuildArtifact("a.out")
+        file_name = "main.cpp"
+        self.runCmd(f"target create {exe}", CURRENT_EXECUTABLE_SET)
+
+        pos_jump = line_number(file_name, "// jump_offset 1")
+        neg_jump = line_number(file_name, "// jump_offset 2")
+        pos_breakpoint = line_number(file_name, "// breakpoint 1")
+        neg_breakpoint = line_number(file_name, "// breakpoint 2")
+        pos_jump_offset = pos_jump - pos_breakpoint
+        neg_jump_offset = neg_jump - neg_breakpoint
+
+        var_1, var_1_value = ("var_1", "10")
+        var_2, var_2_value = ("var_2", "40")
+        var_3, var_3_value = ("var_3", "10")
+
+        # create pos_breakpoint and neg_breakpoint
+        lldbutil.run_break_set_by_file_and_line(
+            self, file_name, pos_breakpoint, num_expected_locations=1
+        )
+        lldbutil.run_break_set_by_file_and_line(
+            self, file_name, neg_breakpoint, num_expected_locations=1
+        )
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # test positive jump
+        # The stop reason of the thread should be breakpoint 1.
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT + " 1",
+            substrs=[
+                "stopped",
+                f"{file_name}:{pos_breakpoint}",
+                "stop reason = breakpoint 1",
+            ],
+        )
+
+        self.runCmd(f"thread jump --by +{pos_jump_offset}")
+        self.expect("process status", substrs=[f"at {file_name}:{pos_jump}"])
+        self.expect(f"print {var_1}", substrs=[var_1_value])
+
+        self.runCmd("thread step-over")
+        self.expect(f"print {var_2}", substrs=[var_2_value])
+
+        self.runCmd("continue")
+
+        # test negative jump
+        # The stop reason of the thread should be breakpoint 1.
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT + " 2",
+            substrs=[
+                "stopped",
+                f"{file_name}:{neg_breakpoint}",
+                "stop reason = breakpoint 2",
+            ],
+        )
+
+        self.runCmd(f"thread jump --by {neg_jump_offset}")
+        self.expect("process status", substrs=[f"at {file_name}:{neg_jump}"])
+        self.runCmd("thread step-over")
+        self.expect(f"print {var_3}", substrs=[var_3_value])
 
     def do_min_test(self, start, jump, var, value):
         # jump to the start marker

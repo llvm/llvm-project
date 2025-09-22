@@ -47,8 +47,7 @@ lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
                            return Complete(R.takeError());
                          Result.push_back({});
                          Result.back().reserve(R->size());
-                         for (auto Addr : *R)
-                           Result.back().push_back(Addr);
+                         llvm::append_range(Result.back(), *R);
 
                          lookupSymbolsAsyncHelper(
                              DylibMgr, Request.drop_front(), std::move(Result),
@@ -225,7 +224,7 @@ SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
 }
 
-Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
+Expected<std::unique_ptr<MemoryAccess>>
 SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
   EPCGenericMemoryAccess::FuncAddrs FAs;
   if (auto Err = SREPC.getBootstrapSymbols(
@@ -234,7 +233,13 @@ SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
            {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
            {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
            {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName}}))
+           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
+           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
+           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
+           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
+           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
+           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
+           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
     return std::move(Err);
 
   return std::make_unique<EPCGenericMemoryAccess>(SREPC, FAs);

@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <new>
@@ -66,6 +67,21 @@ static void BM_StringCtorDefault(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_StringCtorDefault);
+
+static void BM_StringResizeAndOverwrite(benchmark::State& state) {
+  std::string str;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(str);
+    str.resize_and_overwrite(10, [](char* ptr, size_t n) {
+      std::fill_n(ptr, n, 'a');
+      return n;
+    });
+    benchmark::DoNotOptimize(str);
+    str.clear();
+  }
+}
+BENCHMARK(BM_StringResizeAndOverwrite);
 
 enum class Length { Empty, Small, Large, Huge };
 struct AllLengths : EnumValuesAsTuple<AllLengths, Length, 4> {
@@ -235,29 +251,6 @@ struct StringMove {
   }
 
   static std::string name() { return "BM_StringMove" + Length::name(); }
-};
-
-template <class Length, class Opaque>
-struct StringResizeDefaultInit {
-  static void run(benchmark::State& state) {
-    constexpr bool opaque     = Opaque{} == Opacity::Opaque;
-    constexpr int kNumStrings = 4 << 10;
-    size_t length             = makeString(Length()).size();
-    std::string strings[kNumStrings];
-    while (state.KeepRunningBatch(kNumStrings)) {
-      state.PauseTiming();
-      for (int i = 0; i < kNumStrings; ++i) {
-        std::string().swap(strings[i]);
-      }
-      benchmark::DoNotOptimize(strings);
-      state.ResumeTiming();
-      for (int i = 0; i < kNumStrings; ++i) {
-        strings[i].__resize_default_init(maybeOpaque(length, opaque));
-      }
-    }
-  }
-
-  static std::string name() { return "BM_StringResizeDefaultInit" + Length::name() + Opaque::name(); }
 };
 
 template <class Length, class Opaque>
@@ -577,7 +570,6 @@ int main(int argc, char** argv) {
   makeCartesianProductBenchmark<StringCopy, AllLengths>();
   makeCartesianProductBenchmark<StringMove, AllLengths>();
   makeCartesianProductBenchmark<StringDestroy, AllLengths>();
-  makeCartesianProductBenchmark<StringResizeDefaultInit, AllLengths, AllOpacity>();
   makeCartesianProductBenchmark<StringEraseToEnd, AllLengths, AllOpacity>();
   makeCartesianProductBenchmark<StringEraseWithMove, AllLengths, AllOpacity>();
   makeCartesianProductBenchmark<StringRelational, AllRelations, AllLengths, AllLengths, AllDiffTypes>();

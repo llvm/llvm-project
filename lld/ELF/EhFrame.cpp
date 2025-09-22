@@ -21,10 +21,7 @@
 #include "InputSection.h"
 #include "Relocations.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Strings.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Object/ELF.h"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -41,11 +38,10 @@ public:
   bool hasLSDA();
 
 private:
-  template <class P> void failOn(const P *loc, const Twine &msg) {
+  template <class P> void errOn(const P *loc, const Twine &msg) {
     Ctx &ctx = isec->file->ctx;
-    Fatal(ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
-               << isec->getObjMsg((const uint8_t *)loc -
-                                  isec->content().data());
+    Err(ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
+             << isec->getObjMsg((const uint8_t *)loc - isec->content().data());
   }
 
   uint8_t readByte();
@@ -62,8 +58,10 @@ private:
 
 // Read a byte and advance D by one byte.
 uint8_t EhReader::readByte() {
-  if (d.empty())
-    failOn(d.data(), "unexpected end of CIE");
+  if (d.empty()) {
+    errOn(d.data(), "unexpected end of CIE");
+    return 0;
+  }
   uint8_t b = d.front();
   d = d.slice(1);
   return b;
@@ -71,15 +69,18 @@ uint8_t EhReader::readByte() {
 
 void EhReader::skipBytes(size_t count) {
   if (d.size() < count)
-    failOn(d.data(), "CIE is too small");
-  d = d.slice(count);
+    errOn(d.data(), "CIE is too small");
+  else
+    d = d.slice(count);
 }
 
 // Read a null-terminated string.
 StringRef EhReader::readString() {
   const uint8_t *end = llvm::find(d, '\0');
-  if (end == d.end())
-    failOn(d.data(), "corrupted CIE (failed to read string)");
+  if (end == d.end()) {
+    errOn(d.data(), "corrupted CIE (failed to read string)");
+    return {};
+  }
   StringRef s = toStringRef(d.slice(0, end - d.begin()));
   d = d.slice(s.size() + 1);
   return s;
@@ -97,7 +98,7 @@ void EhReader::skipLeb128() {
     if ((val & 0x80) == 0)
       return;
   }
-  failOn(errPos, "corrupted CIE (failed to read LEB128)");
+  errOn(errPos, "corrupted CIE (failed to read LEB128)");
 }
 
 static size_t getAugPSize(Ctx &ctx, unsigned enc) {
@@ -121,12 +122,12 @@ static size_t getAugPSize(Ctx &ctx, unsigned enc) {
 void EhReader::skipAugP() {
   uint8_t enc = readByte();
   if ((enc & 0xf0) == DW_EH_PE_aligned)
-    failOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
+    return errOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
   size_t size = getAugPSize(isec->getCtx(), enc);
   if (size == 0)
-    failOn(d.data() - 1, "unknown FDE encoding");
+    return errOn(d.data() - 1, "unknown FDE encoding");
   if (size >= d.size())
-    failOn(d.data() - 1, "corrupted CIE");
+    return errOn(d.data() - 1, "corrupted CIE");
   d = d.slice(size);
 }
 
@@ -141,9 +142,11 @@ bool elf::hasLSDA(const EhSectionPiece &p) {
 StringRef EhReader::getAugmentation() {
   skipBytes(8);
   int version = readByte();
-  if (version != 1 && version != 3)
-    failOn(d.data() - 1,
-           "FDE version 1 or 3 expected, but got " + Twine(version));
+  if (version != 1 && version != 3) {
+    errOn(d.data() - 1,
+          "FDE version 1 or 3 expected, but got " + Twine(version));
+    return {};
+  }
 
   StringRef aug = readString();
 
@@ -174,8 +177,10 @@ uint8_t EhReader::getFdeEncoding() {
       readByte();
     else if (c == 'P')
       skipAugP();
-    else if (c != 'B' && c != 'S' && c != 'G')
-      failOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
+    else if (c != 'B' && c != 'S' && c != 'G') {
+      errOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
+      break;
+    }
   }
   return DW_EH_PE_absptr;
 }
@@ -191,8 +196,10 @@ bool EhReader::hasLSDA() {
       skipAugP();
     else if (c == 'R')
       readByte();
-    else if (c != 'B' && c != 'S' && c != 'G')
-      failOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
+    else if (c != 'B' && c != 'S' && c != 'G') {
+      errOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
+      break;
+    }
   }
   return false;
 }

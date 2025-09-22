@@ -32,6 +32,14 @@ Sections:
     Address:         0x1000
     AddressAlign:    0x0000000000000010
     Size:            64
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Link:            .symtab
+    Info:            .text
+    Relocations:
+      - Offset: 0
+        Symbol: Referenced
+        Type:   R_X86_64_PC32
 Symbols:
   - Name:     Local
     Type:     STT_FUNC
@@ -49,6 +57,8 @@ Symbols:
     Section:  .text
     Value:    0x1010
     Binding:  STB_GLOBAL
+  - Name:     Referenced
+    Section:  .text
   - Name:     Weak
     Type:     STT_FUNC
     Size:     8
@@ -83,6 +93,15 @@ Symbols:
 #CHECK-NEXT:    Type: File
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: Referenced
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: Global

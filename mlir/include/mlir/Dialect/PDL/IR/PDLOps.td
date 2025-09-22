@@ -360,12 +360,13 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     (`->` `(` $typeValues^ `:` type($typeValues) `)`)? attr-dict
   }];
 
-  let builders = [
-    OpBuilder<(ins CArg<"std::optional<StringRef>", "std::nullopt">:$name,
-      CArg<"ValueRange", "std::nullopt">:$operandValues,
-      CArg<"ArrayRef<StringRef>", "std::nullopt">:$attrNames,
-      CArg<"ValueRange", "std::nullopt">:$attrValues,
-      CArg<"ValueRange", "std::nullopt">:$resultTypes), [{
+  let builders =
+      [OpBuilder<(ins CArg<"std::optional<StringRef>", "std::nullopt">:$name,
+                     CArg<"ValueRange", "{}">:$operandValues,
+                     CArg<"ArrayRef<StringRef>", "{}">:$attrNames,
+                     CArg<"ValueRange", "{}">:$attrValues,
+                     CArg<"ValueRange", "{}">:$resultTypes),
+                 [{
       auto nameAttr = name ? $_builder.getStringAttr(*name) : StringAttr();
       build($_builder, $_state, $_builder.getType<OperationType>(), nameAttr,
             operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),

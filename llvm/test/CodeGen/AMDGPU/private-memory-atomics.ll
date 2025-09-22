@@ -282,8 +282,7 @@ define i32 @atomicrmw_nand_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_not_b32_e32 v2, v1
-; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
+; GCN-NEXT:    v_bfi_b32 v2, v1, -5, -1
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -519,8 +518,8 @@ define amdgpu_kernel void @alloca_promote_atomicrmw_private_lds_promote(ptr addr
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s6, 1
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GCN-NEXT:    s_cselect_b32 s4, 1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -561,8 +560,8 @@ define amdgpu_kernel void @alloca_promote_cmpxchg_private(ptr addrspace(1) %out,
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s6, 1
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GCN-NEXT:    s_cselect_b32 s4, 1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 entry:

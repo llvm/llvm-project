@@ -75,3 +75,49 @@ struct enum_decl_test {
 } __attribute__((randomize_layout));
 
 struct enum_decl_test t13 = { BORK }; // Okay
+
+struct mixed {
+  int a;
+  short b;
+  unsigned c;
+  char d;
+} __attribute__((randomize_layout));
+
+struct mixed t14 = { 7 }; // expected-error {{a randomized struct can only be initialized with a designated initializer}}
+struct mixed t15 = { .b = 8 }; // Okay
+
+// This should be autodetected as randomized.
+struct funcs {
+  func_ptr a;
+  func_ptr b;
+  func_ptr c;
+  func_ptr d;
+};
+
+struct funcs t16 = { .c = foo }; // Okay
+struct funcs t17 = { foo }; // expected-error {{a randomized struct can only be initialized with a designated initializer}}
+
+// This should be forced off.
+struct funcs_unshuffled {
+  func_ptr a;
+  func_ptr b;
+  func_ptr c;
+  func_ptr d;
+} __attribute__((no_randomize_layout));
+
+struct funcs_unshuffled t18 = { .d = foo }; // Okay
+struct funcs_unshuffled t19 = { foo }; // Okay
+
+// This is still all function pointers.
+// https://github.com/llvm/llvm-project/issues/138355
+struct funcs_composite {
+  func_ptr a;
+  func_ptr b;
+  struct funcs inner;
+  func_ptr c;
+  func_ptr d;
+};
+
+struct funcs_composite t20 = { .a = foo }; // Okay
+struct funcs_composite t21 = { .inner.c = foo }; // Okay
+struct funcs_composite t22 = { foo }; // expected-error {{a randomized struct can only be initialized with a designated initializer}}

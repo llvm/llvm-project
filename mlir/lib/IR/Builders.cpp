@@ -12,11 +12,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 
@@ -34,63 +31,21 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 // Types.
 //===----------------------------------------------------------------------===//
 
-FloatType Builder::getFloat4E2M1FNType() {
-  return FloatType::getFloat4E2M1FN(context);
-}
+FloatType Builder::getF8E8M0Type() { return Float8E8M0FNUType::get(context); }
 
-FloatType Builder::getFloat6E2M3FNType() {
-  return FloatType::getFloat6E2M3FN(context);
-}
+FloatType Builder::getBF16Type() { return BFloat16Type::get(context); }
 
-FloatType Builder::getFloat6E3M2FNType() {
-  return FloatType::getFloat6E3M2FN(context);
-}
+FloatType Builder::getF16Type() { return Float16Type::get(context); }
 
-FloatType Builder::getFloat8E5M2Type() {
-  return FloatType::getFloat8E5M2(context);
-}
+FloatType Builder::getTF32Type() { return FloatTF32Type::get(context); }
 
-FloatType Builder::getFloat8E4M3Type() {
-  return FloatType::getFloat8E4M3(context);
-}
+FloatType Builder::getF32Type() { return Float32Type::get(context); }
 
-FloatType Builder::getFloat8E4M3FNType() {
-  return FloatType::getFloat8E4M3FN(context);
-}
+FloatType Builder::getF64Type() { return Float64Type::get(context); }
 
-FloatType Builder::getFloat8E5M2FNUZType() {
-  return FloatType::getFloat8E5M2FNUZ(context);
-}
+FloatType Builder::getF80Type() { return Float80Type::get(context); }
 
-FloatType Builder::getFloat8E4M3FNUZType() {
-  return FloatType::getFloat8E4M3FNUZ(context);
-}
-
-FloatType Builder::getFloat8E4M3B11FNUZType() {
-  return FloatType::getFloat8E4M3B11FNUZ(context);
-}
-
-FloatType Builder::getFloat8E3M4Type() {
-  return FloatType::getFloat8E3M4(context);
-}
-
-FloatType Builder::getFloat8E8M0FNUType() {
-  return FloatType::getFloat8E8M0FNU(context);
-}
-
-FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
-
-FloatType Builder::getF16Type() { return FloatType::getF16(context); }
-
-FloatType Builder::getTF32Type() { return FloatType::getTF32(context); }
-
-FloatType Builder::getF32Type() { return FloatType::getF32(context); }
-
-FloatType Builder::getF64Type() { return FloatType::getF64(context); }
-
-FloatType Builder::getF80Type() { return FloatType::getF80(context); }
-
-FloatType Builder::getF128Type() { return FloatType::getF128(context); }
+FloatType Builder::getF128Type() { return Float128Type::get(context); }
 
 IndexType Builder::getIndexType() { return IndexType::get(context); }
 
@@ -121,6 +76,10 @@ FunctionType Builder::getFunctionType(TypeRange inputs, TypeRange results) {
   return FunctionType::get(context, inputs, results);
 }
 
+GraphType Builder::getGraphType(TypeRange inputs, TypeRange results) {
+  return GraphType::get(context, inputs, results);
+}
+
 TupleType Builder::getTupleType(TypeRange elementTypes) {
   return TupleType::get(context, elementTypes);
 }
@@ -132,7 +91,7 @@ NoneType Builder::getNoneType() { return NoneType::get(context); }
 //===----------------------------------------------------------------------===//
 
 NamedAttribute Builder::getNamedAttr(StringRef name, Attribute val) {
-  return NamedAttribute(getStringAttr(name), val);
+  return NamedAttribute(name, val);
 }
 
 UnitAttr Builder::getUnitAttr() { return UnitAttr::get(context); }
@@ -509,8 +468,9 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-LogicalResult OpBuilder::tryFold(Operation *op,
-                                 SmallVectorImpl<Value> &results) {
+LogicalResult
+OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
+                   SmallVectorImpl<Operation *> *materializedConstants) {
   assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
@@ -571,6 +531,10 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   // If we were successful, insert any generated constants.
   for (Operation *cst : generatedConstants)
     insert(cst);
+
+  // Return materialized constant operations.
+  if (materializedConstants)
+    *materializedConstants = std::move(generatedConstants);
 
   return success();
 }

@@ -1,0 +1,151 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test that there are no loop-carried dependencies between all memory instructions.
+
+# CHECK:      SU(0):   %8:intregs = PHI %1:intregs, %bb.1, %9:intregs, %bb.2
+# CHECK-NEXT:   # preds left
+# CHECK-NEXT:   # succs left
+# CHECK-NEXT:   # rdefs left
+# CHECK-NEXT:   Latency
+# CHECK-NEXT:   Depth
+# CHECK-NEXT:   Height
+# CHECK-NEXT:   Successors:
+# CHECK-DAG:      SU(6): Data Latency=0 Reg=%8
+# CHECK-DAG:      SU(5): Data Latency=0 Reg=%8
+# CHECK-DAG:      SU(3): Data Latency=0 Reg=%8
+# CHECK-DAG:      SU(6): Anti Latency=1
+# CHECK-NEXT: SU(1):   %10:intregs = PHI %2:intregs, %bb.1, %11:intregs, %bb.2
+# CHECK-NEXT:   # preds left
+# CHECK-NEXT:   # succs left
+# CHECK-NEXT:   # rdefs left
+# CHECK-NEXT:   Latency
+# CHECK-NEXT:   Depth
+# CHECK-NEXT:   Height
+# CHECK-NEXT:   Successors:
+# CHECK-DAG:      SU(7): Data Latency=0 Reg=%10
+# CHECK-DAG:      SU(4): Data Latency=0 Reg=%10
+# CHECK-DAG:      SU(2): Data Latency=0 Reg=%10
+# CHECK-DAG:      SU(7): Anti Latency=1
+# CHECK-NEXT: SU(2):   %12:hvxvr = V6_vL32b_ai %10:intregs, 0 :: (load (s1024) from %ir.iptr.09, !tbaa !4)
+# CHECK-NEXT:   # preds left
+# CHECK-NEXT:   # succs left
+# CHECK-NEXT:   # rdefs left
+# CHECK-NEXT:   Latency
+# CHECK-NEXT:   Depth
+# CHECK-NEXT:   Height
+# CHECK-NEXT:   Predecessors:
+# CHECK-NEXT:     SU(1): Data Latency=0 Reg=%10
+# CHECK-NEXT:   Successors:
+# CHECK-NEXT:     SU(3): Data Latency=0 Reg=%12
+# CHECK-NEXT: SU(3):   V6_vS32b_ai %8:intregs, 0, %12:hvxvr :: (store (s1024) into %ir.optr.010, !tbaa !4)
+# CHECK-NEXT:   # preds left
+# CHECK-NEXT:   # succs left
+# CHECK-NEXT:   # rdefs left
+# CHECK-NEXT:   Latency
+# CHECK-NEXT:   Depth
+# CHECK-NEXT:   Height
+# CHECK-NEXT:   Predecessors:
+# CHECK-DAG:      SU(2): Data Latency=0 Reg=%12
+# CHECK-DAG:      SU(0): Data Latency=0 Reg=%8
+# CHECK-NEXT: SU(4):   %13:hvxvr = V6_vL32b_ai %10:intregs, 128 :: (load (s1024) from %ir.cgep, !tbaa !4)
+# CHECK-NEXT:   # preds left
+# CHECK-NEXT:   # succs left
+# CHECK-NEXT:   # rdefs left
+# CHECK-NEXT:   Latency
+# CHECK-NEXT:   Depth
+# CHECK-NEXT:   Height
+# CHECK-NEXT:   Predecessors:
+# CHECK-NEXT:     SU(1): Data Latency=0 Reg=%10
+# CHECK-NEXT:   Successors:
+# CHECK-NEXT:     SU(5): Data Latency=0 Reg=%13
+# CHECK-NEXT: SU(5):   V6_vS32b_ai %8:intregs, 128, %13:hvxvr :: (store (s1024) into %ir.cgep3, !tbaa !4)
+
+
+
+
+--- |
+  define dso_local void @foo(ptr noundef readonly captures(none) %in, ptr noalias noundef writeonly captures(none) %out, i32 noundef %width) local_unnamed_addr #0 {
+  entry:
+    %cmp7 = icmp sgt i32 %width, 0
+    br i1 %cmp7, label %for.body.preheader, label %for.end
+  
+  for.body.preheader:                               ; preds = %entry
+    %0 = add i32 %width, 128
+    br label %for.body
+  
+  for.body:                                         ; preds = %for.body.preheader, %for.body
+    %lsr.iv = phi i32 [ %0, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
+    %optr.010 = phi ptr [ %cgep4, %for.body ], [ %out, %for.body.preheader ]
+    %iptr.09 = phi ptr [ %cgep5, %for.body ], [ %in, %for.body.preheader ]
+    %ald = load <128 x i8>, ptr %iptr.09, align 128, !tbaa !4
+    %cst = bitcast <128 x i8> %ald to <32 x i32>
+    store <32 x i32> %cst, ptr %optr.010, align 128, !tbaa !4
+    %cgep = getelementptr i8, ptr %iptr.09, i32 128
+    %ald1 = load <128 x i8>, ptr %cgep, align 128, !tbaa !4
+    %cst2 = bitcast <128 x i8> %ald1 to <32 x i32>
+    %cgep3 = getelementptr i8, ptr %optr.010, i32 128
+    store <32 x i32> %cst2, ptr %cgep3, align 128, !tbaa !4
+    %lsr.iv.next = add i32 %lsr.iv, -128
+    %cmp = icmp samesign ugt i32 %lsr.iv.next, 128
+    %cgep4 = getelementptr i8, ptr %optr.010, i32 256
+    %cgep5 = getelementptr i8, ptr %iptr.09, i32 256
+    br i1 %cmp, label %for.body, label %for.end
+  
+  for.end:                                          ; preds = %for.body, %entry
+    ret void
+  }
+  
+  attributes #0 = { "target-cpu"="hexagonv60" "target-features"="+hvx-length128b,+hvxv69,+v66,-long-calls" }
+  
+  !llvm.module.flags = !{!0, !1, !2, !3}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 8, !"PIC Level", i32 2}
+  !2 = !{i32 7, !"PIE Level", i32 2}
+  !3 = !{i32 7, !"frame-pointer", i32 2}
+  !4 = !{!5, !5, i64 0}
+  !5 = !{!"omnipotent char", !6, i64 0}
+  !6 = !{!"Simple C/C++ TBAA"}
+...
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.3(0x30000000)
+    liveins: $r0, $r1, $r2
+  
+    %9:intregs = COPY $r2
+    %8:intregs = COPY $r1
+    %7:intregs = COPY $r0
+    %10:predregs = C2_cmpgti %9, 0
+    J2_jumpf %10, %bb.3, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+  
+  bb.1.for.body.preheader:
+    successors: %bb.2(0x80000000)
+  
+    %0:intregs = A2_addi %9, 128
+    %15:intregs = A2_addi %0, -1
+    %16:intregs = S2_lsr_i_r %15, 7
+    %17:intregs = COPY %16
+    J2_loop0r %bb.2, %17, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.2.for.body (machine-block-address-taken):
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  
+    %2:intregs = PHI %8, %bb.1, %5, %bb.2
+    %3:intregs = PHI %7, %bb.1, %6, %bb.2
+    %12:hvxvr = V6_vL32b_ai %3, 0 :: (load (s1024) from %ir.iptr.09, !tbaa !4)
+    V6_vS32b_ai %2, 0, killed %12 :: (store (s1024) into %ir.optr.010, !tbaa !4)
+    %13:hvxvr = V6_vL32b_ai %3, 128 :: (load (s1024) from %ir.cgep, !tbaa !4)
+    V6_vS32b_ai %2, 128, killed %13 :: (store (s1024) into %ir.cgep3, !tbaa !4)
+    %5:intregs = A2_addi %2, 256
+    %6:intregs = A2_addi %3, 256
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+  
+  bb.3.for.end:
+    PS_jmpret $r31, implicit-def dead $pc
+...

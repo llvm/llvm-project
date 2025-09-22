@@ -117,9 +117,15 @@ namespace std {
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
 #  include <__config>
+
+// standard-mandated includes
+
+// [syncstream.syn]
+#  include <ostream>
 
 #  if _LIBCPP_HAS_LOCALIZATION
 
@@ -129,16 +135,10 @@ namespace std {
 #    include <iosfwd> // required for declaration of default arguments
 #    include <streambuf>
 #    include <string>
-
 #    if _LIBCPP_HAS_THREADS
 #      include <map>
 #      include <shared_mutex>
 #    endif
-
-// standard-mandated includes
-
-// [syncstream.syn]
-#    include <ostream>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
@@ -149,7 +149,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#    if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#    if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 // [syncstream.syncbuf.overview]/1
 //   Class template basic_syncbuf stores character data written to it,
@@ -247,7 +247,7 @@ private:
 // Therefore the allocator used in the constructor is passed to the
 // basic_string. The class does not keep a copy of this allocator.
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_syncbuf : public basic_streambuf<_CharT, _Traits> {
+class basic_syncbuf : public basic_streambuf<_CharT, _Traits> {
 public:
   using char_type      = _CharT;
   using traits_type    = _Traits;
@@ -438,7 +438,7 @@ swap(basic_syncbuf<_CharT, _Traits, _Allocator>& __lhs, basic_syncbuf<_CharT, _T
 // basic_osyncstream
 
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_osyncstream : public basic_ostream<_CharT, _Traits> {
+class basic_osyncstream : public basic_ostream<_CharT, _Traits> {
 public:
   using char_type   = _CharT;
   using traits_type = _Traits;
@@ -511,13 +511,13 @@ using std::osyncstream;
 using std::wosyncstream;
 #      endif
 
-#    endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+#    endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
-#endif   // 0
+#endif   // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SYNCSTREAM

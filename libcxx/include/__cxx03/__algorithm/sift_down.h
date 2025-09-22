@@ -25,7 +25,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+_LIBCPP_HIDE_FROM_ABI void
 __sift_down(_RandomAccessIterator __first,
             _Compare&& __comp,
             typename iterator_traits<_RandomAccessIterator>::difference_type __len,
@@ -80,7 +80,7 @@ __sift_down(_RandomAccessIterator __first,
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator __floyd_sift_down(
+_LIBCPP_HIDE_FROM_ABI _RandomAccessIterator __floyd_sift_down(
     _RandomAccessIterator __first,
     _Compare&& __comp,
     typename iterator_traits<_RandomAccessIterator>::difference_type __len) {

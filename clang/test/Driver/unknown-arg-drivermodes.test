@@ -1,6 +1,5 @@
 // RUN: %clang_cl                  \
 // RUN: --config                   \
-// RUN: -fdiagnostics-color=auto   \
 // RUN: -fno-record-command-line   \
 // RUN: -frecord-command-line      \
 // RUN: -nodefaultlibs             \
@@ -15,7 +14,6 @@
 
 // RUN: not %clang_dxc             \
 // RUN: --config                   \
-// RUN: -fdiagnostics-color=auto   \
 // RUN: -fno-record-command-line   \
 // RUN: -frecord-command-line      \
 // RUN: -nodefaultlibs             \
@@ -30,7 +28,6 @@
 // RUN: | FileCheck %s --check-prefix=DXC --implicit-check-not="error:"
 
 // CL: warning: unknown argument ignored in clang-cl: '--config'
-// CL: warning: unknown argument ignored in clang-cl: '-fdiagnostics-color=auto'
 // CL: warning: unknown argument ignored in clang-cl: '-fno-record-command-line'
 // CL: warning: unknown argument ignored in clang-cl: '-frecord-command-line'
 // CL: warning: unknown argument ignored in clang-cl: '-nodefaultlibs'
@@ -42,7 +39,6 @@
 // CL: warning: unknown argument ignored in clang-cl: '-Xoffload-linker'
 
 // DXC: error: unknown argument: '--config'
-// DXC: error: unknown argument: '-fdiagnostics-color=auto'
 // DXC: error: unknown argument: '-fno-record-command-line'
 // DXC: error: unknown argument: '-frecord-command-line'
 // DXC: error: unknown argument: '-nodefaultlibs'

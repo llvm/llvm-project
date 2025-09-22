@@ -58,7 +58,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -116,8 +116,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	b0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	b0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	b0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -126,9 +126,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	b0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	b0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [1] Code Region - FPR16-bit
 
@@ -137,7 +137,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -195,8 +195,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	h0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	h0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	h0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -205,9 +205,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	h0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	h0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [2] Code Region - FPR32-bit
 
@@ -216,7 +216,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -274,8 +274,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	s0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	s0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	s0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -284,9 +284,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	s0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	s0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [3] Code Region - FPR64-bit
 
@@ -295,7 +295,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -353,8 +353,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	d0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	d0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	d0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -363,9 +363,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	d0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	d0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [4] Code Region - FPR128-bit
 
@@ -374,7 +374,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -432,8 +432,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	q0, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	q0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ldr	q0, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -442,9 +442,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	q0, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ldr	q0, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [5] Code Region - SIMD64-bit-b
 
@@ -453,7 +453,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -511,8 +511,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -521,9 +521,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.8b }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [6] Code Region - SIMD64-bit-h
 
@@ -532,7 +532,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -590,8 +590,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -600,9 +600,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.4h }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [7] Code Region - SIMD64-bit-s
 
@@ -611,7 +611,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -669,8 +669,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -679,9 +679,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.2s }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [8] Code Region - SIMD64-bit-d
 
@@ -690,7 +690,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -748,8 +748,8 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
 # CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
-# CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,0]     .DeeeeeeE-R.   ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: [3,1]     .D======eeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -758,9 +758,9 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    1.3       ld1	{ v0.1d }, [sp]
+# CHECK-NEXT: 1.     4     7.0    0.0    0.0       add	z0.d, z0.d, z0.d
+# CHECK-NEXT:        4     4.0    0.5    0.6       <total>
 
 # CHECK:      [9] Code Region - insr
 
@@ -769,7 +769,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      803
 # CHECK-NEXT: Total uOps:        300
 
-# CHECK:      Dispatch Width:    16
+# CHECK:      Dispatch Width:    6
 # CHECK-NEXT: uOps Per Cycle:    0.37
 # CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -825,10 +825,10 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [0,1]     D======eeER    .    .    .    .   .   add	z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,0]     D========eeeeeeER   .    .    .   .   insr	z0.s, w0
 # CHECK-NEXT: [1,1]     D==============eeER .    .    .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [2,0]     D================eeeeeeER.    .   .   insr	z0.s, w0
-# CHECK-NEXT: [2,1]     D======================eeER   .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [3,0]     D========================eeeeeeER .   insr	z0.s, w0
-# CHECK-NEXT: [3,1]     D==============================eeER   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [2,0]     .D===============eeeeeeER.    .   .   insr	z0.s, w0
+# CHECK-NEXT: [2,1]     .D=====================eeER   .   .   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [3,0]     .D=======================eeeeeeER .   insr	z0.s, w0
+# CHECK-NEXT: [3,1]     .D=============================eeER   add	z0.s, z0.s, z0.s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -837,6 +837,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     13.0   0.3    0.0       insr	z0.s, w0
-# CHECK-NEXT: 1.     4     19.0   0.0    0.0       add	z0.s, z0.s, z0.s
-# CHECK-NEXT:        4     16.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     4     12.5   0.3    0.0       insr	z0.s, w0
+# CHECK-NEXT: 1.     4     18.5   0.0    0.0       add	z0.s, z0.s, z0.s
+# CHECK-NEXT:        4     15.5   0.1    0.0       <total>

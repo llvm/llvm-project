@@ -24,7 +24,9 @@ namespace printf_core {
 
 using StorageType = fputil::FPBits<long double>::StorageType;
 
-LIBC_INLINE int convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
+template <WriteMode write_mode>
+LIBC_INLINE int convert_inf_nan(Writer<write_mode> *writer,
+                                const FormatSection &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the case of the conversion.
   bool is_negative;

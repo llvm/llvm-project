@@ -3450,6 +3450,41 @@ define i1 @icmp_ult_vscale_false(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
+define i1 @icmp_eq_false_by_trunc(i8 %x) {
+; CHECK-LABEL: @icmp_eq_false_by_trunc(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %trunc = trunc i8 %x to i1
+  %not = xor i1 %trunc, true
+  call void @llvm.assume(i1 %not)
+  %cmp = icmp eq i8 %x, 1
+  ret i1 %cmp
+}
+
+define <vscale x 8 x i1> @icmp_ne_i1_vec_constant_expr() {
+; CHECK-LABEL: @icmp_ne_i1_vec_constant_expr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+;
+entry:
+  %cmp = icmp ne <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), zeroinitializer
+  ret <vscale x 8 x i1> %cmp
+}
+
+define <vscale x 8 x i1> @icmp_eq_i1_vec_constant_expr_commuted() {
+; CHECK-LABEL: @icmp_eq_i1_vec_constant_expr_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i1> xor (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> splat (i1 true))
+;
+entry:
+  %cmp = icmp eq <vscale x 8 x i1> zeroinitializer, insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+  ret <vscale x 8 x i1> %cmp
+}
+
 declare i64 @llvm.vscale.i64()
 
 ; TODO: Add coverage for global aliases, link once, etc..

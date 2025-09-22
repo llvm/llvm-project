@@ -34,11 +34,12 @@ add_entrypoint_object(
   HDRS
     hsearch.h
   DEPENDS
+    libc.hdr.types.ACTION
+    libc.hdr.types.ENTRY
     libc.src.search.hsearch.global
     libc.src.__support.HashTable.table
     libc.src.__support.HashTable.randomness
     libc.src.errno.errno
-    libc.include.search
 )
 
 add_entrypoint_object(
@@ -48,9 +49,10 @@ add_entrypoint_object(
   HDRS
     hsearch_r.h
   DEPENDS
+    libc.hdr.types.ACTION
+    libc.hdr.types.ENTRY
     libc.src.__support.HashTable.table
     libc.src.errno.errno
-    libc.include.search
 )
 
 add_entrypoint_object(
@@ -109,4 +111,17 @@ add_entrypoint_object(
     libc.include.search
     libc.src.__support.CPP.cstddef
     libc.src.__support.memory_size
+)
+
+add_entrypoint_object(
+  lsearch
+  SRCS
+    lsearch.cpp
+  HDRS
+    lsearch.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
+    libc.src.string.memory_utils.inline_memcpy
 )

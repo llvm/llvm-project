@@ -20,11 +20,10 @@ void SectCreateMaterializationUnit::materialize(
       "orc_sectcreate_" + SectName,
       ObjLinkingLayer.getExecutionSession().getSymbolStringPool(),
       ObjLinkingLayer.getExecutionSession().getTargetTriple(),
-      getGenericEdgeKindName);
+      SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &Sect = G->createSection(SectName, MP);
-  auto Content = G->allocateContent(
-      ArrayRef<char>(Data->getBuffer().data(), Data->getBuffer().size()));
+  auto Content = G->allocateContent(ArrayRef<char>(Data->getBuffer()));
   auto &B = G->createContentBlock(Sect, Content, ExecutorAddr(), Alignment, 0);
 
   for (auto &[Name, Info] : ExtraSymbols) {

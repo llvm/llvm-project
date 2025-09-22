@@ -635,6 +635,57 @@ while.end71:                                      ; preds = %while.body38, %whil
   ret void
 }
 
+; FIXME: This should not be vectorizing (further) with expensive shuffles.
+; The old cost of the or+extract should be 2*1 (or) + 4*2 (extract). The new
+; cost should be 1*1 (or) + 2*2 (extract) + at least 4 (shuffles).
+define i1 @tryMapToRange(ptr %values, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
+; CHECK-LABEL: @tryMapToRange(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[VALUES:%.*]], align 8
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt <2 x i64> [[L]], [[HI:%.*]]
+; CHECK-NEXT:    [[S1:%.*]] = sext <2 x i1> [[C1]] to <2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i64> [[S1]] to <16 x i8>
+; CHECK-NEXT:    [[A1:%.*]] = and <16 x i8> [[BC1]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x i8> [[A1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i8> [[A1]], i64 8
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i64> [[L]], [[LO:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sext <2 x i1> [[C2]] to <2 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[S2]] to <16 x i8>
+; CHECK-NEXT:    [[A2:%.*]] = and <16 x i8> [[BC2]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[E3:%.*]] = extractelement <16 x i8> [[A2]], i64 0
+; CHECK-NEXT:    [[E4:%.*]] = extractelement <16 x i8> [[A2]], i64 8
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub <2 x i64> [[L]], [[LO]]
+; CHECK-NEXT:    [[ADD_I_I_I_I_I_I:%.*]] = add <2 x i64> [[REASS_SUB]], splat (i64 1)
+; CHECK-NEXT:    store <2 x i64> [[ADD_I_I_I_I_I_I]], ptr [[RESULT:%.*]], align 8
+; CHECK-NEXT:    [[O3:%.*]] = or i8 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[E4]], [[E3]]
+; CHECK-NEXT:    [[O4:%.*]] = or i8 [[O3]], [[O2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O4]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = load <2 x i64>, ptr %values, align 8
+  %c1 = icmp sgt <2 x i64> %l, %hi
+  %s1 = sext <2 x i1> %c1 to <2 x i64>
+  %bc1 = bitcast <2 x i64> %s1 to <16 x i8>
+  %a1 = and <16 x i8> %bc1, <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %e1 = extractelement <16 x i8> %a1, i64 0
+  %e2 = extractelement <16 x i8> %a1, i64 8
+  %c2 = icmp slt <2 x i64> %l, %lo
+  %s2 = sext <2 x i1> %c2 to <2 x i64>
+  %bc2 = bitcast <2 x i64> %s2 to <16 x i8>
+  %a2 = and <16 x i8> %bc2, <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %e3 = extractelement <16 x i8> %a2, i64 0
+  %e4 = extractelement <16 x i8> %a2, i64 8
+  %reass.sub = sub <2 x i64> %l, %lo
+  %add.i.i.i.i.i.i = add <2 x i64> %reass.sub, splat (i64 1)
+  store <2 x i64> %add.i.i.i.i.i.i, ptr %result, align 8
+  %o1 = or i8 %e2, %e1
+  %o2 = or i8 %e4, %e3
+  %o3 = or i8 %o1, %o2
+  %c = icmp eq i8 %o3, 0
+  ret i1 %c
+}
+
+
 declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>) #1
 declare <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8>) #2
 declare <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16>) #2

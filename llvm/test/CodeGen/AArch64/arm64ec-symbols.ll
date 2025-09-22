@@ -10,12 +10,12 @@ define void @caller() nounwind {
 }
 
 ; CHECK:      .weak_anti_dep  caller
-; CHECK-NEXT: .set caller, "#caller"{{$}}
+; CHECK-NEXT: caller = "#caller"{{$}}
 
 ; CHECK:      .weak_anti_dep  func
-; CHECK-NEXT: .set func, "#func"{{$}}
+; CHECK-NEXT: func = "#func"{{$}}
 ; CHECK-NEXT: .weak_anti_dep  "#func"
-; CHECK-NEXT: .set "#func", "#func$exit_thunk"{{$}}
+; CHECK-NEXT: "#func" = "#func$exit_thunk"{{$}}
 
 ; SYM:       [ 8](sec  4)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #caller
 ; SYM:       [21](sec  7)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #func$exit_thunk

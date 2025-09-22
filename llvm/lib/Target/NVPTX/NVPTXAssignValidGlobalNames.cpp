@@ -38,10 +38,6 @@ public:
 
 char NVPTXAssignValidGlobalNames::ID = 0;
 
-namespace llvm {
-void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
-}
-
 INITIALIZE_PASS(NVPTXAssignValidGlobalNames, "nvptx-assign-valid-global-names",
                 "Assign valid PTX names to globals", false, false)
 

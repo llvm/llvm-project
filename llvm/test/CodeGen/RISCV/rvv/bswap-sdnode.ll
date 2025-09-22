@@ -304,7 +304,7 @@ define <vscale x 1 x i64> @bswap_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV64-NEXT:    lui a3, 4080
 ; RV64-NEXT:    vsrl.vx v10, v8, a0
 ; RV64-NEXT:    vsrl.vx v11, v8, a1
-; RV64-NEXT:    addiw a2, a2, -256
+; RV64-NEXT:    addi a2, a2, -256
 ; RV64-NEXT:    vand.vx v11, v11, a2
 ; RV64-NEXT:    vor.vv v10, v11, v10
 ; RV64-NEXT:    vsrl.vi v11, v8, 8
@@ -388,7 +388,7 @@ define <vscale x 2 x i64> @bswap_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV64-NEXT:    lui a3, 4080
 ; RV64-NEXT:    vsrl.vx v12, v8, a0
 ; RV64-NEXT:    vsrl.vx v14, v8, a1
-; RV64-NEXT:    addiw a2, a2, -256
+; RV64-NEXT:    addi a2, a2, -256
 ; RV64-NEXT:    vand.vx v14, v14, a2
 ; RV64-NEXT:    vor.vv v12, v14, v12
 ; RV64-NEXT:    vsrl.vi v14, v8, 8
@@ -472,7 +472,7 @@ define <vscale x 4 x i64> @bswap_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV64-NEXT:    lui a3, 4080
 ; RV64-NEXT:    vsrl.vx v16, v8, a0
 ; RV64-NEXT:    vsrl.vx v20, v8, a1
-; RV64-NEXT:    addiw a2, a2, -256
+; RV64-NEXT:    addi a2, a2, -256
 ; RV64-NEXT:    vand.vx v20, v20, a2
 ; RV64-NEXT:    vor.vv v16, v20, v16
 ; RV64-NEXT:    vsrl.vi v20, v8, 8
@@ -530,7 +530,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    vand.vx v24, v24, a0
 ; RV32-NEXT:    vor.vv v16, v24, v16
 ; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; RV32-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vand.vx v16, v8, a0
 ; RV32-NEXT:    vsll.vx v16, v16, a2
 ; RV32-NEXT:    vor.vv v16, v0, v16
@@ -538,7 +538,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    vlse64.v v0, (a5), zero
 ; RV32-NEXT:    vsrl.vi v16, v8, 24
 ; RV32-NEXT:    vand.vx v16, v16, a4
@@ -546,7 +546,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    vand.vv v24, v24, v0
 ; RV32-NEXT:    vor.vv v16, v24, v16
 ; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vor.vv v24, v16, v24
 ; RV32-NEXT:    vand.vv v16, v8, v0
 ; RV32-NEXT:    vand.vx v8, v8, a4
@@ -557,7 +557,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vor.vv v8, v16, v8
 ; RV32-NEXT:    vor.vv v8, v8, v24
 ; RV32-NEXT:    csrr a0, vlenb
@@ -578,7 +578,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV64-NEXT:    lui a3, 4080
 ; RV64-NEXT:    vsrl.vx v16, v8, a0
 ; RV64-NEXT:    vsrl.vx v0, v8, a1
-; RV64-NEXT:    addiw a2, a2, -256
+; RV64-NEXT:    addi a2, a2, -256
 ; RV64-NEXT:    vand.vx v0, v0, a2
 ; RV64-NEXT:    vor.vv v16, v0, v16
 ; RV64-NEXT:    vsrl.vi v0, v8, 8

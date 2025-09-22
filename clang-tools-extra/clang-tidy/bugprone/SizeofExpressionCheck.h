@@ -1,4 +1,4 @@
-//===--- SizeofExpressionCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,6 +32,7 @@ private:
   const bool WarnOnSizeOfPointerToAggregate;
   const bool WarnOnSizeOfPointer;
   const bool WarnOnOffsetDividedBySizeOf;
+  const bool WarnOnSizeOfInLoopTermination;
 };
 
 } // namespace clang::tidy::bugprone

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_70 cubin-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -20,7 +20,7 @@ func.func @main() {
   %c32 = arith.constant 32 : index
   %c1 = arith.constant 1 : index
 
-  // Intialize the Input matrix with the column index in each row.
+  // Initialize the Input matrix with the column index in each row.
   scf.for %arg0 = %c0 to %c16 step %c1 {
     scf.for %arg1 = %c0 to %c16 step %c1 {
       %2 = arith.index_cast %arg1 : index to i16
@@ -28,7 +28,7 @@ func.func @main() {
       memref.store %3, %0[%arg0, %arg1] : memref<16x16xf16>
     }
   }
-  // Intialize the accumulator matrix with zeros.
+  // Initialize the accumulator matrix with zeros.
   scf.for %arg0 = %c0 to %c16 step %c1 {
     scf.for %arg1 = %c0 to %c16 step %c1 {
       memref.store %f0, %22[%arg0, %arg1] : memref<16x16xf16>

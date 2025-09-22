@@ -316,6 +316,64 @@ DECLARE {
                   )"}}));
 }
 
+TEST(IncludeCleanerCheckTest, UnusedIncludes) {
+  const char *PreCode = R"(
+#include "bar.h")";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
+                                        {{"bar.h", "#pragma once"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "included header bar.h is not used directly");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.UnusedIncludes"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {}, Opts,
+                                        {{"bar.h", "#pragma once"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
+}
+
+TEST(IncludeCleanerCheckTest, MissingIncludes) {
+  const char *PreCode = R"(
+#include "baz.h" // IWYU pragma: keep
+
+int BarResult1 = bar();)";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {},
+                                        ClangTidyOptions(),
+                                        {{"baz.h", R"(#pragma once
+                                          #include "bar.h"
+                                       )"},
+                                         {"bar.h", R"(#pragma once
+                                          int bar();
+                                       )"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "no header providing \"bar\" is directly included");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.MissingIncludes"] = "false";
+    runCheckOnCode<IncludeCleanerCheck>(PreCode, &Errors, "file.cpp", {}, Opts,
+                                        {{"baz.h", R"(#pragma once
+                                          #include "bar.h"
+                                       )"},
+                                         {"bar.h", R"(#pragma once
+                                          int bar();
+                                       )"}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
+}
+
 } // namespace
 } // namespace test
 } // namespace tidy

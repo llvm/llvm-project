@@ -2,6 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare void @use(i32)
+declare void @usef32(float)
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare <3 x i17> @llvm.ctlz.v3i17(<3 x i17>, i1)
@@ -343,4 +344,30 @@ define double @test_fabs_select_fmf2(i1 %cond, double %a) {
   %sel1 = select i1 %cond, double 0.0, double %a
   %fabs = call nnan ninf nsz double @llvm.fabs.f64(double %sel1)
   ret double %fabs
+}
+
+define float @test_fabs_select_multiuse(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fabs_select_multiuse(
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float 0x7FF0000000000000
+; CHECK-NEXT:    call void @usef32(float [[SELECT]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %select = select i1 %cond, float %x, float 0x7FF0000000000000
+  call void @usef32(float %select)
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+define float @test_fabs_select_multiuse_both_constant(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fabs_select_multiuse_both_constant(
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float -1.000000e+00, float -2.000000e+00
+; CHECK-NEXT:    call void @usef32(float [[SELECT]])
+; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[COND]], float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %select = select i1 %cond, float -1.0, float -2.0
+  call void @usef32(float %select)
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
 }

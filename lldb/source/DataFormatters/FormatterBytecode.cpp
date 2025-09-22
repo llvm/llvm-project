@@ -9,6 +9,7 @@
 #include "FormatterBytecode.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
@@ -304,6 +305,9 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       control.pop_back();
       activate_block();
       continue;
+    case op_return:
+      control.clear();
+      return pc.takeError();
 
     // Literals.
     case op_lit_uint:
@@ -486,7 +490,10 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         TYPE_CHECK(Object, String);
         auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
-        data.Push((uint64_t)valobj->GetIndexOfChildWithName(name));
+        if (auto index_or_err = valobj->GetIndexOfChildWithName(name))
+          data.Push((uint64_t)*index_or_err);
+        else
+          return index_or_err.takeError();
         break;
       }
       case sel_get_type: {

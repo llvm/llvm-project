@@ -127,7 +127,7 @@ struct TSDRegistrySharedT {
       // analyzer.
       TSDs[I].assertLocked(/*BypassCheck=*/true);
       Str->append("  Shared TSD[%zu]:\n", I);
-      TSDs[I].getCache().getStats(Str);
+      TSDs[I].getSizeClassAllocator().getStats(Str);
       TSDs[I].unlock();
     }
   }

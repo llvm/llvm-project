@@ -13,8 +13,43 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 21.0
+------------
+
+* [libc++] Optimize ctype::to{lower,upper}
+
+  This patch removed __classic_upper_table() and __classic_lower_table(), which were only ever accessed from the dylib.
+
+  x86_64-unknown-gnu-linux
+  ------------------------
+  Symbol removed: _ZNSt3__15ctypeIcE21__classic_lower_tableEv
+  Symbol removed: _ZNSt3__15ctypeIcE21__classic_upper_tableEv
+
+* [libc++] Instantiate hash function externally
+
+  This has multiple benefits:
+  - There is a single instance of our hash function, reducing object file size
+  - The hash implementation isn't instantiated in every TU anymore, reducing compile times
+  - Behind an ABI configuration macro, it would be possible to salt the hash
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__113__hash_memoryEPKvm
+
+------------
 Version 20.0
 ------------
+
+* [libc++][PMR] Remove duplicate implementation of __try_allocate_from_chunk
+
+  This patch removes member functions __try_allocate_from_chunk from __chunk_footer and __initial_descriptor.
+  The two implementations were almost identical and can be easily moved to be implementation details of the built library.
+  Since they were only used from within the built library, the removal of these symbols should not be an ABI break.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm
+  Symbol removed: _ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm
 
 * [libc++] Remove the pointer safety functions from the dylib
 

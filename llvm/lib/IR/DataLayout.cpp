@@ -96,11 +96,10 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   TypeSize Offset = TypeSize::getFixed(FixedOffset);
   ArrayRef<TypeSize> MemberOffsets = getMemberOffsets();
 
-  const auto *SI =
-      std::upper_bound(MemberOffsets.begin(), MemberOffsets.end(), Offset,
-                       [](TypeSize LHS, TypeSize RHS) -> bool {
-                         return TypeSize::isKnownLT(LHS, RHS);
-                       });
+  const auto *SI = llvm::upper_bound(MemberOffsets, Offset,
+                                     [](TypeSize LHS, TypeSize RHS) -> bool {
+                                       return TypeSize::isKnownLT(LHS, RHS);
+                                     });
   assert(SI != MemberOffsets.begin() && "Offset not in structure type!");
   --SI;
   assert(TypeSize::isKnownLE(*SI, Offset) && "upper_bound didn't work");
@@ -173,22 +172,9 @@ struct LessPointerAddrSpace {
 };
 } // namespace
 
-const char *DataLayout::getManglingComponent(const Triple &T) {
-  if (T.isOSBinFormatGOFF())
-    return "-m:l";
-  if (T.isOSBinFormatMachO())
-    return "-m:o";
-  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
-    return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
-  if (T.isOSBinFormatXCOFF())
-    return "-m:a";
-  return "-m:e";
-}
-
 // Default primitive type specifications.
 // NOTE: These arrays must be sorted by type bit width.
 constexpr DataLayout::PrimitiveSpec DefaultIntSpecs[] = {
-    {1, Align::Constant<1>(), Align::Constant<1>()},  // i1:8:8
     {8, Align::Constant<1>(), Align::Constant<1>()},  // i8:8:8
     {16, Align::Constant<2>(), Align::Constant<2>()}, // i16:16:16
     {32, Align::Constant<4>(), Align::Constant<4>()}, // i32:32:32
@@ -695,7 +681,12 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
 
 Align DataLayout::getIntegerAlignment(uint32_t BitWidth,
                                       bool abi_or_pref) const {
-  auto I = lower_bound(IntSpecs, BitWidth, LessPrimitiveBitWidth());
+  auto I = IntSpecs.begin();
+  for (; I != IntSpecs.end(); ++I) {
+    if (I->BitWidth >= BitWidth)
+      break;
+  }
+
   // If we don't have an exact match, use alignment of next larger integer
   // type. If there is none, use alignment of largest integer type by going
   // back one element.
@@ -840,6 +831,44 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
 }
 
+TypeSize DataLayout::getTypeAllocSize(Type *Ty) const {
+  switch (Ty->getTypeID()) {
+  case Type::ArrayTyID: {
+    // The alignment of the array is the alignment of the element, so there
+    // is no need for further adjustment.
+    auto *ATy = cast<ArrayType>(Ty);
+    return ATy->getNumElements() * getTypeAllocSize(ATy->getElementType());
+  }
+  case Type::StructTyID: {
+    const StructLayout *Layout = getStructLayout(cast<StructType>(Ty));
+    TypeSize Size = Layout->getSizeInBytes();
+
+    if (cast<StructType>(Ty)->isPacked())
+      return Size;
+
+    Align A = std::max(StructABIAlignment, Layout->getAlignment());
+    return alignTo(Size, A.value());
+  }
+  case Type::IntegerTyID: {
+    unsigned BitWidth = Ty->getIntegerBitWidth();
+    TypeSize Size = TypeSize::getFixed(divideCeil(BitWidth, 8));
+    Align A = getIntegerAlignment(BitWidth, /*ABI=*/true);
+    return alignTo(Size, A.value());
+  }
+  case Type::PointerTyID: {
+    unsigned AS = Ty->getPointerAddressSpace();
+    TypeSize Size = TypeSize::getFixed(getPointerSize(AS));
+    return alignTo(Size, getPointerABIAlignment(AS).value());
+  }
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getTypeAllocSize(LayoutTy);
+  }
+  default:
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
+  }
+}
+
 Align DataLayout::getABITypeAlign(Type *Ty) const {
   return getAlignment(Ty, true);
 }
@@ -927,12 +956,13 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
     return APInt::getZero(BitWidth);
   }
 
-  APInt Index = Offset.sdiv(ElemSize);
-  Offset -= Index * ElemSize;
+  uint64_t FixedElemSize = ElemSize.getFixedValue();
+  APInt Index = Offset.sdiv(FixedElemSize);
+  Offset -= Index * FixedElemSize;
   if (Offset.isNegative()) {
     // Prefer a positive remaining offset to allow struct indexing.
     --Index;
-    Offset += ElemSize;
+    Offset += FixedElemSize;
     assert(Offset.isNonNegative() && "Remaining offset shouldn't be negative");
   }
   return Index;

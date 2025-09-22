@@ -184,7 +184,7 @@ public:
     bool UseDirtyHeaders = false;
 
     // If true, parse emplace-like functions in the preamble.
-    bool PreambleParseForwardingFunctions = false;
+    bool PreambleParseForwardingFunctions = true;
 
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
@@ -329,8 +329,8 @@ public:
                       bool AddContainer, Callback<ReferencesResult> CB);
 
   /// Run formatting for the \p File with content \p Code.
-  /// If \p Rng is non-null, formats only that region.
-  void formatFile(PathRef File, std::optional<Range> Rng,
+  /// If \p Rng is non-empty, formats only those regions.
+  void formatFile(PathRef File, const std::vector<Range> &Rngs,
                   Callback<tooling::Replacements> CB);
 
   /// Run formatting after \p TriggerText was typed at \p Pos in \p File with
@@ -501,7 +501,7 @@ private:
   // Whether the client supports folding only complete lines.
   bool LineFoldingOnly = false;
 
-  bool PreambleParseForwardingFunctions = false;
+  bool PreambleParseForwardingFunctions = true;
 
   bool ImportInsertions = false;
 

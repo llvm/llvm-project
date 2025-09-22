@@ -45,15 +45,31 @@ public:
                 uint64_t val) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
+  template <class ELFT, class RelTy>
+  bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                               Relocs<RelTy> rels);
+  template <class ELFT, class RelTy>
+  void finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                Relocs<RelTy> rels);
+  template <class ELFT>
+  bool synthesizeAlignAux(uint64_t &dot, InputSection *sec);
+  bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
+
+  // The following two variables are used by synthesized ALIGN relocations.
+  InputSection *baseSec = nullptr;
+  // r_offset and r_addend pairs.
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 
 } // end anonymous namespace
 
-// These are internal relocation numbers for GP relaxation. They aren't part
+// These are internal relocation numbers for GP/X0 relaxation. They aren't part
 // of the psABI spec.
 #define INTERNAL_R_RISCV_GPREL_I 256
 #define INTERNAL_R_RISCV_GPREL_S 257
+#define INTERNAL_R_RISCV_X0REL_I 258
+#define INTERNAL_R_RISCV_X0REL_S 259
 
 const uint64_t dtpOffset = 0x800;
 
@@ -70,6 +86,7 @@ enum Op {
 };
 
 enum Reg {
+  X_X0 = 0,
   X_RA = 1,
   X_GP = 3,
   X_TP = 4,
@@ -447,6 +464,18 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   }
 
+  case INTERNAL_R_RISCV_X0REL_I:
+  case INTERNAL_R_RISCV_X0REL_S: {
+    checkInt(ctx, loc, val, 12, rel);
+    uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_X0 << 15);
+    if (rel.type == INTERNAL_R_RISCV_X0REL_I)
+      insn = setLO12_I(insn, val);
+    else
+      insn = setLO12_S(insn, val);
+    write32le(loc, insn);
+    return;
+  }
+
   case INTERNAL_R_RISCV_GPREL_I:
   case INTERNAL_R_RISCV_GPREL_S: {
     Defined *gp = ctx.sym.riscvGlobalPointer;
@@ -725,19 +754,23 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
       (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
   const int64_t displace = dest - loc;
 
-  if (rvc && isInt<12>(displace) && rd == 0) {
+  // When the caller specifies the old value of `remove`, disallow its
+  // increment.
+  if (remove >= 6 && rvc && isInt<12>(displace) && rd == X_X0) {
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0xa001); // c.j
     remove = 6;
-  } else if (rvc && isInt<12>(displace) && rd == X_RA &&
+  } else if (remove >= 6 && rvc && isInt<12>(displace) && rd == X_RA &&
              !ctx.arg.is64) { // RV32C only
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
-  } else if (isInt<21>(displace)) {
+  } else if (remove >= 4 && isInt<21>(displace)) {
     sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
     sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
     remove = 4;
+  } else {
+    remove = 0;
   }
 }
 
@@ -772,6 +805,25 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
 
 static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
                           uint64_t loc, Relocation &r, uint32_t &remove) {
+
+  // Fold into use of x0+offset
+  if (isInt<12>(r.sym->getVA(ctx, r.addend))) {
+    switch (r.type) {
+    case R_RISCV_HI20:
+      // Remove lui rd, %hi20(x).
+      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+      remove = 4;
+      break;
+    case R_RISCV_LO12_I:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_I;
+      break;
+    case R_RISCV_LO12_S:
+      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
+      break;
+    }
+    return;
+  }
+
   const Defined *gp = ctx.sym.riscvGlobalPointer;
   if (!gp)
     return;
@@ -794,7 +846,7 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   }
 }
 
-static bool relax(Ctx &ctx, InputSection &sec) {
+static bool relax(Ctx &ctx, int pass, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -828,8 +880,13 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     }
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
-      if (relaxable(relocs, i))
+      // Prevent oscillation between states by disallowing the increment of
+      // `remove` after a few passes. The previous `remove` value is
+      // `cur-delta`.
+      if (relaxable(relocs, i)) {
+        remove = pass < 4 ? 6 : cur - delta;
         relaxCall(ctx, sec, i, loc, r, remove);
+      }
       break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
@@ -885,7 +942,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << delta;
+    Err(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }
@@ -899,9 +956,6 @@ static bool relax(Ctx &ctx, InputSection &sec) {
 // relaxation pass.
 bool RISCV::relaxOnce(int pass) const {
   llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
-  if (ctx.arg.relocatable)
-    return false;
-
   if (pass == 0)
     initSymbolAnchors(ctx);
 
@@ -911,9 +965,120 @@ bool RISCV::relaxOnce(int pass) const {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
-      changed |= relax(ctx, *sec);
+      changed |= relax(ctx, pass, *sec);
   }
   return changed;
+}
+
+// If the section alignment is >= 4, advance `dot` to insert NOPs and synthesize
+// an ALIGN relocation. Otherwise, return false to use default handling.
+template <class ELFT, class RelTy>
+bool RISCV::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                                    Relocs<RelTy> rels) {
+  if (!baseSec) {
+    // Record the first input section with RELAX relocations. We will synthesize
+    // ALIGN relocations here.
+    for (auto rel : rels) {
+      if (rel.getType(false) == R_RISCV_RELAX) {
+        baseSec = sec;
+        break;
+      }
+    }
+  } else if (sec->addralign >= 4) {
+    // If the alignment is >= 4 and the section does not start with an ALIGN
+    // relocation, synthesize one.
+    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
+      return rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN;
+    });
+    if (!hasAlignRel) {
+      synthesizedAligns.emplace_back(dot - baseSec->getVA(),
+                                     sec->addralign - 2);
+      dot += sec->addralign - 2;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Finalize the relocation section by appending synthesized ALIGN relocations
+// after processing all input sections.
+template <class ELFT, class RelTy>
+void RISCV::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                     Relocs<RelTy> rels) {
+  auto *f = cast<ObjFile<ELFT>>(baseSec->file);
+  auto shdr = f->template getELFShdrs<ELFT>()[baseSec->relSecIdx];
+  // Create a copy of InputSection.
+  sec = make<InputSection>(*f, shdr, baseSec->name);
+  auto *baseRelSec = cast<InputSection>(f->getSections()[baseSec->relSecIdx]);
+  *sec = *baseRelSec;
+  baseSec = nullptr;
+
+  // Allocate buffer for original and synthesized relocations in RELA format.
+  // If CREL is used, OutputSection::finalizeNonAllocCrel will convert RELA to
+  // CREL.
+  auto newSize = rels.size() + synthesizedAligns.size();
+  auto *relas = makeThreadLocalN<typename ELFT::Rela>(newSize);
+  sec->size = newSize * sizeof(typename ELFT::Rela);
+  sec->content_ = reinterpret_cast<uint8_t *>(relas);
+  sec->type = SHT_RELA;
+  // Copy original relocations to the new buffer, potentially converting CREL to
+  // RELA.
+  for (auto [i, r] : llvm::enumerate(rels)) {
+    relas[i].r_offset = r.r_offset;
+    relas[i].setSymbolAndType(r.getSymbol(0), r.getType(0), false);
+    if constexpr (RelTy::HasAddend)
+      relas[i].r_addend = r.r_addend;
+  }
+  // Append synthesized ALIGN relocations to the buffer.
+  for (auto [i, r] : llvm::enumerate(synthesizedAligns)) {
+    auto &rela = relas[rels.size() + i];
+    rela.r_offset = r.first;
+    rela.setSymbolAndType(0, R_RISCV_ALIGN, false);
+    rela.r_addend = r.second;
+  }
+  synthesizedAligns.clear();
+  // Replace the old relocation section with the new one in the output section.
+  // addOrphanSections ensures that the output relocation section is processed
+  // after osec.
+  for (SectionCommand *cmd : sec->getParent()->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    for (auto *&isec : isd->sections)
+      if (isec == baseRelSec)
+        isec = sec;
+  }
+}
+
+template <class ELFT>
+bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
+  bool ret = false;
+  if (sec) {
+    invokeOnRelocs(*sec, ret = synthesizeAlignForInput<ELFT>, dot, sec);
+  } else if (baseSec) {
+    invokeOnRelocs(*baseSec, finalizeSynthesizeAligns<ELFT>, dot, sec);
+  }
+  return ret;
+}
+
+// Without linker relaxation enabled for a particular relocatable file or
+// section, the assembler will not generate R_RISCV_ALIGN relocations for
+// alignment directives. This becomes problematic in a two-stage linking
+// process: ld -r a.o b.o -o ab.o; ld ab.o -o ab. This function synthesizes an
+// R_RISCV_ALIGN relocation at section start when needed.
+//
+// When called with an input section (`sec` is not null): If the section
+// alignment is >= 4, advance `dot` to insert NOPs and synthesize an ALIGN
+// relocation.
+//
+// When called after all input sections are processed (`sec` is null): The
+// output relocation section is updated with all the newly synthesized ALIGN
+// relocations.
+bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec) {
+  assert(ctx.arg.relocatable);
+  if (ctx.arg.is64)
+    return synthesizeAlignAux<ELF64LE>(dot, sec);
+  return synthesizeAlignAux<ELF32LE>(dot, sec);
 }
 
 void RISCV::finalizeRelax(int passes) const {
@@ -974,6 +1139,8 @@ void RISCV::finalizeRelax(int passes) const {
           switch (newType) {
           case INTERNAL_R_RISCV_GPREL_I:
           case INTERNAL_R_RISCV_GPREL_S:
+          case INTERNAL_R_RISCV_X0REL_I:
+          case INTERNAL_R_RISCV_X0REL_S:
             break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.

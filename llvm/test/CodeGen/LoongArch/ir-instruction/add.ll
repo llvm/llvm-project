@@ -7,12 +7,12 @@
 define i1 @add_i1(i1 %x, i1 %y) {
 ; LA32-LABEL: add_i1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    xor $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_i1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    xor $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %add = add i1 %x, %y
   ret i1 %add
@@ -97,12 +97,12 @@ define i64 @add_i64(i64 %x, i64 %y) {
 define i1 @add_i1_3(i1 %x) {
 ; LA32-LABEL: add_i1_3:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a0, $a0, 1
+; LA32-NEXT:    xori $a0, $a0, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: add_i1_3:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $a0, 1
+; LA64-NEXT:    xori $a0, $a0, 1
 ; LA64-NEXT:    ret
   %add = add i1 %x, 3
   ret i1 %add

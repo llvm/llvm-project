@@ -168,6 +168,7 @@ add_libc_test(
   DEPENDS
     libc.src.string.strdup
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 # FIXME: This is failing on the bot for some reason, disable for now.

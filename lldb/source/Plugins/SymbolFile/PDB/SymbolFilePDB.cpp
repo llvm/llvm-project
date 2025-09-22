@@ -14,6 +14,7 @@
 #include "clang/Lex/Lexer.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -53,7 +54,6 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
@@ -71,6 +71,93 @@ LLDB_PLUGIN_DEFINE(SymbolFilePDB)
 char SymbolFilePDB::ID;
 
 namespace {
+
+enum PDBReader {
+  ePDBReaderDefault,
+  ePDBReaderDIA,
+  ePDBReaderNative,
+};
+
+constexpr OptionEnumValueElement g_pdb_reader_enums[] = {
+    {
+        ePDBReaderDefault,
+        "default",
+        "Use DIA PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
+        "variable is set",
+    },
+    {
+        ePDBReaderDIA,
+        "dia",
+        "Use DIA PDB reader",
+    },
+    {
+        ePDBReaderNative,
+        "native",
+        "Use native PDB reader",
+    },
+};
+
+#define LLDB_PROPERTIES_symbolfilepdb
+#include "SymbolFilePDBProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_symbolfilepdb
+#include "SymbolFilePDBPropertiesEnum.inc"
+};
+
+#if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
+bool ShouldUseNativeReaderByDefault() {
+  static bool g_use_native_by_default = true;
+
+  static llvm::once_flag g_initialize;
+  llvm::call_once(g_initialize, [] {
+    llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
+    if (!env_value.equals_insensitive("on") &&
+        !env_value.equals_insensitive("yes") &&
+        !env_value.equals_insensitive("1") &&
+        !env_value.equals_insensitive("true"))
+      g_use_native_by_default = false;
+  });
+
+  return g_use_native_by_default;
+}
+#endif
+
+class PluginProperties : public Properties {
+public:
+  static llvm::StringRef GetSettingName() {
+    return SymbolFilePDB::GetPluginNameStatic();
+  }
+
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_symbolfilepdb_properties);
+  }
+
+  bool UseNativeReader() const {
+#if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
+    auto value =
+        GetPropertyAtIndexAs<PDBReader>(ePropertyReader, ePDBReaderDefault);
+    switch (value) {
+    case ePDBReaderNative:
+      return true;
+    case ePDBReaderDIA:
+      return false;
+    default:
+    case ePDBReaderDefault:
+      return ShouldUseNativeReaderByDefault();
+    }
+#else
+    return true;
+#endif
+  }
+};
+
+PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
 lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   switch (lang) {
   case PDB_Lang::Cpp:
@@ -97,39 +184,33 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 }
 } // namespace
 
-static bool ShouldUseNativeReader() {
-#if defined(_WIN32)
-#if LLVM_ENABLE_DIA_SDK
-  llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
-  if (!use_native.equals_insensitive("on") &&
-      !use_native.equals_insensitive("yes") &&
-      !use_native.equals_insensitive("1") &&
-      !use_native.equals_insensitive("true"))
-    return false;
-#endif
-#endif
-  return true;
-}
-
 void SymbolFilePDB::Initialize() {
-  if (ShouldUseNativeReader()) {
-    npdb::SymbolFileNativePDB::Initialize();
-  } else {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-  }
+  // Initialize both but check in CreateInstance for the desired plugin
+  npdb::SymbolFileNativePDB::Initialize();
+
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 }
 
 void SymbolFilePDB::Terminate() {
-  if (ShouldUseNativeReader()) {
-    npdb::SymbolFileNativePDB::Terminate();
-  } else {
-    PluginManager::UnregisterPlugin(CreateInstance);
-  }
+  npdb::SymbolFileNativePDB::Terminate();
+
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {}
+bool SymbolFilePDB::UseNativePDB() {
+  return GetGlobalPluginProperties().UseNativeReader();
+}
+
+void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForSymbolFilePlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    PluginManager::CreateSettingForSymbolFilePlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the PDB symbol-file plug-in.", true);
+  }
+}
 
 llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
   return "Microsoft PDB debug symbol file reader.";
@@ -137,6 +218,9 @@ llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
 
 lldb_private::SymbolFile *
 SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  if (UseNativePDB())
+    return nullptr;
+
   return new SymbolFilePDB(std::move(objfile_sp));
 }
 
@@ -296,10 +380,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
     return nullptr;
 
   auto func_length = pdb_func.getLength();
-  AddressRange func_range =
-      AddressRange(file_vm_addr, func_length,
-                   GetObjectFile()->GetModule()->GetSectionList());
-  if (!func_range.GetBaseAddress().IsValid())
+  Address func_addr(file_vm_addr,
+                    GetObjectFile()->GetModule()->GetSectionList());
+  if (!func_addr.IsValid())
     return nullptr;
 
   lldb_private::Type *func_type = ResolveTypeUID(pdb_func.getSymIndexId());
@@ -312,7 +395,7 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
-      AddressRanges{func_range});
+      func_addr, AddressRanges{AddressRange(func_addr, func_length)});
 
   comp_unit.AddFunction(func_sp);
 
@@ -1280,7 +1363,7 @@ void SymbolFilePDB::CacheFunctionNames() {
       if (name.empty())
         continue;
 
-      if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
+      if (Mangled::IsMangledName(name.c_str())) {
         // PDB public symbol has mangled name for its associated function.
         if (auto vm_addr = pub_sym_up->getVirtualAddress()) {
           if (auto it = addr_ids.find(vm_addr); it != addr_ids.end())
@@ -1432,7 +1515,8 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   symtab.Finalize();
 }
 
-void SymbolFilePDB::DumpClangAST(Stream &s) {
+void SymbolFilePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                 bool show_color) {
   auto type_system_or_err =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
@@ -1446,7 +1530,7 @@ void SymbolFilePDB::DumpClangAST(Stream &s) {
       llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_type_system)
     return;
-  clang_type_system->Dump(s.AsRawOstream());
+  clang_type_system->Dump(s.AsRawOstream(), filter, show_color);
 }
 
 void SymbolFilePDB::FindTypesByRegex(
@@ -1762,11 +1846,10 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
   if (!files)
     return false;
 
-  // For each source and header file, create a LineSequence for contributions
-  // to the compiland from that file, and add the sequence.
+  // For each source and header file, create a LineTable::Sequence for
+  // contributions to the compiland from that file, and add the sequence.
   while (auto file = files->getNext()) {
-    std::unique_ptr<LineSequence> sequence(
-        line_table->CreateLineSequenceContainer());
+    LineTable::Sequence sequence;
     auto lines = m_session_up->findLineNumbers(*compiland_up, *file);
     if (!lines)
       continue;
@@ -1795,12 +1878,11 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
       // of the previous entry's address range if the current entry resulted in
       // a gap from the previous entry.
       if (is_gap && ShouldAddLine(match_line, prev_line, prev_length)) {
-        line_table->AppendLineEntryToSequence(
-            sequence.get(), prev_addr + prev_length, prev_line, 0,
-            prev_source_idx, false, false, false, false, true);
+        line_table->AppendLineEntryToSequence(sequence, prev_addr + prev_length,
+                                              prev_line, 0, prev_source_idx,
+                                              false, false, false, false, true);
 
-        line_table->InsertSequence(sequence.get());
-        sequence = line_table->CreateLineSequenceContainer();
+        line_table->InsertSequence(std::move(sequence));
       }
 
       if (ShouldAddLine(match_line, lno, length)) {
@@ -1819,7 +1901,7 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
             is_epilogue = (addr == epilogue->getVirtualAddress());
         }
 
-        line_table->AppendLineEntryToSequence(sequence.get(), addr, lno, col,
+        line_table->AppendLineEntryToSequence(sequence, addr, lno, col,
                                               source_idx, is_statement, false,
                                               is_prologue, is_epilogue, false);
       }
@@ -1832,12 +1914,12 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
 
     if (entry_count > 0 && ShouldAddLine(match_line, prev_line, prev_length)) {
       // The end is always a terminal entry, so insert it regardless.
-      line_table->AppendLineEntryToSequence(
-          sequence.get(), prev_addr + prev_length, prev_line, 0,
-          prev_source_idx, false, false, false, false, true);
+      line_table->AppendLineEntryToSequence(sequence, prev_addr + prev_length,
+                                            prev_line, 0, prev_source_idx,
+                                            false, false, false, false, true);
     }
 
-    line_table->InsertSequence(sequence.get());
+    line_table->InsertSequence(std::move(sequence));
   }
 
   if (line_table->GetSize()) {

@@ -27,7 +27,7 @@ end subroutine
 ! CHECK:             hlfir.yield_element %[[VAL_17]] : i32
 ! CHECK:           }
 ! CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_19:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
-! CHECK:           fir.call @_QPtakes_int(%[[VAL_18]]#1) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
+! CHECK:           fir.call @_QPtakes_int(%[[VAL_18]]#0) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_18]]#1, %[[VAL_18]]#2 : !fir.ref<!fir.array<4xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_19]] : !hlfir.expr<4xi32>
 ! CHECK:           return
@@ -111,7 +111,7 @@ end subroutine
 ! CHECK:             hlfir.yield_element %[[VAL_16]] : i32
 ! CHECK:           }
 ! CHECK:           %[[VAL_17:.*]]:3 = hlfir.associate %[[VAL_18:.*]](%[[VAL_3]]) {adapt.valuebyref} : (!hlfir.expr<4xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>, i1)
-! CHECK:           fir.call @_QPtakes_int(%[[VAL_17]]#1) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
+! CHECK:           fir.call @_QPtakes_int(%[[VAL_17]]#0) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_17]]#1, %[[VAL_17]]#2 : !fir.ref<!fir.array<4xi32>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_18]] : !hlfir.expr<4xi32>
 ! CHECK:           return

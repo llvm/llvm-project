@@ -312,8 +312,9 @@ typedef basic_stringstream<wchar_t> wstringstream;
 
 // clang-format on
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/sstream>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_LOCALIZATION
@@ -324,7 +325,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #    include <__utility/swap.h>
 #    include <ios>
 #    include <istream>
-#    include <locale>
+#    include <streambuf>
 #    include <string>
 #    include <string_view>
 #    include <version>
@@ -341,7 +342,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Class template basic_stringbuf [stringbuf]
 
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_stringbuf : public basic_streambuf<_CharT, _Traits> {
+class basic_stringbuf : public basic_streambuf<_CharT, _Traits> {
 public:
   typedef _CharT char_type;
   typedef _Traits traits_type;
@@ -863,7 +864,7 @@ typename basic_stringbuf<_CharT, _Traits, _Allocator>::pos_type basic_stringbuf<
 // Class template basic_istringstream [istringstream]
 
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_istringstream : public basic_istream<_CharT, _Traits> {
+class basic_istringstream : public basic_istream<_CharT, _Traits> {
 public:
   typedef _CharT char_type;
   typedef _Traits traits_type;
@@ -999,7 +1000,7 @@ swap(basic_istringstream<_CharT, _Traits, _Allocator>& __x, basic_istringstream<
 // Class template basic_ostringstream [ostringstream]
 
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_ostringstream : public basic_ostream<_CharT, _Traits> {
+class basic_ostringstream : public basic_ostream<_CharT, _Traits> {
 public:
   typedef _CharT char_type;
   typedef _Traits traits_type;
@@ -1137,7 +1138,7 @@ swap(basic_ostringstream<_CharT, _Traits, _Allocator>& __x, basic_ostringstream<
 // Class template basic_stringstream [stringstream]
 
 template <class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_stringstream : public basic_iostream<_CharT, _Traits> {
+class basic_stringstream : public basic_iostream<_CharT, _Traits> {
 public:
   typedef _CharT char_type;
   typedef _Traits traits_type;
@@ -1291,6 +1292,6 @@ _LIBCPP_POP_MACROS
 #    include <ostream>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SSTREAM

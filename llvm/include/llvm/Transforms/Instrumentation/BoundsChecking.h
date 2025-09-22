@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_BOUNDSCHECKING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 class Function;
@@ -17,24 +19,29 @@ class Function;
 /// A pass to instrument code and perform run-time bounds checking on loads,
 /// stores, and other memory intrinsics.
 class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
+
 public:
-  enum class ReportingMode {
-    Trap,
-    MinRuntime,
-    MinRuntimeAbort,
-    FullRuntime,
-    FullRuntimeAbort,
+  struct Options {
+    struct Runtime {
+      Runtime(bool MinRuntime, bool MayReturn)
+          : MinRuntime(MinRuntime), MayReturn(MayReturn) {}
+      bool MinRuntime;
+      bool MayReturn;
+    };
+    std::optional<Runtime> Rt; // Trap if empty.
+    bool Merge = false;
+    std::optional<int8_t> GuardKind; // `allow_ubsan_check` argument.
   };
 
-private:
-  ReportingMode Mode = ReportingMode::Trap;
-
-public:
-  BoundsCheckingPass(ReportingMode Mode) : Mode(Mode) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  BoundsCheckingPass(Options Opts) : Opts(Opts) {}
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
+
+private:
+  Options Opts;
 };
 
 } // end namespace llvm

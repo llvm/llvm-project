@@ -4,7 +4,8 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcicsr < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
-# CHECK: :[[@LINE+1]]:20: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
 qc.csrrwr x10, x5, x0
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -14,7 +15,8 @@ qc.csrrwr x10, x5
 qc.csrrwr x10, x5, x20
 
 
-# CHECK: :[[@LINE+1]]:21: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:21: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
 qc.csrrwri x20, 31, x0
 
 # CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [0, 31]

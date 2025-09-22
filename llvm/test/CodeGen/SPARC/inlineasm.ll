@@ -144,15 +144,6 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: test_twinword:
-; CHECK: rd  %asr5, %i1
-; CHECK: srlx %i1, 32, %i0
-
-define i64 @test_twinword(){
-  %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "={i0}"()
-  ret i64 %1
-}
-
 ; CHECK-LABEL: test_symbol:
 ; CHECK: ba,a brtarget
 define void @test_symbol() {

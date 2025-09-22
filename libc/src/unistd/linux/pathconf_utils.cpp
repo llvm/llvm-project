@@ -14,8 +14,8 @@
 #include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 
 // other linux specific includes

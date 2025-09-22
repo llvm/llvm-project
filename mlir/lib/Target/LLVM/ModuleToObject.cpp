@@ -16,8 +16,6 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -28,7 +26,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -68,8 +65,8 @@ ModuleToObject::getOrCreateTargetMachine() {
   }
 
   // Create the target machine using the target.
-  targetMachine.reset(
-      target->createTargetMachine(triple, chip, features, {}, {}));
+  targetMachine.reset(target->createTargetMachine(llvm::Triple(triple), chip,
+                                                  features, {}, {}));
   if (!targetMachine)
     return std::nullopt;
   return targetMachine.get();
@@ -233,7 +230,7 @@ void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
   if (targetMachine) {
     // Set the data layout and target triple of the module.
     module.setDataLayout((*targetMachine)->createDataLayout());
-    module.setTargetTriple((*targetMachine)->getTargetTriple().getTriple());
+    module.setTargetTriple((*targetMachine)->getTargetTriple());
   }
 }
 

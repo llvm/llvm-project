@@ -507,6 +507,9 @@ bool index::printSymbolName(const Decl *D, const LangOptions &LO,
 
 StringRef index::getSymbolKindString(SymbolKind K) {
   switch (K) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case SymbolKind::IncludeDirective:
   case SymbolKind::Unknown: return "<unknown>";
   case SymbolKind::Module: return "module";
   case SymbolKind::Namespace: return "namespace";

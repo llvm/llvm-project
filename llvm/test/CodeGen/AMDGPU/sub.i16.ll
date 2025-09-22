@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=bonaire < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_sub_i16:
@@ -144,7 +144,7 @@ define amdgpu_kernel void @v_test_sub_i16_sext_to_i64(ptr addrspace(1) %out, ptr
   ret void
 }
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 ; GCN-LABEL: {{^}}v_test_sub_i16_constant_commute:
 ; VI: v_subrev_u16_e32 v{{[0-9]+}}, 0x800, v{{[0-9]+}}

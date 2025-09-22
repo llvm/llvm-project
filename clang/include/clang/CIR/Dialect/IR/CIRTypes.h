@@ -10,18 +10,44 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_CIR_IR_CIRTYPES_H_
-#define MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_H
+#define CLANG_CIR_DIALECT_IR_CIRTYPES_H
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
+
+namespace cir {
+
+namespace detail {
+struct RecordTypeStorage;
+} // namespace detail
+
+bool isValidFundamentalIntWidth(unsigned width);
+
+/// Returns true if the type is a CIR sized type.
+///
+/// Types are sized if they implement SizedTypeInterface and
+/// return true from its method isSized.
+///
+/// Unsized types are those that do not have a size, such as
+/// void, or abstract types.
+bool isSized(mlir::Type ty);
+
+} // namespace cir
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect Tablegen'd Types
 //===----------------------------------------------------------------------===//
 
+namespace cir {
+
+#include "clang/CIR/Dialect/IR/CIRTypeConstraints.h.inc"
+
+} // namespace cir
+
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
 
-#endif // MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#endif // CLANG_CIR_DIALECT_IR_CIRTYPES_H

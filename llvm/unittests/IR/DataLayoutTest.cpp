@@ -157,7 +157,7 @@ public:
 
   std::string format(StringRef Str) const {
     std::string Res = Str.str();
-    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    llvm::replace(Res, '!', Specifier);
     return Res;
   }
 };
@@ -675,13 +675,6 @@ TEST(DataLayoutTest, VectorAlign) {
   // the natural alignment as a fallback.
   EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32Ty));
   EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32Ty));
-}
-
-TEST(DataLayoutTest, UEFI) {
-  Triple TT = Triple("x86_64-unknown-uefi");
-
-  // Test UEFI X86_64 Mangling Component.
-  EXPECT_STREQ(DataLayout::getManglingComponent(TT), "-m:w");
 }
 
 } // anonymous namespace

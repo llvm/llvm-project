@@ -10,37 +10,38 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices, i1 %arg) #0 align 2 {
 ; CHECK-LABEL: @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN17_1:%.*]], label [[IF_END22_1:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN17_1:%.*]], label [[IF_END22_1:%.*]]
 ; CHECK:       for.end36:
 ; CHECK-NEXT:    br label [[FOR_BODY144:%.*]]
 ; CHECK:       for.body144:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END227:%.*]], label [[FOR_BODY144]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END227:%.*]], label [[FOR_BODY144]]
 ; CHECK:       for.end227:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END271:%.*]], label [[FOR_BODY233:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END271:%.*]], label [[FOR_BODY233:%.*]]
 ; CHECK:       for.body233:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY233]], label [[FOR_END271]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY233]], label [[FOR_END271]]
 ; CHECK:       for.end271:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ splat (float 0x47EFFFFFE0000000), [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> undef, [[TMP0]]
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN291:%.*]], label [[RETURN]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN291:%.*]], label [[RETURN]]
 ; CHECK:       if.then291:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    br i1 %arg, label [[IF_END332:%.*]], label [[IF_ELSE319:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_END332:%.*]], label [[IF_ELSE319:%.*]]
 ; CHECK:       if.else319:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN325:%.*]], label [[IF_END327:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN325:%.*]], label [[IF_END327:%.*]]
 ; CHECK:       if.then325:
 ; CHECK-NEXT:    br label [[IF_END327]]
 ; CHECK:       if.end327:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN329:%.*]], label [[IF_END332]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> <float poison, float undef>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN329:%.*]], label [[IF_END332]]
 ; CHECK:       if.then329:
 ; CHECK-NEXT:    br label [[IF_END332]]
 ; CHECK:       if.end332:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP1]], [[IF_THEN329]] ], [ [[TMP1]], [[IF_END327]] ], [ splat (float 0x3F847AE140000000), [[IF_THEN291]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP6]], [[IF_THEN329]] ], [ [[TMP6]], [[IF_END327]] ], [ splat (float 0x3F847AE140000000), [[IF_THEN291]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[VERTICES:%.*]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -49,11 +50,11 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %ve
 ; CHECK:       if.then17.1:
 ; CHECK-NEXT:    br label [[IF_END22_1]]
 ; CHECK:       if.end22.1:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN17_2:%.*]], label [[IF_END22_2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN17_2:%.*]], label [[IF_END22_2:%.*]]
 ; CHECK:       if.then17.2:
 ; CHECK-NEXT:    br label [[IF_END22_2]]
 ; CHECK:       if.end22.2:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END36:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END36:%.*]], label [[FOR_BODY]]
 ;
 entry:
   br i1 %arg, label %return, label %if.end

@@ -77,6 +77,7 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86DisassemblerDecoder.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -100,7 +101,7 @@ using namespace llvm::X86Disassembler;
 // this information is known, we have narrowed down to a single instruction.
 struct ModRMDecision {
   uint8_t modrm_type;
-  uint32_t instructionIDs;
+  uint16_t instructionIDs;
 };
 
 // Specifies which set of ModR/M->instruction tables to look at

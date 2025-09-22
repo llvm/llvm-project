@@ -1,9 +1,10 @@
 /// Test i32 passing and returning on LoongArch64
 /// LoongArch64 LP64D ABI requires unsigned 32 bit integers to be sign extended.
 
-// REQUIRES: loongarch-registered-target
 // RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=LOONGARCH64
 // RUN: tco -target="loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=LOONGARCH64_LLVM
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128", llvm.target_triple = "loongarch64-unknown-linux-gnu"} {
 
 // LOONGARCH64: func.func private @cfunc32(i32 {llvm.signext}) -> (i32 {llvm.signext}) attributes {fir.bindc_name = "cfunc32"}
 
@@ -24,4 +25,5 @@ func.func private @cfunc32(i32) -> i32 attributes {fir.bindc_name = "cfunc32"}
 func.func @foo(%0: i32) -> i32 attributes {fir.bindc_name = "foo"} {
   %1 = fir.call @cfunc32(%0) fastmath<contract> : (i32) -> i32
   return %1 : i32
+}
 }

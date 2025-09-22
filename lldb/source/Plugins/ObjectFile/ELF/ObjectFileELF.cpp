@@ -123,7 +123,7 @@ public:
 
   static elf_sxword RelocAddend64(const ELFRelocation &rel);
 
-  bool IsRela() { return (reloc.is<ELFRela *>()); }
+  bool IsRela() { return (llvm::isa<ELFRela *>(reloc)); }
 
 private:
   typedef llvm::PointerUnion<ELFRel *, ELFRela *> RelocUnion;
@@ -144,74 +144,74 @@ ELFRelocation::ELFRelocation(unsigned type) {
 }
 
 ELFRelocation::~ELFRelocation() {
-  if (reloc.is<ELFRel *>())
-    delete reloc.get<ELFRel *>();
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(reloc))
+    delete elfrel;
   else
-    delete reloc.get<ELFRela *>();
+    delete llvm::cast<ELFRela *>(reloc);
 }
 
 bool ELFRelocation::Parse(const lldb_private::DataExtractor &data,
                           lldb::offset_t *offset) {
-  if (reloc.is<ELFRel *>())
-    return reloc.get<ELFRel *>()->Parse(data, offset);
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(reloc))
+    return elfrel->Parse(data, offset);
   else
-    return reloc.get<ELFRela *>()->Parse(data, offset);
+    return llvm::cast<ELFRela *>(reloc)->Parse(data, offset);
 }
 
 unsigned ELFRelocation::RelocType32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocType32(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocType32(*elfrel);
   else
-    return ELFRela::RelocType32(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocType32(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 unsigned ELFRelocation::RelocType64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocType64(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocType64(*elfrel);
   else
-    return ELFRela::RelocType64(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocType64(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 unsigned ELFRelocation::RelocSymbol32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocSymbol32(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocSymbol32(*elfrel);
   else
-    return ELFRela::RelocSymbol32(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocSymbol32(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 unsigned ELFRelocation::RelocSymbol64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return ELFRel::RelocSymbol64(*rel.reloc.get<ELFRel *>());
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return ELFRel::RelocSymbol64(*elfrel);
   else
-    return ELFRela::RelocSymbol64(*rel.reloc.get<ELFRela *>());
+    return ELFRela::RelocSymbol64(*llvm::cast<ELFRela *>(rel.reloc));
 }
 
 elf_addr ELFRelocation::RelocOffset32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return rel.reloc.get<ELFRel *>()->r_offset;
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return elfrel->r_offset;
   else
-    return rel.reloc.get<ELFRela *>()->r_offset;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_offset;
 }
 
 elf_addr ELFRelocation::RelocOffset64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
-    return rel.reloc.get<ELFRel *>()->r_offset;
+  if (auto *elfrel = llvm::dyn_cast<ELFRel *>(rel.reloc))
+    return elfrel->r_offset;
   else
-    return rel.reloc.get<ELFRela *>()->r_offset;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_offset;
 }
 
 elf_sxword ELFRelocation::RelocAddend32(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
+  if (llvm::isa<ELFRel *>(rel.reloc))
     return 0;
   else
-    return rel.reloc.get<ELFRela *>()->r_addend;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_addend;
 }
 
 elf_sxword  ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
-  if (rel.reloc.is<ELFRel *>())
+  if (llvm::isa<ELFRel *>(rel.reloc))
     return 0;
   else
-    return rel.reloc.get<ELFRela *>()->r_addend;
+    return llvm::cast<ELFRela *>(rel.reloc)->r_addend;
 }
 
 static user_id_t SegmentID(size_t PHdrIndex) {
@@ -762,8 +762,7 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
           if (GetAddressByteSize() == 4)
             load_addr &= 0xFFFFFFFF;
 
-          if (target.GetSectionLoadList().SetSectionLoadAddress(section_sp,
-                                                                load_addr))
+          if (target.SetSectionLoadAddress(section_sp, load_addr))
             ++num_loaded_sections;
         }
       }
@@ -1654,39 +1653,9 @@ lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
 }
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
-  if (Name.consume_front(".debug_")) {
-    return llvm::StringSwitch<SectionType>(Name)
-        .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
-        .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
-        .Case("addr", eSectionTypeDWARFDebugAddr)
-        .Case("aranges", eSectionTypeDWARFDebugAranges)
-        .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
-        .Case("frame", eSectionTypeDWARFDebugFrame)
-        .Case("info", eSectionTypeDWARFDebugInfo)
-        .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
-        .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
-        .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
-        .Case("loc", eSectionTypeDWARFDebugLoc)
-        .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
-        .Case("loclists", eSectionTypeDWARFDebugLocLists)
-        .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
-        .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
-        .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
-        .Case("names", eSectionTypeDWARFDebugNames)
-        .Case("pubnames", eSectionTypeDWARFDebugPubNames)
-        .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
-        .Case("ranges", eSectionTypeDWARFDebugRanges)
-        .Case("rnglists", eSectionTypeDWARFDebugRngLists)
-        .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
-        .Case("str", eSectionTypeDWARFDebugStr)
-        .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
-        .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
-        .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
-        .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
-        .Case("types", eSectionTypeDWARFDebugTypes)
-        .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
-        .Default(eSectionTypeOther);
-  }
+  if (Name.consume_front(".debug_"))
+    return ObjectFile::GetDWARFSectionTypeFromName(Name);
+
   return llvm::StringSwitch<SectionType>(Name)
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
@@ -2068,6 +2037,19 @@ static char FindArmAarch64MappingSymbol(const char *symbol_name) {
   return '\0';
 }
 
+static char FindRISCVMappingSymbol(const char *symbol_name) {
+  if (!symbol_name)
+    return '\0';
+
+  if (strcmp(symbol_name, "$d") == 0) {
+    return 'd';
+  }
+  if (strcmp(symbol_name, "$x") == 0) {
+    return 'x';
+  }
+  return '\0';
+}
+
 #define STO_MIPS_ISA (3 << 6)
 #define STO_MICROMIPS (2 << 6)
 #define IS_MICROMIPS(ST_OTHER) (((ST_OTHER)&STO_MIPS_ISA) == STO_MICROMIPS)
@@ -2133,6 +2115,12 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol_name)
       symbol_name = "";
 
+    // Skip local symbols starting with ".L" because these are compiler
+    // generated local labels used for internal purposes (e.g. debugging,
+    // optimization) and are not relevant for symbol resolution or external
+    // linkage.
+    if (llvm::StringRef(symbol_name).starts_with(".L"))
+      continue;
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
@@ -2221,7 +2209,6 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     int64_t symbol_value_offset = 0;
     uint32_t additional_flags = 0;
-
     if (arch.IsValid()) {
       if (arch.GetMachine() == llvm::Triple::arm) {
         if (symbol.getBinding() == STB_LOCAL) {
@@ -2259,6 +2246,27 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
+              address_class_map[symbol.st_value] = AddressClass::eData;
+              break;
+            }
+          }
+          if (mapping_symbol)
+            continue;
+        }
+      } else if (arch.GetTriple().isRISCV()) {
+        if (symbol.getBinding() == STB_LOCAL) {
+          char mapping_symbol = FindRISCVMappingSymbol(symbol_name);
+          if (symbol_type == eSymbolTypeCode) {
+            // Only handle $d and $x mapping symbols.
+            // Other mapping symbols are ignored as they don't affect address
+            // classification.
+            switch (mapping_symbol) {
+            case 'x':
+              // $x - marks a RISCV instruction sequence
+              address_class_map[symbol.st_value] = AddressClass::eCode;
+              break;
+            case 'd':
+              // $d - marks a RISCV data item sequence
               address_class_map[symbol.st_value] = AddressClass::eData;
               break;
             }

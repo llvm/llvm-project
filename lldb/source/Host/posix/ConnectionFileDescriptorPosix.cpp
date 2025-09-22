@@ -72,9 +72,11 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
   OpenCommandPipe();
 }
 
-ConnectionFileDescriptor::ConnectionFileDescriptor(Socket *socket)
-    : Connection(), m_pipe(), m_mutex(), m_shutting_down(false) {
-  InitializeSocket(socket);
+ConnectionFileDescriptor::ConnectionFileDescriptor(
+    std::unique_ptr<Socket> socket_up)
+    : m_shutting_down(false) {
+  m_uri = socket_up->GetRemoteConnectionURI();
+  m_io_sp = std::move(socket_up);
 }
 
 ConnectionFileDescriptor::~ConnectionFileDescriptor() {
@@ -90,7 +92,7 @@ void ConnectionFileDescriptor::OpenCommandPipe() {
 
   Log *log = GetLog(LLDBLog::Connection);
   // Make the command file descriptor here:
-  Status result = m_pipe.CreateNew(/*child_processes_inherit=*/false);
+  Status result = m_pipe.CreateNew();
   if (!result.Success()) {
     LLDB_LOGF(log,
               "%p ConnectionFileDescriptor::OpenCommandPipe () - could not "
@@ -119,8 +121,7 @@ bool ConnectionFileDescriptor::IsConnected() const {
 
 ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Status *error_ptr) {
-  return Connect(
-      path, [](llvm::StringRef) {}, error_ptr);
+  return Connect(path, [](llvm::StringRef) {}, error_ptr);
 }
 
 ConnectionStatus
@@ -179,9 +180,7 @@ ConnectionFileDescriptor::Connect(llvm::StringRef path,
 }
 
 bool ConnectionFileDescriptor::InterruptRead() {
-  size_t bytes_written = 0;
-  Status result = m_pipe.Write("i", 1, bytes_written);
-  return result.Success();
+  return !errorToBool(m_pipe.Write("i", 1).takeError());
 }
 
 ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
@@ -206,13 +205,11 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   std::unique_lock<std::recursive_mutex> locker(m_mutex, std::defer_lock);
   if (!locker.try_lock()) {
     if (m_pipe.CanWrite()) {
-      size_t bytes_written = 0;
-      Status result = m_pipe.Write("q", 1, bytes_written);
-      LLDB_LOGF(log,
-                "%p ConnectionFileDescriptor::Disconnect(): Couldn't get "
-                "the lock, sent 'q' to %d, error = '%s'.",
-                static_cast<void *>(this), m_pipe.GetWriteFileDescriptor(),
-                result.AsCString());
+      llvm::Error err = m_pipe.Write("q", 1).takeError();
+      LLDB_LOG(log,
+               "{0}: Couldn't get the lock, sent 'q' to {1}, error = '{2}'.",
+               this, m_pipe.GetWriteFileDescriptor(), err);
+      consumeError(std::move(err));
     } else if (log) {
       LLDB_LOGF(log,
                 "%p ConnectionFileDescriptor::Disconnect(): Couldn't get the "
@@ -275,13 +272,11 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
   error = m_io_sp->Read(dst, bytes_read);
 
   if (log) {
-    LLDB_LOGF(log,
-              "%p ConnectionFileDescriptor::Read()  fd = %" PRIu64
-              ", dst = %p, dst_len = %" PRIu64 ") => %" PRIu64 ", error = %s",
-              static_cast<void *>(this),
-              static_cast<uint64_t>(m_io_sp->GetWaitableHandle()),
-              static_cast<void *>(dst), static_cast<uint64_t>(dst_len),
-              static_cast<uint64_t>(bytes_read), error.AsCString());
+    LLDB_LOG(log,
+             "{0} ConnectionFileDescriptor::Read()  fd = {1}"
+             ", dst = {2}, dst_len = {3}) => {4}, error = {5}",
+             this, m_io_sp->GetWaitableHandle(), dst, dst_len, bytes_read,
+             error.AsCString());
   }
 
   if (bytes_read == 0) {
@@ -379,13 +374,11 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
   error = m_io_sp->Write(src, bytes_sent);
 
   if (log) {
-    LLDB_LOGF(log,
-              "%p ConnectionFileDescriptor::Write(fd = %" PRIu64
-              ", src = %p, src_len = %" PRIu64 ") => %" PRIu64 " (error = %s)",
-              static_cast<void *>(this),
-              static_cast<uint64_t>(m_io_sp->GetWaitableHandle()),
-              static_cast<const void *>(src), static_cast<uint64_t>(src_len),
-              static_cast<uint64_t>(bytes_sent), error.AsCString());
+    LLDB_LOG(log,
+             "{0} ConnectionFileDescriptor::Write(fd = {1}"
+             ", src = {2}, src_len = {3}) => {4} (error = {5})",
+             this, m_io_sp->GetWaitableHandle(), src, src_len, bytes_sent,
+             error.AsCString());
   }
 
   if (error_ptr)
@@ -454,7 +447,8 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
     if (timeout)
       select_helper.SetTimeout(*timeout);
 
-    select_helper.FDSetRead(handle);
+    // FIXME: Migrate to MainLoop.
+    select_helper.FDSetRead(reinterpret_cast<socket_t>(handle));
 #if defined(_WIN32)
     // select() won't accept pipes on Windows.  The entire Windows codepath
     // needs to be converted over to using WaitForMultipleObjects and event
@@ -496,7 +490,7 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           break; // Lets keep reading to until we timeout
         }
       } else {
-        if (select_helper.FDIsSetRead(handle))
+        if (select_helper.FDIsSetRead((lldb::socket_t)handle))
           return eConnectionStatusSuccess;
 
         if (select_helper.FDIsSetRead(pipe_fd)) {
@@ -731,9 +725,19 @@ ConnectionStatus ConnectionFileDescriptor::ConnectFile(
     struct termios options;
     ::tcgetattr(fd, &options);
 
-    // Set port speed to maximum
+    // Set port speed to the available maximum
+#ifdef B115200
     ::cfsetospeed(&options, B115200);
     ::cfsetispeed(&options, B115200);
+#elif B57600
+    ::cfsetospeed(&options, B57600);
+    ::cfsetispeed(&options, B57600);
+#elif B38400
+    ::cfsetospeed(&options, B38400);
+    ::cfsetispeed(&options, B38400);
+#else
+#error "Maximum Baud rate is Unknown"
+#endif
 
     // Raw input, disable echo and signals
     options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
@@ -790,9 +794,4 @@ ConnectionStatus ConnectionFileDescriptor::ConnectSerialPort(
   return eConnectionStatusSuccess;
 #endif // LLDB_ENABLE_POSIX
   llvm_unreachable("this function should be only called w/ LLDB_ENABLE_POSIX");
-}
-
-void ConnectionFileDescriptor::InitializeSocket(Socket *socket) {
-  m_io_sp.reset(socket);
-  m_uri = socket->GetRemoteConnectionURI();
 }

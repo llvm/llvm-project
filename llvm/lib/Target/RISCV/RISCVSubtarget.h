@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
 
@@ -83,17 +84,24 @@ public:
     SiFive7,
     VentanaVeyron,
     MIPSP8700,
+    Andes45,
+  };
+  enum RISCVVRGatherCostModelEnum : uint8_t {
+    Quadratic,
+    NLog2N,
   };
   // clang-format on
 private:
   virtual void anchor();
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
+  RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
+  unsigned XSfmmTE = 0;
   unsigned ZvlLen = 0;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
@@ -155,11 +163,14 @@ public:
   /// initializeProperties().
   RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
 
+  RISCVVRGatherCostModelEnum getVRGatherCostModel() const { return RISCVVRGatherCostModel; }
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
+  LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
+  bool hasStdExtCOrZca() const { return HasStdExtZca; }
   bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
   bool hasStdExtCOrZcfOrZce() const {
     return HasStdExtC || HasStdExtZcf || HasStdExtZce;
@@ -175,10 +186,38 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
+  bool hasCLZLike() const {
+    return HasStdExtZbb || HasVendorXTHeadBb ||
+           (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCTZLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCPOPLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasREV8Like() const {
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+  }
+
+  bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
+
+  bool hasCZEROLike() const {
+    return HasStdExtZicond || HasVendorXVentanaCondOps;
+  }
+
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
-    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+    return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
            hasShortForwardBranchOpt();
+  }
+
+  bool hasShlAdd(int64_t ShAmt) const {
+    if (ShAmt <= 0)
+      return false;
+    if (ShAmt <= 3)
+      return HasStdExtZba || HasVendorXAndesPerf || HasVendorXTHeadBa;
+    return ShAmt <= 31 && HasVendorXqciac;
   }
 
   bool is64Bit() const { return IsRV64; }
@@ -188,6 +227,8 @@ public:
   unsigned getXLen() const {
     return is64Bit() ? 64 : 32;
   }
+  bool useLoadStorePairs() const;
+  bool useCCMovInsn() const;
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;
@@ -235,8 +276,8 @@ public:
            TargetABI == RISCVABI::ABI_ILP32E;
   }
   bool isRegisterReservedByUser(Register i) const override {
-    assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
-    return UserReservedRegister[i];
+    assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i.id()];
   }
 
   // XRay support - require D and C extensions.
@@ -345,6 +386,7 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return TuneInfo->MaxPrefetchIterationsAhead;
   };
+  bool enableWritePrefetching() const override { return true; }
 
   unsigned getMinimumJumpTableEntries() const;
 
@@ -381,11 +423,11 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                 unsigned NumRegionInstrs) const override;
+                                 const SchedRegion &Region) const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

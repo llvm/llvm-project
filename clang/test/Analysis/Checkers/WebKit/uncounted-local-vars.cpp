@@ -121,6 +121,7 @@ void foo8(RefCountable* obj) {
     RefCountable *bar = foo->trivial() ? foo.get() : nullptr;
     // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
     foo = nullptr;
+    foo = (RefCountable *)0;
     bar->method();
   }
 }
@@ -204,6 +205,20 @@ void foo2() {
   }
 }
 } // namespace guardian_casts
+
+namespace casts {
+
+RefCountable* provide() { return nullptr; }
+RefCountable* downcast(RefCountable*);
+template<class T> T* bitwise_cast(T*);
+template<class T> T* bit_cast(T*);
+
+  void foo() {
+    auto* cast1 = downcast(provide());
+    auto* cast2 = bitwise_cast(provide());
+    auto* cast3 = bit_cast(provide());
+   }
+} // namespace casts
 
 namespace guardian_ref_conversion_operator {
 void foo() {
@@ -463,5 +478,18 @@ namespace local_var_for_singleton {
   void foo() {
     RefCountable* bar = singleton();
     RefCountable* baz = otherSingleton();
+  }
+}
+
+namespace virtual_function {
+  struct SomeObject {
+    virtual RefCountable* provide() { return nullptr; }
+    virtual RefCountable* operator&() { return nullptr; }
+  };
+  void foo(SomeObject* obj) {
+    auto* bar = obj->provide();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    auto* baz = &*obj;
+    // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
   }
 }

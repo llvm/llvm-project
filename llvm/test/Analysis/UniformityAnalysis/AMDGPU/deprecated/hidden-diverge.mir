@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 # This test was generated using SelectionDAG, where the compilation flow does
 # not match the assumptions made in MachineUA. For now, this test mostly serves
@@ -6,7 +7,7 @@
 # be deleted when it is clear that it is not actually testing anything useful.
 
 ---
-# CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
+# CHECK-LABEL: MachineUniformityInfo for function:  @hidden_diverge
 # CHECK-LABEL: BLOCK bb.0
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vgpr_32(s32) = COPY $vgpr0
 # CHECK-LABEL: BLOCK bb.2
