@@ -181,7 +181,8 @@ public:
     return m_target_list.GetSelectedTarget();
   }
 
-  /// Get the execution context for the selected target.
+  /// Get the execution context representing the selected entities in the
+  /// selected target.
   ExecutionContext GetSelectedExecutionContext();
 
   /// Similar to GetSelectedExecutionContext but returns a

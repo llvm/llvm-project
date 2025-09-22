@@ -1223,7 +1223,7 @@ void Debugger::RedrawStatusline(
   if (!m_statusline)
     return;
 
-  m_statusline->Redraw(GetSelectedExecutionContextRef());
+  m_statusline->Redraw(exe_ctx_ref);
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
@@ -2140,7 +2140,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
             if (ProcessSP process_sp = HandleProcessEvent(event_sp))
-              exe_ctx_ref = ExecutionContext(process_sp);
+              exe_ctx_ref = ExecutionContextRef(process_sp.get(),
+                                                /*adopt_selected=*/true);
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2148,7 +2149,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
             }
           } else if (broadcaster_class == broadcaster_class_thread) {
             if (ThreadSP thread_sp = HandleThreadEvent(event_sp))
-              exe_ctx_ref = ExecutionContext(thread_sp);
+              exe_ctx_ref =
+                  ExecutionContextRef(thread_sp.get(), /*adopt_selected=*/true);
           } else if (broadcaster == m_command_interpreter_up.get()) {
             if (event_type &
                 CommandInterpreter::eBroadcastBitQuitCommandReceived) {

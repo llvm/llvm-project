@@ -130,7 +130,7 @@ void Statusline::Redraw(std::optional<ExecutionContextRef> exe_ctx_ref) {
 
   // Lock the execution context.
   ExecutionContext exe_ctx =
-      m_exe_ctx_ref.Lock(/*thread_and_frame_only_if_stopped=*/true);
+      m_exe_ctx_ref.Lock(/*thread_and_frame_only_if_stopped=*/false);
 
   // Compute the symbol context if we're stopped.
   SymbolContext sym_ctx;
