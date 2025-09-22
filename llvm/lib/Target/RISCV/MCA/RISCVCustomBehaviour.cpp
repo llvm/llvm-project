@@ -86,7 +86,8 @@ uint8_t RISCVSEWInstrument::getSEW() const {
 bool RISCVInstrumentManager::supportsInstrumentType(
     llvm::StringRef Type) const {
   return Type == RISCVLMULInstrument::DESC_NAME ||
-         Type == RISCVSEWInstrument::DESC_NAME;
+         Type == RISCVSEWInstrument::DESC_NAME ||
+         InstrumentManager::supportsInstrumentType(Type);;
 }
 
 UniqueInstrument
@@ -110,8 +111,9 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
     return std::make_unique<RISCVSEWInstrument>(Data);
   }
 
-  LLVM_DEBUG(dbgs() << "RVCB: Unknown instrumentation Desc: " << Desc << '\n');
-  return nullptr;
+  LLVM_DEBUG(dbgs() << "RVCB: Creating default instrument for Desc: "
+                    << Desc << '\n');
+  return InstrumentManager::createInstrument(Desc, Data);
 }
 
 SmallVector<UniqueInstrument>
