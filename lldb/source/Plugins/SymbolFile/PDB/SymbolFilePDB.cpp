@@ -106,27 +106,20 @@ enum {
 #include "SymbolFilePDBPropertiesEnum.inc"
 };
 
-bool ShouldUseNativeReaderByDefault() {
-  static bool g_use_native_by_default = true;
-
-  static llvm::once_flag g_initialize;
-  llvm::call_once(g_initialize, [] {
-    llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
-    if (!env_value.equals_insensitive("on") &&
-        !env_value.equals_insensitive("yes") &&
-        !env_value.equals_insensitive("1") &&
-        !env_value.equals_insensitive("true"))
-      g_use_native_by_default = false;
+static bool g_should_use_native_reader_by_default = [] {
+  llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
 
 #if !LLVM_ENABLE_DIA_SDK || !defined(_WIN32)
-    // if the environment value is unset, the native reader is requested
-    if (env_value.empty())
-      g_use_native_by_default = true;
+  // if the environment value is unset, the native reader is requested
+  if (env_value.empty())
+    return true;
 #endif
-  });
 
-  return g_use_native_by_default;
-}
+  return env_value.equals_insensitive("on") ||
+         env_value.equals_insensitive("yes") ||
+         env_value.equals_insensitive("1") ||
+         env_value.equals_insensitive("true");
+}();
 
 class PluginProperties : public Properties {
 public:
@@ -164,7 +157,7 @@ private:
     case ePDBReaderDIA:
       return false;
     default:
-      return ShouldUseNativeReaderByDefault();
+      return g_should_use_native_reader_by_default;
     }
   }
 };
