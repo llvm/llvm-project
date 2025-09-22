@@ -136,6 +136,12 @@ __mmask32 test_kxnor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      __E, __F);
 }
 
+TEST_CONSTEXPR(_kxnor_mask32(0x1234ABCD, 0xFFFF0000) == 0x12345432);         // data correctness
+TEST_CONSTEXPR(_kxnor_mask32(0x123456789ABCDEF0, 0xFFFFFFFF) == 0x9ABCDEF0); // should be truncated to 32 bits
+TEST_CONSTEXPR(_kxnor_mask32(0xAABBCCDD, 0x00000000) == 0x55443322);         // all-zero mask, res = ~LHS
+TEST_CONSTEXPR(_kxnor_mask32(0x87654321, 0xFFFFFFFF) == 0x87654321);         // all-one mask, res = LHS
+TEST_CONSTEXPR(_kxnor_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000);         // ~A xnor A == 0
+
 __mmask64 test_kxnor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -146,6 +152,12 @@ __mmask64 test_kxnor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                     _mm512_cmpneq_epu8_mask(__C, __D)),
                                                     __E, __F);
 }
+
+TEST_CONSTEXPR(_kxnor_mask64(0x0123456789ABCDEF, 0xFFFFFFFF00000000) == 0x0123456776543210); // data correctness
+TEST_CONSTEXPR(_kxnor_mask64(0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F) == 0xFFFFFFFFFFFFFFFF); // full 64 bits
+TEST_CONSTEXPR(_kxnor_mask64(0xFEDCBA9876543210, 0xFFFFFFFFFFFFFFFF) == 0xFEDCBA9876543210); // all-one mask, res = LHS
+TEST_CONSTEXPR(_kxnor_mask64(0xAABBCCDD11223344, 0x0000000000000000) == 0x55443322EEDDCCBB); // all-zero mask, res = ~LHS
+TEST_CONSTEXPR(_kxnor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0x0000000000000000); // ~A xnor A == 0
 
 __mmask32 test_kxor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxor_mask32

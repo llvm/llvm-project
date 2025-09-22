@@ -8638,6 +8638,12 @@ __mmask16 test_mm512_kxnor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
+TEST_CONSTEXPR(_mm512_kxnor(0x00C5, 0xFFAF) == 0x95);    // data correctness
+TEST_CONSTEXPR(_mm512_kxnor(0x12345, 0xFFFF) == 0x2345); // should be truncated
+TEST_CONSTEXPR(_mm512_kxnor(0xABCD, 0x0000) == 0x5432);  // all-zero, res = ~LHS
+TEST_CONSTEXPR(_mm512_kxnor(0x5678, 0xFFFF) == 0x5678);  // all-one, res = LHS
+TEST_CONSTEXPR(_mm512_kxnor(0xAAAA, 0x5555) == 0x0000);  // ~A xnor A == 0
+
 __mmask16 test_mm512_kxor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kxor
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -8672,7 +8678,7 @@ TEST_CONSTEXPR(_kand_mask16(0xCC, 0xAA) == 0x88);        // data correctness
 TEST_CONSTEXPR(_kand_mask16(0x12345, 0xFFFF) == 0x2345); // should be truncated
 TEST_CONSTEXPR(_kand_mask16(0xABCD, 0x0000) == 0x0000);  // all-zero
 TEST_CONSTEXPR(_kand_mask16(0x5678, 0xFFFF) == 0x5678);  // all-one
-TEST_CONSTEXPR(_kand_mask16(0xAAAA, 0x5555) == 0x0000);  // intersect
+TEST_CONSTEXPR(_kand_mask16(0xAAAA, 0x5555) == 0x0000);  // disjoint
 
 __mmask16 test_kandn_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask16
@@ -8720,6 +8726,12 @@ __mmask16 test_kxnor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      _mm512_cmpneq_epu32_mask(__C, __D)),
                                                      __E, __F);
 }
+
+TEST_CONSTEXPR(_kxnor_mask16(0x00C5, 0xFFAF) == 0x95);    // data correctness
+TEST_CONSTEXPR(_kxnor_mask16(0x12345, 0xFFFF) == 0x2345); // should be truncated
+TEST_CONSTEXPR(_kxnor_mask16(0xABCD, 0x0000) == 0x5432);  // all-zero, res = ~LHS
+TEST_CONSTEXPR(_kxnor_mask16(0x5678, 0xFFFF) == 0x5678);  // all-one, res = LHS
+TEST_CONSTEXPR(_kxnor_mask16(0xAAAA, 0x5555) == 0x0000);  // ~A xnor A == 0
 
 __mmask16 test_kxor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxor_mask16

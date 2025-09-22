@@ -79,6 +79,12 @@ __mmask8 test_kxnor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                     __E, __F);
 }
 
+TEST_CONSTEXPR(_kxnor_mask8(0xC5, 0xAF) == 0x95);       // data correctness
+TEST_CONSTEXPR(_kxnor_mask8(0x1234, 0xFF) == 0x34);     // should be truncated to 8 bits
+TEST_CONSTEXPR(_kxnor_mask8(0x3A, 0x00) == 0xC5);       // all-zero mask, res = ~LHS
+TEST_CONSTEXPR(_kxnor_mask8(0xB4, 0xFF) == 0xB4);       // all-one mask, res = LHS
+TEST_CONSTEXPR(_kxnor_mask8(0xAA, 0x55) == 0x00);       // ~A xnor A == 0
+
 __mmask8 test_kxor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxor_mask8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>

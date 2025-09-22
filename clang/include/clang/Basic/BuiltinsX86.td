@@ -3157,15 +3157,15 @@ let Features = "avx512f", Attributes = [NoThrow, Const] in {
   def kunpckhi : X86Builtin<"unsigned short(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kxnorqi : X86Builtin<"unsigned char(unsigned char, unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def kxnorhi : X86Builtin<"unsigned short(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kxnorsi : X86Builtin<"unsigned int(unsigned int, unsigned int)">;
   def kxnordi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }

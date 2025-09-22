@@ -50,9 +50,8 @@ _kor_mask8(__mmask8 __A, __mmask8 __B) {
   return (__mmask8)__builtin_ia32_korqi((__mmask8)__A, (__mmask8)__B);
 }
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kxnor_mask8(__mmask8 __A, __mmask8 __B)
-{
+static __inline__ __mmask8 __DEFAULT_FN_ATTRS_CONSTEXPR
+_kxnor_mask8(__mmask8 __A, __mmask8 __B) {
   return (__mmask8)__builtin_ia32_kxnorqi((__mmask8)__A, (__mmask8)__B);
 }
 
