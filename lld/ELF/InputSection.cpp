@@ -486,7 +486,7 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
       p->r_addend = rel.addend;
 
     // Output section VA is zero for -r, so r_offset is an offset within the
-    // section, but for --emit-relocs it is a virtual address.3333
+    // section, but for --emit-relocs it is a virtual address.
     p->r_offset = sec->getVA(rel.offset);
     p->setSymbolAndType(ctx.in.symTab->getSymbolIndex(sym), type,
                         ctx.arg.isMips64EL);
