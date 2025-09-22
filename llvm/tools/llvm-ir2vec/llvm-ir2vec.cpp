@@ -25,9 +25,11 @@
 /// 3. Embedding Generation (embeddings):
 ///    Generates IR2Vec embeddings using a trained vocabulary.
 ///    Usage: llvm-ir2vec embeddings --ir2vec-vocab-path=vocab.json
-///    --level=func input.bc -o embeddings.txt Levels: --level=inst
-///    (instructions), --level=bb (basic blocks), --level=func (functions)
-///    (See IR2Vec.cpp for more embedding generation options)
+///    --ir2vec-kind=<kind> --level=<level> input.bc -o embeddings.txt
+///    Kind: --ir2vec-kind=symbolic (default), --ir2vec-kind=flow-aware
+///    Levels: --level=inst (instructions), --level=bb (basic blocks),
+///    --level=func (functions) (See IR2Vec.cpp for more embedding generation
+///    options)
 ///
 //===----------------------------------------------------------------------===//
 
@@ -53,8 +55,6 @@
 namespace llvm {
 namespace ir2vec {
 
-static cl::OptionCategory IR2VecToolCategory("IR2Vec Tool Options");
-
 // Subcommands
 static cl::SubCommand
     TripletsSubCmd("triplets", "Generate triplets for vocabulary training");
@@ -70,18 +70,18 @@ static cl::opt<std::string>
     InputFilename(cl::Positional,
                   cl::desc("<input bitcode file or '-' for stdin>"),
                   cl::init("-"), cl::sub(TripletsSubCmd),
-                  cl::sub(EmbeddingsSubCmd), cl::cat(IR2VecToolCategory));
+                  cl::sub(EmbeddingsSubCmd), cl::cat(ir2vec::IR2VecCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"),
-                                           cl::cat(IR2VecToolCategory));
+                                           cl::cat(ir2vec::IR2VecCategory));
 
 // Embedding-specific options
 static cl::opt<std::string>
     FunctionName("function", cl::desc("Process specific function only"),
                  cl::value_desc("name"), cl::Optional, cl::init(""),
-                 cl::sub(EmbeddingsSubCmd), cl::cat(IR2VecToolCategory));
+                 cl::sub(EmbeddingsSubCmd), cl::cat(ir2vec::IR2VecCategory));
 
 enum EmbeddingLevel {
   InstructionLevel, // Generate instruction-level embeddings
@@ -98,7 +98,7 @@ static cl::opt<EmbeddingLevel>
                      clEnumValN(FunctionLevel, "func",
                                 "Generate function-level embeddings")),
           cl::init(FunctionLevel), cl::sub(EmbeddingsSubCmd),
-          cl::cat(IR2VecToolCategory));
+          cl::cat(ir2vec::IR2VecCategory));
 
 namespace {
 
@@ -162,8 +162,8 @@ public:
 
     for (const BasicBlock &BB : F) {
       for (const auto &I : BB.instructionsWithoutDebug()) {
-        unsigned Opcode = Vocabulary::getNumericID(I.getOpcode());
-        unsigned TypeID = Vocabulary::getNumericID(I.getType()->getTypeID());
+        unsigned Opcode = Vocabulary::getSlotIndex(I.getOpcode());
+        unsigned TypeID = Vocabulary::getSlotIndex(I.getType()->getTypeID());
 
         // Add "Next" relationship with previous instruction
         if (HasPrevOpcode) {
@@ -184,7 +184,7 @@ public:
         // Add "Arg" relationships
         unsigned ArgIndex = 0;
         for (const Use &U : I.operands()) {
-          unsigned OperandID = Vocabulary::getNumericID(U.get());
+          unsigned OperandID = Vocabulary::getSlotIndex(*U);
           unsigned RelationID = ArgRelation + ArgIndex;
           OS << Opcode << '\t' << OperandID << '\t' << RelationID << '\n';
 
@@ -211,13 +211,7 @@ public:
 
   /// Dump entity ID to string mappings
   static void generateEntityMappings(raw_ostream &OS) {
-    // FIXME: Currently, the generated entity mappings are not one-to-one;
-    // Multiple TypeIDs map to same string key (Like Half, BFloat, etc. map to
-    // FloatTy). This would hinder learning good seed embeddings.
-    // We should fix this in the future by ensuring unique string keys either by
-    // post-processing here without changing the mapping in ir2vec::Vocabulary,
-    // or by changing the Vocabulary generation logic to ensure unique keys.
-    auto EntityLen = Vocabulary::expectedSize();
+    auto EntityLen = Vocabulary::getCanonicalSize();
     OS << EntityLen << "\n";
     for (unsigned EntityID = 0; EntityID < EntityLen; ++EntityID)
       OS << Vocabulary::getStringKey(EntityID) << '\t' << EntityID << '\n';
@@ -243,7 +237,7 @@ public:
 
     // Create embedder for this function
     assert(Vocab->isValid() && "Vocabulary is not valid");
-    auto Emb = Embedder::create(IR2VecKind::Symbolic, F, *Vocab);
+    auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
     if (!Emb) {
       OS << "Error: Failed to create embedder for function " << F.getName()
          << "\n";
@@ -323,7 +317,7 @@ int main(int argc, char **argv) {
   using namespace llvm::ir2vec;
 
   InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions(IR2VecToolCategory);
+  cl::HideUnrelatedOptions(ir2vec::IR2VecCategory);
   cl::ParseCommandLineOptions(
       argc, argv,
       "IR2Vec - Embedding Generation Tool\n"

@@ -155,8 +155,6 @@ define amdgpu_kernel void @global_volatile_load_0(
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -190,7 +188,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX6-NEXT:    s_mov_b32 s8, 2
 ; GFX6-NEXT:    v_lshlrev_b32_e64 v0, s8, v0
 ; GFX6-NEXT:    s_mov_b32 s8, 0
-; GFX6-NEXT:    ; implicit-def: $sgpr8
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX6-NEXT:    v_mov_b32_e32 v1, v2
@@ -210,7 +207,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX7-NEXT:    s_mov_b32 s6, 2
 ; GFX7-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    ; implicit-def: $sgpr6
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX7-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v0
@@ -281,7 +277,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s8, 2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v0, s8, v0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s8, 0
-; SKIP-CACHE-INV-NEXT:    ; implicit-def: $sgpr8
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, 0
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, v2
@@ -371,8 +366,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX1250-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v1, v1, s[2:3] scale_offset scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -568,7 +561,6 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX6-NEXT:    s_mov_b32 s5, 2
 ; GFX6-NEXT:    v_lshlrev_b32_e64 v1, s5, v0
 ; GFX6-NEXT:    s_mov_b32 s5, 0
-; GFX6-NEXT:    ; implicit-def: $sgpr5
 ; GFX6-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX6-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX6-NEXT:    v_mov_b32_e32 v2, v0
@@ -590,7 +582,6 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX7-NEXT:    s_mov_b32 s5, 2
 ; GFX7-NEXT:    v_lshlrev_b32_e64 v1, s5, v0
 ; GFX7-NEXT:    s_mov_b32 s5, 0
-; GFX7-NEXT:    ; implicit-def: $sgpr5
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX7-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v0
@@ -652,7 +643,6 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s5, 2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v1, s5, v0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s5, 0
-; SKIP-CACHE-INV-NEXT:    ; implicit-def: $sgpr5
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, 0
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, v0
@@ -1047,7 +1037,9 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
    i32 %in, ptr addrspace(1) %out) {

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter -Winvalid-constexpr %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter -Winvalid-constexpr
 
 using size_t = decltype(sizeof(0));
 
@@ -396,4 +396,38 @@ namespace GH150015 {
   constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
                                                  // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}} \
                                                  // interpreter-note {{initializer of 'z' is unknown}}
+}
+
+namespace InvalidConstexprFn {
+  // Make sure we don't trigger -Winvalid-constexpr incorrectly.
+  constexpr bool same_address(const int &a, const int &b) { return &a == &b; }
+  constexpr int next_element(const int &p) { return (&p)[2]; }
+
+  struct Base {};
+  struct Derived : Base { int n; };
+  constexpr int get_derived_member(const Base& b) { return static_cast<const Derived&>(b).n; }
+
+  struct PolyBase {
+    constexpr virtual int get() const { return 0; }
+  };
+  struct PolyDerived : PolyBase {
+    constexpr int get() const override { return 1; }
+  };
+  constexpr int virtual_call(const PolyBase& b) { return b.get(); }
+  constexpr auto* type(const PolyBase& b) { return &typeid(b); }
+  // FIXME: Intepreter doesn't support constexpr dynamic_cast yet.
+  constexpr const void* dyncast(const PolyBase& b) { return dynamic_cast<const void*>(&b); } // interpreter-error {{constexpr function never produces a constant expression}} \
+                                                                                             // interpreter-note 2 {{subexpression not valid in a constant expression}}
+  constexpr int sub(const int (&a)[], const int (&b)[]) { return a-b; }
+  constexpr const int* add(const int &a) { return &a+3; }
+
+  constexpr int arr[3]{0, 1, 2};
+  static_assert(same_address(arr[1], arr[1]));
+  static_assert(next_element(arr[0]) == 2);
+  static_assert(get_derived_member(Derived{}) == 0);
+  static_assert(virtual_call(PolyDerived{}) == 1);
+  static_assert(type(PolyDerived{}) != nullptr);
+  static_assert(dyncast(PolyDerived{}) != nullptr); // interpreter-error {{static assertion expression is not an integral constant expression}} interpreter-note {{in call}}
+  static_assert(sub(arr, arr) == 0);
+  static_assert(add(arr[0]) == &arr[3]);
 }

@@ -1,4 +1,4 @@
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 // RUN: sed 's/placeholder_for_f/f/' %s > %t.cpp
 // RUN: clang-tidy -checks=-*,modernize-use-override %t.cpp -- -std=c++11 | FileCheck -check-prefix=CHECK-SANITY %s
 // RUN: not diff -U0 %s %t.cpp | %clang_tidy_diff -checks=-*,modernize-use-override -- -std=c++11 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-JMAX

@@ -120,7 +120,7 @@ public:
   TargetOptions()
       : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
         NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
+        EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -185,12 +185,6 @@ public:
   /// specifies that optimizations are allowed to treat the sign of a zero
   /// argument or result as insignificant.
   unsigned NoSignedZerosFPMath : 1;
-
-  /// ApproxFuncFPMath - This flag is enabled when the
-  /// -enable-approx-func-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to substitute math functions
-  /// with approximate calculations
-  unsigned ApproxFuncFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and

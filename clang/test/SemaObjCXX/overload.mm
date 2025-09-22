@@ -51,13 +51,13 @@ void test0(A* a, B* b, id val) {
 }
 
 void test1(A* a) {
-  B* b = a; // expected-warning{{incompatible pointer types initializing 'B *' with an expression of type 'A *'}}
-  B *c; c = a; // expected-warning{{incompatible pointer types assigning to 'B *' from 'A *'}}
+  B* b = a; // expected-error{{incompatible pointer types initializing 'B *' with an expression of type 'A *'}}
+  B *c; c = a; // expected-error{{incompatible pointer types assigning to 'B *' from 'A *'}}
 }
 
 void test2(A** ap) {
-  B** bp = ap; // expected-warning{{incompatible pointer types initializing 'B **' with an expression of type 'A **'}}
-  bp = ap; // expected-warning{{incompatible pointer types assigning to 'B **' from 'A **'}}
+  B** bp = ap; // expected-error{{incompatible pointer types initializing 'B **' with an expression of type 'A **'}}
+  bp = ap; // expected-error{{incompatible pointer types assigning to 'B **' from 'A **'}}
 }
 
 int& cv(A*);
@@ -97,7 +97,7 @@ objc_exception_functions_t;
 
 void (*_NSExceptionRaiser(void))(NSException *) {
     objc_exception_functions_t exc_funcs;
-    return exc_funcs.throw_exc; // expected-warning{{incompatible pointer types returning 'void (*)(id)' from a function with result type 'void (*)(NSException *)'}}
+    return exc_funcs.throw_exc; // expected-error{{incompatible pointer types returning 'void (*)(id)' from a function with result type 'void (*)(NSException *)'}}
 }
 
 namespace test5 {

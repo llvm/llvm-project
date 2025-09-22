@@ -75,6 +75,10 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
+  profile data to guide the machine outliner
+  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
+
 Changes to Vectorizers
 ----------------------------------------
 
@@ -119,6 +123,9 @@ Changes to the RISC-V Backend
   and data using mapping symbols such as `$x` and `$d`. Switching architectures
   using `$x` with an architecture string suffix is not yet supported.
 * Ssctr and Smctr extensions are no longer experimental.
+* Add support for Zvfbfa (Additional BF16 vector compute support)
+* Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
+* Add support for Zvfofp8min (OFP8 conversion extension)
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -149,6 +156,9 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
+
+* `llvm-readelf` now dumps all hex format values in lower-case mode.
+* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 
 Changes to LLDB
 ---------------------------------

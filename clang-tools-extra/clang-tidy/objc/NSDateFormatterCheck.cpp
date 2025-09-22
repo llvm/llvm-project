@@ -1,4 +1,4 @@
-//===--- NSDateFormatterCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,7 +43,8 @@ static bool isValidDatePattern(StringRef Pattern) {
 
 // Checks if the string pattern used as a date format specifier contains
 // any incorrect pattern and reports it as a warning.
-// See: http://www.unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns
+// See:
+// https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns
 void NSDateFormatterCheck::check(const MatchFinder::MatchResult &Result) {
   // Callback implementation.
   const auto *StrExpr = Result.Nodes.getNodeAs<ObjCStringLiteral>("str_lit");

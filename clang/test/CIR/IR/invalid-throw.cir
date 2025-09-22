@@ -1,0 +1,16 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.func dso_local @throw_without_type_info() {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
+    // expected-error @below {{'cir.throw' op 'type_info' symbol attribute missing}}
+    cir.throw %0 : !cir.ptr<!s32i>
+    cir.unreachable
+  ^bb1:
+    cir.return
+}
+
+}

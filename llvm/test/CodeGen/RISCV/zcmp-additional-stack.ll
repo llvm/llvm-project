@@ -25,8 +25,8 @@ define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    bnez a3, .LBB0_1
 ; RV32-NEXT:  # %bb.2: # %while.end
-; RV32-NEXT:    lui a0, 4112
-; RV32-NEXT:    addi a1, a0, 257
+; RV32-NEXT:    lui a1, 4112
+; RV32-NEXT:    addi a1, a1, 257
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    sw a0, 0(zero)

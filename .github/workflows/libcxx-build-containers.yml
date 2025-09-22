@@ -32,6 +32,14 @@ jobs:
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
+    # The default Docker storage location for GitHub Actions doesn't have
+    # enough disk space, so change it to /mnt, which has more disk space.
+    - name: Change Docker storage location
+      run: |
+        sudo mkdir /mnt/docker
+        echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker
+
     - name: Build the Linux builder image
       working-directory: libcxx/utils/ci
       run: |
@@ -40,11 +48,11 @@ jobs:
       env:
         TAG: ${{ github.sha }}
 
-    # - name: Build the Android builder image
-    #   working-directory: libcxx/utils/ci
-    #   run: docker compose build android-buildkite-builder
-    #   env:
-    #     TAG: ${{ github.sha }}
+    - name: Build the Android builder image
+      working-directory: libcxx/utils/ci
+      run: docker compose build android-buildkite-builder
+      env:
+        TAG: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
@@ -62,10 +70,10 @@ jobs:
       env:
         TAG: ${{ github.sha }}
 
-    # - name: Push the Android builder image
-    #   if: github.event_name == 'push'
-    #   working-directory: libcxx/utils/ci
-    #   run: |
-    #     docker compose push android-buildkite-builder
-    #   env:
-    #     TAG: ${{ github.sha }}
+    - name: Push the Android builder image
+      if: github.event_name == 'push'
+      working-directory: libcxx/utils/ci
+      run: |
+        docker compose push android-buildkite-builder
+      env:
+        TAG: ${{ github.sha }}

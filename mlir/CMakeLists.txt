@@ -191,6 +191,10 @@ configure_file(
 
 set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
   CACHE STRING "nanobind domain for MLIR python bindings.")
+set(MLIR_PYTHON_PACKAGE_PREFIX "mlir"
+  CACHE STRING "Specifies that all MLIR packages are co-located under the
+  `MLIR_PYTHON_PACKAGE_PREFIX` top level package (the API has been
+  embedded in a relocatable way).")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
 set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING

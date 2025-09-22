@@ -778,7 +778,9 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     Mangler->mangleCXXVTable(CXXD, MangledStream);
   else
     MangledStream << D->getNameAsString();
-  if (MangledName.size() > 255)
+  // A 250 length limit was chosen since 255 is a common limit across
+  // different filesystems, with a 5 character buffer for file extensions.
+  if (MangledName.size() > 250)
     // File creation fails if the mangled name is too long, so default to the
     // USR. We should look for a better check since filesystems differ in
     // maximum filename length
