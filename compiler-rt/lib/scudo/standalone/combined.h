@@ -101,7 +101,6 @@ public:
       Chunk::UnpackedHeader Header = {};
       Header.ClassId = QuarantineClassId & Chunk::ClassIdMask;
       Header.SizeOrUnusedBytes = sizeof(QuarantineBatch);
-      // Do not use Allocated or this block will show up in iterateOverChunks.
       Header.State = Chunk::State::Quarantined;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
