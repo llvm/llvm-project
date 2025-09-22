@@ -2137,7 +2137,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
 
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
-  using OpRewritePattern<CmpFOp>::OpRewritePattern;
+  using Base::Base;
 
   static CmpIPredicate convertToIntegerPredicate(CmpFPredicate pred,
                                                  bool isUnsigned) {
@@ -2431,7 +2431,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp op,
                                 PatternRewriter &rewriter) const override {
