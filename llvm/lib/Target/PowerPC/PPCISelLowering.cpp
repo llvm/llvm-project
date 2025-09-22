@@ -12526,7 +12526,6 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
 }
 
 // Lower unsigned 3-way compare producing -1/0/1.
-// Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue A = DAG.getFreeze(Op.getOperand(0));
