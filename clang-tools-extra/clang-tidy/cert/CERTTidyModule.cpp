@@ -9,7 +9,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../bugprone/AvoidSetjmpLongjmpCheck.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
@@ -29,6 +28,7 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidSetjmpLongjmpCheck.h"
 #include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
@@ -257,11 +257,10 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<bugprone::AvoidSetjmpLongjmpCheck>(
+    CheckFactories.registerCheck<modernize::AvoidSetjmpLongjmpCheck>(
         "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
-    CheckFactories.registerCheck<StaticObjectExceptionCheck>("cert-err58-cpp");
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");

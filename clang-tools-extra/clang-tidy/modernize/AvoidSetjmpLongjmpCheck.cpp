@@ -15,7 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::bugprone {
+namespace clang::tidy::modernize {
 
 namespace {
 const char DiagWording[] =
@@ -62,4 +62,4 @@ void AvoidSetjmpLongjmpCheck::check(const MatchFinder::MatchResult &Result) {
   diag(E->getExprLoc(), DiagWording) << cast<NamedDecl>(E->getCalleeDecl());
 }
 
-} // namespace clang::tidy::bugprone
+} // namespace clang::tidy::modernize

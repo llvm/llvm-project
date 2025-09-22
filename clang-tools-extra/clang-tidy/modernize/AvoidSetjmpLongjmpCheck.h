@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_AVOIDSETJMPLONGJMPCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_AVOIDSETJMPLONGJMPCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDSETJMPLONGJMPCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDSETJMPLONGJMPCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::bugprone {
+namespace clang::tidy::modernize {
 
 /// Guards against use of setjmp/longjmp in C++ code
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/avoid-setjmp-longjmp.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-setjmp-longjmp.html
 class AvoidSetjmpLongjmpCheck : public ClangTidyCheck {
 public:
   AvoidSetjmpLongjmpCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,6 +30,6 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
 };
 
-} // namespace clang::tidy::bugprone
+} // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_AVOIDSETJMPLONGJMPCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDSETJMPLONGJMPCHECK_H

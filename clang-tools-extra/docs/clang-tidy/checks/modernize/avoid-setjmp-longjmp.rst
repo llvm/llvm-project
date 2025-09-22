@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-avoid-setjmp-longjmp
+.. title:: clang-tidy - modernize-avoid-setjmp-longjmp
 
-bugprone-avoid-setjmp-longjmp
-=============================
+modernize-avoid-setjmp-longjmp
+==============================
 
 Flags all call expressions involving ``setjmp()`` and ``longjmp()``.
 

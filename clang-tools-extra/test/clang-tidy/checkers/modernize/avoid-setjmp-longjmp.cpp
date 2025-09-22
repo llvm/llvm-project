@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-avoid-setjmp-longjmp %t
+// RUN: %check_clang_tidy %s modernize-avoid-setjmp-longjmp %t
 
 typedef void *jmp_buf;
 extern int __setjmpimpl(jmp_buf);
@@ -13,7 +13,7 @@ using ::longjmp;
 static jmp_buf env;
 void g() {
   std::longjmp(env, 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not call 'longjmp'; consider using exception handling instead [bugprone-avoid-setjmp-longjmp]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not call 'longjmp'; consider using exception handling instead [modernize-avoid-setjmp-longjmp]
   ::longjmp(env, 1);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not call 'longjmp'; consider using exception handling instead
   longjmp(env, 1);

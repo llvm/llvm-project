@@ -217,8 +217,8 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-err52-cpp <clang-tidy/checks/cert/err52-cpp>` to
-  :doc:`bugprone-avoid-setjmp-longjmp
-  <clang-tidy/checks/bugprone/avoid-setjmp-longjmp>`
+  :doc:`modernize-avoid-setjmp-longjmp
+  <clang-tidy/checks/modernize/avoid-setjmp-longjmp>`
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
