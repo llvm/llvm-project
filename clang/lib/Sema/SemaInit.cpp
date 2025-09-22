@@ -5379,7 +5379,13 @@ static void TryReferenceInitializationCore(Sema &S,
   OverloadingResult ConvOvlResult = OR_Success;
   bool T1Function = T1->isFunctionType();
   if (isLValueRef || T1Function) {
-    if (InitCategory.isLValue() && !isNonReferenceableGLValue(Initializer) &&
+    // Allow direct binding to vector elements (except for vector<bool>
+    // elements) to match GCC. Treat vector elements as referenceable lvalues
+    // for non-bool element types.
+    bool AllowVectorElementRef =
+        Initializer->refersToVectorElement() && !T2->isBooleanType();
+    if (InitCategory.isLValue() &&
+        (!isNonReferenceableGLValue(Initializer) || AllowVectorElementRef) &&
         (RefRelationship == Sema::Ref_Compatible ||
          (Kind.isCStyleOrFunctionalCast() &&
           RefRelationship == Sema::Ref_Related))) {
