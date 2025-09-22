@@ -1479,16 +1479,6 @@ public:
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OmpMetadirectiveDirective &x) { //
-    metaDirective_ = &x;
-    ++metaLevel_;
-    return true;
-  }
-  void Post(const parser::OmpMetadirectiveDirective &) { //
-    metaDirective_ = nullptr;
-    --metaLevel_;
-  }
-
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1581,9 +1571,11 @@ public:
 
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
+    parser::OmpClauseList empty(std::list<parser::OmpClause>{});
+    auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        std::get<std::optional<parser::OmpClauseList>>(x.t), x);
+        maybeClauses ? *maybeClauses : empty, declaratives_.back());
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1692,9 +1684,11 @@ public:
     // can implicitly declare variables instead of only using the
     // ones already declared in the Fortran sources.
     SkipImplicitTyping(true);
+    declaratives_.push_back(&x);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeConstruct &) {
+    declaratives_.pop_back();
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1736,15 +1730,13 @@ public:
 private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
-  template <typename T>
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const std::optional<parser::OmpClauseList> &clauses,
-      const T &wholeConstruct);
+      const parser::OmpClauseList &clauses,
+      const parser::OpenMPDeclarativeConstruct *wholeConstruct);
 
   void ResolveCriticalName(const parser::OmpArgument &arg);
 
-  int metaLevel_{0};
-  const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
+  std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
 };
 
 bool OmpVisitor::NeedsScope(const parser::OmpBlockConstruct &x) {
@@ -1869,11 +1861,10 @@ std::string MangleDefinedOperator(const parser::CharBlock &name) {
   return "op" + name.ToString();
 }
 
-template <typename T>
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const std::optional<parser::OmpClauseList> &clauses,
-    const T &wholeOmpConstruct) {
+    const parser::OmpClauseList &clauses,
+    const parser::OpenMPDeclarativeConstruct *construct) {
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -1960,7 +1951,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     PopScope();
   }
 
-  reductionDetails->AddDecl(&wholeOmpConstruct);
+  reductionDetails->AddDecl(construct);
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -2000,40 +1991,31 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
   AddOmpSourceRange(x.source);
-  if (metaLevel_ == 0) {
-    // Not in METADIRECTIVE.
-    return true;
-  }
 
-  // If OmpDirectiveSpecification (which contains clauses) is a part of
-  // METADIRECTIVE, some semantic checks may not be applicable.
-  // Disable the semantic analysis for it in such cases to allow the compiler
-  // to parse METADIRECTIVE without flagging errors.
-  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
-  auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
+  const parser::OmpArgumentList &args{x.Arguments()};
+  const parser::OmpClauseList &clauses{x.Clauses()};
 
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
-    if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->v.front()};
+    if (!args.v.empty()) {
+      const parser::OmpArgument &first{args.v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
-        ProcessMapperSpecifier(*spec, *maybeClauses);
+        ProcessMapperSpecifier(*spec, clauses);
       }
     }
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
-    if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->v.front()};
+    if (!args.v.empty()) {
+      const parser::OmpArgument &first{args.v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        CHECK(metaDirective_);
-        ProcessReductionSpecifier(*spec, maybeClauses, *metaDirective_);
+        ProcessReductionSpecifier(*spec, clauses, declaratives_.back());
       }
     }
     break;
   default:
     // Default processing.
-    Walk(maybeArgs);
-    Walk(maybeClauses);
+    Walk(args);
+    Walk(clauses);
     break;
   }
   return false;

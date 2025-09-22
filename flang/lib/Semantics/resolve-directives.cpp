@@ -413,7 +413,7 @@ public:
   }
 
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
-    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
@@ -2342,9 +2342,14 @@ bool OmpAttributeVisitor::Pre(
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpThreadprivate);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
+    }
+  }
   return true;
 }
 

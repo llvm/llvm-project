@@ -19,5 +19,3 @@ needs more offload patches
 [Offload] Port llvm-offload-device-info to new offload API (#155626)
 [Offload]  Implement 'olIsValidBinary' in offload
 ---
-akashB: 8afea0d0ea1c [OpenMP][MLIR] Preserve to/from flags in mappe
----

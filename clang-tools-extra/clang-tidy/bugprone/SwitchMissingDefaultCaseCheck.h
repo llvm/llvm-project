@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// warnings.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/switch-missing-default-case.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/switch-missing-default-case.html
 class SwitchMissingDefaultCaseCheck : public ClangTidyCheck {
 public:
   SwitchMissingDefaultCaseCheck(StringRef Name, ClangTidyContext *Context)
