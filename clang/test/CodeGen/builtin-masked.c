@@ -129,3 +129,61 @@ void test_store(v8b m, v8i v, v8i *p) {
 void test_compress_store(v8b m, v8i v, v8i *p) {
   __builtin_masked_compress_store(m, v, p);
 }
+
+// CHECK-LABEL: define dso_local <8 x i32> @test_gather(
+// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[IDX_ADDR:%.*]] = alloca <8 x i32>, align 32
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store i8 [[MASK_COERCE]], ptr [[MASK]], align 1
+// CHECK-NEXT:    [[LOAD_BITS:%.*]] = load i8, ptr [[MASK]], align 1
+// CHECK-NEXT:    [[MASK1:%.*]] = bitcast i8 [[LOAD_BITS]] to <8 x i1>
+// CHECK-NEXT:    [[IDX:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[MASK1]] to i8
+// CHECK-NEXT:    store i8 [[TMP1]], ptr [[MASK_ADDR]], align 1
+// CHECK-NEXT:    store <8 x i32> [[IDX]], ptr [[IDX_ADDR]], align 32
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[LOAD_BITS2:%.*]] = load i8, ptr [[MASK_ADDR]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[IDX_ADDR]], align 32
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], <8 x i32> [[TMP3]]
+// CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP5]], i32 4, <8 x i1> [[TMP2]], <8 x i32> poison)
+// CHECK-NEXT:    ret <8 x i32> [[MASKED_GATHER]]
+//
+v8i test_gather(v8b mask, v8i idx, int *ptr) {
+  return __builtin_masked_gather(mask, idx, ptr);
+}
+
+// CHECK-LABEL: define dso_local void @test_scatter(
+// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR3]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
+// CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca <8 x i32>, align 32
+// CHECK-NEXT:    [[IDX_ADDR:%.*]] = alloca <8 x i32>, align 32
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store i8 [[MASK_COERCE]], ptr [[MASK]], align 1
+// CHECK-NEXT:    [[LOAD_BITS:%.*]] = load i8, ptr [[MASK]], align 1
+// CHECK-NEXT:    [[MASK1:%.*]] = bitcast i8 [[LOAD_BITS]] to <8 x i1>
+// CHECK-NEXT:    [[VAL:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32
+// CHECK-NEXT:    [[IDX:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[MASK1]] to i8
+// CHECK-NEXT:    store i8 [[TMP2]], ptr [[MASK_ADDR]], align 1
+// CHECK-NEXT:    store <8 x i32> [[VAL]], ptr [[VAL_ADDR]], align 32
+// CHECK-NEXT:    store <8 x i32> [[IDX]], ptr [[IDX_ADDR]], align 32
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[LOAD_BITS2:%.*]] = load i8, ptr [[MASK_ADDR]], align 1
+// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
+// CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[VAL_ADDR]], align 32
+// CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i32>, ptr [[IDX_ADDR]], align 32
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], <8 x i32> [[TMP4]]
+// CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP5]], <8 x ptr> [[TMP7]], i32 4, <8 x i1> [[TMP3]])
+// CHECK-NEXT:    ret void
+//
+void test_scatter(v8b mask, v8i val, v8i idx, int *ptr) {
+  __builtin_masked_scatter(mask, val, idx, ptr);
+}
