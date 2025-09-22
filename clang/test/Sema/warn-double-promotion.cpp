@@ -27,6 +27,18 @@ long double ReturnLongDoubleFromDoubleWithExplicitListInitialization(double d) {
   return LongDouble{d};
 }
 
+double ReturnDoubleFromFloatWithFunctionStyleCast(float f) {
+  return double(f);
+}
+
+long double ReturnLongDoubleFromFloatWithFunctionStyleCast(float f) {
+  return LongDouble(f);
+}
+
+long double ReturnLongDoubleFromDoubleWithFunctionStyleCast(double d) {
+  return LongDouble(d);
+}
+
 void Assignment(float f, double d, long double ld) {
   d = static_cast<double>(f);
   ld = static_cast<long double>(f);
@@ -34,6 +46,9 @@ void Assignment(float f, double d, long double ld) {
   d = double{f};
   ld = LongDouble{f};
   ld = LongDouble{d};
+  d = double(f);
+  ld = LongDouble(f);
+  ld = LongDouble(d);
 }
 
 extern void DoubleParameter(double);
@@ -46,6 +61,9 @@ void ArgumentPassing(float f, double d) {
   DoubleParameter(double{f});
   LongDoubleParameter(LongDouble{f});
   LongDoubleParameter(LongDouble{d});
+  DoubleParameter(double(f));
+  LongDoubleParameter(LongDouble(f));
+  LongDoubleParameter(LongDouble(d));
 }
 
 void BinaryOperator(float f, double d, long double ld) {
@@ -61,6 +79,12 @@ void BinaryOperator(float f, double d, long double ld) {
   f = ld * LongDouble{f};
   d = LongDouble{d} * ld;
   d = ld * LongDouble{d};
+  f = double(f) * d;
+  f = d * double(f);
+  f = LongDouble(f) * ld;
+  f = ld * LongDouble(f);
+  d = LongDouble(d) * ld;
+  d = ld * LongDouble(d);
 }
 
 void MultiplicationAssignment(float f, double d, long double ld) {
@@ -70,4 +94,7 @@ void MultiplicationAssignment(float f, double d, long double ld) {
   d *= double{f};
   ld *= LongDouble{f};
   ld *= LongDouble{d};
+  d *= double(f);
+  ld *= LongDouble(f);
+  ld *= LongDouble(d);
 }
