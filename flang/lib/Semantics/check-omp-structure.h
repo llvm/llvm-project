@@ -120,6 +120,8 @@ public:
   void Leave(const parser::OpenMPDispatchConstruct &);
   void Enter(const parser::OmpErrorDirective &);
   void Leave(const parser::OmpErrorDirective &);
+  void Enter(const parser::OmpNothingDirective &);
+  void Leave(const parser::OmpNothingDirective &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
   void Enter(const parser::OpenMPAllocatorsConstruct &);

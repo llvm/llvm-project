@@ -611,14 +611,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
     return false;
   }
-  bool Pre(const parser::OmpErrorDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_error);
-    return false;
-  }
-  bool Pre(const parser::OmpNothingDirective &x) {
-    checker_(x.source, Directive::OMPD_nothing);
-    return false;
-  }
   bool Pre(const parser::OpenMPExecutableAllocate &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
@@ -1761,8 +1753,17 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpNothingDirective &x) {
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpNothingDirective &x) {
+  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
