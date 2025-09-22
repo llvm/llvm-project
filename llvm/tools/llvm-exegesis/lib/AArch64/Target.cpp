@@ -470,6 +470,7 @@ std::vector<MCInst>
 ExegesisAArch64Target::configurePerfCounter(long Request,
                                             bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
+#ifdef HAVE_LIBPFM
   if (SaveRegisters)
     saveSyscallRegisters(ConfigurePerfCounterCode, 3);
 
@@ -491,7 +492,7 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
 
   if (SaveRegisters)
     restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
-
+#endif // HAVE_LIBPFM
   return ConfigurePerfCounterCode;
 }
 
