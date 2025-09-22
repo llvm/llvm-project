@@ -4351,7 +4351,6 @@ bool AArch64DAGToDAGISel::SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm,
                                   ShiftVal))
     return false;
 
-  // All immediates are supported.
   Shift = CurDAG->getTargetConstant(ShiftVal, DL, MVT::i32);
   Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
   return true;

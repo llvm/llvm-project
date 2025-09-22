@@ -15281,12 +15281,12 @@ static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
                              const AArch64Subtarget *ST, APInt &DefBits) {
   EVT VT = Op.getValueType();
   // TODO: We should be able to support 64-bit destinations too
-  if (!ST->hasSVE() || DefBits.getHiBits(64) != DefBits.getLoBits(64) ||
-      VT.getFixedSizeInBits() != 128)
+  if (!ST->hasSVE() || !VT.is128BitVector() ||
+      DefBits.getHiBits(64) != DefBits.getLoBits(64))
     return SDValue();
 
   // See if we can make use of the SVE dup instruction.
-  APInt Val64 = DefBits.sextOrTrunc(64);
+  APInt Val64 = DefBits.trunc(64);
   int32_t ImmVal, ShiftVal;
   if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal))
     return SDValue();
@@ -15337,8 +15337,7 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
     if (SDValue R = TryMOVIWithBits(UndefBits))
       return R;
 
-    // NEON doesn't have a nice way of materialising 64-bit values, but if SVE
-    // is available we have more options.
+    // Try to materialise the constant using SVE when available.
     if (SDValue R = trySVESplat64(Op, DAG, ST, DefBits))
       return R;
 
