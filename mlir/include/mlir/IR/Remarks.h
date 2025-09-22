@@ -34,13 +34,13 @@ struct RemarkCategories {
 
 /// Define the policy to use for the remark engine.
 enum RemarkPolicy {
+  // Show all remarks
   RemarkPolicyAll = 0,
+  // Show only the last remark per location, remark name and category
   RemarkPolicyFinal = 1,
 };
 
-/// Define the operations to perform on the remark engine.
-/// By default none are, the provided regex matches against the category names
-/// for each kind of remark.
+/// Options to create a RemarkEngine.
 struct RemarkEngineOpts {
   RemarkCategories categories;
   RemarkPolicy policy;
