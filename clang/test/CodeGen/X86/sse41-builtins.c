@@ -472,3 +472,4 @@ int test_mm_testz_si128(__m128i x, __m128i y) {
   return _mm_testz_si128(x, y);
 }
 TEST_CONSTEXPR(_mm_testz_si128((__m128i)(__v2di){0,0}, (__m128i)(__v2di){0,0}) == 1);
+TEST_CONSTEXPR(_mm_testz_si128((__m128i)(__v2di){0,1}, (__m128i)(__v2di){0,1}) == 0);

@@ -2851,8 +2851,9 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ptestz(InterpState &S, CodePtr OpPC,
-                                   const CallExpr *Call) {
+static bool interp__builtin_test_op(InterpState &S, CodePtr OpPC,
+                                   const CallExpr *Call,
+llvm::function_ref<bool(const APSInt &A, const APSInt &B)> Fn) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
@@ -2873,7 +2874,7 @@ static bool interp__builtin_ptestz(InterpState &S, CodePtr OpPC,
     for (unsigned I = 0; I < SourceLen; ++I) {
       const APSInt A = LHS.elem<T>(I).toAPSInt();
       const APSInt B = RHS.elem<T>(I).toAPSInt();
-      if ((A & B) != 0) {
+      if (!Fn(A,B)) {
         Flag = false;
         break;
       }
@@ -3615,12 +3616,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
 
   case X86::BI__builtin_ia32_ptestz128:
-    return interp__builtin_ptestz(S, OpPC, Call);
+  case X86::BI__builtin_ia32_ptestz256:
+    return interp__builtin_test_op(S, OpPC, Call, [](const APSInt &A, const APSInt &B) {
+      return (A & B) == 0;
+    });
 
-    // case X86::BI__builtin_ia32_ptestz256:
-
-    // case X86::BI__builtin_ia32_ptestc128:
-    // case X86::BI__builtin_ia32_ptestc256:
+  // case X86::BI__builtin_ia32_ptestc128:
+  // case X86::BI__builtin_ia32_ptestc256:
 
     // case X86::BI__builtin_ia32_ptestnzc128:
     // case X86::BI__builtin_ia32_ptestnzc256:

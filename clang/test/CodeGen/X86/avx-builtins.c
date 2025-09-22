@@ -2082,6 +2082,8 @@ int test_mm256_testz_si256(__m256i A, __m256i B) {
   // CHECK: call {{.*}}i32 @llvm.x86.avx.ptestz.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testz_si256(A, B);
 }
+TEST_CONSTEXPR(_mm256_testz_si256((__m256i)(__v4du){0,0,0,0}, (__m256i)(__v4du){0,0,0,0}) == 1);
+TEST_CONSTEXPR(_mm256_testz_si256((__m256i)(__v4du){0,0,0,1}, (__m256i)(__v4du){0,0,0,1}) == 0);
 
 __m256 test_mm256_undefined_ps(void) {
   // X64-LABEL: test_mm256_undefined_ps
