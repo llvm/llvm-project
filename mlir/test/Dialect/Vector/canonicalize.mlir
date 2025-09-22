@@ -3414,12 +3414,31 @@ func.func @negative_from_elements_poison_constant_mix() -> vector<2xf32> {
 // -----
 
 // CHECK-LABEL: func @from_elements_float8_to_i8_conversion(
-// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
-// CHECK-NEXT:    return %[[CST]] : vector<1xi8>
-func.func @from_elements_float8_to_i8_conversion() -> vector<1xi8> {
-  %cst = llvm.mlir.constant(0.0 : f8E4M3FN) : i8
-  %v = vector.from_elements %cst : vector<1xi8>
-  return %v : vector<1xi8>
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 56, -72, 69, 127, -1]> : vector<6xi8>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi8>
+func.func @from_elements_float8_to_i8_conversion() -> vector<6xi8> {
+  %cst0 = llvm.mlir.constant(0.0 : f8E4M3FN) : i8
+  %cst1 = llvm.mlir.constant(1.0 : f8E4M3FN) : i8
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f8E4M3FN) : i8
+  %cst_pi = llvm.mlir.constant(3.14 : f8E4M3FN) : i8
+  %cst_inf = llvm.mlir.constant(0x7F : f8E4M3FN) : i8
+  %cst_neg_inf = llvm.mlir.constant(0xFF : f8E4M3FN) : i8
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_inf, %cst_neg_inf : vector<6xi8>
+  return %v : vector<6xi8>
+}
+
+// CHECK-LABEL: func @from_elements_float16_to_i16_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 15360, -17408, 16968, 31743, -1025]> : vector<6xi16>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi16>
+func.func @from_elements_float16_to_i16_conversion() -> vector<6xi16> {
+  %cst0 = llvm.mlir.constant(0.0 : f16) : i16
+  %cst1 = llvm.mlir.constant(1.0 : f16) : i16
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f16) : i16
+  %cst_pi = llvm.mlir.constant(3.14 : f16) : i16
+  %cst_max = llvm.mlir.constant(65504.0	: f16) : i16
+  %cst_min = llvm.mlir.constant(-65504.0 : f16) : i16
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_max, %cst_min : vector<6xi16>
+  return %v : vector<6xi16>
 }
 
 // -----

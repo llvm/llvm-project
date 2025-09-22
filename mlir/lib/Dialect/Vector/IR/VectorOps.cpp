@@ -409,19 +409,14 @@ static Attribute convertNumericAttr(Attribute attr, Type expectedType) {
     return attr;
   }
 
-  // Float-to-integer conversion
+  // Float-to-integer bitcast (preserves bit representation)
   if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     auto intType = dyn_cast<IntegerType>(expectedType);
     if (!intType)
       return attr;
 
     APFloat floatVal = floatAttr.getValue();
-    APSInt intVal(intType.getWidth(), intType.isUnsigned());
-    bool isExact = false;
-    [[maybe_unused]] APFloat::opStatus status =
-        floatVal.convertToInteger(intVal, APFloat::rmTowardZero, &isExact);
-    assert(status == APFloat::opOK && "float-to-integer conversion failed");
-    assert(isExact && "float-to-integer conversion must be exact");
+    APInt intVal = floatVal.bitcastToAPInt();
     return IntegerAttr::get(expectedType, intVal);
   }
 
