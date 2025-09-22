@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s                                         | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 typedef __INTPTR_TYPE__ intptr_t;
+
+int x;
+const int *p = &x - 100;
+// CHECK: @p = global ptr getelementptr (i8, ptr @x, i64 -400), align 8
 
 const intptr_t Z1 = (intptr_t)(((char*)-1LL) + 1);
 // CHECK: @Z1 = constant i64 0
