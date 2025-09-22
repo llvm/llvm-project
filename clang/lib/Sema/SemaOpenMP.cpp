@@ -16024,7 +16024,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
          "found in the sequence");
 
   // Handle clauses, which can be any of the following: [looprange, apply]
-  const OMPLoopRangeClause *LRC =
+  const auto *LRC =
       OMPExecutableDirective::getSingleClause<OMPLoopRangeClause>(Clauses);
 
   // The clause arguments are invalidated if any error arises
