@@ -1795,6 +1795,13 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _AllowBreakBeforeQtProperty:
+
+**AllowBreakBeforeQtProperty** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <AllowBreakBeforeQtProperty>`
+  Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  if they were preceded by a comma (``,``). This allows them to be formatted
+  according to ``BinPackParameters``.
+
 .. _AllowShortBlocksOnASingleLine:
 
 **AllowShortBlocksOnASingleLine** (``ShortBlockStyle``) :versionbadge:`clang-format 3.5` :ref:`¶ <AllowShortBlocksOnASingleLine>`
@@ -4425,6 +4432,21 @@ the configuration (without a prefix: ``Auto``).
            #include <foo>
          #endif
        #endif
+
+  * ``PPDIS_Leave`` (in configuration: ``Leave``)
+    Leaves indentation of directives as-is.
+
+    .. note::
+
+     Ignores ``PPIndentWidth``.
+
+    .. code-block:: c++
+
+      #if FOO
+        #if BAR
+      #include <foo>
+        #endif
+      #endif
 
 
 

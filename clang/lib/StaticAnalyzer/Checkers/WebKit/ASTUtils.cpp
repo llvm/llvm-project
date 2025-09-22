@@ -115,7 +115,7 @@ bool tryToFindPtrOrigin(
         if (auto *Callee = operatorCall->getDirectCallee()) {
           auto ClsName = safeGetName(Callee->getParent());
           if (isRefType(ClsName) || isCheckedPtr(ClsName) ||
-              isRetainPtr(ClsName) || ClsName == "unique_ptr" ||
+              isRetainPtrOrOSPtr(ClsName) || ClsName == "unique_ptr" ||
               ClsName == "UniqueRef" || ClsName == "WeakPtr" ||
               ClsName == "WeakRef") {
             if (operatorCall->getNumArgs() == 1) {
@@ -160,6 +160,11 @@ bool tryToFindPtrOrigin(
         if (Name == "__builtin___CFStringMakeConstantString" ||
             Name == "NSClassFromString")
           return callback(E, true);
+      } else if (auto *CalleeE = call->getCallee()) {
+        if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
+          if (isSingleton(E->getFoundDecl()))
+            return callback(E, true);
+        }
       }
 
       // Sometimes, canonical type erroneously turns Ref<T> into T.

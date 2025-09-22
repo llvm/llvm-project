@@ -1515,7 +1515,8 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   symtab.Finalize();
 }
 
-void SymbolFilePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFilePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                 bool show_color) {
   auto type_system_or_err =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
@@ -1529,7 +1530,7 @@ void SymbolFilePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
       llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_type_system)
     return;
-  clang_type_system->Dump(s.AsRawOstream(), filter);
+  clang_type_system->Dump(s.AsRawOstream(), filter, show_color);
 }
 
 void SymbolFilePDB::FindTypesByRegex(

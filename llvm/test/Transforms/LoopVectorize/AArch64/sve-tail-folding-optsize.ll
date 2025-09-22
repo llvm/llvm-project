@@ -6,7 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @trip1025_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapture noundef readonly %src) #0 {
 ; CHECK-LABEL: @trip1025_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2

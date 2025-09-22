@@ -2439,6 +2439,11 @@ void Fortran::lower::mapSymbolAttributes(
 
   // Compute array extents and lower bounds.
   if (ba.isArray()) {
+    // Handle unused entry dummy arrays with BaseBoxType before processing shape
+    if (isUnusedEntryDummy &&
+        llvm::isa<fir::BaseBoxType>(converter.genType(var)))
+      if (genUnusedEntryPointBox())
+        return;
     if (ba.isStaticArray()) {
       if (ba.lboundIsAllOnes()) {
         for (std::int64_t extent :
