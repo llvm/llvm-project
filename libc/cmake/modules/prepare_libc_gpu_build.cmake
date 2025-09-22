@@ -100,12 +100,10 @@ if(NOT TARGET libc.utils.gpu.loader AND gpu_loader_executable)
   )
 endif()
 
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  # The AMDGPU environment uses different code objects to encode the ABI for
-  # kernel calls and intrinsic functions. We want to specify this manually to
-  # conform to whatever the test suite was built to handle.
-  set(LIBC_GPU_CODE_OBJECT_VERSION 6)
-endif()
+# The AMDGPU environment uses different code objects to encode the ABI for
+# kernel calls and intrinsic functions. We want to expose this to conform to
+# whatever the test suite was built to handle.
+set(LIBC_GPU_CODE_OBJECT_VERSION "6" CACHE STRING "AMDGPU Code object ABI to use")
 
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   # FIXME: This is a hack required to keep the CUDA package from trying to find

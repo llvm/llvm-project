@@ -59,30 +59,15 @@ def compareTwoFiles(flags, filepaths):
 
 def compareTwoBinaryFiles(flags, filepaths, filelines):
     exitCode = 0
-    if hasattr(difflib, "diff_bytes"):
-        # python 3.5 or newer
-        diffs = difflib.diff_bytes(
-            difflib.unified_diff,
-            filelines[0],
-            filelines[1],
-            filepaths[0].encode(),
-            filepaths[1].encode(),
-            n=flags.num_context_lines,
-        )
-        diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
-    else:
-        # python 2.7
-        if flags.unified_diff:
-            func = difflib.unified_diff
-        else:
-            func = difflib.context_diff
-        diffs = func(
-            filelines[0],
-            filelines[1],
-            filepaths[0],
-            filepaths[1],
-            n=flags.num_context_lines,
-        )
+    diffs = difflib.diff_bytes(
+        difflib.unified_diff,
+        filelines[0],
+        filelines[1],
+        filepaths[0].encode(),
+        filepaths[1].encode(),
+        n=flags.num_context_lines,
+    )
+    diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
 
     for diff in diffs:
         sys.stdout.write(to_string(diff))
@@ -230,14 +215,8 @@ def compareDirTrees(flags, dir_trees, base_paths=["", ""]):
 
 def main(argv):
     if sys.platform == "win32":
-        if hasattr(sys.stdout, "buffer"):
-            # python 3
-            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\n")
-        else:
-            # python 2.7
-            import msvcrt
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\n")
 
-            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     args = argv[1:]
     try:
         opts, args = getopt.gnu_getopt(args, "wbuI:U:r", ["strip-trailing-cr"])

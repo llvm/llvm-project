@@ -1138,8 +1138,9 @@ static QualType getStdTrait(Sema &S, SourceLocation Loc, StringRef Trait,
   }
 
   // Build the template-id.
-  QualType TraitTy = S.CheckTemplateIdType(ElaboratedTypeKeyword::None,
-                                           TemplateName(TraitTD), Loc, Args);
+  QualType TraitTy = S.CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, TemplateName(TraitTD), Loc, Args,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
   if (TraitTy.isNull())
     return QualType();
 
@@ -12315,7 +12316,8 @@ static QualType BuildStdClassTemplate(Sema &S, ClassTemplateDecl *CTD,
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(TypeParam), TSI));
 
   return S.CheckTemplateIdType(ElaboratedTypeKeyword::None, TemplateName(CTD),
-                               Loc, Args);
+                               Loc, Args, /*Scope=*/nullptr,
+                               /*ForNestedNameSpecifier=*/false);
 }
 
 QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
@@ -12628,16 +12630,17 @@ Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation UsingLoc,
                                       SourceLocation EnumLoc, SourceRange TyLoc,
                                       const IdentifierInfo &II, ParsedType Ty,
-                                      CXXScopeSpec *SS) {
-  assert(SS && !SS->isInvalid() && "ScopeSpec is invalid");
+                                      const CXXScopeSpec &SS) {
   TypeSourceInfo *TSI = nullptr;
   SourceLocation IdentLoc = TyLoc.getBegin();
   QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
-    Diag(IdentLoc, isDependentScopeSpecifier(*SS)
+    Diag(IdentLoc, isDependentScopeSpecifier(SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
-        << II.getName() << SourceRange(SS->getBeginLoc(), TyLoc.getEnd());
+        << II.getName()
+        << SourceRange(SS.isValid() ? SS.getBeginLoc() : IdentLoc,
+                       TyLoc.getEnd());
     return nullptr;
   }
 

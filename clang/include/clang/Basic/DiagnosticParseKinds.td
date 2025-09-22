@@ -215,6 +215,8 @@ def warn_c23_compat_case_range : Warning<
   DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
+def err_c2y_labeled_break_continue : Error<
+  "named %select{'break'|'continue'}0 is only supported in C2y">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -1858,9 +1860,8 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
-def err_invalid_declaration_in_hlsl_buffer : Error<
-  "invalid declaration inside %select{tbuffer|cbuffer}0">;
-def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def err_invalid_declaration_in_hlsl_buffer
+    : Error<"invalid declaration inside %select{tbuffer|cbuffer}0">;
 def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hlsl attribute, use %0 instead">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,

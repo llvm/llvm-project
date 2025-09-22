@@ -21,6 +21,7 @@ class DAPTestCaseBase(TestBase):
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         connection: Optional[str] = None,
+        additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
@@ -33,15 +34,17 @@ class DAPTestCaseBase(TestBase):
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
+            additional_args=additional_args or [],
         )
 
     def build_and_create_debug_adapter(
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         dictionary: Optional[dict] = None,
+        additional_args: Optional[list[str]] = None,
     ):
         self.build(dictionary=dictionary)
-        self.create_debug_adapter(lldbDAPEnv)
+        self.create_debug_adapter(lldbDAPEnv, additional_args=additional_args)
 
     def build_and_create_debug_adapter_for_attach(self):
         """Variant of build_and_create_debug_adapter that builds a uniquely
@@ -238,6 +241,13 @@ class DAPTestCaseBase(TestBase):
                 f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
 
+    def verify_invalidated_event(self, expected_areas):
+        event = self.dap_server.invalidated_event
+        self.dap_server.invalidated_event = None
+        self.assertIsNotNone(event)
+        areas = event["body"].get("areas", [])
+        self.assertEqual(set(expected_areas), set(areas))
+
     def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
@@ -349,13 +359,20 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
+    def set_variable(self, varRef, name, value, id=None):
+        """Set a variable."""
+        response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+        if response["success"]:
+            self.verify_invalidated_event(["variables"])
+        return response
+
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.dap_server.request_setVariable(1, name, str(value), id=id)
+        return self.set_variable(1, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.dap_server.request_setVariable(2, name, str(value), id=id)
+        return self.set_variable(2, name, str(value), id=id)
 
     def stepIn(
         self,
@@ -574,4 +591,6 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_writeMemory(
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )
+        if response["success"]:
+            self.verify_invalidated_event(["all"])
         return response

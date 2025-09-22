@@ -22,6 +22,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 
 namespace scudo {
 
@@ -1307,6 +1308,8 @@ uptr SizeClassAllocator64<Config>::tryReleaseToOS(uptr ClassId,
 
 template <typename Config>
 uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSTraceName(ReleaseType));
+
   uptr TotalReleasedBytes = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     if (I == SizeClassMap::BatchClassId)
@@ -1376,6 +1379,8 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   const uptr BlockSize = getSizeByClassId(ClassId);
   uptr BytesInFreeList;
   const uptr AllocatedUserEnd =

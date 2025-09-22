@@ -411,17 +411,11 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     FixupList.push_back(MD);
   }
 
-  // Remember the index where we stopped inserting new phis above, since the
-  // fixupDefs call in the loop below may insert more, that are already minimal.
+  // Update defining access of following defs.
   unsigned NewPhiIndexEnd = InsertedPHIs.size();
-
-  while (!FixupList.empty()) {
-    unsigned StartingPHISize = InsertedPHIs.size();
-    fixupDefs(FixupList);
-    FixupList.clear();
-    // Put any new phis on the fixup list, and process them
-    FixupList.append(InsertedPHIs.begin() + StartingPHISize, InsertedPHIs.end());
-  }
+  fixupDefs(FixupList);
+  assert(NewPhiIndexEnd == InsertedPHIs.size() &&
+         "Should not insert new phis during fixupDefs()");
 
   // Optimize potentially non-minimal phis added in this method.
   unsigned NewPhiSize = NewPhiIndexEnd - NewPhiIndex;
@@ -504,11 +498,8 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<WeakVH> &Vars) {
         assert(MSSA->dominates(NewDef, FirstDef) &&
                "Should have dominated the new access");
 
-        // This may insert new phi nodes, because we are not guaranteed the
-        // block we are processing has a single pred, and depending where the
-        // store was inserted, it may require phi nodes below it.
-        cast<MemoryDef>(FirstDef)->setDefiningAccess(getPreviousDef(FirstDef));
-        return;
+        cast<MemoryDef>(FirstDef)->setDefiningAccess(NewDef);
+        continue;
       }
       // We didn't find a def, so we must continue.
       for (const auto *S : successors(FixupBlock)) {

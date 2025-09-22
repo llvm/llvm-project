@@ -4581,59 +4581,14 @@ implicitly included in later levels.
 - ``-march=x86-64-v3``: (close to Haswell) AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE
 - ``-march=x86-64-v4``: AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
 
-`Intel AVX10 ISA <https://cdrdv2.intel.com/v1/dl/getContent/784267>`_ is
+`Intel AVX10 ISA <https://cdrdv2.intel.com/v1/dl/getContent/784343>`_ is
 a major new vector ISA incorporating the modern vectorization aspects of
 Intel AVX-512. This ISA will be supported on all future Intel processors.
-Users are supposed to use the new options ``-mavx10.N`` and ``-mavx10.N-512``
-on these processors and should not use traditional AVX512 options anymore.
-
-The ``N`` in ``-mavx10.N`` represents a continuous integer number starting
-from ``1``. ``-mavx10.N`` is an alias of ``-mavx10.N-256``, which means to
-enable all instructions within AVX10 version N at a maximum vector length of
-256 bits. ``-mavx10.N-512`` enables all instructions at a maximum vector
-length of 512 bits, which is a superset of instructions ``-mavx10.N`` enabled.
-
-Current binaries built with AVX512 features can run on Intel AVX10/512 capable
-processors without re-compile, but cannot run on AVX10/256 capable processors.
-Users need to re-compile their code with ``-mavx10.N``, and maybe update some
-code that calling to 512-bit X86 specific intrinsics and passing or returning
-512-bit vector types in function call, if they want to run on AVX10/256 capable
-processors. Binaries built with ``-mavx10.N`` can run on both AVX10/256 and
-AVX10/512 capable processors.
-
-Users can add a ``-mno-evex512`` in the command line with AVX512 options if
-they want to run the binary on both legacy AVX512 and new AVX10/256 capable
-processors. The option has the same constraints as ``-mavx10.N``, i.e.,
-cannot call to 512-bit X86 specific intrinsics and pass or return 512-bit vector
-types in function call.
-
-Users should avoid using AVX512 features in function target attributes when
-developing code for AVX10. If they have to do so, they need to add an explicit
-``evex512`` or ``no-evex512`` together with AVX512 features for 512-bit or
-non-512-bit functions respectively to avoid unexpected code generation. Both
-command line option and target attribute of EVEX512 feature can only be used
-with AVX512. They don't affect vector size of AVX10.
-
-User should not mix the use AVX10 and AVX512 options together at any time,
-because the option combinations are conflicting sometimes. For example, a
-combination of ``-mavx512f -mavx10.1-256`` doesn't show a clear intention to
-compiler, since instructions in AVX512F and AVX10.1/256 intersect but do not
-overlap. In this case, compiler will emit warning for it, but the behavior
-is determined. It will generate the same code as option ``-mavx10.1-512``.
-A similar case is ``-mavx512f -mavx10.2-256``, which equals to
-``-mavx10.1-512 -mavx10.2-256``, because ``avx10.2-256`` implies ``avx10.1-256``
-and ``-mavx512f -mavx10.1-256`` equals to ``-mavx10.1-512``.
-
-There are some new macros introduced with AVX10 support. ``-mavx10.1-256`` will
-enable ``__AVX10_1__`` and ``__EVEX256__``, while ``-mavx10.1-512`` enables
-``__AVX10_1__``, ``__EVEX256__``, ``__EVEX512__``  and ``__AVX10_1_512__``.
-Besides, both ``-mavx10.1-256`` and ``-mavx10.1-512`` will enable all AVX512
-feature specific macros. A AVX512 feature will enable both ``__EVEX256__``,
-``__EVEX512__`` and its own macro. So ``__EVEX512__`` can be used to guard code
-that can run on both legacy AVX512 and AVX10/512 capable processors but cannot
-run on AVX10/256, while a AVX512 macro like ``__AVX512F__`` cannot tell the
-difference among the three options. Users need to check additional macros
-``__AVX10_1__`` and ``__EVEX512__`` if they want to make distinction.
+Users are supposed to use the new options ``-mavx10.N`` on these processors
+and should not use traditional AVX512 options anymore. The ``N`` in
+``-mavx10.N`` represents a continuous integer number starting
+from ``1``. Current binaries built with AVX512 features can run on Intel AVX10
+capable processors without re-compile.
 
 ARM
 ^^^

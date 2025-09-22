@@ -21,6 +21,7 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Evaluate/variable.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
@@ -37,6 +38,7 @@
 #include <vector>
 
 namespace Fortran::semantics::omp {
+using namespace Fortran::parser::omp;
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
@@ -397,16 +399,21 @@ const parser::Block &GetInnermostExecPart(const parser::Block &block) {
   const parser::Block *iter{&block};
   while (iter->size() == 1) {
     const parser::ExecutionPartConstruct &ep{iter->front()};
-    if (auto *exec{std::get_if<parser::ExecutableConstruct>(&ep.u)}) {
-      using BlockConstruct = common::Indirection<parser::BlockConstruct>;
-      if (auto *bc{std::get_if<BlockConstruct>(&exec->u)}) {
-        iter = &std::get<parser::Block>(bc->value().t);
-        continue;
-      }
+    if (auto *bc{GetFortranBlockConstruct(ep)}) {
+      iter = &std::get<parser::Block>(bc->t);
+    } else {
+      break;
     }
-    break;
   }
   return *iter;
+}
+
+bool IsStrictlyStructuredBlock(const parser::Block &block) {
+  if (block.size() == 1) {
+    return GetFortranBlockConstruct(block.front()) != nullptr;
+  } else {
+    return false;
+  }
 }
 
 } // namespace Fortran::semantics::omp

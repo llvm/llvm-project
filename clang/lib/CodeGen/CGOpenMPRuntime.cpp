@@ -1038,7 +1038,8 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   OMPBuilder.initialize();
-  OMPBuilder.loadOffloadInfoMetadata(CGM.getLangOpts().OpenMPIsTargetDevice
+  OMPBuilder.loadOffloadInfoMetadata(*CGM.getFileSystem(),
+                                     CGM.getLangOpts().OpenMPIsTargetDevice
                                          ? CGM.getLangOpts().OMPHostIRFile
                                          : StringRef{});
   OMPBuilder.setConfig(Config);
@@ -1238,7 +1239,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D.getBeginLoc());
+  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D);
 }
 
 std::string CGOpenMPRuntime::getOutlinedHelperName(StringRef Name) const {
@@ -6227,7 +6228,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-        return CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
+        return CGF.GenerateOpenMPCapturedStmtFunction(CS, D);
       };
 
   cantFail(OMPBuilder.emitTargetRegionFunction(

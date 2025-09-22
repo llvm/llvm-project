@@ -303,8 +303,6 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  LLVM_ABI static const char *getManglingComponent(const Triple &T);
-
   /// Returns true if the specified type fits in a native integer type
   /// supported by the CPU.
   ///
@@ -501,10 +499,7 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  TypeSize getTypeAllocSize(Type *Ty) const {
-    // Round up to the next alignment boundary.
-    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
-  }
+  TypeSize getTypeAllocSize(Type *Ty) const;
 
   /// Returns the offset in bits between successive objects of the
   /// specified type, including alignment padding; always a multiple of 8.

@@ -1653,6 +1653,17 @@ void Sema::FilterLookupForScope(LookupResult &R, DeclContext *Ctx, Scope *S,
   F.done();
 }
 
+static bool isImplicitInstantiation(NamedDecl *D) {
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    return VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+    return RD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+
+  return false;
+}
+
 bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   // [module.interface]p7:
   // A declaration is attached to a module as follows:
@@ -1667,6 +1678,14 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
     makeMergedDefinitionVisible(New);
     return false;
   }
+
+  // Although we have questions for the module ownership of implicit
+  // instantiations, it should be sure that we shouldn't diagnose the
+  // redeclaration of incorrect module ownership for different implicit
+  // instantiations in different modules. We will diagnose the redeclaration of
+  // incorrect module ownership for the template itself.
+  if (isImplicitInstantiation(New) || isImplicitInstantiation(Old))
+    return false;
 
   Module *NewM = New->getOwningModule();
   Module *OldM = Old->getOwningModule();
@@ -6373,12 +6392,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       NextTL =
           TL.castAs<DependentNameTypeLoc>().getQualifierLoc().getAsTypeLoc();
       break;
-    case TypeLoc::DependentTemplateSpecialization: {
-      auto TST = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-      TemplateKeywordLoc = TST.getTemplateKeywordLoc();
-      NextTL = TST.getQualifierLoc().getAsTypeLoc();
-      break;
-    }
     default:
       break;
     }
@@ -14393,9 +14406,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
     }
 
-    // Provide a specific diagnostic for uninitialized variable
-    // definitions with incomplete array type.
-    if (Type->isIncompleteArrayType()) {
+    // Provide a specific diagnostic for uninitialized variable definitions
+    // with incomplete array type, unless it is a global unbounded HLSL resource
+    // array.
+    if (Type->isIncompleteArrayType() &&
+        !(getLangOpts().HLSL && Var->hasGlobalStorage() &&
+          Type->isHLSLResourceRecordArray())) {
       if (Var->isConstexpr())
         Diag(Var->getLocation(), diag::err_constexpr_var_requires_const_init)
             << Var;
@@ -15474,6 +15490,14 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
         D.setInvalidType(true);
       }
     }
+  }
+
+  // Incomplete resource arrays are not allowed as function parameters in HLSL
+  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType() &&
+      parmDeclType->isHLSLResourceRecordArray()) {
+    Diag(D.getIdentifierLoc(),
+         diag::err_hlsl_incomplete_resource_array_in_function_param);
+    D.setInvalidType(true);
   }
 
   // Temporarily put parameter variables in the translation unit, not

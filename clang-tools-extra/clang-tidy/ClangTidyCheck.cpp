@@ -62,11 +62,6 @@ ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
   return std::nullopt;
 }
 
-static const llvm::StringSet<> DeprecatedGlobalOptions{
-    "StrictMode",
-    "IgnoreMacros",
-};
-
 static ClangTidyOptions::OptionMap::const_iterator
 findPriorityOption(const ClangTidyOptions::OptionMap &Options,
                    StringRef NamePrefix, StringRef LocalName,
@@ -78,13 +73,6 @@ findPriorityOption(const ClangTidyOptions::OptionMap &Options,
   }
   auto IterLocal = Options.find((NamePrefix + LocalName).str());
   auto IterGlobal = Options.find(LocalName);
-  // FIXME: temporary solution for deprecation warnings, should be removed
-  // after 22.x. Warn configuration deps on deprecation global options.
-  if (IterLocal == Options.end() && IterGlobal != Options.end() &&
-      DeprecatedGlobalOptions.contains(LocalName))
-    Context->configurationDiag(
-        "global option '%0' is deprecated, please use '%1%0' instead.")
-        << LocalName << NamePrefix;
   if (IterLocal == Options.end())
     return IterGlobal;
   if (IterGlobal == Options.end())

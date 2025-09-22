@@ -15,13 +15,7 @@ import threading
 import typing
 import traceback
 from typing import Optional, Tuple
-
-import io
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
@@ -325,6 +319,10 @@ def updateEnv(env, args):
         # from the environment.
         if arg == "-u":
             unset_next_env_var = True
+            continue
+        # Support for the -i flag which clears the environment
+        if arg == "-i":
+            env.env = {}
             continue
         if unset_next_env_var:
             unset_next_env_var = False
@@ -890,20 +888,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if os.path.isfile(exe_in_cwd):
                 executable = exe_in_cwd
         if not executable:
-            executable = lit.util.which(args[0], cmd_shenv.env["PATH"])
+            # Use the path from cmd_shenv by default, but if the environment variable
+            # is unset (like if the user is using env -i), use the standard path.
+            path = (
+                cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
+            )
+            executable = lit.util.which(args[0], shenv.env["PATH"])
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
-            # In Python 2.x, basestring is the base class for all string (including unicode)
-            # In Python 3.x, basestring no longer exist and str is always unicode
-            try:
-                str_type = basestring
-            except NameError:
-                str_type = str
             for i, arg in enumerate(args):
-                if isinstance(arg, str_type) and kDevNull in arg:
+                if isinstance(arg, str) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
@@ -1238,7 +1235,7 @@ def executeScriptInternal(
         ):
             for test_updater in litConfig.test_updaters:
                 try:
-                    update_output = test_updater(result, test)
+                    update_output = test_updater(result, test, commands)
                 except Exception as e:
                     output = out
                     output += err

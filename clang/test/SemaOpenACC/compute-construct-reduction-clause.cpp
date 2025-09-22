@@ -6,8 +6,6 @@ struct CompositeOfScalars {
   short J;
   char C;
   double D;
-  _Complex float CF;
-  _Complex double CD;
 };
 
 struct CompositeHasComposite {
@@ -16,8 +14,6 @@ struct CompositeHasComposite {
   short J;
   char C;
   double D;
-  _Complex float CF;
-  _Complex double CD;
   struct CompositeOfScalars COS; // #COS_FIELD
 };
 
@@ -144,6 +140,35 @@ void uses(unsigned Parm) {
   // expected-note@#HASPTR{{used as field 'I' of composite 'HasPtr'}}
   // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
 #pragma acc parallel reduction(+:HPArr)
+  while (1);
+
+  _Complex int CplxI;
+  _Complex int CplxIArr[5];
+  _Complex float CplxF;
+  _Complex float CplxFArr[5];
+  struct HasCplx { _Complex int I; } HC; //#HASCPLX
+  // expected-error@+2{{invalid type '_Complex int' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:CplxI)
+  while (1);
+  // expected-error@+3{{invalid type '_Complex int' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+2{{used as element type of array type '_Complex int'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:CplxIArr)
+  while (1);
+  // expected-error@+2{{invalid type '_Complex float' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:CplxF)
+  while (1);
+  // expected-error@+3{{invalid type '_Complex float' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@+2{{used as element type of array type '_Complex float'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:CplxFArr)
+  while (1);
+  // expected-error@+3{{invalid type '_Complex int' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
+  // expected-note@#HASCPLX{{used as field 'I' of composite 'HasCplx'}}
+  // expected-note@+1{{OpenACC 'reduction' variable reference must be a scalar variable or a composite of scalars, or an array, sub-array, or element of scalar types}}
+#pragma acc parallel reduction(+:HC)
   while (1);
 }
 

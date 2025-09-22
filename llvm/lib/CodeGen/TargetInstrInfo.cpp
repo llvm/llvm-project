@@ -58,16 +58,15 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass*
+const TargetRegisterClass *
 TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo *TRI,
-                             const MachineFunction &MF) const {
+                             const TargetRegisterInfo *TRI) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
   short RegClass = MCID.operands()[OpNum].RegClass;
   if (MCID.operands()[OpNum].isLookupPtrRegClass())
-    return TRI->getPointerRegClass(MF, RegClass);
+    return TRI->getPointerRegClass(RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
   if (RegClass < 0)
@@ -996,7 +995,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
       (MI->getOpcode() != CombineOpc && CombineOpc != 0))
     return false;
   // Must only used by the user we combine with.
-  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(MO.getReg()))
     return false;
 
   return true;

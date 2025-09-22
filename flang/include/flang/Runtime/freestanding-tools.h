@@ -63,8 +63,7 @@
 #define STD_TOUPPER_UNSUPPORTED 1
 #endif
 
-#if defined(OMP_OFFLOAD_BUILD) && defined(OMP_NOHOST_BUILD) && \
-    defined(__clang__)
+#if defined(OMP_OFFLOAD_BUILD) && defined(__clang__)
 #define STD_FILL_N_UNSUPPORTED 1
 #define STD_MEMSET_USE_BUILTIN 1
 #define STD_MEMSET_UNSUPPORTED 1

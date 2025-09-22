@@ -264,6 +264,50 @@ gpu.module @test_distribution {
   gpu.return
   }
 
+  // CHECK-LABEL: @load_gather
+  // CHECK-SAME: %[[ARG0:.*]]: memref<?xf16>
+  gpu.func @load_gather(%src : memref<?xf16>) {
+    // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<32x4xindex>
+    // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<32x4xi1>
+    // CHECK: %[[LOAD:.*]] = xegpu.load %[[ARG0]][%[[CST]]], %[[MASK]] <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}>
+    // CHECK-SAME: : memref<?xf16>, vector<32x4xindex>, vector<32x4xi1> -> vector<32x4xf16>
+    %offset =  arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 4]>} dense<0> : vector<256x16xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 4]>} dense<1> : vector<256x16xi1>
+    %load = xegpu.load %src[%offset], %mask {chunk_size = 1, layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 4]>, l1_hint = #xegpu.cache_hint<cached>}
+      : memref<?xf16>, vector<256x16xindex>, vector<256x16xi1> -> vector<256x16xf16>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @store_scatter
+  // CHECK-SAME: %[[ARG0:.*]]: memref<256xf16>
+  gpu.func @store_scatter(%dest : memref<256xf16>) {
+    // CHECK: %[[VAL:.*]] = arith.constant dense<2.550000e+01> : vector<8xf16>
+    // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xindex>
+    // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<8xi1>
+    // CHECK: xegpu.store %[[VAL]], %[[ARG0]][%[[CST]]], %[[MASK]] <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}>
+    // CHECK-SAME: : vector<8xf16>, memref<256xf16>, vector<8xindex>, vector<8xi1>
+    %val = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<25.5> : vector<256xf16>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<0> : vector<256xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<1> : vector<256xi1>
+    xegpu.store %val, %dest[%offset], %mask {chunk_size = 1, layout = #xegpu.layout<sg_layout = [32], sg_data = [8]>, l1_hint = #xegpu.cache_hint<cached>}
+      : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @load_with_non_unit_chunk_size
+  // CHECK-SAME: %[[ARG0:.*]]: memref<?xf16>
+  gpu.func @load_with_non_unit_chunk_size(%src : memref<?xf16>) {
+    // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<8xindex>
+    // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<8xi1>
+    // CHECK: %[[LOAD:.*]] = xegpu.load %[[ARG0]][%[[CST]]], %[[MASK]] <{chunk_size = 4 : i64, l1_hint = #xegpu.cache_hint<cached>}>
+    // CHECK-SAME: : memref<?xf16>, vector<8xindex>, vector<8xi1> -> vector<8x4xf16>
+    %offset =  arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<0> : vector<256xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [32], sg_data = [8]>} dense<1> : vector<256xi1>
+    %load = xegpu.load %src[%offset], %mask {chunk_size = 4, layout_result_0 = #xegpu.layout<sg_layout = [32, 1], sg_data = [8, 4]>, l1_hint = #xegpu.cache_hint<cached>}
+      : memref<?xf16>, vector<256xindex>, vector<256xi1> -> vector<256x4xf16>
+    gpu.return
+  }
+
   // CHECK-LABEL: distribute_load_matrix
   // CHECK-SAME: [[arg0:%.+]]: memref<32768xi8, 3>
   gpu.func @distribute_load_matrix(%arg0: memref<32768xi8, 3>) {

@@ -637,7 +637,7 @@
 
 - `--inline-memcpy`
 
-  Inline memcpy using 'rep movsb' instruction (X86-only)
+  Inline memcpy using optimized instruction sequences (X86: 'rep movsb', AArch64: width-optimized register operations)
 
 - `--inline-small-functions`
 

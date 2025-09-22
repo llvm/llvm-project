@@ -349,20 +349,16 @@ template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
                                    sizeof(std::pair<T, U>))> {};
 
 /// Helper to get the hashable data representation for a type.
-/// This variant is enabled when the type itself can be used.
-template <typename T>
-std::enable_if_t<is_hashable_data<T>::value, T>
-get_hashable_data(const T &value) {
-  return value;
-}
-/// Helper to get the hashable data representation for a type.
-/// This variant is enabled when we must first call hash_value and use the
-/// result as our data.
-template <typename T>
-std::enable_if_t<!is_hashable_data<T>::value, size_t>
-get_hashable_data(const T &value) {
-  using ::llvm::hash_value;
-  return hash_value(value);
+template <typename T> auto get_hashable_data(const T &value) {
+  if constexpr (is_hashable_data<T>::value) {
+    // This variant is enabled when the type itself can be used.
+    return value;
+  } else {
+    // This variant is enabled when we must first call hash_value and use the
+    // result as our data.
+    using ::llvm::hash_value;
+    return static_cast<size_t>(hash_value(value));
+  }
 }
 
 /// Helper to store data from a value into a buffer and advance the

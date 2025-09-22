@@ -9,9 +9,9 @@ define amdgpu_kernel void @func(ptr addrspace(1) %in, ptr addrspace(3) %out) {
 ; CHECK:       ; %bb.0: ; %.lr.ph
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 0
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b32 s3, 32
 ; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

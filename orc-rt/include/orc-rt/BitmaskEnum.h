@@ -17,6 +17,7 @@
 #define ORC_RT_BITMASKENUM_H
 
 #include "Math.h"
+#include "bit.h"
 
 #include <cassert>
 #include <type_traits>
@@ -113,6 +114,14 @@ constexpr std::underlying_type_t<E> bitmask_enum_to_underlying(E Val) noexcept {
          "Enum value too large (or langest val too small");
   return U;
 }
+
+template <typename E, typename _ = std::enable_if_t<is_bitmask_enum_v<E>>>
+struct bitmask_enum_num_bits {
+  static constexpr int value = bit_width(largest_bitmask_enum_bit<E>::value);
+};
+
+template <typename E>
+inline constexpr int bitmask_enum_num_bits_v = bitmask_enum_num_bits<E>::value;
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum_v<E>>>
 constexpr E operator~(E Val) noexcept {

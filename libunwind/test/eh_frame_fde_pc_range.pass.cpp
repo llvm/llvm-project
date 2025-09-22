@@ -13,7 +13,9 @@
 
 // clang-format off
 
-// REQUIRES: linux
+// REQUIRES: target={{x86_64-.+-linux-gnu}}
+// aarch64,arm have a cross toolchain build(llvm-clang-win-x-aarch64, etc)
+// where objdump is not available.
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
