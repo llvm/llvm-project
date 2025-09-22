@@ -991,21 +991,21 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
       EnterDirectiveNest(TargetBlockOnlyTeams);
     }
     break;
-  case llvm::omp::Directive::OMPD_workshare:
-  case llvm::omp::Directive::OMPD_parallel_workshare:
+  case llvm::omp::OMPD_workshare:
+  case llvm::omp::OMPD_parallel_workshare:
     CheckWorkshareBlockStmts(block, beginSpec.source);
     HasInvalidWorksharingNesting(
         beginSpec.source, llvm::omp::nestedWorkshareErrSet);
     break;
-  case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::OMPD_workdistribute:
     if (!CurrentDirectiveIsNested()) {
       context_.Say(beginSpec.source,
           "A WORKDISTRIBUTE region must be nested inside TEAMS region only."_err_en_US);
     }
     CheckWorkdistributeBlockStmts(block, beginSpec.source);
     break;
-  case llvm::omp::Directive::OMPD_teams_workdistribute:
-  case llvm::omp::Directive::OMPD_target_teams_workdistribute:
+  case llvm::omp::OMPD_teams_workdistribute:
+  case llvm::omp::OMPD_target_teams_workdistribute:
     CheckWorkdistributeBlockStmts(block, beginSpec.source);
     break;
   case llvm::omp::Directive::OMPD_scope:
