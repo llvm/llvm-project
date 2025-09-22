@@ -18,7 +18,7 @@ define i64 @test_ptr_compare_guard(ptr %start, ptr %end) {
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[LOOP_LATCH]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 1
-; CHECK-NEXT:    [[I64_IV_NEXT]] = add i64 [[I64_IV]], 1
+; CHECK-NEXT:    [[I64_IV_NEXT]] = add nuw i64 [[I64_IV]], 1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[C_2]], label %[[EXIT_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
