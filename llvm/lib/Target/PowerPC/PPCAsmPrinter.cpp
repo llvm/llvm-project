@@ -47,6 +47,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -82,6 +83,7 @@
 
 using namespace llvm;
 using namespace llvm::XCOFF;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "asmprinter"
 
@@ -3413,13 +3415,9 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
 
-
 static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
-  auto IsLocalFunc = [&](const Value *V) {
-    if (!isa<Function>(V))
-      return false;
-    auto *F = cast<Function>(V);
-
+  // Query if the given function is local to the load module.
+  auto IsLocalFunc = [](const Function *F) {
     // Static functions are local
     if (F->getLinkage() == GlobalValue::InternalLinkage)
       return true;
@@ -3433,6 +3431,42 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
         F->getVisibility() == GlobalValue::ProtectedVisibility)
       return true;
 
+    return false;
+  };
+  // Recursive walker that checks if all possible runtime values of the given
+  // llvm::Value are addresses of local functions.
+  std::function<bool(const Value*)> ValueIsALocalFunc = [&IsLocalFunc, &ValueIsALocalFunc](const Value *V) -> bool{
+    if (auto *F = dyn_cast<Function>(V))
+      return IsLocalFunc(F);
+    if (!isa<Instruction>(V))
+      return false;
+
+    Value *Op;
+    auto *I = cast<Instruction>(V);
+    // return isP9 ? foo_p9 : foo_default;
+    if (auto *SI = dyn_cast<SelectInst>(I))
+      return ValueIsALocalFunc(SI->getTrueValue()) && ValueIsALocalFunc(SI->getFalseValue());
+    else if (auto *PN = dyn_cast<PHINode>(I)) {
+      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+        if (!ValueIsALocalFunc(PN->getIncomingValue(i)))
+          return false;
+      return true;
+    }
+    // @switch.table.resolve_foo = private unnamed_addr constant [3 x ptr] [ptr @foo_static, ptr @foo_hidden, ptr @foo_protected]
+    // %switch.gep = getelementptr inbounds nuw ptr, ptr @switch.table, i64 %2
+    // V = load ptr, ptr %switch.gep,
+    else if (match(I, m_Load(m_GEP(m_Value(Op), m_Value())))) {
+      if (!isa<GlobalVariable>(Op))
+        return false;
+      auto *GV = dyn_cast<GlobalVariable>(Op);
+      if (!GV->hasInitializer() || !isa<ConstantArray>(GV->getInitializer()))
+        return false;
+      auto *Initializer = cast<ConstantArray>(GV->getInitializer());
+      for (unsigned Idx = 0, End = Initializer->getNumOperands(); Idx != End; ++Idx)
+        if (!ValueIsALocalFunc(Initializer->getOperand(Idx)))
+          return false;
+      return true;
+    }
     return false;
   };
 
@@ -3451,7 +3485,7 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
 
   auto *Resolver = GI.getResolverFunction();
   // If the resolver is preemptible then we cannot rely on its implementation.
-  if (!isLocalFunc(Resolver))
+  if (!IsLocalFunc(Resolver))
     return true;
   // If one of the return values of the resolver function is not a
   // local function, then we have to conservatively do a TOC save/restore.
@@ -3459,23 +3493,7 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
     if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
       Value *RV = Ret->getReturnValue();
       assert(RV);
-      // return &foo_p9;
-      if (auto *F = dyn_cast<Function>(RV)) {
-        if (!IsLocalFunc(F))
-          return true;
-      } else if (auto *I = dyn_cast<Instruction>(RV)) {
-        // return isP9 ? foo_p9 : foo_default;
-        if (auto *SI = dyn_cast<SelectInst>(I)) {
-          if (!IsLocalFunc(SI->getTrueValue()) ||
-              !IsLocalFunc(SI->getFalseValue()))
-            return true;
-        } else if (auto *PN = dyn_cast<PHINode>(I)) {
-          for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i)
-            if (!IsLocalFunc(PN->getIncomingValue(i)))
-              return true;
-        } else
-          return true;
-      } else
+      if (!ValueIsALocalFunc(RV))
         return true;
     }
   }
