@@ -20,6 +20,18 @@
 using namespace llvm;
 using namespace bolt;
 
+static const MCSymbol *getBranchTargetSymbol(const MCInst &I) {
+  // For B/BC the last operand is a branch target (expr)
+  if (I.getNumOperands() == 0)
+    return nullptr;
+  const MCOperand &Op = I.getOperand(I.getNumOperands() - 1);
+  if (!Op.isExpr())
+    return nullptr;
+  if (auto *SymRef = dyn_cast<MCSymbolRefExpr>(Op.getExpr()))
+    return &SymRef->getSymbol();
+  return nullptr;
+}
+
 static inline unsigned opc(const MCInst &I) { return I.getOpcode(); }
 
 // Create instructions to push two registers onto the stack
@@ -157,6 +169,48 @@ bool PPCMCPlusBuilder::isNoop(const MCInst &Inst) const {
          Inst.getOperand(0).getReg() == PPC::R0 && Inst.getOperand(1).isReg() &&
          Inst.getOperand(1).getReg() == PPC::R0 && Inst.getOperand(2).isImm() &&
          Inst.getOperand(2).getImm() == 0;
+}
+
+bool PPCMCPlusBuilder::analyzeBranch(InstructionIterator Begin,
+                                     InstructionIterator End,
+                                     const MCSymbol *&Tgt,
+                                     const MCSymbol *&Fallthrough,
+                                     MCInst *&CondBr, MCInst *&UncondBr) const {
+  Tgt = nullptr;
+  Fallthrough = nullptr;
+  CondBr = nullptr;
+  UncondBr = nullptr;
+
+  if (Begin == End)
+    return false;
+
+  // Look at the last instruction (canonical BOLT pattern)
+  InstructionIterator I = End;
+  --I;
+  const MCInst &Last = *I;
+
+  // Return (blr) → no branch terminator
+  if (Last.getOpcode() == PPC::BLR) {
+    return false;
+  }
+
+  if (isUnconditionalBranch(Last)) {
+    UncondBr = const_cast<MCInst *>(&Last);
+    Tgt = getBranchTargetSymbol(Last);
+    // with an unconditional branch, there's no fall-through
+    return false;
+  }
+
+  if (isConditionalBranch(Last)) {
+    CondBr = const_cast<MCInst *>(&Last);
+    Tgt = getBranchTargetSymbol(Last);
+    // Assume the block has a fallthrough if no following unconditional branch.
+    // (BOLT will compute actual fallthrough later once CFG is built.)
+    return false;
+  }
+
+  // Otherwise: not a branch terminator (let caller treat as fallthrough/ret)
+  return false;
 }
 
 namespace llvm {
