@@ -8502,11 +8502,11 @@ __mmask16 test_mm512_kand(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    __E, __F);
 }
 
-TEST_CONSTEXPR(_mm512_kand(0xCC, 0xAA) == 0x88);        // data correctness
-TEST_CONSTEXPR(_mm512_kand(0x12345, 0xFFFF) == 0x2345); // should be truncated
-TEST_CONSTEXPR(_mm512_kand(0xABCD, 0x0000) == 0x0000);  // all-zero
-TEST_CONSTEXPR(_mm512_kand(0x5678, 0xFFFF) == 0x5678);  // all-one
-TEST_CONSTEXPR(_mm512_kand(0xAAAA, 0x5555) == 0x0000);  // disjoint
+TEST_CONSTEXPR(_mm512_kand(0xCC, 0xAA) == 0x88);
+TEST_CONSTEXPR(_mm512_kand(0x12345, 0xFFFF) == 0x2345);
+TEST_CONSTEXPR(_mm512_kand(0xABCD, 0x0000) == 0x0000);
+TEST_CONSTEXPR(_mm512_kand(0x5678, 0xFFFF) == 0x5678);
+TEST_CONSTEXPR(_mm512_kand(0xAAAA, 0x5555) == 0x0000);
 
 __mmask16 test_mm512_kandn(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kandn
@@ -8520,11 +8520,11 @@ __mmask16 test_mm512_kandn(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_mm512_kandn(0xCC, 0xAA) == 0x22);        // data correctness
-TEST_CONSTEXPR(_mm512_kandn(0x12345, 0xFFFF) == 0xDCBA); // truncated and inverted
-TEST_CONSTEXPR(_mm512_kandn(0x0000, 0xABCD) == 0xABCD);  // all-ones (~0)
-TEST_CONSTEXPR(_mm512_kandn(0xFFFF, 0x5678) == 0x0000);  // all-zero (~0xFFFF)
-TEST_CONSTEXPR(_mm512_kandn(0xAAAA, 0xAAAA) == 0x0000);  // ~A & A is 0
+TEST_CONSTEXPR(_mm512_kandn(0xCC, 0xAA) == 0x22);
+TEST_CONSTEXPR(_mm512_kandn(0x12345, 0xFFFF) == 0xDCBA);
+TEST_CONSTEXPR(_mm512_kandn(0x0000, 0xABCD) == 0xABCD);
+TEST_CONSTEXPR(_mm512_kandn(0xFFFF, 0x5678) == 0x0000);
+TEST_CONSTEXPR(_mm512_kandn(0xAAAA, 0xAAAA) == 0x0000);
 
 __mmask16 test_mm512_kor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kor
@@ -8537,11 +8537,11 @@ __mmask16 test_mm512_kor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m
                                                   __E, __F);
 }
 
-TEST_CONSTEXPR(_mm512_kor(0xC1, 0xA8) == 0xE9);         // data correctness
-TEST_CONSTEXPR(_mm512_kor(0x12345, 0x12345) == 0x2345); // truncated
-TEST_CONSTEXPR(_mm512_kor(0xABCD, 0x0000) == 0xABCD);   // all-zero
-TEST_CONSTEXPR(_mm512_kor(0xABCD, 0xFFFF) == 0xFFFF);   // all-ones
-TEST_CONSTEXPR(_mm512_kor(0xAAAA, 0x5555) == 0xFFFF);   // disjoint
+TEST_CONSTEXPR(_mm512_kor(0xC1, 0xA8) == 0xE9);
+TEST_CONSTEXPR(_mm512_kor(0x12345, 0x12345) == 0x2345);
+TEST_CONSTEXPR(_mm512_kor(0xABCD, 0x0000) == 0xABCD);
+TEST_CONSTEXPR(_mm512_kor(0xABCD, 0xFFFF) == 0xFFFF);
+TEST_CONSTEXPR(_mm512_kor(0xAAAA, 0x5555) == 0xFFFF);
 
 int test_mm512_kortestc(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_mm512_kortestc
@@ -8638,11 +8638,11 @@ __mmask16 test_mm512_kxnor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_mm512_kxnor(0x00C5, 0xFFAF) == 0x95);    // data correctness
-TEST_CONSTEXPR(_mm512_kxnor(0x12345, 0xFFFF) == 0x2345); // should be truncated
-TEST_CONSTEXPR(_mm512_kxnor(0xABCD, 0x0000) == 0x5432);  // all-zero, res = ~LHS
-TEST_CONSTEXPR(_mm512_kxnor(0x5678, 0xFFFF) == 0x5678);  // all-one, res = LHS
-TEST_CONSTEXPR(_mm512_kxnor(0xAAAA, 0x5555) == 0x0000);  // ~A xnor A == 0
+TEST_CONSTEXPR(_mm512_kxnor(0x00C5, 0xFFAF) == 0x95);
+TEST_CONSTEXPR(_mm512_kxnor(0x12345, 0xFFFF) == 0x2345);
+TEST_CONSTEXPR(_mm512_kxnor(0xABCD, 0x0000) == 0x5432);
+TEST_CONSTEXPR(_mm512_kxnor(0x5678, 0xFFFF) == 0x5678);
+TEST_CONSTEXPR(_mm512_kxnor(0xAAAA, 0x5555) == 0x0000);
 
 __mmask16 test_mm512_kxor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kxor
@@ -8674,11 +8674,11 @@ __mmask16 test_kand_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_kand_mask16(0xCC, 0xAA) == 0x88);        // data correctness
-TEST_CONSTEXPR(_kand_mask16(0x12345, 0xFFFF) == 0x2345); // should be truncated
-TEST_CONSTEXPR(_kand_mask16(0xABCD, 0x0000) == 0x0000);  // all-zero
-TEST_CONSTEXPR(_kand_mask16(0x5678, 0xFFFF) == 0x5678);  // all-one
-TEST_CONSTEXPR(_kand_mask16(0xAAAA, 0x5555) == 0x0000);  // disjoint
+TEST_CONSTEXPR(_kand_mask16(0xCC, 0xAA) == 0x88);
+TEST_CONSTEXPR(_kand_mask16(0x12345, 0xFFFF) == 0x2345);
+TEST_CONSTEXPR(_kand_mask16(0xABCD, 0x0000) == 0x0000);
+TEST_CONSTEXPR(_kand_mask16(0x5678, 0xFFFF) == 0x5678);
+TEST_CONSTEXPR(_kand_mask16(0xAAAA, 0x5555) == 0x0000);
 
 __mmask16 test_kandn_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask16
@@ -8692,11 +8692,11 @@ __mmask16 test_kandn_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      __E, __F);
 }
 
-TEST_CONSTEXPR(_kandn_mask16(0xCC, 0xAA) == 0x22);        // data correctness
-TEST_CONSTEXPR(_kandn_mask16(0x12345, 0xFFFF) == 0xDCBA); // truncated and inverted
-TEST_CONSTEXPR(_kandn_mask16(0x0000, 0xABCD) == 0xABCD);  // all-ones (~0)
-TEST_CONSTEXPR(_kandn_mask16(0xFFFF, 0x5678) == 0x0000);  // all-zero (~0xFFFF)
-TEST_CONSTEXPR(_kandn_mask16(0xAAAA, 0xAAAA) == 0x0000);  // ~A & A is 0
+TEST_CONSTEXPR(_kandn_mask16(0xCC, 0xAA) == 0x22);
+TEST_CONSTEXPR(_kandn_mask16(0x12345, 0xFFFF) == 0xDCBA);
+TEST_CONSTEXPR(_kandn_mask16(0x0000, 0xABCD) == 0xABCD);
+TEST_CONSTEXPR(_kandn_mask16(0xFFFF, 0x5678) == 0x0000);
+TEST_CONSTEXPR(_kandn_mask16(0xAAAA, 0xAAAA) == 0x0000);
 
 __mmask16 test_kor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask16
@@ -8709,11 +8709,11 @@ __mmask16 test_kor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    __E, __F);
 }
 
-TEST_CONSTEXPR(_kor_mask16(0xC1, 0xA8) == 0xE9);         // data correctness
-TEST_CONSTEXPR(_kor_mask16(0x12345, 0x12345) == 0x2345); // truncated
-TEST_CONSTEXPR(_kor_mask16(0xABCD, 0x0000) == 0xABCD);   // all-zero
-TEST_CONSTEXPR(_kor_mask16(0xABCD, 0xFFFF) == 0xFFFF);   // all-ones
-TEST_CONSTEXPR(_kor_mask16(0xAAAA, 0x5555) == 0xFFFF);   // disjoint
+TEST_CONSTEXPR(_kor_mask16(0xC1, 0xA8) == 0xE9);
+TEST_CONSTEXPR(_kor_mask16(0x12345, 0x12345) == 0x2345);
+TEST_CONSTEXPR(_kor_mask16(0xABCD, 0x0000) == 0xABCD);
+TEST_CONSTEXPR(_kor_mask16(0xABCD, 0xFFFF) == 0xFFFF);
+TEST_CONSTEXPR(_kor_mask16(0xAAAA, 0x5555) == 0xFFFF);
 
 __mmask16 test_kxnor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask16
@@ -8727,11 +8727,11 @@ __mmask16 test_kxnor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      __E, __F);
 }
 
-TEST_CONSTEXPR(_kxnor_mask16(0x00C5, 0xFFAF) == 0x95);    // data correctness
-TEST_CONSTEXPR(_kxnor_mask16(0x12345, 0xFFFF) == 0x2345); // should be truncated
-TEST_CONSTEXPR(_kxnor_mask16(0xABCD, 0x0000) == 0x5432);  // all-zero, res = ~LHS
-TEST_CONSTEXPR(_kxnor_mask16(0x5678, 0xFFFF) == 0x5678);  // all-one, res = LHS
-TEST_CONSTEXPR(_kxnor_mask16(0xAAAA, 0x5555) == 0x0000);  // ~A xnor A == 0
+TEST_CONSTEXPR(_kxnor_mask16(0x00C5, 0xFFAF) == 0x95);
+TEST_CONSTEXPR(_kxnor_mask16(0x12345, 0xFFFF) == 0x2345);
+TEST_CONSTEXPR(_kxnor_mask16(0xABCD, 0x0000) == 0x5432);
+TEST_CONSTEXPR(_kxnor_mask16(0x5678, 0xFFFF) == 0x5678);
+TEST_CONSTEXPR(_kxnor_mask16(0xAAAA, 0x5555) == 0x0000);
 
 __mmask16 test_kxor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxor_mask16

@@ -36,11 +36,11 @@ __mmask32 test_kand_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_kand_mask32(0xCCCCCCCC, 0xAAAAAAAA) == 0x88888888);  // data correctness
-TEST_CONSTEXPR(_kand_mask32(0x123456789, 0xFFFFFFFF) == 0x23456789); // should be truncated
-TEST_CONSTEXPR(_kand_mask32(0xABCDEF01, 0x00000000) == 0x00000000);  // all-zero
-TEST_CONSTEXPR(_kand_mask32(0x56789ABC, 0xFFFFFFFF) == 0x56789ABC);  // all-one
-TEST_CONSTEXPR(_kand_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000);  // disjoint
+TEST_CONSTEXPR(_kand_mask32(0xCCCCCCCC, 0xAAAAAAAA) == 0x88888888);
+TEST_CONSTEXPR(_kand_mask32(0x123456789, 0xFFFFFFFF) == 0x23456789);
+TEST_CONSTEXPR(_kand_mask32(0xABCDEF01, 0x00000000) == 0x00000000);
+TEST_CONSTEXPR(_kand_mask32(0x56789ABC, 0xFFFFFFFF) == 0x56789ABC);
+TEST_CONSTEXPR(_kand_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000);
 
 __mmask64 test_kand_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kand_mask64
@@ -52,11 +52,11 @@ __mmask64 test_kand_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                    __E, __F);
 }
 
-TEST_CONSTEXPR(_kand_mask64(0xCCCCCCCCCCCCCCCC, 0xAAAAAAAAAAAAAAAA) == 0x8888888888888888); // data correctness
-TEST_CONSTEXPR(_kand_mask64(0x123456789ABCDEF0, 0xFFFFFFFFFFFFFFFF) == 0x123456789ABCDEF0); // full 64-bit value
-TEST_CONSTEXPR(_kand_mask64(0xABCDEF0123456789, 0x0000000000000000) == 0x0000000000000000); // all-zero
-TEST_CONSTEXPR(_kand_mask64(0x56789ABCDEF01234, 0xFFFFFFFFFFFFFFFF) == 0x56789ABCDEF01234); // all-one
-TEST_CONSTEXPR(_kand_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0x0000000000000000); // disjoint
+TEST_CONSTEXPR(_kand_mask64(0xCCCCCCCCCCCCCCCC, 0xAAAAAAAAAAAAAAAA) == 0x8888888888888888);
+TEST_CONSTEXPR(_kand_mask64(0x123456789ABCDEF0, 0xFFFFFFFFFFFFFFFF) == 0x123456789ABCDEF0);
+TEST_CONSTEXPR(_kand_mask64(0xABCDEF0123456789, 0x0000000000000000) == 0x0000000000000000);
+TEST_CONSTEXPR(_kand_mask64(0x56789ABCDEF01234, 0xFFFFFFFFFFFFFFFF) == 0x56789ABCDEF01234);
+TEST_CONSTEXPR(_kand_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0x0000000000000000);
 
 __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask32
@@ -70,11 +70,11 @@ __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
 }
 // 1100
 //
-TEST_CONSTEXPR(_kandn_mask32(0xA0A0F0F0, 0xCCCCCCCC) == 0x4C4C0C0C);  // data correctness
-TEST_CONSTEXPR(_kandn_mask32(0x123456789, 0xFFFFFFFF) == 0xDCBA9876); // truncated and inverted
-TEST_CONSTEXPR(_kandn_mask32(0x00000000, 0x1234ABCD) == 0x1234ABCD);  // all-ones (~0)
-TEST_CONSTEXPR(_kandn_mask32(0xFFFFFFFF, 0x87654321) == 0x00000000);  // all-zero (~0xFFFFFFFF)
-TEST_CONSTEXPR(_kandn_mask32(0xAAAAAAAA, 0xAAAAAAAA) == 0x00000000);  // ~A & A is 0
+TEST_CONSTEXPR(_kandn_mask32(0xA0A0F0F0, 0xCCCCCCCC) == 0x4C4C0C0C);
+TEST_CONSTEXPR(_kandn_mask32(0x123456789, 0xFFFFFFFF) == 0xDCBA9876);
+TEST_CONSTEXPR(_kandn_mask32(0x00000000, 0x1234ABCD) == 0x1234ABCD);
+TEST_CONSTEXPR(_kandn_mask32(0xFFFFFFFF, 0x87654321) == 0x00000000);
+TEST_CONSTEXPR(_kandn_mask32(0xAAAAAAAA, 0xAAAAAAAA) == 0x00000000);
 
 __mmask64 test_kandn_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask64
@@ -87,11 +87,11 @@ __mmask64 test_kandn_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_kandn_mask64(0xA0A0F0F0C3C33C3C, 0xCCCCCCCCFFFF0000) == 0x4C4C0C0C3C3C0000); // data correctness
-TEST_CONSTEXPR(_kandn_mask64(0x0123456789ABCDEF, 0xFFFFFFFFFFFFFFFF) == 0xFEDCBA9876543210); // inverted with all-ones mask
-TEST_CONSTEXPR(_kandn_mask64(0x0, 0x1122334455667788) == 0x1122334455667788);                // all-ones (~0)
-TEST_CONSTEXPR(_kandn_mask64(0xFFFFFFFFFFFFFFFF, 0x8877665544332211) == 0x0);                // all-zero (~0xFFFFFFFFFFFFFFFF)
-TEST_CONSTEXPR(_kandn_mask64(0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA) == 0x0);                // ~A & A is 0
+TEST_CONSTEXPR(_kandn_mask64(0xA0A0F0F0C3C33C3C, 0xCCCCCCCCFFFF0000) == 0x4C4C0C0C3C3C0000);
+TEST_CONSTEXPR(_kandn_mask64(0x0123456789ABCDEF, 0xFFFFFFFFFFFFFFFF) == 0xFEDCBA9876543210);
+TEST_CONSTEXPR(_kandn_mask64(0x0, 0x1122334455667788) == 0x1122334455667788);
+TEST_CONSTEXPR(_kandn_mask64(0xFFFFFFFFFFFFFFFF, 0x8877665544332211) == 0x0);
+TEST_CONSTEXPR(_kandn_mask64(0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA) == 0x0);
 
 __mmask32 test_kor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask32
@@ -103,11 +103,11 @@ __mmask32 test_kor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    __E, __F);
 }
 
-TEST_CONSTEXPR(_kor_mask32(0xF0F0A5A5, 0x0F0F5A5A) == 0xFFFFFFFF);   // data correctness
-TEST_CONSTEXPR(_kor_mask32(0x12345ABCD, 0x12345ABCD) == 0x2345ABCD); // truncated
-TEST_CONSTEXPR(_kor_mask32(0x1A2B3C4D, 0x00000000) == 0x1A2B3C4D);   // all-zero
-TEST_CONSTEXPR(_kor_mask32(0xDEADBEEF, 0xFFFFFFFF) == 0xFFFFFFFF);   // all-ones
-TEST_CONSTEXPR(_kor_mask32(0xAAAAAAAA, 0x55555555) == 0xFFFFFFFF);   // disjoint
+TEST_CONSTEXPR(_kor_mask32(0xF0F0A5A5, 0x0F0F5A5A) == 0xFFFFFFFF);
+TEST_CONSTEXPR(_kor_mask32(0x12345ABCD, 0x12345ABCD) == 0x2345ABCD);
+TEST_CONSTEXPR(_kor_mask32(0x1A2B3C4D, 0x00000000) == 0x1A2B3C4D);
+TEST_CONSTEXPR(_kor_mask32(0xDEADBEEF, 0xFFFFFFFF) == 0xFFFFFFFF);
+TEST_CONSTEXPR(_kor_mask32(0xAAAAAAAA, 0x55555555) == 0xFFFFFFFF);
 
 __mmask64 test_kor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask64
@@ -119,11 +119,11 @@ __mmask64 test_kor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                   __E, __F);
 }
 
-TEST_CONSTEXPR(_kor_mask64(0xF0A5C33C00FF11EE, 0x0F5AC33CFF00EE11) == 0xFFFFC33CFFFFFFFF); // data correctness
-TEST_CONSTEXPR(_kor_mask64(0x123456789ABCDEF0, 0x123456789ABCDEF0) == 0x123456789ABCDEF0); // full 64-bit value
-TEST_CONSTEXPR(_kor_mask64(0x1122334455667788, 0x0) == 0x1122334455667788);                // all-zero
-TEST_CONSTEXPR(_kor_mask64(0x8877665544332211, 0xFFFFFFFFFFFFFFFF) == 0xFFFFFFFFFFFFFFFF); // all-ones
-TEST_CONSTEXPR(_kor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0xFFFFFFFFFFFFFFFF); // disjoint
+TEST_CONSTEXPR(_kor_mask64(0xF0A5C33C00FF11EE, 0x0F5AC33CFF00EE11) == 0xFFFFC33CFFFFFFFF);
+TEST_CONSTEXPR(_kor_mask64(0x123456789ABCDEF0, 0x123456789ABCDEF0) == 0x123456789ABCDEF0);
+TEST_CONSTEXPR(_kor_mask64(0x1122334455667788, 0x0) == 0x1122334455667788);
+TEST_CONSTEXPR(_kor_mask64(0x8877665544332211, 0xFFFFFFFFFFFFFFFF) == 0xFFFFFFFFFFFFFFFF);
+TEST_CONSTEXPR(_kor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0xFFFFFFFFFFFFFFFF);
 
 __mmask32 test_kxnor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask32
@@ -136,11 +136,11 @@ __mmask32 test_kxnor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      __E, __F);
 }
 
-TEST_CONSTEXPR(_kxnor_mask32(0x1234ABCD, 0xFFFF0000) == 0x12345432);         // data correctness
-TEST_CONSTEXPR(_kxnor_mask32(0x123456789ABCDEF0, 0xFFFFFFFF) == 0x9ABCDEF0); // should be truncated to 32 bits
-TEST_CONSTEXPR(_kxnor_mask32(0xAABBCCDD, 0x00000000) == 0x55443322);         // all-zero mask, res = ~LHS
-TEST_CONSTEXPR(_kxnor_mask32(0x87654321, 0xFFFFFFFF) == 0x87654321);         // all-one mask, res = LHS
-TEST_CONSTEXPR(_kxnor_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000);         // ~A xnor A == 0
+TEST_CONSTEXPR(_kxnor_mask32(0x1234ABCD, 0xFFFF0000) == 0x12345432);
+TEST_CONSTEXPR(_kxnor_mask32(0x123456789ABCDEF0, 0xFFFFFFFF) == 0x9ABCDEF0);
+TEST_CONSTEXPR(_kxnor_mask32(0xAABBCCDD, 0x00000000) == 0x55443322);
+TEST_CONSTEXPR(_kxnor_mask32(0x87654321, 0xFFFFFFFF) == 0x87654321);
+TEST_CONSTEXPR(_kxnor_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000);
 
 __mmask64 test_kxnor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask64
@@ -153,11 +153,11 @@ __mmask64 test_kxnor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_kxnor_mask64(0x0123456789ABCDEF, 0xFFFFFFFF00000000) == 0x0123456776543210); // data correctness
-TEST_CONSTEXPR(_kxnor_mask64(0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F) == 0xFFFFFFFFFFFFFFFF); // full 64 bits
-TEST_CONSTEXPR(_kxnor_mask64(0xFEDCBA9876543210, 0xFFFFFFFFFFFFFFFF) == 0xFEDCBA9876543210); // all-one mask, res = LHS
-TEST_CONSTEXPR(_kxnor_mask64(0xAABBCCDD11223344, 0x0000000000000000) == 0x55443322EEDDCCBB); // all-zero mask, res = ~LHS
-TEST_CONSTEXPR(_kxnor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0x0000000000000000); // ~A xnor A == 0
+TEST_CONSTEXPR(_kxnor_mask64(0x0123456789ABCDEF, 0xFFFFFFFF00000000) == 0x0123456776543210);
+TEST_CONSTEXPR(_kxnor_mask64(0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F) == 0xFFFFFFFFFFFFFFFF);
+TEST_CONSTEXPR(_kxnor_mask64(0xFEDCBA9876543210, 0xFFFFFFFFFFFFFFFF) == 0xFEDCBA9876543210);
+TEST_CONSTEXPR(_kxnor_mask64(0xAABBCCDD11223344, 0x0000000000000000) == 0x55443322EEDDCCBB);
+TEST_CONSTEXPR(_kxnor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0x0000000000000000);
 
 __mmask32 test_kxor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxor_mask32
