@@ -5043,8 +5043,12 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
             return false;
         }
 
-        if (DT.dominates(BB, InBB) || isBackEdge(InBB, BB) ||
-            VisitedBBs.contains(InBB) || match(U.get(), m_Undef()))
+        // If there's multiple incoming edges from the same predecessor we must
+        // ensure the freeze isn't pushed to a single one of the uses,
+        // invalidating the iterator. We simply don't support this case, but it
+        // could be handled if there's a use case.
+        if (isBackEdge(InBB, BB) || !VisitedBBs.insert(InBB).second ||
+            match(U.get(), m_Undef()))
           return false;
         VisitedBBs.insert(InBB);
       }
