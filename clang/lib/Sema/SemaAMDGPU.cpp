@@ -100,7 +100,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
@@ -122,7 +122,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
            << ArgExpr->getType();
   auto Ord = ArgResult.Val.getInt().getZExtValue();
 
-  // Check validity of memory ordering as per C11 / C++11's memody model.
+  // Check validity of memory ordering as per C11 / C++11's memory model.
   // Only fence needs check. Atomic dec/inc allow all memory orders.
   if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),

@@ -740,14 +740,6 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
 
-AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
-  if (id == 0)
-    return AttributeSet();
-  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
-  uint8_t FnAttrID = PackedID >> 8;
-  return getIntrinsicFnAttributeSet(C, FnAttrID);
-}
-
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {
   // There can never be multiple globals with the same name of different types,

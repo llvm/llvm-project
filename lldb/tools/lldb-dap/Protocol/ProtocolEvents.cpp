@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolEvents.h"
+#include "JSONUtils.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
@@ -51,9 +52,16 @@ llvm::json::Value toJSON(const InvalidatedEventBody &IEB) {
   json::Object Result{{"areas", IEB.areas}};
   if (IEB.threadId)
     Result.insert({"threadID", IEB.threadId});
-  if (IEB.frameId)
-    Result.insert({"frameId", IEB.frameId});
+  if (IEB.stackFrameId)
+    Result.insert({"stackFrameId", IEB.stackFrameId});
   return Result;
+}
+
+llvm::json::Value toJSON(const MemoryEventBody &MEB) {
+  return json::Object{
+      {"memoryReference", EncodeMemoryReference(MEB.memoryReference)},
+      {"offset", MEB.offset},
+      {"count", MEB.count}};
 }
 
 } // namespace lldb_dap::protocol

@@ -1,20 +1,26 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
 
 define void @main() {
 entry:
 
 ; CHECK-DAG: OpCapability Float16
 ; CHECK-DAG: OpCapability Float64
+; CHECK-DAG: OpCapability BFloat16TypeKHR
 
-; CHECK-DAG:     %[[#half:]] = OpTypeFloat 16
+; CHECK-DAG:     %[[#half:]] = OpTypeFloat 16{{$}}
+; CHECK-DAG:   %[[#bfloat:]] = OpTypeFloat 16 0{{$}}
 ; CHECK-DAG:    %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG:   %[[#double:]] = OpTypeFloat 64
 
 ; CHECK-DAG:   %[[#v2half:]] = OpTypeVector %[[#half]] 2
 ; CHECK-DAG:   %[[#v3half:]] = OpTypeVector %[[#half]] 3
 ; CHECK-DAG:   %[[#v4half:]] = OpTypeVector %[[#half]] 4
+
+; CHECK-DAG:  %[[#v2bfloat:]] = OpTypeVector %[[#bfloat]] 2
+; CHECK-DAG:  %[[#v3bfloat:]] = OpTypeVector %[[#bfloat]] 3
+; CHECK-DAG:  %[[#v4bfloat:]] = OpTypeVector %[[#bfloat]] 4
 
 ; CHECK-DAG:  %[[#v2float:]] = OpTypeVector %[[#float]] 2
 ; CHECK-DAG:  %[[#v3float:]] = OpTypeVector %[[#float]] 3
@@ -25,11 +31,15 @@ entry:
 ; CHECK-DAG: %[[#v4double:]] = OpTypeVector %[[#double]] 4
 
 ; CHECK-DAG:     %[[#ptr_Function_half:]] = OpTypePointer Function %[[#half]]
+; CHECK-DAG:    %[[#ptr_Function_bfloat:]] = OpTypePointer Function %[[#bfloat]]
 ; CHECK-DAG:    %[[#ptr_Function_float:]] = OpTypePointer Function %[[#float]]
 ; CHECK-DAG:   %[[#ptr_Function_double:]] = OpTypePointer Function %[[#double]]
 ; CHECK-DAG:   %[[#ptr_Function_v2half:]] = OpTypePointer Function %[[#v2half]]
 ; CHECK-DAG:   %[[#ptr_Function_v3half:]] = OpTypePointer Function %[[#v3half]]
 ; CHECK-DAG:   %[[#ptr_Function_v4half:]] = OpTypePointer Function %[[#v4half]]
+; CHECK-DAG:  %[[#ptr_Function_v2bfloat:]] = OpTypePointer Function %[[#v2bfloat]]
+; CHECK-DAG:  %[[#ptr_Function_v3bfloat:]] = OpTypePointer Function %[[#v3bfloat]]
+; CHECK-DAG:  %[[#ptr_Function_v4bfloat:]] = OpTypePointer Function %[[#v4bfloat]]
 ; CHECK-DAG:  %[[#ptr_Function_v2float:]] = OpTypePointer Function %[[#v2float]]
 ; CHECK-DAG:  %[[#ptr_Function_v3float:]] = OpTypePointer Function %[[#v3float]]
 ; CHECK-DAG:  %[[#ptr_Function_v4float:]] = OpTypePointer Function %[[#v4float]]
@@ -39,6 +49,9 @@ entry:
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_half]] Function
   %half_Val = alloca half, align 2
+
+; CHECK: %[[#]] = OpVariable %[[#ptr_Function_bfloat]] Function
+  %bfloat_Val = alloca bfloat, align 2
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_float]] Function
   %float_Val = alloca float, align 4
@@ -54,6 +67,15 @@ entry:
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4half]] Function
   %half4_Val = alloca <4 x half>, align 8
+
+; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2bfloat]] Function
+  %bfloat2_Val = alloca <2 x bfloat>, align 4
+
+; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3bfloat]] Function
+  %bfloat3_Val = alloca <3 x bfloat>, align 8
+
+; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4bfloat]] Function
+  %bfloat4_Val = alloca <4 x bfloat>, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2float]] Function
   %float2_Val = alloca <2 x float>, align 8
