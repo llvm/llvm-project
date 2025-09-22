@@ -2389,22 +2389,18 @@ void RAGreedy::initializeCSRCost() {
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!Instr.isCopy())
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
 
     // Look for the other end of the copy.
-    Register OtherReg = Instr.getOperand(0).getReg();
-    unsigned OtherSubReg = Instr.getOperand(0).getSubReg();
-    unsigned SubReg = Instr.getOperand(1).getSubReg();
-
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(1).getReg();
-      OtherSubReg = Instr.getOperand(1).getSubReg();
-      SubReg = Instr.getOperand(0).getSubReg();
-      if (OtherReg == Reg)
-        continue;
-    }
+    const MachineOperand &OtherOpnd = Instr.getOperand(Opnd.isDef());
+    Register OtherReg = OtherOpnd.getReg();
+    if (OtherReg == Reg)
+      continue;
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    unsigned SubReg = Opnd.getSubReg();
 
     // Get the current assignment.
     MCRegister OtherPhysReg =
