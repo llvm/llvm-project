@@ -6658,7 +6658,7 @@ SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
     // Check that the type has been bound successfully -- and if not,
     // log the event and bail out to avoid an infinite loop.
     swift::CanType swift_bound_type(GetCanonicalSwiftType(bound_type));
-    if (swift_bound_type && swift_bound_type->hasTypeParameter())
+    if (!swift_bound_type || swift_bound_type->hasTypeParameter())
       return llvm::createStringError("Cannot bind type: %s",
                                      bound_type.GetTypeName().AsCString(""));
 
