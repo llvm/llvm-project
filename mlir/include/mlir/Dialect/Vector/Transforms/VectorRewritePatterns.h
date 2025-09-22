@@ -383,6 +383,16 @@ void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns, bool disableAtomicRMW = false);
 
+/// Populates patterns for both MeMref flattening and Vector narrow type
+/// emulation.
+///
+/// Patterns for narrow-type-emulation require "flattened" MemRef(s), so this
+/// composite populate* method can be used for narrow-type-emulation for Ops
+/// operating on MemRef(s) that are rank > 2.
+void populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
+    arith::NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
+
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
 /// vector operations comprising `shuffle` and `bitwise` ops.
 /// Warning: these patterns currently only work for little endian targets.
