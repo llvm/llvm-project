@@ -7027,12 +7027,16 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
 
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
-  bool useFastRealMod = true;
   auto mod = builder.getModule();
-  if (auto attr = mod->getAttrOfType<mlir::omp::VersionAttr>("omp.version"))
-      fprintf(stderr, "omp version: %d\n", attr.getVersion());
-
+  bool useFastRealMod = false;
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod")) {
+    fprintf(stderr, "fir.fast_real_mod present: %d\n", (int) attr.getValue());
+    useFastRealMod = attr.getValue();
+  } else {
+    fprintf(stderr, "fir.fast_real_mod not present\n");
+  }
   fprintf(stderr, "--> -ffast-real-mod: %d\n", (int) useFastRealMod);
+
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
     mlir::Type signlessType = mlir::IntegerType::get(
