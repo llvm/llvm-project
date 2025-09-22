@@ -109,7 +109,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
                                           DenseSet<Operation *> &visited,
                                           SetVector<Operation *> *backwardSlice,
                                           const BackwardSliceOptions &options) {
-  if (!op)
+  if (!op || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return success();
 
   // Evaluate whether we should keep this def.
@@ -136,8 +136,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       // blocks of parentOp, which are not technically backward unless they flow
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
-        if (!parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-            parentOp->getNumRegions() == 1 &&
+        if (parentOp->getNumRegions() == 1 &&
             parentOp->getRegion(0).hasOneBlock()) {
           return getBackwardSliceImpl(parentOp, visited, backwardSlice,
                                       options);
@@ -151,8 +150,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
 
   bool succeeded = true;
 
-  if (!options.omitUsesFromAbove &&
-      !op->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+  if (!options.omitUsesFromAbove) {
     llvm::for_each(op->getRegions(), [&](Region &region) {
       // Walk this region recursively to collect the regions that descend from
       // this op's nested regions (inclusive).
