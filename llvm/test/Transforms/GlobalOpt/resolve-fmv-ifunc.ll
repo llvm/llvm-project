@@ -506,9 +506,9 @@ entry:
   ret i32 %call
 }
 
-define i32 @caller8._Msve() #1 {
-; CHECK-LABEL: define i32 @caller8._Msve(
-; CHECK-SAME: ) #[[ATTR1]] {
+define dso_local i32 @caller8._Msve2() #2 {
+; CHECK-LABEL: define dso_local i32 @caller8._Msve2(
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_unrelated_callers()
 ;
 entry:
@@ -533,10 +533,10 @@ resolver_entry:
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
   %1 = and i64 %0, 576460822096707840
   %2 = icmp eq i64 %1, 576460822096707840
-  %3 = and i64 %0, 1073807616
-  %4 = icmp eq i64 %3, 1073807616
-  %caller8._Msve.caller8.default = select i1 %4, ptr @caller8._Msve, ptr @caller8.default
-  %common.ret.op = select i1 %2, ptr @caller8._MmopsMsve2, ptr %caller8._Msve.caller8.default
+  %3 = and i64 %0, 69793284352
+  %4 = icmp eq i64 %3, 69793284352
+  %caller8._Msve2.caller8.default = select i1 %4, ptr @caller8._Msve2, ptr @caller8.default
+  %common.ret.op = select i1 %2, ptr @caller8._MmopsMsve2, ptr %caller8._Msve2.caller8.default
   ret ptr %common.ret.op
 }
 
@@ -550,20 +550,17 @@ entry:
   ret i32 %call
 }
 
-define i32 @caller9._Msve2() #2 {
-; CHECK-LABEL: define i32 @caller9._Msve2(
-; CHECK-SAME: ) #[[ATTR2]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_unrelated_callers._Msve2()
-;
+define i32 @caller9._Msve() #1 {
+; CHECK-LABEL: define i32 @caller9._Msve(
+; CHECK-SAME: ) #[[ATTR1]] {
 entry:
-  %call = tail call i32 @test_unrelated_callers()
-  ret i32 %call
+  ret i32 1
 }
 
 define i32 @caller9.default() #0 {
 ; CHECK-LABEL: define i32 @caller9.default(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_unrelated_callers()
+; CHECK:    [[CALL:%.*]] = tail call i32 @test_unrelated_callers.default()
 ;
 entry:
   %call = tail call i32 @test_unrelated_callers()
@@ -577,10 +574,10 @@ resolver_entry:
   %0 = load i64, ptr @__aarch64_cpu_features, align 8
   %1 = and i64 %0, 576460752303423488
   %.not = icmp eq i64 %1, 0
-  %2 = and i64 %0, 69793284352
-  %3 = icmp eq i64 %2, 69793284352
-  %caller9._Msve2.caller9.default = select i1 %3, ptr @caller9._Msve2, ptr @caller9.default
-  %common.ret.op = select i1 %.not, ptr %caller9._Msve2.caller9.default, ptr @caller9._Mmops
+  %2 = and i64 %0, 1073807616
+  %3 = icmp eq i64 %2, 1073807616
+  %caller9._Msve.caller9.default = select i1 %3, ptr @caller9._Msve, ptr @caller9.default
+  %common.ret.op = select i1 %.not, ptr %caller9._Msve.caller9.default, ptr @caller9._Mmops
   ret ptr %common.ret.op
 }
 
