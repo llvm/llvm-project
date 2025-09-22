@@ -16,12 +16,12 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Process.h"
 #include <vector>
 
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/mman.h>
 #include <sys/syscall.h>
-#include <unistd.h> // for getpagesize()
 #ifdef HAVE_LIBPFM
 #include <perfmon/perf_event.h>
 #endif                 // HAVE_LIBPFM
@@ -463,7 +463,7 @@ uintptr_t ExegesisAArch64Target::getAuxiliaryMemoryStartAddress() const {
   // Return the second to last page in the virtual address space to try and
   // prevent interference with memory annotations in the snippet
   // FIXME: Why 2 pages?
-  return VAddressSpaceCeiling - (2 * getpagesize());
+  return VAddressSpaceCeiling - (2 * llvm::sys::Process::getPageSizeEstimate());
 }
 
 std::vector<MCInst>
