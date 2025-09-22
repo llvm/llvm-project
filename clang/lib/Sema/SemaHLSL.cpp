@@ -1361,7 +1361,7 @@ bool SemaHLSL::handleRootSignatureElements(
       bool HasAnySampler = false;
       bool HasAnyNonSampler = false;
       uint64_t Offset = 0;
-      bool Unbound = false;
+      bool IsPrevUnbound = false;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         SourceLocation Loc = ClauseElem->getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
@@ -1386,15 +1386,15 @@ bool SemaHLSL::handleRootSignatureElements(
         uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
             Offset, Clause->NumDescriptors);
 
-        if (Unbound && IsAppending)
+        if (IsPrevUnbound && IsAppending)
           Diag(Loc, diag::err_hlsl_appending_onto_unbound);
         else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound))
           Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
 
         // Update offset to be 1 past this range's bound
         Offset = RangeBound + 1;
-        Unbound = Clause->NumDescriptors ==
-                  llvm::hlsl::rootsig::NumDescriptorsUnbounded;
+        IsPrevUnbound = Clause->NumDescriptors ==
+                        llvm::hlsl::rootsig::NumDescriptorsUnbounded;
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
