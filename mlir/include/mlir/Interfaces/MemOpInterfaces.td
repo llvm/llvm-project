@@ -84,7 +84,7 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
       }],
       "::mlir::MemorySpaceCastOpInterface", "cloneMemorySpaceCastOp",
       (ins "::mlir::OpBuilder &":$builder, "::mlir::PtrLikeTypeInterface":$tgt,
-           "::mlir::Value":$src)
+           "::mlir::TypedValue<::mlir::PtrLikeTypeInterface>>":$src)
     >,
     InterfaceMethod<[{
         Returns whether the memory-space cast is lossless. A lossless
