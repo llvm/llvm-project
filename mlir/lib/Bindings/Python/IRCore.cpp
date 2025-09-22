@@ -513,7 +513,7 @@ public:
 
   PyOperationIterator &dunderIter() { return *this; }
 
-  nb::typed<nb::object, PyOpView> dunderNext() {
+  nb::object dunderNext() {
     parentOperation->checkValid();
     if (mlirOperationIsNull(next)) {
       throw nb::stop_iteration();
@@ -562,7 +562,7 @@ public:
     return count;
   }
 
-  nb::typed<nb::object, PyOpView> dunderGetItem(intptr_t index) {
+  nb::object dunderGetItem(intptr_t index) {
     parentOperation->checkValid();
     if (index < 0) {
       index += dunderLen();
@@ -1534,7 +1534,7 @@ nb::object PyOperation::create(std::string_view name,
   return created.getObject();
 }
 
-nb::typed<nb::object, PyOpView> PyOperation::clone(const nb::object &maybeIp) {
+nb::object PyOperation::clone(const nb::object &maybeIp) {
   MlirOperation clonedOperation = mlirOperationClone(operation);
   PyOperationRef cloned =
       PyOperation::createDetached(getContext(), clonedOperation);
@@ -1543,7 +1543,7 @@ nb::typed<nb::object, PyOpView> PyOperation::clone(const nb::object &maybeIp) {
   return cloned->createOpView();
 }
 
-nb::typed<nb::object, PyOpView> PyOperation::createOpView() {
+nb::object PyOperation::createOpView() {
   checkValid();
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
@@ -1638,9 +1638,9 @@ public:
 
 /// Returns the list of types of the values held by container.
 template <typename Container>
-static std::vector<nb::typed<nb::object, PyType>>
-getValueTypes(Container &container, PyMlirContextRef &context) {
-  std::vector<nb::typed<nb::object, PyType>> result;
+static std::vector<nb::object> getValueTypes(Container &container,
+                                             PyMlirContextRef &context) {
+  std::vector<nb::object> result;
   result.reserve(container.size());
   for (int i = 0, e = container.size(); i < e; ++i) {
     result.push_back(PyType(context->getRef(),
@@ -2133,7 +2133,7 @@ PyAttribute PyAttribute::createFromCapsule(nb::object capsule) {
       PyMlirContext::forContext(mlirAttributeGetContext(rawAttr)), rawAttr);
 }
 
-nb::typed<nb::object, PyAttribute> PyAttribute::maybeDownCast() {
+nb::object PyAttribute::maybeDownCast() {
   MlirTypeID mlirTypeID = mlirAttributeGetTypeID(this->get());
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
          "mlirTypeID was expected to be non-null.");
@@ -2179,7 +2179,7 @@ PyType PyType::createFromCapsule(nb::object capsule) {
                 rawType);
 }
 
-nb::typed<nb::object, PyType> PyType::maybeDownCast() {
+nb::object PyType::maybeDownCast() {
   MlirTypeID mlirTypeID = mlirTypeGetTypeID(this->get());
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
          "mlirTypeID was expected to be non-null.");
@@ -2219,7 +2219,7 @@ nb::object PyValue::getCapsule() {
   return nb::steal<nb::object>(mlirPythonValueToCapsule(get()));
 }
 
-nanobind::typed<nanobind::object, PyValue> PyValue::maybeDownCast() {
+nb::object PyValue::maybeDownCast() {
   MlirType type = mlirValueGetType(get());
   MlirTypeID mlirTypeID = mlirTypeGetTypeID(type);
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
@@ -2263,8 +2263,7 @@ PySymbolTable::PySymbolTable(PyOperationBase &operation)
   }
 }
 
-nb::typed<nb::object, PyOpView>
-PySymbolTable::dunderGetItem(const std::string &name) {
+nb::object PySymbolTable::dunderGetItem(const std::string &name) {
   operation->checkValid();
   MlirOperation symbol = mlirSymbolTableLookup(
       symbolTable, mlirStringRefCreate(name.data(), name.length()));
@@ -2678,8 +2677,7 @@ public:
   PyOpAttributeMap(PyOperationRef operation)
       : operation(std::move(operation)) {}
 
-  nb::typed<nb::object, PyAttribute>
-  dunderGetItemNamed(const std::string &name) {
+  nb::object dunderGetItemNamed(const std::string &name) {
     MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
                                                          toMlirStringRef(name));
     if (mlirAttributeIsNull(attr)) {

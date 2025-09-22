@@ -54,14 +54,6 @@ filegroup(
 )
 
 filegroup(
-    name = "IRPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/__init__.pyi",
-        "mlir/_mlir_libs/_mlir/ir.pyi",
-    ],
-)
-
-filegroup(
     name = "MlirLibsPyFiles",
     srcs = [
         "mlir/_mlir_libs/__init__.py",
@@ -72,13 +64,6 @@ filegroup(
     name = "PassManagerPyFiles",
     srcs = [
         "mlir/passmanager.py",
-    ],
-)
-
-filegroup(
-    name = "PassManagerPyIFiles",
-    srcs = [
-        "mlir/_mlir_libs/_mlir/passmanager.pyi",
     ],
 )
 
