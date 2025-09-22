@@ -957,6 +957,11 @@ builtins have the same interface but store the result in consecutive indices.
 Effectively this performs the ``if (mask[i]) val[i] = ptr[j++]`` and ``if
 (mask[i]) ptr[j++] = val[i]`` pattern respectively.
 
+The ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` builtins handle
+non-sequential memory access for vector types. These use a base pointer and a
+vector of integer indices to gather memory into a vector type or scatter it to
+separate indices.
+
 Example:
 
 .. code-block:: c++
@@ -976,6 +981,14 @@ Example:
     
     void store_compress(v8b mask, v8i val, v8i *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
+    }
+
+    v8i gather(v8b mask, v8i idx, int *ptr) {
+      return __builtin_masked_gather(mask, idx, ptr);
+    }
+
+    void scatter(v8b mask, v8i val, v8i idx, int *ptr) {
+      __builtin_masked_scatter(mask, idx, val, ptr);
     }
 
 
