@@ -29,8 +29,8 @@ namespace {
 // subtypes. Maintains a set of `seen` types to avoid recursion in structs.
 //
 // Serves as the source-of-truth for type extension information. All extension
-// logic should be added to this class, while
-// `*Type::getExtensions` functions should not handle extension-related logic
+// logic should be added to this class, while the
+// `SPIRVType::getExtensions` function should not handle extension-related logic
 // directly and only invoke `TypeExtensionVisitor::add(Type *)`.
 class TypeExtensionVisitor {
 public:
@@ -59,9 +59,7 @@ public:
         .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
   }
 
-  // Convenience overloads for use in `T::getExtensions` functions.
   void add(Type type) { add(cast<SPIRVType>(type)); }
-  void add(Type *type) { add(cast<SPIRVType>(*type)); }
 
 private:
   // Types that add unique extensions.
@@ -119,11 +117,6 @@ unsigned ArrayType::getNumElements() const { return getImpl()->elementCount; }
 Type ArrayType::getElementType() const { return getImpl()->elementType; }
 
 unsigned ArrayType::getArrayStride() const { return getImpl()->stride; }
-
-void ArrayType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                              std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
 
 void ArrayType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
@@ -193,12 +186,6 @@ unsigned CompositeType::getNumElements() const {
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {
   return !llvm::isa<CooperativeMatrixType, RuntimeArrayType>(*this);
-}
-
-void CompositeType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(cast<SPIRVType>(*this));
 }
 
 void CompositeType::getCapabilities(
@@ -330,12 +317,6 @@ void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
   extensions.push_back(ext);
 }
 
-void CooperativeMatrixType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
-
 void CooperativeMatrixType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
@@ -447,11 +428,6 @@ ImageSamplerUseInfo ImageType::getSamplerUseInfo() const {
 
 ImageFormat ImageType::getImageFormat() const { return getImpl()->format; }
 
-void ImageType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                              std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
-
 void ImageType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass>) {
@@ -510,11 +486,6 @@ void TypeExtensionVisitor::addConcrete(PointerType type) {
     extensions.push_back(*scExts);
 }
 
-void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                                std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
-
 void PointerType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
@@ -562,12 +533,6 @@ RuntimeArrayType RuntimeArrayType::get(Type elementType, unsigned stride) {
 Type RuntimeArrayType::getElementType() const { return getImpl()->elementType; }
 
 unsigned RuntimeArrayType::getArrayStride() const { return getImpl()->stride; }
-
-void RuntimeArrayType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
 
 void RuntimeArrayType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
@@ -634,11 +599,6 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
   default:
     break;
   }
-}
-
-void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                               std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
 }
 
 void ScalarType::getCapabilities(
@@ -774,7 +734,7 @@ bool SPIRVType::isScalarOrVector() {
 
 void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                               std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
+  TypeExtensionVisitor{extensions, storage}.add(*this);
 }
 
 void SPIRVType::getCapabilities(
@@ -852,12 +812,6 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "Dim must not be SubpassData or Buffer";
 
   return success();
-}
-
-void SampledImageType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
 }
 
 void SampledImageType::getCapabilities(
@@ -1218,11 +1172,6 @@ StructType::trySetBody(ArrayRef<Type> memberTypes,
                       structDecorations);
 }
 
-void StructType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                               std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
-
 void StructType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
@@ -1322,11 +1271,6 @@ unsigned MatrixType::getNumElements() const {
   return (getImpl()->columnCount) * getNumRows();
 }
 
-void MatrixType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                               std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
-}
-
 void MatrixType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
@@ -1386,12 +1330,6 @@ void TypeExtensionVisitor::addConcrete(TensorArmType type) {
   add(type.getElementType());
   static constexpr auto ext = Extension::SPV_ARM_tensors;
   extensions.push_back(ext);
-}
-
-void TensorArmType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  TypeExtensionVisitor{extensions, storage}.add(this);
 }
 
 void TensorArmType::getCapabilities(
