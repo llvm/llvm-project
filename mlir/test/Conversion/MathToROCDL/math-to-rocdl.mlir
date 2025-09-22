@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -convert-math-to-rocdl -allow-unregistered-dialect -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -pass-pipeline='builtin.module(convert-math-to-rocdl{chipset=gfx803})' | FileCheck %s --check-prefix=PRE9
+// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -pass-pipeline='builtin.module(convert-math-to-rocdl{chipset=gfx942})' | FileCheck %s --check-prefix=POST9
 
 module @test_module {
   // CHECK: llvm.func @__ocml_fmod_f16(f16, f16) -> f16
@@ -596,3 +597,33 @@ module @test_module {
     func.return %result : vector<2x2xf16>
   }
 }
+
+// -----
+
+// f16 clamp → rocdl.fmed3 on gfx9+
+func.func @clampf_f16(%x: f16, %lo: f16, %hi: f16) -> f16 {
+  %r = math.clampf %x to [%lo, %hi] : f16
+  return %r : f16
+}
+
+// f32 clamp → rocdl.fmed3 on gfx9+
+func.func @clampf_f32(%x: f32, %lo: f32, %hi: f32) -> f32 {
+  %r = math.clampf %x to [%lo, %hi] : f32
+  return %r : f32
+}
+
+// POST9-LABEL: func.func @clampf_f16
+// POST9: rocdl.fmed3 {{.*}} : f16
+// POST9: return
+
+// POST9-LABEL: func.func @clampf_f32
+// POST9: rocdl.fmed3 {{.*}} : f32
+// POST9: return
+
+// PRE9-LABEL: func.func @clampf_f16
+// PRE9-NOT: rocdl.fmed3
+// PRE9: math.clampf {{.*}} : f16
+
+// PRE9-LABEL: func.func @clampf_f32
+// PRE9-NOT: rocdl.fmed3
+// PRE9: math.clampf {{.*}} : f32

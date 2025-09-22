@@ -10,6 +10,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -120,25 +121,51 @@ void mlir::populateMathToROCDLConversionPatterns(
                                     "__ocml_fmod_f64", "__ocml_fmod_f16");
 }
 
-namespace {
-struct ConvertMathToROCDLPass
-    : public impl::ConvertMathToROCDLBase<ConvertMathToROCDLPass> {
-  ConvertMathToROCDLPass() = default;
+struct ClampFOpConversion : public ConvertOpToLLVMPattern<math::ClampFOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  ClampFOpConversion(const LLVMTypeConverter &converter,
+                     amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<math::ClampFOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(math::ClampFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // V_MED3_F16/F32 only exists in gfx9+ artchitectures
+    if (chipset.majorVersion < 9) {
+      std::string msg =
+          ("pre-gfx9 (gfx" + std::to_string(chipset.majorVersion) +
+           "): V_MED_F16 / V_MED3_F32 not supported.");
+      return rewriter.notifyMatchFailure(op, msg);
+    }
+    rewriter.replaceOpWithNewOp<ROCDL::FMed3Op>(op, op.getType(), op.getValue(),
+                                                op.getMin(), op.getMax());
+    return success();
+  }
+  amdgpu::Chipset chipset;
+};
+
+struct ConvertMathToROCDLPass final
+    : impl::ConvertMathToROCDLBase<ConvertMathToROCDLPass> {
+  using impl::ConvertMathToROCDLBase<
+      ConvertMathToROCDLPass>::ConvertMathToROCDLBase;
+
   void runOnOperation() override;
 };
-} // namespace
 
 void ConvertMathToROCDLPass::runOnOperation() {
   auto m = getOperation();
   MLIRContext *ctx = m.getContext();
+  FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
 
   RewritePatternSet patterns(&getContext());
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
+  patterns.add<ClampFOpConversion>(converter, *maybeChipset);
   populateMathToROCDLConversionPatterns(converter, patterns);
   ConversionTarget target(getContext());
-  target.addLegalDialect<BuiltinDialect, func::FuncDialect,
-                         vector::VectorDialect, LLVM::LLVMDialect>();
+  target
+      .addLegalDialect<BuiltinDialect, func::FuncDialect, vector::VectorDialect,
+                       LLVM::LLVMDialect, ROCDL::ROCDLDialect>();
   target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
                       LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp,
                       LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp,
