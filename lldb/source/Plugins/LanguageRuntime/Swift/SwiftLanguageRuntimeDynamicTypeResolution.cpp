@@ -646,9 +646,9 @@ GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
                             return rti ? ts_sp->GetBuiltinUnknownObjectType()
                                        : ts_sp->GetBuiltinRawPointerType();
                         }});
-    // We replaced "object" with a more specific type.
     if (rti) {
       auto &fields = rti->getFields();
+      // We replaced "object" with a more specific type.
       for (unsigned i = 1; i < fields.size(); ++i) {
         TypeSystemSwiftTypeRefSP ts_sp = ts.GetTypeSystemSwiftTypeRef();
         auto *type_ref = fields[i].TR;
@@ -658,18 +658,6 @@ GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
       }
     }
   }
-  if (ti && llvm::isa<swift::reflection::RecordTypeInfo>(ti)) {
-    auto &fields =
-        llvm::cast<swift::reflection::RecordTypeInfo>(ti)->getFields();
-    for (unsigned i = 0; i < fields.size(); ++i) {
-      TypeSystemSwiftTypeRefSP ts_sp = ts.GetTypeSystemSwiftTypeRef();
-      auto *type_ref = fields[i].TR;
-      children.push_back({fields[i].Name, [=]() {
-                            return GetTypeFromTypeRef(*ts_sp, type_ref);
-                          }});
-    }
-  }
-
   assert(children.size());
   return children;
 }
