@@ -4287,6 +4287,22 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
         return;
       }
     }
+
+    // If the current token is a macro definition, put it back to token stream
+    // and expand any macros in it later.
+    //
+    // export module M ATTR(some_attr);  // -DATTR(x)='[[x]]'
+    //
+    // Current token is `ATTR`.
+    if (Tok.is(tok::identifier) &&
+        getMacroDefinition(Tok.getIdentifierInfo())) {
+      std::unique_ptr<Token[]> TokCopy = std::make_unique<Token[]>(1);
+      TokCopy[0] = Tok;
+      EnterTokenStream(std::move(TokCopy), /*NumToks=*/1,
+                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+      Lex(Tok);
+      DirToks.back() = Tok;
+    }
     break;
   }
   default:
@@ -4298,6 +4314,8 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   // at the semicolon already.
   SourceLocation End = DirToks.back().getLocation();
   if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
+    // Consume the pp-import-suffix and expand any macros in it now. We'll add
+    // it back into the token stream later.
     CollectPPImportSuffix(DirToks);
     End = DirToks.back().getLocation();
   }

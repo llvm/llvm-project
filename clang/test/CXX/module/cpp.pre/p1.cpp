@@ -24,6 +24,8 @@
 // RUN: %clang_cc1 -std=c++20 %t/leading_empty_macro.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/operator_keyword_and.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/operator_keyword_and2.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/macro_in_module_decl_suffix.cpp -D'ATTR(X)=[[X]]' -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/macro_in_module_decl_suffix2.cpp -D'ATTR(X)=[[X]]' -fsyntax-only -verify
 
 
 //--- hash.cpp
@@ -102,3 +104,10 @@ import and x;
 typedef int module;
 extern
 module and x;
+
+//--- macro_in_module_decl_suffix.cpp
+export module m ATTR(x);    // expected-warning {{unknown attribute 'x' ignored}}
+
+//--- macro_in_module_decl_suffix2.cpp
+export module m [[y]] ATTR(x);          // expected-warning {{unknown attribute 'y' ignored}} \
+                                        // expected-warning {{unknown attribute 'x' ignored}}
