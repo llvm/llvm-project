@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -verify -fsyntax-only %s -Wdouble-promotion
 
+using LongDouble = long double;
+
 float ReturnFloatFromDouble(double d) {
   return d;
 }
@@ -41,11 +43,11 @@ double ReturnDoubleFromFloatWithExplicitListInitialization(float f) {
 }
 
 long double ReturnLongDoubleFromFloatWithExplicitListInitialization(float f) {
-  return (long double){f};
+  return LongDouble{f};
 }
 
 long double ReturnLongDoubleFromDoubleWithExplicitListInitialization(double d) {
-  return (long double){d};
+  return LongDouble{d};
 }
 
 void Assignment(float f, double d, long double ld) {
@@ -56,8 +58,8 @@ void Assignment(float f, double d, long double ld) {
   ld = static_cast<long double>(f);
   ld = static_cast<long double>(d);
   d = double{f};
-  ld = (long double){f};
-  ld = (long double){d};
+  ld = LongDouble{f};
+  ld = LongDouble{d};
   f = d;
   f = ld;
   d = ld;
@@ -74,8 +76,8 @@ void ArgumentPassing(float f, double d) {
   LongDoubleParameter(static_cast<long double>(f));
   LongDoubleParameter(static_cast<long double>(d));
   DoubleParameter(double{f});
-  LongDoubleParameter((long double){f});
-  LongDoubleParameter((long double){d});
+  LongDoubleParameter(LongDouble{f});
+  LongDoubleParameter(LongDouble{d});
 }
 
 void BinaryOperator(float f, double d, long double ld) {
@@ -93,10 +95,10 @@ void BinaryOperator(float f, double d, long double ld) {
   d = ld * static_cast<long double>(d);
   f = double{f} * d;
   f = d * double{f};
-  f = (long double){f} * ld;
-  f = ld * (long double){f};
-  d = (long double){d} * ld;
-  d = ld * (long double){d};
+  f = LongDouble{f} * ld;
+  f = ld * LongDouble{f};
+  d = LongDouble{d} * ld;
+  d = ld * LongDouble{d};
 }
 
 void MultiplicationAssignment(float f, double d, long double ld) {
@@ -107,8 +109,8 @@ void MultiplicationAssignment(float f, double d, long double ld) {
   ld *= static_cast<long double>(f);
   ld *= static_cast<long double>(d);
   d *= double{f};
-  ld *= (long double){f};
-  ld *= (long double){d};
+  ld *= LongDouble{f};
+  ld *= LongDouble{d};
 
   // FIXME: These cases should produce warnings as above.
   f *= d;
