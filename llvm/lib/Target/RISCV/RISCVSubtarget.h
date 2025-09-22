@@ -196,6 +196,9 @@ public:
   bool hasCPOPLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
+  bool hasREV8Like() const {
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+  }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
