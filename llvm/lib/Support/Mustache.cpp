@@ -17,6 +17,50 @@ namespace {
 
 using Accessor = SmallVector<std::string>;
 
+// A more generic specialized find for needles of length 1-3.
+[[maybe_unused]]
+static size_t findDelimiters(StringRef Haystack, StringRef Needle,
+                             size_t Offset = 0) {
+  const size_t N = Needle.size();
+  if (N == 0)
+    return Offset;
+  if (N > 3) {
+    // Fallback for longer needles where more advanced algorithms are better.
+    return Haystack.find(Needle, Offset);
+  }
+
+  const char *HaystackStart = Haystack.data();
+  const size_t HaystackSize = Haystack.size();
+  if (HaystackSize < N + Offset)
+    return StringRef::npos;
+
+  const char *NeedleStart = Needle.data();
+  const char *Current = HaystackStart + Offset;
+  const char *End = HaystackStart + HaystackSize;
+
+  while (Current + N <= End) {
+    // Stage 1: Find the first character of the needle.
+    Current = (const char *)::memchr(Current, NeedleStart[0], End - Current);
+    if (!Current || Current + N > End)
+      return StringRef::npos;
+
+    // Stage 2: Validate the rest of the sequence.
+    if (N == 1)
+      return Current - HaystackStart;
+    if (N == 2 && Current[1] == NeedleStart[1])
+      return Current - HaystackStart;
+    if (N == 3 && Current[1] == NeedleStart[1] && Current[2] == NeedleStart[2])
+      return Current - HaystackStart;
+
+    // Mismatch, advance and continue the search.
+    ++Current;
+  }
+
+  return StringRef::npos;
+}
+
+
+
 static bool isFalsey(const json::Value &V) {
   return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
          (V.getAsArray() && V.getAsArray()->empty());
@@ -306,7 +350,9 @@ SmallVector<Token> tokenize(StringRef Template) {
   StringLiteral Open("{{");
   StringLiteral Close("}}");
   size_t Start = 0;
-  size_t DelimiterStart = Template.find(Open);
+  // size_t DelimiterStart = Template.find(Open);
+  size_t DelimiterStart = findDelimiters(Template, Open);
+
   if (DelimiterStart == StringRef::npos) {
     Tokens.emplace_back(Template.str());
     return Tokens;
@@ -314,7 +360,8 @@ SmallVector<Token> tokenize(StringRef Template) {
   while (DelimiterStart != StringRef::npos) {
     if (DelimiterStart != Start)
       Tokens.emplace_back(Template.substr(Start, DelimiterStart - Start).str());
-    size_t DelimiterEnd = Template.find(Close, DelimiterStart);
+    // size_t DelimiterEnd = Template.find(Close, DelimiterStart);
+    size_t DelimiterEnd = findDelimiters(Template, Close, DelimiterStart);
     if (DelimiterEnd == StringRef::npos)
       break;
 
@@ -326,7 +373,8 @@ SmallVector<Token> tokenize(StringRef Template) {
     std::string RawBody = Open.str() + Interpolated + Close.str();
     Tokens.emplace_back(RawBody, Interpolated, Interpolated[0]);
     Start = DelimiterEnd + Close.size();
-    DelimiterStart = Template.find(Open, Start);
+    // DelimiterStart = Template.find(Open, Start);
+    DelimiterStart = findDelimiters(Template, Open, Start);
   }
 
   if (Start < Template.size())
@@ -572,6 +620,8 @@ void ASTNode::render(const json::Value &CurrentCtx, raw_ostream &OS) {
   ParentContext = &CurrentCtx;
   const json::Value *ContextPtr = Ty == Root ? ParentContext : findContext();
 
+  if (AccessorValue.empty() && (Ty != Root && Ty != Text))
+    return;
   switch (Ty) {
   case Root:
     renderChild(CurrentCtx, OS);
