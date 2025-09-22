@@ -172,7 +172,7 @@ raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
      << ", borderColor = " << Sampler.BorderColor
      << ", minLOD = " << Sampler.MinLOD << ", maxLOD = " << Sampler.MaxLOD
      << ", space = " << Sampler.Space << ", visibility = " << Sampler.Visibility
-     << ")";
+     << ", flags = " << Sampler.Flags << ")";
   return OS;
 }
 

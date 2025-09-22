@@ -131,6 +131,7 @@ struct StaticSampler {
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t Space = 0;
   dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
+  dxbc::StaticSamplerFlags Flags = dxbc::StaticSamplerFlags::None;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
