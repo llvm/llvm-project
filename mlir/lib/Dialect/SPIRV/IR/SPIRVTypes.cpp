@@ -805,8 +805,15 @@ Type SampledImageType::getImageType() const { return getImpl()->imageType; }
 LogicalResult
 SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
                                    Type imageType) {
-  if (!llvm::isa<ImageType>(imageType))
+  auto image = dyn_cast<ImageType>(imageType);
+  if (!image)
     return emitError() << "expected image type";
+
+  // As per SPIR-V spec: "It [ImageType] must not have a Dim of SubpassData.
+  // Additionally, starting with version 1.6, it must not have a Dim of Buffer.
+  // ("3.3.6. Type-Declaration Instructions")
+  if (llvm::is_contained({Dim::SubpassData, Dim::Buffer}, image.getDim()))
+    return emitError() << "Dim must not be SubpassData or Buffer";
 
   return success();
 }
@@ -1322,7 +1329,7 @@ struct spirv::detail::TensorArmTypeStorage final : TypeStorage {
   }
 
   TensorArmTypeStorage(ArrayRef<int64_t> shape, Type elementType)
-      : shape(std::move(shape)), elementType(std::move(elementType)) {}
+      : shape(shape), elementType(elementType) {}
 
   ArrayRef<int64_t> shape;
   Type elementType;

@@ -2221,14 +2221,9 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
 void
 CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
   // Ignore empty classes in C++.
-  if (getLangOpts().CPlusPlus) {
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(RT->getOriginalDecl())
-              ->getDefinitionOrSelf()
-              ->isEmpty())
-        return;
-    }
-  }
+  if (getLangOpts().CPlusPlus)
+    if (const auto *RD = Ty->getAsCXXRecordDecl(); RD && RD->isEmpty())
+      return;
 
   if (DestPtr.getElementType() != Int8Ty)
     DestPtr = DestPtr.withElementType(Int8Ty);

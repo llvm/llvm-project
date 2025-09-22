@@ -99,6 +99,10 @@ private:
 
   InstructionWorklist Worklist;
 
+  /// Next instruction to iterate. It will be updated when it is erased by
+  /// RecursivelyDeleteTriviallyDeadInstructions.
+  Instruction *NextInst;
+
   // TODO: Direct calls from the top-level "run" loop use a plain "Instruction"
   //       parameter. That should be updated to specific sub-classes because the
   //       run loop was changed to dispatch on opcode.
@@ -118,6 +122,7 @@ private:
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitOpOfCastops(Instruction &I);
+  bool foldBitOpOfCastConstant(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -169,13 +174,16 @@ private:
     // further folds that were hindered by OneUse limits.
     SmallPtrSet<Value *, 4> Visited;
     for (Value *Op : Ops) {
-      if (Visited.insert(Op).second) {
+      if (!Visited.contains(Op)) {
         if (auto *OpI = dyn_cast<Instruction>(Op)) {
           if (RecursivelyDeleteTriviallyDeadInstructions(
-                  OpI, nullptr, nullptr, [this](Value *V) {
-                    if (auto I = dyn_cast<Instruction>(V)) {
+                  OpI, nullptr, nullptr, [&](Value *V) {
+                    if (auto *I = dyn_cast<Instruction>(V)) {
                       LLVM_DEBUG(dbgs() << "VC: Erased: " << *I << '\n');
                       Worklist.remove(I);
+                      if (I == NextInst)
+                        NextInst = NextInst->getNextNode();
+                      Visited.insert(I);
                     }
                   }))
             continue;
@@ -862,14 +870,17 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   if (LHSSrc->getType() != RHSSrc->getType())
     return false;
 
-  // Only handle vector types with integer elements
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
-  if (!SrcVecTy || !DstVecTy)
+  auto *SrcTy = LHSSrc->getType();
+  auto *DstTy = I.getType();
+  // Bitcasts can handle scalar/vector mixes, such as i16 -> <16 x i1>.
+  // Other casts only handle vector types with integer elements.
+  if (CastOpcode != Instruction::BitCast &&
+      (!isa<FixedVectorType>(SrcTy) || !isa<FixedVectorType>(DstTy)))
     return false;
 
-  if (!SrcVecTy->getScalarType()->isIntegerTy() ||
-      !DstVecTy->getScalarType()->isIntegerTy())
+  // Only integer scalar/vector values are legal for bitwise logic operations.
+  if (!SrcTy->getScalarType()->isIntegerTy() ||
+      !DstTy->getScalarType()->isIntegerTy())
     return false;
 
   // Cost Check :
@@ -877,23 +888,21 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   // NewCost = bitlogic + cast
 
   // Calculate specific costs for each cast with instruction context
-  InstructionCost LHSCastCost =
-      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None, CostKind, LHSCast);
-  InstructionCost RHSCastCost =
-      TTI.getCastInstrCost(CastOpcode, DstVecTy, SrcVecTy,
-                           TTI::CastContextHint::None, CostKind, RHSCast);
+  InstructionCost LHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind, LHSCast);
+  InstructionCost RHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind, RHSCast);
 
   InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy, CostKind) +
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstTy, CostKind) +
       LHSCastCost + RHSCastCost;
 
   // For new cost, we can't provide an instruction (it doesn't exist yet)
   InstructionCost GenericCastCost = TTI.getCastInstrCost(
-      CastOpcode, DstVecTy, SrcVecTy, TTI::CastContextHint::None, CostKind);
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind);
 
   InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy, CostKind) +
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcTy, CostKind) +
       GenericCastCost;
 
   // Account for multi-use casts using specific costs
@@ -922,6 +931,105 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
   // Preserve cast instruction flags
   NewCast->copyIRFlags(LHSCast);
   NewCast->andIRFlags(RHSCast);
+
+  // Insert the new instruction
+  Value *Result = Builder.Insert(NewCast);
+
+  replaceValue(I, *Result);
+  return true;
+}
+
+/// Match:
+// bitop(castop(x), C) ->
+// bitop(castop(x), castop(InvC)) ->
+// castop(bitop(x, InvC))
+// Supports: bitcast
+bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
+  Instruction *LHS;
+  Constant *C;
+
+  // Check if this is a bitwise logic operation
+  if (!match(&I, m_c_BitwiseLogic(m_Instruction(LHS), m_Constant(C))))
+    return false;
+
+  // Get the cast instructions
+  auto *LHSCast = dyn_cast<CastInst>(LHS);
+  if (!LHSCast)
+    return false;
+
+  Instruction::CastOps CastOpcode = LHSCast->getOpcode();
+
+  // Only handle supported cast operations
+  switch (CastOpcode) {
+  case Instruction::BitCast:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::Trunc:
+    break;
+  default:
+    return false;
+  }
+
+  Value *LHSSrc = LHSCast->getOperand(0);
+
+  auto *SrcTy = LHSSrc->getType();
+  auto *DstTy = I.getType();
+  // Bitcasts can handle scalar/vector mixes, such as i16 -> <16 x i1>.
+  // Other casts only handle vector types with integer elements.
+  if (CastOpcode != Instruction::BitCast &&
+      (!isa<FixedVectorType>(SrcTy) || !isa<FixedVectorType>(DstTy)))
+    return false;
+
+  // Only integer scalar/vector values are legal for bitwise logic operations.
+  if (!SrcTy->getScalarType()->isIntegerTy() ||
+      !DstTy->getScalarType()->isIntegerTy())
+    return false;
+
+  // Find the constant InvC, such that castop(InvC) equals to C.
+  PreservedCastFlags RHSFlags;
+  Constant *InvC = getLosslessInvCast(C, SrcTy, CastOpcode, *DL, &RHSFlags);
+  if (!InvC)
+    return false;
+
+  // Cost Check :
+  // OldCost = bitlogic + cast
+  // NewCost = bitlogic + cast
+
+  // Calculate specific costs for each cast with instruction context
+  InstructionCost LHSCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind, LHSCast);
+
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(I.getOpcode(), DstTy, CostKind) + LHSCastCost;
+
+  // For new cost, we can't provide an instruction (it doesn't exist yet)
+  InstructionCost GenericCastCost = TTI.getCastInstrCost(
+      CastOpcode, DstTy, SrcTy, TTI::CastContextHint::None, CostKind);
+
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(I.getOpcode(), SrcTy, CostKind) +
+      GenericCastCost;
+
+  // Account for multi-use casts using specific costs
+  if (!LHSCast->hasOneUse())
+    NewCost += LHSCastCost;
+
+  LLVM_DEBUG(dbgs() << "foldBitOpOfCastConstant: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Create the operation on the source type
+  Value *NewOp = Builder.CreateBinOp((Instruction::BinaryOps)I.getOpcode(),
+                                     LHSSrc, InvC, I.getName() + ".inner");
+  if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
+    NewBinOp->copyIRFlags(&I);
+
+  Worklist.pushValue(NewOp);
+
+  // Create the cast operation directly to ensure we get a new instruction
+  Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
 
   // Insert the new instruction
   Value *Result = Builder.Insert(NewCast);
@@ -1461,8 +1569,8 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
                              TTI::CastContextHint::None, CostKind, RedOp);
 
     CostBeforeReduction = ExtCost * 2 + MulCost + Ext2Cost;
-    CostAfterReduction =
-        TTI.getMulAccReductionCost(IsUnsigned, II.getType(), ExtType, CostKind);
+    CostAfterReduction = TTI.getMulAccReductionCost(
+        IsUnsigned, ReductionOpc, II.getType(), ExtType, CostKind);
     return;
   }
   CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,
@@ -1906,12 +2014,19 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
   uint64_t SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
   uint64_t EltBitMask = (1ull << SrcEltSizeInBits) - 1;
+  uint64_t TotalBits = DL->getTypeSizeInBits(SrcTy);
+  Type *PackedTy = IntegerType::get(SrcTy->getContext(), TotalBits);
+  Value *Mask = ConstantInt::get(PackedTy, EltBitMask);
   for (User *U : Ext->users()) {
     auto *Extract = cast<ExtractElementInst>(U);
     uint64_t Idx =
         cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
-    Value *LShr = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
-    Value *And = Builder.CreateAnd(LShr, EltBitMask);
+    uint64_t ShiftAmt =
+        DL->isBigEndian()
+            ? (TotalBits - SrcEltSizeInBits - Idx * SrcEltSizeInBits)
+            : (Idx * SrcEltSizeInBits);
+    Value *LShr = Builder.CreateLShr(ScalarV, ShiftAmt);
+    Value *And = Builder.CreateAnd(LShr, Mask);
     U->replaceAllUsesWith(And);
   }
   return true;
@@ -3753,6 +3868,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   unsigned MaxVectorSize =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
   unsigned MaxElementsInVector = MaxVectorSize / ElementSize;
+  if (MaxElementsInVector == 0)
+    return false;
   // When there are multiple shufflevector operations on the same input,
   // especially when the vector length is larger than the register size,
   // identical shuffle patterns may occur across different groups of elements.
@@ -4467,6 +4584,8 @@ bool VectorCombine::run() {
       case Instruction::Xor:
         if (foldBitOpOfCastops(I))
           return true;
+        if (foldBitOpOfCastConstant(I))
+          return true;
         break;
       case Instruction::PHI:
         if (shrinkPhiOfShuffles(I))
@@ -4519,12 +4638,20 @@ bool VectorCombine::run() {
     if (!DT.isReachableFromEntry(&BB))
       continue;
     // Use early increment range so that we can erase instructions in loop.
-    for (Instruction &I : make_early_inc_range(BB)) {
-      if (I.isDebugOrPseudoInst())
-        continue;
-      MadeChange |= FoldInst(I);
+    // make_early_inc_range is not applicable here, as the next iterator may
+    // be invalidated by RecursivelyDeleteTriviallyDeadInstructions.
+    // We manually maintain the next instruction and update it when it is about
+    // to be deleted.
+    Instruction *I = &BB.front();
+    while (I) {
+      NextInst = I->getNextNode();
+      if (!I->isDebugOrPseudoInst())
+        MadeChange |= FoldInst(*I);
+      I = NextInst;
     }
   }
+
+  NextInst = nullptr;
 
   while (!Worklist.isEmpty()) {
     Instruction *I = Worklist.removeOne();

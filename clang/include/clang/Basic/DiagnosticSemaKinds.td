@@ -638,6 +638,9 @@ def err_decomp_decl_std_tuple_element_not_specialized : Error<
 def err_decomp_decl_std_tuple_size_not_constant : Error<
   "cannot decompose this type; 'std::tuple_size<%0>::value' "
   "is not a valid integral constant expression">;
+def err_decomp_decl_std_tuple_size_invalid
+    : Error<"cannot decompose this type; 'std::tuple_size<%0>::value' "
+            "is not a valid size: %1">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
 def err_arg_is_not_destructurable : Error<
@@ -1773,6 +1776,7 @@ def note_unsatisfied_trait
            "%TriviallyCopyable{trivially copyable}|"
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
+           "%Aggregate{aggregate}|"
            "%Final{final}"
            "}1">;
 
@@ -1794,6 +1798,7 @@ def note_unsatisfied_trait_reason
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
            "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%PolymorphicType{is a polymorphic type}|"
            "%VirtualFunction{has a virtual function %1}|"
            "%NonEmptyBase{has a base class %1 that is not empty}|"
            "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
@@ -1806,6 +1811,8 @@ def note_unsatisfied_trait_reason
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
+           "%UserDeclaredCtr{has a user-declared constructor}|"
+           "%InheritedCtr{has an inherited constructor}|"
            "%DeletedCtr{has a deleted %select{copy|move}1 "
            "constructor}|"
            "%UserProvidedAssign{has a user provided %select{copy|move}1 "
@@ -1817,6 +1824,8 @@ def note_unsatisfied_trait_reason
            "%FunctionType{is a function type}|"
            "%CVVoidType{is a cv void type}|"
            "%IncompleteArrayType{is an incomplete array type}|"
+           "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
+           "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "%NotClassOrUnion{is not a class or union type}|"
            "%NotMarkedFinal{is not marked 'final'}"
            "}0">;
@@ -3686,6 +3695,10 @@ def warn_alloca : Warning<
 def warn_alloca_align_alignof : Warning<
   "second argument to __builtin_alloca_with_align is supposed to be in bits">,
   InGroup<DiagGroup<"alloca-with-align-alignof">>;
+
+def warn_alloc_size : Warning<
+  "allocation of insufficient size '%0' for type %1 with size '%2'">,
+  InGroup<DiagGroup<"alloc-size">>;
 
 def err_alignment_too_small : Error<
   "requested alignment must be %0 or greater">;
@@ -9038,7 +9051,7 @@ def ext_typecheck_convert_incompatible_pointer : ExtWarn<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">,
-  InGroup<IncompatiblePointerTypes>;
+  InGroup<IncompatiblePointerTypes>, DefaultError;
 def err_typecheck_convert_incompatible_pointer : Error<
   "incompatible pointer types "
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
@@ -10688,7 +10701,7 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_loan_expires_permissive : Warning<
-   "object whose reference is captured does not live long enough">, 
+   "object whose reference is captured does not live long enough">,
    InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
@@ -10820,6 +10833,11 @@ def err_continue_not_in_loop : Error<
   "'continue' statement not in loop statement">;
 def err_break_not_in_loop_or_switch : Error<
   "'break' statement not in loop or switch statement">;
+def err_break_continue_label_not_found : Error<
+  "'%select{break|continue}0' label does not name an enclosing "
+  "%select{loop or 'switch'|loop}0">;
+def err_continue_switch : Error<
+  "label of 'continue' refers to a switch statement">;
 def warn_loop_ctrl_binds_to_inner : Warning<
   "'%0' is bound to current loop, GCC binds it to the enclosing loop">,
   InGroup<GccCompat>;
@@ -11693,12 +11711,18 @@ def err_omp_threadprivate_incomplete_type : Error<
   "threadprivate variable with incomplete type %0">;
 def err_omp_no_dsa_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes">;
+def err_omp_groupprivate_incomplete_type : Error<
+  "groupprivate variable with incomplete type %0">;
+def err_omp_groupprivate_with_initializer : Error<
+  "variable %0 with initializer cannot appear in groupprivate directive">;
 def err_omp_defaultmap_no_attr_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes, data mapping attributes, or in an is_device_ptr clause">;
 def note_omp_default_dsa_none : Note<
   "explicit data sharing attribute requested here">;
 def note_omp_defaultmap_attr_none : Note<
   "explicit data sharing attribute, data mapping attribute, or is_device_ptr clause requested here">;
+def err_omp_default_vc : Error<
+  "wrong variable category specified with modifier %0 in the default clause">;
 def err_omp_wrong_dsa : Error<
   "%0 variable cannot be %1">;
 def err_omp_variably_modified_type_not_supported : Error<
@@ -12614,7 +12638,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
@@ -13106,6 +13130,11 @@ def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier 
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
+def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
+def err_hlsl_semantic_output_not_supported
+    : Error<"semantic %0 does not support output">;
+def err_hlsl_semantic_indexing_not_supported
+    : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
@@ -13132,6 +13161,8 @@ def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used on
 def err_hlsl_incorrect_num_initializers: Error<
   "too %select{few|many}0 initializers in list for type %1 "
   "(expected %2 but found %3)">;
+def err_hlsl_rootsignature_entry: Error<
+   "rootsignature specified as target environment but entry, %0, was not defined">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
@@ -13180,6 +13211,9 @@ def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Litera
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
 def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
+def err_hlsl_invalid_mixed_resources: Error< "sampler and non-sampler resource mixed in descriptor table">;
+def err_hlsl_appending_onto_unbound: Error<"offset appends to unbounded descriptor range">;
+def err_hlsl_offset_overflow: Error<"descriptor range offset overflows [%0, %1]">;
 
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
@@ -13189,6 +13223,11 @@ def err_hlsl_resource_range_overlap: Error<
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
+
+def err_hlsl_incomplete_resource_array_in_function_param: Error<
+  "incomplete resource array in a function parameter">;
+def err_hlsl_assign_to_global_resource: Error<
+  "assignment to global resource variable %0 is not allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13594,4 +13633,6 @@ def warn_acc_var_referenced_lacks_op
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
 } // end of sema component.

@@ -95,8 +95,7 @@ unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
     return EltNumRegs * VT->getNumElements();
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     assert(!RD->hasFlexibleArrayMember());
 
     for (const FieldDecl *Field : RD->fields()) {
@@ -152,11 +151,9 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
       if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
-      if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-        const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-        if (RD->hasFlexibleArrayMember())
-          return DefaultABIInfo::classifyReturnType(RetTy);
-      }
+      if (const auto *RD = RetTy->getAsRecordDecl();
+          RD && RD->hasFlexibleArrayMember())
+        return DefaultABIInfo::classifyReturnType(RetTy);
 
       // Pack aggregates <= 4 bytes into single VGPR or pair.
       uint64_t Size = getContext().getTypeSize(RetTy);
@@ -245,11 +242,9 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->hasFlexibleArrayMember())
-        return DefaultABIInfo::classifyArgumentType(Ty);
-    }
+    if (const auto *RD = Ty->getAsRecordDecl();
+        RD && RD->hasFlexibleArrayMember())
+      return DefaultABIInfo::classifyArgumentType(Ty);
 
     // Pack aggregates <= 8 bytes into single VGPR or pair.
     uint64_t Size = getContext().getTypeSize(Ty);

@@ -5,7 +5,7 @@ target triple = "dxil-pc-shadermodel6.2-compute"
 
 define void @loadi64() {
 ; CHECK-LABEL: define void @loadi64() {
-; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", i64, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", i64, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { <2 x i32>, i1 } @llvm.dx.resource.load.typedbuffer.v2i32.tdx.TypedBuffer_i64_1_0_0t(target("dx.TypedBuffer", i64, 1, 0, 0) [[BUFFER]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <2 x i32>, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
@@ -16,14 +16,14 @@ define void @loadi64() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    ret void
 ;
-  %buffer = tail call target("dx.TypedBuffer", i64, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %buffer = tail call target("dx.TypedBuffer", i64, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
   %result = call { i64, i1 } @llvm.dx.resource.load.typedbuffer.tdx.TypedBuffer_i64_1_0_0t(target("dx.TypedBuffer", i64, 1, 0, 0) %buffer, i32 0)
   ret void
 }
 
 define void @loadv2i64() {
 ; CHECK-LABEL: define void @loadv2i64() {
-; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+; CHECK-NEXT:    [[BUFFER:%.*]] = tail call target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, i1 } @llvm.dx.resource.load.typedbuffer.v4i32.tdx.TypedBuffer_v2i64_1_0_0t(target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) [[BUFFER]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i32>, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
@@ -42,7 +42,7 @@ define void @loadv2i64() {
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i64> [[TMP11]], i64 [[TMP15]], i32 1
 ; CHECK-NEXT:    ret void
 ;
-  %buffer = tail call target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %buffer = tail call target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2i64_1_0_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
   %result = call { <2 x i64>, i1 } @llvm.dx.resource.load.typedbuffer.tdx.TypedBuffer_v2i64_1_0_0t(target("dx.TypedBuffer", <2 x i64>, 1, 0, 0) %buffer, i32 0)
   ret void
 }

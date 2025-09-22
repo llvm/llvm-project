@@ -15,7 +15,7 @@
 namespace clang {
 namespace clangd {
 
-TEST(SymbolDocumentation, Parse) {
+TEST(SymbolDocumentation, UnhandledDocs) {
 
   CommentOptions CommentOpts;
 
@@ -75,9 +75,9 @@ TEST(SymbolDocumentation, Parse) {
       },
       {
           "\\brief this is a \\n\nbrief description",
-          "\\*\\*\\\\brief\\*\\* this is a   \nbrief description",
-          "**\\brief** this is a   \nbrief description",
-          "**\\brief** this is a\nbrief description",
+          "",
+          "",
+          "",
       },
       {
           "\\throw exception foo",
@@ -86,18 +86,26 @@ TEST(SymbolDocumentation, Parse) {
           "**\\throw** *exception* foo",
       },
       {
-          "\\brief this is a brief description\n\n\\li item 1\n\\li item "
-          "2\n\\arg item 3",
-          "\\*\\*\\\\brief\\*\\* this is a brief description\n\n- item 1\n\n- "
-          "item "
-          "2\n\n- "
-          "item 3",
-          "**\\brief** this is a brief description\n\n- item 1\n\n- item "
-          "2\n\n- "
-          "item 3",
-          "**\\brief** this is a brief description\n\n- item 1\n\n- item "
-          "2\n\n- "
-          "item 3",
+          R"(\brief this is a brief description
+
+\li item 1
+\li item 2
+\arg item 3)",
+          R"(- item 1
+
+- item 2
+
+- item 3)",
+          R"(- item 1
+
+- item 2
+
+- item 3)",
+          R"(- item 1
+
+- item 2
+
+- item 3)",
       },
       {
           "\\defgroup mygroup this is a group\nthis is not a group description",
@@ -110,15 +118,36 @@ TEST(SymbolDocumentation, Parse) {
           "description",
       },
       {
-          "\\verbatim\nthis is a\nverbatim block containing\nsome verbatim "
-          "text\n\\endverbatim",
-          "\\*\\*@verbatim\\*\\*\n\n```\nthis is a\nverbatim block "
-          "containing\nsome "
-          "verbatim text\n```\n\n\\*\\*@endverbatim\\*\\*",
-          "**@verbatim**\n\n```\nthis is a\nverbatim block containing\nsome "
-          "verbatim text\n```\n\n**@endverbatim**",
-          "**@verbatim**\n\nthis is a\nverbatim block containing\nsome "
-          "verbatim text\n\n**@endverbatim**",
+          R"(\verbatim
+this is a
+verbatim block containing
+some verbatim text
+\endverbatim)",
+          R"(\*\*@verbatim\*\*
+
+```
+this is a
+verbatim block containing
+some verbatim text
+```
+
+\*\*@endverbatim\*\*)",
+          R"(**@verbatim**
+
+```
+this is a
+verbatim block containing
+some verbatim text
+```
+
+**@endverbatim**)",
+          R"(**@verbatim**
+
+this is a
+verbatim block containing
+some verbatim text
+
+**@endverbatim**)",
       },
       {
           "@param foo this is a parameter\n@param bar this is another "
@@ -128,21 +157,46 @@ TEST(SymbolDocumentation, Parse) {
           "",
       },
       {
-          "@brief brief docs\n\n@param foo this is a parameter\n\nMore "
-          "description\ndocumentation",
-          "\\*\\*@brief\\*\\* brief docs\n\nMore description\ndocumentation",
-          "**@brief** brief docs\n\nMore description\ndocumentation",
-          "**@brief** brief docs\n\nMore description documentation",
+          R"(@brief brief docs
+
+@param foo this is a parameter
+
+\brief another brief?
+
+\details these are details
+
+More description
+documentation)",
+          R"(\*\*\\brief\*\* another brief?
+
+\*\*\\details\*\* these are details
+
+More description
+documentation)",
+          R"(**\brief** another brief?
+
+**\details** these are details
+
+More description
+documentation)",
+          R"(**\brief** another brief?
+
+**\details** these are details
+
+More description documentation)",
       },
       {
-          "<b>this is a bold text</b>\nnormal text\n<i>this is an italic "
-          "text</i>\n<code>this is a code block</code>",
-          "\\<b>this is a bold text\\</b>\nnormal text\n\\<i>this is an italic "
-          "text\\</i>\n\\<code>this is a code block\\</code>",
-          "\\<b>this is a bold text\\</b>\nnormal text\n\\<i>this is an italic "
-          "text\\</i>\n\\<code>this is a code block\\</code>",
-          "<b>this is a bold text</b> normal text <i>this is an italic "
-          "text</i> <code>this is a code block</code>",
+          R"(<b>this is a bold text</b>
+normal text<i>this is an italic text</i>
+<code>this is a code block</code>)",
+          R"(\<b>this is a bold text\</b>
+normal text\<i>this is an italic text\</i>
+\<code>this is a code block\</code>)",
+          R"(\<b>this is a bold text\</b>
+normal text\<i>this is an italic text\</i>
+\<code>this is a code block\</code>)",
+          "<b>this is a bold text</b> normal text<i>this is an italic text</i> "
+          "<code>this is a code block</code>",
       },
   };
   for (const auto &C : Cases) {

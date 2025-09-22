@@ -450,9 +450,6 @@ private:
     if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
       Fortran::lower::attachDeclarePostAllocAction(converter, builder,
                                                    alloc.getSymbol());
-    if (Fortran::semantics::HasCUDAComponent(alloc.getSymbol()))
-      Fortran::lower::initializeDeviceComponentAllocator(
-          converter, alloc.getSymbol(), box);
   }
 
   void setPinnedToFalse() {

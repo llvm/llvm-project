@@ -482,6 +482,11 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqrdmulh:
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_sqsub:
+  case Intrinsic::aarch64_crypto_sha1h:
+  case Intrinsic::aarch64_crypto_sha1c:
+  case Intrinsic::aarch64_crypto_sha1p:
+  case Intrinsic::aarch64_crypto_sha1m:
+  case Intrinsic::aarch64_sisd_fcvtxn:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -848,10 +853,20 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
     break;
   }
+  case TargetOpcode::G_FPTOSI_SAT:
+  case TargetOpcode::G_FPTOUI_SAT: {
+    LLT DstType = MRI.getType(MI.getOperand(0).getReg());
+    if (DstType.isVector())
+      break;
+    if (DstType == LLT::scalar(16)) {
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+      break;
+    }
+    OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
+    break;
+  }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
-  case TargetOpcode::G_FPTOSI_SAT:
-  case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_INTRINSIC_LLRINT:
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())

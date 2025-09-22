@@ -44,12 +44,12 @@ public:
           clang::CharUnits alignment)
       : pointerAndKnownNonNull(pointer, false), elementType(elementType),
         alignment(alignment) {
-    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
-           "Expected cir.ptr type");
-
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
+
+    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+           "Expected cir.ptr type");
 
     assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
            elementType);

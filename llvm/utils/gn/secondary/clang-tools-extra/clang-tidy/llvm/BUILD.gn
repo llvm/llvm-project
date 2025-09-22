@@ -21,5 +21,6 @@ static_library("llvm") {
     "PreferStaticOverAnonymousNamespaceCheck.cpp",
     "TwineLocalCheck.cpp",
     "UseNewMLIROpBuilderCheck.cpp",
+    "UseRangesCheck.cpp",
   ]
 }

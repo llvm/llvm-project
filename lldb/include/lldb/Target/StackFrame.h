@@ -60,10 +60,9 @@ public:
     /// local variables.
     History,
 
-    /// An artificial stack frame (e.g. a synthesized result of inferring
-    /// missing tail call frames from a backtrace) with limited support for
-    /// local variables.
-    Artificial
+    /// An synthetic stack frame (e.g. a synthesized result from script
+    /// resource) possibly without support for local variables or register.
+    Synthetic
   };
 
   /// Construct a StackFrame object without supplying a RegisterContextSP.
@@ -109,7 +108,8 @@ public:
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx, lldb::addr_t cfa,
              bool cfa_is_valid, lldb::addr_t pc, Kind frame_kind,
-             bool behaves_like_zeroth_frame, const SymbolContext *sc_ptr);
+             bool artificial, bool behaves_like_zeroth_frame,
+             const SymbolContext *sc_ptr);
 
   StackFrame(const lldb::ThreadSP &thread_sp, lldb::user_id_t frame_idx,
              lldb::user_id_t concrete_frame_idx,
@@ -398,7 +398,10 @@ public:
   ///
   /// \return
   ///   true if this is an inlined frame.
-  bool IsInlined();
+  virtual bool IsInlined();
+
+  /// Query whether this frame is synthetic.
+  bool IsSynthetic() const;
 
   /// Query whether this frame is part of a historical backtrace.
   bool IsHistorical() const;
@@ -406,12 +409,12 @@ public:
   /// Query whether this frame is artificial (e.g a synthesized result of
   /// inferring missing tail call frames from a backtrace). Artificial frames
   /// may have limited support for inspecting variables.
-  bool IsArtificial() const;
+  virtual bool IsArtificial() const;
 
   /// Query whether this frame should be hidden from backtraces. Frame
   /// recognizers can customize this behavior and hide distracting
   /// system implementation details this way.
-  bool IsHidden();
+  virtual bool IsHidden();
 
   /// Language plugins can use this API to report language-specific
   /// runtime information about this compile unit, such as additional
@@ -422,13 +425,13 @@ public:
   ///
   ///  /// \return
   ///   A C-String containing the function demangled name. Can be null.
-  const char *GetFunctionName();
+  virtual const char *GetFunctionName();
 
   /// Get the frame's demangled display name.
   ///
   ///  /// \return
   ///   A C-String containing the function demangled display name. Can be null.
-  const char *GetDisplayFunctionName();
+  virtual const char *GetDisplayFunctionName();
 
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
@@ -540,18 +543,7 @@ protected:
 
   bool HasCachedData() const;
 
-private:
-  /// Private methods, called from GetValueForVariableExpressionPath.
-  /// See that method for documentation of parameters and return value.
-  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
-      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
-
-  /// For StackFrame only.
+  /// For StackFrame and derived classes only.
   /// \{
   lldb::ThreadWP m_thread_wp;
   uint32_t m_frame_index;
@@ -571,6 +563,10 @@ private:
   /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
   bool m_cfa_is_valid;
   Kind m_stack_frame_kind;
+  /// Is this an artificial stack frame (e.g. a synthesized result of inferring
+  /// missing tail call frames from a backtrace) with limited support for
+  /// local variables. Orthogonal to `StackFrame::Kind`.
+  bool m_artificial;
 
   /// Whether this frame behaves like the zeroth frame, in the sense
   /// that its pc value might not immediately follow a call (and thus might
@@ -583,6 +579,17 @@ private:
   std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
+
+private:
+  /// Private methods, called from GetValueForVariableExpressionPath.
+  /// See that method for documentation of parameters and return value.
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;

@@ -1693,6 +1693,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::XXPERM:
     return "PPCISD::XXPERM";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
+  case PPCISD::VSRQ:
+    return "PPCISD::VSRQ";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
   case PPCISD::Hi:              return "PPCISD::Hi";
   case PPCISD::Lo:              return "PPCISD::Lo";
@@ -2696,7 +2698,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
+  Imm = cast<ConstantSDNode>(N)->getSExtValue();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -9902,20 +9904,24 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SmallVector<SDValue, 16> Ops(16, C);
     SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
     unsigned IID;
+    EVT VT;
     switch (SplatSize) {
     default:
       llvm_unreachable("Unexpected type for vector constant.");
     case 2:
       IID = Intrinsic::ppc_altivec_vupklsb;
+      VT = MVT::v8i16;
       break;
     case 4:
       IID = Intrinsic::ppc_altivec_vextsb2w;
+      VT = MVT::v4i32;
       break;
     case 8:
       IID = Intrinsic::ppc_altivec_vextsb2d;
+      VT = MVT::v2i64;
       break;
     }
-    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl);
+    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl, VT);
     return DAG.getBitcast(Op->getValueType(0), Extend);
   }
   assert(!IsSplat64 && "Unhandled 64-bit splat pattern");
@@ -11274,6 +11280,24 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
+  case Intrinsic::ppc_mma_build_dmr: {
+    SmallVector<SDValue, 8> Pairs;
+    SmallVector<SDValue, 8> Chains;
+    for (int i = 1; i < 9; i += 2) {
+      SDValue Hi = Op.getOperand(i);
+      SDValue Lo = Op.getOperand(i + 1);
+      if (Hi->getOpcode() == ISD::LOAD)
+        Chains.push_back(Hi.getValue(1));
+      if (Lo->getOpcode() == ISD::LOAD)
+        Chains.push_back(Lo.getValue(1));
+      Pairs.push_back(
+          DAG.getNode(PPCISD::PAIR_BUILD, dl, MVT::v256i1, {Hi, Lo}));
+    }
+    SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+    SDValue Value = DMFInsert1024(Pairs, SDLoc(Op), DAG);
+    return DAG.getMergeValues({Value, TF}, dl);
+  }
+
   case Intrinsic::ppc_mma_dmxxextfdmr512: {
     assert(Subtarget.isISAFuture() && "dmxxextfdmr512 requires ISA Future");
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
@@ -11609,6 +11633,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getScalarIntVT(), Val),
             Op.getOperand(0)),
         0);
+  }
+  case Intrinsic::ppc_mma_disassemble_dmr: {
+    return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
+                        Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
   default:
     break;
@@ -12097,6 +12125,24 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
 
   return DAG.getMergeValues({DmrPValue, TF}, dl);
+}
+
+SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
+                                         const SDLoc &dl,
+                                         SelectionDAG &DAG) const {
+  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Pairs[0],
+                                Pairs[1]),
+             0);
+  SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
+  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
+                                Pairs[2], Pairs[3]),
+             0);
+  SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
+  SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
+
+  return SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1,
+                                    {RC, Lo, LoSub, Hi, HiSub}),
+                 0);
 }
 
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,

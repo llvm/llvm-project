@@ -36,6 +36,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -70,12 +71,7 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
   PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
   // We want to discourage direct use of PatternRewriter in APIs but In this
   // very specific case, an IRRewriter is not enough.
-  struct TrivialPatternRewriter : public PatternRewriter {
-  public:
-    explicit TrivialPatternRewriter(MLIRContext *context)
-        : PatternRewriter(context) {}
-  };
-  TrivialPatternRewriter rewriter(operation->getContext());
+  PatternRewriter rewriter(operation->getContext());
   rewriter.setInsertionPoint(operation);
   auto result = pattern.returningMatchAndRewrite(op, rewriter);
   if (failed(result))
@@ -287,7 +283,7 @@ void transform::BufferizeToAllocationOp::build(OpBuilder &b,
   return build(b, result,
                /*resultTypes=*/resultTypes,
                /*target=*/target,
-               /*memorySpace=*/memorySpace);
+               /*memory_space=*/memorySpace);
 }
 
 void transform::BufferizeToAllocationOp::build(OpBuilder &b,
@@ -300,7 +296,7 @@ void transform::BufferizeToAllocationOp::build(OpBuilder &b,
   return build(b, result,
                /*resultTypes=*/resultTypes,
                /*target=*/target,
-               /*memorySpace=*/b.getI64IntegerAttr(memorySpace));
+               /*memory_space=*/b.getI64IntegerAttr(memorySpace));
 }
 
 namespace {
@@ -1907,21 +1903,21 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              StringRef copyBackOp,
                              bool usePrescribedTensorShapes) {
   auto resultType = transform::AnyOpType::get(b.getContext());
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
-               /*padToMultipleOf=*/ValueRange{},
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_dimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*pad_to_multiple_of=*/ValueRange{},
                /*padToMultipleOf=*/
                (padToMultipleOf.empty()
                     ? DenseI64ArrayAttr()
                     : b.getDenseI64ArrayAttr(padToMultipleOf)),
-               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
-               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
-               /*copyBackOp=*/b.getStringAttr(copyBackOp),
-               /*usePrescribedTensorShapes=*/
+               /*nofold_flags=*/b.getI64ArrayAttr(nofoldFlags),
+               /*transpose_paddings=*/b.getArrayAttr(transposePaddings),
+               /*copy_back_op=*/b.getStringAttr(copyBackOp),
+               /*use_prescribed_tensor_shapes=*/
                usePrescribedTensorShapes ? b.getUnitAttr() : nullptr);
 }
 
@@ -1937,18 +1933,18 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
   SmallVector<Value> dynamicPadToMultipleOf;
   dispatchIndexOpFoldResults(mixedPadToMultipleOf, dynamicPadToMultipleOf,
                              staticPadToMultipleOf);
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
-               /*padToMultipleOf=*/dynamicPadToMultipleOf,
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_dimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*pad_to_multiple_of=*/dynamicPadToMultipleOf,
                /*padToMultipleOf=*/staticPadToMultipleOf,
-               /*nofoldFlags=*/b.getI64ArrayAttr(nofoldFlags),
-               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
-               /*copyBackOp=*/copyBackOp,
-               /*usePrescribedTensorShapes=*/usePrescribedTensorShapes);
+               /*nofold_flags=*/b.getI64ArrayAttr(nofoldFlags),
+               /*transpose_paddings=*/b.getArrayAttr(transposePaddings),
+               /*copy_back_op=*/copyBackOp,
+               /*use_prescribed_tensor_shapes=*/usePrescribedTensorShapes);
 }
 
 void PadOp::getEffects(
@@ -2167,16 +2163,16 @@ void transform::PadTilingInterfaceOp::build(OpBuilder &b,
                                             ArrayRef<int64_t> paddingSizes,
                                             bool padToMultipleOf) {
   auto resultType = transform::AnyOpType::get(b.getContext());
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingSizes=*/ValueRange{},
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_sizes=*/ValueRange{},
                /*paddingSizes=*/
                (paddingSizes.empty() ? DenseI64ArrayAttr()
                                      : b.getDenseI64ArrayAttr(paddingSizes)),
-               /*padToMultipleOf=*/
+               /*pad_to_multiple_of=*/
                padToMultipleOf ? b.getUnitAttr() : nullptr);
 }
 
@@ -2188,12 +2184,12 @@ void transform::PadTilingInterfaceOp::build(
   SmallVector<Value> dynamicPaddingSizes;
   dispatchIndexOpFoldResults(mixedPaddingSizes, dynamicPaddingSizes,
                              staticPaddingSizes);
-  return build(/*builder=*/b,
+  return build(/*odsBuilder=*/b,
                /*result=*/result,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
-               /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingSizes=*/dynamicPaddingSizes,
+               /*padding_values=*/ArrayAttr(), // let inference handle this
+               /*padding_sizes=*/dynamicPaddingSizes,
                /*paddingSizes=*/staticPaddingSizes,
                /*usePrescribedTensorShapes=*/padToMultipleOf);
 }
@@ -3038,10 +3034,17 @@ void transform::TileReductionUsingForallOp::build(
 }
 
 DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
-    transform::TransformRewriter &rewriter, LinalgOp target,
+    transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
+
+  auto partialReductionOp = dyn_cast<PartialReductionOpInterface>(target);
+  if (!partialReductionOp) {
+    return emitSilenceableFailure(
+        target->getLoc(),
+        "Operation should implement PartialReductionOpInterface");
+  }
   SmallVector<OpFoldResult> numThreads =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getNumThreads()));
   SmallVector<OpFoldResult> tileSizes =
@@ -3063,14 +3066,14 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
       extractFromIntegerArrayAttr<unsigned>(getReductionDims());
   if (reductionDims.empty()) {
     for (auto [idx, iteratorType] :
-         llvm::enumerate(target.getIteratorTypesArray())) {
+         llvm::enumerate(partialReductionOp.getLoopIteratorTypes())) {
       if (iteratorType == utils::IteratorType::reduction)
         reductionDims.push_back(idx);
     }
   }
   options.setReductionDims(reductionDims);
-  FailureOr<scf::SCFTilingResult> result = scf::tileUsingSCF(
-      rewriter, cast<TilingInterface>(target.getOperation()), options);
+  FailureOr<scf::SCFTilingResult> result =
+      scf::tileUsingSCF(rewriter, partialReductionOp, options);
 
   if (failed(result)) {
     auto diag = emitSilenceableError() << "could not tile reduction";
@@ -4145,12 +4148,11 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // If we are inside an InParallel region, temporarily set the insertion point
-  // outside: only tensor.parallel_insert_slice ops are allowed in there.
-  if constexpr (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-    rewriter.setInsertionPoint(
-        target->template getParentOfType<scf::InParallelOp>());
-  }
+  // If we are inside a `ParallelCombiningOp` region, temporarily set the
+  // insertion point outside: only ops implementing ParallelCombiningOpInterface
+  // are allowed in there.
+  if (isa<mlir::ParallelCombiningOpInterface>(target.getOperation()))
+    rewriter.setInsertionPoint(target->getParentOp());
 
   Value extracted = tensor::ExtractSliceOp::create(
       rewriter, target.getLoc(), target.getDest(), target.getMixedOffsets(),

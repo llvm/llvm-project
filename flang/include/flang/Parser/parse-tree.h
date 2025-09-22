@@ -4430,6 +4430,22 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [6.0:438]
+//
+// graph_id-clause ->
+//    GRAPH_ID(graph-id-value)                      // since 6.0
+struct OmpGraphIdClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphIdClause, common::Indirection<Expr>);
+};
+
+// Ref: [6.0:438-439]
+//
+// graph_reset-clause ->
+//    GRAPH_RESET[(graph-reset-expression)]         // since 6.0
+struct OmpGraphResetClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, common::Indirection<Expr>);
+};
+
 // Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
 struct OmpHintClause {
   WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);
@@ -4627,6 +4643,14 @@ struct OmpReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
+// Ref: [6.0:440:441]
+//
+// replayable-clause ->
+//    REPLAYABLE[(replayable-expression)]           // since 6.0
+struct OmpReplayableClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpReplayableClause, Scalar<Logical<ConstantExpr>>);
+};
+
 // Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
 //
 // schedule-clause ->
@@ -4674,6 +4698,14 @@ struct OmpToClause {
   TUPLE_CLASS_BOILERPLATE(OmpToClause);
   MODIFIER_BOILERPLATE(OmpExpectation, OmpIterator, OmpMapper);
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
+};
+
+// Ref: [6.0:510-511]
+//
+// transparent-clause ->
+//    TRANSPARENT[(impex-type)]                     // since 6.0
+struct OmpTransparentClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpTransparentClause, ScalarIntExpr);
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
@@ -4835,46 +4867,25 @@ struct OpenMPDeclarativeAssumes {
   CharBlock source;
 };
 
-struct OmpAssumeDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective);
-  std::tuple<Verbatim, OmpClauseList> t;
-  CharBlock source;
-};
-
-struct OmpEndAssumeDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpEndAssumeDirective, Verbatim);
-  CharBlock source;
-};
-
-// Ref: [5.2: 213-216]
+// Ref: [5.1:86-89], [5.2:215], [6.0:369]
 //
-// assume-construct ->
-//   ASSUME absent-clause | contains-clause | holds_clause | no-openmp-clause
-//          no-openmp-routines-clause | no-parallelism-clause
-//       block
+// assume-directive ->                              // since 5.1
+//   ASSUME assumption-clause...
+//     block
 //   [END ASSUME]
-struct OpenMPAssumeConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct);
-  std::tuple<OmpAssumeDirective, Block, std::optional<OmpEndAssumeDirective>> t;
-  CharBlock source;
+struct OpenMPAssumeConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct, OmpBlockConstruct);
 };
 
 // 2.7.2 SECTIONS
 // 2.11.2 PARALLEL SECTIONS
-struct OmpSectionsDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpSectionsDirective, llvm::omp::Directive);
-  CharBlock source;
+struct OmpBeginSectionsDirective : public OmpBeginDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OmpBeginSectionsDirective, OmpBeginDirective);
 };
 
-struct OmpBeginSectionsDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpBeginSectionsDirective);
-  std::tuple<OmpSectionsDirective, OmpClauseList> t;
-  CharBlock source;
-};
-struct OmpEndSectionsDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndSectionsDirective);
-  std::tuple<OmpSectionsDirective, OmpClauseList> t;
-  CharBlock source;
+struct OmpEndSectionsDirective : public OmpEndDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndSectionsDirective, OmpEndDirective);
 };
 
 // [!$omp section]
@@ -4891,10 +4902,19 @@ struct OpenMPSectionConstruct {
 struct OpenMPSectionsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPSectionsConstruct);
   CharBlock source;
+  const OmpBeginSectionsDirective &BeginDir() const {
+    return std::get<OmpBeginSectionsDirective>(t);
+  }
+  const std::optional<OmpEndSectionsDirective> &EndDir() const {
+    return std::get<std::optional<OmpEndSectionsDirective>>(t);
+  }
   // Each of the OpenMPConstructs in the list below contains an
   // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // The end sections directive is optional here because it is difficult to
+  // generate helpful error messages for a missing end directive within the
+  // parser. Semantics will generate an error if this is absent.
   std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
-      OmpEndSectionsDirective>
+      std::optional<OmpEndSectionsDirective>>
       t;
 };
 
@@ -4997,18 +5017,6 @@ struct OpenMPDeclarativeConstruct {
       u;
 };
 
-// 2.13.2 CRITICAL [Name] <block> END CRITICAL [Name]
-struct OmpCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
-};
-struct OmpEndCriticalDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndCriticalDirective);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>> t;
-};
-
 struct OpenMPCriticalConstruct : public OmpBlockConstruct {
   INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct, OmpBlockConstruct);
 };
@@ -5064,12 +5072,6 @@ struct OpenMPAtomicConstruct : public OmpBlockConstruct {
   };
 
   mutable Analysis analysis;
-};
-
-// OpenMP directives that associate with loop(s)
-struct OmpLoopDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpLoopDirective, llvm::omp::Directive);
-  CharBlock source;
 };
 
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
@@ -5149,20 +5151,12 @@ struct OpenMPStandaloneConstruct {
       u;
 };
 
-struct OmpBeginLoopDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective);
-  std::tuple<OmpLoopDirective, OmpClauseList> t;
-  CharBlock source;
+struct OmpBeginLoopDirective : public OmpBeginDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective, OmpBeginDirective);
 };
 
-struct OmpEndLoopDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective);
-  std::tuple<OmpLoopDirective, OmpClauseList> t;
-  CharBlock source;
-};
-
-struct OpenMPBlockConstruct : public OmpBlockConstruct {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPBlockConstruct, OmpBlockConstruct);
+struct OmpEndLoopDirective : public OmpEndDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective, OmpEndDirective);
 };
 
 // OpenMP directives enclosing do loop
@@ -5172,6 +5166,13 @@ struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
       : t({std::move(a), std::nullopt, std::nullopt}) {}
+
+  const OmpBeginLoopDirective &BeginDir() const {
+    return std::get<OmpBeginLoopDirective>(t);
+  }
+  const std::optional<OmpEndLoopDirective> &EndDir() const {
+    return std::get<std::optional<OmpEndLoopDirective>>(t);
+  }
   std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
@@ -5187,7 +5188,7 @@ struct OpenMPExecDirective {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
+      OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
       OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
       OpenMPUtilityConstruct, OpenMPExecutableAllocate,
       OpenMPAllocatorsConstruct, OpenMPAssumeConstruct, OpenMPCriticalConstruct>
