@@ -65,7 +65,7 @@ __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
   constexpr size_t __vec_size     = __native_vector_size<__value_type>;
   using __vec                     = __simd_vector<__value_type, __vec_size>;
 
-  if (!__libcpp_is_constant_evaluated()) {
+  if (!__libcpp_is_constant_evaluated() || _LIBCPP_HAS_CONSTEXPR_VECTORS) {
     auto __orig_first1 = __first1;
     auto __last2       = __first2 + (__last1 - __first1);
     while (static_cast<size_t>(__last1 - __first1) >= __unroll_count * __vec_size) [[__unlikely__]] {

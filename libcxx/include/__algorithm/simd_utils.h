@@ -40,6 +40,14 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS
 
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2200
+#    define _LIBCPP_HAS_CONSTEXPR_VECTORS 1
+#    define _LIBCPP_VECTOR_CONSTEXPR _LIBCPP_CONSTEXPR
+#  else
+#    define _LIBCPP_HAS_CONSTEXPR_VECTORS 0
+#    define _LIBCPP_VECTOR_CONSTEXPR
+#  endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
@@ -108,30 +116,40 @@ using __simd_vector_underlying_type_t _LIBCPP_NODEBUG = decltype(std::__simd_vec
 
 // This isn't inlined without always_inline when loading chars.
 template <class _VecT, class _Iter>
-[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __load_vector(_Iter __iter) noexcept {
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_VECTOR_CONSTEXPR _VecT
+__load_vector(_Iter __iter) noexcept {
   return [=]<size_t... _Indices>(index_sequence<_Indices...>) _LIBCPP_ALWAYS_INLINE noexcept {
     return _VecT{__iter[_Indices]...};
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_VECTOR_CONSTEXPR bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_VECTOR_CONSTEXPR size_t
+__find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
+
+#  if _LIBCPP_HAS_CONSTEXPR_VECTORS
+#    if defined(_LIBCPP_BIG_ENDIAN)
+  return __builtin_clzg(__builtin_convertvector(__vec, __mask_vec), static_cast<int>(_Np));
+#    else
+  return __builtin_ctzg(__builtin_convertvector(__vec, __mask_vec), static_cast<int>(_Np));
+#    endif
+#  else
 
   // This has MSan disabled du to https://llvm.org/PR85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
-#  if defined(_LIBCPP_BIG_ENDIAN)
+#    if defined(_LIBCPP_BIG_ENDIAN)
     return std::min<size_t>(
         _Np, std::__countl_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
-#  else
+#    else
     return std::min<size_t>(
         _Np, std::__countr_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
-#  endif
+#    endif
   };
 
   if constexpr (sizeof(__mask_vec) == sizeof(uint8_t)) {
@@ -146,10 +164,12 @@ template <class _Tp, size_t _Np>
     static_assert(sizeof(__mask_vec) == 0, "unexpected required size for mask integer type");
     return 0;
   }
+#  endif
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_VECTOR_CONSTEXPR size_t
+__find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
 
