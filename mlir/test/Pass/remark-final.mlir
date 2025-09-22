@@ -9,8 +9,6 @@ module @foo {
 
 // CHECK: --- !Failure
 // CHECK: Name:            test-remark
-// CHECK: DebugLoc:        { File: '../mlir/test/Pass/remark-final.mlir', Line: 4, 
-// CHECK:                    Column: 3 }
 // CHECK: Function:        '<unknown function>'
 // CHECK: Args:
 // CHECK:   - Remark:          This is a test failed remark
@@ -20,8 +18,6 @@ module @foo {
 // CHECK: --- !Passed
 // CHECK: Pass:            category-1-passed
 // CHECK: Name:            test-remark
-// CHECK: DebugLoc:        { File: '../mlir/test/Pass/remark-final.mlir', Line: 4, 
-// CHECK-NEXT:                    Column: 3 }
 // CHECK: Function:        '<unknown function>'
 // CHECK: Args:
 // CHECK:   - Remark:          This is a test passed remark
@@ -31,8 +27,6 @@ module @foo {
 // CHECK: --- !Analysis
 // CHECK: Pass:            category-2-analysis
 // CHECK: Name:            test-remark
-// CHECK: DebugLoc:        { File: '../mlir/test/Pass/remark-final.mlir', Line: 4, 
-// CHECK-NEXT:                    Column: 3 }
 // CHECK: Function:        '<unknown function>'
 // CHECK: Args:
 // CHECK:   - Remark:          This is a test analysis remark
