@@ -843,3 +843,19 @@ define i1 @cmn_nsw_neg_64(i64 %a, i64 %b) {
   %cmp = icmp sgt i64 %a, %sub
   ret i1 %cmp
 }
+
+define i1 @cmn_and_adds(i32 %num, i32 %num2, ptr %use)  {
+; CHECK-LABEL: cmn_and_adds:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, w1
+; CHECK-NEXT:    add w9, w1, w0
+; CHECK-NEXT:    cset w8, lt
+; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ret
+  %add = add nsw i32 %num2, %num
+  store i32 %add, ptr %use, align 4
+  %sub = sub nsw i32 0, %num2
+  %cmp = icmp slt i32 %num, %sub
+  ret i1 %cmp
+}
