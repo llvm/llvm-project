@@ -439,6 +439,43 @@ func.func @test_pad_invalid_padding_value(%arg0: tensor<10xi8>, %arg1: tensor<1x
 }
 
 // -----
+func.func @test_cond_if_wrong_terminator_op(%arg0: tensor<i1>) -> tensor<i32> {
+  %0 = "tosa.cond_if"(%arg0) ({
+    %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+    "tosa.yield"(%1) : (tensor<i32>) -> ()
+  }, {
+    // expected-error@+2 {{'func.return' op expects parent op 'func.func'}}
+    %2 = "tosa.const"() <{values = dense<2> : tensor<i32>}> : () -> tensor<i32>
+    "func.return"(%2) : (tensor<i32>) -> ()
+  }) : (tensor<i1>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_cond_if_missing_then_terminator(%arg0: tensor<i1>) -> tensor<i32> {
+  %0 = "tosa.cond_if"(%arg0) ({
+    // expected-error@+1 {{block with no terminator}}
+    %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+  }, {
+    %2 = "tosa.const"() <{values = dense<2> : tensor<i32>}> : () -> tensor<i32>
+    "tosa.yield"(%2) : (tensor<i32>) -> ()
+  }) : (tensor<i1>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_cond_if_missing_else_terminator(%arg0: tensor<i1>) -> tensor<i32> {
+  %0 = "tosa.cond_if"(%arg0) ({
+    %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+    "tosa.yield"(%1) : (tensor<i32>) -> ()
+  }, {
+    // expected-error@+1 {{block with no terminator}}
+    %2 = "tosa.const"() <{values = dense<2> : tensor<i32>}> : () -> tensor<i32>
+  }) : (tensor<i1>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
 
 func.func @test_cond_if_input_list_mismatch_then_block(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
   // expected-error@+1 {{'tosa.cond_if' op require same number of values in 'then_graph' arguments (1) and 'input_list' (2)}}
@@ -647,6 +684,48 @@ func.func @test_cond_if_incorrect_type_simple(%arg0: tensor<f32>, %arg1: tensor<
     tosa.yield %1 : tensor<f32>
   }
   return %0 : tensor<f32>
+}
+
+// -----
+func.func @test_while_loop_wrong_terminator(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<i32> {
+    %0 = tosa.while_loop (%arg2 = %arg0) : (tensor<i32>) -> tensor<i32> {
+      // expected-error@+2 {{'func.return' op expects parent op 'func.func'}}
+      %1 = tosa.greater_equal %arg1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+      "func.return"(%arg2) : (tensor<i32>) -> ()
+    } do {
+    ^bb0(%arg2: tensor<i32>):
+      %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+      %2 = tosa.add %arg2, %1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+      tosa.yield %2 : tensor<i32>
+    }
+    return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_while_loop_missing_cond_terminator(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<i32> {
+    %0 = tosa.while_loop (%arg2 = %arg0) : (tensor<i32>) -> tensor<i32> {
+      // expected-error@+1 {{block with no terminator}}
+      %1 = tosa.greater_equal %arg1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+    } do {
+    ^bb0(%arg2: tensor<i32>):
+      %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+      %2 = tosa.add %arg2, %1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+      tosa.yield %2 : tensor<i32>
+    }
+    return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_while_loop_missing_body_terminator(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<i32> {
+    %0 = tosa.while_loop (%arg2 = %arg0) : (tensor<i32>) -> tensor<i32> {
+      %1 = tosa.greater_equal %arg1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+      tosa.yield %1 : tensor<i1>
+    } do {
+    ^bb0(%arg2: tensor<i32>):
+      // expected-error@+1 {{block with no terminator}}
+      %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+    }
+    return %0 : tensor<i32>
 }
 
 // -----

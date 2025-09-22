@@ -3457,7 +3457,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
     assert(!Op.getValueType().isScalableVector());
     // Collect the known bits that are shared by every demanded vector element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       if (!DemandedElts[i])
         continue;
@@ -3480,6 +3480,17 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         break;
     }
     break;
+  case ISD::VECTOR_COMPRESS: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue PassThru = Op.getOperand(2);
+    Known = computeKnownBits(PassThru, DemandedElts, Depth + 1);
+    // If we don't know any bits, early out.
+    if (Known.isUnknown())
+      break;
+    Known2 = computeKnownBits(Vec, Depth + 1);
+    Known = Known.intersectWith(Known2);
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     assert(!Op.getValueType().isScalableVector());
     // Collect the known bits that are shared by every vector element referenced
@@ -3492,7 +3503,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       break;
 
     // Known bits are the values that are shared by every demanded element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     if (!!DemandedLHS) {
       SDValue LHS = Op.getOperand(0);
       Known2 = computeKnownBits(LHS, DemandedLHS, Depth + 1);
@@ -3518,7 +3529,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getValueType().isScalableVector())
       break;
     // Split DemandedElts and test each of the demanded subvectors.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.setAllConflict();
     EVT SubVectorVT = Op.getOperand(0).getValueType();
     unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
     unsigned NumSubVectors = Op.getNumOperands();
@@ -3549,8 +3560,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     APInt DemandedSrcElts = DemandedElts;
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
 
-    Known.One.setAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllConflict();
     if (!!DemandedSubElts) {
       Known = computeKnownBits(Sub, DemandedSubElts, Depth + 1);
       if (Known.isUnknown())
@@ -3643,7 +3653,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
           APIntOps::ScaleBitMask(DemandedElts, NumElts / SubScale);
       Known2 = computeKnownBits(N0, SubDemandedElts, Depth + 1);
 
-      Known.Zero.setAllBits(); Known.One.setAllBits();
+      Known.setAllConflict();
       for (unsigned i = 0; i != NumElts; ++i)
         if (DemandedElts[i]) {
           unsigned Shifts = IsLE ? i : NumElts - 1 - i;
@@ -3991,8 +4001,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         // TODO - do we need to handle different bitwidths?
         if (CstTy->isVectorTy() && BitWidth == CstTy->getScalarSizeInBits()) {
           // Iterate across all vector elements finding common known bits.
-          Known.One.setAllBits();
-          Known.Zero.setAllBits();
+          Known.setAllConflict();
           for (unsigned i = 0; i != NumElts; ++i) {
             if (!DemandedElts[i])
               continue;
@@ -4277,8 +4286,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       DemandedVal = !!DemandedElts[EltIdx];
       DemandedVecElts.clearBit(EltIdx);
     }
-    Known.One.setAllBits();
-    Known.Zero.setAllBits();
+    Known.setAllConflict();
     if (DemandedVal) {
       Known2 = computeKnownBits(InVal, Depth + 1);
       Known = Known.intersectWith(Known2.zextOrTrunc(BitWidth));
@@ -4791,6 +4799,17 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       Tmp = std::min(Tmp, Tmp2);
     }
     return Tmp;
+
+  case ISD::VECTOR_COMPRESS: {
+    SDValue Vec = Op.getOperand(0);
+    SDValue PassThru = Op.getOperand(2);
+    Tmp = ComputeNumSignBits(PassThru, DemandedElts, Depth + 1);
+    if (Tmp == 1)
+      return 1;
+    Tmp2 = ComputeNumSignBits(Vec, Depth + 1);
+    Tmp = std::min(Tmp, Tmp2);
+    return Tmp;
+  }
 
   case ISD::VECTOR_SHUFFLE: {
     // Collect the minimum number of sign bits that are shared by every vector
@@ -8600,7 +8619,7 @@ static bool isMemSrcFromConstant(SDValue Src, ConstantDataArraySlice &Slice) {
   GlobalAddressSDNode *G = nullptr;
   if (Src.getOpcode() == ISD::GlobalAddress)
     G = cast<GlobalAddressSDNode>(Src);
-  else if (Src.getOpcode() == ISD::ADD &&
+  else if (Src->isAnyAdd() &&
            Src.getOperand(0).getOpcode() == ISD::GlobalAddress &&
            Src.getOperand(1).getOpcode() == ISD::Constant) {
     G = cast<GlobalAddressSDNode>(Src.getOperand(0));
@@ -9135,6 +9154,33 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
           Type::getInt32Ty(*getContext()),
           getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
+      .setTailCall(IsTailCall);
+
+  return TLI->LowerCallTo(CLI);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
+                                                    const SDLoc &dl,
+                                                    SDValue Src,
+                                                    const CallInst *CI) {
+  const char *LibCallName = TLI->getLibcallName(RTLIB::STRLEN);
+  if (!LibCallName)
+    return {};
+
+  // Emit a library call.
+  TargetLowering::ArgListTy Args = {
+      {Src, PointerType::getUnqual(*getContext())}};
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
+                    getExternalSymbol(
+                        LibCallName, TLI->getProgramPointerTy(getDataLayout())),
+                    std::move(Args))
       .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
