@@ -1791,8 +1791,11 @@ TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
     verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
 
 // 2.15.2 Threadprivate directive
-TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(
-    verbatim("THREADPRIVATE"_tok), parenthesized(Parser<OmpObjectList>{}))))
+TYPE_PARSER(sourced( //
+    construct<OpenMPThreadprivate>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_threadprivate)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
 // 2.11.3 Declarative Allocate directive
 TYPE_PARSER(
