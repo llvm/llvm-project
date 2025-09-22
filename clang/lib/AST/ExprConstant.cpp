@@ -14670,6 +14670,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return HandleMaskBinOp(
         [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
   }
+
+  case X86::BI__builtin_ia32_korqi:
+  case X86::BI__builtin_ia32_korhi:
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS | RHS; });
+  }
   }
 }
 

@@ -8537,6 +8537,12 @@ __mmask16 test_mm512_kor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m
                                                   __E, __F);
 }
 
+TEST_CONSTEXPR(_mm512_kor(0xC1, 0xA8) == 0xE9);         // data correctness
+TEST_CONSTEXPR(_mm512_kor(0x12345, 0x12345) == 0x2345); // truncated
+TEST_CONSTEXPR(_mm512_kor(0xABCD, 0x0000) == 0xABCD);   // all-zero
+TEST_CONSTEXPR(_mm512_kor(0xABCD, 0xFFFF) == 0xFFFF);   // all-ones
+TEST_CONSTEXPR(_mm512_kor(0xAAAA, 0x5555) == 0xFFFF);   // disjoint
+
 int test_mm512_kortestc(__m512i __A, __m512i __B, __m512i __C, __m512i __D) {
   // CHECK-LABEL: test_mm512_kortestc
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -8696,6 +8702,12 @@ __mmask16 test_kor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    _mm512_cmpneq_epu32_mask(__C, __D)),
                                                    __E, __F);
 }
+
+TEST_CONSTEXPR(_kor_mask16(0xC1, 0xA8) == 0xE9);         // data correctness
+TEST_CONSTEXPR(_kor_mask16(0x12345, 0x12345) == 0x2345); // truncated
+TEST_CONSTEXPR(_kor_mask16(0xABCD, 0x0000) == 0xABCD);   // all-zero
+TEST_CONSTEXPR(_kor_mask16(0xABCD, 0xFFFF) == 0xFFFF);   // all-ones
+TEST_CONSTEXPR(_kor_mask16(0xAAAA, 0x5555) == 0xFFFF);   // disjoint
 
 __mmask16 test_kxnor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask16

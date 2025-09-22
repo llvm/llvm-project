@@ -36,11 +36,11 @@ __mmask32 test_kand_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
-TEST_CONSTEXPR(_kand_mask32(0xCCCCCCCC, 0xAAAAAAAA) == 0x88888888); // data correctness
+TEST_CONSTEXPR(_kand_mask32(0xCCCCCCCC, 0xAAAAAAAA) == 0x88888888);  // data correctness
 TEST_CONSTEXPR(_kand_mask32(0x123456789, 0xFFFFFFFF) == 0x23456789); // should be truncated
-TEST_CONSTEXPR(_kand_mask32(0xABCDEF01, 0x00000000) == 0x00000000); // all-zero
-TEST_CONSTEXPR(_kand_mask32(0x56789ABC, 0xFFFFFFFF) == 0x56789ABC); // all-one
-TEST_CONSTEXPR(_kand_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000); // disjoint
+TEST_CONSTEXPR(_kand_mask32(0xABCDEF01, 0x00000000) == 0x00000000);  // all-zero
+TEST_CONSTEXPR(_kand_mask32(0x56789ABC, 0xFFFFFFFF) == 0x56789ABC);  // all-one
+TEST_CONSTEXPR(_kand_mask32(0xAAAAAAAA, 0x55555555) == 0x00000000);  // disjoint
 
 __mmask64 test_kand_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kand_mask64
@@ -103,6 +103,12 @@ __mmask32 test_kor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                    __E, __F);
 }
 
+TEST_CONSTEXPR(_kor_mask32(0xF0F0A5A5, 0x0F0F5A5A) == 0xFFFFFFFF);   // data correctness
+TEST_CONSTEXPR(_kor_mask32(0x12345ABCD, 0x12345ABCD) == 0x2345ABCD); // truncated
+TEST_CONSTEXPR(_kor_mask32(0x1A2B3C4D, 0x00000000) == 0x1A2B3C4D);   // all-zero
+TEST_CONSTEXPR(_kor_mask32(0xDEADBEEF, 0xFFFFFFFF) == 0xFFFFFFFF);   // all-ones
+TEST_CONSTEXPR(_kor_mask32(0xAAAAAAAA, 0x55555555) == 0xFFFFFFFF);   // disjoint
+
 __mmask64 test_kor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -112,6 +118,12 @@ __mmask64 test_kor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                   _mm512_cmpneq_epu8_mask(__C, __D)),
                                                   __E, __F);
 }
+
+TEST_CONSTEXPR(_kor_mask64(0xF0A5C33C00FF11EE, 0x0F5AC33CFF00EE11) == 0xFFFFC33CFFFFFFFF); // data correctness
+TEST_CONSTEXPR(_kor_mask64(0x123456789ABCDEF0, 0x123456789ABCDEF0) == 0x123456789ABCDEF0); // full 64-bit value
+TEST_CONSTEXPR(_kor_mask64(0x1122334455667788, 0x0) == 0x1122334455667788);                // all-zero
+TEST_CONSTEXPR(_kor_mask64(0x8877665544332211, 0xFFFFFFFFFFFFFFFF) == 0xFFFFFFFFFFFFFFFF); // all-ones
+TEST_CONSTEXPR(_kor_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0xFFFFFFFFFFFFFFFF); // disjoint
 
 __mmask32 test_kxnor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask32

@@ -62,6 +62,12 @@ __mmask8 test_kor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m5
                                                   __E, __F);
 }
 
+TEST_CONSTEXPR(_kor_mask8(0xB3, 0x6C) == 0xFF);         // data correctness
+TEST_CONSTEXPR(_kor_mask8(0x1A5, 0x1A5) == 0xA5);       // truncated
+TEST_CONSTEXPR(_kor_mask8(0xDE, 0x00) == 0xDE);         // all-zero
+TEST_CONSTEXPR(_kor_mask8(0x42, 0xFF) == 0xFF);         // all-ones
+TEST_CONSTEXPR(_kor_mask8(0xAA, 0x55) == 0xFF);         // disjoint
+
 __mmask8 test_kxnor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kxnor_mask8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
