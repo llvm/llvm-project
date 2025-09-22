@@ -25,8 +25,8 @@ namespace {
 class PPC final : public TargetInfo {
 public:
   PPC(Ctx &);
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -219,8 +219,8 @@ bool PPC::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   llvm_unreachable("unsupported relocation type used in branch");
 }
 
-RelExpr PPC::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                        StringRef rv_vendor) const {
+RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
+                        const uint8_t *loc) const {
   switch (type) {
   case R_PPC_NONE:
     return R_NONE;

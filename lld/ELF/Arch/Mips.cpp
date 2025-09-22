@@ -23,8 +23,8 @@ template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS(Ctx &);
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor) const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   RelType getDynRel(RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -77,7 +77,7 @@ template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
 
 template <class ELFT>
 RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
-                               const uint8_t *loc, StringRef rv_vendor) const {
+                               const uint8_t *loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
     type.v &= 0xff;

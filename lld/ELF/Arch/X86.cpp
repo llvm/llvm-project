@@ -23,8 +23,8 @@ class X86 : public TargetInfo {
 public:
   X86(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   RelType getDynRel(RelType type) const override;
@@ -74,8 +74,8 @@ int X86::getTlsGdRelaxSkip(RelType type) const {
   return type == R_386_TLS_GOTDESC || type == R_386_TLS_DESC_CALL ? 1 : 2;
 }
 
-RelExpr X86::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                        StringRef rv_vendor) const {
+RelExpr X86::getRelExpr(RelType type, const Symbol &s,
+                        const uint8_t *loc) const {
   switch (type) {
   case R_386_8:
   case R_386_16:

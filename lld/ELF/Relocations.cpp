@@ -1513,7 +1513,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   }
 
   // Stash the RISCV vendor namespace for the subsequent relocation.
-  if (LLVM_UNLIKELY(ctx.arg.emachine == EM_RISCV) && type == R_RISCV_VENDOR) {
+  if (LLVM_UNLIKELY(ctx.arg.emachine == EM_RISCV && type == R_RISCV_VENDOR)) {
     rv_vendor = sym.getName();
     return;
   }
@@ -1523,8 +1523,13 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   if (offset == uint64_t(-1))
     return;
 
-  RelExpr expr = ctx.target->getRelExpr(
-      type, sym, sec->content().data() + offset, rv_vendor);
+  RelExpr expr;
+  if (rv_vendor.empty()) {
+    expr = ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
+  } else {
+    expr = ctx.target->getVendorRelExpr(
+        type, sym, sec->content().data() + offset, rv_vendor);
+  }
   int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
                        : ctx.target->getImplicitAddend(

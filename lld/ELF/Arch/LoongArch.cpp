@@ -33,8 +33,8 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   RelType getDynRel(RelType type) const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -416,7 +416,7 @@ RelType LoongArch::getDynRel(RelType type) const {
 }
 
 RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
-                              const uint8_t *loc, StringRef rv_vendor) const {
+                              const uint8_t *loc) const {
   switch (type) {
   case R_LARCH_NONE:
   case R_LARCH_MARK_LA:

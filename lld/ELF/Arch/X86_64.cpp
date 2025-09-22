@@ -28,8 +28,8 @@ class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -361,8 +361,8 @@ bool X86_64::relaxOnce(int pass) const {
   return changed;
 }
 
-RelExpr X86_64::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                           StringRef rv_vendor) const {
+RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
+                           const uint8_t *loc) const {
   switch (type) {
   case R_X86_64_8:
   case R_X86_64_16:

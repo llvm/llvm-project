@@ -64,8 +64,8 @@ namespace {
 class AArch64 : public TargetInfo {
 public:
   AArch64(Ctx &);
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -131,8 +131,8 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   needsThunks = true;
 }
 
-RelExpr AArch64::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                            StringRef rv_vendor) const {
+RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
+                            const uint8_t *loc) const {
   switch (type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:

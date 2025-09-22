@@ -24,8 +24,8 @@ class SystemZ : public TargetInfo {
 public:
   SystemZ(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -79,8 +79,8 @@ SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x1000000;
 }
 
-RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                            StringRef rv_vendor) const {
+RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
+                            const uint8_t *loc) const {
   switch (type) {
   case R_390_NONE:
     return R_NONE;

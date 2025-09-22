@@ -33,8 +33,8 @@ class Hexagon final : public TargetInfo {
 public:
   Hexagon(Ctx &);
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                     StringRef rv_vendor = "") const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -99,8 +99,8 @@ static uint32_t applyMask(uint32_t mask, uint32_t data) {
   return result;
 }
 
-RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s, const uint8_t *loc,
-                            StringRef rv_vendor) const {
+RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
+                            const uint8_t *loc) const {
   switch (type) {
   case R_HEX_NONE:
     return R_NONE;
