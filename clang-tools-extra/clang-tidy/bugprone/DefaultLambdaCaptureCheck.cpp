@@ -14,8 +14,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+AST_MATCHER(LambdaExpr, hasDefaultCapture) {
+  return Node.getCaptureDefault() != LCD_None;
+}
+
+} // namespace
+
 void DefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(lambdaExpr().bind("lambda"), this);
+  Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
 }
 
 void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
@@ -23,8 +30,8 @@ void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Lambda)
     return;
 
-  if (Lambda->getCaptureDefault() == LCD_None)
-    return;
+  // No need to check getCaptureDefault() != LCD_None since our custom matcher
+  // hasDefaultCapture() already ensures this condition
 
   SourceLocation DefaultCaptureLoc = Lambda->getCaptureDefaultLoc();
   if (DefaultCaptureLoc.isInvalid())
