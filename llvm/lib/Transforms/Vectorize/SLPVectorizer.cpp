@@ -6829,7 +6829,7 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 
   // Try to generate strided load node.
   auto IsAnyPointerUsedOutGraph =
-      Iany_of(PointerOps, [&](Value *V) {
+      any_of(PointerOps, [&](Value *V) {
         return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
                  return !isVectorized(U) && !MustGather.contains(U);
                });
