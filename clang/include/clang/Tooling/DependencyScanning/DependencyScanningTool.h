@@ -161,14 +161,41 @@ public:
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
-  /// TODO: add documentation.
+  /// The following three methods provides a new interface to perform
+  /// by name dependency scan. The new interface's intention is to improve
+  /// dependency scanning performance when a sequence of name is looked up
+  /// with the same current working directory and the command line.
+
+  /// @brief Initializing the context and the compiler instance to perform.
+  ///        This method must be called before performing scanning.
+  /// @param CWD The current working directory used during the scan.
+  /// @param CommandLine The commandline used for the scan.
+  /// @return Error if the initializaiton fails.
   llvm::Error initializeCompilerInstacneWithContext(
       StringRef CWD, const std::vector<std::string> &CommandLine);
 
+  /// @brief Computes the dependeny for the module named ModuleName.
+  /// @param ModuleName The name of the module for which this method computes
+  ///.                  dependencies.
+  /// @param AlreadySeen This stores modules which have previously been
+  ///                    reported. Use the same instance for all calls to this
+  ///                    function for a single \c DependencyScanningTool in a
+  ///                    single build. Note that this parameter is not part of
+  ///                    the context because it can be shared across different
+  ///                    worker threads and each worker thread may update it.
+  /// @param LookupModuleOutput This function is called to fill in
+  ///                           "-fmodule-file=", "-o" and other output
+  ///                           arguments for dependencies.
+  /// @return An instance of \c TranslationUnitDeps if the scan is successful.
+  ///         Otherwise it returns an error.
   llvm::Expected<TranslationUnitDeps> computeDependenciesByNameWithContext(
       StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput);
 
+  /// @brief This method finializes the compiler instance. It finalizes the
+  ///        diagnostics and deletes the compiler instance. Call this method
+  ///        once all names for a same commandline are scanned.
+  /// @return Error if an error occured during finalization.
   llvm::Error finalizeCompilerInstanceWithContext();
 
 private:

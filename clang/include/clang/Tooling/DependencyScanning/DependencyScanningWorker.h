@@ -106,10 +106,6 @@ public:
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
-  llvm::Error initializeCompierInstanceWithContext(
-      StringRef CWD, const std::vector<std::string> &CommandLine);
-  llvm::Error finalizeCompilerInstanceWithContext();
-
   /// Run the dependency scanning tool for a given clang driver command-line,
   /// and report the discovered dependencies to the provided consumer. If
   /// TUBuffer is not nullopt, it is used as TU input for the dependency
@@ -157,11 +153,33 @@ public:
                                   DependencyActionController &Controller,
                                   StringRef ModuleName);
 
-  /// TODO: add documentation
+  /// The three method below implements a new interface for by name
+  /// dependency scanning. They together enable the dependency scanning worker
+  /// to more effectively perform scanning for a sequence of modules
+  /// by name when the CWD and CommandLine are holding constant.
+
+  /// @brief Initializing the context and the compiler instance to perform.
+  /// @param CWD The current working directory used during the scan.
+  /// @param CommandLine The commandline used for the scan.
+  /// @return Error if the initializaiton fails.
+  llvm::Error initializeCompierInstanceWithContext(
+      StringRef CWD, const std::vector<std::string> &CommandLine);
+
+  /// @brief Performaces dependency scanning for the module whose name is
+  ///        specified.
+  /// @param ModuleName  The name of the module whose dependency will be
+  ///                    scanned.
+  /// @param Consumer The dependency consumer that stores the results.
+  /// @param Controller The controller for the dependency scanning action.
+  /// @return Error of the scanner incurs errors.
   llvm::Error
   computeDependenciesByNameWithContext(StringRef ModuleName,
                                        DependencyConsumer &Consumer,
                                        DependencyActionController &Controller);
+
+  /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
+  /// @return Error if errors occur during finalization.
+  llvm::Error finalizeCompilerInstanceWithContext();
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 
