@@ -455,6 +455,8 @@ static LogicalResult generateLoopNestUsingForOp(
     rewriter.setInsertionPointToEnd(loop.getBody());
     destinationTensors = loop.getRegionIterArgs();
   }
+  if (loops.empty())
+    return success();
 
   SmallVector<Value> tiledResults;
   SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
@@ -463,9 +465,6 @@ static LogicalResult generateLoopNestUsingForOp(
     return rewriter.notifyMatchFailure(
         loc, "failed to generate inner tile loop body");
   }
-  if (loops.empty())
-    return success();
-
   assert(tiledResults.size() == destinationTensors.size() &&
          "Number of results of body should be equal to number of iter args");
 
