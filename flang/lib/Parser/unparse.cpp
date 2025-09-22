@@ -2495,11 +2495,8 @@ public:
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE REDUCTION ");
-    Put("(");
-    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
-    Put(")");
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
