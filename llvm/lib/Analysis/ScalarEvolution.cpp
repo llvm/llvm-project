@@ -16014,16 +16014,16 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
       // Try to strengthen divisibility of SMax/UMax expressions coming from >=
       // 1 conditions.
-      if (auto *SMax = dyn_cast<SCEVSMaxExpr>(Rewritten)) {
-        unsigned MinTrailingZeros = SE.getMinTrailingZeros(SMax->getOperand(1));
-        for (const SCEV *Op : drop_begin(SMax->operands(), 2))
-          MinTrailingZeros =
-              std::min(MinTrailingZeros, SE.getMinTrailingZeros(Op));
-        if (MinTrailingZeros != 0)
-          Rewritten = SE.getSMaxExpr(
-              SE.getConstant(APInt(SMax->getType()->getScalarSizeInBits(), 1)
-                                 .shl(MinTrailingZeros)),
-              SMax);
+      auto *Max = dyn_cast<SCEVMinMaxExpr>(Rewritten);
+      if (Max && isa<SCEVSMaxExpr, SCEVUMaxExpr>(Rewritten) &&
+          Rewritten->getType()->isIntegerTy() && Max->getOperand(0)->isOne()) {
+        APInt CommonMultiple = SE.getConstantMultiple(Max->getOperand(1));
+        for (const SCEV *Op : drop_begin(Max->operands(), 2)) {
+          CommonMultiple = APIntOps::GreatestCommonDivisor(
+              CommonMultiple, SE.getConstantMultiple(Op));
+        }
+        SmallVector<const SCEV *> Ops = {SE.getConstant(CommonMultiple), Max};
+        Rewritten = SE.getMinMaxExpr(Max->getSCEVType(), Ops);
       }
       Guards.RewriteMap.insert({Expr, Rewritten});
     }
