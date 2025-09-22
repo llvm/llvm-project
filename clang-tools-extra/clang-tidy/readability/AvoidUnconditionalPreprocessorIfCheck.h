@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// directives by analyzing `#if` conditions, such as `#if 0` and `#if 1`, etc.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-unconditional-preprocessor-if.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-unconditional-preprocessor-if.html
 class AvoidUnconditionalPreprocessorIfCheck : public ClangTidyCheck {
 public:
   AvoidUnconditionalPreprocessorIfCheck(StringRef Name,

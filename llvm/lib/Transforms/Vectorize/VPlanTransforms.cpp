@@ -1592,11 +1592,12 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
           m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
     assert(Index && "Expected index from ActiveLaneMask instruction");
 
-    auto *II = dyn_cast<VPInstruction>(Index);
-    if (II && II->getOpcode() == VPInstruction::CanonicalIVIncrementForPart) {
-      auto Part = cast<ConstantInt>(II->getOperand(1)->getLiveInIRValue());
-      Phis[Part->getZExtValue()] = Phi;
-    } else
+    uint64_t Part;
+    if (match(Index,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
+                  m_VPValue(), m_ConstantInt(Part))))
+      Phis[Part] = Phi;
+    else
       // Anything other than a CanonicalIVIncrementForPart is part 0
       Phis[0] = Phi;
   }
@@ -1991,12 +1992,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // All VPInstructions that lower to GEPs must have the i8 source element
     // type (as they are PtrAdds), so we omit it.
     return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
-        .Case<VPReplicateRecipe, VPWidenGEPRecipe>([](auto *I) -> Type * {
+        .Case<VPReplicateRecipe>([](auto *I) -> Type * {
           if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
             return GEP->getSourceElementType();
           return nullptr;
         })
-        .Case<VPVectorPointerRecipe>(
+        .Case<VPVectorPointerRecipe, VPWidenGEPRecipe>(
             [](auto *I) { return I->getSourceElementType(); })
         .Default([](auto *) { return nullptr; });
   }

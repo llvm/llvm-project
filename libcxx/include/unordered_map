@@ -2035,12 +2035,12 @@ template <class _Key,
           class            = enable_if_t<!is_integral<_Hash>::value>,
           class            = enable_if_t<!__is_allocator<_Pred>::value>,
           class            = enable_if_t<__is_allocator<_Allocator>::value>>
-unordered_multimap(
-    initializer_list<pair<_Key, _Tp>>,
-    typename allocator_traits<_Allocator>::size_type = 0,
-    _Hash                                            = _Hash(),
-    _Pred                                            = _Pred(),
-    _Allocator = _Allocator()) -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
+unordered_multimap(initializer_list<pair<_Key, _Tp>>,
+                   typename allocator_traits<_Allocator>::size_type = 0,
+                   _Hash                                            = _Hash(),
+                   _Pred                                            = _Pred(),
+                   _Allocator                                       = _Allocator())
+    -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,

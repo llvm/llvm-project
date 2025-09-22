@@ -633,6 +633,8 @@ public:
   NODE(parser, OmpNumTasksClause)
   NODE(OmpNumTasksClause, Modifier)
   NODE(parser, OmpObject)
+  NODE(OmpObject, Invalid)
+  NODE_ENUM(OmpObject::Invalid, Kind)
   NODE(parser, OmpObjectList)
   NODE(parser, OmpOrderClause)
   NODE(OmpOrderClause, Modifier)
