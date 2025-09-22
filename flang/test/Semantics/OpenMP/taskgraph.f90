@@ -1,3 +1,4 @@
+!REQUIRES: openmp_runtime
 !RUN: %python %S/../test_errors.py %s %flang %openmp_flags -fopenmp -fopenmp-version=60
 
 module m
