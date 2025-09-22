@@ -6789,27 +6789,6 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-/// Utility to compare expression locations.
-/// Returns true if expr-loc of LHS is less-than that of RHS.
-/// This function asserts that both expressions have valid expr-locations.
-static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
-  // Assert that neither LHS nor RHS can be null
-  assert(LHS && "LHS expression cannot be null");
-  assert(RHS && "RHS expression cannot be null");
-
-  // Get source locations
-  SourceLocation LocLHS = LHS->getExprLoc();
-  SourceLocation LocRHS = RHS->getExprLoc();
-
-  // Assert that we have valid source locations
-  assert(LocLHS.isValid() && "LHS expression must have valid source location");
-  assert(LocRHS.isValid() && "RHS expression must have valid source location");
-
-  // Compare source locations for deterministic ordering
-  bool result = LocLHS < LocRHS;
-  return result;
-}
-
 // Utility to handle information from clauses associated with a given
 // construct that use mappable expressions (e.g. 'map' clause, 'to' clause).
 // It provides a convenient interface to obtain the information and generate
@@ -6817,8 +6796,9 @@ static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
 class MappableExprsHandler {
 public:
   /// Custom comparator for attach-pointer expressions that compares them by
-  /// complexity (i.e. their component-depth) first, then by their expr-locs if
-  /// they are semantically different.
+  /// complexity (i.e. their component-depth) first, then by the order in which
+  /// they were computed by collectAttachPtrExprInfo(), if they are semantically
+  /// different.
   struct AttachPtrExprComparator {
     const MappableExprsHandler *Handler;
     // Cache of previous equality comparison results.
@@ -6848,8 +6828,8 @@ public:
         // Both have same complexity, now check semantic equality
         if (areEqual(LHS, RHS))
           return false;
-        // Different semantically, compare by location
-        return compareExprLocs(LHS, RHS);
+        // Different semantically, compare by computation order
+        return wasComputedBefore(LHS, RHS);
       }
       if (!DepthLHS.has_value())
         return true; // LHS has lower complexity
@@ -6863,8 +6843,8 @@ public:
       // Same complexity, now check semantic equality
       if (areEqual(LHS, RHS))
         return false;
-      // Different semantically, compare by location
-      return compareExprLocs(LHS, RHS);
+      // Different semantically, compare by computation order
+      return wasComputedBefore(LHS, RHS);
     }
 
   public:
@@ -6883,6 +6863,16 @@ public:
       CachedEqualityComparisons[{LHS, RHS}] = ComparisonResult;
       CachedEqualityComparisons[{RHS, LHS}] = ComparisonResult;
       return ComparisonResult;
+    }
+
+    /// Compare the two attach-ptr expressions by their computation order.
+    /// Returns true iff LHS was computed before RHS by
+    /// collectAttachPtrExprInfo().
+    bool wasComputedBefore(const Expr *LHS, const Expr *RHS) const {
+      const size_t &OrderLHS = Handler->AttachPtrComputationOrderMap.at(LHS);
+      const size_t &OrderRHS = Handler->AttachPtrComputationOrderMap.at(RHS);
+
+      return OrderLHS < OrderRHS;
     }
 
   private:
@@ -7228,8 +7218,8 @@ private:
   llvm::DenseMap<const ValueDecl *, const OMPMapClause *> LambdasMap;
 
   /// Map from component lists to their attach pointer expressions.
-  mutable llvm::DenseMap<
-      OMPClauseMappableExprCommon::MappableExprComponentListRef, const Expr *>
+  llvm::DenseMap<OMPClauseMappableExprCommon::MappableExprComponentListRef,
+                 const Expr *>
       AttachPtrExprMap;
 
   /// Map from attach pointer expressions to their component depth.
@@ -7240,8 +7230,13 @@ private:
   /// dereferences in an expr as an indicator of its complexity, instead of the
   /// component-depth. That would be needed for us to treat `p[1]`, `*(p + 10)`,
   /// `*(p + 5 + 5)` together.
-  mutable llvm::DenseMap<const Expr *, std::optional<size_t>>
+  llvm::DenseMap<const Expr *, std::optional<size_t>>
       AttachPtrComponentDepthMap = {{nullptr, std::nullopt}};
+
+  /// Map from attach pointer expressions to the order they were computed in, in
+  /// collectAttachPtrExprInfo().
+  llvm::DenseMap<const Expr *, size_t> AttachPtrComputationOrderMap = {
+      {nullptr, 0}};
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
@@ -8645,9 +8640,13 @@ private:
     return true;
   }
 
-  // A wrapper around OMPClauseMappableExprCommon::findAttachPtrExpr. that
-  // accepts \p CurDir instead of an OpenMPDirectiveKind.
-  static std::pair<const Expr *, std::optional<size_t>> findAttachPtrExpr(
+  /// Computes the attach-ptr expr for \p Components, and updates various maps
+  /// with the information.
+  /// It internally calls OMPClauseMappableExprCommon::findAttachPtrExpr()
+  /// with the OpenMPDirectiveKind extracted from \p CurDir.
+  /// It updates AttachPtrComputationOrderMap, AttachPtrComponentDepthMap, and
+  /// AttachPtrExprMap.
+  void collectAttachPtrExprInfo(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
       llvm::PointerUnion<const OMPExecutableDirective *,
                          const OMPDeclareMapperDecl *>
@@ -8658,8 +8657,14 @@ private:
             ? OMPD_declare_mapper
             : cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind();
 
-    return OMPClauseMappableExprCommon::findAttachPtrExpr(Components,
-                                                          CurDirectiveID);
+    const auto &[AttachPtrExpr, Depth] =
+        OMPClauseMappableExprCommon::findAttachPtrExpr(Components,
+                                                       CurDirectiveID);
+
+    AttachPtrComputationOrderMap.try_emplace(
+        AttachPtrExpr, AttachPtrComputationOrderMap.size());
+    AttachPtrComponentDepthMap.try_emplace(AttachPtrExpr, Depth);
+    AttachPtrExprMap.try_emplace(Components, AttachPtrExpr);
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -9198,34 +9203,31 @@ public:
       }
     }
 
-    auto cacheAttachPtrExprsForClauseComponents = [this](const auto *C) {
+    auto CollectAttachPtrExprsForClauseComponents = [this](const auto *C) {
       for (auto L : C->component_lists()) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
             std::get<1>(L);
-        if (!Components.empty()) {
-          auto [AttachPtrExpr, Depth] = findAttachPtrExpr(Components, CurDir);
-          AttachPtrExprMap[Components] = AttachPtrExpr;
-          AttachPtrComponentDepthMap[AttachPtrExpr] = Depth;
-        }
+        if (!Components.empty())
+          collectAttachPtrExprInfo(Components, CurDir);
       }
     };
 
     // Populate the AttachPtrExprMap for all component lists from map-related
     // clauses.
     for (const auto *C : Dir.getClausesOfKind<OMPMapClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
     for (const auto *C : Dir.getClausesOfKind<OMPToClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
     for (const auto *C : Dir.getClausesOfKind<OMPFromClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
     for (const auto *C : Dir.getClausesOfKind<OMPUseDevicePtrClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
     for (const auto *C : Dir.getClausesOfKind<OMPUseDeviceAddrClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
     for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
     for (const auto *C : Dir.getClausesOfKind<OMPHasDeviceAddrClause>())
-      cacheAttachPtrExprsForClauseComponents(C);
+      CollectAttachPtrExprsForClauseComponents(C);
   }
 
   /// Constructor for the declare mapper directive.
