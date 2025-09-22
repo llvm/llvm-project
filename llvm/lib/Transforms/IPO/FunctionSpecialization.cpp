@@ -796,18 +796,19 @@ bool FunctionSpecializer::run() {
       if (Count && !ProfcheckDisableMetadataFixes) {
         std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
             Clone->getEntryCount();
-        assert(MaybeCloneCount && "Clone entry count was not set!");
-        uint64_t CallCount = *Count + MaybeCloneCount->getCount();
-        Clone->setEntryCount(CallCount);
-        if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
-                S.F->getEntryCount()) {
-          uint64_t OriginalCount = MaybeOriginalCount->getCount();
-          if (OriginalCount >= *Count) {
-            S.F->setEntryCount(OriginalCount - *Count);
-          } else {
-            // This should generally not happen as that would mean there are
-            // more computed calls to the function than what was recorded.
-            LLVM_DEBUG(S.F->setEntryCount(0));
+        if (MaybeCloneCount) {
+          uint64_t CallCount = *Count + MaybeCloneCount->getCount();
+          Clone->setEntryCount(CallCount);
+          if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
+                  S.F->getEntryCount()) {
+            uint64_t OriginalCount = MaybeOriginalCount->getCount();
+            if (OriginalCount >= *Count) {
+              S.F->setEntryCount(OriginalCount - *Count);
+            } else {
+              // This should generally not happen as that would mean there are
+              // more computed calls to the function than what was recorded.
+              LLVM_DEBUG(S.F->setEntryCount(0));
+            }
           }
         }
       }
