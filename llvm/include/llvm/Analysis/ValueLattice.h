@@ -80,6 +80,11 @@ class ValueLatticeElement {
   /// Number of times a constant range has been extended with widening enabled.
   unsigned NumRangeExtensions : 8;
 
+  // Pointer constants derived from equality predicates may have different
+  // provenance than the original value. Limit constant propagation if this
+  // happens to be the case.
+  bool MayHaveDifferentProvenance = false;
+
   /// The union either stores a pointer to a constant or a constant range,
   /// associated to the lattice element. We have to ensure that Range is
   /// initialized or destroyed when changing state to or from constantrange.
@@ -148,7 +153,8 @@ public:
   ~ValueLatticeElement() { destroy(); }
 
   ValueLatticeElement(const ValueLatticeElement &Other)
-      : Tag(Other.Tag), NumRangeExtensions(0) {
+      : Tag(Other.Tag), NumRangeExtensions(0),
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -167,7 +173,8 @@ public:
   }
 
   ValueLatticeElement(ValueLatticeElement &&Other)
-      : Tag(Other.Tag), NumRangeExtensions(0) {
+      : Tag(Other.Tag), NumRangeExtensions(0),
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -492,6 +499,9 @@ public:
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
+
+  bool mayHaveDifferentProvenance() const { return MayHaveDifferentProvenance; }
+  void setMayHaveDifferentProvenance(bool V) { MayHaveDifferentProvenance = V; }
 };
 
 static_assert(sizeof(ValueLatticeElement) <= 40,
