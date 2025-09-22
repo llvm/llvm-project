@@ -588,13 +588,16 @@ public:
     return OrderedKernels;
   }
 
-  static void partitionVariablesIntoIndirectStrategies(
+  void partitionVariablesIntoIndirectStrategies(
       Module &M, LDSUsesInfoTy const &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly,
       DenseSet<GlobalVariable *> &ModuleScopeVariables,
       DenseSet<GlobalVariable *> &TableLookupVariables,
       DenseSet<GlobalVariable *> &KernelAccessVariables,
       DenseSet<GlobalVariable *> &DynamicVariables) {
+
+    if (TM.getOptLevel() == CodeGenOptLevel::None)
+      LoweringKindLoc = LoweringKind::table;
 
     GlobalVariable *HybridModuleRoot =
         LoweringKindLoc != LoweringKind::hybrid
@@ -1188,6 +1191,8 @@ public:
           // Allocated at zero, recorded once on construction, not once per
           // kernel
           Offset += DL.getTypeAllocSize(MaybeModuleScopeStruct->getValueType());
+          LLVM_DEBUG(dbgs() << "amdgpu-lds-size after ModuleScopeStruct"
+                            << Offset << "\n");
         }
 
         if (AllocateKernelScopeStruct) {
@@ -1195,6 +1200,8 @@ public:
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
           Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
+          LLVM_DEBUG(dbgs()
+                     << "amdgpu-lds-size after KernelStruct" << Offset << "\n");
         }
 
         // If there is dynamic allocation, the alignment needed is included in
@@ -1205,6 +1212,8 @@ public:
           GlobalVariable *DynamicVariable = KernelToCreatedDynamicLDS[&Func];
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, DynamicVariable));
           recordLDSAbsoluteAddress(&M, DynamicVariable, Offset);
+          LLVM_DEBUG(dbgs() << "amdgpu-lds-size after DynamicVariable" << Offset
+                            << "\n");
         }
 
         if (Offset != 0) {
