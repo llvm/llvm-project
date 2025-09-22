@@ -409,7 +409,7 @@ public:
   /// getEndLoc - Get the location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Token:
       OS << "Token: " << getToken() << "\n";
@@ -422,29 +422,43 @@ public:
       break;
     case k_MemoryRegRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+#" << getMemIndexReg() << "+"
-         << *getMemOffset() << "\n";
+      OS << "Mem: #" << getMemBase() << "+#" << getMemIndexReg() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryRegImmImm:
       assert(getMemIndex() != nullptr && getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+" << *getMemIndex() << "+"
-         << *getMemOffset() << "\n";
+      OS << "Mem: #" << getMemBase() << "+";
+      MAI.printExpr(OS, *getMemIndex());
+      OS << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryZeroRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: 0+#" << getMemIndexReg() << "+" << *getMemOffset() << "\n";
+      OS << "Mem: 0+#" << getMemIndexReg() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryZeroImmImm:
       assert(getMemIndex() != nullptr && getMemOffset() != nullptr);
-      OS << "Mem: 0+" << *getMemIndex() << "+" << *getMemOffset() << "\n";
+      OS << "Mem: 0+";
+      MAI.printExpr(OS, *getMemIndex());
+      OS << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+" << *getMemOffset() << "\n";
+      OS << "Mem: #" << getMemBase() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryZeroImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: 0+" << *getMemOffset() << "\n";
+      OS << "Mem: 0+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_CCOp:
       OS << "CCOp: " << getCCVal() << "\n";

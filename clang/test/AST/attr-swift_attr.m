@@ -43,7 +43,7 @@ typedef struct {
   void *ptr;
 } SendableStruct;
 
-// CHECK-LABEL: TypedefDecl {{.*}} SendableStruct 'struct SendableStruct':'SendableStruct'
+// CHECK-LABEL: TypedefDecl {{.*}} SendableStruct 'struct SendableStruct'
 // CHECK: SwiftAttrAttr {{.*}} "@Sendable"
 
 @interface TestAttrPlacementInBlock1

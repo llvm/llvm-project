@@ -31,6 +31,7 @@ class ModulePass;
 class Pass;
 class TargetMachine;
 class raw_ostream;
+enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
 namespace vfs {
@@ -438,10 +439,6 @@ LLVM_ABI extern char &UnpackMachineBundlesID;
 LLVM_ABI FunctionPass *
 createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
 
-/// FinalizeMachineBundles - This pass finalize machine instruction
-/// bundles (created earlier, e.g. during pre-RA scheduling).
-LLVM_ABI extern char &FinalizeMachineBundlesID;
-
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
 /// the intrinsic for later emission to the StackMap.
@@ -524,7 +521,7 @@ LLVM_ABI ModulePass *createGlobalMergeFuncPass();
 
 /// This pass performs outlining on machine instructions directly before
 /// printing assembly.
-LLVM_ABI ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
+LLVM_ABI ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode);
 
 /// This pass expands the reduction intrinsics into sequences of shuffles.
 LLVM_ABI FunctionPass *createExpandReductionsPass();
@@ -553,6 +550,9 @@ LLVM_ABI FunctionPass *createCFIFixup();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();
+
+// Expands floating point instructions.
+FunctionPass *createExpandFpPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -619,7 +619,7 @@ LLVM_ABI FunctionPass *createSelectOptimizePass();
 LLVM_ABI FunctionPass *createCallBrPass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
-ModulePass *createWindowsSecureHotPatchingPass();
+LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();

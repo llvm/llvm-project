@@ -20,9 +20,7 @@ class MCGOFFStreamer : public MCObjectStreamer {
 public:
   MCGOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                  std::unique_ptr<MCObjectWriter> OW,
-                 std::unique_ptr<MCCodeEmitter> Emitter)
-      : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
-                         std::move(Emitter)) {}
+                 std::unique_ptr<MCCodeEmitter> Emitter);
 
   ~MCGOFFStreamer() override;
 
@@ -35,7 +33,6 @@ public:
   }
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override {}
 };
 
 } // end namespace llvm

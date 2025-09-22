@@ -75,7 +75,7 @@ bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
 unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                           const MCValue &Target,
                                           bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   uint8_t Specifier = Target.getSpecifier();
   auto CheckFDPIC = [&](uint32_t Type) {
     if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
@@ -97,15 +97,15 @@ unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ARM::S_TLSLDM_FDPIC:
   case ARM::S_TLSLDO:
   case ARM::S_TPOFF:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_ARM_NONE;

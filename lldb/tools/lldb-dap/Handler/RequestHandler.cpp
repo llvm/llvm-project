@@ -51,6 +51,33 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
+static void
+SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
+                   lldb::SBLaunchInfo &launch_info) {
+  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
+  for (size_t i = 0; i < n; i++) {
+    std::optional<std::string> path;
+    if (stdio.size() < i)
+      path = stdio.back();
+    else
+      path = stdio[i];
+    if (!path)
+      continue;
+    switch (i) {
+    case 0:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      break;
+    case 1:
+    case 2:
+      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      break;
+    default:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      break;
+    }
+  }
+}
+
 static llvm::Error
 RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
   if (!dap.clientFeatures.contains(
@@ -80,7 +107,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid);
+      arguments.cwd, comm_file.m_path, debugger_pid,
+      arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
@@ -176,6 +204,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     launch_info.SetEnvironment(env, true);
   }
 
+  if (!arguments.stdio.empty() && !arguments.disableSTDIO)
+    SetupIORedirection(arguments.stdio, launch_info);
+
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
@@ -192,7 +223,7 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     // about process state changes during the launch.
     ScopeSyncMode scope_sync_mode(dap.debugger);
 
-    if (arguments.runInTerminal) {
+    if (arguments.console != protocol::eConsoleInternal) {
       if (llvm::Error err = RunInTerminal(dap, arguments))
         return err;
     } else if (launchCommands.empty()) {

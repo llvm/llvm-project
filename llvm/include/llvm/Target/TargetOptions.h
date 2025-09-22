@@ -120,7 +120,7 @@ public:
   TargetOptions()
       : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
         NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
+        EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -133,10 +133,11 @@ public:
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
-        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
-        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
+        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
+        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
+        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
+        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
+        DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true),
@@ -184,12 +185,6 @@ public:
   /// specifies that optimizations are allowed to treat the sign of a zero
   /// argument or result as insignificant.
   unsigned NoSignedZerosFPMath : 1;
-
-  /// ApproxFuncFPMath - This flag is enabled when the
-  /// -enable-approx-func-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to substitute math functions
-  /// with approximate calculations
-  unsigned ApproxFuncFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -318,6 +313,9 @@ public:
   /// Memory Buffer that contains information on sampled basic blocks and used
   /// to selectively generate basic block sections.
   std::shared_ptr<MemoryBuffer> BBSectionsFuncListBuf;
+
+  /// Emit section containing call graph metadata.
+  unsigned EmitCallGraphSection : 1;
 
   /// The flag enables call site info production. It is used only for debug
   /// info, and it is restricted only to optimized code. This can be used for

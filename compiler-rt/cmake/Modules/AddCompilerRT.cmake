@@ -162,7 +162,9 @@ endmacro()
 #                         OBJECT_LIBS <object libraries to use as sources>
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>
-#                         EXTENSIONS <boolean>)
+#                         EXTENSIONS <boolean>
+#                         C_STANDARD <version>
+#                         CXX_STANDARD <version>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
     message(FATAL_ERROR
@@ -171,7 +173,7 @@ function(add_compiler_rt_runtime name type)
   endif()
   cmake_parse_arguments(LIB
     ""
-    "PARENT_TARGET"
+    "PARENT_TARGET;C_STANDARD;CXX_STANDARD"
     "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS"
     ${ARGN})
   set(libnames)
@@ -360,6 +362,12 @@ function(add_compiler_rt_runtime name type)
       set_target_link_flags(${libname} ${extra_link_flags_${libname}})
       set_property(TARGET ${libname} APPEND PROPERTY
                    COMPILE_DEFINITIONS ${LIB_DEFS})
+      if(LIB_C_STANDARD)
+        set_property(TARGET ${libname} PROPERTY C_STANDARD ${LIB_C_STANDARD})
+      endif()
+      if(LIB_CXX_STANDARD)
+        set_property(TARGET ${libname} PROPERTY CXX_STANDARD ${LIB_CXX_STANDARD})
+      endif()
       set_target_output_directories(${libname} ${output_dir_${libname}})
       install(TARGETS ${libname}
         ARCHIVE DESTINATION ${install_dir_${libname}}
@@ -584,7 +592,7 @@ endmacro(add_compiler_rt_script src name)
 
 
 macro(add_compiler_rt_cfg target_name file_name component arch)
-  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
+  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/AIX/${file_name}")
   get_compiler_rt_output_dir(${arch} output_dir)
   set(dst_file "${output_dir}/${file_name}")
   add_custom_command(OUTPUT ${dst_file}

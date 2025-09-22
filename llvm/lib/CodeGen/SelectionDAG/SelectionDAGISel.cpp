@@ -396,9 +396,7 @@ void SelectionDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addPreserved<GCModuleInfo>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
-#ifndef NDEBUG
   AU.addRequired<TargetTransformInfoWrapperPass>();
-#endif
   AU.addRequired<AssumptionCacheTracker>();
   if (UseMBPI && OptLevel != CodeGenOptLevel::None)
       AU.addRequired<BranchProbabilityInfoWrapperPass>();
@@ -1731,9 +1729,17 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     // Setup an EH landing-pad block.
     FuncInfo->ExceptionPointerVirtReg = Register();
     FuncInfo->ExceptionSelectorVirtReg = Register();
-    if (LLVMBB->isEHPad())
+    if (LLVMBB->isEHPad()) {
       if (!PrepareEHLandingPad())
         continue;
+
+      if (!FastIS) {
+        SDValue NewRoot = TLI->lowerEHPadEntry(CurDAG->getRoot(),
+                                               SDB->getCurSDLoc(), *CurDAG);
+        if (NewRoot && NewRoot != CurDAG->getRoot())
+          CurDAG->setRoot(NewRoot);
+      }
+    }
 
     // Before doing SelectionDAG ISel, see if FastISel has been requested.
     if (FastIS) {

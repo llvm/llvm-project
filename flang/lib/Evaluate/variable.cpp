@@ -212,21 +212,17 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   }
   if (!result) { // error cases
     if (*lbi < 1) {
-      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
-        context.messages().Say(common::UsageWarning::Bounds,
-            "Lower bound (%jd) on substring is less than one"_warn_en_US,
-            static_cast<std::intmax_t>(*lbi));
-      }
+      context.Warn(common::UsageWarning::Bounds,
+          "Lower bound (%jd) on substring is less than one"_warn_en_US,
+          static_cast<std::intmax_t>(*lbi));
       *lbi = 1;
       lower_ = AsExpr(Constant<SubscriptInteger>{1});
     }
     if (length && *ubi > *length) {
-      if (context.languageFeatures().ShouldWarn(common::UsageWarning::Bounds)) {
-        context.messages().Say(common::UsageWarning::Bounds,
-            "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
-            static_cast<std::intmax_t>(*ubi),
-            static_cast<std::intmax_t>(*length));
-      }
+      context.Warn(common::UsageWarning::Bounds,
+          "Upper bound (%jd) on substring is greater than character length (%jd)"_warn_en_US,
+          static_cast<std::intmax_t>(*ubi),
+          static_cast<std::intmax_t>(*length));
       *ubi = *length;
       upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
     }

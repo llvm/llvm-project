@@ -35,7 +35,12 @@ set(BOLT_RT_FLAGS
   -fno-exceptions
   -fno-rtti
   -fno-stack-protector
-  -fPIC)
+  -fPIC
+  # Runtime currently assumes omitted frame pointers for functions marked __attribute((naked)).
+  # Protect against distros adding -fno-omit-frame-pointer and compiling with GCC.
+  # Refs: llvm/llvm-project#148595 https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77882
+  -fomit-frame-pointer
+)
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
   set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} 
     -mno-sse 

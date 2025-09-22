@@ -42,7 +42,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_rmw_builtin() {
   //    &Context.getTargetInfo().getLongDoubleFormat() ==
   //        &llvm::APFloat::x87DoubleExtended())
   // For more info
-  // https://github.com/llvm/llvm-project/issues/68602
+  // https://llvm.org/PR68602
   // https://reviews.llvm.org/D53965
   return !std::__is_fp80_long_double<_Tp>();
 #  endif

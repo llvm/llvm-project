@@ -271,7 +271,7 @@ TextEncodingConverterIconv::convertString(StringRef Source,
     // Setup the input. Use nullptr to reset iconv state if input length is
     // zero.
     size_t InputLength = Source.size();
-    char *Input = InputLength ? const_cast<char *>(Source.data()) : "";
+    char *Input = const_cast<char *>(InputLength ? Source.data() : "");
     Ret = iconv(ConvDesc, &Input, &InputLength, &Output, &OutputLength);
     if (Ret != 0) {
       if (auto EC = HandleError(Ret))

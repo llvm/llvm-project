@@ -49,6 +49,7 @@ define <2 x bfloat> @struct_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsr
 ; GFX1200-NEXT:    v_readfirstlane_b32 s3, v7
 ; GFX1200-NEXT:    s_wait_alu 0xf1ff
 ; GFX1200-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
 ; GFX1200-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
 ; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0
@@ -88,6 +89,7 @@ define void @struct_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__vgpr_rsrc__vgp
 ; GFX1200-NEXT:    v_readfirstlane_b32 s3, v7
 ; GFX1200-NEXT:    s_wait_alu 0xf1ff
 ; GFX1200-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
 ; GFX1200-NEXT:    v_cmp_eq_u32_e64 s1, s3, v7
 ; GFX1200-NEXT:    s_and_b32 s0, vcc_lo, s0

@@ -11,4 +11,4 @@
 export module dummy;
 
 //--- test.cpp
-export import dummy; // expected-error {{export declaration can only be used within a module purview}}
+export import dummy; // expected-error {{export declaration can only be used within a module interface}}

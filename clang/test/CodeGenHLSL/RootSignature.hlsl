@@ -76,7 +76,8 @@ void RootDescriptorsEntry() {}
 // CHECK-SAME: i32 2, i32 3, i32 5,
 
 // checking mipLODBias, maxAnisotropy, comparisonFunc, borderColor
-// CHECK-SAME: float 0x40403999A0000000, i32 9, i32 3, i32 2,
+// note: the hex value is the float bit representation of 12.45
+// CHECK-SAME: float 0x4028E66660000000, i32 9, i32 3, i32 2,
 
 // checking minLOD, maxLOD
 // CHECK-SAME: float -1.280000e+02, float 1.280000e+02,
@@ -90,7 +91,7 @@ void RootDescriptorsEntry() {}
   " addressU = TEXTURE_ADDRESS_MIRROR, " \
   " addressV = TEXTURE_ADDRESS_CLAMP, " \
   " addressW = TEXTURE_ADDRESS_MIRRORONCE, " \
-  " mipLODBias = 32.45f, maxAnisotropy = 9, " \
+  " mipLODBias = 12.45f, maxAnisotropy = 9, " \
   " comparisonFunc = COMPARISON_EQUAL, " \
   " borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE, " \
   " minLOD = -128.f, maxLOD = 128.f, " \

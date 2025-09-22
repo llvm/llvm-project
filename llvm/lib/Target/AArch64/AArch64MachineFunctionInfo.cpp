@@ -25,7 +25,13 @@ using namespace llvm;
 
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
-    : HasRedZone(MFI.hasRedZone()) {}
+    : HasRedZone(MFI.hasRedZone()),
+      StackSizeSVE(MFI.hasCalculatedStackSizeSVE()
+                       ? std::optional<uint64_t>(MFI.getStackSizeSVE())
+                       : std::nullopt),
+      HasStackFrame(MFI.hasStackFrame()
+                        ? std::optional<bool>(MFI.hasStackFrame())
+                        : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -35,6 +41,10 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
+  if (YamlMFI.StackSizeSVE)
+    setStackSizeSVE(*YamlMFI.StackSizeSVE);
+  if (YamlMFI.HasStackFrame)
+    setHasStackFrame(*YamlMFI.HasStackFrame);
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {

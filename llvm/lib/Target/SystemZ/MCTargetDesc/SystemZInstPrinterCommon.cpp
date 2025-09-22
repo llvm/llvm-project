@@ -67,7 +67,7 @@ void SystemZInstPrinterCommon::printUImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   uint64_t Value = static_cast<uint64_t>(MO.getImm());
@@ -80,7 +80,7 @@ void SystemZInstPrinterCommon::printSImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   int64_t Value = MI->getOperand(OpNum).getImm();

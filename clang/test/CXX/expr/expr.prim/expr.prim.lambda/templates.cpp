@@ -3,7 +3,7 @@
 template<typename T>
 void test_attributes() {
   // FIXME: GCC accepts [[gnu::noreturn]] here.
-  auto nrl = []() [[gnu::noreturn]] {}; // expected-warning{{attribute 'noreturn' ignored}}
+  auto nrl = []() [[gnu::noreturn]] {}; // expected-warning{{attribute 'gnu::noreturn' ignored}}
 }
 
 template void test_attributes<int>();

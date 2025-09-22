@@ -318,14 +318,15 @@ static void printMemoryTags(const DataExtractor &DE, Stream *s,
 }
 
 static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
-                                                   size_t byte_size) {
+                                                   size_t byte_size,
+                                                   lldb::Format format) {
   if (target_sp) {
     auto type_system_or_err =
       target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (!type_system_or_err)
       llvm::consumeError(type_system_or_err.takeError());
     else if (auto ts = *type_system_or_err)
-      return ts->GetFloatTypeSemantics(byte_size);
+      return ts->GetFloatTypeSemantics(byte_size, format);
   }
   // No target, just make a reasonable guess
   switch(byte_size) {
@@ -335,7 +336,13 @@ static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
       return llvm::APFloat::IEEEsingle();
     case 8:
       return llvm::APFloat::IEEEdouble();
-  }
+    case 16:
+      if (format == eFormatFloat128) {
+        return llvm::APFloat::IEEEquad();
+      }
+      // Otherwise it's ambigious whether a 16-byte float is a float128 or a
+      // target-specific long double.
+    }
   return llvm::APFloat::Bogus();
 }
 
@@ -653,6 +660,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       }
     } break;
 
+    case eFormatFloat128:
     case eFormatFloat: {
       TargetSP target_sp;
       if (exe_scope)
@@ -666,7 +674,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       const unsigned format_precision = 0;
 
       const llvm::fltSemantics &semantics =
-          GetFloatSemantics(target_sp, item_byte_size);
+          GetFloatSemantics(target_sp, item_byte_size, item_format);
 
       // Recalculate the byte size in case of a difference. This is possible
       // when item_byte_size is 16 (128-bit), because you could get back the

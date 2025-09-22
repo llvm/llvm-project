@@ -35,7 +35,7 @@ void test_strip(int *dp, int (*fp)(int)) {
   int (*fr)(int) = __builtin_ptrauth_strip(fp, VALID_CODE_KEY);
   fr = __builtin_ptrauth_strip(fp, INVALID_KEY); // expected-error {{does not identify a valid pointer authentication key for the current target}}
 
-  float *mismatch = __builtin_ptrauth_strip(dp, VALID_DATA_KEY); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+  float *mismatch = __builtin_ptrauth_strip(dp, VALID_DATA_KEY); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
 
 void test_blend_discriminator(int *dp, int (*fp)(int), int value) {
@@ -55,9 +55,9 @@ void test_string_discriminator(const char *str) {
   (void) __builtin_ptrauth_string_discriminator("test string"); // no warning
 
   __builtin_ptrauth_string_discriminator(str); // expected-error {{argument must be a string literal}}
-  __builtin_ptrauth_string_discriminator(L"wide test"); // expected-error {{argument must be a string literal}} expected-warning {{incompatible pointer types passing 'int[10]' to parameter of type 'const char *'}}
+  __builtin_ptrauth_string_discriminator(L"wide test"); // expected-error {{argument must be a string literal}} expected-error {{incompatible pointer types passing 'int[10]' to parameter of type 'const char *'}}
 
-  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type 'unsigned long'}}
+  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type '__size_t'}}
 }
 
 
@@ -77,7 +77,7 @@ void test_sign_unauthenticated(int *dp, int (*fp)(int)) {
   int (*fr)(int) = __builtin_ptrauth_sign_unauthenticated(fp, VALID_CODE_KEY, 0);
   fr = __builtin_ptrauth_sign_unauthenticated(fp, INVALID_KEY, 0); // expected-error {{does not identify a valid pointer authentication key for the current target}}
 
-  float *mismatch = __builtin_ptrauth_sign_unauthenticated(dp, VALID_DATA_KEY, 0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+  float *mismatch = __builtin_ptrauth_sign_unauthenticated(dp, VALID_DATA_KEY, 0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
 
 void test_auth(int *dp, int (*fp)(int)) {
@@ -96,7 +96,7 @@ void test_auth(int *dp, int (*fp)(int)) {
   int (*fr)(int) = __builtin_ptrauth_auth(fp, VALID_CODE_KEY, 0);
   fr = __builtin_ptrauth_auth(fp, INVALID_KEY, 0); // expected-error {{does not identify a valid pointer authentication key for the current target}}
 
-  float *mismatch = __builtin_ptrauth_auth(dp, VALID_DATA_KEY, 0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+  float *mismatch = __builtin_ptrauth_auth(dp, VALID_DATA_KEY, 0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
 
 void test_auth_and_resign(int *dp, int (*fp)(int)) {
@@ -119,7 +119,7 @@ void test_auth_and_resign(int *dp, int (*fp)(int)) {
   fr = __builtin_ptrauth_auth_and_resign(fp, INVALID_KEY, 0, VALID_CODE_KEY, dp); // expected-error {{does not identify a valid pointer authentication key for the current target}}
   fr = __builtin_ptrauth_auth_and_resign(fp, VALID_CODE_KEY, 0, INVALID_KEY, dp); // expected-error {{does not identify a valid pointer authentication key for the current target}}
 
-  float *mismatch = __builtin_ptrauth_auth_and_resign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+  float *mismatch = __builtin_ptrauth_auth_and_resign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
 
 void test_sign_generic_data(int *dp) {
@@ -152,7 +152,7 @@ int *t_cst_sig3 = __builtin_ptrauth_sign_constant(mismatched_type, VALID_DATA_KE
 int *t_cst_sig4 = __builtin_ptrauth_sign_constant(&dv, mismatched_type, 0); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
 int *t_cst_sig5 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, mismatched_type); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
 
-float *t_cst_result = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+float *t_cst_result = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 
 int *t_cst_valid1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
 int *t_cst_valid2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv, 0));
@@ -184,7 +184,7 @@ void test_sign_constant(int *dp, fp_t fp) {
   int *sig4 = __builtin_ptrauth_sign_constant(&dv, mismatched_type, 0); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
   int *sig5 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, mismatched_type); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
 
-  float *result = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+  float *result = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 
   int *valid1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
   int *valid2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv, 0));

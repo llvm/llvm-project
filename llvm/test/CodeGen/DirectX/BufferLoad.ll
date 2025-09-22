@@ -11,7 +11,7 @@ define void @loadv4f32() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -70,7 +70,7 @@ define void @index_dynamic(i32 %bufindex, i32 %elemindex) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[LOAD:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 %bufindex, i32 undef) #[[#ATTR]]
   %load = call {<4 x float>, i1} @llvm.dx.resource.load.typedbuffer(
@@ -106,7 +106,7 @@ define void @loadf32() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", float, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %load0 = call {float, i1} @llvm.dx.resource.load.typedbuffer(
@@ -125,7 +125,7 @@ define void @loadv2f32() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <2 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call {<2 x float>, i1} @llvm.dx.resource.load.typedbuffer(
@@ -139,7 +139,7 @@ define void @loadv4f32_checkbit() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call {<4 x float>, i1} @llvm.dx.resource.load.typedbuffer.f32(
@@ -160,7 +160,7 @@ define void @loadv4i32() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4i32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call {<4 x i32>, i1} @llvm.dx.resource.load.typedbuffer(
@@ -174,7 +174,7 @@ define void @loadv4f16() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x half>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f16_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.f16 @dx.op.bufferLoad.f16(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call {<4 x half>, i1} @llvm.dx.resource.load.typedbuffer(
@@ -188,7 +188,7 @@ define void @loadv4i16() {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i16>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4i16_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0:%.*]] = call %dx.types.ResRet.i16 @dx.op.bufferLoad.i16(i32 68, %dx.types.Handle [[HANDLE]], i32 0, i32 undef) #[[#ATTR]]
   %data0 = call {<4 x i16>, i1} @llvm.dx.resource.load.typedbuffer(
@@ -202,7 +202,7 @@ define void @loadf64() {
   ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 1, i32 1, i32 0, i8 1 }, i32 1, i1 false) #0
   %buffer = call target("dx.TypedBuffer", double, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]], %dx.types.ResourceProperties { i32 4106, i32 266 }) #0
   %load = call { <2 x i32>, i1 } @llvm.dx.resource.load.typedbuffer(
@@ -218,7 +218,7 @@ define void @loadv2f64() {
   ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 1, i32 1, i32 0, i8 1 }, i32 1, i1 false) #0
   %buffer = call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]], %dx.types.ResourceProperties { i32 4106, i32 522 }) #0
   %load = call { <4 x i32>, i1 } @llvm.dx.resource.load.typedbuffer(

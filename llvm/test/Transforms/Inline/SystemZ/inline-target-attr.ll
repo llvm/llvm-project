@@ -12,28 +12,28 @@ entry:
 
 declare i32 @baz(...) #0
 
-define i32 @bar() #1 {
+define i32 @features_subset() #1 {
 entry:
   %call = call i32 @foo()
   ret i32 %call
-; CHECK-LABEL: bar
-; CHECK: call i32 @foo()
-}
-
-define i32 @qux() #0 {
-entry:
-  %call = call i32 @foo()
-  ret i32 %call
-; CHECK-LABEL: qux
+; CHECK-LABEL: features_subset
 ; CHECK: call i32 (...) @baz()
 }
 
-define i32 @quux() #2 {
+define i32 @features_equal() #0 {
 entry:
-  %call = call i32 @bar()
+  %call = call i32 @foo()
   ret i32 %call
-; CHECK-LABEL: quux
-; CHECK: call i32 @bar()
+; CHECK-LABEL: features_equal
+; CHECK: call i32 (...) @baz()
+}
+
+define i32 @features_different() #2 {
+entry:
+  %call = call i32 @foo()
+  ret i32 %call
+; CHECK-LABEL: features_different
+; CHECK: call i32 @foo()
 }
 
 

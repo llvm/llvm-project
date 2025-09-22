@@ -198,6 +198,9 @@ def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 /// Argument is dead if the call unwinds.
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
+/// Argument is dead upon function return.
+def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
+
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
@@ -403,7 +406,6 @@ def AllowDirectAccessInHotPatchFunction
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
-def ApproxFuncFPMath : StrBoolAttr<"approx-func-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
@@ -468,7 +470,6 @@ class MergeRule<string F> {
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
-def : MergeRule<"setAND<ApproxFuncFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;

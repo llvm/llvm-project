@@ -34,7 +34,7 @@ define void @test() #0 {
   ;   int2 d;
   ; }
   %CB1.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB1, 24, 0, 4, 8, 16))
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @CB1.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @CB1.str)
   ; cbuffer CB2 : register(b0) {
   ;   float a;
   ;   double b;
@@ -46,7 +46,7 @@ define void @test() #0 {
   ;}
 
   %CB2.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB2, 36, 0, 8, 16, 20, 22, 24, 32))
-            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr @CB2.str)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr @CB2.str)
   ; cbuffer CB3 : register(b5) {
   ;   double B0;
   ;   float3 B1;
@@ -59,7 +59,7 @@ define void @test() #0 {
   ;   half3 B8;
   ; }
   %CB3.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_MyConstants, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90))
-            @llvm.dx.resource.handlefrombinding(i32 15, i32 5, i32 1, i32 0, i1 false, ptr @MyConstants.str)
+            @llvm.dx.resource.handlefrombinding(i32 15, i32 5, i32 1, i32 0, ptr @MyConstants.str)
 
   ret void
 }

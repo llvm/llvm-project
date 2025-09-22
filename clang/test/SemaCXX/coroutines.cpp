@@ -1396,7 +1396,7 @@ struct bad_promise_deleted_constructor {
 
 coro<bad_promise_deleted_constructor>
 bad_coroutine_calls_deleted_promise_constructor() {
-  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
+  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
   co_return;
 }
 
@@ -1463,7 +1463,7 @@ struct bad_promise_no_matching_constructor {
 
 coro<bad_promise_no_matching_constructor>
 bad_coroutine_calls_with_no_matching_constructor(int, int) {
-  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
+  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
   co_return;
 }
 

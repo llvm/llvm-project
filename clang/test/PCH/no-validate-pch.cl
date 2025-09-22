@@ -16,7 +16,7 @@
 // CHECK: note: previous definition is here
 // CHECK: #define X 4
 
-// CHECK-VAL: error: __OPTIMIZE__ predefined macro was enabled in precompiled file '{{.*}}' but is currently disabled
+// CHECK-VAL: error: OptimizationLevel differs in precompiled file '{{.*}}' vs. current file
 // CHECK-VAL: error: definition of macro 'X' differs between the precompiled file '{{.*}}' ('4') and the command line ('5')
 
 void test(void) {

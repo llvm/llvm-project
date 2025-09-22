@@ -4,6 +4,11 @@
       "value": "LIBC_ERRNO_MODE_EXTERNAL"
     }
   },
+  "threads": {
+    "LIBC_CONF_THREAD_MODE": {
+      "value": "LIBC_THREAD_MODE_SINGLE"
+    }
+  },
   "printf": {
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": true

@@ -398,7 +398,7 @@ bb5:
 
 @linenum = external local_unnamed_addr global i32, align 4
 
-define void @accessible_after_return11_loop() {
+define void @accessible_after_return11_loop(ptr noalias %p) {
 ; CHECK-LABEL: @accessible_after_return11_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
@@ -406,7 +406,7 @@ define void @accessible_after_return11_loop() {
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_1]], label [[FOR_BODY_I]], label [[INIT_PARSE_EXIT:%.*]]
 ; CHECK:       init_parse.exit:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull undef)
+; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i32 0, ptr @linenum, align 4
 ; CHECK-NEXT:    br label [[FOR_BODY_I20:%.*]]
 ; CHECK:       for.body.i20:
@@ -424,7 +424,7 @@ for.body.i:                                       ; preds = %for.body.i, %entry
 
 init_parse.exit:                                  ; preds = %for.body.i
   store i32 0, ptr @linenum, align 4
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull undef) #2
+  store i32 1, ptr %p
   store i32 0, ptr @linenum, align 4
   br label %for.body.i20
 
@@ -435,7 +435,6 @@ for.body.i20:                                     ; preds = %for.body.i20, %init
 exit:
   ret void
 }
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare i1 @cond() readnone nounwind
 
 ; Tests where the pointer/object is *NOT* accessible after the function returns.

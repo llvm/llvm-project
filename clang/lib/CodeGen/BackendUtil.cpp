@@ -25,6 +25,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -406,13 +407,13 @@ static bool initTargetOptions(const CompilerInstance &CI,
   // Set EABI version.
   Options.EABIVersion = TargetOpts.EABIVersion;
 
-  if (LangOpts.hasSjLjExceptions())
+  if (CodeGenOpts.hasSjLjExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
-  if (LangOpts.hasSEHExceptions())
+  if (CodeGenOpts.hasSEHExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::WinEH;
-  if (LangOpts.hasDWARFExceptions())
+  if (CodeGenOpts.hasDWARFExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
-  if (LangOpts.hasWasmExceptions())
+  if (CodeGenOpts.hasWasmExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
 
   Options.NoInfsFPMath = LangOpts.NoHonorInfs;
@@ -424,7 +425,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
                               LangOptions::FPModeKind::FPM_Fast ||
                           LangOpts.getDefaultFPContractMode() ==
                               LangOptions::FPModeKind::FPM_FastHonorPragmas);
-  Options.ApproxFuncFPMath = LangOpts.ApproxFunc;
 
   Options.BBAddrMap = CodeGenOpts.BBAddrMap;
   Options.BBSections =
@@ -562,7 +562,8 @@ getInstrProfOptions(const CodeGenOptions &CodeGenOpts,
   return Options;
 }
 
-static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
+static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts,
+                               vfs::FileSystem &VFS) {
   SmallVector<const char *, 16> BackendArgs;
   BackendArgs.push_back("clang"); // Fake program name.
   if (!CodeGenOpts.DebugPass.empty()) {
@@ -582,8 +583,9 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
   // FIXME: The command line parser below is not thread-safe and shares a global
   // state, so this call might crash or overwrite the options of another Clang
   // instance in the same process.
-  llvm::cl::ParseCommandLineOptions(BackendArgs.size() - 1,
-                                    BackendArgs.data());
+  llvm::cl::ParseCommandLineOptions(BackendArgs.size() - 1, BackendArgs.data(),
+                                    /*Overview=*/"", /*Errs=*/nullptr,
+                                    /*VFS=*/&VFS);
 }
 
 void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
@@ -805,17 +807,21 @@ static void addSanitizers(const Triple &TargetTriple,
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
-
+  uint64_t AllowRuntimeCheckSkipHotCutoff =
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.value_or(0.0) * 1000000;
   // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value()) {
+  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback(
-        [ScaledCutoffs](ModulePassManager &MPM, OptimizationLevel Level,
-                        ThinOrFullLTOPhase Phase) {
+        [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff](
+            ModulePassManager &MPM, OptimizationLevel Level,
+            ThinOrFullLTOPhase Phase) {
           LowerAllowCheckPass::Options Opts;
           // TODO: after removing IsRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
             Opts.cutoffs = ScaledCutoffs.value();
+          Opts.runtime_check = AllowRuntimeCheckSkipHotCutoff;
           MPM.addPass(
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });
@@ -892,6 +898,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
+  PTO.LoopFusion = CodeGenOpts.FuseLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;
@@ -957,7 +964,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           CodeGenOpts.DIBugsReportFilePath);
     Debugify.registerCallbacks(PIC, MAM);
 
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
     // If we're using debug location coverage tracking, mark all the
     // instructions coming out of the frontend without a DebugLoc as being
     // compiler-generated, to prevent both those instructions and new
@@ -1021,12 +1028,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             if (Level != OptimizationLevel::O0)
               MPM.addPass(
                   createModuleToFunctionPassAdaptor(ObjCARCExpandPass()));
-          });
-      PB.registerPipelineEarlySimplificationEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level,
-             ThinOrFullLTOPhase) {
-            if (Level != OptimizationLevel::O0)
-              MPM.addPass(ObjCARCAPElimPass());
           });
       PB.registerScalarOptimizerLateEPCallback(
           [](FunctionPassManager &FPM, OptimizationLevel Level) {
@@ -1261,7 +1262,7 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
                                       std::unique_ptr<raw_pwrite_stream> OS,
                                       BackendConsumer *BC) {
-  setCommandLineOpts(CodeGenOpts);
+  setCommandLineOpts(CodeGenOpts, CI.getVirtualFileSystem());
 
   bool RequiresCodeGen = actionRequiresCodeGen(Action);
   CreateTargetMachine(RequiresCodeGen);
@@ -1296,7 +1297,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
-  setCommandLineOpts(CGOpts);
+  setCommandLineOpts(CGOpts, CI.getVirtualFileSystem());
 
   // We can simply import the values mentioned in the combined index, since
   // we should only invoke this using the individual indexes written out
@@ -1333,6 +1334,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
+  Conf.PTO.LoopFusion = CGOpts.FuseLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
   Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;

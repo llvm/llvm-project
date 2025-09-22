@@ -555,7 +555,7 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return LoongArchInstPrinter::getRegisterName(Reg);
@@ -565,7 +565,7 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";

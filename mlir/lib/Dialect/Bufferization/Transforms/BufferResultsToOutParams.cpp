@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
@@ -33,7 +32,7 @@ static bool hasFullyDynamicLayoutMap(MemRefType type) {
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
-  if (!ShapedType::isDynamic(offset))
+  if (ShapedType::isStatic(offset))
     return false;
   return true;
 }
@@ -133,7 +132,7 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
           return WalkResult::interrupt();
       }
     }
-    builder.create<func::ReturnOp>(op.getLoc(), keepAsReturnOperands);
+    func::ReturnOp::create(builder, op.getLoc(), keepAsReturnOperands);
     op.erase();
     return WalkResult::advance();
   });
@@ -191,7 +190,7 @@ updateCalls(ModuleOp module,
         assert(hasFullyDynamicLayoutMap(memrefType) &&
                "layout map not supported");
         outParam =
-            builder.create<memref::CastOp>(op.getLoc(), memrefType, outParam);
+            memref::CastOp::create(builder, op.getLoc(), memrefType, outParam);
       }
       memref.replaceAllUsesWith(outParam);
       outParams.push_back(outParam);
@@ -201,8 +200,8 @@ updateCalls(ModuleOp module,
     newOperands.append(outParams.begin(), outParams.end());
     auto newResultTypes = llvm::to_vector<6>(llvm::map_range(
         replaceWithNewCallResults, [](Value v) { return v.getType(); }));
-    auto newCall = builder.create<func::CallOp>(op.getLoc(), op.getCalleeAttr(),
-                                                newResultTypes, newOperands);
+    auto newCall = func::CallOp::create(
+        builder, op.getLoc(), op.getCalleeAttr(), newResultTypes, newOperands);
     for (auto t : llvm::zip(replaceWithNewCallResults, newCall.getResults()))
       std::get<0>(t).replaceAllUsesWith(std::get<1>(t));
     op.erase();

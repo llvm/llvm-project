@@ -57,7 +57,7 @@ void test3(pointer_pair_t pair) {
 }
 
 // CHECK-LABEL:define{{.*}} void @test4(
-// CHECK-SAME: ptr noundef [[QUAD:%.*]])
+// CHECK-SAME: ptr dead_on_return noundef [[QUAD:%.*]])
 // CHECK:      [[QUAD_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[QUAD_T:%.*]], align 8
 // CHECK-NEXT: store ptr [[QUAD]], ptr [[QUAD_INDIRECT_ADDR]]

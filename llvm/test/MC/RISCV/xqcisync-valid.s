@@ -3,14 +3,15 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisync < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcisync -M no-aliases --no-print-imm-hex -d - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcisync -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcisync < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcisync --no-print-imm-hex -d - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ALIAS %s
 
-# CHECK-INST: qc.c.delay     10
+# CHECK-NOALIAS: c.slli zero, 10
+# CHECK-ALIAS: qc.c.delay 10
 # CHECK-ENC: encoding: [0x2a,0x00]
 qc.c.delay 10
 

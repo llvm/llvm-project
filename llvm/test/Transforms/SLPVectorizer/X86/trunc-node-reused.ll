@@ -4,16 +4,7 @@
 define i16 @test() {
 ; CHECK-LABEL: define i16 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i1> @llvm.vector.insert.v4i1.v2i1(<4 x i1> <i1 false, i1 false, i1 poison, i1 poison>, <2 x i1> zeroinitializer, i64 2)
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i1> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <4 x i64> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i1> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP5]], <4 x i1> zeroinitializer, <4 x i1> [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i1> [[TMP7]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> zeroinitializer)
 ; CHECK-NEXT:    ret i16 [[TMP9]]
 ;
 entry:

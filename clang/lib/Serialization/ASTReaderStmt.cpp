@@ -320,15 +320,20 @@ void ASTStmtReader::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
   S->setTarget(Record.readSubExpr());
 }
 
-void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
+void ASTStmtReader::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
-  S->setContinueLoc(readSourceLocation());
+  S->setKwLoc(readSourceLocation());
+  if (Record.readBool()) {
+    S->setLabelDecl(readDeclAs<LabelDecl>());
+    S->setLabelLoc(readSourceLocation());
+  }
 }
 
-void ASTStmtReader::VisitBreakStmt(BreakStmt *S) {
-  VisitStmt(S);
-  S->setBreakLoc(readSourceLocation());
+void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
+  VisitLoopControlStmt(S);
 }
+
+void ASTStmtReader::VisitBreakStmt(BreakStmt *S) { VisitLoopControlStmt(S); }
 
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
@@ -1733,7 +1738,7 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
-  E->Range = Record.readSourceRange();
+  E->BeginLoc = Record.readSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXRewrittenBinaryOperator(
@@ -2086,13 +2091,12 @@ void ASTStmtReader::VisitOverloadExpr(OverloadExpr *E) {
   assert((E->hasTemplateKWAndArgsInfo() == HasTemplateKWAndArgsInfo) &&
          "Wrong HasTemplateKWAndArgsInfo!");
 
+  unsigned NumTemplateArgs = 0;
   if (HasTemplateKWAndArgsInfo) {
-    unsigned NumTemplateArgs = Record.readInt();
+    NumTemplateArgs = Record.readInt();
     ReadTemplateKWAndArgsInfo(*E->getTrailingASTTemplateKWAndArgsInfo(),
                               E->getTrailingTemplateArgumentLoc(),
                               NumTemplateArgs);
-    assert((E->getNumTemplateArgs() == NumTemplateArgs) &&
-           "Wrong NumTemplateArgs!");
   }
 
   UnresolvedSet<8> Decls;
@@ -2107,6 +2111,9 @@ void ASTStmtReader::VisitOverloadExpr(OverloadExpr *E) {
   for (unsigned I = 0; I != NumResults; ++I) {
     Results[I] = (Iter + I).getPair();
   }
+
+  assert((E->getNumTemplateArgs() == NumTemplateArgs) &&
+         "Wrong NumTemplateArgs!");
 
   E->NameInfo = Record.readDeclarationNameInfo();
   E->QualifierLoc = Record.readNestedNameSpecifierLoc();
@@ -2440,30 +2447,30 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
-void ASTStmtReader::VisitOMPLoopTransformationDirective(
-    OMPLoopTransformationDirective *D) {
+void ASTStmtReader::VisitOMPCanonicalLoopNestTransformationDirective(
+    OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
-  D->setNumGeneratedLoops(Record.readUInt32());
+  D->setNumGeneratedTopLevelLoops(Record.readUInt32());
 }
 
 void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPStripeDirective(OMPStripeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {

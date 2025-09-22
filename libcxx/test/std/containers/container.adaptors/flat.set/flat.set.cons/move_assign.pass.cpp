@@ -30,9 +30,9 @@
 struct MoveNegates {
   int value_    = 0;
   MoveNegates() = default;
-  MoveNegates(int v) : value_(v) {}
-  MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
-  MoveNegates& operator=(MoveNegates&& rhs) {
+  constexpr MoveNegates(int v) : value_(v) {}
+  constexpr MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
+  constexpr MoveNegates& operator=(MoveNegates&& rhs) {
     value_     = rhs.value_;
     rhs.value_ = -rhs.value_;
     return *this;
@@ -44,9 +44,9 @@ struct MoveNegates {
 struct MoveClears {
   int value_   = 0;
   MoveClears() = default;
-  MoveClears(int v) : value_(v) {}
-  MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
-  MoveClears& operator=(MoveClears&& rhs) {
+  constexpr MoveClears(int v) : value_(v) {}
+  constexpr MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
+  constexpr MoveClears& operator=(MoveClears&& rhs) {
     value_     = rhs.value_;
     rhs.value_ = 0;
     return *this;
@@ -68,11 +68,12 @@ struct MoveAssignThrows : std::vector<int> {
 };
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-void test_move_assign_clears() {
+template <template <class...> class KeyContainer>
+constexpr void test_move_assign_clears() {
   // Preserves the class invariant for the moved-from flat_set.
   {
     const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    using M              = std::flat_set<MoveNegates, std::less<MoveNegates>>;
+    using M              = std::flat_set<MoveNegates, std::less<MoveNegates>, KeyContainer<MoveNegates>>;
     M m                  = M(expected, expected + 8);
     M m2                 = M(expected, expected + 3);
 
@@ -89,7 +90,7 @@ void test_move_assign_clears() {
   }
   {
     const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    using M              = std::flat_set<MoveClears, std::less<MoveClears>>;
+    using M              = std::flat_set<MoveClears, std::less<MoveClears>, KeyContainer<MoveClears>>;
     M m                  = M(expected, expected + 8);
     M m2                 = M(expected, expected + 3);
 
@@ -106,7 +107,7 @@ void test_move_assign_clears() {
   }
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
-    using M = std::flat_set<int, std::less<>, std::vector<int>>;
+    using M = std::flat_set<int, std::less<>, CopyOnlyVector<int>>;
     M m1    = M({1, 2, 3});
     M m2    = M({1, 2});
     m2      = std::move(m1);
@@ -115,7 +116,7 @@ void test_move_assign_clears() {
     LIBCPP_ASSERT(m1.empty());
   }
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using M = std::flat_set<int, std::less<>, MoveAssignThrows>;
     M m1    = {1, 2, 3};
     M m2    = {1, 2};
@@ -189,11 +190,12 @@ void test_move_assign_no_except() {
   }
 }
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     using C                           = test_less<int>;
     using A1                          = test_allocator<int>;
-    using M                           = std::flat_set<int, C, std::vector<int, A1>>;
+    using M                           = std::flat_set<int, C, KeyContainer<int, A1>>;
     M mo                              = M({1, 2, 3}, C(5), A1(7));
     M m                               = M({}, C(3), A1(7));
     std::same_as<M&> decltype(auto) r = m = std::move(mo);
@@ -207,7 +209,7 @@ void test() {
   {
     using C                           = test_less<int>;
     using A1                          = other_allocator<int>;
-    using M                           = std::flat_set<int, C, std::deque<int, A1>>;
+    using M                           = std::flat_set<int, C, KeyContainer<int, A1>>;
     M mo                              = M({4, 5}, C(5), A1(7));
     M m                               = M({1, 2, 3, 4}, C(3), A1(7));
     std::same_as<M&> decltype(auto) r = m = std::move(mo);
@@ -220,7 +222,7 @@ void test() {
   }
   {
     using A                           = min_allocator<int>;
-    using M                           = std::flat_set<int, std::greater<int>, std::vector<int, A>>;
+    using M                           = std::flat_set<int, std::greater<int>, KeyContainer<int, A>>;
     M mo                              = M({5, 4, 3}, A());
     M m                               = M({4, 3, 2, 1}, A());
     std::same_as<M&> decltype(auto) r = m = std::move(mo);
@@ -232,10 +234,27 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  test<std::vector>();
+  test_move_assign_clears<std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque>();
+    test_move_assign_clears<std::deque>();
+  }
+
+  return true;
+}
+
 int main(int, char**) {
   test();
-  test_move_assign_clears();
   test_move_assign_no_except();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

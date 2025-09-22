@@ -15,11 +15,9 @@ define void @_Z3fn1v() {
 ; CHECK-NEXT:    [[J_SROA_0_0_COPYLOAD:%.*]] = load i8, ptr [[X5]], align 1
 ; CHECK-NEXT:    br label [[DOTPREHEADER4_LR_PH:%.*]]
 ; CHECK:       .preheader4.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X4]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i8 [[J_SROA_0_0_COPYLOAD]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[X4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    br label [[DOTPREHEADER4:%.*]]
 ; CHECK:       .preheader4:
 ; CHECK-NEXT:    [[K_09:%.*]] = phi ptr [ undef, [[DOTPREHEADER4_LR_PH]] ], [ [[X25:%.*]], [[X22:%.*]] ]

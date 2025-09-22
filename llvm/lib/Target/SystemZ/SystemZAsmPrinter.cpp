@@ -1114,6 +1114,9 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
     emitIDRLSection(M);
   }
   emitAttributes(M);
+  // Emit the END instruction in case of HLASM output. This must be the last
+  // instruction in the source file.
+  getTargetStreamer()->emitEnd();
 }
 
 void SystemZAsmPrinter::emitADASection() {
