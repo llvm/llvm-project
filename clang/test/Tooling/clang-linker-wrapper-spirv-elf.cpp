@@ -11,7 +11,7 @@
 // RUN: llvm-readelf -t %t.elf | FileCheck -check-prefix=CHECK-SECTION %s
 // RUN: llvm-readelf -n %t.elf | FileCheck -check-prefix=CHECK-NOTES %s
 
-// CHECK-MACHINE: Machine: 8086
+// CHECK-MACHINE: Machine: Intel Graphics Technology
 
 // CHECK-SECTION: .note.inteloneompoffload
 // CHECK-SECTION: __openmp_offload_spirv_0
