@@ -105,6 +105,8 @@ DebugHandlerBase::~DebugHandlerBase() = default;
 void DebugHandlerBase::beginModule(Module *M) {
   if (M->debug_compile_units().empty())
     Asm = nullptr;
+  else
+    LScopes.initialize(*M);
 }
 
 // Each LexicalScope has first instruction and last instruction to mark
@@ -269,7 +271,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 
   // Grab the lexical scopes for the function, if we don't have any of those
   // then we're not going to be able to do anything.
-  LScopes.initialize(*MF);
+  LScopes.scanFunction(*MF);
   if (LScopes.empty()) {
     beginFunctionImpl(MF);
     return;

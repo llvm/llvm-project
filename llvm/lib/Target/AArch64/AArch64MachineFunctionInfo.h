@@ -239,6 +239,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // support).
   Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
 
+  // Holds the spill slot for ZT0.
+  int ZT0SpillSlotIndex = std::numeric_limits<int>::max();
+
   // Note: The following properties are only used for the old SME ABI lowering:
   /// The frame-index for the TPIDR2 object used for lazy saves.
   TPIDR2Object TPIDR2;
@@ -263,6 +266,15 @@ public:
 
   Register getEarlyAllocSMESaveBuffer() const {
     return EarlyAllocSMESaveBuffer;
+  }
+
+  void setZT0SpillSlotIndex(int FI) { ZT0SpillSlotIndex = FI; }
+  int getZT0SpillSlotIndex() const {
+    assert(hasZT0SpillSlotIndex() && "ZT0 spill slot index not set!");
+    return ZT0SpillSlotIndex;
+  }
+  bool hasZT0SpillSlotIndex() const {
+    return ZT0SpillSlotIndex != std::numeric_limits<int>::max();
   }
 
   // Old SME ABI lowering state getters/setters:
