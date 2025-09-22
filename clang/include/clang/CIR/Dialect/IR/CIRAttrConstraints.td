@@ -39,10 +39,26 @@ def CIR_AnyIntOrFloatAttr : AnyAttrOf<[CIR_AnyIntAttr, CIR_AnyFPAttr],
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalViewAttr constraints
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyGlobalViewAttr : CIR_AttrConstraint<"::cir::GlobalViewAttr", "GlobalView attribute">;
+
+def CIR_AnyIntOrGlobalViewAttr : AnyAttrOf<[CIR_AnyIntAttr, CIR_AnyGlobalViewAttr],
+    "integer or global view attribute"> {
+  string cppType = "::mlir::TypedAttr";
+}
+
+//===----------------------------------------------------------------------===//
 // ArrayAttr constraints
 //===----------------------------------------------------------------------===//
 
 def CIR_IntArrayAttr : TypedArrayAttrBase<CIR_AnyIntAttr,
    "integer array attribute">;
+
+def CIR_IntOrGlobalViewArrayAttr : TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr,
+   "integer or global view array attribute">{
+  string cppType = "::mlir::ArrayAttr";
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD

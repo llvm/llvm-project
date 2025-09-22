@@ -17,15 +17,9 @@
 #include <pmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("ssse3,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("ssse3"),          \
                  __min_vector_width__(128)))
-#endif
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
@@ -181,11 +175,12 @@ _mm_abs_epi32(__m128i __a) {
 ///    An immediate operand specifying how many bytes to right-shift the result.
 /// \returns A 64-bit integer vector containing the concatenated right-shifted
 ///    value.
-#define _mm_alignr_pi8(a, b, n) \
-  ((__m64)__builtin_shufflevector(                                       \
-       __builtin_ia32_psrldqi128_byteshift(                              \
-           __builtin_shufflevector((__v1di)(a), (__v1di)(b), 1, 0),      \
-           (n)), __extension__ (__v2di){}, 0))
+#define _mm_alignr_pi8(a, b, n)                                                \
+  ((__m64)__builtin_shufflevector(                                             \
+      (__v2di)__builtin_ia32_psrldqi128_byteshift(                             \
+          (__v16qi)__builtin_shufflevector((__v1di)(a), (__v1di)(b), 1, 0),    \
+          (n)),                                                                \
+      __extension__(__v2di){}, 0))
 
 /// Horizontally adds the adjacent pairs of values contained in 2 packed
 ///    128-bit vectors of [8 x i16].

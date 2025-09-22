@@ -354,8 +354,10 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
 
     // Reference all file's mmap'd pages to load them into memory.
     for (const char *page = buff.data(), *end = page + buff.size(); page < end;
-         page += pageSize)
+         page += pageSize) {
       LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+      (void)t;
+    }
   };
 #if LLVM_ENABLE_THREADS
   { // Create scope for waiting for the taskGroup
@@ -1833,11 +1835,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *arg = args.getLastArg(OPT_read_workers)) {
     StringRef v(arg->getValue());
-    unsigned threads = 0;
-    if (!llvm::to_integer(v, threads, 0) || threads < 0)
-      error(arg->getSpelling() + ": expected a positive integer, but got '" +
-            arg->getValue() + "'");
-    config->readWorkers = threads;
+    unsigned workers = 0;
+    if (!llvm::to_integer(v, workers, 0))
+      error(arg->getSpelling() +
+            ": expected a non-negative integer, but got '" + arg->getValue() +
+            "'");
+    config->readWorkers = workers;
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());

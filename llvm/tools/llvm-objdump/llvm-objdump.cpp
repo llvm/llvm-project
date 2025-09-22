@@ -1099,6 +1099,7 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
 class DisassemblerTarget {
 public:
   const Target *TheTarget;
+  const Triple TheTriple;
   std::unique_ptr<const MCSubtargetInfo> SubtargetInfo;
   std::shared_ptr<MCContext> Context;
   std::unique_ptr<MCDisassembler> DisAsm;
@@ -1122,18 +1123,19 @@ private:
 DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
                                        StringRef TripleName, StringRef MCPU,
                                        SubtargetFeatures &Features)
-    : TheTarget(TheTarget), Printer(&selectPrettyPrinter(Triple(TripleName))),
-      RegisterInfo(TheTarget->createMCRegInfo(TripleName)) {
+    : TheTarget(TheTarget), TheTriple(TripleName),
+      Printer(&selectPrettyPrinter(TheTriple)),
+      RegisterInfo(TheTarget->createMCRegInfo(TheTriple)) {
   if (!RegisterInfo)
     reportError(Obj.getFileName(), "no register info for target " + TripleName);
 
   // Set up disassembler.
-  AsmInfo.reset(TheTarget->createMCAsmInfo(*RegisterInfo, TripleName, Options));
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*RegisterInfo, TheTriple, Options));
   if (!AsmInfo)
     reportError(Obj.getFileName(), "no assembly info for target " + TripleName);
 
   SubtargetInfo.reset(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, Features.getString()));
   if (!SubtargetInfo)
     reportError(Obj.getFileName(),
                 "no subtarget info for target " + TripleName);
@@ -1141,9 +1143,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   if (!InstrInfo)
     reportError(Obj.getFileName(),
                 "no instruction info for target " + TripleName);
-  Context =
-      std::make_shared<MCContext>(Triple(TripleName), AsmInfo.get(),
-                                  RegisterInfo.get(), SubtargetInfo.get());
+  Context = std::make_shared<MCContext>(
+      TheTriple, AsmInfo.get(), RegisterInfo.get(), SubtargetInfo.get());
 
   // FIXME: for now initialize MCObjectFileInfo with default values
   ObjectFileInfo.reset(
@@ -1160,9 +1161,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
 
   int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  InstPrinter.reset(TheTarget->createMCInstPrinter(Triple(TripleName),
-                                                   AsmPrinterVariant, *AsmInfo,
-                                                   *InstrInfo, *RegisterInfo));
+  InstPrinter.reset(TheTarget->createMCInstPrinter(
+      TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *RegisterInfo));
   if (!InstPrinter)
     reportError(Obj.getFileName(),
                 "no instruction printer for target " + TripleName);
@@ -1187,8 +1187,8 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
 
 DisassemblerTarget::DisassemblerTarget(DisassemblerTarget &Other,
                                        SubtargetFeatures &Features)
-    : TheTarget(Other.TheTarget),
-      SubtargetInfo(TheTarget->createMCSubtargetInfo(TripleName, MCPU,
+    : TheTarget(Other.TheTarget), TheTriple(Other.TheTriple),
+      SubtargetInfo(TheTarget->createMCSubtargetInfo(TheTriple, MCPU,
                                                      Features.getString())),
       Context(Other.Context),
       DisAsm(TheTarget->createMCDisassembler(*SubtargetInfo, *Context)),
@@ -1615,17 +1615,17 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
 // This is currently only used on AMDGPU, and assumes the format of the
 // void * argument passed to AMDGPU's createMCSymbolizer.
 static void addSymbolizer(
-    MCContext &Ctx, const Target *Target, StringRef TripleName,
+    MCContext &Ctx, const Target *Target, const Triple &TheTriple,
     MCDisassembler *DisAsm, uint64_t SectionAddr, ArrayRef<uint8_t> Bytes,
     SectionSymbolsTy &Symbols,
     std::vector<std::unique_ptr<std::string>> &SynthesizedLabelNames) {
 
   std::unique_ptr<MCRelocationInfo> RelInfo(
-      Target->createMCRelocationInfo(TripleName, Ctx));
+      Target->createMCRelocationInfo(TheTriple, Ctx));
   if (!RelInfo)
     return;
   std::unique_ptr<MCSymbolizer> Symbolizer(Target->createMCSymbolizer(
-      TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
+      TheTriple, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
   MCSymbolizer *SymbolizerPtr = &*Symbolizer;
   DisAsm->setSymbolizer(std::move(Symbolizer));
 
@@ -1662,9 +1662,9 @@ static void addSymbolizer(
   }
   llvm::stable_sort(Symbols);
   // Recreate the symbolizer with the new symbols list.
-  RelInfo.reset(Target->createMCRelocationInfo(TripleName, Ctx));
+  RelInfo.reset(Target->createMCRelocationInfo(TheTriple, Ctx));
   Symbolizer.reset(Target->createMCSymbolizer(
-      TripleName, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
+      TheTriple, nullptr, nullptr, &Symbols, &Ctx, std::move(RelInfo)));
   DisAsm->setSymbolizer(std::move(Symbolizer));
 }
 
@@ -1973,8 +1973,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
     if (Obj.isELF() && Obj.getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
-      addSymbolizer(*DT->Context, DT->TheTarget, TripleName, DT->DisAsm.get(),
-                    SectionAddr, Bytes, Symbols, SynthesizedLabelNames);
+      addSymbolizer(*DT->Context, DT->TheTarget, DT->TheTriple,
+                    DT->DisAsm.get(), SectionAddr, Bytes, Symbols,
+                    SynthesizedLabelNames);
     }
 
     StringRef SegmentName = getSegmentName(MachO, Section);

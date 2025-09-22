@@ -1,4 +1,4 @@
-//===--- IdentifierNamingCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -186,7 +186,7 @@ static StringRef const StyleNames[] = {
      m(ptrdiff_t) \
      m(void) \
 
-static StringRef const HungarainNotationPrimitiveTypes[] = {
+static StringRef const HungarianNotationPrimitiveTypes[] = {
 #define STRINGIZE(v) #v,
   HUNGARIAN_NOTATION_PRIMITIVE_TYPES(STRINGIZE)
 #undef STRINGIZE
@@ -222,7 +222,7 @@ static StringRef const HungarainNotationPrimitiveTypes[] = {
      m(UINT64) \
      m(PVOID) \
 
-static StringRef const HungarainNotationUserDefinedTypes[] = {
+static StringRef const HungarianNotationUserDefinedTypes[] = {
 #define STRINGIZE(v) #v,
   HUNGARIAN_NOTATION_USER_DEFINED_TYPES(STRINGIZE)
 #undef STRINGIZE
@@ -337,8 +337,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
 
     // Remove keywords
     for (StringRef Kw : Keywords) {
-      for (size_t Pos = 0;
-           (Pos = Type.find(Kw.data(), Pos)) != std::string::npos;) {
+      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;) {
         Type.replace(Pos, Kw.size(), "");
       }
     }
@@ -373,7 +372,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
         " int", " char", " double", " long", " short"};
     bool RedundantRemoved = false;
     for (auto Kw : TailsOfMultiWordType) {
-      size_t Pos = Type.rfind(Kw.data());
+      size_t Pos = Type.rfind(Kw);
       if (Pos != std::string::npos) {
         const size_t PtrCount = getAsteriskCount(Type, ND);
         Type = Type.substr(0, Pos + Kw.size() + PtrCount);
@@ -488,7 +487,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
 
   Buffer = {Section, "PrimitiveType."};
   DefSize = Buffer.size();
-  for (const auto &PrimType : HungarainNotationPrimitiveTypes) {
+  for (const auto &PrimType : HungarianNotationPrimitiveTypes) {
     Buffer.truncate(DefSize);
     Buffer.append(PrimType);
     StringRef Val = Options.get(Buffer, "");
@@ -501,7 +500,7 @@ void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
 
   Buffer = {Section, "UserDefinedType."};
   DefSize = Buffer.size();
-  for (const auto &Type : HungarainNotationUserDefinedTypes) {
+  for (const auto &Type : HungarianNotationUserDefinedTypes) {
     Buffer.truncate(DefSize);
     Buffer.append(Type);
     StringRef Val = Options.get(Buffer, "");
@@ -602,9 +601,8 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   if (PtrCount > 0) {
     ModifiedTypeName = [&](std::string Str, StringRef From, StringRef To) {
       size_t StartPos = 0;
-      while ((StartPos = Str.find(From.data(), StartPos)) !=
-             std::string::npos) {
-        Str.replace(StartPos, From.size(), To.data());
+      while ((StartPos = Str.find(From, StartPos)) != std::string::npos) {
+        Str.replace(StartPos, From.size(), To);
         StartPos += To.size();
       }
       return Str;

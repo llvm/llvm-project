@@ -125,8 +125,8 @@ class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let InOperandList = IOL;
   let AsmString = asmstr;
   let Itinerary = itin;
-  let Inst{0-5} = pref;
-  let Inst{32-37} = opcode;
+  let Inst{0...5} = pref;
+  let Inst{32...37} = opcode;
 
   bits<1> PPC970_First = 0;
   bits<1> PPC970_Single = 0;
@@ -138,7 +138,7 @@ class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let TSFlags{0}   = PPC970_First;
   let TSFlags{1}   = PPC970_Single;
   let TSFlags{2}   = PPC970_Cracked;
-  let TSFlags{5-3} = PPC970_Unit;
+  let TSFlags{5...3} = PPC970_Unit;
 
   bits<1> Prefixed = 1;  // This is a prefixed instruction.
   let TSFlags{7}  = Prefixed;
@@ -167,11 +167,11 @@ class VXForm_VTB5_RC<bits<10> xo, bits<5> R, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10} = VT;
-  let Inst{11-15} = R;
-  let Inst{16-20} = VB;
+  let Inst{6...10} = VT;
+  let Inst{11...15} = R;
+  let Inst{16...20} = VB;
   let Inst{21} = RC;
-  let Inst{22-31} = xo;
+  let Inst{22...31} = xo;
 }
 
 // Multiclass definition to account for record and non-record form
@@ -200,16 +200,16 @@ class MLS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 2;
-  let Inst{8-10} = 0;
+  let Inst{6...7} = 2;
+  let Inst{8...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = D{33-16}; // d0
+  let Inst{12...13} = 0;
+  let Inst{14...31} = D{33...16}; // d0
 
   // The instruction.
-  let Inst{38-42} = RST{4-0};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0}; // d1
+  let Inst{38...42} = RST{4...0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0}; // d1
 }
 
 class MLS_DForm_R_SI34_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -222,16 +222,16 @@ class MLS_DForm_R_SI34_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 2;
-  let Inst{8-10} = 0;
+  let Inst{6...7} = 2;
+  let Inst{8...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = SI{33-16};
+  let Inst{12...13} = 0;
+  let Inst{14...31} = SI{33...16};
 
   // The instruction.
-  let Inst{38-42} = RT;
-  let Inst{43-47} = RA;
-  let Inst{48-63} = SI{15-0};
+  let Inst{38...42} = RT;
+  let Inst{43...47} = RA;
+  let Inst{48...63} = SI{15...0};
 }
 
 class MLS_DForm_SI34_RT5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
@@ -243,16 +243,16 @@ class MLS_DForm_SI34_RT5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 2;
-  let Inst{8-10} = 0;
+  let Inst{6...7} = 2;
+  let Inst{8...10} = 0;
   let Inst{11} = 0;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = SI{33-16};
+  let Inst{12...13} = 0;
+  let Inst{14...31} = SI{33...16};
 
   // The instruction.
-  let Inst{38-42} = RT;
-  let Inst{43-47} = 0;
-  let Inst{48-63} = SI{15-0};
+  let Inst{38...42} = RT;
+  let Inst{43...47} = 0;
+  let Inst{48...63} = SI{15...0};
 }
 
 multiclass MLS_DForm_R_SI34_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
@@ -274,15 +274,15 @@ class 8LS_DForm_R_SI34_RTA5_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-10} = 0;
+  let Inst{6...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = D{33-16}; // d0
+  let Inst{12...13} = 0;
+  let Inst{14...31} = D{33...16}; // d0
 
   // The instruction.
-  let Inst{38-42} = RST{4-0};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0}; // d1
+  let Inst{38...42} = RST{4...0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0}; // d1
 }
 
 // 8LS:D-Form: [ 1 0 0 // R // d0
@@ -298,18 +298,18 @@ class 8LS_DForm_R_SI34_XT6_RA5_MEM<bits<5> opcode, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 0;
+  let Inst{6...7} = 0;
   let Inst{8} = 0;
-  let Inst{9-10} = 0; // reserved
+  let Inst{9...10} = 0; // reserved
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0; // reserved
-  let Inst{14-31} = D{33-16}; // d0
+  let Inst{12...13} = 0; // reserved
+  let Inst{14...31} = D{33...16}; // d0
 
   // The instruction.
   let Inst{37} = XST{5};
-  let Inst{38-42} = XST{4-0};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0}; // d1
+  let Inst{38...42} = XST{4...0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0}; // d1
 }
 
 // X-Form: [PO T IMM VRB XO TX]
@@ -321,10 +321,10 @@ class XForm_XT6_IMM5_VB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   bits<5> IMM;
 
   let Pattern = pattern;
-  let Inst{6-10} = XT{4-0};
-  let Inst{11-15} = IMM;
-  let Inst{16-20} = VRB;
-  let Inst{21-30} = xo;
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = IMM;
+  let Inst{16...20} = VRB;
+  let Inst{21...30} = xo;
   let Inst{31} = XT{5};
 }
 
@@ -341,19 +341,19 @@ class 8RR_XX4Form_IMM8_XTAB6<bits<6> opcode, bits<2> xo,
     let Pattern = pattern;
 
     // The prefix.
-    let Inst{6-7} = 1;
+    let Inst{6...7} = 1;
     let Inst{8} = 0;
-    let Inst{9-11} = 0;
-    let Inst{12-13} = 0;
-    let Inst{14-23} = 0;
-    let Inst{24-31} = IMM;
+    let Inst{9...11} = 0;
+    let Inst{12...13} = 0;
+    let Inst{14...23} = 0;
+    let Inst{24...31} = IMM;
 
     // The instruction.
-    let Inst{38-42} = XT{4-0};
-    let Inst{43-47} = XA{4-0};
-    let Inst{48-52} = XB{4-0};
-    let Inst{53-57} = XC{4-0};
-    let Inst{58-59} = xo;
+    let Inst{38...42} = XT{4...0};
+    let Inst{43...47} = XA{4...0};
+    let Inst{48...52} = XB{4...0};
+    let Inst{53...57} = XC{4...0};
+    let Inst{58...59} = xo;
     let Inst{60} = XC{5};
     let Inst{61} = XA{5};
     let Inst{62} = XB{5};
@@ -369,11 +369,11 @@ class VXForm_RD5_N3_VB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RD;
-  let Inst{11-12} = 0;
-  let Inst{13-15} = N;
-  let Inst{16-20} = VB;
-  let Inst{21-31} = xo;
+  let Inst{6...10}  = RD;
+  let Inst{11...12} = 0;
+  let Inst{13...15} = N;
+  let Inst{16...20} = VB;
+  let Inst{21...31} = xo;
 }
 
 
@@ -401,11 +401,11 @@ class VXForm_BF3_VAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-8} = BF;
-  let Inst{9-10} = 0;
-  let Inst{11-15} = VA;
-  let Inst{16-20} = VB;
-  let Inst{21-31} = xo;
+  let Inst{6...8} = BF;
+  let Inst{9...10} = 0;
+  let Inst{11...15} = VA;
+  let Inst{16...20} = VB;
+  let Inst{21...31} = xo;
 }
 
 // VN-Form: [PO VRT VRA VRB PS SD XO]
@@ -420,12 +420,12 @@ class VNForm_VTAB5_SD3<bits<6> xo, bits<2> ps, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = VRT;
-  let Inst{11-15} = VRA;
-  let Inst{16-20} = VRB;
-  let Inst{21-22} = ps;
-  let Inst{23-25} = SD;
-  let Inst{26-31} = xo;
+  let Inst{6...10}  = VRT;
+  let Inst{11...15} = VRA;
+  let Inst{16...20} = VRB;
+  let Inst{21...22} = ps;
+  let Inst{23...25} = SD;
+  let Inst{26...31} = xo;
 }
 
 class VXForm_RD5_MP_VB5<bits<11> xo, bits<4> eo, dag OOL, dag IOL,
@@ -437,11 +437,11 @@ class VXForm_RD5_MP_VB5<bits<11> xo, bits<4> eo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-10}  = RD;
-  let Inst{11-14} = eo;
+  let Inst{6...10}  = RD;
+  let Inst{11...14} = eo;
   let Inst{15} = MP;
-  let Inst{16-20} = VB;
-  let Inst{21-31} = xo;
+  let Inst{16...20} = VB;
+  let Inst{21...31} = xo;
 }
 
 // 8RR:D-Form: [ 1 1 0 // // imm0
@@ -456,17 +456,17 @@ class 8RR_DForm_IMM32_XT6<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0; // reserved
-  let Inst{14-15} = 0; // reserved
-  let Inst{16-31} = IMM32{31-16};
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0; // reserved
+  let Inst{14...15} = 0; // reserved
+  let Inst{16...31} = IMM32{31...16};
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-46} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...46} = xo;
   let Inst{47} = XT{5};
-  let Inst{48-63} = IMM32{15-0};
+  let Inst{48...63} = IMM32{15...0};
 }
 
 // 8RR:D-Form: [ 1 1 0 // // imm0
@@ -482,18 +482,18 @@ class 8RR_DForm_IMM32_XT6_IX<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0; // reserved
-  let Inst{14-15} = 0; // reserved
-  let Inst{16-31} = IMM32{31-16};
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0; // reserved
+  let Inst{14...15} = 0; // reserved
+  let Inst{16...31} = IMM32{31...16};
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-45} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...45} = xo;
   let Inst{46} = IX;
   let Inst{47} = XT{5};
-  let Inst{48-63} = IMM32{15-0};
+  let Inst{48...63} = IMM32{15...0};
 }
 
 class 8RR_XX4Form_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
@@ -507,17 +507,17 @@ class 8RR_XX4Form_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = 0;
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0;
+  let Inst{14...31} = 0;
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-57} = XC{4-0};
-  let Inst{58-59} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...57} = XC{4...0};
+  let Inst{58...59} = xo;
   let Inst{60} = XC{5};
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
@@ -537,18 +537,18 @@ class 8RR_XX4Form_IMM3_XTABC6<bits<6> opcode, bits<2> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 1;
-  let Inst{8-11} = 0;
-  let Inst{12-13} = 0;
-  let Inst{14-28} = 0;
-  let Inst{29-31} = IMM;
+  let Inst{6...7} = 1;
+  let Inst{8...11} = 0;
+  let Inst{12...13} = 0;
+  let Inst{14...28} = 0;
+  let Inst{29...31} = IMM;
 
   // The instruction.
-  let Inst{38-42} = XT{4-0};
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-57} = XC{4-0};
-  let Inst{58-59} = xo;
+  let Inst{38...42} = XT{4...0};
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...57} = XC{4...0};
+  let Inst{58...59} = xo;
   let Inst{60} = XC{5};
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
@@ -565,11 +565,11 @@ class XX2_BF3_XO5_XB6_XO9<bits<6> opcode, bits<5> xo2, bits<9> xo, dag OOL,
 
   let Pattern = pattern;
 
-  let Inst{6-8}   = BF;
-  let Inst{9-10}  = 0;
-  let Inst{11-15} = xo2;
-  let Inst{16-20} = XB{4-0};
-  let Inst{21-29} = xo;
+  let Inst{6...8}   = BF;
+  let Inst{9...10}  = 0;
+  let Inst{11...15} = xo2;
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...29} = xo;
   let Inst{30}    = XB{5};
   let Inst{31}    = 0;
 }
@@ -863,11 +863,11 @@ class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-9} = XTp{3-0};
+  let Inst{6...9} = XTp{3...0};
   let Inst{10} = XTp{4};
-  let Inst{11-15} = RA;
-  let Inst{16-27} = DQ;
-  let Inst{28-31} = xo;
+  let Inst{11...15} = RA;
+  let Inst{16...27} = DQ;
+  let Inst{28...31} = xo;
 }
 
 class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
@@ -878,11 +878,11 @@ class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   bits<5> RB;
 
   let Pattern = pattern;
-  let Inst{6-9} = XTp{3-0};
+  let Inst{6...9} = XTp{3...0};
   let Inst{10} = XTp{4};
-  let Inst{11-15} = RA;
-  let Inst{16-20} = RB;
-  let Inst{21-30} = xo;
+  let Inst{11...15} = RA;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -896,16 +896,16 @@ class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-10} = 0;
+  let Inst{6...10} = 0;
   let Inst{11} = PCRel;
-  let Inst{12-13} = 0;
-  let Inst{14-31} = D{33-16}; // Imm18
+  let Inst{12...13} = 0;
+  let Inst{14...31} = D{33...16}; // Imm18
 
   // The instruction.
-  let Inst{38-41} = XTp{3-0};
+  let Inst{38...41} = XTp{3...0};
   let Inst{42}    = XTp{4};
-  let Inst{43-47} = RA;
-  let Inst{48-63} = D{15-0};
+  let Inst{43...47} = RA;
+  let Inst{48...63} = D{15...0};
 }
 
 multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> opcode, dag OOL,
@@ -935,11 +935,11 @@ class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-8}  = AT;
-  let Inst{9-10}  = 0;
-  let Inst{11-15} = xo2;
-  let Inst{16-20} = 0;
-  let Inst{21-30} = xo;
+  let Inst{6...8}  = AT;
+  let Inst{9...10}  = 0;
+  let Inst{11...15} = xo2;
+  let Inst{16...20} = 0;
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -952,10 +952,10 @@ class XForm_XT6_IMM5<bits<6> opcode, bits<5> eo, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-10} = XT{4-0};
-  let Inst{11-15} = eo;
-  let Inst{16-20} = UIM;
-  let Inst{21-30} = xo;
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = eo;
+  let Inst{16...20} = UIM;
+  let Inst{21...30} = xo;
   let Inst{31} = XT{5};
 }
 
@@ -969,11 +969,11 @@ class XX3Form_AT3_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6-8} = AT;
-  let Inst{9-10} = 0;
-  let Inst{11-15} = XA{4-0};
-  let Inst{16-20} = XB{4-0};
-  let Inst{21-28} = xo;
+  let Inst{6...8} = AT;
+  let Inst{9...10} = 0;
+  let Inst{11...15} = XA{4...0};
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...28} = xo;
   let Inst{29}    = XA{5};
   let Inst{30}    = XB{5};
   let Inst{31} = 0;
@@ -993,20 +993,20 @@ class MMIRR_XX3Form_XY4P2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-15} = 0;
-  let Inst{16-17} = PMSK;
-  let Inst{18-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...17} = PMSK;
+  let Inst{18...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1025,18 +1025,18 @@ class MMIRR_XX3Form_XY4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1055,19 +1055,19 @@ class MMIRR_XX3Form_X4Y2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-29} = YMSK;
-  let Inst{30-31} = 0;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...29} = YMSK;
+  let Inst{30...31} = 0;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1087,19 +1087,19 @@ class MMIRR_XX3Form_XY4P8_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-15} = 0;
-  let Inst{16-23} = PMSK;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...23} = PMSK;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -1119,20 +1119,20 @@ class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6-7} = 3;
-  let Inst{8-11} = 9;
-  let Inst{12-15} = 0;
-  let Inst{16-19} = PMSK;
-  let Inst{20-23} = 0;
-  let Inst{24-27} = XMSK;
-  let Inst{28-31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...19} = PMSK;
+  let Inst{20...23} = 0;
+  let Inst{24...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38-40} = AT;
-  let Inst{41-42} = 0;
-  let Inst{43-47} = XA{4-0};
-  let Inst{48-52} = XB{4-0};
-  let Inst{53-60} = xo;
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...47} = XA{4...0};
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XA{5};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
