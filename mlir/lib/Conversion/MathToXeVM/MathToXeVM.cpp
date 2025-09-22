@@ -38,8 +38,9 @@ using namespace mlir;
 template <typename Op>
 struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
 
-  ConvertNativeFuncPattern(MLIRContext *context, StringRef nativeFunc, PatternBenefit benefit = 1)
-    : OpConversionPattern<Op>(context, benefit), nativeFunc(nativeFunc) {}
+  ConvertNativeFuncPattern(MLIRContext *context, StringRef nativeFunc,
+                           PatternBenefit benefit = 1)
+      : OpConversionPattern<Op>(context, benefit), nativeFunc(nativeFunc) {}
 
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
@@ -51,7 +52,7 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       return failure();
 
     arith::FastMathFlags fastFlags = op.getFastmath();
-    if (!((uint32_t) fastFlags & (uint32_t) arith::FastMathFlags::afn))
+    if (!((uint32_t)fastFlags & (uint32_t)arith::FastMathFlags::afn))
       return failure();
 
     // FIXME: Implement handling for vector sizes/dimensions that are not
@@ -63,7 +64,8 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       operandTypes.push_back(operand.getType());
     }
     LLVM::LLVMFuncOp funcOp = appendOrGetFuncOp(op, operandTypes);
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, funcOp, adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, funcOp,
+                                              adaptor.getOperands());
     return success();
   }
 
@@ -79,13 +81,15 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       if (shape.size() != 1)
         return false;
       // SPIRV only allows vectors of size 2, 3, 4, 8, 16.
-      if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 || shape[0] == 16)
+      if (shape[0] == 2 || shape[0] == 3 || shape[0] == 4 || shape[0] == 8 ||
+          shape[0] == 16)
         return true;
     }
     return false;
   }
 
-  LLVM::LLVMFuncOp appendOrGetFuncOp(Op &op, const SmallVector<Type, 1> &operandTypes) const {
+  LLVM::LLVMFuncOp
+  appendOrGetFuncOp(Op &op, const SmallVector<Type, 1> &operandTypes) const {
     // This function assumes op types have already been validated using
     // isSPIRVCompatibleFloatOrVec.
     using LLVM::LLVMFuncOp;
@@ -112,7 +116,7 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
 
     auto funcAttr = StringAttr::get(op->getContext(), mangledNativeFunc);
     auto funcOp =
-         SymbolTable::lookupNearestSymbolFrom<LLVMFuncOp>(op, funcAttr);
+        SymbolTable::lookupNearestSymbolFrom<LLVMFuncOp>(op, funcAttr);
     if (funcOp)
       return funcOp;
 
@@ -124,17 +128,17 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     // location as debug info metadata inside of a function cannot be used
     // outside of that function.
     auto funcType = LLVM::LLVMFunctionType::get(op.getType(), operandTypes);
-    auto globalloc = op->getLoc()->template findInstanceOfOrUnknown<FileLineColLoc>();
+    auto globalloc =
+        op->getLoc()->template findInstanceOfOrUnknown<FileLineColLoc>();
     return LLVMFuncOp::create(b, globalloc, mangledNativeFunc, funcType);
   }
 
   const StringRef nativeFunc;
 };
 
-
 void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns) {
-  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(
-    patterns.getContext(), "__spirv_ocl_native_exp");
+  patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_exp");
 }
 
 namespace {
@@ -147,7 +151,7 @@ struct ConvertMathToXeVMPass
 
 void ConvertMathToXeVMPass::runOnOperation() {
   auto m = getOperation();
-  //MLIRContext *ctx = m.getContext();
+  // MLIRContext *ctx = m.getContext();
 
   RewritePatternSet patterns(&getContext());
   populateMathToXeVMConversionPatterns(patterns);
