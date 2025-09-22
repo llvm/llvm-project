@@ -29,6 +29,7 @@
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -50,6 +51,35 @@ class APFixedPoint;
 class FixedPointSemantics;
 struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
+
+struct ScalableVecTyKey {
+  uintptr_t EltTy;
+  unsigned NumElts;
+  unsigned NumFields;
+
+  bool operator==(const ScalableVecTyKey &RHS) const {
+    return EltTy == RHS.EltTy && NumElts == RHS.NumElts &&
+           NumFields == RHS.NumFields;
+  }
+};
+
+// Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
+// as a key in DenseMap.
+template <> struct DenseMapInfo<ScalableVecTyKey> {
+  static inline ScalableVecTyKey getEmptyKey() {
+    return {DenseMapInfo<uintptr_t>::getEmptyKey(), ~0U, ~0U};
+  }
+  static inline ScalableVecTyKey getTombstoneKey() {
+    return {DenseMapInfo<uintptr_t>::getTombstoneKey(), ~0U, ~0U};
+  }
+  static unsigned getHashValue(const ScalableVecTyKey &Val) {
+    return hash_combine(Val.EltTy, Val.NumElts, Val.NumFields);
+  }
+  static bool isEqual(const ScalableVecTyKey &LHS,
+                      const ScalableVecTyKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // namespace llvm
 
@@ -504,6 +534,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const ObjCInterfaceDecl *,
                  SmallVector<const ObjCInterfaceDecl *, 4>>
       ObjCSubClasses;
+
+  // A mapping from Scalable Vector Type keys to their corresponding QualType.
+  mutable llvm::DenseMap<llvm::ScalableVecTyKey, QualType> ScalableVecTyMap;
 
   ASTContext &this_() { return *this; }
 
