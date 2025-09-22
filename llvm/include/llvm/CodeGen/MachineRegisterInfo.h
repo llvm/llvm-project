@@ -880,20 +880,21 @@ public:
       AntiHints.push_back(AntiHintVReg);
   }
 
-  /// addRegAllocationAntiHint - Add multiple anti-hints at once
-  void addRegAllocationAntiHints(Register VReg, ArrayRef<Register> AntiHintVRegs) {
+  /// addRegAllocationAntiHint - Add multiple anti-hints at once.
+  void addRegAllocationAntiHints(Register VReg,
+                                 ArrayRef<Register> AntiHintVRegs) {
     for (Register AntiHint : AntiHintVRegs)
       setRegAllocationAntiHint(VReg, AntiHint);
   }
 
-  /// clearRegAllocationAntiHints - Clear all anti-hints for a register
+  /// clearRegAllocationAntiHints - Clear all anti-hints for a register.
   void clearRegAllocationAntiHints(Register VReg) {
     assert(VReg.isVirtual());
     if (AntiHintRegs.inBounds(VReg))
       AntiHintRegs[VReg].clear();
   }
 
-  /// getRegAllocationAntiHints - Return the vector of anti-hints for VReg
+  /// getRegAllocationAntiHints - Return the vector of anti-hints for VReg.
   ArrayRef<Register> getRegAllocationAntiHints(Register VReg) const {
     assert(VReg.isVirtual());
     if (!AntiHintRegs.inBounds(VReg))
@@ -901,7 +902,7 @@ public:
     return AntiHintRegs[VReg];
   }
 
-  /// hasRegAllocationAntiHint - Check if VReg has AntiHintVReg as an anti-hint
+  /// hasRegAllocationAntiHint - Check if VReg has AntiHintVReg as an anti-hint.
   bool hasRegAllocationAntiHint(Register VReg, Register AntiHintVReg) const {
     assert(VReg.isVirtual() && AntiHintVReg.isVirtual());
     if (!AntiHintRegs.inBounds(VReg))
@@ -910,11 +911,11 @@ public:
     return llvm::find(AntiHints, AntiHintVReg) != AntiHints.end();
   }
 
-  /// getPhysRegAntiHints - Get the set of physical registers to avoid based on
-  /// anti-hints and current allocations. This is called during allocation.
+  /// getPhysRegAntiHints - Get the set of physical registers to avoid.
   /// VRM is the current virtual register map showing allocations made so far.
-  void getPhysRegAntiHints(Register VReg, SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-                          const VirtRegMap *VRM) const;
+  void getPhysRegAntiHints(Register VReg,
+                           SmallVectorImpl<MCPhysReg> &PhysAntiHints,
+                           const VirtRegMap *VRM) const;
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be

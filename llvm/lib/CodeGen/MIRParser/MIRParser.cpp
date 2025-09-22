@@ -739,13 +739,12 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
     for (const auto &AntiHintValue : VReg.AntiHints) {
       if (Info.Kind != VRegInfo::NORMAL)
         return error(VReg.Class.SourceRange.Start,
-              Twine("anti-hints can only be set for normal vregs"));
+                     Twine("anti-hints can only be set for normal vregs"));
 
       Register AntiHintReg;
-      if (parseRegisterReference(PFS, AntiHintReg,
-                                 AntiHintValue.Value, Error))
+      if (parseRegisterReference(PFS, AntiHintReg, AntiHintValue.Value, Error))
         return error(Error, AntiHintValue.SourceRange);
-      
+
       Info.AntiHints.push_back(AntiHintReg);
     }
 

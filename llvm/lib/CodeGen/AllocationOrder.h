@@ -119,11 +119,10 @@ public:
                static_cast<uint32_t>(std::numeric_limits<MCPhysReg>::max()));
     return Reg.isPhysical() && is_contained(Hints, Reg.id());
   }
-  
-  /// Apply anti-hints to the allocation order.
-  void applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs, 
-                      const TargetRegisterInfo *TRI);
 
+  /// Apply anti-hints to the allocation order.
+  void applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs,
+                      const TargetRegisterInfo *TRI);
 };
 
 } // end namespace llvm
