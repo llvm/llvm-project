@@ -147,9 +147,11 @@ extern "C" double rtclock() {
 #endif // _WIN32
 }
 
-extern "C" void *mlirAlloc(uint64_t size) { return malloc(size); }
+// NOLINTBEGIN(*-identifier-naming)
 
-extern "C" void *mlirAlignedAlloc(uint64_t alignment, uint64_t size) {
+extern "C" void *_mlir_alloc(uint64_t size) { return malloc(size); }
+extern "C" void *_mlir_malloc(uint64_t size) { return malloc(size); }
+extern "C" void *_mlir_aligned_alloc(uint64_t alignment, uint64_t size) {
 #ifdef _WIN32
   return _aligned_malloc(size, alignment);
 #elif defined(__APPLE__)
@@ -163,9 +165,9 @@ extern "C" void *mlirAlignedAlloc(uint64_t alignment, uint64_t size) {
 #endif
 }
 
-extern "C" void mlirFree(void *ptr) { free(ptr); }
+extern "C" void _mlir_free(void *ptr) { free(ptr); }
 
-extern "C" void mlirAlignedFree(void *ptr) {
+extern "C" void _mlir_aligned_free(void *ptr) {
 #ifdef _WIN32
   _aligned_free(ptr);
 #else
@@ -212,5 +214,7 @@ IMPL_STDSORT(I64, int64_t)
 IMPL_STDSORT(F64, double)
 IMPL_STDSORT(F32, float)
 #undef IMPL_STDSORT
+
+// NOLINTEND(*-identifier-naming)
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS

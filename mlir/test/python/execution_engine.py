@@ -777,7 +777,7 @@ def testNanoTime():
 run(testNanoTime)
 
 
-#  Test that nano time clock is available.
+#  Test dump to object file.
 # CHECK-LABEL: TEST: testDumpToObjectFile
 def testDumpToObjectFile():
     fd, object_path = tempfile.mkstemp(suffix=".o")
@@ -787,13 +787,35 @@ def testDumpToObjectFile():
             module = Module.parse(
                 """
         module {
-        func.func @main() attributes { llvm.emit_c_interface } {
-          return
+        func.func @main(%arg0: memref<1xf32>) -> memref<1xf32> attributes {llvm.emit_c_interface} {
+          %out_memref = memref.alloc() : memref<1xf32>
+          %c0 = arith.constant 0 : index
+          %load_value = memref.load %arg0[%c0] : memref<1xf32>
+          memref.store %load_value, %out_memref[%c0] : memref<1xf32>
+          func.return %out_memref : memref<1xf32>
         }
       }"""
             )
 
-            execution_engine = ExecutionEngine(lowerToLLVM(module), opt_level=3)
+            if sys.platform == "win32":
+                shared_libs = [
+                    "../../../../bin/mlir_runner_utils.dll",
+                    "../../../../bin/mlir_c_runner_utils.dll",
+                ]
+            elif sys.platform == "darwin":
+                shared_libs = [
+                    "../../../../lib/libmlir_runner_utils.dylib",
+                    "../../../../lib/libmlir_c_runner_utils.dylib",
+                ]
+            else:
+                shared_libs = [
+                    MLIR_RUNNER_UTILS,
+                    MLIR_C_RUNNER_UTILS,
+                ]
+
+            execution_engine = ExecutionEngine(
+                lowerToLLVM(module), opt_level=3, shared_libs=shared_libs
+            )
 
             # CHECK: Object file exists: True
             print(f"Object file exists: {os.path.exists(object_path)}")
