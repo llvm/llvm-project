@@ -3126,9 +3126,10 @@ void DWARFASTParserClang::ParseSingleMember(
   if (!member_clang_type.IsCompleteType())
     member_clang_type.GetCompleteType();
 
-  if (attrs.member_byte_offset != UINT32_MAX
-      && attrs.member_byte_offset >= parent_byte_size
-      && llvm::expectedToOptional(member_clang_type.GetByteSize(nullptr)).value_or(0) > 0)
+  if (attrs.member_byte_offset != UINT32_MAX &&
+      attrs.member_byte_offset >= parent_byte_size &&
+      llvm::expectedToOptional(member_clang_type.GetByteSize(nullptr))
+              .value_or(0) > 0)
     module_sp->ReportError(
         "{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
         " which extends beyond the bounds of {3:x8}",
