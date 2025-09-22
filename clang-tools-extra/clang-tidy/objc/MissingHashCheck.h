@@ -17,7 +17,7 @@ namespace clang::tidy::objc {
 /// appropriately implementing -hash.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc/missing-hash.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/objc/missing-hash.html
 class MissingHashCheck : public ClangTidyCheck {
 public:
   MissingHashCheck(StringRef Name, ClangTidyContext *Context)
