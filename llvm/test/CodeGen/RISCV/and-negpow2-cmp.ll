@@ -161,8 +161,7 @@ define i1 @test9(i64 %x) {
 define i64 @test10(i64 %0) #0 {
 ; RV32-LABEL: test10:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi a0, a0, -16
-; RV32-NEXT:    addi a0, a0, 15
+; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    andi a0, a0, -16
 ; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    li a1, 0
@@ -170,8 +169,7 @@ define i64 @test10(i64 %0) #0 {
 ;
 ; RV64-LABEL: test10:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a0, a0, -16
-; RV64-NEXT:    addi a0, a0, 15
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    sraiw a0, a0, 4
 ; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    ret
@@ -188,8 +186,7 @@ entry:
 define i64 @test11(i64 %0) #0 {
 ; RV32-LABEL: test11:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi a0, a0, -16
-; RV32-NEXT:    addi a0, a0, 15
+; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    srai a0, a0, 4
 ; RV32-NEXT:    addi a0, a0, 1621
 ; RV32-NEXT:    seqz a0, a0
@@ -198,8 +195,7 @@ define i64 @test11(i64 %0) #0 {
 ;
 ; RV64-LABEL: test11:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a0, a0, -16
-; RV64-NEXT:    addi a0, a0, 15
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    sraiw a0, a0, 4
 ; RV64-NEXT:    addi a0, a0, 1621
 ; RV64-NEXT:    seqz a0, a0
@@ -225,14 +221,8 @@ define i64 @test12(i64 %0) #0 {
 ;
 ; RV64-LABEL: test12:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    addi a2, a1, -16
-; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    addi a2, a2, 15
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    addi a1, a1, -13
-; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    addiw a0, a0, -16
+; RV64-NEXT:    addi a0, a0, 13
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
 entry:
@@ -251,8 +241,7 @@ define i64 @test13(i64 %0) #0 {
 ; RV32-NEXT:    lui a1, 524288
 ; RV32-NEXT:    addi a1, a1, 15
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    addi a1, a1, -15
-; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    srli a0, a0, 31
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
@@ -262,11 +251,7 @@ define i64 @test13(i64 %0) #0 {
 ; RV64-NEXT:    lui a1, 524288
 ; RV64-NEXT:    addi a1, a1, -15
 ; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    li a1, 1
-; RV64-NEXT:    slli a1, a1, 31
-; RV64-NEXT:    addi a1, a1, 15
-; RV64-NEXT:    addi a1, a1, -15
-; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    sraiw a0, a0, 31
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
 entry:
