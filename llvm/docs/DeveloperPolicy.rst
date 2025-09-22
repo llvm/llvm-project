@@ -1196,7 +1196,10 @@ pass first. This is often both faster and more powerful.
 
 When adding a new pass, the goal should be to enable it as part of the default
 optimization pipeline as early as possible and then continue development
-incrementally. The recommended workflow is:
+incrementally. (This does not apply to passes that are only relevant for
+specific uses of LLVM, such as GC support passes.)
+
+The recommended workflow is:
 
 1. Implement a basic version of the pass and add it to the pass pipeline behind
    a flag that is disabled by default. The initial version should focus on
