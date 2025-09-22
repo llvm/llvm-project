@@ -78,7 +78,7 @@
 "","","","","",""
 "`LWG3216 <https://wg21.link/LWG3216>`__","Rebinding the allocator before calling ``construct``/``destroy`` in ``allocate_shared``","2024-11 (Wrocław)","","","`#118332 <https://github.com/llvm/llvm-project/issues/118332>`__",""
 "`LWG3436 <https://wg21.link/LWG3436>`__","``std::construct_at`` should support arrays","2024-11 (Wrocław)","","","`#118335 <https://github.com/llvm/llvm-project/issues/118335>`__",""
-"`LWG3886 <https://wg21.link/LWG3886>`__","Monad mo' problems","2024-11 (Wrocław)","","","`#118336 <https://github.com/llvm/llvm-project/issues/118336>`__",""
+"`LWG3886 <https://wg21.link/LWG3886>`__","Monad mo' problems","2024-11 (Wrocław)","|Complete|","22","`#118336 <https://github.com/llvm/llvm-project/issues/118336>`__",""
 "`LWG3899 <https://wg21.link/LWG3899>`__","``co_yield``\ing elements of an lvalue generator is unnecessarily inefficient","2024-11 (Wrocław)","","","`#118337 <https://github.com/llvm/llvm-project/issues/118337>`__",""
 "`LWG3900 <https://wg21.link/LWG3900>`__","The ``allocator_arg_t`` overloads of ``generator::promise_type::operator new`` should not be constrained","2024-11 (Wrocław)","","","`#118338 <https://github.com/llvm/llvm-project/issues/118338>`__",""
 "`LWG3918 <https://wg21.link/LWG3918>`__","``std::uninitialized_move/_n`` and guaranteed copy elision","2024-11 (Wrocław)","","","`#118339 <https://github.com/llvm/llvm-project/issues/118339>`__",""
