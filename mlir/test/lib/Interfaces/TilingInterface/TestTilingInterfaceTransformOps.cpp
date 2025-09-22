@@ -18,9 +18,13 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "test-tiling-interface"
 
 #define GET_OP_CLASSES
 #include "TestTilingInterfaceTransformOps.h.inc"
@@ -57,8 +61,7 @@ template <typename Range>
 static LogicalResult
 applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
                       Range &&payloadOps, unsigned numLoops,
-                      ArrayRef<OpFoldResult> tileSizes,
-                      ArrayRef<int64_t> interchange, bool useForall,
+                      scf::SCFTilingOptions tilingOptions,
                       TransformResults &transformResults) {
   SmallVector<Operation *> tiledOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
@@ -78,12 +81,6 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
           })) {
         yieldReplacementsFor.insert(op);
       }
-    }
-
-    scf::SCFTilingOptions tilingOptions;
-    tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
-    if (useForall) {
-      tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
     }
 
     scf::SCFTileAndFuseOptions tileAndFuseOptions;
@@ -154,10 +151,16 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
   SmallVector<OpFoldResult> tileSizesOfr =
       getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
 
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizes(tileSizesOfr).setInterchange(tileInterchange);
+  if (getUseForall()) {
+    tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
+  }
+
   LogicalResult result = applyTileAndFuseToAll(
       rewriter, getOperation(), state.getPayloadOps(getTarget()),
-      tileSizes.size() - llvm::count(tileSizes, 0), tileSizesOfr,
-      tileInterchange, getUseForall(), transformResults);
+      tileSizes.size() - llvm::count(tileSizes, 0), tilingOptions,
+      transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
@@ -168,29 +171,30 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
 
 /// Apply fusing of consumer transformation to all payload ops and store both
 /// the original consumer operation as well as the fused consumer operation.
-template <typename Range>
-static LogicalResult
-applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
-                  Range &&payloadOps, uint32_t numConsumerToFuse,
-                  TransformResults &transformResults) {
+static LogicalResult applyFuseConsumer(
+    RewriterBase &rewriter, Operation *transformOp,
+    ArrayRef<Operation *> slices, MutableArrayRef<LoopLikeOpInterface> loops,
+    uint32_t numConsumerToFuse, TransformResults &transformResults) {
   SmallVector<Operation *> originalConsumerOps;
   SmallVector<Operation *> fusedConsumerOps;
 
-  for (Operation *target : payloadOps) {
-    rewriter.setInsertionPoint(target);
+  rewriter.setInsertionPoint(slices.front());
 
-    while (numConsumerToFuse--) {
-      FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
-          scf::tileAndFuseConsumerOfSlice(rewriter, target);
+  while (numConsumerToFuse--) {
+    FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
+        scf::tileAndFuseConsumerOfSlices(rewriter, slices, loops);
 
-      if (failed(fuseConsumerResults))
-        return failure();
+    if (failed(fuseConsumerResults))
+      return slices.front()->emitOpError("failed to fuse consumer of slice");
 
-      // Report back the relevant handles to the transform op.
-      originalConsumerOps.push_back(
-          fuseConsumerResults->origConsumerOperand->getOwner());
-      fusedConsumerOps.push_back(
-          fuseConsumerResults->tiledAndFusedConsumerOperand->getOwner());
+    // Report back the relevant handles to the transform op.
+    for (OpOperand *origConsumerOperand :
+         fuseConsumerResults->origConsumerOperands) {
+      originalConsumerOps.push_back(origConsumerOperand->getOwner());
+    }
+    for (OpOperand *tiledAndFusedConsumerOperand :
+         fuseConsumerResults->tiledAndFusedConsumerOperands) {
+      fusedConsumerOps.push_back(tiledAndFusedConsumerOperand->getOwner());
     }
   }
 
@@ -203,16 +207,32 @@ DiagnosedSilenceableFailure
 transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
                                      TransformResults &transformResults,
                                      TransformState &state) {
-  LogicalResult result = applyFuseConsumer(
-      rewriter, getOperation(), state.getPayloadOps(getTarget()),
-      getNumConsumerToFuse(), transformResults);
+  SmallVector<Operation *> slices;
+  for (auto op : getTargets()) {
+    auto sliceOp = *state.getPayloadOps(op).begin();
+    slices.push_back(sliceOp);
+  }
+
+  SmallVector<LoopLikeOpInterface> loops;
+  for (auto op : llvm::reverse(getLoops())) {
+    auto loopLikeOp =
+        dyn_cast<LoopLikeOpInterface>(*state.getPayloadOps(op).begin());
+    if (!loopLikeOp) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    loops.push_back(loopLikeOp);
+  }
+  LogicalResult result =
+      applyFuseConsumer(rewriter, getOperation(), slices, loops,
+                        getNumConsumerToFuse(), transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
 
 void transform::TestFuseConsumerOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
+  consumesHandle(getTargetsMutable(), effects);
+  consumesHandle(getLoopsMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
@@ -377,6 +397,75 @@ void transform::TestFuseUsingForallOp::getEffects(
   consumesHandle(getRootOpMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// TestTileAndFuseOuterParallelPartialReduction
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::TestTileAndFuseOuterParallelPartialReductionOp::apply(
+    TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
+  auto target =
+      dyn_cast<TilingInterface>(*state.getPayloadOps(getRootOp()).begin());
+  if (!target) {
+    emitOpError("expected root operation to implement `TilingInterface`");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  SmallVector<unsigned> reductionDims =
+      extractFromIntegerArrayAttr<unsigned>(getReductionDims());
+  if (reductionDims.empty()) {
+    for (auto [index, iterator] :
+         llvm::enumerate(target.getLoopIteratorTypes()))
+      if (iterator == utils::IteratorType::reduction)
+        reductionDims.push_back(index);
+  }
+
+  if (reductionDims.empty()) {
+    emitOpError(
+        "no reduction dimension specified or found in the target operation");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  SmallVector<int64_t> reductionTileSizes =
+      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
+  if (reductionTileSizes.size() != reductionDims.size()) {
+    emitOpError(
+        "missing tile sizes for reduction dimensions that are to be tiled");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  // Adjust tile sizes so that it corresponds to the reduction iterator types.
+  SmallVector<OpFoldResult> tileSizes;
+  int reductionTileSizeNum = 0;
+  OpFoldResult zero = rewriter.getIndexAttr(0);
+  for (auto iterator : target.getLoopIteratorTypes()) {
+    if (iterator == utils::IteratorType::parallel) {
+      tileSizes.push_back(zero);
+      continue;
+    }
+    tileSizes.push_back(
+        rewriter.getIndexAttr(reductionTileSizes[reductionTileSizeNum++]));
+  }
+
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizes(tileSizes)
+      .setLoopType(scf::SCFTilingOptions::LoopType::ForallOp)
+      .setReductionTilingStrategy(
+          ReductionTilingStrategy::PartialReductionOuterParallel)
+      .setReductionDims(reductionDims);
+  if (auto mapping = getMapping()) {
+    tilingOptions.setMapping(getMapping().value());
+  }
+
+  LogicalResult result = applyTileAndFuseToAll(
+      rewriter, getOperation(), state.getPayloadOps(getRootOp()),
+      /*numLoops =*/1, tilingOptions, transformResults);
+
+  return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
+                        : DiagnosedSilenceableFailure::success();
 }
 
 #define GET_OP_CLASSES

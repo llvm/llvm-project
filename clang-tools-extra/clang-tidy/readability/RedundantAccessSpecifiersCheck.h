@@ -1,4 +1,4 @@
-//===--- RedundantAccessSpecifiersCheck.h - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,7 @@ class RedundantAccessSpecifiersCheck : public ClangTidyCheck {
 public:
   RedundantAccessSpecifiersCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        CheckFirstDeclaration(
-            Options.getLocalOrGlobal("CheckFirstDeclaration", false)) {}
+        CheckFirstDeclaration(Options.get("CheckFirstDeclaration", false)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }

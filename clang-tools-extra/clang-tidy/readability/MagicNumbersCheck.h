@@ -1,4 +1,4 @@
-//===--- MagicNumbersCheck.h - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -43,11 +43,12 @@ private:
 
   bool isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &,
                        const FloatingLiteral &) const {
-     return false;
+    return false;
   }
 
-  bool isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &Result,
-                       const IntegerLiteral &Literal) const;
+  bool
+  isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &Result,
+                  const IntegerLiteral &Literal) const;
 
   bool isUserDefinedLiteral(
       const clang::ast_matchers::MatchFinder::MatchResult &Result,

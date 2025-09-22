@@ -17,7 +17,6 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <optional>
 
@@ -27,6 +26,15 @@ using namespace mlir::dataflow;
 //===----------------------------------------------------------------------===//
 // AbstractDenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
+
+void AbstractDenseForwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
+    Operation *top) {
+  top->walk([&](Operation *op) {
+    if (isa<RegionBranchOpInterface, CallOpInterface>(op))
+      return;
+    buildOperationEquivalentLatticeAnchor(op);
+  });
+}
 
 LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
@@ -56,10 +64,12 @@ void AbstractDenseForwardDataFlowAnalysis::visitCallOperation(
     AbstractDenseLattice *after) {
   // Allow for customizing the behavior of calls to external symbols, including
   // when the analysis is explicitly marked as non-interprocedural.
-  auto callable =
-      dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
-  if (!getSolverConfig().isInterprocedural() ||
-      (callable && !callable.getCallableRegion())) {
+  auto isExternalCallable = [&]() {
+    auto callable =
+        dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
+    return callable && !callable.getCallableRegion();
+  };
+  if (!getSolverConfig().isInterprocedural() || isExternalCallable()) {
     return visitCallControlFlowTransfer(
         call, CallControlFlowAction::ExternalCallee, before, after);
   }
@@ -240,17 +250,18 @@ void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
   }
 }
 
-const AbstractDenseLattice *
-AbstractDenseForwardDataFlowAnalysis::getLatticeFor(ProgramPoint *dependent,
-                                                    LatticeAnchor anchor) {
-  AbstractDenseLattice *state = getLattice(anchor);
-  addDependency(state, dependent);
-  return state;
-}
-
 //===----------------------------------------------------------------------===//
 // AbstractDenseBackwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
+
+void AbstractDenseBackwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
+    Operation *top) {
+  top->walk([&](Operation *op) {
+    if (isa<RegionBranchOpInterface, CallOpInterface>(op))
+      return;
+    buildOperationEquivalentLatticeAnchor(op);
+  });
+}
 
 LogicalResult
 AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
@@ -281,6 +292,12 @@ AbstractDenseBackwardDataFlowAnalysis::visit(ProgramPoint *point) {
 void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
     CallOpInterface call, const AbstractDenseLattice &after,
     AbstractDenseLattice *before) {
+  // If the solver is not interprocedural, let the hook handle it as an external
+  // callee.
+  if (!getSolverConfig().isInterprocedural())
+    return visitCallControlFlowTransfer(
+        call, CallControlFlowAction::ExternalCallee, after, before);
+
   // Find the callee.
   Operation *callee = call.resolveCallableInTable(&symbolTable);
 
@@ -288,12 +305,10 @@ void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
   // No region means the callee is only declared in this module.
   // If that is the case or if the solver is not interprocedural,
   // let the hook handle it.
-  if (!getSolverConfig().isInterprocedural() ||
-      (callable && (!callable.getCallableRegion() ||
-                    callable.getCallableRegion()->empty()))) {
+  if (callable &&
+      (!callable.getCallableRegion() || callable.getCallableRegion()->empty()))
     return visitCallControlFlowTransfer(
         call, CallControlFlowAction::ExternalCallee, after, before);
-  }
 
   if (!callable)
     return setToExitState(before);
@@ -454,12 +469,4 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
     visitRegionBranchControlFlowTransfer(branch, branchPoint, successor, *after,
                                          before);
   }
-}
-
-const AbstractDenseLattice *
-AbstractDenseBackwardDataFlowAnalysis::getLatticeFor(ProgramPoint *dependent,
-                                                     LatticeAnchor anchor) {
-  AbstractDenseLattice *state = getLattice(anchor);
-  addDependency(state, dependent);
-  return state;
 }

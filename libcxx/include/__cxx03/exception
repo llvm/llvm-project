@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXCEPTION
-#define _LIBCPP_EXCEPTION
+#ifndef _LIBCPP___CXX03_EXCEPTION
+#define _LIBCPP___CXX03_EXCEPTION
 
 /*
     exception synopsis
@@ -88,9 +88,9 @@ template <class E> void rethrow_if_nested(const E& e);
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_EXCEPTION
+#endif // _LIBCPP___CXX03_EXCEPTION

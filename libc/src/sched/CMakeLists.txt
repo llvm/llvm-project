@@ -3,6 +3,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_entrypoint_object(
+  getcpu
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getcpu
+)
+
+add_entrypoint_object(
   sched_getaffinity
   ALIAS
   DEPENDS
@@ -77,4 +84,25 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.__sched_getcpucount
+)
+
+add_entrypoint_object(
+  __sched_setcpuzero
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_setcpuzero
+)
+
+add_entrypoint_object(
+  __sched_setcpuset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_setcpuset
+)
+
+add_entrypoint_object(
+  __sched_getcpuisset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_getcpuisset
 )

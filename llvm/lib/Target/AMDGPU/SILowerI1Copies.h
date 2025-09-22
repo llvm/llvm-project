@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 
 namespace llvm {
@@ -70,6 +71,11 @@ public:
 
   void initializeLaneMaskRegisterAttributes(Register LaneMask) {
     LaneMaskRegAttrs = MRI->getVRegAttrs(LaneMask);
+  }
+
+  void
+  initializeLaneMaskRegisterAttributes(MachineRegisterInfo::VRegAttrs Attrs) {
+    LaneMaskRegAttrs = Attrs;
   }
 
   bool isLaneMaskReg(Register Reg) const {

@@ -33,7 +33,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn(
             """
     1 | unknown_identifier
-      | ^
+      | ^~~~~~~~~~~~~~~~~~
 """,
             value.GetError().GetCString(),
         )
@@ -45,7 +45,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn(
             """
     1 | 1 + unknown_identifier
-      |     ^
+      |     ^~~~~~~~~~~~~~~~~~
 """,
             value.GetError().GetCString(),
         )
@@ -57,7 +57,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertIn(
             """
     2 | foobar +=1;
-      | ^
+      | ^~~~~~
 """,
             value.GetError().GetCString(),
         )
@@ -207,37 +207,56 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// Break here", self.main_source_spec
         )
+
+        def check_error(diags):
+            # Version.
+            version = diags.GetValueForKey("version")
+            self.assertEqual(version.GetIntegerValue(), 1)
+
+            details = diags.GetValueForKey("details")
+
+            # Detail 1/2: undeclared 'a'
+            diag = details.GetItemAtIndex(0)
+
+            severity = diag.GetValueForKey("severity")
+            message = diag.GetValueForKey("message")
+            rendered = diag.GetValueForKey("rendered")
+            sloc = diag.GetValueForKey("source_location")
+            filename = sloc.GetValueForKey("file")
+            hidden = sloc.GetValueForKey("hidden")
+            in_user_input = sloc.GetValueForKey("in_user_input")
+
+            self.assertEqual(str(severity), "error")
+            self.assertIn("undeclared identifier 'a'", str(message))
+            # The rendered string should contain the source file.
+            self.assertIn("user expression", str(rendered))
+            self.assertIn("user expression", str(filename))
+            self.assertFalse(hidden.GetBooleanValue())
+            self.assertTrue(in_user_input.GetBooleanValue())
+
+            # Detail 1/2: undeclared 'b'
+            diag = details.GetItemAtIndex(1)
+            message = diag.GetValueForKey("message")
+            self.assertIn("undeclared identifier 'b'", str(message))
+
+        # Test diagnostics in CommandReturnObject
         interp = self.dbg.GetCommandInterpreter()
         cro = lldb.SBCommandReturnObject()
         interp.HandleCommand("expression -- a+b", cro)
 
         diags = cro.GetErrorData()
-        # Version.
-        version = diags.GetValueForKey("version")
+        check_error(diags)
+
+        # Test diagnostics in SBError
+        frame = thread.GetSelectedFrame()
+        value = frame.EvaluateExpression("a+b")
+        error = value.GetError()
+        self.assertTrue(error.Fail())
+        self.assertEqual(error.GetType(), lldb.eErrorTypeExpression)
+        data = error.GetErrorData()
+        version = data.GetValueForKey("version")
         self.assertEqual(version.GetIntegerValue(), 1)
-
-        details = diags.GetValueForKey("details")
-
-        # Detail 1/2: undeclared 'a'
-        diag = details.GetItemAtIndex(0)
-
-        severity = diag.GetValueForKey("severity")
-        message = diag.GetValueForKey("message")
-        rendered = diag.GetValueForKey("rendered")
-        sloc = diag.GetValueForKey("source_location")
-        filename = sloc.GetValueForKey("file")
-        hidden = sloc.GetValueForKey("hidden")
-        in_user_input = sloc.GetValueForKey("in_user_input")
-
-        self.assertEqual(str(severity), "error")
-        self.assertIn("undeclared identifier 'a'", str(message))
-        # The rendered string should contain the source file.
-        self.assertIn("user expression", str(rendered))
-        self.assertIn("user expression", str(filename))
-        self.assertFalse(hidden.GetBooleanValue())
-        self.assertTrue(in_user_input.GetBooleanValue())
-
-        # Detail 1/2: undeclared 'b'
-        diag = details.GetItemAtIndex(1)
-        message = diag.GetValueForKey("message")
-        self.assertIn("undeclared identifier 'b'", str(message))
+        err_ty = data.GetValueForKey("type")
+        self.assertEqual(err_ty.GetIntegerValue(), lldb.eErrorTypeExpression)
+        diags = data.GetValueForKey("errors").GetItemAtIndex(0)
+        check_error(diags)

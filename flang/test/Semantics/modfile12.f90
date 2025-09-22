@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: %python %S/test_modfile.py %s %flang_fc1
 module m
   integer(8), parameter :: a = 1, b = 2_8

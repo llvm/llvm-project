@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CFENV
-#define _LIBCPP_CFENV
+#ifndef _LIBCPP___CXX03_CFENV
+#define _LIBCPP___CXX03_CFENV
 
 /*
     cfenv synopsis
@@ -56,7 +56,7 @@ int feupdateenv(const fenv_t* envp);
 
 #include <__cxx03/fenv.h>
 
-#ifndef _LIBCPP_FENV_H
+#ifndef _LIBCPP___CXX03_FENV_H
 #   error <cfenv> tried including <fenv.h> but didn't find libc++'s <fenv.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -87,4 +87,4 @@ using ::feupdateenv _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CFENV
+#endif // _LIBCPP___CXX03_CFENV

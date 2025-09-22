@@ -18,7 +18,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -30,7 +29,7 @@
 using namespace clang;
 
 DiagnosticRenderer::DiagnosticRenderer(const LangOptions &LangOpts,
-                                       DiagnosticOptions *DiagOpts)
+                                       DiagnosticOptions &DiagOpts)
     : LangOpts(LangOpts), DiagOpts(DiagOpts), LastLevel() {}
 
 DiagnosticRenderer::~DiagnosticRenderer() = default;
@@ -115,7 +114,7 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
     // Find the ultimate expansion location for the diagnostic.
     Loc = Loc.getFileLoc();
 
-    PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+    PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts.ShowPresumedLoc);
 
     // First, if this diagnostic is not in the main file, print out the
     // "included from" lines.
@@ -172,7 +171,7 @@ void DiagnosticRenderer::emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
 
   LastIncludeLoc = IncludeLoc;
 
-  if (!DiagOpts->ShowNoteIncludeStack && Level == DiagnosticsEngine::Note)
+  if (!DiagOpts.ShowNoteIncludeStack && Level == DiagnosticsEngine::Note)
     return;
 
   if (IncludeLoc.isValid())
@@ -191,7 +190,7 @@ void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
     return;
   }
 
-  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts.ShowPresumedLoc);
   if (PLoc.isInvalid())
     return;
 
@@ -232,7 +231,7 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
     return;
   }
 
-  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts.ShowPresumedLoc);
 
   // Emit the other import frames first.
   std::pair<FullSourceLoc, StringRef> NextImportLoc = Loc.getModuleImportLoc();
@@ -247,9 +246,8 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
 void DiagnosticRenderer::emitModuleBuildStack(const SourceManager &SM) {
   ModuleBuildStack Stack = SM.getModuleBuildStack();
   for (const auto &I : Stack) {
-    emitBuildingModuleLocation(I.second, I.second.getPresumedLoc(
-                                              DiagOpts->ShowPresumedLoc),
-                               I.first);
+    emitBuildingModuleLocation(
+        I.second, I.second.getPresumedLoc(DiagOpts.ShowPresumedLoc), I.first);
   }
 }
 
@@ -272,8 +270,7 @@ retrieveMacroLocation(SourceLocation Loc, FileID MacroFileID,
   if (SM->isMacroArgExpansion(Loc)) {
     // Only look at the immediate spelling location of this macro argument if
     // the other location in the source range is also present in that expansion.
-    if (std::binary_search(CommonArgExpansions.begin(),
-                           CommonArgExpansions.end(), MacroFileID))
+    if (llvm::binary_search(CommonArgExpansions, MacroFileID))
       MacroRange =
           CharSourceRange(SM->getImmediateSpellingLoc(Loc), IsTokenRange);
     MacroArgRange = SM->getImmediateExpansionRange(Loc);
@@ -454,62 +451,41 @@ void DiagnosticRenderer::emitSingleMacroExpansion(
                  SpellingRanges, {});
 }
 
-/// Check that the macro argument location of Loc starts with ArgumentLoc.
-/// The starting location of the macro expansions is used to differeniate
-/// different macro expansions.
-static bool checkLocForMacroArgExpansion(SourceLocation Loc,
-                                         const SourceManager &SM,
-                                         SourceLocation ArgumentLoc) {
-  SourceLocation MacroLoc;
-  if (SM.isMacroArgExpansion(Loc, &MacroLoc)) {
-    if (ArgumentLoc == MacroLoc) return true;
-  }
-
-  return false;
-}
-
-/// Check if all the locations in the range have the same macro argument
-/// expansion, and that the expansion starts with ArgumentLoc.
-static bool checkRangeForMacroArgExpansion(CharSourceRange Range,
-                                           const SourceManager &SM,
-                                           SourceLocation ArgumentLoc) {
-  SourceLocation BegLoc = Range.getBegin(), EndLoc = Range.getEnd();
-  while (BegLoc != EndLoc) {
-    if (!checkLocForMacroArgExpansion(BegLoc, SM, ArgumentLoc))
-      return false;
-    BegLoc.getLocWithOffset(1);
-  }
-
-  return checkLocForMacroArgExpansion(BegLoc, SM, ArgumentLoc);
-}
-
 /// A helper function to check if the current ranges are all inside the same
 /// macro argument expansion as Loc.
-static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
-                                            ArrayRef<CharSourceRange> Ranges) {
+static bool
+rangesInsideSameMacroArgExpansion(FullSourceLoc Loc,
+                                  ArrayRef<CharSourceRange> Ranges) {
   assert(Loc.isMacroID() && "Must be a macro expansion!");
 
-  SmallVector<CharSourceRange, 4> SpellingRanges;
+  SmallVector<CharSourceRange> SpellingRanges;
   mapDiagnosticRanges(Loc, Ranges, SpellingRanges);
 
-  // Count all valid ranges.
   unsigned ValidCount =
       llvm::count_if(Ranges, [](const auto &R) { return R.isValid(); });
-
   if (ValidCount > SpellingRanges.size())
     return false;
 
-  // To store the source location of the argument location.
-  FullSourceLoc ArgumentLoc;
+  const SourceManager &SM = Loc.getManager();
+  for (const auto &R : Ranges) {
+    // All positions in the range need to point to Loc.
+    SourceLocation Begin = R.getBegin();
+    if (Begin == R.getEnd()) {
+      if (!SM.isMacroArgExpansion(Begin))
+        return false;
+      continue;
+    }
 
-  // Set the ArgumentLoc to the beginning location of the expansion of Loc
-  // so to check if the ranges expands to the same beginning location.
-  if (!Loc.isMacroArgExpansion(&ArgumentLoc))
-    return false;
+    while (Begin != R.getEnd()) {
+      SourceLocation MacroLoc;
+      if (!SM.isMacroArgExpansion(Begin, &MacroLoc))
+        return false;
+      if (MacroLoc != Loc)
+        return false;
 
-  for (const auto &Range : SpellingRanges)
-    if (!checkRangeForMacroArgExpansion(Range, Loc.getManager(), ArgumentLoc))
-      return false;
+      Begin = Begin.getLocWithOffset(1);
+    }
+  }
 
   return true;
 }
@@ -539,13 +515,13 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
   while (L.isMacroID()) {
     // If this is the expansion of a macro argument, point the caret at the
     // use of the argument in the definition of the macro, not the expansion.
-    if (SM.isMacroArgExpansion(L))
+    if (SM.isMacroArgExpansion(L)) {
       LocationStack.push_back(SM.getImmediateExpansionRange(L).getBegin());
-    else
-      LocationStack.push_back(L);
 
-    if (checkRangesForMacroArgExpansion(FullSourceLoc(L, SM), Ranges))
-      IgnoredEnd = LocationStack.size();
+      if (rangesInsideSameMacroArgExpansion(FullSourceLoc(L, SM), Ranges))
+        IgnoredEnd = LocationStack.size();
+    } else
+      LocationStack.push_back(L);
 
     L = SM.getImmediateMacroCallerLoc(L);
 
@@ -561,7 +537,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
                       LocationStack.begin() + IgnoredEnd);
 
   unsigned MacroDepth = LocationStack.size();
-  unsigned MacroLimit = DiagOpts->MacroBacktraceLimit;
+  unsigned MacroLimit = DiagOpts.MacroBacktraceLimit;
   if (MacroDepth <= MacroLimit || MacroLimit == 0) {
     for (auto I = LocationStack.rbegin(), E = LocationStack.rend();
          I != E; ++I)

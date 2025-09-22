@@ -464,6 +464,10 @@ public:
   };
 
 private:
+  /// Instructions which should get is_stmt applied because they implement key
+  /// functionality for a source atom.
+  SmallDenseSet<const MachineInstr *> KeyInstructions;
+
   /// Force the use of DW_AT_ranges even for single-entry range lists.
   MinimizeAddrInV5 MinimizeAddr = MinimizeAddrInV5::Disabled;
 
@@ -679,7 +683,7 @@ private:
   /// label that was emitted and which provides correspondence to the
   /// source line list.
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
-                        unsigned Flags);
+                        unsigned Flags, StringRef Location = {});
 
   /// Populate LexicalScope entries with variables' info.
   void collectEntityInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
@@ -700,6 +704,11 @@ private:
   void emitSectionReference(const DwarfCompileUnit &CU);
 
   void findForceIsStmtInstrs(const MachineFunction *MF);
+
+  /// Compute instructions which should get is_stmt applied because they
+  /// implement key functionality for a source location atom, store results in
+  /// DwarfDebug::KeyInstructions.
+  void computeKeyInstructions(const MachineFunction *MF);
 
 protected:
   /// Gather pre-function debug information.

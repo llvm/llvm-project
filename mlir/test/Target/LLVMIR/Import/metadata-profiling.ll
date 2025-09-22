@@ -36,14 +36,17 @@ bbd:
 
 ; // -----
 
+; Verify that a single weight attached to a call is not translated.
+; The MLIR WeightedBranchOpInterface does not support this case.
+
 ; CHECK: llvm.func @fn()
-declare void @fn()
+declare i32 @fn()
 
 ; CHECK-LABEL: @call_branch_weights
-define void @call_branch_weights() {
-  ; CHECK:  llvm.call @fn() {branch_weights = array<i32: 42>}
-  call void @fn(), !prof !0
-  ret void
+define i32 @call_branch_weights() {
+  ; CHECK:  llvm.call @fn() : () -> i32
+  %1 = call i32 @fn(), !prof !0
+  ret i32 %1
 }
 
 !0 = !{!"branch_weights", i32 42}

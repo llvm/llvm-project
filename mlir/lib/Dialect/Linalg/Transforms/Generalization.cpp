@@ -13,17 +13,12 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGGENERALIZENAMEDOPSPASS
@@ -66,8 +61,9 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   // All named ops have a region attached that can be inlined.
   assert(linalgOp->getNumRegions() == 1 &&
          "expect named op to have one region attached");
-  GenericOp genericOp = rewriter.create<GenericOp>(
-      linalgOp.getLoc(), resultTypes, inputs, outputs, indexingMaps, iterators);
+  GenericOp genericOp =
+      GenericOp::create(rewriter, linalgOp.getLoc(), resultTypes, inputs,
+                        outputs, indexingMaps, iterators);
   rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
                               genericOp.getRegion().begin());
   rewriter.replaceOp(linalgOp, genericOp->getResults());
@@ -89,7 +85,7 @@ struct LinalgGeneralizeNamedOpsPass
 void LinalgGeneralizeNamedOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(

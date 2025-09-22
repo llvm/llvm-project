@@ -18,7 +18,6 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -81,10 +80,6 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     for (auto &&[opOffset, sourceOffset, sourceStride, opSize] :
          llvm::zip(op.getMixedOffsets(), sourceOp.getMixedOffsets(),
                    sourceOp.getMixedStrides(), op.getMixedSizes())) {
-      // We only support static sizes.
-      if (opSize.is<Value>()) {
-        return failure();
-      }
       sizes.push_back(opSize);
       Attribute opOffsetAttr = llvm::dyn_cast_if_present<Attribute>(opOffset),
                 sourceOffsetAttr =
@@ -109,7 +104,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
               rewriter.getAffineConstantExpr(cast<IntegerAttr>(attr).getInt());
         } else {
           expr = rewriter.getAffineSymbolExpr(affineApplyOperands.size());
-          affineApplyOperands.push_back(sourceOffset.get<Value>());
+          affineApplyOperands.push_back(cast<Value>(sourceOffset));
         }
 
         // Multiply 'opOffset' by 'sourceStride' and make the 'expr' add the
@@ -121,12 +116,12 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
           expr =
               expr + rewriter.getAffineSymbolExpr(affineApplyOperands.size()) *
                          cast<IntegerAttr>(sourceStrideAttr).getInt();
-          affineApplyOperands.push_back(opOffset.get<Value>());
+          affineApplyOperands.push_back(cast<Value>(opOffset));
         }
 
         AffineMap map = AffineMap::get(0, affineApplyOperands.size(), expr);
-        Value result = rewriter.create<affine::AffineApplyOp>(
-            op.getLoc(), map, affineApplyOperands);
+        Value result = affine::AffineApplyOp::create(rewriter, op.getLoc(), map,
+                                                     affineApplyOperands);
         offsets.push_back(result);
       }
     }

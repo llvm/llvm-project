@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 
@@ -108,7 +109,7 @@ class MCLOHDirective {
   /// Emit this directive in \p OutStream using the information available
   /// in the given \p ObjWriter and \p Layout to get the address of the
   /// arguments within the object file.
-  void emit_impl(const MCAssembler &Asm, raw_ostream &OutStream,
+  void emit_impl(raw_ostream &OutStream,
                  const MachObjectWriter &ObjWriter) const;
 
 public:
@@ -125,12 +126,12 @@ public:
 
   /// Emit this directive as:
   /// <kind, numArgs, addr1, ..., addrN>
-  void emit(const MCAssembler &Asm, MachObjectWriter &ObjWriter) const;
+  LLVM_ABI void emit(const MCAssembler &Asm, MachObjectWriter &ObjWriter) const;
 
   /// Get the size in bytes of this directive if emitted in \p ObjWriter with
   /// the given \p Layout.
-  uint64_t getEmitSize(const MCAssembler &Asm,
-                       const MachObjectWriter &ObjWriter) const;
+  LLVM_ABI uint64_t getEmitSize(const MCAssembler &Asm,
+                                const MachObjectWriter &ObjWriter) const;
 };
 
 class MCLOHContainer {

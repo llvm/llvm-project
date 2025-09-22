@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -43,9 +44,11 @@ namespace {
 /// StackFrameLayoutAnalysisPass - This is a pass to dump the stack frame of a
 /// MachineFunction.
 ///
-struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
+struct StackFrameLayoutAnalysis {
   using SlotDbgMap = SmallDenseMap<int, SetVector<const DILocalVariable *>>;
-  static char ID;
+  MachineOptimizationRemarkEmitter &ORE;
+
+  StackFrameLayoutAnalysis(MachineOptimizationRemarkEmitter &ORE) : ORE(ORE) {}
 
   enum SlotType {
     Spill,          // a Spill slot
@@ -99,19 +102,7 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
     }
   };
 
-  StackFrameLayoutAnalysisPass() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "Stack Frame Layout Analysis";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
+  bool run(MachineFunction &MF) {
     // TODO: We should implement a similar filter for remarks:
     //   -Rpass-func-filter=<regex>
     if (!isFunctionInPrintList(MF.getName()))
@@ -126,7 +117,7 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
                                           &MF.front());
     Rem << ("\nFunction: " + MF.getName()).str();
     emitStackFrameLayoutRemarks(MF, Rem);
-    getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE().emit(Rem);
+    ORE.emit(Rem);
     return false;
   }
 
@@ -278,17 +269,47 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
   }
 };
 
-char StackFrameLayoutAnalysisPass::ID = 0;
+class StackFrameLayoutAnalysisLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  StackFrameLayoutAnalysisLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "Stack Frame Layout Analysis";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    auto &ORE = getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+    return StackFrameLayoutAnalysis(ORE).run(MF);
+  }
+};
+
+char StackFrameLayoutAnalysisLegacy::ID = 0;
 } // namespace
 
-char &llvm::StackFrameLayoutAnalysisPassID = StackFrameLayoutAnalysisPass::ID;
-INITIALIZE_PASS(StackFrameLayoutAnalysisPass, "stack-frame-layout",
+PreservedAnalyses
+llvm::StackFrameLayoutAnalysisPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  auto &ORE = MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  StackFrameLayoutAnalysis(ORE).run(MF);
+  return PreservedAnalyses::all();
+}
+
+char &llvm::StackFrameLayoutAnalysisPassID = StackFrameLayoutAnalysisLegacy::ID;
+INITIALIZE_PASS(StackFrameLayoutAnalysisLegacy, "stack-frame-layout",
                 "Stack Frame Layout", false, false)
 
 namespace llvm {
 /// Returns a newly-created StackFrameLayout pass.
 MachineFunctionPass *createStackFrameLayoutAnalysisPass() {
-  return new StackFrameLayoutAnalysisPass();
+  return new StackFrameLayoutAnalysisLegacy();
 }
 
 } // namespace llvm

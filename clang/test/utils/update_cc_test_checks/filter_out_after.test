@@ -1,0 +1,11 @@
+## Check that --filter_out_after works properly.
+# RUN: cp -f %S/Inputs/filter_out_after.c %t.c && %update_cc_test_checks --version=5 --filter-out-after="call.*bar" %t.c
+# RUN: diff -u %t.c %S/Inputs/filter_out_after.c.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_cc_test_checks --version=5 --filter-out-after="call.*bar" %t.c
+# RUN: diff -u %t.c %S/Inputs/filter_out_after.c.expected
+
+## Check that running the script again, without arguments, does not change the result:
+# RUN: %update_cc_test_checks --version=5 %t.c
+# RUN: diff -u %t.c %S/Inputs/filter_out_after.c.expected

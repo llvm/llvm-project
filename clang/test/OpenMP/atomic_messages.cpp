@@ -991,3 +991,34 @@ int mixed() {
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();
 }
+
+#ifdef OMP51
+struct U {};
+struct U operator<(U, U);
+struct U operator>(U, U);
+struct U operator==(U, U);
+
+template <typename T> void templated() {
+  T cx, cv, ce, cd;
+#pragma omp atomic compare capture
+  if (cx == ce) {
+    cx = cd;
+  } else {
+    cv = cx;
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (ce > cx) {
+      cx = ce;
+    }
+  }
+#pragma omp atomic compare capture
+  {
+    cv = cx;
+    if (cx < ce) {
+      cx = ce;
+    }
+  }
+}
+#endif

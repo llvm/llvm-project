@@ -20,10 +20,10 @@ def Arith_Dialect : Dialect {
     mathematical operations. This includes unary, binary, and ternary arithmetic
     ops, bitwise and shift ops, cast ops, and compare ops. Operations in this
     dialect also accept vectors and tensors of integers or floats. The dialect
-    assumes integers are represented by bitvectors with a two's complement 
-    representation. Unless otherwise stated, the operations within this dialect 
-    propagate poison values, i.e., if any of its inputs are poison, then the 
-    output is poison. Unless otherwise stated, operations applied to `vector` 
+    assumes integers are represented by bitvectors with a two's complement
+    representation. Unless otherwise stated, the operations within this dialect
+    propagate poison values, i.e., if any of its inputs are poison, then the
+    output is poison. Unless otherwise stated, operations applied to `vector`
     and `tensor` values propagates poison elementwise.
   }];
 
@@ -76,27 +76,29 @@ def Arith_CmpIPredicateAttr : I64EnumAttr<
 
 def ATOMIC_RMW_KIND_ADDF     : I64EnumAttrCase<"addf", 0>;
 def ATOMIC_RMW_KIND_ADDI     : I64EnumAttrCase<"addi", 1>;
-def ATOMIC_RMW_KIND_ASSIGN   : I64EnumAttrCase<"assign", 2>;
-def ATOMIC_RMW_KIND_MAXIMUMF : I64EnumAttrCase<"maximumf", 3>;
-def ATOMIC_RMW_KIND_MAXS     : I64EnumAttrCase<"maxs", 4>;
-def ATOMIC_RMW_KIND_MAXU     : I64EnumAttrCase<"maxu", 5>;
-def ATOMIC_RMW_KIND_MINIMUMF : I64EnumAttrCase<"minimumf", 6>;
-def ATOMIC_RMW_KIND_MINS     : I64EnumAttrCase<"mins", 7>;
-def ATOMIC_RMW_KIND_MINU     : I64EnumAttrCase<"minu", 8>;
-def ATOMIC_RMW_KIND_MULF     : I64EnumAttrCase<"mulf", 9>;
-def ATOMIC_RMW_KIND_MULI     : I64EnumAttrCase<"muli", 10>;
-def ATOMIC_RMW_KIND_ORI      : I64EnumAttrCase<"ori", 11>;
-def ATOMIC_RMW_KIND_ANDI     : I64EnumAttrCase<"andi", 12>;
-def ATOMIC_RMW_KIND_MAXNUMF  : I64EnumAttrCase<"maxnumf", 13>;
-def ATOMIC_RMW_KIND_MINNUMF  : I64EnumAttrCase<"minnumf", 14>;
+def ATOMIC_RMW_KIND_ANDI     : I64EnumAttrCase<"andi", 2>;
+def ATOMIC_RMW_KIND_ASSIGN   : I64EnumAttrCase<"assign", 3>;
+def ATOMIC_RMW_KIND_MAXIMUMF : I64EnumAttrCase<"maximumf", 4>;
+def ATOMIC_RMW_KIND_MAXNUMF  : I64EnumAttrCase<"maxnumf", 5>;
+def ATOMIC_RMW_KIND_MAXS     : I64EnumAttrCase<"maxs", 6>;
+def ATOMIC_RMW_KIND_MAXU     : I64EnumAttrCase<"maxu", 7>;
+def ATOMIC_RMW_KIND_MINIMUMF : I64EnumAttrCase<"minimumf", 8>;
+def ATOMIC_RMW_KIND_MINNUMF  : I64EnumAttrCase<"minnumf", 9>;
+def ATOMIC_RMW_KIND_MINS     : I64EnumAttrCase<"mins", 10>;
+def ATOMIC_RMW_KIND_MINU     : I64EnumAttrCase<"minu", 11>;
+def ATOMIC_RMW_KIND_MULF     : I64EnumAttrCase<"mulf", 12>;
+def ATOMIC_RMW_KIND_MULI     : I64EnumAttrCase<"muli", 13>;
+def ATOMIC_RMW_KIND_ORI      : I64EnumAttrCase<"ori", 14>;
+def ATOMIC_RMW_KIND_XORI     : I64EnumAttrCase<"xori", 15>;
 
 def AtomicRMWKindAttr : I64EnumAttr<
     "AtomicRMWKind", "",
-    [ATOMIC_RMW_KIND_ADDF, ATOMIC_RMW_KIND_ADDI, ATOMIC_RMW_KIND_ASSIGN,
-     ATOMIC_RMW_KIND_MAXIMUMF, ATOMIC_RMW_KIND_MAXS, ATOMIC_RMW_KIND_MAXU,
-     ATOMIC_RMW_KIND_MINIMUMF, ATOMIC_RMW_KIND_MINS, ATOMIC_RMW_KIND_MINU,
+    [ATOMIC_RMW_KIND_ADDF, ATOMIC_RMW_KIND_ADDI, ATOMIC_RMW_KIND_ANDI,
+     ATOMIC_RMW_KIND_ASSIGN, ATOMIC_RMW_KIND_MAXIMUMF, ATOMIC_RMW_KIND_MAXNUMF,
+     ATOMIC_RMW_KIND_MAXS, ATOMIC_RMW_KIND_MAXU, ATOMIC_RMW_KIND_MINIMUMF,
+     ATOMIC_RMW_KIND_MINNUMF, ATOMIC_RMW_KIND_MINS, ATOMIC_RMW_KIND_MINU,
      ATOMIC_RMW_KIND_MULF, ATOMIC_RMW_KIND_MULI, ATOMIC_RMW_KIND_ORI,
-     ATOMIC_RMW_KIND_ANDI, ATOMIC_RMW_KIND_MAXNUMF, ATOMIC_RMW_KIND_MINNUMF]> {
+     ATOMIC_RMW_KIND_XORI]> {
   let cppNamespace = "::mlir::arith";
 }
 
@@ -179,39 +181,6 @@ def Arith_RoundingModeAttr : I32EnumAttr<
     [Arith_RToNearestTiesToEven, Arith_RDownward, Arith_RUpward,
      Arith_RTowardZero, Arith_RToNearestTiesAwayFromZero]> {
   let cppNamespace = "::mlir::arith";
-}
-
-//===----------------------------------------------------------------------===//
-// Arith_DenormalMode
-//===----------------------------------------------------------------------===//
-
-// Denormal mode is applied on operands and results. For example, if denormal =
-// preserve_sign, operands and results will be flushed to sign preserving zero.
-// We do not distinguish between operands and results.
-
-// The default mode. Denormals are preserved and processed as defined 
-// by IEEE 754 rules.
-def Arith_DenormalModeIEEE          : I32EnumAttrCase<"ieee", 0>;
-
-// A mode where denormal numbers are flushed to zero, but the sign of the zero 
-// (+0 or -0) is preserved.
-def Arith_DenormalModePreserveSign  : I32EnumAttrCase<"preserve_sign", 1>;
-
-// A mode where all denormal numbers are flushed to positive zero (+0), 
-// ignoring the sign of the original number.
-def Arith_DenormalModePositiveZero  : I32EnumAttrCase<"positive_zero",  2>;
-
-def Arith_DenormalMode : I32EnumAttr<
-    "DenormalMode", "denormal mode arith",
-    [Arith_DenormalModeIEEE, Arith_DenormalModePreserveSign, 
-     Arith_DenormalModePositiveZero]> {
-  let cppNamespace = "::mlir::arith";
-  let genSpecializedAttr = 0;
-}
-
-def Arith_DenormalModeAttr :
-    EnumAttr<Arith_Dialect, Arith_DenormalMode, "denormal"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 #endif // ARITH_BASE

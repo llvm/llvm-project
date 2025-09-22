@@ -372,6 +372,7 @@ declare <256 x i8> @llvm.vp.sadd.sat.v258i8(<256 x i8>, <256 x i8>, <256 x i1>, 
 define <256 x i8> @vsadd_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vi_v258i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
@@ -421,9 +422,10 @@ define <256 x i8> @vsadd_vi_v258i8_unmasked(<256 x i8> %va, i32 zeroext %evl) {
 define <256 x i8> @vsadd_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK-LABEL: vsadd_vi_v258i8_evl129:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a0)
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vsadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
@@ -433,18 +435,12 @@ define <256 x i8> @vsadd_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
   ret <256 x i8> %v
 }
 
-; FIXME: The upper half is doing nothing.
-
 define <256 x i8> @vsadd_vi_v258i8_evl128(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK-LABEL: vsadd_vi_v258i8_evl128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a0)
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vsadd.vi v8, v8, -1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetivli zero, 0, e8, m8, ta, ma
-; CHECK-NEXT:    vsadd.vi v16, v16, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.sadd.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 128)
   ret <256 x i8> %v
@@ -1416,13 +1412,8 @@ define <32 x i64> @vsadd_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 define <32 x i64> @vsadd_vx_v32i64_evl12(<32 x i64> %va, <32 x i1> %m) {
 ; CHECK-LABEL: vsadd_vx_v32i64_evl12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 12, e64, m8, ta, ma
 ; CHECK-NEXT:    vsadd.vi v8, v8, -1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, ma
-; CHECK-NEXT:    vsadd.vi v16, v16, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.sadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 12)
   ret <32 x i64> %v

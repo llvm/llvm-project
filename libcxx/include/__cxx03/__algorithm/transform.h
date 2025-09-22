@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_TRANSFORM_H
-#define _LIBCPP___ALGORITHM_TRANSFORM_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_TRANSFORM_H
+#define _LIBCPP___CXX03___ALGORITHM_TRANSFORM_H
 
 #include <__cxx03/__config>
 
@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator, class _UnaryOperation>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 transform(_InputIterator __first, _InputIterator __last, _OutputIterator __result, _UnaryOperation __op) {
   for (; __first != __last; ++__first, (void)++__result)
     *__result = __op(*__first);
@@ -26,7 +26,7 @@ transform(_InputIterator __first, _InputIterator __last, _OutputIterator __resul
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _BinaryOperation>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator transform(
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator transform(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -39,4 +39,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator trans
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_TRANSFORM_H
+#endif // _LIBCPP___CXX03___ALGORITHM_TRANSFORM_H

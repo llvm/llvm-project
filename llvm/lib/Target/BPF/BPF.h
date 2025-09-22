@@ -22,6 +22,8 @@ class BPFTargetMachine;
 class InstructionSelector;
 class PassRegistry;
 
+#define BPF_TRAP "__bpf_trap"
+
 ModulePass *createBPFCheckAndAdjustIR();
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
@@ -34,6 +36,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFSubtarget &,
                                                   const BPFRegisterBankInfo &);
 
+void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);

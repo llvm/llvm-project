@@ -10,14 +10,19 @@
 #define LLVM_LINKER_IRMOVER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
 class Error;
 class GlobalValue;
 class Metadata;
+class MDNode;
+class NamedMDNode;
 class Module;
 class StructType;
 class TrackingMDRef;
@@ -28,17 +33,17 @@ class IRMover {
     struct KeyTy {
       ArrayRef<Type *> ETypes;
       bool IsPacked;
-      KeyTy(ArrayRef<Type *> E, bool P);
-      KeyTy(const StructType *ST);
-      bool operator==(const KeyTy &that) const;
-      bool operator!=(const KeyTy &that) const;
+      LLVM_ABI KeyTy(ArrayRef<Type *> E, bool P);
+      LLVM_ABI KeyTy(const StructType *ST);
+      LLVM_ABI bool operator==(const KeyTy &that) const;
+      LLVM_ABI bool operator!=(const KeyTy &that) const;
     };
-    static StructType *getEmptyKey();
-    static StructType *getTombstoneKey();
-    static unsigned getHashValue(const KeyTy &Key);
-    static unsigned getHashValue(const StructType *ST);
-    static bool isEqual(const KeyTy &LHS, const StructType *RHS);
-    static bool isEqual(const StructType *LHS, const StructType *RHS);
+    LLVM_ABI static StructType *getEmptyKey();
+    LLVM_ABI static StructType *getTombstoneKey();
+    LLVM_ABI static unsigned getHashValue(const KeyTy &Key);
+    LLVM_ABI static unsigned getHashValue(const StructType *ST);
+    LLVM_ABI static bool isEqual(const KeyTy &LHS, const StructType *RHS);
+    LLVM_ABI static bool isEqual(const StructType *LHS, const StructType *RHS);
   };
 
   /// Type of the Metadata map in \a ValueToValueMapTy.
@@ -53,18 +58,21 @@ public:
     DenseSet<StructType *, StructTypeKeyInfo> NonOpaqueStructTypes;
 
   public:
-    void addNonOpaque(StructType *Ty);
-    void switchToNonOpaque(StructType *Ty);
-    void addOpaque(StructType *Ty);
-    StructType *findNonOpaque(ArrayRef<Type *> ETypes, bool IsPacked);
-    bool hasType(StructType *Ty);
+    LLVM_ABI void addNonOpaque(StructType *Ty);
+    LLVM_ABI void switchToNonOpaque(StructType *Ty);
+    LLVM_ABI void addOpaque(StructType *Ty);
+    LLVM_ABI StructType *findNonOpaque(ArrayRef<Type *> ETypes, bool IsPacked);
+    LLVM_ABI bool hasType(StructType *Ty);
   };
 
-  IRMover(Module &M);
+  LLVM_ABI IRMover(Module &M);
 
   typedef std::function<void(GlobalValue &)> ValueAdder;
   using LazyCallback =
       llvm::unique_function<void(GlobalValue &GV, ValueAdder Add)>;
+
+  using NamedMDNodesT =
+      DenseMap<const NamedMDNode *, SmallPtrSet<const MDNode *, 8>>;
 
   /// Move in the provide values in \p ValuesToLink from \p Src.
   ///
@@ -76,14 +84,16 @@ public:
   ///   Pass nullptr if there's no work to be done in such cases.
   /// - \p IsPerformingImport is true when this IR link is to perform ThinLTO
   ///   function importing from Src.
-  Error move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
-             LazyCallback AddLazyFor, bool IsPerformingImport);
+  LLVM_ABI Error move(std::unique_ptr<Module> Src,
+                      ArrayRef<GlobalValue *> ValuesToLink,
+                      LazyCallback AddLazyFor, bool IsPerformingImport);
   Module &getModule() { return Composite; }
 
 private:
   Module &Composite;
   IdentifiedStructTypeSet IdentifiedStructTypes;
   MDMapT SharedMDs; ///< A Metadata map to use for all calls to \a move().
+  NamedMDNodesT NamedMDNodes; ///< Cache for IRMover::linkNamedMDNodes().
 };
 
 } // End llvm namespace

@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX6 %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga   -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX8 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX6 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga   < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11 %s
 
 ; GCN-LABEL: {{^}}test_mul_legacy_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_mul_legacy_f32(ptr addrspace(1) %out, float %a, 
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 ; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_undef0_f32(ptr addrspace(1) %out, float %a) #0 {
-  %result = call float @llvm.amdgcn.fmul.legacy(float undef, float %a)
+  %result = call float @llvm.amdgcn.fmul.legacy(float poison, float %a)
   store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -28,7 +28,7 @@ define amdgpu_kernel void @test_mul_legacy_undef0_f32(ptr addrspace(1) %out, flo
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 ; GFX11: v_mul_dx9_zero_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_undef1_f32(ptr addrspace(1) %out, float %a) #0 {
-  %result = call float @llvm.amdgcn.fmul.legacy(float %a, float undef)
+  %result = call float @llvm.amdgcn.fmul.legacy(float %a, float poison)
   store float %result, ptr addrspace(1) %out, align 4
   ret void
 }

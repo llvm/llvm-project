@@ -98,6 +98,8 @@ public:
     return llvm::DebuggerKind::DBX;
   }
 
+  path_list getArchSpecificLibPaths() const override { return path_list(); };
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

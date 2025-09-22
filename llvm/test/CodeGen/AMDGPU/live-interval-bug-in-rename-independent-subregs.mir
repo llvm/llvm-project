@@ -187,8 +187,8 @@ body: |
   bb.3:
     successors: %bb.5(0x80000000)
 
-    %20:sreg_32 = V_READFIRSTLANE_B32 %10.sub0, implicit $exec
-    %21:sreg_32 = V_READFIRSTLANE_B32 %10.sub4, implicit $exec
+    %20:sreg_32_xm0 = V_READFIRSTLANE_B32 %10.sub0, implicit $exec
+    %21:sreg_32_xm0 = V_READFIRSTLANE_B32 %10.sub4, implicit $exec
     S_CMP_EQ_U32 %21, %20, implicit-def $scc
     %22:sreg_32 = S_CSELECT_B32 1, 0, implicit killed $scc
     %16:vgpr_32 = COPY %22

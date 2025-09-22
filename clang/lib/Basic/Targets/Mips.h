@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_MIPS_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_MIPS_H
 
+#include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -128,7 +129,7 @@ public:
     LongWidth = LongAlign = 32;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
     PointerWidth = PointerAlign = 32;
-    PtrDiffType = SignedInt;
+    PtrDiffType = IntPtrType = SignedInt;
     SizeType = UnsignedInt;
     SuitableAlign = 64;
   }
@@ -154,7 +155,7 @@ public:
     IntMaxType = Int64Type;
     LongWidth = LongAlign = 64;
     PointerWidth = PointerAlign = 64;
-    PtrDiffType = SignedLong;
+    PtrDiffType = IntPtrType = SignedLong;
     SizeType = UnsignedLong;
   }
 
@@ -164,7 +165,7 @@ public:
     IntMaxType = Int64Type;
     LongWidth = LongAlign = 32;
     PointerWidth = PointerAlign = 32;
-    PtrDiffType = SignedInt;
+    PtrDiffType = IntPtrType = SignedInt;
     SizeType = UnsignedInt;
   }
 
@@ -197,7 +198,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasFeature(StringRef Feature) const override;
 
@@ -449,6 +450,42 @@ public:
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY WindowsMipsTargetInfo
+    : public WindowsTargetInfo<MipsTargetInfo> {
+  const llvm::Triple Triple;
+
+public:
+  WindowsMipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  void getVisualStudioDefines(const LangOptions &Opts,
+                              MacroBuilder &Builder) const;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+};
+
+// Windows MIPS, MS (C++) ABI
+class LLVM_LIBRARY_VISIBILITY MicrosoftMipsTargetInfo
+    : public WindowsMipsTargetInfo {
+public:
+  MicrosoftMipsTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+};
+
+// MIPS MinGW target
+class LLVM_LIBRARY_VISIBILITY MinGWMipsTargetInfo
+    : public WindowsMipsTargetInfo {
+public:
+  MinGWMipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
 };
 } // namespace targets
 } // namespace clang

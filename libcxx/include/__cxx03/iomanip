@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_IOMANIP
-#define _LIBCPP_IOMANIP
+#ifndef _LIBCPP___CXX03_IOMANIP
+#define _LIBCPP___CXX03_IOMANIP
 
 /*
     iomanip synopsis
@@ -505,38 +505,6 @@ __quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT
   return __quoted_proxy<_CharT, _Traits, _Allocator>(__s, __delim, __escape);
 }
 
-#if _LIBCPP_STD_VER >= 14
-
-template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto quoted(const _CharT* __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
-  const _CharT* __end = __s;
-  while (*__end)
-    ++__end;
-  return __quoted_output_proxy<_CharT, void>(__s, __end, __delim, __escape);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI auto
-quoted(const basic_string<_CharT, _Traits, _Allocator>& __s,
-       _CharT __delim  = _CharT('"'),
-       _CharT __escape = _CharT('\\')) {
-  return __quoted_output_proxy<_CharT, _Traits>(__s.data(), __s.data() + __s.size(), __delim, __escape);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI auto
-quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
-  return __quoted_proxy<_CharT, _Traits, _Allocator>(__s, __delim, __escape);
-}
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI auto
-quoted(basic_string_view<_CharT, _Traits> __sv, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
-  return __quoted_output_proxy<_CharT, _Traits>(__sv.data(), __sv.data() + __sv.size(), __delim, __escape);
-}
-
-#endif // _LIBCPP_STD_VER >= 14
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_IOMANIP
+#endif // _LIBCPP___CXX03_IOMANIP

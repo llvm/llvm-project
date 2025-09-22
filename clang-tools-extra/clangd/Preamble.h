@@ -103,7 +103,7 @@ struct PreambleData {
   // Target options used when building the preamble. Changes in target can cause
   // crashes when deserializing preamble, this enables consumers to use the
   // same target (without reparsing CompileCommand).
-  std::shared_ptr<TargetOptions> TargetOpts = nullptr;
+  std::unique_ptr<TargetOptions> TargetOpts = nullptr;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
   // Processes like code completions and go-to-definitions will need #include

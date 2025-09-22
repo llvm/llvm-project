@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s abseil-time-subtraction %t -- -- -I %S/Inputs
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++11-or-later %s abseil-time-subtraction %t -- -- -I %S/Inputs
 
 #include "absl/time/time.h"
 

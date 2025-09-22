@@ -4,7 +4,7 @@
 target triple = "amdgcn-amd-amdhsa"
 
 ; Unknown functions are conservatively passed all implicit parameters
-declare void @unknown_call()
+declare fastcc void @unknown_call()
 ; Use the same constant as a sgpr parameter (for the kernel id) and for a vector operation
 define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id !0 {
 ; CHECK-LABEL: kern:

@@ -9,7 +9,7 @@ tbx z0.b, z1.b, z2.b
 .arch_extension sve-aes
 .arch_extension nosve-aes
 aesd z23.b, z23.b, z13.b
-// CHECK: error: instruction requires: sve2 or ssve-aes sve-aes
+// CHECK: error: instruction requires: sve-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
 // nosve2-aes should disable sve-aes but not sve2.
@@ -22,19 +22,19 @@ aesd z23.b, z23.b, z13.b
 .arch_extension sve2-sm4
 .arch_extension nosve2-sm4
 sm4e z0.s, z0.s, z0.s
-// CHECK: error: instruction requires: sve2-sm4
+// CHECK: error: instruction requires: sve-sm4
 // CHECK-NEXT: sm4e z0.s, z0.s, z0.s
 
 .arch_extension sve2-sha3
 .arch_extension nosve2-sha3
 rax1 z0.d, z0.d, z0.d
-// CHECK: error: instruction requires: sve2-sha3
+// CHECK: error: instruction requires: sve-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
 .arch_extension sve2-bitperm
 .arch_extension nosve2-bitperm
 bgrp z21.s, z10.s, z21.s
-// CHECK: error: instruction requires: sve2-bitperm
+// CHECK: error: instruction requires: sve-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
 
 .arch_extension f8f16mm

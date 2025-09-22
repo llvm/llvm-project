@@ -81,11 +81,16 @@ mlirPassManagerRunOnOp(MlirPassManager passManager, MlirOperation op);
 MLIR_CAPI_EXPORTED void mlirPassManagerEnableIRPrinting(
     MlirPassManager passManager, bool printBeforeAll, bool printAfterAll,
     bool printModuleScope, bool printAfterOnlyOnChange,
-    bool printAfterOnlyOnFailure, MlirStringRef treePrintingPath);
+    bool printAfterOnlyOnFailure, MlirOpPrintingFlags flags,
+    MlirStringRef treePrintingPath);
 
 /// Enable / disable verify-each.
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable);
+
+/// Enable pass timing.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableTiming(MlirPassManager passManager);
 
 /// Nest an OpPassManager under the top-level PassManager, the nested
 /// passmanager will only run on operations matching the provided name.

@@ -106,6 +106,49 @@ public:
   void FileSkipped(const FileEntryRef &SkippedFile, const Token &FilenameTok,
                    SrcMgr::CharacteristicKind FileType) override;
 };
+
+/// A callback for emitting direct header and module usage information to a
+/// file in JSON. The output format is like HeaderIncludesJSONCallback but has
+/// an array of separate entries, one for each non-system source file used in
+/// the compilation showing only the direct includes and imports from that file.
+class HeaderIncludesDirectPerFileCallback : public PPCallbacks {
+  SourceManager &SM;
+  HeaderSearch &HSI;
+  raw_ostream *OutputFile;
+  bool OwnsOutputFile;
+  using DependencyMap = llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef>>;
+  DependencyMap Dependencies;
+
+public:
+  HeaderIncludesDirectPerFileCallback(const Preprocessor *PP,
+                                      raw_ostream *OutputFile_,
+                                      bool OwnsOutputFile_)
+      : SM(PP->getSourceManager()), HSI(PP->getHeaderSearchInfo()),
+        OutputFile(OutputFile_), OwnsOutputFile(OwnsOutputFile_) {}
+
+  ~HeaderIncludesDirectPerFileCallback() override {
+    if (OwnsOutputFile)
+      delete OutputFile;
+  }
+
+  HeaderIncludesDirectPerFileCallback(
+      const HeaderIncludesDirectPerFileCallback &) = delete;
+  HeaderIncludesDirectPerFileCallback &
+  operator=(const HeaderIncludesDirectPerFileCallback &) = delete;
+
+  void EndOfMainFile() override;
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
+                          SrcMgr::CharacteristicKind FileType) override;
+
+  void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
+                    const Module *Imported) override;
+};
 }
 
 static void PrintHeaderInfo(raw_ostream *OutputFile, StringRef Filename,
@@ -192,13 +235,20 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
         MSStyle));
     break;
   }
-  case HIFMT_JSON: {
-    assert(DepOpts.HeaderIncludeFiltering == HIFIL_Only_Direct_System &&
-           "only-direct-system is the only option for filtering");
-    PP.addPPCallbacks(std::make_unique<HeaderIncludesJSONCallback>(
-        &PP, OutputFile, OwnsOutputFile));
+  case HIFMT_JSON:
+    switch (DepOpts.HeaderIncludeFiltering) {
+    default:
+      llvm_unreachable("Unknown HeaderIncludeFilteringKind enum");
+    case HIFIL_Only_Direct_System:
+      PP.addPPCallbacks(std::make_unique<HeaderIncludesJSONCallback>(
+          &PP, OutputFile, OwnsOutputFile));
+      break;
+    case HIFIL_Direct_Per_File:
+      PP.addPPCallbacks(std::make_unique<HeaderIncludesDirectPerFileCallback>(
+          &PP, OutputFile, OwnsOutputFile));
+      break;
+    }
     break;
-  }
   }
 }
 
@@ -260,8 +310,11 @@ void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
 
 void HeaderIncludesJSONCallback::EndOfMainFile() {
   OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID());
-  SmallString<256> MainFile(FE->getName());
-  SM.getFileManager().makeAbsolutePath(MainFile);
+  SmallString<256> MainFile;
+  if (FE) {
+    MainFile += FE->getName();
+    SM.getFileManager().makeAbsolutePath(MainFile);
+  }
 
   std::string Str;
   llvm::raw_string_ostream OS(Str);
@@ -318,4 +371,82 @@ void HeaderIncludesJSONCallback::FileSkipped(
     return;
 
   IncludedHeaders.push_back(SkippedFile.getName().str());
+}
+
+void HeaderIncludesDirectPerFileCallback::EndOfMainFile() {
+  if (Dependencies.empty())
+    return;
+
+  // Sort the files so that the output does not depend on the DenseMap order.
+  SmallVector<FileEntryRef> SourceFiles;
+  for (auto F = Dependencies.begin(), FEnd = Dependencies.end(); F != FEnd;
+       ++F) {
+    SourceFiles.push_back(F->first);
+  }
+  llvm::sort(SourceFiles, [](const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return LHS.getUID() < RHS.getUID();
+  });
+
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  llvm::json::OStream JOS(OS);
+  JOS.array([&] {
+    for (auto S = SourceFiles.begin(), SE = SourceFiles.end(); S != SE; ++S) {
+      JOS.object([&] {
+        SmallVector<FileEntryRef> &Deps = Dependencies[*S];
+        JOS.attribute("source", S->getName().str());
+        JOS.attributeArray("includes", [&] {
+          for (unsigned I = 0, N = Deps.size(); I != N; ++I)
+            JOS.value(Deps[I].getName().str());
+        });
+      });
+    }
+  });
+  OS << "\n";
+
+  if (OutputFile->get_kind() == raw_ostream::OStreamKind::OK_FDStream) {
+    llvm::raw_fd_ostream *FDS = static_cast<llvm::raw_fd_ostream *>(OutputFile);
+    if (auto L = FDS->lock())
+      *OutputFile << Str;
+  } else
+    *OutputFile << Str;
+}
+
+void HeaderIncludesDirectPerFileCallback::InclusionDirective(
+    SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  if (!File)
+    return;
+
+  SourceLocation Loc = SM.getExpansionLoc(HashLoc);
+  if (SM.isInSystemHeader(Loc))
+    return;
+  OptionalFileEntryRef FromFile = SM.getFileEntryRefForID(SM.getFileID(Loc));
+  if (!FromFile)
+    return;
+
+  Dependencies[*FromFile].push_back(*File);
+}
+
+void HeaderIncludesDirectPerFileCallback::moduleImport(SourceLocation ImportLoc,
+                                                       ModuleIdPath Path,
+                                                       const Module *Imported) {
+  if (!Imported)
+    return;
+
+  SourceLocation Loc = SM.getExpansionLoc(ImportLoc);
+  if (SM.isInSystemHeader(Loc))
+    return;
+  OptionalFileEntryRef FromFile = SM.getFileEntryRefForID(SM.getFileID(Loc));
+  if (!FromFile)
+    return;
+
+  OptionalFileEntryRef ModuleMapFile =
+      HSI.getModuleMap().getModuleMapFileForUniquing(Imported);
+  if (!ModuleMapFile)
+    return;
+
+  Dependencies[*FromFile].push_back(*ModuleMapFile);
 }

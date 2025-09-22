@@ -1,7 +1,7 @@
-; RUN: not --crash llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s --check-prefix=BASELINE
+; RUN: not llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s --check-prefix=BASELINE
 ; RUN: llc < %s -mtriple=thumbv8m.main-none-eabi -mattr=+dsp 2>&1 | FileCheck %s --check-prefix=MAINLINE
 
-; BASELINE: LLVM ERROR: Invalid register name "faultmask_ns".
+; BASELINE: error: <unknown>:0:0: invalid register "faultmask_ns" for llvm.read_register
 
 define i32 @read_mclass_registers() nounwind {
 entry:

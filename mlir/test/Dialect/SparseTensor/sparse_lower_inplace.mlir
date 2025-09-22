@@ -29,8 +29,8 @@
 // CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}>
 // CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}>
 // CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse{{[0-9]*}}>
-// CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
-// CHECK-HIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
+// CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
+// CHECK-HIR-DAG:       %[[VAL_10:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-HIR-DAG:         %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
 // CHECK-HIR-DAG:         %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_5]] : index
@@ -60,8 +60,8 @@
 // CHECK-MIR-DAG:       %[[VAL_6:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_5]]) : (!llvm.ptr, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr) -> memref<?xf64>
-// CHECK-MIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
-// CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
+// CHECK-MIR-DAG:       %[[VAL_9:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
+// CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
 // CHECK-MIR:           scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-MIR-DAG:         %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
 // CHECK-MIR-DAG:         %[[VAL_13:.*]] = arith.addi %[[VAL_11]], %[[VAL_5]] : index

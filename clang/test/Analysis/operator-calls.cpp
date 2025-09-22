@@ -121,16 +121,16 @@ namespace SynthesizedAssignment {
   void testNoWarning() {
 
     B v, u;
-    u = v; // expected-warning@110{{Assigned value is garbage or undefined}}
+    u = v; // expected-warning@110{{Assigned value is uninitialized}}
     // expected-note@-1{{Calling defaulted copy assignment operator for 'B'}}
-    // expected-note@110{{Assigned value is garbage or undefined}}
+    // expected-note@110{{Assigned value is uninitialized}}
   }
 
   void testNoWarningMove() {
     B v, u;
-    u = static_cast<B &&>(v); // expected-warning@111{{Assigned value is garbage or undefined}}
+    u = static_cast<B &&>(v); // expected-warning@111{{Assigned value is uninitialized}}
     // expected-note@-1{{Calling defaulted move assignment operator for 'B'}}
-    // expected-note@111{{Assigned value is garbage or undefined}}
+    // expected-note@111{{Assigned value is uninitialized}}
   }
 
   void testConsistency() {

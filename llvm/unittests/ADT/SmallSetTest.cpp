@@ -24,13 +24,6 @@ TEST(SmallSetTest, ConstructorIteratorPair) {
   EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
 }
 
-TEST(SmallSet, ConstructorRange) {
-  std::initializer_list<int> L = {1, 2, 3, 4, 5};
-
-  SmallSet<int, 4> S(llvm::make_range(std::begin(L), std::end(L)));
-  EXPECT_THAT(S, testing::UnorderedElementsAreArray(L));
-}
-
 TEST(SmallSet, ConstructorInitializerList) {
   std::initializer_list<int> L = {1, 2, 3, 4, 5};
   SmallSet<int, 4> S = {1, 2, 3, 4, 5};
@@ -125,6 +118,19 @@ TEST(SmallSetTest, InsertPerfectFwd) {
     S.insert(std::move(V2));
     EXPECT_EQ(V2.Moved, true);
   }
+}
+
+TEST(SmallSetTest, CtorRange) {
+  constexpr unsigned Args[] = {3, 1, 2};
+  SmallSet<int, 4> s1(llvm::from_range, Args);
+  EXPECT_THAT(s1, ::testing::UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(SmallSetTest, InsertRange) {
+  SmallSet<int, 4> s1;
+  constexpr unsigned Args[] = {3, 1, 2};
+  s1.insert_range(Args);
+  EXPECT_THAT(s1, ::testing::UnorderedElementsAre(1, 2, 3));
 }
 
 TEST(SmallSetTest, Grow) {

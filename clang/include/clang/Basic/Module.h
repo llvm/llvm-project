@@ -64,6 +64,11 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
 
   explicit operator bool() const { return *this != BaseT({{0}}); }
 
+  // Support implicit cast to ArrayRef.  Note that ASTFileSignature::size
+  // prevents implicit cast to ArrayRef because one of the implicit constructors
+  // of ArrayRef requires access to BaseT::size.
+  operator ArrayRef<uint8_t>() const { return ArrayRef<uint8_t>(data(), size); }
+
   /// Returns the value truncated to the size of an uint64_t.
   uint64_t truncatedValue() const {
     uint64_t Value = 0;
@@ -98,6 +103,30 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     std::copy(First, Last, Signature.begin());
     return Signature;
   }
+};
+
+/// The set of attributes that can be attached to a module.
+struct ModuleAttributes {
+  /// Whether this is a system module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsSystem : 1;
+
+  /// Whether this is an extern "C" module.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExternC : 1;
+
+  /// Whether this is an exhaustive set of configuration macros.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsExhaustive : 1;
+
+  /// Whether files in this module can only include non-modular headers
+  /// and headers from used modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned NoUndeclaredIncludes : 1;
+
+  ModuleAttributes()
+      : IsSystem(false), IsExternC(false), IsExhaustive(false),
+        NoUndeclaredIncludes(false) {}
 };
 
 /// Required to construct a Module.
@@ -864,7 +893,7 @@ public:
 
   /// Get the location at which the import of a module was triggered.
   SourceLocation getImportLoc(const Module *M) const {
-    return M->getVisibilityID() < ImportLocs.size()
+    return M && M->getVisibilityID() < ImportLocs.size()
                ? ImportLocs[M->getVisibilityID()]
                : SourceLocation();
   }
@@ -881,10 +910,11 @@ public:
                          StringRef Message)>;
 
   /// Make a specific module visible.
-  void setVisible(Module *M, SourceLocation Loc,
-                  VisibleCallback Vis = [](Module *) {},
-                  ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
-                                           StringRef) {});
+  void setVisible(
+      Module *M, SourceLocation Loc, bool IncludeExports = true,
+      VisibleCallback Vis = [](Module *) {},
+      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
+
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.

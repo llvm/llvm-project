@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 // RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=operator new" "-DDELETE=operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+
 constexpr bool alloc_from_user_code() {
   void *p = NEW(sizeof(int)); // expected-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
   DELETE(p);
@@ -12,10 +17,9 @@ static_assert(alloc_from_user_code()); // expected-error {{constant expression}}
 
 namespace std {
   using size_t = decltype(sizeof(0));
-  // FIXME: It would be preferable to point these notes at the location of the call to allocator<...>::[de]allocate instead
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)NEW(sizeof(T) * N); // expected-note 3{{heap allocation}} expected-note {{not deallocated}}
+      return (T*)NEW(sizeof(T) * N);
     }
     constexpr void deallocate(void *p) {
       DELETE(p); // #dealloc expected-note 2{{'std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}}
@@ -59,7 +63,7 @@ constexpr bool mismatched(int alloc_kind, int dealloc_kind) {
     p = new int[1]; // expected-note {{heap allocation}}
     break;
   case 2:
-    p = std::allocator<int>().allocate(1);
+    p = std::allocator<int>().allocate(1); // expected-note 2{{heap allocation}}
     break;
   }
   switch (dealloc_kind) {
@@ -81,8 +85,10 @@ static_assert(mismatched(2, 0)); // expected-error {{constant expression}} expec
 static_assert(mismatched(2, 1)); // expected-error {{constant expression}} expected-note {{in call}}
 static_assert(mismatched(2, 2));
 
-constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{constant expression}} expected-note {{pointer to subobject of heap-allocated}}
-constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}}
+constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{constant expression}} expected-note {{pointer to subobject of heap-allocated}} \
+                                                           // expected-note {{heap allocation performed here}}
+constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}} \
+                                                             // expected-note {{not deallocated}}
 constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} expected-note {{assignment to object outside its lifetime}}
 constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // expected-error {{constant expression}} expected-note {{in call}}
 // expected-note@#dealloc {{'std::allocator<...>::deallocate' used to delete a null pointer}}
@@ -240,4 +246,68 @@ void f() {
     test<string().size()>();
 }
 
+}
+
+namespace GH134820 {
+struct S {
+    char* c = new char;
+    constexpr ~S() {
+        delete c;
+    }
+    int i = 0;
+};
+
+int f() {
+    if constexpr((S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(S s; (S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(S s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = S{}.i; true) {
+        return 1;
+    }
+    return 0;
+}
+
+template <typename T>
+int f2() {
+    if constexpr((T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = T{}.i; true) {
+        return 1;
+    }
+    return 0;
+}
+
+void test() {
+  f2<S>(); // expected-note {{in instantiation}}
+}
+
+}
+namespace GH120197{
+struct NonTrivialDtor {
+  NonTrivialDtor() = default;
+  NonTrivialDtor(const NonTrivialDtor&) = default;
+  NonTrivialDtor(NonTrivialDtor&&) = default;
+  NonTrivialDtor& operator=(const NonTrivialDtor&)  = default;
+  NonTrivialDtor& operator=(NonTrivialDtor&&) = default;
+  constexpr ~NonTrivialDtor() noexcept {}
+};
+
+static_assert(((void)NonTrivialDtor{}, true)); // passes
+
+void f() {
+  if constexpr ((void)NonTrivialDtor{}, true) {}
+}
 }

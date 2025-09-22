@@ -6,27 +6,12 @@
 # RUN: %lldb %t -o "image lookup -v -n look_me_up" -o exit | FileCheck %s
 
 # CHECK:      1 match found in {{.*}}
-# CHECK:      Summary: {{.*}}`foo + 6 [inlined] foo_inl + 1
-# CHECK-NEXT:          {{.*}}`foo + 5
-# CHECK:      Blocks: id = {{.*}}, ranges = [0x00000000-0x00000003)[0x00000004-0x00000008)
-# CHECK-NEXT:         id = {{.*}}, ranges = [0x00000001-0x00000002)[0x00000005-0x00000007), name = "foo_inl"
+# CHECK:      Summary: {{.*}}`foo - 3 [inlined] foo_inl + 1
+# CHECK-NEXT:          {{.*}}`foo - 4
+# CHECK:      Blocks: id = {{.*}}, ranges = [0x00000000-0x00000004)[0x00000005-0x00000008)
+# CHECK-NEXT:         id = {{.*}}, ranges = [0x00000001-0x00000003)[0x00000006-0x00000007), name = "foo_inl"
 
         .text
-
-        .type   foo,@function
-foo:
-        nop
-.Lfoo_inl:
-        nop
-.Lfoo_inl_end:
-        nop
-.Lfoo_end:
-        .size   foo, .Lfoo_end-foo
-
-bar:
-        nop
-.Lbar_end:
-        .size   bar, .Lbar_end-bar
 
         .section        .text.__part1,"ax",@progbits
 foo.__part.1:
@@ -41,6 +26,21 @@ look_me_up:
 .Lfoo.__part.1_end:
         .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
 
+
+bar:
+        nop
+.Lbar_end:
+        .size   bar, .Lbar_end-bar
+
+        .type   foo,@function
+foo:
+        nop
+.Lfoo_inl:
+        nop
+.Lfoo_inl_end:
+        nop
+.Lfoo_end:
+        .size   foo, .Lfoo_end-foo
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                               # Abbreviation Code

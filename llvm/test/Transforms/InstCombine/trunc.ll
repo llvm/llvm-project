@@ -960,13 +960,26 @@ define <3 x i31> @wide_splat3(<3 x i33> %x) {
 
 define <8 x i8> @wide_lengthening_splat(<4 x i16> %v) {
 ; CHECK-LABEL: @wide_lengthening_splat(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i16> [[V:%.*]], <4 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TR:%.*]] = trunc <8 x i16> [[SHUF]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i16> [[V:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[TR:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i8> [[TR]]
 ;
   %shuf = shufflevector <4 x i16> %v, <4 x i16> %v, <8 x i32> zeroinitializer
   %tr = trunc <8 x i16> %shuf to <8 x i8>
   ret <8 x i8> %tr
+}
+
+; This is a negative test, we expect the trunc to remain after the shuffle as it
+; might not be beneficial to preform trunc on a wider type
+define <4 x i8> @wide_shortening_splat(<8 x i16> %v) {
+; CHECK-LABEL: @wide_shortening_splat(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i16> [[V:%.*]], <8 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TR:%.*]] = trunc <4 x i16> [[SHUF]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[TR]]
+;
+  %shuf = shufflevector <8 x i16> %v, <8 x i16> %v, <4 x i32> zeroinitializer
+  %tr = trunc <4 x i16> %shuf to <4 x i8>
+  ret <4 x i8> %tr
 }
 
 define <2 x i8> @narrow_add_vec_constant(<2 x i32> %x) {
@@ -1123,4 +1136,85 @@ loop:
 
 exit:
   ret void
+}
+
+define i1 @trunc_nuw_i1_non_zero(i8 %1) {
+; CHECK-LABEL: @trunc_nuw_i1_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    ret i1 true
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nuw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i1 @neg_trunc_nuw_i1_maybe_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nuw_i1_maybe_zero(
+; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP0:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ret = trunc nuw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i2 @neg_trunc_nuw_i2_non_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nuw_i2_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP0]] to i2
+; CHECK-NEXT:    ret i2 [[RET]]
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nuw i8 %1 to i2
+  ret i2 %ret
+}
+
+define i1 @neg_trunc_i1_non_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_i1_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[TMP0]] to i1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc i8 %1 to i1
+  ret i1 %ret
+}
+
+define i1 @trunc_nsw_i1_non_zero(i8 %1) {
+; CHECK-LABEL: @trunc_nsw_i1_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    ret i1 true
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nsw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i1 @neg_trunc_nsw_i1_maybe_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nsw_i1_maybe_zero(
+; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[TMP0:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ret = trunc nsw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i2 @neg_trunc_nsw_i2_non_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nsw_i2_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[TMP0]] to i2
+; CHECK-NEXT:    ret i2 [[RET]]
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nsw i8 %1 to i2
+  ret i2 %ret
 }

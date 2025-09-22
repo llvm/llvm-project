@@ -31,13 +31,13 @@ subroutine simdloop_aligned_cptr(A)
     use iso_c_binding
     integer :: i
     type (c_ptr) :: A
-    !DEFAULT: omp.simd aligned(%[[A_DECL]]#1 : !fir.ref
+    !DEFAULT: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref
     !DEFAULT-SAME: <!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
     !DEFAULT-SAME: -> 128 : i64)
-    !AVX: omp.simd aligned(%[[A_DECL]]#1 : !fir.ref
+    !AVX: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref
     !AVX-SAME: <!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
     !AVX-SAME: -> 256 : i64)
-    !AVX512F: omp.simd aligned(%[[A_DECL]]#1 : !fir.ref
+    !AVX512F: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref
     !AVX512F-SAME: <!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
     !AVX512F-SAME: -> 512 : i64)
     !$OMP SIMD ALIGNED(A)

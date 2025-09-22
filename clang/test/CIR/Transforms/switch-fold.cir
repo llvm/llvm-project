@@ -1,0 +1,196 @@
+// RUN: cir-opt -cir-canonicalize -cir-simplify -o %t.cir %s
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+    cir.func @foldCascade(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%1 : !s32i) {
+        cir.case(equal, [#cir.int<1> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<2> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<3> : !s32i]) {
+          %2 = cir.const #cir.int<2> : !s32i
+          cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+          cir.break
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  //CHECK: cir.func @foldCascade
+  //CHECK:   cir.switch (%[[COND:.*]] : !s32i) {
+  //CHECK-NEXT:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]) {
+  //CHECK-NEXT:       %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+  //CHECK-NEXT:       cir.store %[[TWO]], %[[ARG0:.*]] : !s32i, !cir.ptr<!s32i>
+  //CHECK-NEXT:       cir.break
+  //CHECK-NEXT:     }
+  //CHECK-NEXT:     cir.yield
+  //CHECK-NEXT:   }
+
+    cir.func @foldCascade2(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%1 : !s32i) {
+        cir.case(equal, [#cir.int<0> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<2> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<4> : !s32i]) {
+          cir.break
+        }
+        cir.case(equal, [#cir.int<1> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<3> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<5> : !s32i]) {
+          cir.break
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  //CHECK: @foldCascade2
+  //CHECK:   cir.switch (%[[COND2:.*]] : !s32i) {
+  //CHECK:     cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<2> : !s32i, #cir.int<4> : !s32i]) {
+  //CHECK:       cir.break
+  //cehck:     }
+  //CHECK:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<3> : !s32i, #cir.int<5> : !s32i]) {
+  //CHECK:       cir.break
+  //CHECK:     }
+  //CHECK:     cir.yield
+  //CHECK:   }
+  cir.func @foldCascade3(%arg0: !s32i ) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"] {alignment = 4 : i64}
+      %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%2 : !s32i) {
+        cir.case(equal, [#cir.int<0> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<1> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<2> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<3> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<4> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<5> : !s32i]) {
+          cir.break
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  //CHECK: cir.func @foldCascade3
+  //CHECK:   cir.switch (%[[COND3:.*]] : !s32i) {
+  //CHECK:     cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
+  //CHECK:       cir.break
+  //CHECK:    }
+  //CHECK:    cir.yield
+  //CHECK:   }
+  cir.func @foldCascadeWithDefault(%arg0: !s32i ) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%1 : !s32i) {
+        cir.case(equal, [#cir.int<3> : !s32i]) {
+          cir.break
+        }
+        cir.case(equal, [#cir.int<4> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<5> : !s32i]) {
+          cir.yield
+        }
+        cir.case(default, []) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<6> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<7> : !s32i]) {
+          cir.break
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  //CHECK: cir.func @foldCascadeWithDefault
+  //CHECK:   cir.switch (%[[COND:.*]] : !s32i) {
+  //CHECK:      cir.case(equal, [#cir.int<3> : !s32i]) {
+  //CHECK:        cir.break
+  //CHECK:      }
+  //CHECK:      cir.case(anyof, [#cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
+  //CHECK:        cir.yield
+  //CHECK:      }
+  //CHECK:      cir.case(default, []) {
+  //CHECK:        cir.yield
+  //CHECK:      }
+  //CHECK:      cir.case(anyof, [#cir.int<6> : !s32i, #cir.int<7> : !s32i]) {
+  //CHECK:        cir.break
+  //CHECK:      }
+  //CHECK:      cir.yield
+  //CHECK:   }
+  cir.func @foldAllCascade(%arg0: !s32i ) {
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.scope {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.switch (%1 : !s32i) {
+        cir.case(equal, [#cir.int<0> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<1> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<2> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<3> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<4> : !s32i]) {
+          cir.yield
+        }
+        cir.case(equal, [#cir.int<5> : !s32i]) {
+          cir.yield
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+  //CHECK: cir.func @foldAllCascade
+  //CHECK:   cir.switch (%[[COND:.*]] : !s32i) {
+  //CHECK:     cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
+  //CHECK:       cir.yield
+  //CHECK:     }
+  //CHECK:     cir.yield
+  //CHECK:   }
+}

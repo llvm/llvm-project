@@ -66,7 +66,7 @@
 name:            test
 alignment:       16
 tracksRegLiveness: true
-hasEHCatchret:   true
+hasEHContTarget: true
 hasEHScopes:     true
 hasEHFunclets:   true
 debugInstrRef:   true

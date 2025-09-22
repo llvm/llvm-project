@@ -58,6 +58,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Tessellation, Linkage], []> {
+  // CHECK: patch
+  spirv.GlobalVariable @var {patch} : !spirv.ptr<vector<4xf32>, Input>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  // CHECK: invariant
+  spirv.GlobalVariable @var {invariant} : !spirv.ptr<vector<2xf32>, Output>
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outSideGlobalVar1", linkage_type = <Import>>
   spirv.GlobalVariable @var1 {
@@ -148,6 +162,15 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [CacheControlsINTEL], [SP
   spirv.func @cache_controls_invalid_type() "None" {
     // expected-error@below {{expecting non-empty array attribute of CacheControlStoreINTEL for CacheControlStoreINTEL}}
     %0 = spirv.Variable {cache_control_store_intel = []} : !spirv.ptr<f32, Function>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  // CHECK: spirv.func @relaxed_precision_arg({{%.*}}: !spirv.ptr<f32, Function> {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None" attributes {relaxed_precision} {
+  spirv.func @relaxed_precision_arg(%arg0: !spirv.ptr<f32, Function> {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) -> () "None" attributes {relaxed_precision} {
     spirv.Return
   }
 }

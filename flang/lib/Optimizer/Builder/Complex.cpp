@@ -24,7 +24,7 @@ mlir::Type fir::factory::Complex::getComplexPartType(mlir::Value cplx) const {
 mlir::Value fir::factory::Complex::createComplex(mlir::Type cplxTy,
                                                  mlir::Value real,
                                                  mlir::Value imag) {
-  mlir::Value und = builder.create<fir::UndefOp>(loc, cplxTy);
+  mlir::Value und = fir::UndefOp::create(builder, loc, cplxTy);
   return insert<Part::Imag>(insert<Part::Real>(und, real), imag);
 }
 

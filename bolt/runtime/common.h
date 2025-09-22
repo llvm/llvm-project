@@ -151,10 +151,14 @@ struct timespec {
   uint64_t tv_nsec; /* nanoseconds */
 };
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__arm64__)
 #include "sys_aarch64.h"
-#else
+#elif defined(__riscv)
+#include "sys_riscv64.h"
+#elif defined(__x86_64__)
 #include "sys_x86_64.h"
+#else
+#error "For AArch64/ARM64,X86_64 AND RISCV64 only."
 #endif
 
 constexpr uint32_t BufSize = 10240;

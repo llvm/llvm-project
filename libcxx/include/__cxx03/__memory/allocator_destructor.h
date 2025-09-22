@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATOR_DESTRUCTOR_H
-#define _LIBCPP___MEMORY_ALLOCATOR_DESTRUCTOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALLOCATOR_DESTRUCTOR_H
+#define _LIBCPP___CXX03___MEMORY_ALLOCATOR_DESTRUCTOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/allocator_traits.h>
@@ -37,4 +37,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALLOCATOR_DESTRUCTOR_H
+#endif // _LIBCPP___CXX03___MEMORY_ALLOCATOR_DESTRUCTOR_H

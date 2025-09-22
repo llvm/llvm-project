@@ -12,6 +12,7 @@
 // CHECK-NEXT:     dsp                 Supports DSP instructions in ARM and/or Thumb2
 // CHECK-NEXT:     mve                 Support M-Class Vector Extension with integer ops
 // CHECK-NEXT:     mve.fp              Support M-Class Vector Extension with integer and floating ops
+// CHECK-NEXT:     simd                Enable NEON instructions
 // CHECK-NEXT:     fp16                Enable half-precision floating point
 // CHECK-NEXT:     ras                 Enable Reliability, Availability and Serviceability extensions
 // CHECK-NEXT:     fp16fml             Enable full half-precision floating point fml instructions

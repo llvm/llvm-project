@@ -93,3 +93,91 @@ define i64 @cfcmov64rr_inv(i64 %0) {
   %3 = select i1 %2, i64 0, i64 %0
   ret i64 %3
 }
+
+define void @cfcmov16mr(ptr %p, i16 %0) {
+; CHECK-LABEL: cfcmov16mr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    cmpw %ax, %si
+; CHECK-NEXT:    cfcmovlew %si, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load i16, ptr %p, align 2
+  %3 = icmp sgt i16 %0, %2
+  %4 = select i1 %3, i16 %2, i16 %0
+  store i16 %4, ptr %p, align 2
+  ret void
+}
+
+define void @cfcmov32mr(ptr %p, i32 %0) {
+; CHECK-LABEL: cfcmov32mr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl (%rdi), %esi
+; CHECK-NEXT:    cfcmovgl %esi, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load i32, ptr %p, align 4
+  %3 = call i32 @llvm.smax.i32(i32 %0, i32 %2)
+  store i32 %3, ptr %p, align 4
+  ret void
+}
+
+define void @cfcmov64mr(ptr %p, i64 %0) {
+; CHECK-LABEL: cfcmov64mr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq (%rdi), %rsi
+; CHECK-NEXT:    cfcmovgq %rsi, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load i64, ptr %p, align 8
+  %3 = icmp sgt i64 %0, %2
+  %4 = select i1 %3, i64 %0, i64 %2
+  store i64 %4, ptr %p, align 8
+  ret void
+}
+
+define void @volatileload(ptr %p, i32 %0) {
+; CHECK-LABEL: volatileload:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    cmpl %eax, %esi
+; CHECK-NEXT:    cmovbl %esi, %eax
+; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load volatile i32, ptr %p, align 4
+  %3 = call i32 @llvm.umin.i32(i32 %0, i32 %2)
+  store i32 %3, ptr %p, align 4
+  ret void
+}
+
+define void @atomicstore(ptr %p, i64 %0) {
+; CHECK-LABEL: atomicstore:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    cmpq %rax, %rsi
+; CHECK-NEXT:    cmovaq %rsi, %rax
+; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    retq
+  %2 = load i64, ptr %p, align 8
+  %3 = icmp ugt i64 %0, %2
+  %4 = select i1 %3, i64 %0, i64 %2
+  store atomic i64 %4, ptr %p unordered, align 8
+  ret void
+}
+
+define void @loadstorediffptr(ptr %p, i32 %0) {
+; CHECK-LABEL: loadstorediffptr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    cmpl %eax, %esi
+; CHECK-NEXT:    cmovbel %eax, %esi
+; CHECK-NEXT:    movl %esi, 4(%rdi)
+; CHECK-NEXT:    retq
+  %2 = getelementptr [2 x i32], ptr %p, i32 0, i32 0
+  %3 = load i32, ptr %2, align 4
+  %4 = icmp ule i32 %0, %3
+  %5 = select i1 %4, i32 %3, i32 %0
+  %6 = getelementptr [2 x i32], ptr %p, i32 0, i32 1
+  store i32 %5, ptr %6, align 4
+  ret void
+}
+
+declare i32 @llvm.smax.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)

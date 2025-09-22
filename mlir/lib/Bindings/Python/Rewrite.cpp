@@ -9,13 +9,16 @@
 #include "Rewrite.h"
 
 #include "IRModule.h"
-#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Rewrite.h"
+// clang-format off
+#include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir/Config/mlir-config.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 using namespace mlir;
-using namespace py::literals;
+using namespace nb::literals;
 using namespace mlir::python;
 
 namespace {
@@ -54,18 +57,17 @@ public:
   }
   MlirFrozenRewritePatternSet get() { return set; }
 
-  pybind11::object getCapsule() {
-    return py::reinterpret_steal<py::object>(
+  nb::object getCapsule() {
+    return nb::steal<nb::object>(
         mlirPythonFrozenRewritePatternSetToCapsule(get()));
   }
 
-  static pybind11::object createFromCapsule(pybind11::object capsule) {
+  static nb::object createFromCapsule(nb::object capsule) {
     MlirFrozenRewritePatternSet rawPm =
         mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
     if (rawPm.ptr == nullptr)
-      throw py::error_already_set();
-    return py::cast(PyFrozenRewritePatternSet(rawPm),
-                    py::return_value_policy::move);
+      throw nb::python_error();
+    return nb::cast(PyFrozenRewritePatternSet(rawPm), nb::rv_policy::move);
   }
 
 private:
@@ -75,36 +77,59 @@ private:
 } // namespace
 
 /// Create the `mlir.rewrite` here.
-void mlir::python::populateRewriteSubmodule(py::module &m) {
+void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-  py::class_<PyPDLPatternModule>(m, "PDLModule", py::module_local())
-      .def(py::init<>([](MlirModule module) {
-             return mlirPDLPatternModuleFromModule(module);
-           }),
-           "module"_a, "Create a PDL module from the given module.")
+  nb::class_<PyPDLPatternModule>(m, "PDLModule")
+      .def(
+          "__init__",
+          [](PyPDLPatternModule &self, PyModule &module) {
+            new (&self) PyPDLPatternModule(
+                mlirPDLPatternModuleFromModule(module.get()));
+          },
+          // clang-format off
+          nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ") -> None"),
+          // clang-format on
+          "module"_a, "Create a PDL module from the given module.")
       .def("freeze", [](PyPDLPatternModule &self) {
         return new PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
             mlirRewritePatternSetFromPDLPatternModule(self.get())));
       });
-#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCg
-  py::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet",
-                                        py::module_local())
-      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
-                             &PyFrozenRewritePatternSet::getCapsule)
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
+  nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
+      .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
+                   &PyFrozenRewritePatternSet::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR,
            &PyFrozenRewritePatternSet::createFromCapsule);
   m.def(
-      "apply_patterns_and_fold_greedily",
-      [](MlirModule module, MlirFrozenRewritePatternSet set) {
-        auto status = mlirApplyPatternsAndFoldGreedily(module, set, {});
-        if (mlirLogicalResultIsFailure(status))
-          // FIXME: Not sure this is the right error to throw here.
-          throw py::value_error("pattern application failed to converge");
-      },
-      "module"_a, "set"_a,
-      "Applys the given patterns to the given module greedily while folding "
-      "results.");
+       "apply_patterns_and_fold_greedily",
+       [](PyModule &module, PyFrozenRewritePatternSet &set) {
+         auto status =
+             mlirApplyPatternsAndFoldGreedily(module.get(), set.get(), {});
+         if (mlirLogicalResultIsFailure(status))
+           throw std::runtime_error("pattern application failed to converge");
+       },
+       "module"_a, "set"_a,
+       // clang-format off
+       nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: FrozenRewritePatternSet) -> None"),
+       // clang-format on
+       "Applys the given patterns to the given module greedily while folding "
+       "results.")
+      .def(
+          "apply_patterns_and_fold_greedily",
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
+            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
+                op.getOperation(), set.get(), {});
+            if (mlirLogicalResultIsFailure(status))
+              throw std::runtime_error(
+                  "pattern application failed to converge");
+          },
+          "op"_a, "set"_a,
+          // clang-format off
+          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: FrozenRewritePatternSet) -> None"),
+          // clang-format on
+          "Applys the given patterns to the given op greedily while folding "
+          "results.");
 }

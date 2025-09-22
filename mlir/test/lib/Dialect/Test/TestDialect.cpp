@@ -236,13 +236,14 @@ void test::writeToMlirBytecode(DialectBytecodeWriter &writer,
 // Dynamic operations
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<DynamicOpDefinition> getDynamicGenericOp(TestDialect *dialect) {
+static std::unique_ptr<DynamicOpDefinition>
+getDynamicGenericOp(TestDialect *dialect) {
   return DynamicOpDefinition::get(
       "dynamic_generic", dialect, [](Operation *op) { return success(); },
       [](Operation *op) { return success(); });
 }
 
-std::unique_ptr<DynamicOpDefinition>
+static std::unique_ptr<DynamicOpDefinition>
 getDynamicOneOperandTwoResultsOp(TestDialect *dialect) {
   return DynamicOpDefinition::get(
       "dynamic_one_operand_two_results", dialect,
@@ -262,7 +263,7 @@ getDynamicOneOperandTwoResultsOp(TestDialect *dialect) {
       [](Operation *op) { return success(); });
 }
 
-std::unique_ptr<DynamicOpDefinition>
+static std::unique_ptr<DynamicOpDefinition>
 getDynamicCustomParserPrinterOp(TestDialect *dialect) {
   auto verifier = [](Operation *op) {
     if (op->getNumOperands() == 0 && op->getNumResults() == 0)
@@ -346,7 +347,7 @@ TestDialect::~TestDialect() {
 
 Operation *TestDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
-  return builder.create<TestOpConstant>(loc, type, value);
+  return TestOpConstant::create(builder, loc, type, value);
 }
 
 void *TestDialect::getRegisteredInterfaceForOp(TypeID typeID,

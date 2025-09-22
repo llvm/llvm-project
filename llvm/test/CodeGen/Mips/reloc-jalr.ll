@@ -102,9 +102,9 @@ entry:
 ; ALL-LABEL: checkCall:
 ; ALL-NOT: MIPS_JALR
   call void @foo()
-; JALR-32:       .reloc ([[TMPLABEL:\$.+]]), R_MIPS_JALR, foo
+; JALR-32:       .reloc [[TMPLABEL:\$.+]], R_MIPS_JALR, foo
 ; JALR-64:       .reloc [[TMPLABEL:\..+]], R_MIPS_JALR, foo
-; JALR-MM:       .reloc ([[TMPLABEL:\$.+]]), R_MICROMIPS_JALR, foo
+; JALR-MM:       .reloc [[TMPLABEL:\$.+]], R_MICROMIPS_JALR, foo
 ; NORELOC-NOT:   .reloc
 ; JALR-ALL-NEXT: [[TMPLABEL]]:
 ; JALR-32R2-NEXT: 	jalr	$25
@@ -121,9 +121,9 @@ entry:
 ; ALL-LABEL: checkTailCall:
 ; ALL-NOT: MIPS_JALR
   tail call void @foo()
-; JALR-32:       .reloc ([[TMPLABEL:\$.+]]), R_MIPS_JALR, foo
+; JALR-32:       .reloc [[TMPLABEL:\$.+]], R_MIPS_JALR, foo
 ; JALR-64:       .reloc [[TMPLABEL:\..+]], R_MIPS_JALR, foo
-; JALR-MM:       .reloc ([[TMPLABEL:\$.+]]), R_MICROMIPS_JALR, foo
+; JALR-MM:       .reloc [[TMPLABEL:\$.+]], R_MICROMIPS_JALR, foo
 ; JALR-ALL-NEXT: [[TMPLABEL]]:
 ; NORELOC-NOT:   .reloc
 ; TAILCALL-32R2-NEXT: 	jr	$25

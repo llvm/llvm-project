@@ -21,8 +21,7 @@ define i1 @pr84653(i32 %x) {
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    sext.w a1, a0
 ; CHECK-ZBB-NEXT:    lui a2, 524288
-; CHECK-ZBB-NEXT:    addi a2, a2, -1
-; CHECK-ZBB-NEXT:    xor a0, a0, a2
+; CHECK-ZBB-NEXT:    xnor a0, a0, a2
 ; CHECK-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ZBB-NEXT:    max a0, a0, zero
 ; CHECK-ZBB-NEXT:    slt a0, a0, a1
@@ -40,7 +39,7 @@ define i1 @pr85190(i64 %a) {
 ; CHECK-NOZBB-LABEL: pr85190:
 ; CHECK-NOZBB:       # %bb.0:
 ; CHECK-NOZBB-NEXT:    ori a1, a0, 7
-; CHECK-NOZBB-NEXT:    slti a2, a0, 0
+; CHECK-NOZBB-NEXT:    srli a2, a0, 63
 ; CHECK-NOZBB-NEXT:    li a3, -1
 ; CHECK-NOZBB-NEXT:    slli a3, a3, 63
 ; CHECK-NOZBB-NEXT:    sub a3, a3, a1
@@ -82,8 +81,7 @@ define i1 @select_to_or(i32 %x) {
 ; CHECK-ZBB:       # %bb.0:
 ; CHECK-ZBB-NEXT:    sext.w a1, a0
 ; CHECK-ZBB-NEXT:    lui a2, 524288
-; CHECK-ZBB-NEXT:    addi a2, a2, -1
-; CHECK-ZBB-NEXT:    xor a0, a0, a2
+; CHECK-ZBB-NEXT:    xnor a0, a0, a2
 ; CHECK-ZBB-NEXT:    sext.w a0, a0
 ; CHECK-ZBB-NEXT:    min a0, a0, zero
 ; CHECK-ZBB-NEXT:    slt a0, a0, a1

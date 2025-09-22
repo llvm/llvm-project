@@ -91,12 +91,15 @@ namespace llvm {
     }
 
     bool operator<(const ValID &RHS) const {
-      assert(Kind == RHS.Kind && "Comparing ValIDs of different kinds");
+      assert((((Kind == t_LocalID || Kind == t_LocalName) &&
+               (RHS.Kind == t_LocalID || RHS.Kind == t_LocalName)) ||
+              ((Kind == t_GlobalID || Kind == t_GlobalName) &&
+               (RHS.Kind == t_GlobalID || RHS.Kind == t_GlobalName))) &&
+             "Comparing ValIDs of different kinds");
+      if (Kind != RHS.Kind)
+        return Kind < RHS.Kind;
       if (Kind == t_LocalID || Kind == t_GlobalID)
         return UIntVal < RHS.UIntVal;
-      assert((Kind == t_LocalName || Kind == t_GlobalName ||
-              Kind == t_ConstantStruct || Kind == t_PackedConstantStruct) &&
-             "Ordering not defined for this ValID kind yet");
       return StrVal < RHS.StrVal;
     }
   };
@@ -376,6 +379,7 @@ namespace llvm {
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRangeAttr(AttrBuilder &B);
     bool parseInitializesAttr(AttrBuilder &B);
+    bool parseCapturesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 

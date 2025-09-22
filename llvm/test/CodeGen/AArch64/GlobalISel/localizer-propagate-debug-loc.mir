@@ -71,18 +71,73 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK:   [[ADRP3:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @A, debug-location !10
-  ; CHECK-NEXT:   [[ADD_LOW3:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP3]](p0), target-flags(aarch64-pageoff, aarch64-nc) @A, debug-location !10
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[ADD_LOW3]](p0), debug-location !10 :: (dereferenceable load (s32))
+  ; CHECK-LABEL: name: foo
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
+  ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @C,  debug-location !DILocation(line: 0, scope: !18)
+  ; CHECK-NEXT:   [[ADD_LOW:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @C,  debug-location !DILocation(line: 0, scope: !18)
+  ; CHECK-NEXT:   [[ADRP1:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @B,  debug-location !DILocation(line: 0, scope: !14)
+  ; CHECK-NEXT:   [[ADD_LOW1:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP1]](p0), target-flags(aarch64-pageoff, aarch64-nc) @B,  debug-location !DILocation(line: 0, scope: !14)
+  ; CHECK-NEXT:   [[ADRP2:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @A,  debug-location !DILocation(line: 0, scope: !11)
+  ; CHECK-NEXT:   [[ADD_LOW2:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP2]](p0), target-flags(aarch64-pageoff, aarch64-nc) @A,  debug-location !DILocation(line: 0, scope: !11)
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY [[C1]](s32)
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gpr(s32) = G_XOR [[COPY]], [[C2]]
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[XOR]](s32)
+  ; CHECK-NEXT:   G_BRCOND [[TRUNC]](s1), %bb.2
+  ; CHECK-NEXT:   G_BR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADRP3:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @A,  debug-location !10
+  ; CHECK-NEXT:   [[ADD_LOW3:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP3]](p0), target-flags(aarch64-pageoff, aarch64-nc) @A,  debug-location !10
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[ADD_LOW3]](p0),  debug-location !10 :: (dereferenceable load (s32))
+  ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[FRAME_INDEX1]](p0) :: (volatile store (s32) into %ir.1)
+  ; CHECK-NEXT:   G_BR %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[XOR1:%[0-9]+]]:gpr(s32) = G_XOR [[C3]], [[C4]]
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:gpr(s1) = G_TRUNC [[XOR1]](s32)
+  ; CHECK-NEXT:   G_BRCOND [[TRUNC1]](s1), %bb.4
+  ; CHECK-NEXT:   G_BR %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADRP4:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @B,  debug-location !DILocation(line: 0, scope: !14)
+  ; CHECK-NEXT:   [[ADD_LOW4:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP4]](p0), target-flags(aarch64-pageoff, aarch64-nc) @B,  debug-location !DILocation(line: 0, scope: !14)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:gpr(s32) = G_LOAD [[ADD_LOW4]](p0),  debug-location !13 :: (dereferenceable load (s32))
+  ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:gpr(p0) = G_FRAME_INDEX %stack.0
+  ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX2]](p0) :: (volatile store (s32) into %ir.1)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:gpr(s32) = G_LOAD [[ADD_LOW4]](p0),  debug-location !16 :: (dereferenceable load (s32))
+  ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX2]](p0) :: (volatile store (s32) into %ir.1)
+  ; CHECK-NEXT:   G_BR %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.5(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADRP5:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @C,  debug-location !17
+  ; CHECK-NEXT:   [[ADD_LOW5:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP5]](p0), target-flags(aarch64-pageoff, aarch64-nc) @C,  debug-location !17
+  ; CHECK-NEXT:   [[C5:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3,  debug-location !17
+  ; CHECK-NEXT:   G_STORE [[C5]](s32), [[ADD_LOW5]](p0),  debug-location !17 :: (store (s32) into @C)
+  ; CHECK-NEXT:   G_BR %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   [[C6:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   $w0 = COPY [[C6]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 
-  ; CHECK:   [[ADRP4:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @B, debug-location !DILocation(line: 0, scope: !14)
-  ; CHECK-NEXT:   [[ADD_LOW4:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP4]](p0), target-flags(aarch64-pageoff, aarch64-nc) @B, debug-location !DILocation(line: 0, scope: !14)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:gpr(s32) = G_LOAD [[ADD_LOW4]](p0), debug-location !13 :: (dereferenceable load (s32))
 
-  ; CHECK:   [[ADRP5:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @C, debug-location !17
-  ; CHECK-NEXT:   [[ADD_LOW5:%[0-9]+]]:gpr(p0) = G_ADD_LOW [[ADRP5]](p0), target-flags(aarch64-pageoff, aarch64-nc) @C, debug-location !17
-  ; CHECK-NEXT:   [[C5:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3, debug-location !17
-  ; CHECK-NEXT:   G_STORE [[C5]](s32), [[ADD_LOW5]](p0), debug-location !17 :: (store (s32) into @C)
   bb.1:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
 

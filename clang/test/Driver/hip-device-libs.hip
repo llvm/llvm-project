@@ -157,7 +157,7 @@
 // Test default code object version.
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI5
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI6
 
 // Test default code object version with old device library without abi_version_400.bc
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
@@ -208,10 +208,9 @@
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
 
-// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
-// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
+// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
+// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
 
-// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ocml.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ockl.bc"
 
 // FLUSHD-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_daz_opt_on.bc"
@@ -253,5 +252,5 @@
 // NOABI4-NOT: error:
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_400.bc"
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_500.bc"
-// NOABI5: error: cannot find ROCm device libraryfor ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
-// NOABI6: error: cannot find ROCm device libraryfor ABI version 6; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
+// NOABI5: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
+// NOABI6: error: cannot find ROCm device library for ABI version 6, which requires ROCm 6.3 or higher; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library

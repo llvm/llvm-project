@@ -207,6 +207,24 @@ mlir::ParseResult parseAttrElideType(mlir::AsmParser &parser,
 void printAttrElideType(mlir::AsmPrinter &printer, mlir::Operation *op,
                         mlir::TypeAttr type, mlir::Attribute attr);
 
+//===----------------------------------------------------------------------===//
+// CustomDirectiveDummyRegionRef
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult parseDummyRegionRef(mlir::OpAsmParser &parser,
+                                      mlir::Region &region);
+void printDummyRegionRef(mlir::OpAsmPrinter &printer, mlir::Operation *op,
+                         mlir::Region &region);
+
+//===----------------------------------------------------------------------===//
+// CustomDirectiveDummySuccessorRef
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult parseDummySuccessorRef(mlir::OpAsmParser &parser,
+                                         mlir::Block *successor);
+void printDummySuccessorRef(mlir::OpAsmPrinter &printer, mlir::Operation *op,
+                            mlir::Block *successor);
+
 } // end namespace test
 
 #endif // MLIR_TESTFORMATUTILS_H

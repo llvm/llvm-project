@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
-#define _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALLOCATE_AT_LEAST_H
+#define _LIBCPP___CXX03___MEMORY_ALLOCATE_AT_LEAST_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/allocator_traits.h>
@@ -19,15 +19,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 23
-
-template <class _Alloc>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __allocate_at_least(_Alloc& __alloc, size_t __n) {
-  return std::allocator_traits<_Alloc>::allocate_at_least(__alloc, __n);
-}
-
-#else
-
 template <class _Pointer>
 struct __allocation_result {
   _Pointer ptr;
@@ -35,14 +26,11 @@ struct __allocation_result {
 };
 
 template <class _Alloc>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR __allocation_result<typename allocator_traits<_Alloc>::pointer>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __allocation_result<typename allocator_traits<_Alloc>::pointer>
 __allocate_at_least(_Alloc& __alloc, size_t __n) {
   return {__alloc.allocate(__n), __n};
 }
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
+#endif // _LIBCPP___CXX03___MEMORY_ALLOCATE_AT_LEAST_H

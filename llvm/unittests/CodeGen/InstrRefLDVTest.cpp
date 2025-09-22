@@ -81,9 +81,9 @@ public:
       GTEST_SKIP();
 
     TargetOptions Options;
-    Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        Triple::normalize("x86_64--"), "", "", Options, std::nullopt,
-        std::nullopt, CodeGenOptLevel::Aggressive));
+    Machine = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
+                               std::nullopt, CodeGenOptLevel::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
     auto F =
@@ -159,7 +159,7 @@ public:
     // Setup things like the artifical block map, and BlockNo <=> RPO Order
     // mappings.
     LDV->initialSetup(*MF);
-    LDV->LS.initialize(*MF);
+    LDV->LS.scanFunction(*MF);
     addMTracker(MF);
     return &*LDV;
   }

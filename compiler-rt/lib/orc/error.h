@@ -10,7 +10,7 @@
 #define ORC_RT_ERROR_H
 
 #include "compiler.h"
-#include "extensible_rtti.h"
+#include "rtti.h"
 #include "stl_extras.h"
 
 #include <cassert>
@@ -367,8 +367,8 @@ private:
   }
 
   union {
-    std::aligned_union_t<1, storage_type> TStorage;
-    std::aligned_union_t<1, error_type> ErrorStorage;
+    alignas(storage_type) char TStorage[sizeof(storage_type)];
+    alignas(error_type) char ErrorStorage[sizeof(error_type)];
   };
 
   bool HasError : 1;

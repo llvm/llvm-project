@@ -57,6 +57,7 @@ struct Variable;
 struct OMPDeferredDeclareTargetInfo {
   mlir::omp::DeclareTargetCaptureClause declareTargetCaptureClause;
   mlir::omp::DeclareTargetDeviceType declareTargetDeviceType;
+  bool automap = false;
   const Fortran::semantics::Symbol &sym;
 };
 
@@ -79,7 +80,6 @@ void genOpenMPDeclarativeConstruct(AbstractConverter &,
 void genOpenMPSymbolProperties(AbstractConverter &converter,
                                const pft::Variable &var);
 
-int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);

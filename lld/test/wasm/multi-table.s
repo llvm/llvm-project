@@ -26,7 +26,7 @@ call_indirect_explicit_tables:
   call_indirect table_b, () -> ()
   end_function
 
-# RT-MVP: wasm-ld: error: object file not built with 'reference-types' feature conflicts with import of table table_a by file
+# RT-MVP: wasm-ld: error: object file not built with 'reference-types' or 'call-indirect-overlong' feature conflicts with import of table table_a by file
 
 # CHECK:      --- !WASM
 # CHECK-NEXT: FileHeader:

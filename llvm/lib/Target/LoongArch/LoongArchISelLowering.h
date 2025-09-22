@@ -34,6 +34,13 @@ enum NodeType : unsigned {
   TAIL_MEDIUM,
   TAIL_LARGE,
 
+  // Select
+  SELECT_CC,
+
+  // Branch
+  BR_CC,
+  BRCOND,
+
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
   SLL_W,
@@ -57,6 +64,10 @@ enum NodeType : unsigned {
 
   FTINT,
 
+  // Build and split F64 pair
+  BUILD_PAIR_F64,
+  SPLIT_PAIR_F64,
+
   // Bit counting operations
   CLZ_W,
   CTZ_W,
@@ -68,6 +79,7 @@ enum NodeType : unsigned {
   REVB_2H,
   REVB_2W,
   BITREV_4B,
+  BITREV_8B,
   BITREV_W,
 
   // Intrinsic operations start ============================================
@@ -133,6 +145,9 @@ enum NodeType : unsigned {
   VREPLVEI,
   VREPLGR2VR,
   XVPERMI,
+  XVPERM,
+  XVREPLVE0,
+  XVREPLVE0Q,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -146,7 +161,31 @@ enum NodeType : unsigned {
 
   // Floating point approximate reciprocal operation
   FRECIPE,
-  FRSQRTE
+  FRSQRTE,
+
+  // Vector logicial left / right shift by immediate
+  VSLLI,
+  VSRLI,
+
+  // Vector byte logicial left / right shift
+  VBSLL,
+  VBSRL,
+
+  // Scalar load broadcast to vector
+  VLDREPL,
+
+  // Vector mask set by condition
+  VMSKLTZ,
+  VMSKGEZ,
+  VMSKEQZ,
+  VMSKNEZ,
+  XVMSKLTZ,
+  XVMSKGEZ,
+  XVMSKEQZ,
+  XVMSKNEZ,
+
+  // Vector Horizontal Addition with Widening‌
+  VHADDW
 
   // Intrinsic operations end =============================================
 };
@@ -182,7 +221,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
@@ -270,16 +309,30 @@ public:
       unsigned *Fast = nullptr) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
-    return false;
+    if (!VT.isSimple())
+      return false;
+
+    // Not for i1 vectors
+    if (VT.getSimpleVT().getScalarType() == MVT::i1)
+      return false;
+
+    return isTypeLegal(VT.getSimpleVT());
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
-  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
 
   bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
                               Align &PrefAlign) const override;
 
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -287,7 +340,7 @@ private:
                                    unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
                                    ISD::ArgFlagsTy ArgFlags, CCState &State,
-                                   bool IsFixed, bool IsRet, Type *OrigTy);
+                                   bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -333,7 +386,19 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -358,6 +423,28 @@ private:
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 
   bool softPromoteHalfType() const override { return true; }
+
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
+
+  SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             std::optional<CallingConv::ID> CC) const override;
+
+  /// Return the register type for a given MVT, ensuring vectors are treated
+  /// as a series of gpr sized integers.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, ensuring vectors are
+  /// treated as a series of gpr sized integers.
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
 };
 
 } // end namespace llvm

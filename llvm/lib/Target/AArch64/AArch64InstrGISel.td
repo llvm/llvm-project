@@ -179,36 +179,6 @@ def G_FCMGT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_FCMEQZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$imm, ptype0:$src1);
@@ -295,12 +265,6 @@ def : GINodeEquiv<G_FCMEQ, AArch64fcmeq>;
 def : GINodeEquiv<G_FCMGE, AArch64fcmge>;
 def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 
-def : GINodeEquiv<G_FCMEQZ, AArch64fcmeqz>;
-def : GINodeEquiv<G_FCMGEZ, AArch64fcmgez>;
-def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
-def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
-def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
-
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_UMULL, AArch64umull>;
@@ -323,27 +287,6 @@ def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
                      (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),
            (f32 (FADDPv2i32p (v2f32 FPR64:$Rn)))>;
-
-let Predicates = [HasNEON] in {
-  def : Pat<(v2f64 (sint_to_fp v2i32:$src)),
-            (SCVTFv2f64 (SSHLLv2i32_shift V64:$src, 0))>;
-  def : Pat<(v2f64 (uint_to_fp v2i32:$src)),
-            (UCVTFv2f64 (USHLLv2i32_shift V64:$src, 0))>;
-  def : Pat<(v2f32 (sint_to_fp v2i64:$src)),
-            (FCVTNv2i32 (SCVTFv2f64 V128:$src))>;
-  def : Pat<(v2f32 (uint_to_fp v2i64:$src)),
-            (FCVTNv2i32 (UCVTFv2f64 V128:$src))>;
-
-  def : Pat<(v2i64 (fp_to_sint v2f32:$src)),
-            (FCVTZSv2f64 (FCVTLv2i32 V64:$src))>;
-  def : Pat<(v2i64 (fp_to_uint v2f32:$src)),
-            (FCVTZUv2f64 (FCVTLv2i32 V64:$src))>;
-  def : Pat<(v2i32 (fp_to_sint v2f64:$src)),
-            (XTNv2i32 (FCVTZSv2f64 V128:$src))>;
-  def : Pat<(v2i32 (fp_to_uint v2f64:$src)),
-            (XTNv2i32 (FCVTZUv2f64 V128:$src))>;
-
-}
 
 let Predicates = [HasNoLSE] in {
 def : Pat<(atomic_cmp_swap_i8 GPR64:$addr, GPR32:$desired, GPR32:$new),

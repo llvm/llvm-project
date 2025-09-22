@@ -18,15 +18,14 @@ func.func @_QPsub1() {
 
 func.func @_QPsub1() {
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub1Ea"}
-  %1 = fir.alloca i32
+  %1 = fir.alloca i64
   %4:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-  %s = fir.load %1 : !fir.ref<i32>
-  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%s : i32) {data_attr = #cuf.cuda<device>} -> i32
+  %13 = cuf.allocate %11 : !fir.ref<!fir.box<none>> stream(%1 : !fir.ref<i64>) {data_attr = #cuf.cuda<device>} -> i32
   return
 }
 
-// CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<none>> stream(%{{.*}} : i32) {data_attr = #cuf.cuda<device>} -> i32
+// CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<none>> stream(%{{.*}} : !fir.ref<i64>) {data_attr = #cuf.cuda<device>} -> i32
 
 // -----
 
@@ -86,3 +85,30 @@ func.func @_QPsub1() {
 // CHECK: cuf.alloc
 // CHECK: cuf.free
 
+// -----
+
+ gpu.module @cuda_device_mod {
+  gpu.func @_QPdynshared() kernel {
+    %c-1 = arith.constant -1 : index
+    %6 = cuf.shared_memory !fir.array<?xf32>, %c-1 : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>
+    %7 = fir.shape %c-1 : (index) -> !fir.shape<1>
+    %8 = fir.declare %6(%7) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFdynsharedEr"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+    gpu.return
+  }
+}
+
+// CHECK: cuf.shared_memory
+
+// -----
+
+gpu.module @cuda_device_mod {
+  gpu.func @_QPshared_static() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+    %0 = cuf.shared_memory i32 {bindc_name = "a", uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>
+    %1 = fir.declare %0 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = cuf.shared_memory i32 {bindc_name = "b", uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
+    %3 = fir.declare %2 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFshared_staticEb"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    gpu.return
+  }
+}
+
+// CHECK-COUNT-2: cuf.shared_memory 

@@ -11,14 +11,14 @@ define void @blam() {
 ; SPLITTING-NEXT:    adrp x8, g1
 ; SPLITTING-NEXT:    add x8, x8, :lo12:g1
 ; SPLITTING-NEXT:    adrp x9, g0
-; SPLITTING-NEXT:    ldr q0, [x9, :lo12:g0]
+; SPLITTING-NEXT:    ldr d0, [x9, :lo12:g0]
 ; SPLITTING-NEXT:    str d0, [x8]
 ; SPLITTING-NEXT:    ret
 ;
 ; MISALIGNED-LABEL: blam:
 ; MISALIGNED:       // %bb.0:
 ; MISALIGNED-NEXT:    adrp x8, g0
-; MISALIGNED-NEXT:    ldr q0, [x8, :lo12:g0]
+; MISALIGNED-NEXT:    ldr d0, [x8, :lo12:g0]
 ; MISALIGNED-NEXT:    adrp x8, g1
 ; MISALIGNED-NEXT:    add x8, x8, :lo12:g1
 ; MISALIGNED-NEXT:    str d0, [x8]

@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -29,7 +28,7 @@
 using namespace llvm;
 
 bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
-                                         BuildFnTy &MatchInfo) {
+                                         BuildFnTy &MatchInfo) const {
   const GMerge *Merge = cast<GMerge>(&MI);
 
   Register Dst = Merge->getReg(0);
@@ -58,7 +57,7 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
 }
 
 bool CombinerHelper::matchMergeXAndZero(const MachineInstr &MI,
-                                        BuildFnTy &MatchInfo) {
+                                        BuildFnTy &MatchInfo) const {
   const GMerge *Merge = cast<GMerge>(&MI);
 
   Register Dst = Merge->getReg(0);

@@ -1,4 +1,4 @@
-//===--- IncDecInConditionsCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
 AST_MATCHER(BinaryOperator, isLogicalOperator) { return Node.isLogicalOp(); }
 
 AST_MATCHER(UnaryOperator, isUnaryPrePostOperator) {
@@ -25,6 +27,8 @@ AST_MATCHER(CXXOperatorCallExpr, isPrePostOperator) {
   return Node.getOperator() == OO_PlusPlus ||
          Node.getOperator() == OO_MinusMinus;
 }
+
+} // namespace
 
 void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
   auto OperatorMatcher = expr(

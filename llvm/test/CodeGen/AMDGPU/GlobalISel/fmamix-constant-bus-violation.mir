@@ -20,7 +20,7 @@ body: |
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_LSHR_B32_]]
     ; GFX9-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_LSHR_B32_1]]
     ; GFX9-NEXT: [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 9, [[COPY3]], 8, [[COPY3]], 8, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX9-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[V_FMA_MIX_F32_]], implicit $exec
+    ; GFX9-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[V_FMA_MIX_F32_]], implicit $exec
     ; GFX9-NEXT: $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
     ; GFX9-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:sgpr(s32) = COPY $sgpr0

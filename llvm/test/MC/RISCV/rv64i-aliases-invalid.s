@@ -1,5 +1,5 @@
 # UNSUPPORTED: target={{.*-windows.*}}
-# RUN: not llvm-mc -triple=riscv64 -riscv-no-aliases < %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv64 -M no-aliases < %s -o /dev/null 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=riscv64 < %s 2>&1 -o /dev/null | FileCheck %s
 
 li t5, 0x10000000000000000 # CHECK: :[[@LINE]]:8: error: unknown operand
@@ -26,7 +26,7 @@ lla x1, %lo(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a constan
 lla x1, %hi(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
 lla x1, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
 lla a1, foo+foo # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
-lla a2, foo@plt # CHECK: :[[@LINE]]:17: error: '@plt' operand not valid for instruction
+lla a2, foo@plt # CHECK: :[[@LINE]]:12: error: unexpected token
 
 rdinstreth x29 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
 rdcycleh x27   # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}

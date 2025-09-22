@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_AUTO_CAST_H
-#define _LIBCPP___UTILITY_AUTO_CAST_H
+#ifndef _LIBCPP___CXX03___UTILITY_AUTO_CAST_H
+#define _LIBCPP___CXX03___UTILITY_AUTO_CAST_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/decay.h>
@@ -19,4 +19,4 @@
 
 #define _LIBCPP_AUTO_CAST(expr) static_cast<::std::__decay_t<decltype((expr))> >(expr)
 
-#endif // _LIBCPP___UTILITY_AUTO_CAST_H
+#endif // _LIBCPP___CXX03___UTILITY_AUTO_CAST_H

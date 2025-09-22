@@ -28,7 +28,7 @@ class MCSubtargetInfo;
 class StringRef;
 
 /// Convert `Bytes' to a hex string and output to `OS'
-void dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS);
+LLVM_ABI void dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS);
 
 namespace HexStyle {
 
@@ -43,7 +43,7 @@ struct AliasMatchingData;
 
 /// This is an instance of a target assembly language printer that
 /// converts an MCInst to valid target assembly syntax.
-class MCInstPrinter {
+class LLVM_ABI MCInstPrinter {
 protected:
   /// A stream that comments can be emitted to if desired.  Each comment
   /// must end with a newline.  This will be null if verbose assembly emission
@@ -101,9 +101,10 @@ public:
 
   class WithMarkup {
   public:
-    LLVM_CTOR_NODISCARD WithMarkup(MCInstPrinter &IP, raw_ostream &OS, Markup M,
-                                   bool EnableMarkup, bool EnableColor);
-    ~WithMarkup();
+    LLVM_CTOR_NODISCARD LLVM_ABI WithMarkup(MCInstPrinter &IP, raw_ostream &OS,
+                                            Markup M, bool EnableMarkup,
+                                            bool EnableColor);
+    LLVM_ABI ~WithMarkup();
 
     template <typename T> WithMarkup &operator<<(T &O) {
       OS << O;
