@@ -1,7 +1,7 @@
 // REQUIRES: arm-emulator
 
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   --arm-sve-legalize-vector-storage --convert-vector-to-scf --convert-scf-to-cf  --convert-vector-to-llvm='enable-arm-sve' \
+// DEFINE:   --arm-sve-legalize-vector-storage --convert-vector-to-scf --convert-scf-to-cf  --naive-convert-vector-to-llvm='enable-arm-sve' \
 // DEFINE:   --expand-strided-metadata    --lower-affine --convert-to-llvm --finalize-memref-to-llvm  --reconcile-unrealized-casts \
 // DEFINE: -o %t
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-vector-to-llvm="enable-amx" --convert-to-llvm -reconcile-unrealized-casts \
+// RUN: mlir-opt %s --naive-convert-vector-to-llvm="enable-amx" --convert-to-llvm -reconcile-unrealized-casts \
 // RUN: | mlir-translate --mlir-to-llvmir \
 // RUN: | FileCheck %s
 

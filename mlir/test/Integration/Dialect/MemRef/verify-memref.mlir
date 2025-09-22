@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
-// RUN:   -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm\
+// RUN:   -convert-vector-to-scf -convert-scf-to-cf -naive-convert-vector-to-llvm -finalize-memref-to-llvm\
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-runner \
 // RUN:  -e entry -entry-point-result=void \

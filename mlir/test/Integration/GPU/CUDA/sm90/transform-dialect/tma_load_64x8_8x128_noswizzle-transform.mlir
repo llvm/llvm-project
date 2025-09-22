@@ -3,7 +3,7 @@
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
 // RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
-// RUN:     -convert-vector-to-llvm \
+// RUN:     -naive-convert-vector-to-llvm \
 // RUN:     -convert-math-to-llvm \
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
@@ -30,7 +30,7 @@
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
 // RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
-// RUN:     -convert-vector-to-llvm \
+// RUN:     -naive-convert-vector-to-llvm \
 // RUN:     -convert-math-to-llvm \
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \

@@ -1,6 +1,6 @@
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=vector" --split-input-file %s | FileCheck %s
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=vector allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
-// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -naive-convert-vector-to-llvm -split-input-file | FileCheck %s
 
 //===========================================================================//
 // Basic tests for Vector-to-LLVM conversion

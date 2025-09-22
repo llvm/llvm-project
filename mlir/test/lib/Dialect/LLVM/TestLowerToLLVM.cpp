@@ -21,7 +21,7 @@
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
+#include "mlir/Conversion/VectorToLLVM/NaiveConvertVectorToLLVMPass.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -60,9 +60,9 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
   // Convert vector to LLVM (always needed).
-  pm.addPass(createConvertVectorToLLVMPass(
+  pm.addPass(createNaiveConvertVectorToLLVMPass(
       // TODO: add more options on a per-need basis.
-      ConvertVectorToLLVMPassOptions{options.reassociateFPReductions}));
+      NaiveConvertVectorToLLVMPassOptions{options.reassociateFPReductions}));
   // Convert Math to LLVM (always needed).
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   // Expand complicated MemRef operations before lowering them.

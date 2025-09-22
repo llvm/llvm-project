@@ -14,7 +14,7 @@
 // DEFINE:    --transform-interpreter --test-transform-dialect-erase-schedule \
 // DEFINE:    --lower-vector-mask \
 // DEFINE:    -canonicalize -cse --convert-vector-to-scf \
-// DEFINE:    -arm-sve-legalize-vector-storage -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
+// DEFINE:    -arm-sve-legalize-vector-storage -naive-convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\

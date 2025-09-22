@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVM_H_
-#define MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVM_H_
+#ifndef MLIR_CONVERSION_VECTORTOLLVM_NAIVECONVERTVECTORTOLLVM_H_
+#define MLIR_CONVERSION_VECTORTOLLVM_NAIVECONVERTVECTORTOLLVM_H_
 
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -24,4 +24,4 @@ void registerConvertVectorToLLVMInterface(DialectRegistry &registry);
 }
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVM_H_
+#endif // MLIR_CONVERSION_VECTORTOLLVM_NAIVECONVERTVECTORTOLLVM_H_

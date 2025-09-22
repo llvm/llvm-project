@@ -1,7 +1,7 @@
 // Check that the ceildivsi lowering is correct.
 // We do not check any poison or UB values, as it is not possible to catch them.
 
-// RUN: mlir-opt %s --convert-vector-to-llvm \
+// RUN: mlir-opt %s --naive-convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
 // RUN:   mlir-runner -e entry --entry-point-result=void \
 // RUN:               --shared-libs=%mlir_c_runner_utils | \

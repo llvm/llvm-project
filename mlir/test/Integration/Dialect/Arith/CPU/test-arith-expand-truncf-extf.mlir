@@ -2,7 +2,7 @@
 
 // RUN: mlir-opt %s --convert-func-to-llvm \
 // RUN:             --arith-expand="include-f4e2m1=true" \
-// RUN:             --convert-arith-to-llvm --convert-vector-to-llvm \
+// RUN:             --convert-arith-to-llvm --naive-convert-vector-to-llvm \
 // RUN:             --reconcile-unrealized-casts | \
 // RUN:   mlir-runner -e entry --entry-point-result=void \
 // RUN:               --shared-libs=%mlir_c_runner_utils | \

@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
+#include "mlir/Conversion/VectorToLLVM/NaiveConvertVectorToLLVMPass.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassOptions.h"
 
@@ -162,8 +162,8 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
-  ConvertVectorToLLVMPassOptions convertVectorToLLVMOptions() const {
-    ConvertVectorToLLVMPassOptions opts{};
+  NaiveConvertVectorToLLVMPassOptions convertVectorToLLVMOptions() const {
+    NaiveConvertVectorToLLVMPassOptions opts{};
     opts.reassociateFPReductions = reassociateFPReductions;
     opts.force32BitVectorIndices = force32BitVectorIndices;
     opts.armNeon = armNeon;
