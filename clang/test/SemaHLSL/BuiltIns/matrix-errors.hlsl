@@ -2,7 +2,7 @@
 
 // Some bad declarations
 hlsl::matrix ShouldWorkSomeday; // expected-error{{use of alias template 'hlsl::matrix' requires template arguments}}
-// expected-note@*:* {{template declaration from hidden source: template <class element = float, int rows_count = 4, int cols_count = 4> using matrix = element __attribute__((matrix_type(rows_count, cols_count)))}}
+// expected-note@*:* {{template declaration from hidden source: template <class element = float, int rows_count = 4, int cols_count = 4> requires rows_count <= 4 && cols_count <= 4 using matrix = element __attribute__((matrix_type(rows_count, cols_count)))}}
 
 hlsl::matrix<1,1,1> BadMat; // expected-error{{template argument for template type parameter must be a type}}
 // expected-note@*:* {{template parameter from hidden source: class element = float}}
@@ -11,7 +11,7 @@ hlsl::matrix<int, float,4> AnotherBadMat; // expected-error{{template argument f
 // expected-note@*:* {{template parameter from hidden source: int rows_count = 4}}
 
 hlsl::matrix<int, 2, 3, 2> YABV; // expected-error{{too many template arguments for alias template 'matrix'}}
-// expected-note@*:* {{template declaration from hidden source: template <class element = float, int rows_count = 4, int cols_count = 4> using matrix = element __attribute__((matrix_type(rows_count, cols_count)))}}
+// expected-note@*:* {{template declaration from hidden source: template <class element = float, int rows_count = 4, int cols_count = 4> requires rows_count <= 4 && cols_count <= 4 using matrix = element __attribute__((matrix_type(rows_count, cols_count)))}}
 
 // This code is rejected by clang because clang puts the HLSL built-in types
 // into the HLSL namespace.

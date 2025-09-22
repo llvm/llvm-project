@@ -159,9 +159,39 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                                                   SourceLocation(), ColsParam));
   TemplateParams.emplace_back(ColsParam);
 
-  auto *ParamList =
-      TemplateParameterList::Create(AST, SourceLocation(), SourceLocation(),
-                                    TemplateParams, SourceLocation(), nullptr);
+  const unsigned MaxMatDim = SemaPtr->getLangOpts().MaxMatrixDimension;
+  auto *MaxRow = IntegerLiteral::Create(
+      AST, llvm::APInt(AST.getIntWidth(AST.IntTy), MaxMatDim), AST.IntTy,
+      SourceLocation());
+  auto *MaxCol = IntegerLiteral::Create(
+      AST, llvm::APInt(AST.getIntWidth(AST.IntTy), MaxMatDim), AST.IntTy,
+      SourceLocation());
+
+  auto *RowsRef = DeclRefExpr::Create(
+      AST, NestedNameSpecifierLoc(), SourceLocation(), RowsParam,
+      /*RefersToEnclosingVariableOrCapture*/ false,
+      DeclarationNameInfo(RowsParam->getDeclName(), SourceLocation()),
+      AST.IntTy, VK_LValue);
+  auto *ColsRef = DeclRefExpr::Create(
+      AST, NestedNameSpecifierLoc(), SourceLocation(), ColsParam,
+      /*RefersToEnclosingVariableOrCapture*/ false,
+      DeclarationNameInfo(ColsParam->getDeclName(), SourceLocation()),
+      AST.IntTy, VK_LValue);
+
+  auto *RowsLE = BinaryOperator::Create(AST, RowsRef, MaxRow, BO_LE, AST.BoolTy,
+                                        VK_PRValue, OK_Ordinary,
+                                        SourceLocation(), FPOptionsOverride());
+  auto *ColsLE = BinaryOperator::Create(AST, ColsRef, MaxCol, BO_LE, AST.BoolTy,
+                                        VK_PRValue, OK_Ordinary,
+                                        SourceLocation(), FPOptionsOverride());
+
+  auto *RequiresExpr = BinaryOperator::Create(
+      AST, RowsLE, ColsLE, BO_LAnd, AST.BoolTy, VK_PRValue, OK_Ordinary,
+      SourceLocation(), FPOptionsOverride());
+
+  auto *ParamList = TemplateParameterList::Create(
+      AST, SourceLocation(), SourceLocation(), TemplateParams, SourceLocation(),
+      RequiresExpr);
 
   IdentifierInfo &II = AST.Idents.get("matrix", tok::TokenKind::identifier);
 
