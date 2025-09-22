@@ -3,7 +3,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: @dx.rts0 = private constant [76 x i8]  c"{{.*}}", section "RTS0", align 4
+; CHECK: @dx.rts0 = private constant [80 x i8]  c"{{.*}}", section "RTS0", align 4
 
 define void @main() #0 {
 entry:
@@ -13,14 +13,14 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
-!2 = !{ ptr @main, !3, i32 2 } ; function, root signature
+!2 = !{ ptr @main, !3, i32 3 } ; function, root signature
 !3 = !{ !5 } ; list of root signature elements
-!5 = !{ !"StaticSampler", i32 4, i32 2, i32 3, i32 5, float 0x3FF6CCCCC0000000, i32 9, i32 3, i32 2, float -1.280000e+02, float 1.280000e+02, i32 42, i32 0, i32 0, i32 0 }
+!5 = !{ !"StaticSampler", i32 4, i32 2, i32 3, i32 5, float 0x3FF6CCCCC0000000, i32 9, i32 3, i32 2, float -1.280000e+02, float 1.280000e+02, i32 42, i32 0, i32 0, i32 1 }
 
 ; DXC: - Name:            RTS0
-; DXC-NEXT:     Size:            76
+; DXC-NEXT:     Size:            80
 ; DXC-NEXT:     RootSignature:
-; DXC-NEXT:       Version:         2
+; DXC-NEXT:       Version:         3
 ; DXC-NEXT:       NumRootParameters: 0
 ; DXC-NEXT:       RootParametersOffset: 24
 ; DXC-NEXT:       NumStaticSamplers: 1
@@ -40,3 +40,4 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:           ShaderRegister:  42
 ; DXC-NEXT:           RegisterSpace:   0
 ; DXC-NEXT:           ShaderVisibility: All
+; DXC-NEXT:           SAMPLER_FLAG_UINT_BORDER_COLOR: true 

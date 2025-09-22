@@ -212,6 +212,7 @@ MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
       ConstantAsMetadata::get(Builder.getInt32(Sampler.Space)),
       ConstantAsMetadata::get(
           Builder.getInt32(to_underlying(Sampler.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(0)),
   };
   return MDNode::get(Ctx, Operands);
 }
@@ -411,7 +412,7 @@ Error MetadataParser::parseDescriptorTable(mcdxbc::RootSignatureDesc &RSD,
 
 Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
                                          MDNode *StaticSamplerNode) {
-  if (StaticSamplerNode->getNumOperands() != 14)
+  if (StaticSamplerNode->getNumOperands() != 15)
     return make_error<InvalidRSMetadataFormat>("Static Sampler");
 
   mcdxbc::StaticSampler Sampler;
@@ -494,6 +495,17 @@ Error MetadataParser::parseStaticSampler(mcdxbc::RootSignatureDesc &RSD,
   if (auto E = Visibility.takeError())
     return Error(std::move(E));
   Sampler.ShaderVisibility = *Visibility;
+
+  if (RSD.Version < 3) {
+    RSD.StaticSamplers.push_back(Sampler);
+    return Error::success();
+  }
+  assert(RSD.Version >= 3);
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(StaticSamplerNode, 14))
+    Sampler.Flags = *Val;
+  else
+    return make_error<InvalidRSMetadataValue>("Static Sampler Flags");
 
   RSD.StaticSamplers.push_back(Sampler);
   return Error::success();
