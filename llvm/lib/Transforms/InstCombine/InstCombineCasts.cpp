@@ -977,8 +977,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // trunc ( OP i8 C1, V1) to i1 -> icmp eq V1, log_2(C1) iff C1 is power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_Power2(C1), m_Value(V1)))) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
-    Value *Icmp = Builder.CreateICmpEQ(V1, Right);
-    return replaceInstUsesWith(Trunc, Icmp);
+    return new ICmpInst(ICmpInst::ICMP_EQ, V1, Right);
   }
 
   // OP = { lshr, ashr }
@@ -986,8 +985,15 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_LowBitMask(C1), m_Value(V1)))) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_one());
-    Value *Icmp = Builder.CreateICmpULT(V1, Right);
-    return replaceInstUsesWith(Trunc, Icmp);
+    return new ICmpInst(ICmpInst::ICMP_ULT, V1, Right);
+  }
+
+  // OP = { lshr, ashr }
+  // trunc ( OP i8 C1, V1) to i1 -> icmp ugt V1, cttz(C1) - 1 iff (C1) is
+  // negative power of 2
+  if (DestWidth == 1 && match(Src, m_Shr(m_NegatedPower2(C1), m_Value(V1)))) {
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
+    return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
   }
 
   return Changed ? &Trunc : nullptr;

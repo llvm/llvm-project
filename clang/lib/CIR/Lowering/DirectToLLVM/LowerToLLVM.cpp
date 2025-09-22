@@ -185,6 +185,14 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
+    cir::CosOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CosOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -227,6 +235,7 @@ public:
   mlir::Value visitCirAttr(cir::ConstRecordAttr attr);
   mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
   mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
+  mlir::Value visitCirAttr(cir::TypeInfoAttr attr);
   mlir::Value visitCirAttr(cir::VTableAttr attr);
   mlir::Value visitCirAttr(cir::ZeroAttr attr);
 
@@ -513,6 +522,21 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
 }
 
+// TypeInfoAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeInfoAttr) {
+  mlir::Type llvmTy = converter->convertType(typeInfoAttr.getType());
+  mlir::Location loc = parentOp->getLoc();
+  mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+
+  for (auto [idx, elt] : llvm::enumerate(typeInfoAttr.getData())) {
+    mlir::Value init = visit(elt);
+    result =
+        mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+  }
+
+  return result;
+}
+
 // VTableAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
   mlir::Type llvmTy = converter->convertType(vtableArr.getType());
@@ -690,6 +714,17 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
                                                 cmpxchg.getResult(), 1);
 
   rewriter.replaceOp(op, {old, cmp});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicXchgLowering::matchAndRewrite(
+    cir::AtomicXchg op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
+      op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
+      llvmOrder);
   return mlir::success();
 }
 
@@ -2455,86 +2490,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(&getContext());
 
-  patterns.add<CIRToLLVMReturnOpLowering>(patterns.getContext());
-  // This could currently be merged with the group below, but it will get more
-  // arguments later, so we'll keep it separate for now.
-  patterns.add<CIRToLLVMAllocaOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMLoadOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMStoreOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMCastOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMPtrStrideOpLowering>(converter, patterns.getContext(),
-                                             dl);
-  patterns.add<CIRToLLVMInlineAsmOpLowering>(converter, patterns.getContext(),
-                                             dl);
   patterns.add<
-      // clang-format off
-               CIRToLLVMACosOpLowering,
-               CIRToLLVMASinOpLowering,
-               CIRToLLVMAssumeOpLowering,
-               CIRToLLVMAssumeAlignedOpLowering,
-               CIRToLLVMAssumeSepStorageOpLowering,
-               CIRToLLVMAtomicCmpXchgLowering,
-               CIRToLLVMBaseClassAddrOpLowering,
-               CIRToLLVMATanOpLowering,
-               CIRToLLVMBinOpLowering,
-               CIRToLLVMBitClrsbOpLowering,
-               CIRToLLVMBitClzOpLowering,
-               CIRToLLVMBitCtzOpLowering,
-               CIRToLLVMBitFfsOpLowering,
-               CIRToLLVMBitParityOpLowering,
-               CIRToLLVMBitPopcountOpLowering,
-               CIRToLLVMBitReverseOpLowering,
-               CIRToLLVMBrCondOpLowering,
-               CIRToLLVMBrOpLowering,
-               CIRToLLVMByteSwapOpLowering,
-               CIRToLLVMCallOpLowering,
-               CIRToLLVMCmpOpLowering,
-               CIRToLLVMComplexAddOpLowering,
-               CIRToLLVMComplexCreateOpLowering,
-               CIRToLLVMComplexImagOpLowering,
-               CIRToLLVMComplexImagPtrOpLowering,
-               CIRToLLVMComplexRealOpLowering,
-               CIRToLLVMComplexRealPtrOpLowering,
-               CIRToLLVMComplexSubOpLowering,
-               CIRToLLVMCopyOpLowering,
-               CIRToLLVMConstantOpLowering,
-               CIRToLLVMExpectOpLowering,
-               CIRToLLVMFAbsOpLowering,
-               CIRToLLVMFrameAddrOpLowering,
-               CIRToLLVMFuncOpLowering,
-               CIRToLLVMGetBitfieldOpLowering,
-               CIRToLLVMGetGlobalOpLowering,
-               CIRToLLVMGetMemberOpLowering,
-               CIRToLLVMReturnAddrOpLowering,
-               CIRToLLVMRotateOpLowering,
-               CIRToLLVMSelectOpLowering,
-               CIRToLLVMSetBitfieldOpLowering,
-               CIRToLLVMShiftOpLowering,
-               CIRToLLVMStackRestoreOpLowering,
-               CIRToLLVMStackSaveOpLowering,
-               CIRToLLVMSwitchFlatOpLowering,
-               CIRToLLVMThrowOpLowering,
-               CIRToLLVMTrapOpLowering,
-               CIRToLLVMUnaryOpLowering,
-               CIRToLLVMUnreachableOpLowering,
-               CIRToLLVMVAArgOpLowering,
-               CIRToLLVMVAEndOpLowering,
-               CIRToLLVMVAStartOpLowering,
-               CIRToLLVMVecCmpOpLowering,
-               CIRToLLVMVecCreateOpLowering,
-               CIRToLLVMVecExtractOpLowering,
-               CIRToLLVMVecInsertOpLowering,
-               CIRToLLVMVecShuffleDynamicOpLowering,
-               CIRToLLVMVecShuffleOpLowering,
-               CIRToLLVMVecSplatOpLowering,
-               CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMVTableAddrPointOpLowering,
-               CIRToLLVMVTableGetVPtrOpLowering,
-               CIRToLLVMVTableGetVirtualFnAddrOpLowering,
-               CIRToLLVMVTTAddrPointOpLowering
-      // clang-format on
-      >(converter, patterns.getContext());
+#define GET_LLVM_LOWERING_PATTERNS_LIST
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_LLVM_LOWERING_PATTERNS_LIST
+      >(converter, patterns.getContext(), dl);
 
   processCIRAttrs(module);
 

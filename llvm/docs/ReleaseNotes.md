@@ -124,6 +124,8 @@ Changes to the RISC-V Backend
   using `$x` with an architecture string suffix is not yet supported.
 * Ssctr and Smctr extensions are no longer experimental.
 * Add support for Zvfbfa (Additional BF16 vector compute support)
+* Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
+* Add support for Zvfofp8min (OFP8 conversion extension)
 
 Changes to the WebAssembly Backend
 ----------------------------------
