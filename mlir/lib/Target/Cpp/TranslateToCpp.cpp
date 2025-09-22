@@ -831,6 +831,64 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
+                                    mlir::UnrealizedConversionCastOp castOp) {
+  raw_ostream &os = emitter.ostream();
+  Operation &op = *castOp.getOperation();
+
+  if (castOp.getResults().size() != 1 || castOp.getOperands().size() != 1) {
+    return castOp.emitOpError(
+        "expected single result and single operand for conversion cast");
+  }
+
+  Type destType = castOp.getResult(0).getType();
+
+  auto srcPtrType =
+      mlir::dyn_cast<emitc::PointerType>(castOp.getOperand(0).getType());
+  auto destArrayType = mlir::dyn_cast<emitc::ArrayType>(destType);
+
+  if (srcPtrType && destArrayType) {
+
+    // Emit declaration: (*v13)[dims] =
+    if (failed(emitter.emitType(op.getLoc(), destArrayType.getElementType())))
+      return failure();
+    os << " (*" << emitter.getOrCreateName(op.getResult(0)) << ")";
+    for (int64_t dim : destArrayType.getShape())
+      os << "[" << dim << "]";
+    os << " = ";
+
+    os << "(";
+
+    // Emit the C++ type for "datatype (*)[dim1][dim2]..."
+    if (failed(emitter.emitType(op.getLoc(), destArrayType.getElementType())))
+      return failure();
+
+    os << "(*)"; // Pointer to array
+
+    for (int64_t dim : destArrayType.getShape()) {
+      os << "[" << dim << "]";
+    }
+    os << ")";
+    if (failed(emitter.emitOperand(castOp.getOperand(0))))
+      return failure();
+
+    return success();
+  }
+
+  // Fallback to generic C-style cast for other cases
+  if (failed(emitter.emitAssignPrefix(op)))
+    return failure();
+
+  os << "(";
+  if (failed(emitter.emitType(op.getLoc(), destType)))
+    return failure();
+  os << ")";
+  if (failed(emitter.emitOperand(castOp.getOperand(0))))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ApplyOp applyOp) {
   raw_ostream &os = emitter.ostream();
   Operation &op = *applyOp.getOperation();
@@ -1339,7 +1397,29 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
 std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
   std::string out;
   llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getValue());
+  Value baseValue = op.getValue();
+
+  // Check if the baseValue (%arg1) is a result of UnrealizedConversionCastOp
+  // that converts a pointer to an array type.
+  if (auto castOp = dyn_cast_or_null<mlir::UnrealizedConversionCastOp>(
+          baseValue.getDefiningOp())) {
+    auto destArrayType =
+        mlir::dyn_cast<emitc::ArrayType>(castOp.getResult(0).getType());
+    auto srcPtrType =
+        mlir::dyn_cast<emitc::PointerType>(castOp.getOperand(0).getType());
+
+    // If it's a pointer being cast to an array, emit (*varName)
+    if (srcPtrType && destArrayType) {
+      ss << "(*" << getOrCreateName(baseValue) << ")";
+    } else {
+      // Fallback if the cast is not our specific pointer-to-array case
+      ss << getOrCreateName(baseValue);
+    }
+  } else {
+    // Default behavior for a regular array or other base types
+    ss << getOrCreateName(baseValue);
+  }
+
   for (auto index : op.getIndices()) {
     ss << "[" << getOrCreateName(index) << "]";
   }
@@ -1796,6 +1876,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
             cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
             return success();
           })
+          .Case<mlir::UnrealizedConversionCastOp>(
+              [&](auto op) { return printOperation(*this, op); })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
