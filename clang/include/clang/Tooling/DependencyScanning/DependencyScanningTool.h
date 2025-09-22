@@ -161,6 +161,16 @@ public:
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
+  /// TODO: add documentation.
+  llvm::Error initializeCompilerInstacneWithContext(
+      StringRef CWD, const std::vector<std::string> &CommandLine);
+
+  llvm::Expected<TranslationUnitDeps> computeDependenciesByNameWithContext(
+      StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
+      LookupModuleOutputCallback LookupModuleOutput);
+
+  llvm::Error finalizeCompilerInstanceWithContext();
+
 private:
   DependencyScanningWorker Worker;
 };

@@ -106,6 +106,10 @@ public:
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
+  llvm::Error initializeCompierInstanceWithContext(
+      StringRef CWD, const std::vector<std::string> &CommandLine);
+  llvm::Error finalizeCompilerInstanceWithContext();
+
   /// Run the dependency scanning tool for a given clang driver command-line,
   /// and report the discovered dependencies to the provided consumer. If
   /// TUBuffer is not nullopt, it is used as TU input for the dependency
@@ -152,6 +156,12 @@ public:
                                   DependencyConsumer &Consumer,
                                   DependencyActionController &Controller,
                                   StringRef ModuleName);
+
+  /// TODO: add documentation
+  llvm::Error
+  computeDependenciesByNameWithContext(StringRef ModuleName,
+                                       DependencyConsumer &Consumer,
+                                       DependencyActionController &Controller);
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 

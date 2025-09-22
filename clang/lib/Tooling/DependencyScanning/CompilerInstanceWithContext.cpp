@@ -104,6 +104,7 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   // we enable CAS.
   // CI.getInvocation().getCASOpts() = Worker.CASOpts;
   CI.setBuildingModule(false);
+  CI.createVirtualFileSystem(OverlayFS, Diags->getClient());
   sanitizeDiagOpts(CI.getDiagnosticOpts());
   CI.createDiagnostics(DiagPrinter.get(), false);
   CI.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath = true;

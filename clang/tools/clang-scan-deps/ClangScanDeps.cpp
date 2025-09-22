@@ -1075,12 +1075,26 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         }
       } else if (ModuleName) {
-        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-            LookupOutput);
+        if (llvm::Error Err = WorkerTool.initializeCompilerInstacneWithContext(
+                CWD, Input->CommandLine)) {
+          llvm::errs() << "ERROR: compiler instance with context setup error "
+                       << Err << "\n";
+          HadErrors = true;
+          continue;
+        }
+        auto MaybeModuleDepsGraph =
+            WorkerTool.computeDependenciesByNameWithContext(
+                *ModuleName, AlreadySeenModules, LookupOutput);
         if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
+        if (llvm::Error Err =
+                WorkerTool.finalizeCompilerInstanceWithContext()) {
+          llvm::errs()
+              << "ERROR: compiler instance with context finialization error "
+              << Err << "\n";
+          HadErrors = true;
+        }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;
