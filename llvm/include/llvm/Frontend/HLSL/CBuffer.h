@@ -55,9 +55,6 @@ public:
   void eraseFromModule();
 };
 
-APInt translateCBufArrayOffset(const DataLayout &DL, APInt Offset,
-                               ArrayType *Ty);
-
 } // namespace hlsl
 } // namespace llvm
 

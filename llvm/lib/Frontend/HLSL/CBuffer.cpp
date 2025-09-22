@@ -76,10 +76,3 @@ void CBufferMetadata::eraseFromModule() {
   // Remove the cbs named metadata
   MD->eraseFromParent();
 }
-
-APInt hlsl::translateCBufArrayOffset(const DataLayout &DL, APInt Offset,
-                                     ArrayType *Ty) {
-  int64_t TypeSize = DL.getTypeSizeInBits(Ty->getElementType()) / 8;
-  int64_t RoundUp = alignTo(TypeSize, Align(CBufferRowSizeInBytes));
-  return Offset.udiv(TypeSize) * RoundUp;
-}
