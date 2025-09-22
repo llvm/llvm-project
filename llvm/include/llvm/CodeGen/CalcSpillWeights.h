@@ -84,8 +84,8 @@ class VirtRegMap;
                                    const MachineRegisterInfo &MRI,
                                    const TargetInstrInfo &TII);
 
-    /// \returns true if all registers used by \p OrigMI at \p OrigIdx are also
-    /// available with the same value at \p UseIdx.
+    /// \returns true if all registers used by \p MI are also available with the
+    /// same value at \p UseIdx.
     static bool allUsesAvailableAt(const MachineInstr *MI, SlotIndex UseIdx,
                                    const LiveIntervals &LIS,
                                    const MachineRegisterInfo &MRI,
