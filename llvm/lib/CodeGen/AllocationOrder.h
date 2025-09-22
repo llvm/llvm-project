@@ -120,7 +120,7 @@ public:
     return Reg.isPhysical() && is_contained(Hints, Reg.id());
   }
   
-  /// Apply antihint to the allocation order.
+  /// Apply anti-hints to the allocation order.
   void applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs, 
                       const TargetRegisterInfo *TRI);
 
