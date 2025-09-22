@@ -501,8 +501,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
       UsePath = Path;
     }
     StringRef UseKind;
-    auto ReaderOrErr = llvm::IndexedInstrProfReader::create(
-        UsePath, D.getVFS());
+    auto ReaderOrErr =
+        llvm::IndexedInstrProfReader::create(UsePath, D.getVFS());
     if (auto E = ReaderOrErr.takeError()) {
       auto DiagID = D.getDiags().getCustomDiagID(
           DiagnosticsEngine::Error, "Error in reading profile %0: %1");
