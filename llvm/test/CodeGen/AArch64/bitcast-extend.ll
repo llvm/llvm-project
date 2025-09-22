@@ -289,10 +289,16 @@ define void @extractbitcastext_s(i32 %bytes, ptr %output) {
 }
 
 define <8 x i8> @load_zext_i8_v8i8(ptr %p) {
-; CHECK-LABEL: load_zext_i8_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i8_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i8_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i8, ptr %p
     %z = zext i8 %l to i64
     %b = bitcast i64 %z to <8 x i8>
@@ -300,10 +306,16 @@ define <8 x i8> @load_zext_i8_v8i8(ptr %p) {
 }
 
 define <8 x i8> @load_zext_i16_v8i8(ptr %p) {
-; CHECK-LABEL: load_zext_i16_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i16_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i16_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i16, ptr %p
     %z = zext i16 %l to i64
     %b = bitcast i64 %z to <8 x i8>
@@ -311,10 +323,16 @@ define <8 x i8> @load_zext_i16_v8i8(ptr %p) {
 }
 
 define <8 x i8> @load_zext_i32_v8i8(ptr %p) {
-; CHECK-LABEL: load_zext_i32_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i32_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i32_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i32, ptr %p
     %z = zext i32 %l to i64
     %b = bitcast i64 %z to <8 x i8>
@@ -355,10 +373,16 @@ define <16 x i8> @load_zext_v16i8(ptr %p) {
 
 
 define <4 x i16> @load_zext_i8_v4i16(ptr %p) {
-; CHECK-LABEL: load_zext_i8_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i8_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i8_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i8, ptr %p
     %z = zext i8 %l to i64
     %b = bitcast i64 %z to <4 x i16>
@@ -366,10 +390,16 @@ define <4 x i16> @load_zext_i8_v4i16(ptr %p) {
 }
 
 define <4 x i16> @load_zext_i16_v4i16(ptr %p) {
-; CHECK-LABEL: load_zext_i16_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i16_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i16_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i16, ptr %p
     %z = zext i16 %l to i64
     %b = bitcast i64 %z to <4 x i16>
@@ -377,10 +407,16 @@ define <4 x i16> @load_zext_i16_v4i16(ptr %p) {
 }
 
 define <4 x i16> @load_zext_i32_v4i16(ptr %p) {
-; CHECK-LABEL: load_zext_i32_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i32_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i32_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i32, ptr %p
     %z = zext i32 %l to i64
     %b = bitcast i64 %z to <4 x i16>
@@ -388,10 +424,16 @@ define <4 x i16> @load_zext_i32_v4i16(ptr %p) {
 }
 
 define <2 x i32> @load_zext_i8_v2i32(ptr %p) {
-; CHECK-LABEL: load_zext_i8_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i8_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i8_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i8, ptr %p
     %z = zext i8 %l to i64
     %b = bitcast i64 %z to <2 x i32>
@@ -399,10 +441,16 @@ define <2 x i32> @load_zext_i8_v2i32(ptr %p) {
 }
 
 define <2 x i32> @load_zext_i16_v2i32(ptr %p) {
-; CHECK-LABEL: load_zext_i16_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i16_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i16_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i16, ptr %p
     %z = zext i16 %l to i64
     %b = bitcast i64 %z to <2 x i32>
@@ -410,10 +458,16 @@ define <2 x i32> @load_zext_i16_v2i32(ptr %p) {
 }
 
 define <2 x i32> @load_zext_i32_v2i32(ptr %p) {
-; CHECK-LABEL: load_zext_i32_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i32_v2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i32_v2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i32, ptr %p
     %z = zext i32 %l to i64
     %b = bitcast i64 %z to <2 x i32>
@@ -473,10 +527,16 @@ define <1 x i64> @load_zext_i32_v1i64(ptr %p) {
 
 
 define <4 x half> @load_zext_i8_v4f16(ptr %p) {
-; CHECK-LABEL: load_zext_i8_v4f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i8_v4f16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i8_v4f16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i8, ptr %p
     %z = zext i8 %l to i64
     %b = bitcast i64 %z to <4 x half>
@@ -484,10 +544,16 @@ define <4 x half> @load_zext_i8_v4f16(ptr %p) {
 }
 
 define <4 x half> @load_zext_i16_v4f16(ptr %p) {
-; CHECK-LABEL: load_zext_i16_v4f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i16_v4f16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i16_v4f16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i16, ptr %p
     %z = zext i16 %l to i64
     %b = bitcast i64 %z to <4 x half>
@@ -495,10 +561,16 @@ define <4 x half> @load_zext_i16_v4f16(ptr %p) {
 }
 
 define <4 x half> @load_zext_i32_v4f16(ptr %p) {
-; CHECK-LABEL: load_zext_i32_v4f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i32_v4f16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i32_v4f16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i32, ptr %p
     %z = zext i32 %l to i64
     %b = bitcast i64 %z to <4 x half>
@@ -539,10 +611,16 @@ define <4 x bfloat> @load_zext_i32_v4bf16(ptr %p) {
 }
 
 define <2 x float> @load_zext_i8_v2f32(ptr %p) {
-; CHECK-LABEL: load_zext_i8_v2f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i8_v2f32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i8_v2f32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i8, ptr %p
     %z = zext i8 %l to i64
     %b = bitcast i64 %z to <2 x float>
@@ -550,10 +628,16 @@ define <2 x float> @load_zext_i8_v2f32(ptr %p) {
 }
 
 define <2 x float> @load_zext_i16_v2f32(ptr %p) {
-; CHECK-LABEL: load_zext_i16_v2f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i16_v2f32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i16_v2f32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i16, ptr %p
     %z = zext i16 %l to i64
     %b = bitcast i64 %z to <2 x float>
@@ -561,10 +645,16 @@ define <2 x float> @load_zext_i16_v2f32(ptr %p) {
 }
 
 define <2 x float> @load_zext_i32_v2f32(ptr %p) {
-; CHECK-LABEL: load_zext_i32_v2f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: load_zext_i32_v2f32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_zext_i32_v2f32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
     %l = load i32, ptr %p
     %z = zext i32 %l to i64
     %b = bitcast i64 %z to <2 x float>
