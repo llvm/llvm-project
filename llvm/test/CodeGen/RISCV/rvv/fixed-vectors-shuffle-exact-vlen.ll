@@ -57,8 +57,8 @@ define <4 x i64> @m2_pair_swap_vl4(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v11, v9, 1
-; CHECK-NEXT:    vslideup.vi v11, v9, 1
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
+; CHECK-NEXT:    vslideup.vi v11, v9, 1
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -291,8 +291,8 @@ define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range
 ; CHECK-NEXT:    vmv.v.i v0, 1
 ; CHECK-NEXT:    vslideup.vi v13, v11, 1
 ; CHECK-NEXT:    vslidedown.vi v11, v10, 1, v0.t
-; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vrgather.vi v12, v9, 0
+; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
 ; CHECK-NEXT:    ret
@@ -324,8 +324,8 @@ define <16 x i32> @m4_linear_num_of_shuffles_in_chunks(<16 x i32> %0) vscale_ran
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v12, v10, 2
-; CHECK-NEXT:    vslideup.vi v12, v11, 3
 ; CHECK-NEXT:    vrgather.vi v14, v8, 2
+; CHECK-NEXT:    vslideup.vi v12, v11, 3
 ; CHECK-NEXT:    vrgather.vi v15, v10, 3
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret

@@ -1892,9 +1892,9 @@ define void @load_factor4_one_active_storeback_full(ptr %ptr) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    vmv1r.v v13, v8
-; CHECK-NEXT:    vmv1r.v v14, v12
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 8
+; CHECK-NEXT:    vmv1r.v v14, v12
 ; CHECK-NEXT:    vmv1r.v v15, v16
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 12
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma

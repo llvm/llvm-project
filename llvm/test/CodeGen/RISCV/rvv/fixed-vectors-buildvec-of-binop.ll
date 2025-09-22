@@ -502,17 +502,17 @@ define <8 x i32> @add_constant_rhs_8xi32_vector_in2(<8 x i32> %vin, i32 %a, i32 
 ; CHECK-NEXT:    addi a1, a1, 25
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a3, a3, 2047
-; CHECK-NEXT:    addi a3, a3, 308
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 5
+; CHECK-NEXT:    addi a0, a3, 308
 ; CHECK-NEXT:    vmv.s.x v10, a2
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 6
-; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    ret
@@ -534,15 +534,15 @@ define <8 x i32> @add_constant_rhs_8xi32_vector_in3(<8 x i32> %vin, i32 %a, i32 
 ; CHECK-NEXT:    addi a1, a1, 25
 ; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a3, a3, 2047
-; CHECK-NEXT:    addi a3, a3, 308
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    addi a0, a3, 308
 ; CHECK-NEXT:    vmv.s.x v10, a2
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
-; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 6
 ; CHECK-NEXT:    ret

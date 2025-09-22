@@ -229,6 +229,10 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Spilling is generally expensive on all RISC-V cores, so always enable
   // register-pressure tracking. This will increase compile time.
   Policy.ShouldTrackPressure = true;
+
+  // Enabling ShouldTrackLaneMasks when vector instructions are supported.
+  // TODO: Add extensions that need register pairs as well?
+  Policy.ShouldTrackLaneMasks = hasVInstructions();
 }
 
 void RISCVSubtarget::overridePostRASchedPolicy(

@@ -257,11 +257,11 @@ define <16 x i32> @v16i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vslidedown.vx v14, v10, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v8, v12, v10
 ; CHECK-NEXT:    vrgatherei16.vv v9, v12, v14
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v14, v14, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v8, v12, v10
 ; CHECK-NEXT:    vrgatherei16.vv v10, v12, v14
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v14, v14, a1
@@ -302,27 +302,27 @@ define <32 x i32> @v32i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vsext.vf2 v12, v8
 ; CHECK-NEXT:    vslidedown.vx v20, v12, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v9, v16, v20
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v20, v20, a1
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v8, v16, v12
+; CHECK-NEXT:    vrgatherei16.vv v9, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v12, v20, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v16, v20
+; CHECK-NEXT:    vrgatherei16.vv v10, v16, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v20, v12, a1
+; CHECK-NEXT:    vslidedown.vx v12, v12, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v16, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v20, a1
+; CHECK-NEXT:    vslidedown.vx v20, v12, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v20, v24, a1
+; CHECK-NEXT:    vslidedown.vx v20, v20, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v13, v16, v24
+; CHECK-NEXT:    vrgatherei16.vv v13, v16, v20
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v20, v20, a1
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v14, v16, v20
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v20, v20, a1

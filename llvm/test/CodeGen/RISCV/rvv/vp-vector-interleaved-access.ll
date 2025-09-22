@@ -218,21 +218,23 @@ define void @store_factor3_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, <v
 define void @store_factor4_v2(<vscale x 1 x i32> %v0, <vscale x 1 x i32> %v1, ptr %ptr, i32 zeroext %evl) {
 ; RV32-LABEL: store_factor4_v2:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; RV32-NEXT:    vmv1r.v v10, v8
+; RV32-NEXT:    vmv1r.v v11, v9
 ; RV32-NEXT:    slli a1, a1, 3
 ; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv1r.v v10, v8
-; RV32-NEXT:    vmv1r.v v11, v9
 ; RV32-NEXT:    vsseg4e32.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: store_factor4_v2:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; RV64-NEXT:    vmv1r.v v10, v8
+; RV64-NEXT:    vmv1r.v v11, v9
 ; RV64-NEXT:    slli a1, a1, 35
 ; RV64-NEXT:    srli a1, a1, 34
 ; RV64-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; RV64-NEXT:    vmv1r.v v10, v8
-; RV64-NEXT:    vmv1r.v v11, v9
 ; RV64-NEXT:    vsseg4e32.v v8, (a0)
 ; RV64-NEXT:    ret
   %rvl = mul nuw i32 %evl, 8

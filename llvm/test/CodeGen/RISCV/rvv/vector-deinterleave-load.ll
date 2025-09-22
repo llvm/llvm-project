@@ -593,29 +593,30 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    add a3, a1, a2
-; CHECK-NEXT:    vmv.v.v v13, v12
 ; CHECK-NEXT:    srli a4, a2, 2
-; CHECK-NEXT:    vmv.v.v v14, v12
 ; CHECK-NEXT:    srli a5, a2, 3
+; CHECK-NEXT:    vmv.v.v v13, v12
+; CHECK-NEXT:    vmv.v.v v14, v12
 ; CHECK-NEXT:    vmv.v.v v15, v12
 ; CHECK-NEXT:    vsseg4e8.v v12, (a1)
 ; CHECK-NEXT:    vl1r.v v12, (a1)
 ; CHECK-NEXT:    add a1, a4, a5
 ; CHECK-NEXT:    vl1r.v v13, (a3)
 ; CHECK-NEXT:    add a3, a3, a2
-; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    vl1r.v v14, (a3)
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    vl1r.v v15, (a2)
 ; CHECK-NEXT:    vmsne.vi v13, v13, 0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
 ; CHECK-NEXT:    vmsne.vi v12, v14, 0
-; CHECK-NEXT:    vmsne.vi v14, v15, 0
 ; CHECK-NEXT:    vsetvli zero, a4, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v0, v13, a5
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmsne.vi v13, v15, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v0, v12, a4
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v0, v14, a1
+; CHECK-NEXT:    vslideup.vx v0, v13, a1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
