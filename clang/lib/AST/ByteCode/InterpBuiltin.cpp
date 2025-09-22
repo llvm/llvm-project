@@ -3596,6 +3596,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS & RHS; });
 
+  case X86::BI__builtin_ia32_kandnqi:
+  case X86::BI__builtin_ia32_kandnhi:
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
+
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);

@@ -8520,6 +8520,12 @@ __mmask16 test_mm512_kandn(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
+TEST_CONSTEXPR(_mm512_kandn(0xCC, 0xAA) == 0x22);        // data correctness
+TEST_CONSTEXPR(_mm512_kandn(0x12345, 0xFFFF) == 0xDCBA); // truncated and inverted
+TEST_CONSTEXPR(_mm512_kandn(0x0000, 0xABCD) == 0xABCD);  // all-ones (~0)
+TEST_CONSTEXPR(_mm512_kandn(0xFFFF, 0x5678) == 0x0000);  // all-zero (~0xFFFF)
+TEST_CONSTEXPR(_mm512_kandn(0xAAAA, 0xAAAA) == 0x0000);  // ~A & A is 0
+
 __mmask16 test_mm512_kor(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_mm512_kor
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
@@ -8673,6 +8679,12 @@ __mmask16 test_kandn_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      _mm512_cmpneq_epu32_mask(__C, __D)),
                                                      __E, __F);
 }
+
+TEST_CONSTEXPR(_kandn_mask16(0xCC, 0xAA) == 0x22);        // data correctness
+TEST_CONSTEXPR(_kandn_mask16(0x12345, 0xFFFF) == 0xDCBA); // truncated and inverted
+TEST_CONSTEXPR(_kandn_mask16(0x0000, 0xABCD) == 0xABCD);  // all-ones (~0)
+TEST_CONSTEXPR(_kandn_mask16(0xFFFF, 0x5678) == 0x0000);  // all-zero (~0xFFFF)
+TEST_CONSTEXPR(_kandn_mask16(0xAAAA, 0xAAAA) == 0x0000);  // ~A & A is 0
 
 __mmask16 test_kor_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask16

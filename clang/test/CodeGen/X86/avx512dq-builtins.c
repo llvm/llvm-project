@@ -46,6 +46,12 @@ __mmask8 test_kandn_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __
                                                     __E, __F);
 }
 
+TEST_CONSTEXPR(_kandn_mask8(0xC3, 0xA5) == 0x24);        // data correctness
+TEST_CONSTEXPR(_kandn_mask8(0x1F0, 0xFF) == 0x0F);       // truncated (to 0xF0) and inverted
+TEST_CONSTEXPR(_kandn_mask8(0x00, 0xB7) == 0xB7);        // all-ones (~0)
+TEST_CONSTEXPR(_kandn_mask8(0xFF, 0x7E) == 0x00);        // all-zero (~0xFF)
+TEST_CONSTEXPR(_kandn_mask8(0x55, 0x55) == 0x00);        // ~A & A is 0
+
 __mmask8 test_kor_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>

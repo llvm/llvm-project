@@ -52,11 +52,11 @@ __mmask64 test_kand_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                    __E, __F);
 }
 
-TEST_CONSTEXPR(_kand_mask64(0xCCCCCCCCCCCCCCCCull, 0xAAAAAAAAAAAAAAAAull) == 0x8888888888888888ull); // data correctness
-TEST_CONSTEXPR(_kand_mask64(0x123456789ABCDEF0ull, 0xFFFFFFFFFFFFFFFFull) == 0x123456789ABCDEF0ull); // full 64-bit value
-TEST_CONSTEXPR(_kand_mask64(0xABCDEF0123456789ull, 0x0000000000000000ull) == 0x0000000000000000ull); // all-zero
-TEST_CONSTEXPR(_kand_mask64(0x56789ABCDEF01234ull, 0xFFFFFFFFFFFFFFFFull) == 0x56789ABCDEF01234ull); // all-one
-TEST_CONSTEXPR(_kand_mask64(0xAAAAAAAAAAAAAAAAull, 0x5555555555555555ull) == 0x0000000000000000ull); // disjoint
+TEST_CONSTEXPR(_kand_mask64(0xCCCCCCCCCCCCCCCC, 0xAAAAAAAAAAAAAAAA) == 0x8888888888888888); // data correctness
+TEST_CONSTEXPR(_kand_mask64(0x123456789ABCDEF0, 0xFFFFFFFFFFFFFFFF) == 0x123456789ABCDEF0); // full 64-bit value
+TEST_CONSTEXPR(_kand_mask64(0xABCDEF0123456789, 0x0000000000000000) == 0x0000000000000000); // all-zero
+TEST_CONSTEXPR(_kand_mask64(0x56789ABCDEF01234, 0xFFFFFFFFFFFFFFFF) == 0x56789ABCDEF01234); // all-one
+TEST_CONSTEXPR(_kand_mask64(0xAAAAAAAAAAAAAAAA, 0x5555555555555555) == 0x0000000000000000); // disjoint
 
 __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask32
@@ -68,6 +68,13 @@ __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                      _mm512_cmpneq_epu16_mask(__C, __D)),
                                                      __E, __F);
 }
+// 1100
+//
+TEST_CONSTEXPR(_kandn_mask32(0xA0A0F0F0, 0xCCCCCCCC) == 0x4C4C0C0C);  // data correctness
+TEST_CONSTEXPR(_kandn_mask32(0x123456789, 0xFFFFFFFF) == 0xDCBA9876); // truncated and inverted
+TEST_CONSTEXPR(_kandn_mask32(0x00000000, 0x1234ABCD) == 0x1234ABCD);  // all-ones (~0)
+TEST_CONSTEXPR(_kandn_mask32(0xFFFFFFFF, 0x87654321) == 0x00000000);  // all-zero (~0xFFFFFFFF)
+TEST_CONSTEXPR(_kandn_mask32(0xAAAAAAAA, 0xAAAAAAAA) == 0x00000000);  // ~A & A is 0
 
 __mmask64 test_kandn_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask64
@@ -79,6 +86,12 @@ __mmask64 test_kandn_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
                                                     _mm512_cmpneq_epu8_mask(__C, __D)),
                                                     __E, __F);
 }
+
+TEST_CONSTEXPR(_kandn_mask64(0xA0A0F0F0C3C33C3C, 0xCCCCCCCCFFFF0000) == 0x4C4C0C0C3C3C0000); // data correctness
+TEST_CONSTEXPR(_kandn_mask64(0x0123456789ABCDEF, 0xFFFFFFFFFFFFFFFF) == 0xFEDCBA9876543210); // inverted with all-ones mask
+TEST_CONSTEXPR(_kandn_mask64(0x0, 0x1122334455667788) == 0x1122334455667788);                // all-ones (~0)
+TEST_CONSTEXPR(_kandn_mask64(0xFFFFFFFFFFFFFFFF, 0x8877665544332211) == 0x0);                // all-zero (~0xFFFFFFFFFFFFFFFF)
+TEST_CONSTEXPR(_kandn_mask64(0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA) == 0x0);                // ~A & A is 0
 
 __mmask32 test_kor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kor_mask32

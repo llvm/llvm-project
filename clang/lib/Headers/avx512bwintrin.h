@@ -52,14 +52,13 @@ _kand_mask64(__mmask64 __A, __mmask64 __B) {
   return (__mmask64)__builtin_ia32_kanddi((__mmask64)__A, (__mmask64)__B);
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS
-_kandn_mask32(__mmask32 __A, __mmask32 __B)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS_CONSTEXPR
+_kandn_mask32(__mmask32 __A, __mmask32 __B) {
   return (__mmask32)__builtin_ia32_kandnsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS _kandn_mask64(__mmask64 __A,
-                                                             __mmask64 __B) {
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_kandn_mask64(__mmask64 __A, __mmask64 __B) {
   return (__mmask64)__builtin_ia32_kandndi((__mmask64)__A, (__mmask64)__B);
 }
 
