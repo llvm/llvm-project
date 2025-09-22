@@ -49,7 +49,7 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   // Get anti-hints
   SmallVector<MCPhysReg, 16> AntiHintedPhysRegs;
   MRI.getPhysRegAntiHints(VirtReg, AntiHintedPhysRegs, &VRM);
-  
+
   LLVM_DEBUG({
     if (!AntiHintedPhysRegs.empty()) {
       dbgs() << "anti-hints:";
@@ -58,14 +58,14 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
       dbgs() << '\n';
     }
   });
-  
+
   // Create allocation order object
   AllocationOrder AO(std::move(Hints), Order, HardHints);
-  
+
   // Apply anti-hints filtering if needed
   if (!AntiHintedPhysRegs.empty()) {
     AO.applyAntiHints(AntiHintedPhysRegs, TRI);
-    
+
     LLVM_DEBUG({
       if (!AO.Hints.empty()) {
         dbgs() << "filtered hints:";
@@ -76,38 +76,37 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
     });
   }
 
-
   assert(all_of(AO.Hints,
                 [&](MCPhysReg Hint) { return is_contained(AO.Order, Hint); }) &&
          "Target hint is outside allocation order.");
   return AO;
 }
 
-void AllocationOrder::applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs, 
+void AllocationOrder::applyAntiHints(ArrayRef<MCPhysReg> AntiHintedPhysRegs,
                                      const TargetRegisterInfo *TRI) {
   // Create filtered order
   FilteredOrderStorage.clear();
   FilteredOrderStorage.reserve(Order.size());
-  
+
   // Add non-anti-hinted registers first
   for (MCPhysReg PhysReg : Order) {
     if (!is_contained(AntiHintedPhysRegs, PhysReg)) {
       FilteredOrderStorage.push_back(PhysReg);
     }
   }
-  
+
   // Add anti-hinted registers at the end as last resort
   for (MCPhysReg PhysReg : Order) {
     if (is_contained(AntiHintedPhysRegs, PhysReg)) {
       FilteredOrderStorage.push_back(PhysReg);
     }
   }
-  
+
   // Update Order
   Order = FilteredOrderStorage;
-  
+
   LLVM_DEBUG({
-    dbgs() << "moved " << AntiHintedPhysRegs.size() 
+    dbgs() << "moved " << AntiHintedPhysRegs.size()
            << " anti-hinted registers to end of allocation order\n";
   });
 }

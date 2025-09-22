@@ -210,9 +210,10 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("flags", Reg.RegisterFlags,
                        std::vector<FlowStringValue>());
-    if(!YamlIO.outputting() || !Reg.AntiHints.empty()) {  // Only map when parsing or anti-hints present
+    if (!YamlIO.outputting() ||
+        !Reg.AntiHints.empty()) { // Only map when parsing or anti-hints present
       YamlIO.mapOptional("anti-hints", Reg.AntiHints,
-                       std::vector<FlowStringValue>());  // for anti-hints
+                         std::vector<FlowStringValue>()); // for anti-hints
     }
   }
 

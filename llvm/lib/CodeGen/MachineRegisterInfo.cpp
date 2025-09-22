@@ -678,16 +678,16 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   return false;
 }
 
-void MachineRegisterInfo::getPhysRegAntiHints(Register VReg, 
-                                             SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-                                             const VirtRegMap *VRM) const {
+void MachineRegisterInfo::getPhysRegAntiHints(
+    Register VReg, SmallVectorImpl<MCPhysReg> &PhysAntiHints,
+    const VirtRegMap *VRM) const {
   assert(VReg.isVirtual());
   if (!AntiHintRegs.inBounds(VReg) || !VRM)
     return;
-  
+
   const auto &AntiHints = AntiHintRegs[VReg];
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
-  
+
   for (Register AntiHintVReg : AntiHints) {
     // Check if the anti-hinted register has been allocated
     if (VRM->hasPhys(AntiHintVReg)) {
@@ -698,7 +698,7 @@ void MachineRegisterInfo::getPhysRegAntiHints(Register VReg,
       }
     }
   }
-  
+
   // Remove duplicates
   llvm::sort(PhysAntiHints);
   PhysAntiHints.erase(llvm::unique(PhysAntiHints), PhysAntiHints.end());
