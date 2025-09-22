@@ -59,7 +59,7 @@ constexpr void test() {
   if (!std::is_constant_evaluated()) {
     { // With a position that is out of range.
       try {
-        sv.subview(sv.size() + 1);
+        std::ignore = sv.subview(sv.size() + 1);
         assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
         LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
@@ -70,7 +70,7 @@ constexpr void test() {
 
     { // With a position that is out of range and a 0 character length.
       try {
-        sv.subview(sv.size() + 1, 0);
+        std::ignore = sv.subview(sv.size() + 1, 0);
         assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
         LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
@@ -81,7 +81,7 @@ constexpr void test() {
 
     { // With a position that is out of range and a some character length.
       try {
-        sv.subview(sv.size() + 1, 1);
+        std::ignore = sv.subview(sv.size() + 1, 1);
         assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
         LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");

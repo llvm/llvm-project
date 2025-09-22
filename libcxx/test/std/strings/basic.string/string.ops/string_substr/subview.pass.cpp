@@ -10,7 +10,8 @@
 
 // <string>
 
-// constexpr basic_string_view<_CharT, _Traits> subview(size_type __pos = 0, size_type __n = npos) const;
+//    constexpr basic_string_view<charT, traits> subview(size_type pos = 0,
+//                                                       size_type n = npos) const;
 
 #include <cassert>
 #include <concepts>
@@ -61,7 +62,7 @@ constexpr void test() {
   if (!std::is_constant_evaluated()) {
     { // With a position that is out of range.
       try {
-        s.subview(s.size() + 1);
+        std::ignore = s.subview(s.size() + 1);
         assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
         LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
@@ -72,7 +73,7 @@ constexpr void test() {
 
     { // With a position that is out of range and a 0 character length.
       try {
-        s.subview(s.size() + 1, 0);
+        std::ignore = s.subview(s.size() + 1, 0);
         assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
         LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");
@@ -83,7 +84,7 @@ constexpr void test() {
 
     { // With a position that is out of range and a some character length.
       try {
-        s.subview(s.size() + 1, 1);
+        std::ignore = s.subview(s.size() + 1, 1);
         assert(false);
       } catch ([[maybe_unused]] const std::out_of_range& ex) {
         LIBCPP_ASSERT(std::string(ex.what()) == "string_view::substr");

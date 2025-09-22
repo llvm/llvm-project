@@ -6,28 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #include <allocator>
+// REQUIRES: std-at-least-c++26
+
+// <string>
+
+//    constexpr basic_string_view<charT, traits> subview(size_type pos = 0,
+//                                                       size_type n = npos) const;
+
 #include <string>
 
-#include "constexpr_char_traits.h"
-#include "test_macros.h"
-#include "type_algorithms.h"
-
-template <typename CharT, typename TraitsT, typename AllocT>
-constexpr void test() {
-#if TEST_STD_VER >= 26
-  std::basic_string<CharT, TraitsT, AllocT> s;
+void test() {
+  std::string s;
 
   s.subview(); // expected-warning {{ignoring return value of function}}
-#endif
 }
-
-class Test {
-public:
-  template <typename CharT>
-  constexpr void operator()() const {
-    test<CharT, std::char_traits<CharT>, std::allocator<CharT>>();
-  }
-};
-
-void test() { types::for_each(types::character_types(), Test{}); }

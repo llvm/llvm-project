@@ -6,27 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <string_view>
+// REQUIRES: std-at-least-c++26
 
-#include "constexpr_char_traits.h"
-#include "test_macros.h"
-#include "type_algorithms.h"
+// <string>
 
-template <typename CharT, typename TraitsT, typename AllocT>
-constexpr void test() {
-#if TEST_STD_VER >= 26
-  std::basic_string_view<CharT, TraitsT> sv;
+// constexpr basic_string_view subview(size_type pos = 0,
+//                                     size_type n = npos) const;      // freestanding-deleted
+
+#include <string>
+
+void test() {
+  std::string_view sv;
 
   sv.subview(); // expected-warning {{ignoring return value of function}}
-#endif
 }
-
-class Test {
-public:
-  template <typename CharT>
-  constexpr void operator()() const {
-    test<CharT, std::char_traits<CharT>>();
-  }
-};
-
-void test() { types::for_each(types::character_types(), Test{}); }
