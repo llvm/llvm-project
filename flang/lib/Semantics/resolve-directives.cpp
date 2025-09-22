@@ -2278,14 +2278,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
-  const auto &beginSectionsDir{
-      std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &beginDir{
-      std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  switch (beginDir.v) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+  switch (beginName.v) {
   case llvm::omp::Directive::OMPD_parallel_sections:
   case llvm::omp::Directive::OMPD_sections:
-    PushContext(beginDir.source, beginDir.v);
+    PushContext(beginName.source, beginName.v);
     GetContext().withinConstruct = true;
     break;
   default:
@@ -2344,9 +2342,14 @@ bool OmpAttributeVisitor::Pre(
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpThreadprivate);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
+    }
+  }
   return true;
 }
 
@@ -3123,14 +3126,24 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
 
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  common::visit(common::visitors{
-                    [&](const parser::Designator &designator) {
-                      ResolveOmpDesignator(designator, ompFlag);
-                    },
-                    [&](const parser::Name &name) { // common block
-                      ResolveOmpCommonBlock(name, ompFlag);
-                    },
-                },
+  common::visit( //
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            ResolveOmpDesignator(designator, ompFlag);
+          },
+          [&](const parser::Name &name) { // common block
+            ResolveOmpCommonBlock(name, ompFlag);
+          },
+          [&](const parser::OmpObject::Invalid &invalid) {
+            switch (invalid.v) {
+              SWITCH_COVERS_ALL_CASES
+            case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+              context_.Say(invalid.source,
+                  "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+              break;
+            }
+          },
+      },
       ompObject.u);
 }
 

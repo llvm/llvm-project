@@ -114,6 +114,15 @@ AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
 
+- Pretty-printing of atomic builtins ``__atomic_test_and_set`` and ``__atomic_clear`` in ``-ast-print`` output.
+  These previously displayed an extra ``<null expr>`` argument, e.g.:
+
+    ``__atomic_test_and_set(p, <null expr>, 0)``
+
+  Now they are printed as:
+
+    ``__atomic_test_and_set(p, 0)``
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -125,6 +134,7 @@ Clang Python Bindings Potentially Breaking Changes
 - TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
   ElaboratedTypes. The value becomes unused, and all the existing users should
   expect the former underlying type to be reported instead.
+- Remove ``AccessSpecifier.NONE`` kind. No libclang interfaces ever returned this kind.
 
 What's New in Clang |release|?
 ==============================
@@ -203,6 +213,10 @@ Non-comprehensive list of changes in this release
   conditional memory loads from vectors. Binds to the LLVM intrinsics of the
   same name.
 
+- Added ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` for
+  conditional gathering and scattering operations on vectors. Binds to the LLVM
+  intrinsics of the same name.
+
 - The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
   functions now accept fixed-size boolean vectors.
 
@@ -250,6 +264,9 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- The definition of a function declaration with ``[[clang::cfi_unchecked_callee]]`` inherits this
+  attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
+  treated as an error where the definition and declaration would have differing types.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -258,10 +275,13 @@ Improvements to Clang's diagnostics
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
+- Implemented diagnostics when retrieving the tuple size for types where its specialization of `std::tuple_size`
+  produces an invalid size (either negative or greater than the implementation limit). (#GH159563)
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 - Added fix-it hint for when scoped enumerations require explicit conversions for binary operations. (#GH24265)
-
+- Constant template parameters are now type checked in template definitions,
+  including template template parameters.
 - Fixed an issue where emitted format-signedness diagnostics were not associated with an appropriate
   diagnostic id. Besides being incorrect from an API standpoint, this was user visible, e.g.:
   "format specifies type 'unsigned int' but the argument has type 'int' [-Wformat]"
@@ -342,11 +362,15 @@ Bug Fixes in This Version
   and vector of 4 ``float`` values. (#GH155405)
 - Fixed inconsistent shadow warnings for lambda capture of structured bindings.
   Previously, ``[val = val]`` (regular parameter) produced no warnings with ``-Wshadow``
-  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``) 
-  incorrectly produced warnings. Both cases now consistently show no warnings with 
+  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``)
+  incorrectly produced warnings. Both cases now consistently show no warnings with
   ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
+- Fixed an assertion when an improper use of the ``malloc`` attribute targeting
+  a function without arguments caused us to try to access a non-existent argument.
+  (#GH159080)
+- Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -511,6 +535,7 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
+- Add ``AllowBreakBeforeQtProperty`` option.
 
 libclang
 --------
@@ -556,9 +581,11 @@ OpenMP Support
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
+- Added support to handle new syntax of the ``uses_allocators`` clause.
 - Added support for ``variable-category`` modifier in ``default clause``.
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 - Added support for ``defaultmap`` directive implicit-behavior ``private``.
+- Added parsing and semantic analysis support for ``groupprivate`` directive.
 
 Improvements
 ^^^^^^^^^^^^

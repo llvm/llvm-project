@@ -540,12 +540,12 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
   return T;
 }
 
-Error lto::finalizeOptimizationRemarks(
-    std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
     return Error::success();
+  DiagOutputFile.finalize();
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
   return Error::success();
@@ -640,7 +640,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
-          std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+          LLVMRemarkFileHandle DiagnosticOutputFile) {
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,

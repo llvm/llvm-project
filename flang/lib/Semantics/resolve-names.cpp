@@ -1625,25 +1625,33 @@ public:
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
     const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-    auto populateDeclareTargetNames{
-        [this](const parser::OmpObjectList &objectList) {
-          for (const auto &ompObject : objectList.v) {
-            common::visit(
-                common::visitors{
-                    [&](const parser::Designator &designator) {
-                      if (const auto *name{
-                              semantics::getDesignatorNameIfDataRef(
-                                  designator)}) {
-                        specPartState_.declareTargetNames.insert(name->source);
-                      }
-                    },
-                    [&](const parser::Name &name) {
-                      specPartState_.declareTargetNames.insert(name.source);
-                    },
+    auto populateDeclareTargetNames{[this](const parser::OmpObjectList
+                                            &objectList) {
+      for (const auto &ompObject : objectList.v) {
+        common::visit(
+            common::visitors{
+                [&](const parser::Designator &designator) {
+                  if (const auto *name{
+                          semantics::getDesignatorNameIfDataRef(designator)}) {
+                    specPartState_.declareTargetNames.insert(name->source);
+                  }
                 },
-                ompObject.u);
-          }
-        }};
+                [&](const parser::Name &name) {
+                  specPartState_.declareTargetNames.insert(name.source);
+                },
+                [&](const parser::OmpObject::Invalid &invalid) {
+                  switch (invalid.v) {
+                    SWITCH_COVERS_ALL_CASES
+                  case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+                    context().Say(invalid.source,
+                        "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+                    break;
+                  }
+                },
+            },
+            ompObject.u);
+      }
+    }};
 
     if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
       populateDeclareTargetNames(*objectList);
@@ -2994,12 +3002,20 @@ Symbol *ScopeHandler::FindSymbol(const Scope &scope, const parser::Name &name) {
       }
     }
     return FindSymbol(scope.parent(), name);
-  } else {
+  } else if (scope.kind() == Scope::Kind::ImpliedDos) {
+    if (Symbol * symbol{FindInScope(scope, name)}) {
+      return Resolve(name, symbol);
+    } else {
+      // Don't use scope.FindSymbol() as below, since implied DO scopes
+      // can be parts of initializers in derived type components.
+      return FindSymbol(scope.parent(), name);
+    }
+  } else if (inEquivalenceStmt_) {
     // In EQUIVALENCE statements only resolve names in the local scope, see
     // 19.5.1.4, paragraph 2, item (10)
-    return Resolve(name,
-        inEquivalenceStmt_ ? FindInScope(scope, name)
-                           : scope.FindSymbol(name.source));
+    return Resolve(name, FindInScope(scope, name));
+  } else {
+    return Resolve(name, scope.FindSymbol(name.source));
   }
 }
 
@@ -8722,7 +8738,6 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       return &name;
     }
   }
-
   if (CheckForHostAssociatedImplicit(name)) {
     NotePossibleBadForwardRef(name);
     return &name;
@@ -9111,6 +9126,9 @@ void DeclarationVisitor::NonPointerInitialization(
         if (details->init()) {
           SayWithDecl(name, *name.symbol,
               "'%s' has already been initialized"_err_en_US);
+        } else if (details->isCDefined()) {
+          context().Warn(common::UsageWarning::CdefinedInit, name.source,
+              "CDEFINED variable should not have an initializer"_warn_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
         } else if (ultimate.owner().IsParameterizedDerivedType()) {

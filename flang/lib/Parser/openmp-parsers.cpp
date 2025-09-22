@@ -1024,8 +1024,11 @@ TYPE_PARSER(construct<OmpNumTasksClause>(
     maybe(nonemptyList(Parser<OmpNumTasksClause::Modifier>{}) / ":"),
     scalarIntExpr))
 
-TYPE_PARSER(
-    construct<OmpObject>(designator) || "/" >> construct<OmpObject>(name) / "/")
+TYPE_PARSER( //
+    construct<OmpObject>(designator) ||
+    "/" >> construct<OmpObject>(name) / "/" ||
+    construct<OmpObject>(sourced(construct<OmpObject::Invalid>(
+        "//"_tok >> pure(OmpObject::Invalid::Kind::BlankCommonBlock)))))
 
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(
@@ -1281,6 +1284,16 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 
 // --- Parsers for directives and constructs --------------------------
 
+static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
+  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
+
+static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+  return [&dirs](const OmpDirectiveName &name) -> bool {
+    return dirs.test(llvm::to_underlying(name.v));
+  };
+}
+
 TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
 
 OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
@@ -1365,16 +1378,6 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
 
 TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
     verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
-
-static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
-  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
-}
-
-static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
-  return [&dirs](const OmpDirectiveName &name) -> bool {
-    return dirs.test(llvm::to_underlying(name.v));
-  };
-}
 
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
@@ -1788,8 +1791,11 @@ TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
     verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
 
 // 2.15.2 Threadprivate directive
-TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(
-    verbatim("THREADPRIVATE"_tok), parenthesized(Parser<OmpObjectList>{}))))
+TYPE_PARSER(sourced( //
+    construct<OpenMPThreadprivate>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_threadprivate)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
 // 2.11.3 Declarative Allocate directive
 TYPE_PARSER(
@@ -1862,17 +1868,21 @@ TYPE_PARSER( //
 #undef MakeBlockConstruct
 
 // OMP SECTIONS Directive
-TYPE_PARSER(construct<OmpSectionsDirective>(first(
-    "SECTIONS" >> pure(llvm::omp::Directive::OMPD_sections),
-    "PARALLEL SECTIONS" >> pure(llvm::omp::Directive::OMPD_parallel_sections))))
+static constexpr DirectiveSet GetSectionsDirectives() {
+  using Directive = llvm::omp::Directive;
+  constexpr DirectiveSet sectionsDirectives{
+      unsigned(Directive::OMPD_sections),
+      unsigned(Directive::OMPD_parallel_sections),
+  };
+  return sectionsDirectives;
+}
 
 // OMP BEGIN and END SECTIONS Directive
-TYPE_PARSER(sourced(construct<OmpBeginSectionsDirective>(
-    sourced(Parser<OmpSectionsDirective>{}), Parser<OmpClauseList>{})))
-TYPE_PARSER(
-    startOmpLine >> sourced(construct<OmpEndSectionsDirective>(
-                        sourced("END"_tok >> Parser<OmpSectionsDirective>{}),
-                        Parser<OmpClauseList>{})))
+TYPE_PARSER(construct<OmpBeginSectionsDirective>(
+    OmpBeginDirectiveParser(GetSectionsDirectives())))
+
+TYPE_PARSER(construct<OmpEndSectionsDirective>(
+    OmpEndDirectiveParser(GetSectionsDirectives())))
 
 static constexpr auto sectionDir{
     startOmpLine >> (predicated(OmpDirectiveNameParser{},

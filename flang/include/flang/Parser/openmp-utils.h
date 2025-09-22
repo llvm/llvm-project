@@ -49,7 +49,6 @@ MAKE_CONSTR_ID(OpenMPDeclareSimdConstruct, D::OMPD_declare_simd);
 MAKE_CONSTR_ID(OpenMPDeclareTargetConstruct, D::OMPD_declare_target);
 MAKE_CONSTR_ID(OpenMPExecutableAllocate, D::OMPD_allocate);
 MAKE_CONSTR_ID(OpenMPRequiresConstruct, D::OMPD_requires);
-MAKE_CONSTR_ID(OpenMPThreadprivate, D::OMPD_threadprivate);
 
 #undef MAKE_CONSTR_ID
 
@@ -80,8 +79,7 @@ struct DirectiveNameScope {
 
   static OmpDirectiveName GetOmpDirectiveName(
       const OmpBeginSectionsDirective &x) {
-    auto &dir{std::get<OmpSectionsDirective>(x.t)};
-    return MakeName(dir.source, dir.v);
+    return x.DirName();
   }
 
   template <typename T>
@@ -111,8 +109,7 @@ struct DirectiveNameScope {
           std::is_same_v<T, OpenMPDeclareSimdConstruct> ||
           std::is_same_v<T, OpenMPDeclareTargetConstruct> ||
           std::is_same_v<T, OpenMPExecutableAllocate> ||
-          std::is_same_v<T, OpenMPRequiresConstruct> ||
-          std::is_same_v<T, OpenMPThreadprivate>) {
+          std::is_same_v<T, OpenMPRequiresConstruct>) {
         return MakeName(std::get<Verbatim>(x.t).source, ConstructId<T>::id);
       } else {
         return GetFromTuple(

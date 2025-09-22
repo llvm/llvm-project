@@ -1029,7 +1029,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MachineOperand *CarryOut = TII->getNamedOperand(MISucc, AMDGPU::OpName::sdst);
   if (!CarryOut)
     return;
-  if (!MRI->hasOneUse(CarryIn->getReg()) || !MRI->use_empty(CarryOut->getReg()))
+  if (!MRI->hasOneNonDBGUse(CarryIn->getReg()) ||
+      !MRI->use_nodbg_empty(CarryOut->getReg()))
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();

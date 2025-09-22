@@ -44,7 +44,7 @@ export class LogFilePathProvider {
     const logFolder = this.logFolder || this.context.logUri.fsPath;
     switch(type) {
     case LogType.DEBUG_SESSION:
-        return path.join(logFolder, `lldb-dap-session-${formatDate(new Date())}.log`);
+        return path.join(logFolder, `lldb-dap-${formatDate(new Date())}-${vscode.env.sessionId.split("-")[0]}.log`);
         break;
     }
   }

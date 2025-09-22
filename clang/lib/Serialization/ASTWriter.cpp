@@ -4297,10 +4297,18 @@ static bool isModuleLocalDecl(NamedDecl *D) {
     if (auto *CDGD = dyn_cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl()))
       return isModuleLocalDecl(CDGD->getDeducedTemplate());
 
-  if (D->getFormalLinkage() == Linkage::Module)
-    return true;
+  if (D->getFormalLinkage() != Linkage::Module)
+    return false;
 
-  return false;
+  // It is hard for the serializer to judge if the in-class friend declaration
+  // is visible or not, so we just transfer the task to Sema. It should be a
+  // safe decision since Sema is able to handle the lookup rules for in-class
+  // friend declarations good enough already.
+  if (D->getFriendObjectKind() &&
+      isa<CXXRecordDecl>(D->getLexicalDeclContext()))
+    return false;
+
+  return true;
 }
 
 static bool isTULocalInNamedModules(NamedDecl *D) {
