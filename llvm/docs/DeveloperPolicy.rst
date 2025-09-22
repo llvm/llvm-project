@@ -1190,7 +1190,9 @@ Adding or enabling a new LLVM pass
 
 The guidelines here are primarily targeted at the enablement of new major
 passes in the target-independent optimization pipeline. Small additions, or
-backend-specific passes, require a lesser degree of care.
+backend-specific passes, require a lesser degree of care. Before creating a new
+pass, consider whether the functionality can be integrated into an existing
+pass first. This is often both faster and more powerful.
 
 When adding a new pass, the goal should be to enable it as part of the default
 optimization pipeline as early as possible and then continue development
