@@ -244,12 +244,10 @@ void testStrlenCallee(void) {
 
 void strlen_symbolic_offset(unsigned x) {
   const char *str = "abcd";
-  if (x > 3)
+  if (x < 1 || x > 3)
     return;
-  // FIXME: these should be known
-  clang_analyzer_eval(strlen(str + x) > 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(strlen(str + x) > 2); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(strlen(str + x) <= 4); // expected-warning{{UNKNOWN}}
+  // FIXME: these should be TRUE
+  clang_analyzer_eval(strlen(str + x) >= 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(strlen(str + x) <= 3); // expected-warning{{UNKNOWN}}
   if (x != 1)
     return;
