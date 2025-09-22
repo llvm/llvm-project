@@ -7332,16 +7332,23 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   unsigned StoreSizeBytes = GRLen / 8;
   Align StackAlign = Align(GRLen / 8);
 
-  if (ValVT == MVT::f32 && !UseGPRForFloat)
+  if (ValVT == MVT::f32 && !UseGPRForFloat) {
     Reg = State.AllocateReg(ArgFPR32s);
-  else if (ValVT == MVT::f64 && !UseGPRForFloat)
+  } else if (ValVT == MVT::f64 && !UseGPRForFloat) {
     Reg = State.AllocateReg(ArgFPR64s);
-  else if (ValVT.is128BitVector())
+  } else if (ValVT.is128BitVector()) {
     Reg = State.AllocateReg(ArgVRs);
-  else if (ValVT.is256BitVector())
+    UseGPRForFloat = false;
+    StoreSizeBytes = 16;
+    StackAlign = Align(16);
+  } else if (ValVT.is256BitVector()) {
     Reg = State.AllocateReg(ArgXRs);
-  else
+    UseGPRForFloat = false;
+    StoreSizeBytes = 32;
+    StackAlign = Align(32);
+  } else {
     Reg = State.AllocateReg(ArgGPRs);
+  }
 
   unsigned StackOffset =
       Reg ? 0 : State.AllocateStack(StoreSizeBytes, StackAlign);

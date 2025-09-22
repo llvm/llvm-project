@@ -28772,6 +28772,36 @@ TEST_F(FormatTest, BreakBeforeClassName) {
                "    ArenaSafeUniquePtr {};");
 }
 
+TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
+  constexpr StringRef Code("Q_PROPERTY(int name\n"
+                           "           READ name\n"
+                           "           WRITE setName\n"
+                           "           NOTIFY nameChanged)");
+  constexpr StringRef Code2("class A {\n"
+                            "  Q_PROPERTY(int name\n"
+                            "             READ name\n"
+                            "             WRITE setName\n"
+                            "             NOTIFY nameChanged)\n"
+                            "};");
+
+  auto Style = getLLVMStyle();
+  Style.AllowBreakBeforeQtProperty = true;
+
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat(Code, Style);
+  verifyFormat(Code2, Style);
+
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.ColumnLimit = 40;
+  verifyFormat(Code, Style);
+  verifyFormat(Code2, Style);
+  verifyFormat("/* sdf */ Q_PROPERTY(int name\n"
+               "                     READ name\n"
+               "                     WRITE setName\n"
+               "                     NOTIFY nameChanged)",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

@@ -161,6 +161,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
+  CHECK_PARSE_BOOL(AllowBreakBeforeQtProperty);
   CHECK_PARSE_BOOL(AllowShortCaseExpressionOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
