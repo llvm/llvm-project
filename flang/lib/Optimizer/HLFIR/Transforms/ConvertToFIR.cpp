@@ -126,9 +126,9 @@ public:
                // assignment is the copy of the contents, because the dynamic
                // types of the LHS and the RHS must match already. We use the
                // runtime in this case so that the polymorphic (including
-               // unlimited) content is copied properly.
-               (lhs.isPolymorphic() && assignOp.isTemporaryLHS()) ||
-               lhs.isPolymorphic() || rhs.isPolymorphic()) {
+               // unlimited) content is copied properly. This is also needed
+               // for unlimited polymorphic arrays in WHERE statements.
+               (lhs.isPolymorphic())) {
       // Use the runtime for simplicity. An optimization pass will be added to
       // inline array assignment when profitable.
       mlir::Value from = emboxRHS(rhsExv);
