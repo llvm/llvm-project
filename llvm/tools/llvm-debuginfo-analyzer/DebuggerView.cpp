@@ -145,7 +145,6 @@ struct ScopePrinter {
   }
 
   static void PrintCallstack(raw_ostream &OS, const LVScope *Scope) {
-    bool First = true;
     const LVScope *PrevScope = nullptr;
     while (Scope) {
       if (Scope->getIsFunction() || Scope->getIsInlinedFunction()) {
@@ -155,7 +154,6 @@ struct ScopePrinter {
              << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
         }
         OS << "]";
-        First = false;
         PrevScope = Scope;
       }
       Scope = Scope->getParentScope();
