@@ -140,7 +140,7 @@
 // RUN: %clang -### -S -fprofile-instr-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
 // RUN: mkdir -p %t/some/dir
 // RUN: cp %t/default.profdata %t/some/dir
-// RUN: %clang -### -S -fprofile-use=%t.d/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
+// RUN: %clang -### -S -fprofile-use=%t/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
 // RUN: %clang -### -S -fprofile-instr-use=%t/somefile.prof %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
 // CHECK-PROFILE-USE: "-fprofile-instrument-use-path=default.profdata"
 // CHECK-PROFILE-USE-DIR: "-fprofile-instrument-use-path={{.*}}some/dir{{/|\\\\}}default.profdata"
