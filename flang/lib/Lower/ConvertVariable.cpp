@@ -511,7 +511,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       Fortran::semantics::IsProcedurePointer(sym))
     TODO(loc, "procedure pointer globals");
 
-  const auto *oeDetails = sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+  const auto *oeDetails =
+      sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
