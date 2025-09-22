@@ -16,16 +16,19 @@
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -508,7 +511,9 @@ static LogicalResult generateLoopNestUsingForallOp(
     RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
     ArrayRef<OpFoldResult> tileSizes, ArrayRef<OpFoldResult> numThreads,
     ArrayRef<Attribute> mappingVector, ValueRange destinationTensors,
-    YieldTiledValuesFn tiledBodyFn, SmallVector<LoopLikeOpInterface> &loops) {
+    YieldTiledValuesFn tiledBodyFn,
+    scf::SCFTileDistributionFn tileDistributionFn,
+    SmallVector<LoopLikeOpInterface> &loops) {
   assert(!loopRanges.empty() && "unexpected empty loop ranges");
   assert(loopRanges.size() == tileSizes.size() &&
          "expected as many tile sizes as loop ranges");
@@ -520,6 +525,7 @@ static LogicalResult generateLoopNestUsingForallOp(
 
   scf::ForallOp forallOp;
   bool useNumThreads = !numThreads.empty();
+  scf::SCFUpdateInductionVarFn updateInductionVar = nullptr;
 
   if (useNumThreads) {
     // Prune the zero numthreads.
@@ -533,8 +539,19 @@ static LogicalResult generateLoopNestUsingForallOp(
                                      destinationTensors, mappingAttr);
   } else {
     SmallVector<OpFoldResult> lbs, ubs, steps;
-    std::tie(lbs, ubs, steps) =
-        getLoopBounds(rewriter, loc, loopRanges, tileSizes);
+    if (tileDistributionFn) {
+      SmallVector<Range> ranges;
+      std::tie(ranges, updateInductionVar) =
+          tileDistributionFn(rewriter, loc, loopRanges, tileSizes);
+      for (const Range &range : ranges) {
+        lbs.push_back(range.offset);
+        ubs.push_back(range.size);
+        steps.push_back(range.stride);
+      }
+    } else {
+      std::tie(lbs, ubs, steps) =
+          getLoopBounds(rewriter, loc, loopRanges, tileSizes);
+    }
     forallOp = scf::ForallOp::create(rewriter, loc, lbs, ubs, steps,
                                      destinationTensors, mappingAttr);
   }
@@ -545,7 +562,13 @@ static LogicalResult generateLoopNestUsingForallOp(
 
   SmallVector<Value> tiledResults;
   SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
-  if (failed(tiledBodyFn(rewriter, loc, forallOp.getInductionVars(),
+  SmallVector<Value> originalInductionVars = forallOp.getInductionVars();
+  SmallVector<Value> updatedInductionVars = originalInductionVars;
+  if (updateInductionVar) {
+    updatedInductionVars =
+        updateInductionVar(rewriter, loc, originalInductionVars);
+  }
+  if (failed(tiledBodyFn(rewriter, loc, updatedInductionVars,
                          destinationTensors, tiledResults, resultOffsets,
                          resultSizes)))
     return rewriter.notifyMatchFailure(loc, "failed to generate loop body");
@@ -579,7 +602,9 @@ static LogicalResult generateLoopNest(
     scf::SCFTilingOptions::LoopType loopType, ArrayRef<Range> loopRanges,
     ArrayRef<OpFoldResult> tileSizes, ArrayRef<OpFoldResult> numThreads,
     ValueRange destinationTensors, ArrayRef<Attribute> mappingVector,
-    YieldTiledValuesFn tiledBodyFn, SmallVector<LoopLikeOpInterface> &loops) {
+    YieldTiledValuesFn tiledBodyFn,
+    scf::SCFTileDistributionFn tileDistributionFn,
+    SmallVector<LoopLikeOpInterface> &loops) {
   // If the tile sizes are all zero, no loops are generated. Just call the
   // callback function to handle untiled case.
   if (llvm::all_of(tileSizes, isZeroInteger)) {
@@ -595,7 +620,7 @@ static LogicalResult generateLoopNest(
   if (loopType == scf::SCFTilingOptions::LoopType::ForallOp) {
     return generateLoopNestUsingForallOp(
         rewriter, loc, loopRanges, tileSizes, numThreads, mappingVector,
-        destinationTensors, tiledBodyFn, loops);
+        destinationTensors, tiledBodyFn, tileDistributionFn, loops);
   }
   return rewriter.notifyMatchFailure(loc, "unhandled loop type");
 }
@@ -1115,10 +1140,10 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
 
   // 7. Generate the tiled loops nest using the callback defined above.
   SmallVector<LoopLikeOpInterface> loops;
-  if (failed(generateLoopNest(rewriter, op.getLoc(), options.loopType,
-                              iterationDomain, tileSizes, numThreads,
-                              initTensors, options.mappingVector,
-                              innerYieldTiledValuesFn, loops)))
+  if (failed(generateLoopNest(
+          rewriter, op.getLoc(), options.loopType, iterationDomain, tileSizes,
+          numThreads, initTensors, options.mappingVector,
+          innerYieldTiledValuesFn, options.tileDistributionFunction, loops)))
     return op.emitOpError("failed to generate tiling loops");
   assert(succeeded(tilingResult) &&
          "expected tiling result to be computed after loop generation");

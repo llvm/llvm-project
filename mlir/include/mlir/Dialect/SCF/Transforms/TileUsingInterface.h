@@ -31,6 +31,28 @@ namespace scf {
 using SCFTileSizeComputationFunction =
     std::function<SmallVector<OpFoldResult>(OpBuilder &, Operation *)>;
 
+/// Computes the original tile indices from the induction variables of a newly
+/// created scf.forall loop.
+///
+/// \param ivs Induction variables of the newly formed scf.forall loop.
+/// \returns SmallVector<Value> containing the original tile indices.
+using SCFUpdateInductionVarFn = std::function<SmallVector<Value>(
+    RewriterBase &, Location &, ValueRange ivs)>;
+
+/// Controls tile iteration and distribution for an scf.forall loop.
+///
+/// \param loopRanges Array of Range objects specifying the iteration domain.
+/// \param tileSizes Array of tile sizes for each loop dimension.
+/// \returns A tuple containing:
+///   - ranges : loop bounds for the scf.forall loop (lbs, ubs, steps).
+///   - updateInductionVarFn: Function to compute original tile indices from
+///   new induction variables.
+
+using SCFTileDistributionFn =
+    std::function<std::tuple<SmallVector<Range>, SCFUpdateInductionVarFn>(
+        RewriterBase &, Location, ArrayRef<Range> loopRanges,
+        ArrayRef<OpFoldResult> tileSizes)>;
+
 /// Options to use to control tiling.
 struct SCFTilingOptions {
   /// Computation function that returns the tile sizes to use for each loop.
@@ -39,6 +61,11 @@ struct SCFTilingOptions {
   /// loops are not tiled. If the size of the returned vector is larger, then
   /// the vector is truncated to number of loops.
   SCFTileSizeComputationFunction tileSizeComputationFunction = nullptr;
+  /// Function to have control over tile ordering within the scf.forall loop.
+  /// This function takes the iterationDomain as parameter and returns:
+  /// loop bounds : (lbs, ubs, steps)
+  /// InductionVarFn : compute old tile indices from new ones.
+  SCFTileDistributionFn tileDistributionFunction = nullptr;
 
   SCFTilingOptions &
   setTileSizeComputationFunction(SCFTileSizeComputationFunction fun) {
@@ -92,6 +119,11 @@ struct SCFTilingOptions {
   SmallVector<Attribute> mappingVector = {};
   SCFTilingOptions &setMapping(ArrayRef<Attribute> mapping) {
     mappingVector = llvm::to_vector(mapping);
+    return *this;
+  }
+
+  SCFTilingOptions &setTileDistributionFunction(SCFTileDistributionFn fun) {
+    tileDistributionFunction = std::move(fun);
     return *this;
   }
 
