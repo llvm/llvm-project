@@ -2459,12 +2459,10 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   /// The scratch address space does not need the global memory cache
   /// to be flushed as all memory operations by the same thread are
   /// sequentially consistent, and no other thread can access scratch
-  /// memory, unless the subtarget has GloballyAddressableScratch.
+  /// memory.
 
   /// Other address spaces do not have a cache.
-  if (((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE) &&
-      (((AddrSpace & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) ||
-       !ST.hasGloballyAddressableScratch()))
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
     return false;
 
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
@@ -2522,11 +2520,8 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // The scratch address space does not need the global memory cache
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
-  // memory, unless the subtarget has GloballyAddressableScratch.
-  if (((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) ||
-      (((AddrSpace & SIAtomicAddrSpace::SCRATCH) != SIAtomicAddrSpace::NONE) &&
-       ST.hasGloballyAddressableScratch())) {
-
+  // memory.
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
     if (Pos == Position::AFTER)
       ++MI;
 
