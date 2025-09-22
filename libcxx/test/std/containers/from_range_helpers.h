@@ -54,6 +54,8 @@ constexpr auto wrap_input(std::vector<T>& input) {
 }
 
 // https://llvm.org/PR159943
+// Verify container insertion/assignment from ranges whose iterators dereference to prvalues.
+// Especially, `std::prev` should be avoided when inserting such a `bidirectional_range`.
 struct DecayCopy {
   template <class T>
     requires std::convertible_to<T, std::decay_t<T>>
