@@ -473,7 +473,7 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   if (SaveRegisters)
     saveSyscallRegisters(ConfigurePerfCounterCode, 3);
 
-#ifdef HAVE_LIBPFM“
+#ifdef HAVE_LIBPFM
   // Load actual file descriptor from auxiliary memory location [address + 0]
   // CounterFileDescriptor was stored at AuxiliaryMemoryMapping[0]
   ConfigurePerfCounterCode.push_back(
@@ -489,7 +489,7 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   ConfigurePerfCounterCode.push_back(
       loadImmediate(AArch64::X2, 64, APInt(64, PERF_IOC_FLAG_GROUP))); // arg
   generateSysCall(SYS_ioctl, ConfigurePerfCounterCode); // SYS_ioctl is 29
-#endif // HAVE_LIBPFM
+#endif
 
   if (SaveRegisters)
     restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
