@@ -81,6 +81,7 @@ class VirtRegMap;
     static bool isRematerializable(const LiveInterval &LI,
                                    const LiveIntervals &LIS,
                                    const VirtRegMap &VRM,
+                                   const MachineRegisterInfo &MRI,
                                    const TargetInstrInfo &TII);
 
     /// \returns true if all registers used by \p OrigMI at \p OrigIdx are also

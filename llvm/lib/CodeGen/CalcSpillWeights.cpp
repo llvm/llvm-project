@@ -81,12 +81,15 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
 bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
                                         const LiveIntervals &LIS,
                                         const VirtRegMap &VRM,
+                                        const MachineRegisterInfo &MRI,
                                         const TargetInstrInfo &TII) {
   Register Reg = LI.reg();
   Register Original = VRM.getOriginal(Reg);
+  SmallDenseMap<unsigned, MachineInstr *> VNIDefs;
   for (LiveInterval::const_vni_iterator I = LI.vni_begin(), E = LI.vni_end();
        I != E; ++I) {
     const VNInfo *VNI = *I;
+    const VNInfo *OrigVNI = VNI;
     if (VNI->isUnused())
       continue;
     if (VNI->isPHIDef())
@@ -125,17 +128,21 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
     if (!TII.isTriviallyReMaterializable(*MI))
       return false;
 
-    // If MI has register uses, it will only be rematerializable if its uses are
-    // also live at the indices it will be rematerialized at.
-    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-    for (MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
-      SlotIndex UseIdx = LIS.getInstructionIndex(Use);
-      if (LI.getVNInfoAt(UseIdx) != VNI)
-        continue;
-      if (!allUsesAvailableAt(MI, UseIdx, LIS, MRI, TII))
-        return false;
-    }
+    VNIDefs[OrigVNI->id] = MI;
   }
+
+  // If MI has register uses, it will only be rematerializable if its uses are
+  // also live at the indices it will be rematerialized at.
+  for (MachineOperand &Use : MRI.use_nodbg_operands(LI.reg())) {
+    if (Use.isUndef())
+      continue;
+    SlotIndex UseIdx = LIS.getInstructionIndex(*Use.getParent());
+    MachineInstr *Def = VNIDefs[LI.getVNInfoAt(UseIdx)->id];
+    assert(Def && "Use with no def");
+    if (!allUsesAvailableAt(Def, UseIdx, LIS, MRI, TII))
+      return false;
+  }
+
   return true;
 }
 
@@ -404,7 +411,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // it is a preferred candidate for spilling.
   // FIXME: this gets much more complicated once we support non-trivial
   // re-materialization.
-  if (isRematerializable(LI, LIS, VRM, *MF.getSubtarget().getInstrInfo()))
+  if (isRematerializable(LI, LIS, VRM, MRI, *MF.getSubtarget().getInstrInfo()))
     TotalWeight *= 0.5F;
 
   // Finally, we scale the weight by the scale factor of register class.
