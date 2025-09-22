@@ -3130,11 +3130,11 @@ void DWARFASTParserClang::ParseSingleMember(
       attrs.member_byte_offset >= parent_byte_size &&
       llvm::expectedToOptional(member_clang_type.GetByteSize(nullptr))
               .value_or(0) > 0)
-    module_sp->ReportError(
-        "{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
-        " which extends beyond the bounds of {3:x8}",
-        die.GetID(), attrs.name,
-        attrs.encoding_form.Reference().GetOffset(), parent_die.GetID());
+    module_sp->ReportError("{0:x8}: DW_TAG_member '{1}' refers to type {2:x16}"
+                           " which extends beyond the bounds of {3:x8}",
+                           die.GetID(), attrs.name,
+                           attrs.encoding_form.Reference().GetOffset(),
+                           parent_die.GetID());
 
   TypeSystemClang::RequireCompleteType(member_clang_type);
 
