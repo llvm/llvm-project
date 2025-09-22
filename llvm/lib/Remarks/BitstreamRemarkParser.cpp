@@ -260,7 +260,7 @@ Error BitstreamParserHelper::parseMeta() {
       break;
     if (*MaybeBlockID != REMARK_BLOCK_ID)
       return error("Unexpected block between meta blocks.");
-    // Remember first remark block
+    // Remember first remark block.
     if (!RemarkStartBitPos)
       RemarkStartBitPos = Stream.GetCurrentBitNo();
     if (Error E = Stream.SkipBlock())
