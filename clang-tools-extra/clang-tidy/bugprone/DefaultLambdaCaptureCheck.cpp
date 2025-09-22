@@ -33,12 +33,8 @@ void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
   if (DefaultCaptureLoc.isInvalid())
     return;
 
-  const char *CaptureKind =
-      (Lambda->getCaptureDefault() == LCD_ByCopy) ? "by-copy" : "by-reference";
-
-  diag(DefaultCaptureLoc, "lambda %0 default capture is discouraged; "
-                          "prefer to capture specific variables explicitly")
-      << CaptureKind;
+  diag(DefaultCaptureLoc, "lambda default captures are discouraged; "
+                          "prefer to capture specific variables explicitly");
 }
 
 } // namespace clang::tidy::bugprone
