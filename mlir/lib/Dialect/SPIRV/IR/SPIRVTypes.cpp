@@ -33,10 +33,6 @@ namespace {
 // `*Type::getExtensions` functions should not handle extension-related logic
 // directly and only invoke `TypeExtensionVisitor::add(Type *)`.
 class TypeExtensionVisitor {
-  SPIRVType::ExtensionArrayRefVector &extensions;
-  std::optional<StorageClass> storage;
-  DenseSet<Type> seen;
-
 public:
   TypeExtensionVisitor(SPIRVType::ExtensionArrayRefVector &extensions,
                        std::optional<StorageClass> storage)
@@ -49,10 +45,17 @@ public:
       return;
 
     TypeSwitch<SPIRVType>(type)
-        .Case<ScalarType, PointerType, CooperativeMatrixType, TensorArmType,
-              VectorType, ArrayType, RuntimeArrayType, StructType, MatrixType,
-              ImageType, SampledImageType>(
-            [this](auto concreteType) { add(concreteType); })
+        .Case<ScalarType, PointerType, CooperativeMatrixType, TensorArmType>(
+            [this](auto concreteType) { addConcrete(concreteType); })
+        .Case<VectorType, ArrayType, RuntimeArrayType, MatrixType, ImageType>(
+            [this](auto concreteType) { add(concreteType.getElementType()); })
+        .Case<StructType>([this](StructType concreteType) {
+          for (Type elementType : concreteType.getElementTypes())
+            add(elementType);
+        })
+        .Case<SampledImageType>([this](SampledImageType concreteType) {
+          add(concreteType.getImageType());
+        })
         .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
   }
 
@@ -60,23 +63,16 @@ public:
   void add(Type type) { add(cast<SPIRVType>(type)); }
   void add(Type *type) { add(cast<SPIRVType>(*type)); }
 
+private:
   // Types that add unique extensions.
-  void add(ScalarType type);
-  void add(PointerType type);
-  void add(CooperativeMatrixType type);
-  void add(TensorArmType type);
+  void addConcrete(ScalarType type);
+  void addConcrete(PointerType type);
+  void addConcrete(CooperativeMatrixType type);
+  void addConcrete(TensorArmType type);
 
-  // Trivial passthrough without any new extensions.
-  void add(VectorType type) { add(type.getElementType()); }
-  void add(ArrayType type) { add(type.getElementType()); }
-  void add(RuntimeArrayType type) { add(type.getElementType()); }
-  void add(StructType type) {
-    for (Type elementType : type.getElementTypes())
-      add(elementType);
-  }
-  void add(MatrixType type) { add(type.getElementType()); }
-  void add(ImageType type) { add(type.getElementType()); }
-  void add(SampledImageType type) { add(type.getImageType()); }
+  SPIRVType::ExtensionArrayRefVector &extensions;
+  std::optional<StorageClass> storage;
+  DenseSet<Type> seen;
 };
 
 } // namespace
@@ -328,7 +324,7 @@ CooperativeMatrixUseKHR CooperativeMatrixType::getUse() const {
   return getImpl()->use;
 }
 
-void TypeExtensionVisitor::add(CooperativeMatrixType type) {
+void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
   add(type.getElementType());
   static constexpr auto ext = Extension::SPV_KHR_cooperative_matrix;
   extensions.push_back(ext);
@@ -502,7 +498,7 @@ StorageClass PointerType::getStorageClass() const {
   return getImpl()->storageClass;
 }
 
-void TypeExtensionVisitor::add(PointerType type) {
+void TypeExtensionVisitor::addConcrete(PointerType type) {
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
   std::optional<StorageClass> oldStorageClass = storage;
@@ -607,7 +603,7 @@ bool ScalarType::isValid(IntegerType type) {
   return llvm::is_contained({1u, 8u, 16u, 32u, 64u}, type.getWidth());
 }
 
-void TypeExtensionVisitor::add(ScalarType type) {
+void TypeExtensionVisitor::addConcrete(ScalarType type) {
   if (isa<BFloat16Type>(type)) {
     static constexpr auto ext = Extension::SPV_KHR_bfloat16;
     extensions.push_back(ext);
@@ -1386,7 +1382,7 @@ TensorArmType TensorArmType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 Type TensorArmType::getElementType() const { return getImpl()->elementType; }
 ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
 
-void TypeExtensionVisitor::add(TensorArmType type) {
+void TypeExtensionVisitor::addConcrete(TensorArmType type) {
   add(type.getElementType());
   static constexpr auto ext = Extension::SPV_ARM_tensors;
   extensions.push_back(ext);
