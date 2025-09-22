@@ -148,13 +148,22 @@ RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
   return R_GOT_PC;
 }
 
-void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+void TargetInfo::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   const unsigned bits = ctx.arg.is64 ? 64 : 32;
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
+  for (const Relocation &rel : sec.relocs()) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
+    if (rel.expr != R_RELAX_HINT)
+      relocate(loc, rel, val);
+  }
+}
+
+// A variant of relocateAlloc that processes an EhInputSection.
+void TargetInfo::relocateEh(EhInputSection &sec, uint8_t *buf) const {
+  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.getParent()->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(
