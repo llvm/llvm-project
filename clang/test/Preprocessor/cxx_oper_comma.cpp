@@ -3,7 +3,8 @@
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++14
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++17
 // RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++20
-// RUN: %clang_cc1 -E -pedantic-errors %s -verify -std=c++23
+// RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,embed -std=c++23 -Wno-c23-extensions
+// RUN: %clang_cc1 -E -pedantic-errors %s -verify=expected,embed -std=c++2c -Wno-c23-extensions
 
 // Test 1: Top-level comma
 // expected-error@+1 {{expected end of line in preprocessor expression}}
@@ -35,4 +36,10 @@
 // Test 6: Leading comma (syntax error)
 // expected-error@+1 {{invalid token at start of a preprocessor expression}}
 #if ,
+#endif
+
+// Test 7: Comma in #embed limit parameter (C++23+)
+#if defined(__has_embed) && __cplusplus >= 202302L
+// embed-error@+1 {{expected ')'}}
+#embed "jk.txt" limit(1, 2)
 #endif
