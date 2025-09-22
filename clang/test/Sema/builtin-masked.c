@@ -54,3 +54,29 @@ void test_masked_scatter(int *p, v8i idx, v8b mask, v2b mask2, v8i val) {
   __builtin_masked_scatter(mask, idx, val, idx); // expected-error {{3rd argument must be a scalar pointer}}
   __builtin_masked_scatter(mask, idx, val, &idx); // expected-error {{3rd argument must be a scalar pointer}}
 }
+
+void a(v8b mask, v8i val, const int *ptr) {
+  __builtin_masked_load(mask, ptr, val);
+  (void)__builtin_masked_load(mask, (volatile int *)ptr, val); // expected-error {{sending 'volatile int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('volatile int' vs 'int')}}
+}
+
+void b(v8b mask, v8i idx, const int *ptr) {
+  (void)__builtin_masked_gather(mask, idx, ptr);
+  (void)__builtin_masked_gather(mask, idx, (volatile int *)ptr); // expected-error {{sending 'volatile int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('volatile int' vs 'int')}}
+}
+
+void c(v8b mask, const v8i val, int *ptr) {
+  __builtin_masked_store(mask, val, ptr);
+}
+
+void readonly(v8b mask, v8i val, const int *ptr, const int *s) {
+  __builtin_masked_store(mask, val, ptr); // expected-error {{sending 'const int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('const int' vs 'int')}}
+  __builtin_masked_compress_store(mask, val, ptr); // expected-error {{sending 'const int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('const int' vs 'int')}}
+  __builtin_masked_scatter(mask, val, val, s); // expected-error {{sending 'const int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('const int' vs 'int')}}
+}
+
+void vol(v8b mask, v8i val, volatile int *ptr, volatile int *s) {
+  __builtin_masked_store(mask, val, ptr); // expected-error {{sending 'volatile int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('volatile int' vs 'int')}}
+  __builtin_masked_compress_store(mask, val, ptr); // expected-error {{sending 'volatile int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('volatile int' vs 'int')}}
+  __builtin_masked_scatter(mask, val, val, s); // expected-error {{sending 'volatile int' to parameter of incompatible type 'int': type mismatch at 2nd parameter ('volatile int' vs 'int')}}
+}
