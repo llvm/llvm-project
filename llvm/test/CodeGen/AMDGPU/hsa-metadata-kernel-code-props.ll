@@ -47,8 +47,8 @@ entry:
 }
 
 ; CHECK:   .name:       num_spilled_sgprs
-; GFX700:   .sgpr_spill_count: 14
-; GFX803:   .sgpr_spill_count: 14
+; GFX700:   .sgpr_spill_count: 10
+; GFX803:   .sgpr_spill_count: 10
 ; GFX900:   .sgpr_spill_count: 62
 ; GFX1010:  .sgpr_spill_count: 60
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
