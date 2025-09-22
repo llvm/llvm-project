@@ -11,7 +11,7 @@
 define amdgpu_ps i32 @s_uaddo_pseudo(i32 inreg %val0) {
 ; CHECK-LABEL: s_uaddo_pseudo:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_i32 s0, s0, 1
+; CHECK-NEXT:    s_add_u32 s0, s0, 1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_addc_u32 s0, 1, 0

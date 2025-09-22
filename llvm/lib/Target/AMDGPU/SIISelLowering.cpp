@@ -5956,10 +5956,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B64);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
-<<<<<<< HEAD
-=======
-    const DebugLoc &DL = MI.getDebugLoc();
->>>>>>> 27321ddcdbe2 (Clean up code.)
     MachineOperand &Dest0 = MI.getOperand(0);
     MachineOperand &Dest1 = MI.getOperand(1);
     MachineOperand &Src0 = MI.getOperand(2);
