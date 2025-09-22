@@ -22,7 +22,6 @@
 ; CHECK-DAG: VAR: my_var2: float : reg{{.+}}
 
 source_filename = "module"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32-p11:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9-p32:32:32-v8:8-v16:16-v32:32-v48:32-v64:32-v80:32-v96:32-v112:32-v128:32-v144:32-v160:32-v176:32-v192:32-v208:32-v224:32-v240:32-v256:32-i1:32-i8:8-i16:16-i32:32-i64:32-f16:16-f32:32-f64:32"
 target triple = "amdgcn-amd-amdpal"
 
 %dx.types.ResRet.f32 = type { float, float, float, float, i32 }
@@ -54,19 +53,15 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg noundef %globalTable,
   ret void, !dbg !37
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef i64 @llvm.amdgcn.s.getpc() #1
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 declare void @llvm.assume(i1 noundef) #2
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) #3
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg) #4
 
-attributes #0 = { memory(readwrite) "amdgpu-flat-work-group-size"="64,64" "amdgpu-memory-bound"="false" "amdgpu-num-sgpr"="4294967295" "amdgpu-num-vgpr"="4294967295" "amdgpu-prealloc-sgpr-spill-vgprs" "amdgpu-unroll-threshold"="1200" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="3" "denormal-fp-math"="ieee" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+wavefrontsize64,+cumode,+enable-flat-scratch" }
+attributes #0 = { memory(readwrite) }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 attributes #3 = { nocallback nofree nosync nounwind willreturn memory(write) }
