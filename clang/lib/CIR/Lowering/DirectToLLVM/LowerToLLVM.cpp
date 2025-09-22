@@ -2381,9 +2381,6 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       }
       break;
     }
-    converter.addConversion([&](cir::VoidType type) -> mlir::Type {
-      return mlir::LLVM::LLVMVoidType::get(type.getContext());
-    });
 
     // Record has a name: lower as an identified record.
     mlir::LLVM::LLVMStructType llvmStruct;
