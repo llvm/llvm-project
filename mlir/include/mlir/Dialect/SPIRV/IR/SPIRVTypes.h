@@ -89,8 +89,6 @@ public:
   /// Returns true if the given float type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 
@@ -118,8 +116,6 @@ public:
   /// implementation dependent.
   bool hasCompileTimeKnownNumElements() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 
@@ -148,8 +144,6 @@ public:
   /// type.
   unsigned getArrayStride() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 
@@ -193,8 +187,6 @@ public:
   ImageFormat getImageFormat() const;
   // TODO: Add support for Access qualifier
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 };
@@ -213,8 +205,6 @@ public:
 
   StorageClass getStorageClass() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 };
@@ -239,8 +229,6 @@ public:
   /// type.
   unsigned getArrayStride() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 };
@@ -265,8 +253,6 @@ public:
 
   Type getImageType() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<spirv::StorageClass> storage = std::nullopt);
   void
   getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                   std::optional<spirv::StorageClass> storage = std::nullopt);
@@ -420,8 +406,6 @@ public:
              ArrayRef<MemberDecorationInfo> memberDecorations = {},
              ArrayRef<StructDecorationInfo> structDecorations = {});
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 };
@@ -456,8 +440,6 @@ public:
   /// Returns the use parameter of the cooperative matrix.
   CooperativeMatrixUseKHR getUse() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 
@@ -512,8 +494,6 @@ public:
   /// Returns the elements' type (i.e, single element type).
   Type getElementType() const;
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 };
@@ -552,8 +532,6 @@ public:
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
                        std::optional<StorageClass> storage = std::nullopt);
 };
