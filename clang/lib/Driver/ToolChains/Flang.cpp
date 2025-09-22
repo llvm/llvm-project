@@ -767,10 +767,8 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   if (ReciprocalMath)
     CmdArgs.push_back("-freciprocal-math");
 
-  if (Args.hasArg(options::OPT_ffast_real_mod)) {
-    fprintf(stderr, "##> -ffast-real-mod: %d\n", options::OPT_ffast_real_mod);
+  if (Args.hasArg(options::OPT_ffast_real_mod))
     CmdArgs.push_back("-ffast-real-mod");
-  }
 }
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,

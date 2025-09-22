@@ -1425,9 +1425,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
   }
 
   if (args.hasArg(clang::driver::options::OPT_ffast_real_mod)) {
-    fprintf(stderr, "$$> FC1: -ffast-real-mod: %d\n", (int) opts.FastRealMod);
     opts.FastRealMod = true;
-    fprintf(stderr, "$$> FC1: -ffast-real-mod: %d\n", (int) opts.FastRealMod);
   }
 
   return true;

@@ -7013,7 +7013,6 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
 static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value a, mlir::Value p) {
   mlir::Value divResult = mlir::arith::DivFOp::create(builder, loc, a, p);
-  fprintf(stderr, "--> int type width: %d\n", a.getType().getIntOrFloatBitWidth());
   mlir::Type intType = builder.getIntegerType(
       a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
   mlir::Value intResult = builder.createConvert(loc, intType, divResult);
@@ -7029,13 +7028,8 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
   bool useFastRealMod = false;
-  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod")) {
-    fprintf(stderr, "fir.fast_real_mod present: %d\n", (int) attr.getValue());
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod"))
     useFastRealMod = attr.getValue();
-  } else {
-    fprintf(stderr, "fir.fast_real_mod not present\n");
-  }
-  fprintf(stderr, "--> -ffast-real-mod: %d\n", (int) useFastRealMod);
 
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
@@ -7053,12 +7047,10 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
     // but faster code directly.
     assert(resultType.isFloat() &&
            "non floating-point type hit for fast real MOD");
-    fprintf(stderr, "--> emitting fast mod operation for MOD\n");
     return builder.createConvert(loc, resultType,
                                  genFastMod(builder, loc, args[0], args[1]));
   } else {
     // Use runtime.
-    fprintf(stderr, "--> emitting slow path MOD\n");
     return builder.createConvert(
         loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
   }

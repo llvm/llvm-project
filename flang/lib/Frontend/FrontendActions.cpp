@@ -278,10 +278,11 @@ bool CodeGenAction::beginSourceFileAction() {
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
-    fprintf(stderr, "YAY!!!!\n");
     auto mod = lb.getModule();
-    mod.getOperation()->setAttr(mlir::StringAttr::get(mod.getContext(), llvm::Twine{"fir.fast_real_mod"}),
-      mlir::BoolAttr::get(mod.getContext(), true));
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              llvm::Twine{"fir.fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
   }
 
   // Create a parse tree and lower it to FIR
