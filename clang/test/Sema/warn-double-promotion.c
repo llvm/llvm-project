@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -verify -fsyntax-only %s -Wdouble-promotion
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -verify -fsyntax-only -x c++ %s -Wdouble-promotion
 
 float ReturnFloatFromDouble(double d) {
   return d;
