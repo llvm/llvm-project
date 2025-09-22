@@ -681,8 +681,10 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       Ty = ED->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
-      // FIXME: Maybe we should treat 32 as a special case and wait for
-      // the psABI to decide.
+      
+      if (XLen == 64 && EIT->getNumBits() == 32)
+        return extendType(Ty, CGT.ConvertType(Ty));
+
       if (EIT->getNumBits() <= 2 * XLen)
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
       return getNaturalAlignIndirect(

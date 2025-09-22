@@ -70,7 +70,7 @@ _BitInt(17) test_bitint_17_add_default(_BitInt(17) a, _BitInt(17) b) {
 }
 
 // RISCV64-LABEL: define {{[^@]+}}@test_bitint_32_add_unsigned
-// RISCV64-SAME: (i32 noundef zeroext [[A:%.*]], i32 noundef zeroext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// RISCV64-SAME: (i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // RISCV64-NEXT:  entry:
 // RISCV64-NEXT:    [[ADD:%.*]] = add i32 [[B]], [[A]]
 // RISCV64-NEXT:    ret i32 [[ADD]]
