@@ -230,7 +230,7 @@ public:
   /// EnableGlobalISel - This flag enables global instruction selection.
   unsigned EnableGlobalISel : 1;
 
-  /// EnableGlobalISelExtendedLLT - This flag enables LLTs with extenden type
+  /// EnableGlobalISelExtendedLLT - This flag enables LLTs with extended type
   /// info so target may distinguish different formats of equal sized scalars.
   unsigned EnableGlobalISelExtendedLLT : 1;
 
