@@ -85,7 +85,7 @@ TEST(BuildIDTest, InvalidPhdrFileSizeNoShdrs) {
       "");
 }
 
-// the code handles a malformed section header that points at data outside the file.
+// The code handles a malformed section header that points at data outside the file.
 TEST(BuildIDTest, InvalidSectionHeader) {
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
