@@ -1424,6 +1424,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_TRUNC_SSAT_S:
+  case TargetOpcode::G_TRUNC_SSAT_U:
+  case TargetOpcode::G_TRUNC_USAT_U:
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     // Number of operands and presense of types is already checked (and
@@ -1450,6 +1453,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         report("Generic extend has destination type no larger than source", MI);
       break;
     case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_TRUNC_SSAT_S:
+    case TargetOpcode::G_TRUNC_SSAT_U:
+    case TargetOpcode::G_TRUNC_USAT_U:
     case TargetOpcode::G_FPTRUNC:
       if (DstSize >= SrcSize)
         report("Generic truncate has destination type no smaller than source",
@@ -2370,20 +2376,24 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     // If we have only one valid type, this is likely a copy between a virtual
     // and physical register.
-    TypeSize SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
-    TypeSize DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+    TypeSize SrcSize = TypeSize::getZero();
+    TypeSize DstSize = TypeSize::getZero();
     if (SrcReg.isPhysical() && DstTy.isValid()) {
       const TargetRegisterClass *SrcRC =
           TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
-      if (SrcRC)
-        SrcSize = TRI->getRegSizeInBits(*SrcRC);
+      if (!SrcRC)
+        SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+    } else {
+      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     }
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
           TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
-      if (DstRC)
-        DstSize = TRI->getRegSizeInBits(*DstRC);
+      if (!DstRC)
+        DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+    } else {
+      DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     }
 
     // The next two checks allow COPY between physical and virtual registers,
@@ -2630,7 +2640,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
       if (MONum < MCID.getNumOperands()) {
         if (const TargetRegisterClass *DRC =
-              TII->getRegClass(MCID, MONum, TRI, *MF)) {
+                TII->getRegClass(MCID, MONum, TRI)) {
           if (!DRC->contains(Reg)) {
             report("Illegal physical register for instruction", MO, MONum);
             OS << printReg(Reg, TRI) << " is not a "
@@ -2715,11 +2725,11 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         // comply to it.
         if (!isPreISelGenericOpcode(MCID.getOpcode()) &&
             MONum < MCID.getNumOperands() &&
-            TII->getRegClass(MCID, MONum, TRI, *MF)) {
+            TII->getRegClass(MCID, MONum, TRI)) {
           report("Virtual register does not match instruction constraint", MO,
                  MONum);
           OS << "Expect register class "
-             << TRI->getRegClassName(TII->getRegClass(MCID, MONum, TRI, *MF))
+             << TRI->getRegClassName(TII->getRegClass(MCID, MONum, TRI))
              << " but got nothing\n";
           return;
         }
@@ -2746,7 +2756,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
       if (MONum < MCID.getNumOperands()) {
         if (const TargetRegisterClass *DRC =
-              TII->getRegClass(MCID, MONum, TRI, *MF)) {
+                TII->getRegClass(MCID, MONum, TRI)) {
           if (SubIdx) {
             const TargetRegisterClass *SuperRC =
                 TRI->getLargestLegalSuperClass(RC, *MF);

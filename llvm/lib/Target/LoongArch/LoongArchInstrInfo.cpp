@@ -25,8 +25,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "LoongArchGenInstrInfo.inc"
 
-LoongArchInstrInfo::LoongArchInstrInfo(LoongArchSubtarget &STI)
-    : LoongArchGenInstrInfo(LoongArch::ADJCALLSTACKDOWN,
+LoongArchInstrInfo::LoongArchInstrInfo(const LoongArchSubtarget &STI)
+    : LoongArchGenInstrInfo(STI, LoongArch::ADJCALLSTACKDOWN,
                             LoongArch::ADJCALLSTACKUP),
       STI(STI) {}
 

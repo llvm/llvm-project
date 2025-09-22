@@ -30,3 +30,24 @@ entry:
   %shl2 = shl i64 %xor, %xor1
   ret i64 %shl2
 }
+
+; Check that eon is generated if the xor is a disjoint or.
+define i64 @disjoint_or(i64 %a, i64 %b) {
+; CHECK-LABEL: disjoint_or:
+; CHECK: eon
+; CHECK: ret
+  %or = or disjoint i64 %a, %b
+  %eon = xor i64 %or, -1
+  ret i64 %eon
+}
+
+; Check that eon is *not* generated if the or is not disjoint.
+define i64 @normal_or(i64 %a, i64 %b) {
+; CHECK-LABEL: normal_or:
+; CHECK: orr
+; CHECK: mvn
+; CHECK: ret
+  %or = or i64 %a, %b
+  %not = xor i64 %or, -1
+  ret i64 %not
+}

@@ -212,17 +212,18 @@ protected:
   void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
-  void assertSafeToAddRange(const T *From, const T *To) {
-    if (From == To)
-      return;
-    this->assertSafeToAdd(From, To - From);
-    this->assertSafeToAdd(To - 1, To - From);
+  template <class ItTy> void assertSafeToAddRange(ItTy From, ItTy To) {
+    if constexpr (std::is_pointer_v<ItTy> &&
+                  std::is_same_v<std::remove_cv_t<std::remove_pointer_t<ItTy>>,
+                                 T>) {
+      if (From == To)
+        return;
+      this->assertSafeToAdd(From, To - From);
+      this->assertSafeToAdd(To - 1, To - From);
+    }
+    (void)From;
+    (void)To;
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
-  void assertSafeToAddRange(ItTy, ItTy) {}
 
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
@@ -518,7 +519,7 @@ protected:
     // use memcpy here. Note that I and E are iterators and thus might be
     // invalid for memcpy if they are equal.
     if (I != E)
-      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+      std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -561,7 +562,7 @@ protected:
 public:
   void push_back(ValueParamT Elt) {
     const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    std::memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
     this->set_size(this->size() + 1);
   }
 

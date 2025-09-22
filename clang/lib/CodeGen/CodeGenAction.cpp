@@ -29,6 +29,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Demangle/Demangle.h"
@@ -259,19 +260,18 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
 
-  Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
-    setupLLVMOptimizationRemarks(
-      Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
-      CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
-      CodeGenOpts.DiagnosticsHotnessThreshold);
+  Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
+      setupLLVMOptimizationRemarks(
+          Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
+          CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
+          CodeGenOpts.DiagnosticsHotnessThreshold);
 
   if (Error E = OptRecordFileOrErr.takeError()) {
     reportOptRecordError(std::move(E), Diags, CodeGenOpts);
     return;
   }
 
-  std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
-    std::move(*OptRecordFileOrErr);
+  LLVMRemarkFileHandle OptRecordFile = std::move(*OptRecordFileOrErr);
 
   if (OptRecordFile && CodeGenOpts.getProfileUse() !=
                            llvm::driver::ProfileInstrKind::ProfileNone)
@@ -908,6 +908,8 @@ bool CodeGenAction::loadLinkModules(CompilerInstance &CI) {
 bool CodeGenAction::hasIRSupport() const { return true; }
 
 void CodeGenAction::EndSourceFileAction() {
+  ASTFrontendAction::EndSourceFileAction();
+
   // If the consumer creation failed, do nothing.
   if (!getCompilerInstance().hasASTConsumer())
     return;
@@ -932,7 +934,7 @@ CodeGenerator *CodeGenAction::getCodeGenerator() const {
 bool CodeGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (CI.getFrontendOpts().GenReducedBMI)
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 static std::unique_ptr<raw_pwrite_stream>
@@ -976,7 +978,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      CI, BA, &CI.getVirtualFileSystem(), *VMContext, std::move(LinkModules),
+      CI, BA, CI.getVirtualFileSystemPtr(), *VMContext, std::move(LinkModules),
       InFile, std::move(OS), CoverageInfo));
   BEConsumer = Result.get();
 
@@ -995,7 +997,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     std::vector<std::unique_ptr<ASTConsumer>> Consumers(2);
     Consumers[0] = std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath);
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts());
     Consumers[1] = std::move(Result);
     return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }
@@ -1154,7 +1156,7 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), *VMContext,
+  BackendConsumer Result(CI, BA, CI.getVirtualFileSystemPtr(), *VMContext,
                          std::move(LinkModules), "", nullptr, nullptr,
                          TheModule.get());
 
@@ -1171,7 +1173,7 @@ void CodeGenAction::ExecuteAction() {
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);
   Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
 
-  Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
+  Expected<LLVMRemarkFileHandle> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(
           Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
           CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
@@ -1181,8 +1183,7 @@ void CodeGenAction::ExecuteAction() {
     reportOptRecordError(std::move(E), Diagnostics, CodeGenOpts);
     return;
   }
-  std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
-      std::move(*OptRecordFileOrErr);
+  LLVMRemarkFileHandle OptRecordFile = std::move(*OptRecordFileOrErr);
 
   emitBackendOutput(CI, CI.getCodeGenOpts(),
                     CI.getTarget().getDataLayoutString(), TheModule.get(), BA,

@@ -1,4 +1,4 @@
-//===--- MisplacedConstCheck.h - clang-tidy----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::misc {
 /// pointer type rather than to the pointee.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/misplaced-const.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/misplaced-const.html
 class MisplacedConstCheck : public ClangTidyCheck {
 public:
   MisplacedConstCheck(StringRef Name, ClangTidyContext *Context)

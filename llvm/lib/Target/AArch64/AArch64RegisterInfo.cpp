@@ -441,7 +441,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
 
-  if (TFI->hasFP(MF) || TT.isOSDarwin())
+  if (TFI->isFPReserved(MF))
     markSuperRegs(Reserved, AArch64::W29);
 
   if (MF.getSubtarget<AArch64Subtarget>().isWindowsArm64EC()) {
@@ -610,8 +610,7 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
 }
 
 const TargetRegisterClass *
-AArch64RegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
+AArch64RegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &AArch64::GPR64spRegClass;
 }
 
@@ -893,7 +892,7 @@ AArch64RegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const MCInstrDesc &MCID = TII->get(AArch64::ADDXri);
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   Register BaseReg = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
-  MRI.constrainRegClass(BaseReg, TII->getRegClass(MCID, 0, this, MF));
+  MRI.constrainRegClass(BaseReg, TII->getRegClass(MCID, 0, this));
   unsigned Shifter = AArch64_AM::getShifterImm(AArch64_AM::LSL, 0);
 
   BuildMI(*MBB, Ins, DL, MCID, BaseReg)
@@ -1369,4 +1368,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
 bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
     MCRegister R) const {
   return R == AArch64::VG;
+}
+
+bool AArch64RegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
+  return (LLVMReg >= AArch64::Z0 && LLVMReg <= AArch64::Z31) ||
+         (LLVMReg >= AArch64::P0 && LLVMReg <= AArch64::P15);
 }

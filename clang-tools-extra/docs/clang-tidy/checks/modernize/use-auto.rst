@@ -166,8 +166,9 @@ that behave as casts, such as ``llvm::dyn_cast``, ``boost::lexical_cast`` and
 casts if the first template argument is explicit and is a type, and the function
 returns that type, or a pointer or reference to it.
 
-Known Limitations
------------------
+
+Limitations
+-----------
 
 * If the initializer is an explicit conversion constructor, the check will not
   replace the type specifier even though it would be safe to do so.

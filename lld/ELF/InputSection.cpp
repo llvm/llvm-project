@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <optional>
@@ -830,6 +831,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLT_PC:
     return r.sym->getGotPltVA(ctx) + a - p;
   case RE_LOONGARCH_GOT_PAGE_PC:
+  case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);
@@ -860,6 +862,11 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return ctx.in.mipsGot->getVA() +
            ctx.in.mipsGot->getPageEntryOffset(file, *r.sym, a) -
            ctx.in.mipsGot->getGp(file);
+  case RE_MIPS_OSEC_LOCAL_PAGE:
+    // This is used by the MIPS multi-GOT implementation. It relocates
+    // addresses of 64kb pages that lie inside the output section that sym is
+    // a representative for.
+    return getMipsPageAddr(r.sym->getOutputSection()->addr) + a;
   case RE_MIPS_GOT_OFF:
   case RE_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
@@ -1164,7 +1171,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
 }
 
 template <class ELFT>
-void InputSectionBase::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
+void InputSection::relocate(Ctx &ctx, uint8_t *buf, uint8_t *bufEnd) {
   if ((flags & SHF_EXECINSTR) && LLVM_UNLIKELY(getFile<ELFT>()->splitStack))
     adjustSplitStackFunctionPrologues<ELFT>(ctx, buf, bufEnd);
 

@@ -1751,10 +1751,11 @@ namespace {
   class BitSimplification : public Transformation {
   public:
     BitSimplification(BitTracker &bt, const MachineDominatorTree &mdt,
-        const HexagonInstrInfo &hii, const HexagonRegisterInfo &hri,
-        MachineRegisterInfo &mri, MachineFunction &mf)
-      : Transformation(true), MDT(mdt), HII(hii), HRI(hri), MRI(mri),
-        MF(mf), BT(bt) {}
+                      const HexagonInstrInfo &hii,
+                      const HexagonRegisterInfo &hri, MachineRegisterInfo &mri,
+                      MachineFunction &mf)
+        : Transformation(true), MDT(mdt), HII(hii), HRI(hri), MRI(mri), BT(bt) {
+    }
 
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
 
@@ -1797,7 +1798,6 @@ namespace {
     const HexagonInstrInfo &HII;
     const HexagonRegisterInfo &HRI;
     MachineRegisterInfo &MRI;
-    MachineFunction &MF;
     BitTracker &BT;
   };
 
@@ -1886,7 +1886,7 @@ bool BitSimplification::matchHalf(unsigned SelfR,
 
 bool BitSimplification::validateReg(BitTracker::RegisterRef R, unsigned Opc,
       unsigned OpNum) {
-  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI, MF);
+  auto *OpRC = HII.getRegClass(HII.get(Opc), OpNum, &HRI);
   auto *RRC = HBS::getFinalVRegClass(R, MRI);
   return OpRC->hasSubClassEq(RRC);
 }

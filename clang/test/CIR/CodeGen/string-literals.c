@@ -17,13 +17,13 @@ char g_exact[4] = "123";
 
 // CIR: cir.global external @g_exact = #cir.const_array<"123\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
 
-// CIR: cir.global "private" cir_private dso_local @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
-// CIR: cir.global "private" cir_private dso_local @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
-// CIR: cir.global "private" cir_private dso_local @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR1_GLOBAL:.*]] = #cir.const_array<"1\00" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR2_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 1>
+// CIR: cir.global "private" constant cir_private dso_local @[[STR3_GLOBAL:.*]] = #cir.zero : !cir.array<!s8i x 2>
 
-// LLVM: @[[STR1_GLOBAL:.*]] = private global [2 x i8] c"1\00"
-// LLVM: @[[STR2_GLOBAL:.*]] = private global [1 x i8] zeroinitializer
-// LLVM: @[[STR3_GLOBAL:.*]] = private global [2 x i8] zeroinitializer
+// LLVM: @[[STR1_GLOBAL:.*]] = private constant [2 x i8] c"1\00"
+// LLVM: @[[STR2_GLOBAL:.*]] = private constant [1 x i8] zeroinitializer
+// LLVM: @[[STR3_GLOBAL:.*]] = private constant [2 x i8] zeroinitializer
 
 // OGCG: @[[STR1_GLOBAL:.*]] = private unnamed_addr constant [2 x i8] c"1\00"
 // OGCG: @[[STR2_GLOBAL:.*]] = private unnamed_addr constant [1 x i8] zeroinitializer

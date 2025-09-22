@@ -26,6 +26,17 @@ GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
 }
 
+void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  // Make sure that all section are registered in the correct order.
+  SmallVector<MCSectionGOFF *> Sections;
+  for (auto *S = static_cast<MCSectionGOFF *>(Section); S; S = S->getParent())
+    Sections.push_back(S);
+  while (!Sections.empty()) {
+    auto *S = Sections.pop_back_val();
+    MCObjectStreamer::changeSection(S, Sections.empty() ? Subsection : 0);
+  }
+}
+
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
@@ -34,3 +45,9 @@ MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
       new MCGOFFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   return S;
 }
+llvm::MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
+                                     std::unique_ptr<MCAsmBackend> MAB,
+                                     std::unique_ptr<MCObjectWriter> OW,
+                                     std::unique_ptr<MCCodeEmitter> Emitter)
+    : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
+                       std::move(Emitter)) {}

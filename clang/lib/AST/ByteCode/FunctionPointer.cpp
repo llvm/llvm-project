@@ -27,8 +27,6 @@ void FunctionPointer::print(llvm::raw_ostream &OS) const {
   OS << "FnPtr(";
   if (Func)
     OS << Func->getName();
-  else if (Func)
-    OS << reinterpret_cast<uintptr_t>(Func);
   else
     OS << "nullptr";
   OS << ")";

@@ -137,8 +137,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT.value_or(std::cref(BT_ArgumentNull)),
           (PtrDescr + " pointer might be NULL.").str(), N);
-      if (PtrExpr)
-        bugreporter::trackExpressionValue(N, PtrExpr, *R);
+      bugreporter::trackExpressionValue(N, PtrExpr, *R);
       C.emitReport(std::move(R));
     }
     return nullptr;
@@ -223,6 +222,10 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   // All calls should at least provide arguments up to the 'flags' parameter.
   unsigned int MinArgCount = FlagsArgIndex + 1;
 
+  // The frontend should issue a warning for this case. Just return.
+  if (Call.getNumArgs() < MinArgCount)
+    return;
+
   // If the flags has O_CREAT set then open/openat() require an additional
   // argument specifying the file mode (permission bits) for the created file.
   unsigned int CreateModeArgIndex = FlagsArgIndex + 1;
@@ -231,11 +234,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   unsigned int MaxArgCount = CreateModeArgIndex + 1;
 
   ProgramStateRef state = C.getState();
-
-  if (Call.getNumArgs() < MinArgCount) {
-    // The frontend should issue a warning for this case. Just return.
-    return;
-  } else if (Call.getNumArgs() == MaxArgCount) {
+  if (Call.getNumArgs() == MaxArgCount) {
     const Expr *Arg = Call.getArgExpr(CreateModeArgIndex);
     QualType QT = Arg->getType();
     if (!QT->isIntegerType()) {
@@ -541,17 +540,15 @@ void UnixAPIPortabilityChecker::CheckCallocZero(CheckerContext &C,
     if (argVal.isUnknownOrUndef()) {
       if (i == 0)
         continue;
-      else
-        return;
+      return;
     }
 
     if (IsZeroByteAllocation(state, argVal, &trueState, &falseState)) {
       if (ReportZeroByteAllocation(C, falseState, arg, "calloc"))
         return;
-      else if (i == 0)
+      if (i == 0)
         continue;
-      else
-        return;
+      return;
     }
   }
 

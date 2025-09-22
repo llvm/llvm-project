@@ -223,6 +223,8 @@ LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
 ///   /foo  + bar/f => /foo/bar/f
 ///   /foo/ + bar/f => /foo/bar/f
 ///   foo   + bar/f => foo/bar/f
+///   foo   + /bar/f => foo/bar/f (FIXME: will be changed to /bar/f to align
+///                                with C++17 std::filesystem::path::append)
 /// @endcode
 ///
 /// @param path Set to \a path + \a component.

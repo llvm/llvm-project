@@ -271,8 +271,8 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
 ; CHECK-SM70-LABEL: fma_bf16_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .pred %p<5>;
-; CHECK-SM70-NEXT:    .reg .b16 %rs<4>;
-; CHECK-SM70-NEXT:    .reg .b32 %r<29>;
+; CHECK-SM70-NEXT:    .reg .b16 %rs<3>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<30>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_2];
@@ -309,8 +309,8 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
 ; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %r23, %r23;
 ; CHECK-SM70-NEXT:    or.b32 %r27, %r23, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r28, %r27, %r26, %p4;
-; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs3}, %r28; }
-; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs3;
+; CHECK-SM70-NEXT:    shr.u32 %r29, %r28, 16;
+; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %r29;
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul fast bfloat %a, %b
   %2 = fadd fast bfloat %1, %c
@@ -351,8 +351,7 @@ define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)
 ; CHECK-SM70-LABEL: fma_bf16_expanded_maxnum_no_nans(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .pred %p<3>;
-; CHECK-SM70-NEXT:    .reg .b16 %rs<2>;
-; CHECK-SM70-NEXT:    .reg .b32 %r<20>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<21>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_expanded_maxnum_no_nans_param_2];
@@ -376,8 +375,8 @@ define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)
 ; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r14, %r14;
 ; CHECK-SM70-NEXT:    or.b32 %r18, %r14, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r19, %r18, %r17, %p2;
-; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r19; }
-; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-SM70-NEXT:    shr.u32 %r20, %r19, 16;
+; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %r20;
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul fast bfloat %a, %b
   %2 = fadd fast bfloat %1, %c
@@ -1111,8 +1110,7 @@ define bfloat @fma_bf16_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloa
 ; CHECK-SM70-LABEL: fma_bf16_no_nans_multiple_uses_of_fma(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .pred %p<4>;
-; CHECK-SM70-NEXT:    .reg .b16 %rs<2>;
-; CHECK-SM70-NEXT:    .reg .b32 %r<27>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<28>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_no_nans_multiple_uses_of_fma_param_2];
@@ -1144,8 +1142,8 @@ define bfloat @fma_bf16_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloa
 ; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %r21, %r21;
 ; CHECK-SM70-NEXT:    or.b32 %r25, %r21, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r26, %r25, %r24, %p3;
-; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r26; }
-; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-SM70-NEXT:    shr.u32 %r27, %r26, 16;
+; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %r27;
 ; CHECK-SM70-NEXT:    ret;
   %1 = call nnan bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   %2 = fcmp nsz ogt bfloat %1, 0.0
@@ -1183,8 +1181,7 @@ define bfloat @fma_bf16_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)  {
 ; CHECK-SM70-LABEL: fma_bf16_maxnum_no_nans(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .pred %p<3>;
-; CHECK-SM70-NEXT:    .reg .b16 %rs<2>;
-; CHECK-SM70-NEXT:    .reg .b32 %r<20>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<21>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_maxnum_no_nans_param_2];
@@ -1208,8 +1205,8 @@ define bfloat @fma_bf16_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)  {
 ; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r14, %r14;
 ; CHECK-SM70-NEXT:    or.b32 %r18, %r14, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r19, %r18, %r17, %p2;
-; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r19; }
-; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-SM70-NEXT:    shr.u32 %r20, %r19, 16;
+; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %r20;
 ; CHECK-SM70-NEXT:    ret;
   %1 = call nnan bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   %2 = call nsz bfloat @llvm.maxnum.bf16(bfloat %1, bfloat 0.0)

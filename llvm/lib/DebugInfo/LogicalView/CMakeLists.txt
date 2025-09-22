@@ -47,7 +47,8 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
   MC
   Support
   TargetParser
-  DebugInfoDWARF
   DebugInfoCodeView
+  DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   DebugInfoPDB
   )

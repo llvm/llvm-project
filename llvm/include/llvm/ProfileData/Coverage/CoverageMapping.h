@@ -499,9 +499,7 @@ public:
   /// vectors.
   std::pair<unsigned, unsigned> getDecisions() const {
     const unsigned TrueDecisions =
-        std::count_if(TV.begin(), TV.end(), [](const auto &TestVec) {
-          return TestVec.second == CondState::MCDC_True;
-        });
+        llvm::count(llvm::make_second_range(TV), CondState::MCDC_True);
 
     return {TrueDecisions, TV.size() - TrueDecisions};
   }

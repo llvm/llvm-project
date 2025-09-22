@@ -560,6 +560,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         return true;
     }
   } else if (Current.is(TT_BinaryOperator) && Current.CanBreakBefore &&
+             Current.getPrecedence() != prec::Assignment &&
              CurrentState.BreakBeforeParameter) {
     return true;
   }
@@ -628,9 +629,16 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       // name.
       !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
       CurrentState.BreakBeforeParameter) {
-    for (const auto *Tok = &Previous; Tok; Tok = Tok->Previous)
-      if (Tok->FirstAfterPPLine || Tok->is(TT_LineComment))
+    for (const auto *Tok = &Previous; Tok; Tok = Tok->Previous) {
+      if (Tok->is(TT_LineComment))
         return false;
+      if (Tok->is(TT_TemplateCloser)) {
+        Tok = Tok->MatchingParen;
+        assert(Tok);
+      }
+      if (Tok->FirstAfterPPLine)
+        return false;
+    }
 
     return true;
   }
@@ -772,19 +780,21 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   // Indent preprocessor directives after the hash if required.
   int PPColumnCorrection = 0;
-  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash &&
-      Previous.is(tok::hash) && State.FirstIndent > 0 &&
-      &Previous == State.Line->First &&
+  if (&Previous == State.Line->First && Previous.is(tok::hash) &&
       (State.Line->Type == LT_PreprocessorDirective ||
        State.Line->Type == LT_ImportStatement)) {
-    Spaces += State.FirstIndent;
+    if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash) {
+      Spaces += State.FirstIndent;
 
-    // For preprocessor indent with tabs, State.Column will be 1 because of the
-    // hash. This causes second-level indents onward to have an extra space
-    // after the tabs. We avoid this misalignment by subtracting 1 from the
-    // column value passed to replaceWhitespace().
-    if (Style.UseTab != FormatStyle::UT_Never)
-      PPColumnCorrection = -1;
+      // For preprocessor indent with tabs, State.Column will be 1 because of
+      // the hash. This causes second-level indents onward to have an extra
+      // space after the tabs. We avoid this misalignment by subtracting 1 from
+      // the column value passed to replaceWhitespace().
+      if (Style.UseTab != FormatStyle::UT_Never)
+        PPColumnCorrection = -1;
+    } else if (Style.IndentPPDirectives == FormatStyle::PPDIS_Leave) {
+      Spaces += Current.OriginalColumn - Previous.OriginalColumn - 1;
+    }
   }
 
   if (!DryRun) {
@@ -1724,7 +1734,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   }
   if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
                    (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) &&
-                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)))) {
+                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr,
+                                       TT_CtorInitializerColon)))) {
     CurrentState.NestedBlockInlined =
         !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }
@@ -1929,6 +1940,15 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     return;
   }
 
+  const bool EndsInComma = [](const FormatToken *Tok) {
+    if (!Tok)
+      return false;
+    const auto *Prev = Tok->getPreviousNonComment();
+    if (!Prev)
+      return false;
+    return Prev->is(tok::comma);
+  }(Current.MatchingParen);
+
   unsigned NewIndent;
   unsigned LastSpace = CurrentState.LastSpace;
   bool AvoidBinPacking;
@@ -1948,9 +1968,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
     const FormatToken *NextNonComment = Current.getNextNonComment();
-    bool EndsInComma = Current.MatchingParen &&
-                       Current.MatchingParen->Previous &&
-                       Current.MatchingParen->Previous->is(tok::comma);
     AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
                       Style.isProto() || !Style.BinPackArguments ||
                       (NextNonComment && NextNonComment->isOneOf(
@@ -1983,11 +2000,6 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = std::max(NewIndent, CurrentState.Indent);
       LastSpace = std::max(LastSpace, CurrentState.Indent);
     }
-
-    bool EndsInComma =
-        Current.MatchingParen &&
-        Current.MatchingParen->getPreviousNonComment() &&
-        Current.MatchingParen->getPreviousNonComment()->is(tok::comma);
 
     // If ObjCBinPackProtocolList is unspecified, fall back to BinPackParameters
     // for backwards compatibility.

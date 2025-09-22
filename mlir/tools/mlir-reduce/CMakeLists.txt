@@ -1,6 +1,3 @@
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 if(MLIR_INCLUDE_TESTS)
   set(test_libs
     MLIRTestDialect
@@ -8,12 +5,9 @@ if(MLIR_INCLUDE_TESTS)
 endif()
 
 set(LIBS
-  ${conversion_libs}
-  ${dialect_libs}
-  MLIRDialect
-  MLIRIR
-  MLIRPass
   MLIRReduceLib
+  MLIRRegisterAllDialects
+  MLIRRegisterAllPasses
   )
 
 add_mlir_tool(mlir-reduce

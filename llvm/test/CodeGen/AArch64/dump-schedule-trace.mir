@@ -32,7 +32,7 @@
 # RUN:  -sched-print-cycles=true -misched-dump-schedule-trace=true \
 # RUN:  2>&1 | FileCheck %s --check-prefix=BIDIRECTIONAL
 
-# REQUIRES: asserts, aarch64-registered-target
+# REQUIRES: asserts
 ---
 name: f
 tracksRegLiveness: true

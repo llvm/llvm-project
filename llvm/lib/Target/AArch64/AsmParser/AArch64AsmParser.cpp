@@ -2294,7 +2294,7 @@ public:
     Inst.addOperand(MCOperand::createImm((MCE->getValue() - 90) / 180));
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<AArch64Operand>
   CreateToken(StringRef Str, SMLoc S, MCContext &Ctx, bool IsSuffix = false) {
@@ -2584,7 +2584,7 @@ public:
 
 } // end anonymous namespace.
 
-void AArch64Operand::print(raw_ostream &OS) const {
+void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case k_FPImm:
     OS << "<fpimm " << getFPImm().bitcastToAPInt().getZExtValue();
@@ -2601,12 +2601,12 @@ void AArch64Operand::print(raw_ostream &OS) const {
     break;
   }
   case k_Immediate:
-    OS << *getImm();
+    MAI.printExpr(OS, *getImm());
     break;
   case k_ShiftedImm: {
     unsigned Shift = getShiftedImmShift();
     OS << "<shiftedimm ";
-    OS << *getShiftedImmVal();
+    MAI.printExpr(OS, *getShiftedImmVal());
     OS << ", lsl #" << AArch64_AM::getShiftValue(Shift) << ">";
     break;
   }
@@ -3299,7 +3299,8 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
     if (DarwinSpec == AArch64::S_None && ELFSpec == AArch64::S_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADRP relocation (unfortunately).
-      Expr = MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, getContext());
+      Expr =
+          MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, getContext(), S);
     } else if ((DarwinSpec == AArch64::S_MACHO_GOTPAGE ||
                 DarwinSpec == AArch64::S_MACHO_TLVPPAGE) &&
                Addend != 0) {
@@ -3351,7 +3352,7 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
     if (DarwinSpec == AArch64::S_None && ELFSpec == AArch64::S_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
-      Expr = MCSpecifierExpr::create(Expr, AArch64::S_ABS, getContext());
+      Expr = MCSpecifierExpr::create(Expr, AArch64::S_ABS, getContext(), S);
     } else if (ELFSpec != AArch64::S_GOT_AUTH_PAGE) {
       // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
       // adr. It's not actually GOT entry page address but the GOT address
@@ -3741,7 +3742,8 @@ static const struct Extension {
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve-aes", {AArch64::FeatureSVEAES}},
     {"sve2-aes", {AArch64::FeatureAliasSVE2AES, AArch64::FeatureSVEAES}},
-    {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
+    {"sve-sm4", {AArch64::FeatureSVESM4}},
+    {"sve2-sm4", {AArch64::FeatureAliasSVE2SM4, AArch64::FeatureSVESM4}},
     {"sve-sha3", {AArch64::FeatureSVESHA3}},
     {"sve2-sha3", {AArch64::FeatureAliasSVE2SHA3, AArch64::FeatureSVESHA3}},
     {"sve-bitperm", {AArch64::FeatureSVEBitPerm}},
@@ -4394,7 +4396,7 @@ bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
 bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
   bool HasELFModifier = false;
   AArch64::Specifier RefKind;
-
+  SMLoc Loc = getLexer().getLoc();
   if (parseOptionalToken(AsmToken::Colon)) {
     HasELFModifier = true;
 
@@ -4468,7 +4470,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
     return true;
 
   if (HasELFModifier)
-    ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext());
+    ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext(), Loc);
 
   SMLoc EndLoc;
   if (getContext().getAsmInfo()->hasSubsectionsViaSymbols()) {
@@ -7404,7 +7406,7 @@ bool AArch64AsmParser::parseDirectiveLOH(StringRef IDVal, SMLoc Loc) {
   if (parseEOL())
     return true;
 
-  getStreamer().emitLOHDirective((MCLOHType)Kind, Args);
+  getStreamer().emitLOHDirective(Kind, Args);
   return false;
 }
 
@@ -7907,9 +7909,11 @@ bool AArch64AsmParser::parseDirectiveSEHSavePReg(SMLoc L) {
 }
 
 bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
-  // Expecting 3 AsmToken::Identifier after '.aeabi_subsection', a name and 2
-  // parameters, e.g.: .aeabi_subsection (1)aeabi_feature_and_bits, (2)optional,
-  // (3)uleb128 separated by 2 commas.
+  // Handle parsing of .aeabi_subsection directives
+  // - On first declaration of a subsection, expect exactly three identifiers
+  //   after `.aeabi_subsection`: the subsection name and two parameters.
+  // - When switching to an existing subsection, it is valid to provide only
+  //   the subsection name, or the name together with the two parameters.
   MCAsmParser &Parser = getParser();
 
   // Consume the name (subsection name)
@@ -7923,15 +7927,37 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
   Parser.Lex();
-  // consume a comma
+
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
+      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
+  // Check whether only the subsection name was provided.
+  // If so, the user is trying to switch to a subsection that should have been
+  // declared before.
+  if (Parser.getTok().is(llvm::AsmToken::EndOfStatement)) {
+    if (SubsectionExists) {
+      getTargetStreamer().emitAttributesSubsection(
+          SubsectionName,
+          static_cast<AArch64BuildAttributes::SubsectionOptional>(
+              SubsectionExists->IsOptional),
+          static_cast<AArch64BuildAttributes::SubsectionType>(
+              SubsectionExists->ParameterType));
+      return false;
+    }
+    // If subsection does not exists, report error.
+    else {
+      Error(Parser.getTok().getLoc(),
+            "Could not switch to subsection '" + SubsectionName +
+                "' using subsection name, subsection has not been defined");
+      return true;
+    }
+  }
+
+  // Otherwise, expecting 2 more parameters: consume a comma
   // parseComma() return *false* on success, and call Lex(), no need to call
   // Lex() again.
   if (Parser.parseComma()) {
     return true;
   }
-
-  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
-      getTargetStreamer().getAttributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;
@@ -8211,7 +8237,7 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
     const MCExpr *Term;
     if (getParser().parsePrimaryExpr(Term, EndLoc, nullptr))
       return true;
-    Res = MCBinaryExpr::create(*Opcode, Res, Term, getContext());
+    Res = MCBinaryExpr::create(*Opcode, Res, Term, getContext(), Res->getLoc());
   }
   return false;
 }
@@ -8265,7 +8291,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return true;
 
   Res = AArch64AuthMCExpr::create(Res, Discriminator, *KeyIDOrNone,
-                                  UseAddressDiversity, Ctx);
+                                  UseAddressDiversity, Ctx, Res->getLoc());
   return false;
 }
 

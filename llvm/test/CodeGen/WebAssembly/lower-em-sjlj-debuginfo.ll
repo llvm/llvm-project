@@ -16,10 +16,10 @@ entry:
   call void @foo(), !dbg !7
   ret void, !dbg !8
 ; CHECK: entry:
-  ; CHECK-NEXT: %functionInvocationId = alloca i32, align 4, !dbg ![[DL0:.*]]
+  ; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16, !dbg ![[DL0:.*]]
+  ; CHECK-NEXT: %functionInvocationId = alloca i32, align 4, !dbg ![[DL0]]
 
 ; CHECK: entry.split:
-  ; CHECK: alloca {{.*}}, !dbg ![[DL0]]
   ; CHECK: call void @__wasm_setjmp{{.*}}, !dbg ![[DL1:.*]]
   ; CHECK-NEXT: br {{.*}}, !dbg ![[DL2:.*]]
 

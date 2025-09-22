@@ -13,6 +13,7 @@
 #include "RemarkCounter.h"
 #include "RemarkUtilRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/Regex.h"
 
 using namespace llvm;
@@ -197,23 +198,11 @@ Error ArgumentCounter::print(StringRef OutputFileName) {
 
   auto OF = std::move(*MaybeOF);
   OF->os() << groupByToStr(Group) << ",";
-  unsigned Idx = 0;
-  for (auto [Key, _] : ArgumentSetIdxMap) {
-    OF->os() << Key;
-    if (Idx != ArgumentSetIdxMap.size() - 1)
-      OF->os() << ",";
-    Idx++;
-  }
+  OF->os() << llvm::interleaved(llvm::make_first_range(ArgumentSetIdxMap), ",");
   OF->os() << "\n";
   for (auto [Header, CountVector] : CountByKeysMap) {
     OF->os() << Header << ",";
-    unsigned Idx = 0;
-    for (auto Count : CountVector) {
-      OF->os() << Count;
-      if (Idx != ArgumentSetIdxMap.size() - 1)
-        OF->os() << ",";
-      Idx++;
-    }
+    OF->os() << llvm::interleaved(CountVector, ",");
     OF->os() << "\n";
   }
   return Error::success();

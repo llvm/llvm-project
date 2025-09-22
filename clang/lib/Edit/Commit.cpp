@@ -16,7 +16,6 @@
 #include "clang/Lex/PPConditionalDirectiveRecord.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
-#include <utility>
 
 using namespace clang;
 using namespace edit;

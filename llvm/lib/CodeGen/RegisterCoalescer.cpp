@@ -1325,9 +1325,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
 
-  SmallVector<Register, 8> NewRegs;
-  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
-  if (!Edit.checkRematerializable(ValNo, DefMI))
+  if (!TII->isTriviallyReMaterializable(*DefMI))
     return false;
 
   if (!definesFullReg(*DefMI, SrcReg))
@@ -1374,7 +1372,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   }
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
-  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
+  const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
@@ -1395,15 +1393,18 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  LiveRangeEdit::Remat RM(ValNo);
-  RM.OrigMI = DefMI;
-  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx))
+  SmallVector<Register, 8> NewRegs;
+  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
+  SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
+  if (!Edit.allUsesAvailableAt(DefMI, DefIdx, CopyIdx))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
   MachineBasicBlock *MBB = CopyMI->getParent();
   MachineBasicBlock::iterator MII =
       std::next(MachineBasicBlock::iterator(CopyMI));
+  LiveRangeEdit::Remat RM(ValNo);
+  RM.OrigMI = DefMI;
   Edit.rematerializeAt(*MBB, MII, DstReg, RM, *TRI, false, SrcIdx, CopyMI);
   MachineInstr &NewMI = *std::prev(MII);
   NewMI.setDebugLoc(DL);
@@ -1624,11 +1625,11 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
           UpdatedSubRanges = true;
         } else {
           // We know that this lane is defined by this instruction,
-          // but at this point it may be empty because it is not used by
-          // anything. This happens when updateRegDefUses adds the missing
-          // lanes. Assign that lane a dead def so that the interferences
-          // are properly modeled.
-          if (SR.empty())
+          // but at this point it might not be live because it was not defined
+          // by the original instruction. This happens when the
+          // rematerialization widens the defined register. Assign that lane a
+          // dead def so that the interferences are properly modeled.
+          if (!SR.liveAt(DefIndex))
             SR.createDeadDef(DefIndex, Alloc);
         }
       }
@@ -4152,10 +4153,8 @@ void RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
   if (JoinGlobalCopies) {
     SmallVector<MachineInstr *, 2> LocalTerminals;
     SmallVector<MachineInstr *, 2> GlobalTerminals;
-    // Coalesce copies bottom-up to coalesce local defs before local uses. They
-    // are not inherently easier to resolve, but slightly preferable until we
-    // have local live range splitting. In particular this is required by
-    // cmp+jmp macro fusion.
+    // Coalesce copies top-down to propagate coalescing and rematerialization
+    // forward.
     for (MachineInstr &MI : *MBB) {
       if (!MI.isCopyLike())
         continue;
@@ -4177,6 +4176,8 @@ void RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
     WorkList.append(GlobalTerminals.begin(), GlobalTerminals.end());
   } else {
     SmallVector<MachineInstr *, 2> Terminals;
+    // Coalesce copies top-down to propagate coalescing and rematerialization
+    // forward.
     for (MachineInstr &MII : *MBB)
       if (MII.isCopyLike()) {
         if (applyTerminalRule(MII))

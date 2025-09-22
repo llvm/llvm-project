@@ -328,7 +328,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
   const char *CPU = 0;
 
   switch (Family) {
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -626,7 +626,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:
@@ -1093,6 +1093,12 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_CLZERO);
   if (HasExtLeaf8 && ((EBX >> 9) & 1))
     setFeature(FEATURE_WBNOINVD);
+
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  if (HasExtLeaf21 && ((EAX >> 20) & 1))
+    setFeature(FEATURE_PREFETCHI);
 
   bool HasLeaf14 = MaxLevel >= 0x14 &&
                    !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);

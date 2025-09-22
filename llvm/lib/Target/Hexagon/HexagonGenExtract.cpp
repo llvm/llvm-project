@@ -44,9 +44,6 @@ static cl::opt<unsigned> ExtractCutoff("extract-cutoff", cl::init(~0U),
 static cl::opt<bool> NoSR0("extract-nosr0", cl::init(true), cl::Hidden,
   cl::desc("No extract instruction with offset 0"));
 
-static cl::opt<bool> NeedAnd("extract-needand", cl::init(true), cl::Hidden,
-  cl::desc("Require & in extract patterns"));
-
 namespace {
 
   class HexagonGenExtract : public FunctionPass {

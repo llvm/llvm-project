@@ -54,11 +54,13 @@
 // fpfast: -funsafe-math-optimizations
 // fpfast: -ffast-math
 
-// RUN: %clang_cl /fp:fast /fp:precise -### -- %s 2>&1 | FileCheck -check-prefix=fpprecise %s
+// RUN: %clang_cl /fp:fast /fp:precise -Wno-overriding-complex-range -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=fpprecise %s
 // fpprecise-NOT: -funsafe-math-optimizations
 // fpprecise-NOT: -ffast-math
 
-// RUN: %clang_cl /fp:fast /fp:strict -### -- %s 2>&1 | FileCheck -check-prefix=fpstrict %s
+// RUN: %clang_cl /fp:fast /fp:strict -Wno-overriding-complex-range -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=fpstrict %s
 // fpstrict-NOT: -funsafe-math-optimizations
 // fpstrict-NOT: -ffast-math
 // fpstrict: -ffp-contract=off
@@ -361,6 +363,12 @@
 
 // RUN: %clang_cl -c -### /std:c11 -- %s 2>&1 | FileCheck -check-prefix CHECK-C11 %s
 // CHECK-C11: -std=c11
+
+// RUN: %clang_cl -c -### /std:c17 -- %s 2>&1 | FileCheck -check-prefix CHECK-C17 %s
+// CHECK-C17: -std=c17
+
+// RUN: %clang_cl -c -### /std:clatest -- %s 2>&1 | FileCheck -check-prefix CHECK-CLATEST %s
+// CHECK-CLATEST: -std=c23
 
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -wd12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
@@ -722,6 +730,7 @@
 // RUN:     -fno-profile-instr-use \
 // RUN:     -fcs-profile-generate \
 // RUN:     -fcs-profile-generate=dir \
+// RUN:     -fpseudo-probe-for-profiling \
 // RUN:     -ftime-trace \
 // RUN:     -fmodules \
 // RUN:     -fno-modules \

@@ -508,14 +508,15 @@ private:
 
   bool attributeCheckRescale(Operation *op) {
     if (auto rescale = dyn_cast<tosa::RescaleOp>(op)) {
-      if (rescale.getRoundingMode() == "DOUBLE_ROUND" &&
+      if (rescale.getRoundingMode() == RoundingMode::DOUBLE_ROUND &&
           !targetEnv.allows(Extension::doubleround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = DOUBLE_ROUND "
             << "requires extension [doubleround]";
         return false;
-      } else if (rescale.getRoundingMode() == "INEXACT_ROUND" &&
-                 !targetEnv.allows(Extension::inexactround)) {
+      }
+      if (rescale.getRoundingMode() == RoundingMode::INEXACT_ROUND &&
+          !targetEnv.allows(Extension::inexactround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = INEXACT_ROUND "
             << "requires extension [inexactround]";
@@ -577,7 +578,7 @@ private:
 
 template <>
 bool TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
   if (!levelCheckRank(op, tosaOp.getInput(), "operand", tosaLevel.MAX_RANK))
     return false;
 
@@ -590,7 +591,7 @@ bool TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
 
 template <>
 bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
 
   // Only the condition input has rank limitation.
   if (!levelCheckRank(op, tosaOp.getCondition(), "operand", tosaLevel.MAX_RANK))
@@ -601,7 +602,7 @@ bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
 
 template <>
 bool TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
   auto variableType = getVariableType(tosaOp);
   if (!levelCheckRank(op, variableType, "variable type", tosaLevel.MAX_RANK))
     return false;
@@ -611,7 +612,7 @@ bool TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
 
 template <>
 bool TosaValidation::levelCheckSizes(tosa::VariableOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
   auto variableType = getVariableType(tosaOp);
   if (!levelCheckSize(op, variableType, "variable type"))
     return false;
@@ -1122,7 +1123,7 @@ bool checkErrorIfRescale(Operation *op) {
   }
 
   // ERROR_IF(!scale32 && (rounding_mode == DOUBLE_ROUND))
-  if (!scale32 && roundingMode == "DOUBLE_ROUND") {
+  if (!scale32 && roundingMode == RoundingMode::DOUBLE_ROUND) {
     op->emitOpError() << "DOUBLE_ROUND is only allowed with scale32=true.";
     return false;
   }
@@ -1193,12 +1194,33 @@ bool checkErrorIfPad(Operation *op) {
   return true;
 }
 
-// Returns true if the operation takes no input operands, excluding attributes.
-static bool isNullaryOperation(Operation *op) {
-  if (isa<tosa::ConstOp>(op) || isa<tosa::ConstShapeOp>(op) ||
-      isa<tosa::YieldOp>(op) || isa<tosa::VariableOp>(op))
-    return true;
-  return false;
+static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
+  return llvm::all_of(op->getOperands(), [&](auto operand) {
+    Region *operandRegion = operand.getParentRegion();
+    return operandRegion && region->isAncestor(operandRegion);
+  });
+}
+
+static bool isRegionIsolatedFromAbove(Region &regionToCheck) {
+  bool noLiveInValue = true;
+  regionToCheck.walk([&noLiveInValue, &regionToCheck](Operation *op) {
+    if (!isOpIsolatedWithinRegion(op, &regionToCheck)) {
+      noLiveInValue = false;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return noLiveInValue;
+}
+
+LogicalResult checkIsolatedRegion(Operation *op, Region &regionToCheck,
+                                  StringRef regionName) {
+  if (isRegionIsolatedFromAbove(regionToCheck))
+    return success();
+  op->emitOpError()
+      << "is not conformant to the TOSA specification. It requires the '"
+      << regionName << "' region is isolated from above.\n";
+  return failure();
 }
 
 bool checkErrorIfCondIf(Operation *op) {
@@ -1206,42 +1228,46 @@ bool checkErrorIfCondIf(Operation *op) {
   if (!ifOp)
     return true;
 
-  // Whether the types and shapes of operands between the input/output list and
-  // internal regions are validated by the operation verifier. However, with
-  // support for the simplified form - where redundant operand notations are
-  // omitted - is not conformant to the specification. According to the
-  // specification, all operands passed into an operation must be explicitly
-  // declared at each operation's structure. This code section verify that the
-  // operation's form complies with this requirement.
+  // Currently the dialect supports declaring cond_if operations that
+  // have then/else regions that reference values from outside these
+  // regions. According to the specification, all values used by the
+  // then/else regions must be explicitly declared within the regions.
+  // Therefore we must check that the then/else regions are
+  // "isolated from above", in order to be conformant to the
+  // specification.
+  //
+  // Note: the dialect currently supports two styles of syntax for
+  // declaring "cond_if" operations. We'll refer to these as follows:
+  //
+  // Generic:
+  // %0 = "tosa.cond_if"(%arg0, %arg1, %arg2) ({
+  //   ^bb0(%arg3, %arg4):
+  //     tosa.yield %arg3
+  // },  {
+  //   ^bb0(%arg3, %arg4):
+  //     tosa.yield %arg4
+  // })
+  //
+  // Simplified:
+  // %0 = tosa.cond_if %arg2 (%arg3 = %arg0, %arg4 = %arg1) {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg3
+  // } else {
+  //   ^bb0(%arg3, %arg4):
+  //   tosa.yield %arg4
+  // }
 
-  // Returns true if the region uses no external input operands.
-  auto isNullaryRegion = [](Region &region) -> bool {
-    bool noLiveInValue = true;
-    region.walk([&noLiveInValue](Operation *op) {
-      if (!isNullaryOperation(op)) {
-        noLiveInValue = false;
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
-    return noLiveInValue;
-  };
+  return failed(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) ||
+         failed(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
+}
 
-  mlir::Region &thenGraph = ifOp.getThenGraph();
-  mlir::Region &elseGraph = ifOp.getElseGraph();
-  bool isThenGraphNullaryRegion = isNullaryRegion(thenGraph);
-  bool isElseGraphNullaryRegion = isNullaryRegion(elseGraph);
-  bool isInputListEmpty = ifOp.getInputList().size() == 0;
+bool checkErrorIfWhileLoop(Operation *op) {
+  auto whileOp = dyn_cast<tosa::WhileOp>(op);
+  if (!whileOp)
+    return true;
 
-  if ((isInputListEmpty != isThenGraphNullaryRegion) ||
-      (isInputListEmpty != isElseGraphNullaryRegion)) {
-    op->emitOpError()
-        << "the current simplified form is not strictly conformant to the "
-           "spec, please use the generic format\n";
-    return false;
-  }
-
-  return true;
+  return failed(checkIsolatedRegion(op, whileOp.getCondGraph(), "cond")) ||
+         failed(checkIsolatedRegion(op, whileOp.getBodyGraph(), "body"));
 }
 
 bool checkErrorIfScatter(Operation *op) {
@@ -1273,7 +1299,7 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
       !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
-      !checkErrorIfScatter(op))
+      !checkErrorIfWhileLoop(op) || !checkErrorIfScatter(op))
     return failure();
   return success();
 }
@@ -1282,7 +1308,8 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
                Float8E5M2Type>(type);
-  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+  }
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
@@ -1320,13 +1347,14 @@ void TosaValidation::runOnOperation() {
 
     // validate operator element types:
     // - rescale operator is allowed to have ui8/ui16/ui32
-    //   operands/results
+    //   operands/results when strictOpSpecAlignment is false
     // - perform valid element type check at the beginning to
     //   protect rest of code against quantized element types
-    const bool opIsRescale = isa<tosa::RescaleOp>(op);
+    const bool allowUnsigned =
+        !strictOpSpecAlignment && isa<tosa::RescaleOp>(op);
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy, opIsRescale)) {
+      if (!isValidElementType(elementTy, allowUnsigned)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();
@@ -1334,7 +1362,7 @@ void TosaValidation::runOnOperation() {
     }
     for (Type resultTy : op->getResultTypes()) {
       auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy, opIsRescale)) {
+      if (!isValidElementType(elementTy, allowUnsigned)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();
@@ -1355,7 +1383,7 @@ void TosaValidation::runOnOperation() {
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
-    if (strictOpSpecAlignment && failed(applyConstantOperandCheck(op)))
+    if (failed(applyConstantOperandCheck(op)))
       signalPassFailure();
 
     // do level checks

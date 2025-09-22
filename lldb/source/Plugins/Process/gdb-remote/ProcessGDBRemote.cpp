@@ -34,6 +34,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
@@ -92,7 +93,14 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
+#elif defined(_WIN32)
+#define DEBUGSERVER_BASENAME "lldb-server.exe"
+#else
+#define DEBUGSERVER_BASENAME "lldb-server"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -315,6 +323,11 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   KillDebugserverProcess();
 }
 
+std::shared_ptr<ThreadGDBRemote>
+ProcessGDBRemote::CreateThread(lldb::tid_t tid) {
+  return std::make_shared<ThreadGDBRemote>(*this, tid);
+}
+
 bool ProcessGDBRemote::ParsePythonTargetDefinition(
     const FileSpec &target_definition_fspec) {
   ScriptInterpreter *interpreter =
@@ -468,10 +481,29 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                     .Success())
               reg_info.format =
                   llvm::StringSwitch<Format>(value)
+                      .Case("boolean", eFormatBoolean)
                       .Case("binary", eFormatBinary)
+                      .Case("bytes", eFormatBytes)
+                      .Case("bytes-with-ascii", eFormatBytesWithASCII)
+                      .Case("char", eFormatChar)
+                      .Case("char-printable", eFormatCharPrintable)
+                      .Case("complex", eFormatComplex)
+                      .Case("cstring", eFormatCString)
                       .Case("decimal", eFormatDecimal)
+                      .Case("enum", eFormatEnum)
                       .Case("hex", eFormatHex)
+                      .Case("hex-uppercase", eFormatHexUppercase)
                       .Case("float", eFormatFloat)
+                      .Case("octal", eFormatOctal)
+                      .Case("ostype", eFormatOSType)
+                      .Case("unicode16", eFormatUnicode16)
+                      .Case("unicode32", eFormatUnicode32)
+                      .Case("unsigned", eFormatUnsigned)
+                      .Case("pointer", eFormatPointer)
+                      .Case("vector-char", eFormatVectorOfChar)
+                      .Case("vector-sint64", eFormatVectorOfSInt64)
+                      .Case("vector-float16", eFormatVectorOfFloat16)
+                      .Case("vector-float64", eFormatVectorOfFloat64)
                       .Case("vector-sint8", eFormatVectorOfSInt8)
                       .Case("vector-uint8", eFormatVectorOfUInt8)
                       .Case("vector-sint16", eFormatVectorOfSInt16)
@@ -481,6 +513,14 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("vector-float32", eFormatVectorOfFloat32)
                       .Case("vector-uint64", eFormatVectorOfUInt64)
                       .Case("vector-uint128", eFormatVectorOfUInt128)
+                      .Case("complex-integer", eFormatComplexInteger)
+                      .Case("char-array", eFormatCharArray)
+                      .Case("address-info", eFormatAddressInfo)
+                      .Case("hex-float", eFormatHexFloat)
+                      .Case("instruction", eFormatInstruction)
+                      .Case("void", eFormatVoid)
+                      .Case("unicode8", eFormatUnicode8)
+                      .Case("float128", eFormatFloat128)
                       .Default(eFormatInvalid);
           } else if (name == "set") {
             reg_info.set_name.SetString(value);
@@ -1586,7 +1626,7 @@ bool ProcessGDBRemote::DoUpdateThreadList(ThreadList &old_thread_list,
       ThreadSP thread_sp(
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
-        thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
+        thread_sp = CreateThread(tid);
         LLDB_LOGV(log, "Making new thread: {0} for thread ID: {1:x}.",
                   thread_sp.get(), thread_sp->GetID());
       } else {
@@ -1718,7 +1758,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
     if (!thread_sp) {
       // Create the thread if we need to
-      thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
+      thread_sp = CreateThread(tid);
       m_thread_list_real.AddThread(thread_sp);
     }
   }
@@ -3448,6 +3488,51 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   return error;
 }
 
+static FileSpec GetDebugserverPath(Platform &platform) {
+  Log *log = GetLog(GDBRLog::Process);
+  // If we locate debugserver, keep that located version around
+  static FileSpec g_debugserver_file_spec;
+  FileSpec debugserver_file_spec;
+
+  Environment host_env = Host::GetEnvironment();
+
+  // Always check to see if we have an environment override for the path to the
+  // debugserver to use and use it if we do.
+  std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
+  if (!env_debugserver_path.empty()) {
+    debugserver_file_spec.SetFile(env_debugserver_path,
+                                  FileSpec::Style::native);
+    LLDB_LOG(log, "gdb-remote stub exe path set from environment variable: {0}",
+             env_debugserver_path);
+  } else
+    debugserver_file_spec = g_debugserver_file_spec;
+  if (FileSystem::Instance().Exists(debugserver_file_spec))
+    return debugserver_file_spec;
+
+  // The debugserver binary is in the LLDB.framework/Resources directory.
+  debugserver_file_spec = HostInfo::GetSupportExeDir();
+  if (debugserver_file_spec) {
+    debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
+    if (FileSystem::Instance().Exists(debugserver_file_spec)) {
+      LLDB_LOG(log, "found gdb-remote stub exe '{0}'", debugserver_file_spec);
+
+      g_debugserver_file_spec = debugserver_file_spec;
+    } else {
+      debugserver_file_spec = platform.LocateExecutable(DEBUGSERVER_BASENAME);
+      if (!debugserver_file_spec) {
+        // Platform::LocateExecutable() wouldn't return a path if it doesn't
+        // exist
+        LLDB_LOG(log, "could not find gdb-remote stub exe '{0}'",
+                 debugserver_file_spec);
+      }
+      // Don't cache the platform specific GDB server binary as it could
+      // change from platform to platform
+      g_debugserver_file_spec.Clear();
+    }
+  }
+  return debugserver_file_spec;
+}
+
 Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     const ProcessInfo &process_info) {
   using namespace std::placeholders; // For _1, _2, etc.
@@ -3466,6 +3551,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
       std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3));
   debugserver_launch_info.SetUserID(process_info.GetUserID());
 
+  FileSpec debugserver_path = GetDebugserverPath(*GetTarget().GetPlatform());
+
 #if defined(__APPLE__)
   // On macOS 11, we need to support x86_64 applications translated to
   // arm64. We check whether a binary is translated and spawn the correct
@@ -3478,12 +3565,12 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
              NULL, 0) == 0 &&
       bufsize > 0) {
     if (processInfo.kp_proc.p_flag & P_TRANSLATED) {
-      FileSpec rosetta_debugserver(
-          "/Library/Apple/usr/libexec/oah/debugserver");
-      debugserver_launch_info.SetExecutableFile(rosetta_debugserver, false);
+      debugserver_path = FileSpec("/Library/Apple/usr/libexec/oah/debugserver");
     }
   }
 #endif
+  debugserver_launch_info.SetExecutableFile(debugserver_path,
+                                            /*add_exe_file_as_first_arg=*/true);
 
   llvm::Expected<Socket::Pair> socket_pair = Socket::CreatePair();
   if (!socket_pair)
@@ -3495,7 +3582,6 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     return error;
 
   error = m_gdb_comm.StartDebugserverProcess(shared_socket.GetSendableFD(),
-                                             GetTarget().GetPlatform().get(),
                                              debugserver_launch_info, nullptr);
 
   if (error.Fail()) {
@@ -4729,7 +4815,8 @@ bool ParseRegisters(
             } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
               reg_info.format = eFormatAddressInfo;
               reg_info.encoding = eEncodingUint;
-            } else if (gdb_type == "float") {
+            } else if (gdb_type == "float" || gdb_type == "ieee_single" ||
+                       gdb_type == "ieee_double") {
               reg_info.format = eFormatFloat;
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
@@ -5206,17 +5293,17 @@ llvm::Error ProcessGDBRemote::LoadModules() {
     loaded_modules.Remove(removed_modules);
     m_process->GetTarget().ModulesDidUnload(removed_modules, false);
 
-    new_modules.ForEach([&target](const lldb::ModuleSP module_sp) -> bool {
+    new_modules.ForEach([&target](const lldb::ModuleSP module_sp) {
       lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
       if (!obj)
-        return true;
+        return IterationAction::Continue;
 
       if (obj->GetType() != ObjectFile::Type::eTypeExecutable)
-        return true;
+        return IterationAction::Continue;
 
       lldb::ModuleSP module_copy_sp = module_sp;
       target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
-      return false;
+      return IterationAction::Stop;
     });
 
     loaded_modules.AppendIfNeeded(new_modules);
@@ -5686,7 +5773,7 @@ public:
   CommandObjectProcessGDBRemotePacketMonitor(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "process plugin packet monitor",
                          "Send a qRcmd packet through the GDB remote protocol "
-                         "and print the response."
+                         "and print the response. "
                          "The argument passed to this command will be hex "
                          "encoded into a valid 'qRcmd' packet, sent and the "
                          "response will be printed.") {}

@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
@@ -44,7 +45,7 @@ namespace dxbc {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
-  assert(Kind <= Triple::Amplification - Triple::Pixel &&
+  assert(Kind <= Triple::RootSignature - Triple::Pixel &&
          "Shader kind out of expected range.");
   return static_cast<Triple::EnvironmentType>(Triple::Pixel + Kind);
 }
@@ -157,22 +158,32 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = Num,
-enum class RootElementFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = Num,
-enum class RootDescriptorFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = Num,
-enum class DescriptorRangeFlag : uint32_t {
+#define ROOT_SIGNATURE_FLAG(Num, Val) Val = Num,
+enum class RootFlags : uint32_t {
 #include "DXContainerConstants.def"
 
-  LLVM_MARK_AS_BITMASK_ENUM(DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS)
+  LLVM_MARK_AS_BITMASK_ENUM(SamplerHeapDirectlyIndexed)
 };
+
+LLVM_ABI ArrayRef<EnumEntry<RootFlags>> getRootFlags();
+
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) Enum = Num,
+enum class RootDescriptorFlags : uint32_t {
+#include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DataStatic)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<RootDescriptorFlags>> getRootDescriptorFlags();
+
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag) Enum = Num,
+enum class DescriptorRangeFlags : uint32_t {
+#include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DescriptorsStaticKeepingBufferBoundsChecks)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeFlags>> getDescriptorRangeFlags();
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
@@ -180,13 +191,6 @@ enum class RootParameterType : uint32_t {
 };
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
-
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -196,6 +200,10 @@ inline bool isValidParameterType(uint32_t V) {
 #include "DXContainerConstants.def"
   }
   return false;
+}
+
+inline bool isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
@@ -215,25 +223,73 @@ inline bool isValidShaderVisibility(uint32_t V) {
   return false;
 }
 
-#define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
-enum class StaticSamplerFilter : uint32_t {
+#define FILTER(Val, Enum) Enum = Val,
+enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+#define FILTER(Val, Enum)                                                      \
+  case Val:                                                                    \
+    return true;
+inline bool isValidSamplerFilter(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
+LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
 
 #define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
 enum class TextureAddressMode : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
-enum class SamplersComparisonFunction : uint32_t {
+LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum)                                        \
+  case Val:                                                                    \
+    return true;
+inline bool isValidAddress(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define COMPARISON_FUNC(Val, Enum) Enum = Val,
+enum class ComparisonFunc : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
+
+#define COMPARISON_FUNC(Val, Enum)                                             \
+  case Val:                                                                    \
+    return true;
+inline bool isValidComparisonFunc(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
-enum class SamplersBorderColor : uint32_t {
+enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+#define STATIC_BORDER_COLOR(Val, Enum)                                         \
+  case Val:                                                                    \
+    return true;
+inline bool isValidBorderColor(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
+LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 

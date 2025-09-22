@@ -130,6 +130,7 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&block);
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
+    ActiveOpenACCLoopRAII activeLoop{*this, &op};
 
     stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
     builder.create<mlir::acc::YieldOp>(end);

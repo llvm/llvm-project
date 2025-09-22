@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -31,8 +30,10 @@ enum class Operation : int {
   Acospi,
   Asin,
   Asinh,
+  Asinpi,
   Atan,
   Atanh,
+  Atanpi,
   Cbrt,
   Ceil,
   Cos,
@@ -55,6 +56,7 @@ enum class Operation : int {
   ModPIOver4,
   Round,
   RoundEven,
+  Rsqrt,
   Sin,
   Sinpi,
   Sinh,
@@ -353,7 +355,7 @@ template <Operation op, typename InputType, typename OutputType>
 __attribute__((no_sanitize("address"))) cpp::enable_if_t<
     is_valid_operation<op, InputType, OutputType>(),
     internal::MPFRMatcher<op, /*is_silent*/ false, InputType, OutputType>>
-get_mpfr_matcher(InputType input, OutputType output_unused,
+get_mpfr_matcher(InputType input, [[maybe_unused]] OutputType output_unused,
                  double ulp_tolerance, RoundingMode rounding) {
   return internal::MPFRMatcher<op, /*is_silent*/ false, InputType, OutputType>(
       input, ulp_tolerance, rounding);
@@ -363,7 +365,8 @@ template <Operation op, typename InputType, typename OutputType>
 __attribute__((no_sanitize("address"))) cpp::enable_if_t<
     is_valid_operation<op, InputType, OutputType>(),
     internal::MPFRMatcher<op, /*is_silent*/ true, InputType, OutputType>>
-get_silent_mpfr_matcher(InputType input, OutputType output_unused,
+get_silent_mpfr_matcher(InputType input,
+                        [[maybe_unused]] OutputType output_unused,
                         double ulp_tolerance, RoundingMode rounding) {
   return internal::MPFRMatcher<op, /*is_silent*/ true, InputType, OutputType>(
       input, ulp_tolerance, rounding);

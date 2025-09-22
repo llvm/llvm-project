@@ -83,6 +83,7 @@ namespace format {
   TYPE(FunctionDeclarationName)                                                \
   TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
+  TYPE(FunctionLikeMacro)                                                      \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
   /* The colons as part of a C11 _Generic selection */                         \
@@ -135,6 +136,7 @@ namespace format {
   TYPE(PointerOrReference)                                                     \
   TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(PureVirtualSpecifier)                                                   \
+  TYPE(QtProperty)                                                             \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RecordRBrace)                                                           \
@@ -702,6 +704,7 @@ public:
            isAttribute();
   }
 
+  [[nodiscard]] bool isQtProperty() const;
   [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 

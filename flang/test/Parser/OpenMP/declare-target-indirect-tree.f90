@@ -15,7 +15,8 @@ module functions
 contains
   function func1() result(i)
     !$omp declare target enter(func1) indirect(.true.)
-    !CHECK: | | | | | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> Enter -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func1'
+    !CHECK: | | | | | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
+    !CHECK-NEXT: | | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func1'
     !CHECK-NEXT: | | | | | OmpClause -> Indirect -> OmpIndirectClause -> Scalar -> Logical -> Expr = '.true._4'
     !CHECK-NEXT: | | | | | | LiteralConstant -> LogicalLiteralConstant
     !CHECK-NEXT: | | | | | | | bool = 'true'
@@ -26,7 +27,8 @@ contains
 
   function func2() result(i)
     !$omp declare target enter(func2) indirect
-    !CHECK: | | | | | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> Enter -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'
+    !CHECK: | | | | | OmpDeclareTargetSpecifier -> OmpDeclareTargetWithClause -> OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
+    !CHECK-NEXT: | | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'
     !CHECK-NEXT: | | | | | OmpClause -> Indirect -> OmpIndirectClause ->
     character(1) :: i
     i = 'b'

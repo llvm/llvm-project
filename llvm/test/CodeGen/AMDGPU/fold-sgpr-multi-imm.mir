@@ -46,7 +46,8 @@ body: |
     %2:sreg_32 = S_LSHL2_ADD_U32 %0, %1, implicit-def $scc
 ...
 # GCN-LABEL: name: test_frameindex{{$}}
-# GCN: %1:sreg_32 = S_ADD_I32 %stack.0, 70
+# GCN:      [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 70
+# GCN-NEXT: %1:sreg_32 = S_ADD_I32 %stack.0, [[S_MOV_B32_]]
 ---
 name: test_frameindex
 tracksRegLiveness: true

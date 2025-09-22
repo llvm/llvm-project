@@ -92,6 +92,8 @@ namespace ARM {
 using Specifier = uint16_t;
 enum {
   S_None,
+  S_COFF_SECREL,
+
   S_HI16 =
       MCSymbolRefExpr::FirstTargetSpecifier, // The R_ARM_MOVT_ABS relocation
                                              // (:upper16: in the .s file)

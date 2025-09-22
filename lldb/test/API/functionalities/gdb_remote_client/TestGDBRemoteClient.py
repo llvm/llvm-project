@@ -594,7 +594,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.assertEqual(process.threads[0].GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(process.threads[0].GetStopDescription(100), "signal SIGBUS")
+        self.assertEqual(process.threads[0].stop_description, "signal SIGBUS")
 
     def test_signal_lldb_old(self):
         class MyResponder(MockGDBServerResponder):
@@ -620,7 +620,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.assertEqual(process.threads[0].GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(process.threads[0].GetStopDescription(100), "signal SIGUSR1")
+        self.assertEqual(process.threads[0].stop_description, "signal SIGUSR1")
 
     def test_signal_lldb(self):
         class MyResponder(MockGDBServerResponder):
@@ -643,7 +643,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.assertEqual(process.threads[0].GetStopReason(), lldb.eStopReasonSignal)
-        self.assertEqual(process.threads[0].GetStopDescription(100), "signal SIGUSR1")
+        self.assertEqual(process.threads[0].stop_description, "signal SIGUSR1")
 
     def do_siginfo_test(self, platform, target_yaml, raw_data, expected):
         class MyResponder(MockGDBServerResponder):

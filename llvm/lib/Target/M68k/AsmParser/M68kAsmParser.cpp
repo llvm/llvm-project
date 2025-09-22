@@ -8,6 +8,7 @@
 
 #include "M68kInstrInfo.h"
 #include "M68kRegisterInfo.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCContext.h"
@@ -31,7 +32,6 @@ static cl::opt<bool> RegisterPrefixOptional(
 namespace {
 /// Parses M68k assembly from a stream.
 class M68kAsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
@@ -57,7 +57,7 @@ class M68kAsmParser : public MCTargetAsmParser {
 public:
   M68kAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -144,7 +144,7 @@ public:
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   bool isMem() const override { return false; }
   bool isMemOp() const { return Kind == KindTy::MemOp; }
@@ -1023,7 +1023,7 @@ bool M68kAsmParser::missingFeature(llvm::SMLoc const &Loc,
 bool M68kAsmParser::emit(MCInst &Inst, SMLoc const &Loc,
                          MCStreamer &Out) const {
   Inst.setLoc(Loc);
-  Out.emitInstruction(Inst, STI);
+  Out.emitInstruction(Inst, *STI);
 
   return false;
 }
@@ -1051,7 +1051,7 @@ bool M68kAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   }
 }
 
-void M68kOperand::print(raw_ostream &OS) const {
+void M68kOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case KindTy::Invalid:
     OS << "invalid";

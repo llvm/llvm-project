@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Usage: <path/to/input-header.h> <path/to/output-header.h> LLDB_MAJOR_VERSION LLDB_MINOR_VERSION LLDB_PATCH_VERSION
+Usage: -i <path/to/input-header.h> -o <path/to/output-header.h> -m LLDB_MAJOR_VERSION -n LLDB_MINOR_VERSION -p LLDB_PATCH_VERSION
 
-This script uncomments and populates the versioning information in lldb-defines.h
+This script uncomments and populates the versioning information in lldb-defines.h. Note that the LLDB version numbering looks like MAJOR.MINOR.PATCH
 """
 
 import argparse
@@ -15,18 +15,23 @@ LLDB_VERSION_STRING_REGEX = re.compile(r"//\s*#define LLDB_VERSION_STRING\s*$", 
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input_path")
-    parser.add_argument("output_path")
-    parser.add_argument("lldb_version_major")
-    parser.add_argument("lldb_version_minor")
-    parser.add_argument("lldb_version_patch")
+    parser = argparse.ArgumentParser(
+        description="This script uncomments and populates the versioning information in lldb-defines.h. Note that the LLDB version numbering looks like MAJOR.MINOR.PATCH"
+    )
+    parser.add_argument("-i", "--input_path", help="The filepath for the input header.")
+    parser.add_argument(
+        "-o", "--output_path", help="The filepath for the output header."
+    )
+    parser.add_argument("-m", "--major", help="The LLDB version major.")
+    parser.add_argument("-n", "--minor", help="The LLDB version minor.")
+    parser.add_argument("-p", "--patch", help="The LLDB version patch number.")
     args = parser.parse_args()
     input_path = str(args.input_path)
     output_path = str(args.output_path)
-    lldb_version_major = args.lldb_version_major
-    lldb_version_minor = args.lldb_version_minor
-    lldb_version_patch = args.lldb_version_patch
+
+    # Create the output dir if it doesn't already exist
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
 
     with open(input_path, "r") as input_file:
         lines = input_file.readlines()
@@ -38,19 +43,19 @@ def main():
         # e.g. //#define LLDB_VERSION -> #define LLDB_VERSION <LLDB_MAJOR_VERSION>
         file_buffer = re.sub(
             LLDB_VERSION_REGEX,
-            r"#define LLDB_VERSION " + lldb_version_major,
+            r"#define LLDB_VERSION " + args.major,
             file_buffer,
         )
 
         file_buffer = re.sub(
             LLDB_REVISION_REGEX,
-            r"#define LLDB_REVISION " + lldb_version_patch,
+            r"#define LLDB_REVISION " + args.patch,
             file_buffer,
         )
         file_buffer = re.sub(
             LLDB_VERSION_STRING_REGEX,
             r'#define LLDB_VERSION_STRING "{0}.{1}.{2}"'.format(
-                lldb_version_major, lldb_version_minor, lldb_version_patch
+                args.major, args.minor, args.patch
             ),
             file_buffer,
         )

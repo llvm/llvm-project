@@ -49,6 +49,9 @@ struct CIRGenTypeCache {
   cir::FP80Type FP80Ty;
   cir::FP128Type FP128Ty;
 
+  /// ClangIR char
+  mlir::Type UCharTy;
+
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
     mlir::Type UIntPtrTy;
@@ -59,12 +62,20 @@ struct CIRGenTypeCache {
 
   /// void* in address space 0
   cir::PointerType VoidPtrTy;
+  cir::PointerType UInt8PtrTy;
 
   /// The size and alignment of a pointer into the generic address space.
   union {
     unsigned char PointerAlignInBytes;
     unsigned char PointerSizeInBytes;
   };
+
+  /// The alignment of size_t.
+  unsigned char SizeAlignInBytes;
+
+  clang::CharUnits getSizeAlign() const {
+    return clang::CharUnits::fromQuantity(SizeAlignInBytes);
+  }
 
   clang::CharUnits getPointerAlign() const {
     return clang::CharUnits::fromQuantity(PointerAlignInBytes);

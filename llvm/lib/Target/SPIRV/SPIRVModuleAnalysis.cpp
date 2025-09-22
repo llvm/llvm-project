@@ -70,6 +70,8 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   AvoidCapabilitiesSet AvoidCaps;
   if (!ST.isShader())
     AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
 
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
@@ -88,8 +90,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   } else if (MinVerOK && MaxVerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
-      if (Reqs.isCapabilityAvailable(Cap))
-        return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+      if (Reqs.isCapabilityAvailable(Cap)) {
+        ReqExts.append(getSymbolicOperandExtensions(
+            SPIRV::OperandCategory::CapabilityOperand, Cap));
+        return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+      }
     } else {
       // By SPIR-V specification: "If an instruction, enumerant, or other
       // feature specifies multiple enabling capabilities, only one such
@@ -103,8 +108,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
           UseCaps.push_back(Cap);
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
-        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
-          return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
+          ReqExts.append(getSymbolicOperandExtensions(
+              SPIRV::OperandCategory::CapabilityOperand, Cap));
+          return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+        }
       }
     }
   }
@@ -116,7 +124,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       })) {
     return {true,
             {},
-            ReqExts,
+            std::move(ReqExts),
             VersionTuple(),
             VersionTuple()}; // TODO: add versions to extensions.
   }
@@ -550,7 +558,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
   InstrSignature MISign = instrToSignature(MI, MAI, true);
-  auto FoundMI = IS.insert(MISign);
+  auto FoundMI = IS.insert(std::move(MISign));
   if (!FoundMI.second)
     return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.
@@ -736,8 +744,14 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
+  AvoidCapabilitiesSet AvoidCaps;
+  if (!ST.isShader())
+    AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
+
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
@@ -1208,6 +1222,13 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   }
 }
 
+static bool isBFloat16Type(const SPIRVType *TypeDef) {
+  return TypeDef && TypeDef->getNumOperands() == 3 &&
+         TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
+         TypeDef->getOperand(1).getImm() == 16 &&
+         TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::RequirementHandler &Reqs,
                           const SPIRVSubtarget &ST) {
@@ -1247,12 +1268,29 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int8);
     break;
   }
+  case SPIRV::OpDot: {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::BFloat16DotProductKHR);
+    break;
+  }
   case SPIRV::OpTypeFloat: {
     unsigned BitWidth = MI.getOperand(1).getImm();
     if (BitWidth == 64)
       Reqs.addCapability(SPIRV::Capability::Float64);
-    else if (BitWidth == 16)
-      Reqs.addCapability(SPIRV::Capability::Float16);
+    else if (BitWidth == 16) {
+      if (isBFloat16Type(&MI)) {
+        if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bfloat16))
+          report_fatal_error("OpTypeFloat type with bfloat requires the "
+                             "following SPIR-V extension: SPV_KHR_bfloat16",
+                             false);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_bfloat16);
+        Reqs.addCapability(SPIRV::Capability::BFloat16TypeKHR);
+      } else {
+        Reqs.addCapability(SPIRV::Capability::Float16);
+      }
+    }
     break;
   }
   case SPIRV::OpTypeVector: {
@@ -1272,8 +1310,9 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
-        TypeDef->getOperand(1).getImm() == 16)
+    if ((TypeDef->getNumOperands() == 2) &&
+        (TypeDef->getOpcode() == SPIRV::OpTypeFloat) &&
+        (TypeDef->getOperand(1).getImm() == 16))
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
   }
@@ -1556,6 +1595,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
     }
     break;
+  case SPIRV::OpRoundFToTF32INTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_tensor_float32_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_tensor_float32_conversion);
+      Reqs.addCapability(SPIRV::Capability::TensorFloat32RoundingINTEL);
+    }
+    break;
   case SPIRV::OpVariableLengthArrayINTEL:
   case SPIRV::OpSaveMemoryINTEL:
   case SPIRV::OpRestoreMemoryINTEL:
@@ -1572,7 +1618,7 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::AsmINTEL);
     }
     break;
-  case SPIRV::OpTypeCooperativeMatrixKHR:
+  case SPIRV::OpTypeCooperativeMatrixKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error(
           "OpTypeCooperativeMatrixKHR type requires the "
@@ -1580,7 +1626,12 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (isBFloat16Type(TypeDef))
+      Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
     break;
+  }
   case SPIRV::OpArithmeticFenceEXT:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
       report_fatal_error("OpArithmeticFenceEXT requires the "
@@ -1850,6 +1901,11 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
     break;
   }
+  case SPIRV::OpCopyMemorySized: {
+    Reqs.addCapability(SPIRV::Capability::Addresses);
+    // TODO: Add UntypedPointersKHR when implemented.
+    break;
+  }
 
   default:
     break;
@@ -1975,6 +2031,14 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
   return Flags;
 }
 
+static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
+  if (ST.isKernel())
+    return true;
+  if (ST.getSPIRVVersion() < VersionTuple(1, 2))
+    return false;
+  return ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+}
+
 static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
                                    const SPIRVInstrInfo &TII,
                                    SPIRV::RequirementHandler &Reqs) {
@@ -1998,8 +2062,12 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   unsigned FMFlags = getFastMathFlags(I);
   if (FMFlags == SPIRV::FPFastMathMode::None)
     return;
-  Register DstReg = I.getOperand(0).getReg();
-  buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
+
+  if (isFastMathMathModeAvailable(ST)) {
+    Register DstReg = I.getOperand(0).getReg();
+    buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode,
+                    {FMFlags});
+  }
 }
 
 // Walk all functions and add decorations related to MI flags.

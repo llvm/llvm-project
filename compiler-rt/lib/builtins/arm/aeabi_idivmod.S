@@ -49,7 +49,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
         add     sp, sp, #4
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop     { r12, lr }
-        bxaut   r12, lr, sp
+        PAC_RETURN
 #else
         pop     { pc }
 #endif

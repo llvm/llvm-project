@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -350,10 +351,10 @@ struct VPCostContext {
   TargetTransformInfo::TargetCostKind CostKind;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM,
+                const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind)
-      : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM), CostKind(CostKind) {}
+      : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
+        CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -370,6 +371,13 @@ struct VPCostContext {
   /// legacy cost model for \p VF. Only used to check for additional VPlan
   /// simplifications.
   bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
+
+  /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
+  /// and \p Operands with \p VF. This is a convenience wrapper for the
+  /// type-based getScalarizationOverhead API.
+  InstructionCost getScalarizationOverhead(Type *ResultTy,
+                                           ArrayRef<const VPValue *> Operands,
+                                           ElementCount VF);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -388,9 +396,14 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
+  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
+  /// require slot tracking.
+  std::unique_ptr<ModuleSlotTracker> MST;
+
   void assignName(const VPValue *V);
   void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
+  std::string getName(const Value *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {

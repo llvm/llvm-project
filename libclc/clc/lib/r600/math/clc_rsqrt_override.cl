@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 
 _CLC_OVERLOAD _CLC_DEF float __clc_rsqrt(float x) {
   return __builtin_r600_recipsqrt_ieeef(x);
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_rsqrt, float);
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION __clc_rsqrt
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_FUNCTION
 
 #ifdef cl_khr_fp64
 
@@ -23,6 +26,10 @@ _CLC_OVERLOAD _CLC_DEF double __clc_rsqrt(double x) {
   return __builtin_r600_recipsqrt_ieee(x);
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_rsqrt, double);
+#define __CLC_DOUBLE_ONLY
+#define __CLC_FUNCTION __clc_rsqrt
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_FUNCTION
 
 #endif
