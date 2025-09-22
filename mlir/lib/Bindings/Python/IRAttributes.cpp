@@ -485,13 +485,14 @@ public:
 
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
-    nb::object dunderNext() {
+    nb::typed<nb::object, PyAttribute> dunderNext() {
       // TODO: Throw is an inefficient way to stop iteration.
       if (nextIndex >= mlirArrayAttrGetNumElements(attr.get()))
         throw nb::stop_iteration();
-      return PyAttribute(this->attr.getContext(),
-                         mlirArrayAttrGetElement(attr.get(), nextIndex++))
-          .maybeDownCast();
+      return nb::cast<nb::typed<nb::object, PyAttribute>>(
+          PyAttribute(this->attr.getContext(),
+                      mlirArrayAttrGetElement(attr.get(), nextIndex++))
+              .maybeDownCast());
     }
 
     static void bind(nb::module_ &m) {
@@ -524,13 +525,13 @@ public:
         },
         nb::arg("attributes"), nb::arg("context") = nb::none(),
         "Gets a uniqued Array attribute");
-    c.def(
-         "__getitem__",
-         [](PyArrayAttribute &arr, intptr_t i) {
-           if (i >= mlirArrayAttrGetNumElements(arr))
-             throw nb::index_error("ArrayAttribute index out of range");
-           return PyAttribute(arr.getContext(), arr.getItem(i)).maybeDownCast();
-         })
+    c.def("__getitem__",
+          [](PyArrayAttribute &arr, intptr_t i) {
+            if (i >= mlirArrayAttrGetNumElements(arr))
+              throw nb::index_error("ArrayAttribute index out of range");
+            return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                PyAttribute(arr.getContext(), arr.getItem(i)).maybeDownCast());
+          })
         .def("__len__",
              [](const PyArrayAttribute &arr) {
                return mlirArrayAttrGetNumElements(arr);
@@ -1014,9 +1015,10 @@ public:
           if (!mlirDenseElementsAttrIsSplat(self))
             throw nb::value_error(
                 "get_splat_value called on a non-splat attribute");
-          return PyAttribute(self.getContext(),
-                             mlirDenseElementsAttrGetSplatValue(self))
-              .maybeDownCast();
+          return nb::cast<nb::typed<nb::object, PyAttribute>>(
+              PyAttribute(self.getContext(),
+                          mlirDenseElementsAttrGetSplatValue(self))
+                  .maybeDownCast());
         });
   }
 
@@ -1527,7 +1529,8 @@ public:
           mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
       if (mlirAttributeIsNull(attr))
         throw nb::key_error("attempt to access a non-existent attribute");
-      return PyAttribute(self.getContext(), attr).maybeDownCast();
+      return nb::cast<nb::typed<nb::object, PyAttribute>>(
+          PyAttribute(self.getContext(), attr).maybeDownCast());
     });
     c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
       if (index < 0 || index >= self.dunderLen()) {
@@ -1595,8 +1598,9 @@ public:
         nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued Type attribute");
     c.def_prop_ro("value", [](PyTypeAttribute &self) {
-      return PyType(self.getContext(), mlirTypeAttrGetValue(self.get()))
-          .maybeDownCast();
+      return nb::cast<nb::typed<nb::object, PyType>>(
+          PyType(self.getContext(), mlirTypeAttrGetValue(self.get()))
+              .maybeDownCast());
     });
   }
 };

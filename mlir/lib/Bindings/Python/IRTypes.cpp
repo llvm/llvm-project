@@ -502,8 +502,9 @@ public:
     c.def_prop_ro(
         "element_type",
         [](PyComplexType &self) {
-          return PyType(self.getContext(), mlirComplexTypeGetElementType(self))
-              .maybeDownCast();
+          return nb::cast<nb::typed<nb::object, PyType>>(
+              PyType(self.getContext(), mlirComplexTypeGetElementType(self))
+                  .maybeDownCast());
         },
         "Returns element type.");
   }
@@ -516,8 +517,9 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
       [](PyShapedType &self) {
-        return PyType(self.getContext(), mlirShapedTypeGetElementType(self))
-            .maybeDownCast();
+        return nb::cast<nb::typed<nb::object, PyType>>(
+            PyType(self.getContext(), mlirShapedTypeGetElementType(self))
+                .maybeDownCast());
       },
       "Returns the element type of the shaped type.");
   c.def_prop_ro(
@@ -898,11 +900,21 @@ public:
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
         "Create a tuple type");
+    c.def_static(
+        "get_tuple",
+        [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
+          MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
+                                        elements.data());
+          return PyTupleType(context->getRef(), t);
+        },
+        nb::arg("elements"), nb::arg("context") = nb::none(),
+        "Create a tuple type");
     c.def(
         "get_type",
         [](PyTupleType &self, intptr_t pos) {
-          return PyType(self.getContext(), mlirTupleTypeGetType(self, pos))
-              .maybeDownCast();
+          return nb::cast<nb::typed<nb::object, PyType>>(
+              PyType(self.getContext(), mlirTupleTypeGetType(self, pos))
+                  .maybeDownCast());
         },
         nb::arg("pos"), "Returns the pos-th type in the tuple type.");
     c.def_prop_ro(
@@ -926,23 +938,17 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::vector<PyType> inputs, std::vector<PyType> results,
+        [](std::vector<MlirType> inputs, std::vector<MlirType> results,
            DefaultingPyMlirContext context) {
-          std::vector<MlirType> mlirInputs;
-          mlirInputs.reserve(inputs.size());
-          for (const auto &input : inputs)
-            mlirInputs.push_back(input.get());
-          std::vector<MlirType> mlirResults;
-          mlirResults.reserve(results.size());
-          for (const auto &result : results)
-            mlirResults.push_back(result.get());
-
-          MlirType t = mlirFunctionTypeGet(context->get(), inputs.size(),
-                                           mlirInputs.data(), results.size(),
-                                           mlirResults.data());
+          MlirType t =
+              mlirFunctionTypeGet(context->get(), inputs.size(), inputs.data(),
+                                  results.size(), results.data());
           return PyFunctionType(context->getRef(), t);
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: mlir.ir.Context | None = None) -> FunctionType"),
+        // clang-format on
         "Gets a FunctionType from a list of input and result types");
     c.def_prop_ro(
         "inputs",

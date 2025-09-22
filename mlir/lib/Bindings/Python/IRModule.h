@@ -1102,8 +1102,9 @@ public:
         },
         nanobind::arg("other"));
     cls.def_prop_ro("type", [](PyAttribute &attr) {
-      return PyType(attr.getContext(), mlirAttributeGetType(attr))
-          .maybeDownCast();
+      return nanobind::cast<nanobind::typed<nanobind::object, PyType>>(
+          PyType(attr.getContext(), mlirAttributeGetType(attr))
+              .maybeDownCast());
     });
     cls.def_prop_ro_static(
         "static_typeid",
