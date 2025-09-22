@@ -2,7 +2,8 @@
 ; RUN: opt -S -passes=instsimplify < %s | FileCheck %s
 ;; Check that we do not create new inttoptr instructions for unstable pointers
 ;; or pointers with external state (even if the values are all constants).
-;; NOTE: for all but the zero address space, the GEP should only modify the low 8 bits of the pointer.
+;; NOTE: for all but the zero address space, the GEP should only modify the
+;; low 8 bits of the pointer.
 target datalayout = "p:16:16:16:16-p1:16:16:16:8-pu2:16:16:16:8-pe3:16:16:16:8"
 
 define ptr @test_null_base_normal() {
@@ -22,7 +23,7 @@ define ptr @test_inttoptr_base_normal() {
 }
 
 ;; Transformation is fine for non-integral address space, but we can only change
-;; the index bits (i8 -2 == i16 254)
+;; the index bits: (i8 -2 == i16 254)
 define ptr addrspace(1) @test_null_base_nonintegral() {
 ; CHECK-LABEL: define ptr addrspace(1) @test_null_base_nonintegral() {
 ; CHECK-NEXT:    ret ptr addrspace(1) inttoptr (i16 254 to ptr addrspace(1))
