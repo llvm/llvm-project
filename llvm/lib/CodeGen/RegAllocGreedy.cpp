@@ -2395,7 +2395,7 @@ void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
       continue;
 
     // Look for the other end of the copy.
-    const MachineOperand &OtherOpnd = Instr.getOperand(1 - Opnd.getOperandNo());
+    const MachineOperand &OtherOpnd = Instr.getOperand(Opnd.isDef());
     Register OtherReg = OtherOpnd.getReg();
     if (OtherReg == Reg)
       continue;
