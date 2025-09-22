@@ -53,8 +53,8 @@ entry:
 ;; Test for MD5 hash of _ZTSFPvS_E.generalized and the generated temporary callsite label.
 ; CHECK-NEXT: .quad   8646233951371320954
 ; CHECK-NEXT: .quad   [[LABEL_TMP2]]
-;; Test for number of direct calls and {callsite_label, callee} pairs.
-; CHECK-NEXT: .quad	3
+;; Test for number of direct calls and direct callees.
+; CHECK-NEXT: .long	3
 ; CHECK-NEXT: .quad	direct_foo
 ; CHECK-NEXT: .quad	direct_bar
 ; CHECK-NEXT: .quad	direct_baz
