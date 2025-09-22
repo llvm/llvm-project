@@ -531,7 +531,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTSELECT, MVT::f32, Custom);
   setOperationAction(ISD::CTSELECT, MVT::f64, Custom);
   for (MVT VT : MVT::vector_valuetypes()) {
-    setOperationAction(ISD::CTSELECT, VT, Expand);
+    MVT elemType = VT.getVectorElementType();
+    if (elemType == MVT::i8 || elemType == MVT::i16) {
+      setOperationAction(ISD::CTSELECT, VT, Promote);
+    } else if ((elemType == MVT::f16 || elemType == MVT::bf16) && !Subtarget->hasFullFP16()) {
+      setOperationAction(ISD::CTSELECT, VT, Promote);
+    } else {
+      setOperationAction(ISD::CTSELECT, VT, Expand);
+    }
   }
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Custom);
