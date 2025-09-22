@@ -2,17 +2,13 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 --mattr=+lasx < %s | FileCheck %s --check-prefix=LA64
 
-define fastcc <64 x i64> @test1(<64 x i64> %0) {
+define fastcc <64 x i64> @test1(<64 x i64> %0) nounwind {
 ; LA32-LABEL: test1:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -32
-; LA32-NEXT:    .cfi_def_cfa_offset 32
 ; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
-; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    .cfi_offset 22, -8
 ; LA32-NEXT:    addi.w $fp, $sp, 32
-; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    xvld $xr8, $fp, 0
 ; LA32-NEXT:    xvld $xr9, $fp, 32
@@ -47,13 +43,9 @@ define fastcc <64 x i64> @test1(<64 x i64> %0) {
 ; LA64-LABEL: test1:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    addi.d $sp, $sp, -32
-; LA64-NEXT:    .cfi_def_cfa_offset 32
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    .cfi_offset 1, -8
-; LA64-NEXT:    .cfi_offset 22, -16
 ; LA64-NEXT:    addi.d $fp, $sp, 32
-; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; LA64-NEXT:    xvld $xr8, $fp, 0
 ; LA64-NEXT:    xvld $xr9, $fp, 32
@@ -88,17 +80,13 @@ entry:
   ret <64 x i64> %0
 }
 
-define fastcc <32 x double> @test2(<32 x double> %0, <32 x double> %1) {
+define fastcc <32 x double> @test2(<32 x double> %0, <32 x double> %1) nounwind {
 ; LA32-LABEL: test2:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -32
-; LA32-NEXT:    .cfi_def_cfa_offset 32
 ; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
-; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    .cfi_offset 22, -8
 ; LA32-NEXT:    addi.w $fp, $sp, 32
-; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    xvst $xr7, $a0, 224
 ; LA32-NEXT:    xvst $xr6, $a0, 192
@@ -117,13 +105,9 @@ define fastcc <32 x double> @test2(<32 x double> %0, <32 x double> %1) {
 ; LA64-LABEL: test2:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    addi.d $sp, $sp, -32
-; LA64-NEXT:    .cfi_def_cfa_offset 32
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    .cfi_offset 1, -8
-; LA64-NEXT:    .cfi_offset 22, -16
 ; LA64-NEXT:    addi.d $fp, $sp, 32
-; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; LA64-NEXT:    xvst $xr7, $a0, 224
 ; LA64-NEXT:    xvst $xr6, $a0, 192

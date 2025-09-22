@@ -2,7 +2,7 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lsx < %s | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 --mattr=+lsx < %s | FileCheck %s
 
-define fastcc <64 x i32> @test1(<64 x i32> %0) {
+define fastcc <64 x i32> @test1(<64 x i32> %0) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr8, $sp, 0
@@ -34,7 +34,7 @@ entry:
   ret <64 x i32> %0
 }
 
-define fastcc <16 x double> @test2(<16 x double> %0, <16 x double> %1) {
+define fastcc <16 x double> @test2(<16 x double> %0, <16 x double> %1) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vst $vr7, $a0, 112
