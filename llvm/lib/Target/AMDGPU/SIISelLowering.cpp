@@ -5902,10 +5902,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 MachineBasicBlock *
 SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                               MachineBasicBlock *BB) const {
-
-  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   MachineFunction *MF = BB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
@@ -5975,8 +5976,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::V_ADD_U64_PSEUDO:
   case AMDGPU::V_SUB_U64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
     const DebugLoc &DL = MI.getDebugLoc();
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
@@ -6072,8 +6071,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // only from uniform add/subcarry node. All the VGPR operands
     // therefore assumed to be splat vectors.
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
     MachineBasicBlock::iterator MII = MI;
     const DebugLoc &DL = MI.getDebugLoc();
     MachineOperand &Dest = MI.getOperand(0);
@@ -6103,16 +6100,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-    const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
-    unsigned WaveSize = TRI->getRegSizeInBits(*Src2RC);
-    assert(WaveSize == 64 || WaveSize == 32);
-
-    if (WaveSize == 64) {
+    if (ST.isWave64()) {
       if (ST.hasScalarCompareEq64()) {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
             .addReg(Src2.getReg())
             .addImm(0);
       } else {
+        const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
         const TargetRegisterClass *SubRC =
             TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
         MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
@@ -6142,7 +6136,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // clang-format on
 
     unsigned SelOpc =
-        (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+        (ST.isWave64()) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
 
     BuildMI(*BB, MII, DL, TII->get(SelOpc), CarryDest.getReg())
         .addImm(-1)
@@ -6245,8 +6239,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return splitKillBlock(MI, BB);
   case AMDGPU::V_CNDMASK_B64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     Register Dst = MI.getOperand(0).getReg();
     const MachineOperand &Src0 = MI.getOperand(1);
@@ -6304,7 +6296,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_BR_UNDEF: {
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
     MachineInstr *Br = BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
                            .add(MI.getOperand(0));
@@ -6321,7 +6312,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
 
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
@@ -6351,8 +6341,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
     if (TII->isVOP3(*I)) {
-      const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-      const SIRegisterInfo *TRI = ST.getRegisterInfo();
       I.addReg(TRI->getVCC(), RegState::Define);
     }
     I.add(MI.getOperand(1)).add(MI.getOperand(2));
