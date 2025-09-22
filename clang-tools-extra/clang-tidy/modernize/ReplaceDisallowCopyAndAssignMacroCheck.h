@@ -35,7 +35,7 @@ namespace clang::tidy::modernize {
 /// ~~~
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/replace-disallow-copy-and-assign-macro.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/replace-disallow-copy-and-assign-macro.html
 class ReplaceDisallowCopyAndAssignMacroCheck : public ClangTidyCheck {
 public:
   ReplaceDisallowCopyAndAssignMacroCheck(StringRef Name,
