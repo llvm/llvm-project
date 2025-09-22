@@ -328,7 +328,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // Pick out opcode, type/ext information and use sub side effects from a widen
   // recipe.
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
-    if (match(Widen, m_Sub(m_SpecificInt(0), m_VPValue(Op)))) {
+    if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
       Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
     }
     Opcode = Widen->getOpcode();
@@ -375,9 +375,9 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   Type *RetTy = PhiVal->getType();
 
-  CallInst *V = Builder.CreateIntrinsic(
-      RetTy, Intrinsic::experimental_vector_partial_reduce_add,
-      {PhiVal, BinOpVal}, nullptr, "partial.reduce");
+  CallInst *V =
+      Builder.CreateIntrinsic(RetTy, Intrinsic::vector_partial_reduce_add,
+                              {PhiVal, BinOpVal}, nullptr, "partial.reduce");
 
   State.set(this, V);
 }
@@ -2462,7 +2462,6 @@ void VPScalarIVStepsRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
   // Construct a vector GEP by widening the operands of the scalar GEP as
   // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
   // results in a vector of pointers when at least one operand of the GEP
@@ -2486,9 +2485,9 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     for (unsigned I = 0, E = getNumOperands(); I != E; I++)
       Ops.push_back(State.get(getOperand(I), VPLane(0)));
 
-    auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ops[0],
-                                           ArrayRef(Ops).drop_front(), "",
-                                           getGEPNoWrapFlags());
+    auto *NewGEP =
+        State.Builder.CreateGEP(getSourceElementType(), Ops[0], drop_begin(Ops),
+                                "", getGEPNoWrapFlags());
     Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
     State.set(this, Splat);
   } else {
@@ -2512,8 +2511,8 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 
     // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
     // but it should be a vector, otherwise.
-    auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ptr,
-                                           Indices, "", getGEPNoWrapFlags());
+    auto *NewGEP = State.Builder.CreateGEP(getSourceElementType(), Ptr, Indices,
+                                           "", getGEPNoWrapFlags());
     assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
            "NewGEP is not a pointer vector");
     State.set(this, NewGEP);
@@ -2592,8 +2591,8 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, Increment, "", getGEPNoWrapFlags());
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
+                                       "", getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -3163,9 +3162,22 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (isSingleScalar())
       return ScalarCost;
 
-    return ScalarCost * VF.getFixedValue() +
-           Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
-                                        to_vector(operands()), VF);
+    ScalarCost = ScalarCost * VF.getFixedValue() +
+                 Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
+                                              to_vector(operands()), VF);
+    // If the recipe is not predicated (i.e. not in a replicate region), return
+    // the scalar cost. Otherwise handle predicated cost.
+    if (!getParent()->getParent()->isReplicator())
+      return ScalarCost;
+
+    // Account for the phi nodes that we will create.
+    ScalarCost += VF.getFixedValue() *
+                  Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+    // Scale the cost by the probability of executing the predicated blocks.
+    // This assumes the predicated block for each vector lane is equally
+    // likely.
+    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    return ScalarCost;
   }
   case Instruction::Load:
   case Instruction::Store: {

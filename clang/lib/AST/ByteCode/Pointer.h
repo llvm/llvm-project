@@ -75,7 +75,7 @@ enum class Storage { Block, Int, Fn, Typeid };
 /// data the pointer decribes can be found at
 /// Pointee->rawData() + Pointer.Offset.
 ///
-///
+/// \verbatim
 /// Pointee                      Offset
 /// │                              │
 /// │                              │
@@ -87,6 +87,7 @@ enum class Storage { Block, Int, Fn, Typeid };
 ///                      │
 ///                      │
 ///                     Base
+/// \endverbatim
 class Pointer {
 private:
   static constexpr unsigned PastEndMark = ~0u;
@@ -701,6 +702,8 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialized the given element of a primitive array.
+  void initializeElement(unsigned Index) const;
   /// Initialize all elements of a primitive array at once. This can be
   /// used in situations where we *know* we have initialized *all* elements
   /// of a primtive array.

@@ -383,6 +383,20 @@ that do not start with `LLVM-MCA-` are ignored by :program:`llvm-mca`.
 An instruction (a MCInst) is added to an InstrumentRegion R only
 if its location is in range [R.RangeStart, R.RangeEnd].
 
+There is one instrument that can be used on all targets to explicitly
+set instruction latencies. It can be used, for example, to model the
+cache misses that impact load latencies. The syntax is like
+
+.. code-block:: none
+
+  # LLVM-MCA-LATENCY 100
+  mov (%edi), %eax
+  # LLVM-MCA-LATENCY
+
+It sets the latency of mov instruction to 100. LLVM-MCA-LATENCY without
+argument ends the region with explicit latency, after it default target
+latencies are used.
+
 On RISCV targets, vector instructions have different behaviour depending
 on the LMUL. Code can be instrumented with a comment that takes the
 following form:
