@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Options.h"
 #include "DebuggerView.h"
+#include "Options.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/Support/COM.h"
