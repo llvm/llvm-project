@@ -601,7 +601,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     } else if (auto *LI = dyn_cast<LoadInst>(&I))
       PushPtrOperand(LI->getPointerOperand());
     else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-      Value* V = SI->getValueOperand();
+      Value *V = SI->getValueOperand();
       if (V->getType()->isPtrOrPtrVectorTy())
         PushPtrOperand(V);
       PushPtrOperand(SI->getPointerOperand());
