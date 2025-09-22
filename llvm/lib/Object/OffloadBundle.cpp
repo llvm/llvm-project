@@ -64,10 +64,8 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
       Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
           CompressedOffloadBundle::decompress(**CodeOrErr, nullptr);
       if (!DecompressedBufferOrErr)
-        return createStringError(
-            inconvertibleErrorCode(),
-            "failed to decompress input: " +
-                toString(DecompressedBufferOrErr.takeError()));
+        return createStringError("failed to decompress input: " +
+                                 toString(DecompressedBufferOrErr.takeError()));
 
       auto FatBundleOrErr = OffloadBundleFatBin::create(
           **DecompressedBufferOrErr, Offset, FileName, true);
@@ -333,19 +331,17 @@ CompressedOffloadBundle::compress(compression::Params P,
   if (Version == 2) {
     // For V2, ensure the sizes don't exceed 32-bit limit.
     if (UncompressedSize64 > std::numeric_limits<uint32_t>::max())
-      return createStringError(
-          inconvertibleErrorCode(),
-          "uncompressed size exceeds version 2 unsigned 32-bit integer limit");
-    if ((MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
-         sizeof(CompressionMethod) + sizeof(uint32_t) + sizeof(TruncatedHash) +
-         CompressedBuffer.size()) > std::numeric_limits<uint32_t>::max())
-      return createStringError(
-          inconvertibleErrorCode(),
-          "total file size exceeds version 2 unsigned 32-bit integer limit");
-
+      return createStringError("uncompressed size (%llu) exceeds version 2 "
+                               "unsigned 32-bit integer limit",
+                               UncompressedSize64);
     TotalFileSize64 = MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
                       sizeof(CompressionMethod) + sizeof(uint32_t) +
                       sizeof(TruncatedHash) + CompressedBuffer.size();
+    if (TotalFileSize64 > std::numeric_limits<uint32_t>::max())
+      return createStringError("total file size (%llu) exceeds version 2 "
+                               "unsigned 32-bit integer limit",
+                               TotalFileSize64);
+
   } else { // Version 3.
     TotalFileSize64 = MagicNumber.size() + sizeof(uint64_t) + sizeof(Version) +
                       sizeof(CompressionMethod) + sizeof(uint64_t) +
@@ -474,8 +470,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   size_t RequiredSize = getHeaderSize(Normalized.Version);
 
   if (Blob.size() < RequiredSize)
-    return createStringError(inconvertibleErrorCode(),
-                             "compressed bundle header size too small");
+    return createStringError("compressed bundle header size too small");
 
   switch (Normalized.Version) {
   case 1:
@@ -493,8 +488,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
     Normalized.Hash = Header.V3.Hash;
     break;
   default:
-    return createStringError(inconvertibleErrorCode(),
-                             "unknown compressed bundle version");
+    return createStringError("unknown compressed bundle version");
   }
 
   // Determine compression format.
@@ -505,8 +499,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
         static_cast<compression::Format>(Header.Common.Method);
     break;
   default:
-    return createStringError(inconvertibleErrorCode(),
-                             "unknown compressing method");
+    return createStringError("unknown compressing method");
   }
 
   return Normalized;
@@ -554,9 +547,8 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
   if (Error DecompressionError = compression::decompress(
           CompressionFormat, arrayRefFromStringRef(CompressedData),
           DecompressedData, UncompressedSize))
-    return createStringError(inconvertibleErrorCode(),
-                             "could not decompress embedded file contents: " +
-                                 toString(std::move(DecompressionError)));
+    return createStringError("could not decompress embedded file contents: " +
+                             toString(std::move(DecompressionError)));
 
   if (VerboseStream) {
     DecompressTimer.stopTimer();
