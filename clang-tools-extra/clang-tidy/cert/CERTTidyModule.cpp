@@ -28,6 +28,7 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidSetjmpLongjmpCheck.h"
 #include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
@@ -40,14 +41,13 @@
 #include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
-#include "SetLongJmpCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 
 namespace {
 
 // Checked functions for cert-err33-c.
-// The following functions are deliberately excluded because they can be called
-// with NULL argument and in this case the check is not applicable:
+// The following functions are deliberately excluded because they can be
+// called with NULL argument and in this case the check is not applicable:
 // `mblen, mbrlen, mbrtowc, mbtowc, wctomb, wctomb_s`.
 // FIXME: The check can be improved to handle such cases.
 const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
@@ -257,7 +257,8 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
+    CheckFactories.registerCheck<modernize::AvoidSetjmpLongjmpCheck>(
+        "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
