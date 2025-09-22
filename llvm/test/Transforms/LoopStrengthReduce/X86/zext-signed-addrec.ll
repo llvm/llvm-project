@@ -31,25 +31,27 @@ define i32 @foo() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[INC:%.*]], %[[OUTER_LATCH:.*]] ], [ [[DOTPR]], %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER_LOOP:.*]]
 ; CHECK:       [[INNER_LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[INNER_LOOP]] ], [ 258, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[INNER_LOOP]] ], [ 516, %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i8 [ 1, %[[OUTER_HEADER]] ], [ [[DEC:%.*]], %[[INNER_LOOP]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[LSR_IV]], 510
+; CHECK-NEXT:    [[SHL:%.*]] = add i32 [[LSR_IV]], -258
 ; CHECK-NEXT:    store i32 [[SHL]], ptr @c, align 4
 ; CHECK-NEXT:    [[DEC]] = add i8 [[TMP2]], -1
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -258
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[DEC]], -1
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNER_LOOP]], label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT]], %[[INNER_LOOP]] ]
 ; CHECK-NEXT:    store i32 0, ptr @d, align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    store i32 [[INC]], ptr @b, align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[OUTER_HEADER]], label %[[OUTER_EXIT:.*]]
 ; CHECK:       [[OUTER_EXIT]]:
+; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT_LCSSA]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    store i8 [[DEC]], ptr @e, align 1
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[DOTPRE]], %[[ENTRY_ELSE]] ], [ [[SHL]], %[[OUTER_EXIT]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[DOTPRE]], %[[ENTRY_ELSE]] ], [ [[LSR_IV_NEXT_LCSSA_LCSSA]], %[[OUTER_EXIT]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @bar(i32 [[TMP3]])
 ; CHECK-NEXT:    br label %[[RETURN:.*]]
 ; CHECK:       [[P_ELSE]]:

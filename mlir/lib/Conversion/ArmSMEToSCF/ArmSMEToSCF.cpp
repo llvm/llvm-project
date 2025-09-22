@@ -309,7 +309,7 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
 
     // Combine masks.
     auto rowIsActive = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::ult, tileSliceIndex, numRows);
+        rewriter, loc, arith::CmpIPredicate::slt, tileSliceIndex, numRows);
     auto rowIsActiveI32 = arith::ExtSIOp::create(
         rewriter, loc, rewriter.getI32Type(), rowIsActive);
     auto mask =

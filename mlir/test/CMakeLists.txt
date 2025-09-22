@@ -247,4 +247,5 @@ add_lit_testsuite(check-mlir "Running the MLIR regression tests"
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
+  SKIP "^python*"
 )

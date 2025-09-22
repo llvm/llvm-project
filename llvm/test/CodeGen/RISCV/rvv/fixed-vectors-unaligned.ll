@@ -575,7 +575,7 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; FAST-NEXT:    vse32.v v8, (a1)
 ; FAST-NEXT:    ret
   %mask = icmp eq <2 x i32> %m, zeroinitializer
-  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> undef)
+  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> poison)
   store <2 x i32> %load, ptr %res_ptr
   ret void
 }

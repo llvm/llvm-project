@@ -716,6 +716,7 @@ CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
+unixFD = FNUM(FORTRAN_UNIT)
 ```
 
 ## Intrinsic Procedure Name Resolution
@@ -778,6 +779,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
 | Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
+| Library functions | FNUM |
 
 
 ### Intrinsic Function Folding
@@ -1148,6 +1150,32 @@ PROGRAM example_secnds
   elapsed = SECNDS(refTime)
   PRINT *, "Elapsed seconds:", elapsed
 END PROGRAM example_secnds
+```
+### Non-Standard Intrinsics: DSECNDS
+#### Description
+`DSECNDS(refTime)` is the double precision variant of `SECNDS`. It returns the number of seconds
+since midnight minus a user-supplied reference time `refTime`. Uses `REAL(KIND=8)` for higher precision.
+
+#### Usage and Info
+- **Standard:** PGI extension  
+- **Class:**     function  
+- **Syntax:**    result = `DSECNDS(refTime)`  
+- **Arguments:** 
+
+| ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
+|-----------|--------|---------------|-------------------------|------------------------------------------|
+| `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=8), required  | Reference time in seconds since midnight |
+
+- **Return Value:** REAL(KIND=8), scalar — seconds elapsed since `refTime`.  
+- **Purity:** Impure
+
+#### Example
+```fortran
+PROGRAM example_dsecnds
+  DOUBLE PRECISION :: refTime
+  refTime = 0.0D0
+  PRINT '(F24.15)', DSECNDS(refTime)
+END PROGRAM example_dsecnds
 ```
 
 ### Non-standard Intrinsics: SECOND

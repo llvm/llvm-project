@@ -1108,8 +1108,8 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                 SIInstrFlags::FlatScratch);
 }
 
-const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
-  const MachineFunction &MF, unsigned Kind) const {
+const TargetRegisterClass *
+SIRegisterInfo::getPointerRegClass(unsigned Kind) const {
   // This is inaccurate. It depends on the instruction and address space. The
   // only place where we should hit this is for dealing with frame indexes /
   // private accesses, so this is correct in that case.
@@ -3756,14 +3756,15 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 
 unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                                                 unsigned Idx) const {
-  if (Idx == AMDGPU::RegisterPressureSets::VGPR_32 ||
-      Idx == AMDGPU::RegisterPressureSets::AGPR_32)
+  switch (static_cast<AMDGPU::RegisterPressureSets>(Idx)) {
+  case AMDGPU::RegisterPressureSets::VGPR_32:
+  case AMDGPU::RegisterPressureSets::AGPR_32:
     return getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
-
-  if (Idx == AMDGPU::RegisterPressureSets::SReg_32)
+  case AMDGPU::RegisterPressureSets::SReg_32:
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
+  }
 
   llvm_unreachable("Unexpected register pressure set!");
 }

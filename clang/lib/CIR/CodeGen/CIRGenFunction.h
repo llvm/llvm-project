@@ -25,7 +25,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -63,6 +65,10 @@ public:
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
+
+  /// The temporary alloca to hold the return value. This is
+  /// invalid iff the function has no return value.
+  Address returnValue = Address::invalid();
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
@@ -599,6 +605,12 @@ public:
   /// true when both vcall CFI and whole-program-vtables are enabled.
   bool shouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *rd);
 
+  /// Source location information about the default argument or member
+  /// initializer expression we're evaluating, if any.
+  clang::CurrentSourceLocExprScope curSourceLocExprScope;
+  using SourceLocExprScopeGuard =
+      clang::CurrentSourceLocExprScope::SourceLocExprScopeGuard;
+
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -615,6 +627,29 @@ public:
   private:
     CIRGenFunction &cgf;
     Address oldCXXDefaultInitExprThis;
+  };
+
+  /// The scope of a CXXDefaultInitExpr. Within this scope, the value of 'this'
+  /// is overridden to be the object under construction.
+  class CXXDefaultInitExprScope {
+  public:
+    CXXDefaultInitExprScope(CIRGenFunction &cgf, const CXXDefaultInitExpr *e)
+        : cgf{cgf}, oldCXXThisValue(cgf.cxxThisValue),
+          oldCXXThisAlignment(cgf.cxxThisAlignment),
+          sourceLocScope(e, cgf.curSourceLocExprScope) {
+      cgf.cxxThisValue = cgf.cxxDefaultInitExprThis.getPointer();
+      cgf.cxxThisAlignment = cgf.cxxDefaultInitExprThis.getAlignment();
+    }
+    ~CXXDefaultInitExprScope() {
+      cgf.cxxThisValue = oldCXXThisValue;
+      cgf.cxxThisAlignment = oldCXXThisAlignment;
+    }
+
+  public:
+    CIRGenFunction &cgf;
+    mlir::Value oldCXXThisValue;
+    clang::CharUnits oldCXXThisAlignment;
+    SourceLocExprScopeGuard sourceLocScope;
   };
 
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
@@ -658,6 +693,8 @@ public:
                                 const clang::CXXRecordDecl *rd);
   void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
 
+  AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *fd);
+
   /// Return the address of a local variable.
   Address getAddrOfLocalVar(const clang::VarDecl *vd) {
     auto it = localDeclMap.find(vd);
@@ -668,6 +705,14 @@ public:
 
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
                                    mlir::Type fieldType, unsigned index);
+
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
 
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
@@ -692,6 +737,14 @@ public:
                                                 const CXXRecordDecl *derived,
                                                 const CXXRecordDecl *base,
                                                 bool baseIsVirtual);
+
+  /// Determine whether a return value slot may overlap some other object.
+  AggValueSlot::Overlap_t getOverlapForReturnValue() {
+    // FIXME: Assuming no overlap here breaks guaranteed copy elision for base
+    // class subobjects. These cases may need to be revisited depending on the
+    // resolution of the relevant core issue.
+    return AggValueSlot::DoesNotOverlap;
+  }
 
   /// Determine whether a base class initialization may overlap some other
   /// object.
@@ -1011,7 +1064,7 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
-  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+  void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
 

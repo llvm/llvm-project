@@ -71,16 +71,14 @@ void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
       llvmTypeConverter, [](AddressSpace space) -> unsigned {
         switch (space) {
         case AddressSpace::Global:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
         case AddressSpace::Workgroup:
-          return static_cast<unsigned>(
-              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
         case AddressSpace::Private:
           return 0;
         }
         llvm_unreachable("unknown address space enum value");
-        return 0;
+        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
       });
   // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
   // TODO: We should have a single to_nvvm_type_converter.

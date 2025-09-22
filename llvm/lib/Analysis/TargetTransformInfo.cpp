@@ -1403,8 +1403,9 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
-bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
-  return TTIImpl->preferFixedOverScalableIfEqualCost();
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost(
+    bool IsEpilogue) const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost(IsEpilogue);
 }
 
 bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
@@ -1422,6 +1423,10 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {
   return TTIImpl->preferEpilogueVectorization();
+}
+
+bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {
+  return TTIImpl->shouldConsiderVectorizationRegPressure();
 }
 
 TargetTransformInfo::VPLegalization
