@@ -1199,7 +1199,8 @@ optimization pipeline as early as possible and then continue development
 incrementally. The recommended workflow is:
 
 1. Implement a basic version of the pass and add it to the pass pipeline behind
-   a flag that is disabled by default.
+   a flag that is disabled by default. The initial version should focus on
+   handling simple cases correctly and efficiently.
 2. Enable the pass by default. Separating this step allows easily disabling the
    pass if issues are encountered, without having to revert the entire
    implementation.
