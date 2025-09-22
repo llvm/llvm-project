@@ -216,6 +216,11 @@ New check aliases
   <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-err52-cpp <clang-tidy/checks/cert/err52-cpp>` to
+  :doc:`modernize-avoid-setjmp-longjmp
+  <clang-tidy/checks/modernize/avoid-setjmp-longjmp>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
   :doc:`bugprone-throwing-static-initialization
   <clang-tidy/checks/bugprone/throwing-static-initialization>`

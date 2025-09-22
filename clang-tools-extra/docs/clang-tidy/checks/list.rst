@@ -175,7 +175,6 @@ Clang-Tidy Checks
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
-   :doc:`cert-err52-cpp <cert/err52-cpp>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
@@ -287,6 +286,7 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
+   :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
    :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
@@ -441,6 +441,7 @@ Check aliases
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
+   :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,

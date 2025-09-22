@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SETLONGJMPCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SETLONGJMPCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDSETJMPLONGJMPCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDSETJMPLONGJMPCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::modernize {
 
 /// Guards against use of setjmp/longjmp in C++ code
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/err52-cpp.html
-class SetLongJmpCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-setjmp-longjmp.html
+class AvoidSetjmpLongjmpCheck : public ClangTidyCheck {
 public:
-  SetLongJmpCheck(StringRef Name, ClangTidyContext *Context)
+  AvoidSetjmpLongjmpCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -30,6 +30,6 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_SETLONGJMPCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDSETJMPLONGJMPCHECK_H
