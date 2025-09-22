@@ -18,11 +18,11 @@ body:             |
     ; CHECK-LABEL: name: test_software_pipelining
     ; CHECK: registers:
     ; CHECK:  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-    ; CHECK-NEXT:{{\s*}}'%27',
+    ; CHECK-NEXT:{{\s*}}'%4',
     ; CHECK:{{\s*}}'%8' ] }
     ; CHECK:  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
-    ; CHECK-NEXT:{{\s*}}'%16',
-    ; CHECK:{{\s*}}'%18' ] }
+    ; CHECK-NEXT:{{\s*}}'%8',
+    ; CHECK:{{\s*}}'%16' ] }
     ; CHECK:  - { id: 4, class: vreg_128_align2, preferred-register: '', flags: [  ],
     ; CHECK-NEXT:{{\s*}}anti-hints: [ '%29'{{.*}}'%9' ] }
     ; CHECK:  - { id: 5, class: vreg_128_align2, preferred-register:  '', flags: [  ],
@@ -34,12 +34,12 @@ body:             |
     ; CHECK:  - { id: 8, class: vreg_128_align2, preferred-register:  '', flags: [  ],
     ; CHECK-NEXT:{{\s*}}anti-hints: [ '%17'{{.*}}'%9' ] }
     ; CHECK:  - { id: 9, class: vgpr_32, preferred-register:  '', flags: [  ], anti-hints: [
-    ; CHECK-NEXT:{{\s*}}'%27',
+    ; CHECK-NEXT:{{\s*}}'%4',
     ; CHECK:{{\s*}}'%8' ] }
     ; CHECK:  - { id: 16, class: vreg_128_align2, preferred-register:  '', flags: [  ],
     ; CHECK-NEXT:{{\s*}}anti-hints: [ '%23'{{.*}}'%9' ] }
     ; CHECK:  - { id: 17, class: vreg_128_align2, preferred-register:  '', flags: [  ],
-    ; CHECK-NEXT:{{\s*}}anti-hints: [ '%16'{{.*}}'%8' ] }
+    ; CHECK-NEXT:{{\s*}}anti-hints: [ '%8' ] }
     ; CHECK:  - { id: 18, class: vreg_128_align2, preferred-register:  '', flags: [  ],
     ; CHECK-NEXT:{{\s*}}anti-hints: [ '%23'{{.*}}'%9' ] }
     ; CHECK:  - { id: 19, class: vreg_128_align2, preferred-register:  '', flags: [  ],
@@ -47,17 +47,17 @@ body:             |
     ; CHECK:  - { id: 22, class: vreg_128_align2, preferred-register:  '', flags: [  ],
     ; CHECK-NEXT:{{\s*}}anti-hints: [ '%29'{{.*}}'%9' ] }
     ; CHECK:  - { id: 23, class: vreg_128_align2, preferred-register:  '', flags: [  ],
-    ; CHECK-NEXT:{{\s*}}anti-hints: [ '%22'{{.*}}'%8' ] }
+    ; CHECK-NEXT:{{\s*}}anti-hints: [ '%6'{{.*}}'%8' ] }
     ; CHECK:  - { id: 25, class: vreg_128_align2, preferred-register:  '', flags: [  ],
     ; CHECK-NEXT:{{\s*}}anti-hints: [ '%29'{{.*}}'%9' ] }
     ; CHECK:  - { id: 28, class: vgpr_32, preferred-register:  '', flags: [  ], anti-hints: [
-    ; CHECK-NEXT:{{\s*}}'%27',
+    ; CHECK-NEXT:{{\s*}}'%4',
     ; CHECK:{{\s*}}'%8' ] }
     ; CHECK:  - { id: 29, class: vgpr_32, preferred-register:  '', flags: [ ], anti-hints: [
-    ; CHECK-NEXT:{{\s*}}'%27',
+    ; CHECK-NEXT:{{\s*}}'%4',
     ; CHECK:{{\s*}}'%8' ] }
     ; CHECK:  - { id: 30, class: vreg_128_align2
-    ; CHECK-NEXT: {{.*}}anti-hints: [ '%27'
+    ; CHECK-NEXT: {{.*}}anti-hints: [ '%4'
     ; CHECK: {{.*}}'%8' ] }
     ; CHECK: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
