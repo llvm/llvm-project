@@ -712,8 +712,13 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
           TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
     const TargetRegisterClass *NewRC =
         TRI->getRegClassForReg(*MRI, New->getReg());
-    const TargetRegisterClass *ConstrainRC =
-        TRI->findCommonRegClass(OpRC, Old.getSubReg(), NewRC, New->getSubReg());
+
+    const TargetRegisterClass *ConstrainRC = OpRC;
+    if (New->getSubReg()) {
+      ConstrainRC =
+          TRI->getMatchingSuperRegClass(NewRC, OpRC, New->getSubReg());
+    }
+
     if (!ConstrainRC)
       return false;
 
