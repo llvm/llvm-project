@@ -163,9 +163,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     }
   }
 
-  for (uint32_t Loc = 0; Loc < Data.getNumStaticSamplers(); ++Loc) {
-    llvm::Expected<dxbc::RTS0::v3::StaticSampler> MaybeSampler =
-        Data.getSampler(Loc);
+  for (llvm::Expected<dxbc::RTS0::v3::StaticSampler> MaybeSampler :
+       Data.samplers()) {
     if (Error E = MaybeSampler.takeError())
       return std::move(E);
     const llvm::dxbc::RTS0::v3::StaticSampler &S = *MaybeSampler;

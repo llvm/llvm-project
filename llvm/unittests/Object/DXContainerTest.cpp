@@ -1184,7 +1184,7 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(RS.getStaticSamplersOffset(), 24u);
     ASSERT_EQ(RS.getFlags(), 17u);
 
-    auto MaybeSamplerView = RS.getSampler(0);
+    auto MaybeSamplerView = *RS.samplers().begin();
     ASSERT_THAT_ERROR(MaybeSamplerView.takeError(), Succeeded());
     const auto &Sampler = *MaybeSamplerView;
 
