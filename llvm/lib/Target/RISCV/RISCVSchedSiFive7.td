@@ -950,14 +950,14 @@ multiclass SiFive7WriteResBase<int VLEN,
   // Mask reduction
   foreach mx = SchedMxList in {
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-    let Latency = 11, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 11)] in {
+    let Latency = 11, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 3)] in {
       defm "" : LMULWriteResMX<"WriteVMFFSV", [VCQ, VA1], mx, IsWorstCase>;
       defm "" : LMULWriteResMX<"WriteVMPopV", [VCQ, VA1], mx, IsWorstCase>;
     }
   }
 
   // 16. Vector Permutation Instructions
-  let Latency = 11, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 11)] in {
+  let Latency = 11, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 3)] in {
     def : WriteRes<WriteVMovXS, [VCQ, VA1]>;
     def : WriteRes<WriteVMovFS, [VCQ, VA1]>;
   }

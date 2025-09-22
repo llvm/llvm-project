@@ -75,8 +75,8 @@ vmsof.m v8, v4
 # CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFNE_VV                   vmfne.vv	v8, v4, v20
 # CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMADC_VV                   vmadc.vv	v8, v4, v20
 # CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSBC_VV                   vmsbc.vv	v8, v4, v20
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VFIRST_M                   vfirst.m	a2, v4
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VCPOP_M                    vcpop.m	a2, v4
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFIRST_M                   vfirst.m	a2, v4
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VCPOP_M                    vcpop.m	a2, v4
 # CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VIOTA_M                    viota.m	v8, v4
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMSBF_M                    vmsbf.m	v8, v4
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMSIF_M                    vmsif.m	v8, v4
@@ -94,7 +94,7 @@ vmsof.m v8, v4
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     1.00    -     87.00  24.00   -      -
+# CHECK-NEXT:  -      -     1.00    -     71.00  24.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -117,8 +117,8 @@ vmsof.m v8, v4
 # CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmfne.vv	v8, v4, v20
 # CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmadc.vv	v8, v4, v20
 # CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vmsbc.vv	v8, v4, v20
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vfirst.m	a2, v4
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vcpop.m	a2, v4
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vfirst.m	a2, v4
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vcpop.m	a2, v4
 # CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     viota.m	v8, v4
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsbf.m	v8, v4
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmsif.m	v8, v4

@@ -475,28 +475,28 @@ vfmv.f.s f7, v16
 # CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    11.00                        11    VLEN512SiFive7VA[1,12],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
@@ -510,7 +510,7 @@ vfmv.f.s f7, v16
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     112.00  -     996.00 120.00  -      -
+# CHECK-NEXT:  -      -     112.00  -     932.00 120.00  -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -724,25 +724,25 @@ vfmv.f.s f7, v16
 # CHECK-NEXT:  -      -      -      -     17.00  1.00    -      -     vmv8r.v	v8, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmv.s.x	v8, t0
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vmv.x.s	t2, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vmv.x.s	t2, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmv.s.x	v8, t0
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vmv.x.s	t2, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vmv.x.s	t2, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmv.s.x	v8, t0
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vmv.x.s	t2, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vmv.x.s	t2, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vmv.s.x	v8, t0
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vmv.x.s	t2, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vmv.x.s	t2, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vfmv.s.f	v8, ft5
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vfmv.f.s	ft7, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vfmv.f.s	ft7, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vfmv.s.f	v8, ft5
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vfmv.f.s	ft7, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vfmv.f.s	ft7, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vfmv.s.f	v8, ft5
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vfmv.f.s	ft7, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vfmv.f.s	ft7, v16
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -     2.00   1.00    -      -     vfmv.s.f	v8, ft5
-# CHECK-NEXT:  -      -      -      -     12.00  1.00    -      -     vfmv.f.s	ft7, v16
+# CHECK-NEXT:  -      -      -      -     4.00   1.00    -      -     vfmv.f.s	ft7, v16
