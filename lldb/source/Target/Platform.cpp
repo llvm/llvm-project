@@ -750,12 +750,30 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
 
   if (resolved_module_spec.GetArchitecture().IsValid() ||
       resolved_module_spec.GetUUID().IsValid()) {
-    Status error =
-        ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                    module_search_paths_ptr, nullptr, nullptr);
+    // Call locate module callback first to give it a chance to find/register
+    // symbol file specs for the main executable, similar to how shared
+    // libraries are handled in Platform::GetRemoteSharedModule()
+    FileSpec symbol_file_spec;
+    CallLocateModuleCallbackIfSet(resolved_module_spec, exe_module_sp,
+                                  symbol_file_spec, nullptr);
 
-    if (exe_module_sp && exe_module_sp->GetObjectFile())
-      return error;
+    Status error;
+    if (!exe_module_sp) {
+      // If locate module callback didn't provide a module, fallback to standard
+      // path
+      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                          module_search_paths_ptr, nullptr,
+                                          nullptr);
+    }
+
+    if (exe_module_sp && exe_module_sp->GetObjectFile()) {
+      // Set the symbol file if locate module callback returned one
+      if (symbol_file_spec) {
+        exe_module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+      }
+      return error; // Return the actual status from GetSharedModule (or success
+                    // from callback)
+    }
     exe_module_sp.reset();
   }
   // No valid architecture was specified or the exact arch wasn't found.
@@ -767,12 +785,26 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
   Status error;
   for (const ArchSpec &arch : GetSupportedArchitectures(process_host_arch)) {
     resolved_module_spec.GetArchitecture() = arch;
-    error =
-        ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                    module_search_paths_ptr, nullptr, nullptr);
+
+    // Call locate module callback first, then fallback to standard path
+    FileSpec symbol_file_spec;
+    CallLocateModuleCallbackIfSet(resolved_module_spec, exe_module_sp,
+                                  symbol_file_spec, nullptr);
+
+    if (!exe_module_sp) {
+      error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
+                                          module_search_paths_ptr, nullptr,
+                                          nullptr);
+    }
+
     if (error.Success()) {
-      if (exe_module_sp && exe_module_sp->GetObjectFile())
+      if (exe_module_sp && exe_module_sp->GetObjectFile()) {
+        // Set the symbol file if locate module callback returned one
+        if (symbol_file_spec) {
+          exe_module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+        }
         break;
+      }
       error = Status::FromErrorString("no exe object file");
     }
 
