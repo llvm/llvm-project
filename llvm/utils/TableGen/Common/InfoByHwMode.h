@@ -28,6 +28,8 @@
 
 namespace llvm {
 
+class CodeGenRegBank;
+class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
 
@@ -242,6 +244,13 @@ struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
 struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
   EncodingInfoByHwMode(const Record *R, const CodeGenHwModes &CGH);
   EncodingInfoByHwMode() = default;
+};
+
+struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
+public:
+  RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+                   const CodeGenRegBank &RegBank);
+  RegClassByHwMode() = default;
 };
 
 } // namespace llvm
