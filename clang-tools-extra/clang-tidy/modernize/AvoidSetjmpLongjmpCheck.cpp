@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SetLongJmpCheck.h"
+#include "AvoidSetjmpLongjmpCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -15,17 +15,18 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::modernize {
 
 namespace {
 const char DiagWording[] =
     "do not call %0; consider using exception handling instead";
 
 class SetJmpMacroCallbacks : public PPCallbacks {
-  SetLongJmpCheck &Check;
+  AvoidSetjmpLongjmpCheck &Check;
 
 public:
-  explicit SetJmpMacroCallbacks(SetLongJmpCheck &Check) : Check(Check) {}
+  explicit SetJmpMacroCallbacks(AvoidSetjmpLongjmpCheck &Check)
+      : Check(Check) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
@@ -39,15 +40,14 @@ public:
 };
 } // namespace
 
-void SetLongJmpCheck::registerPPCallbacks(const SourceManager &SM,
-                                          Preprocessor *PP,
-                                          Preprocessor *ModuleExpanderPP) {
+void AvoidSetjmpLongjmpCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   // Per [headers]p5, setjmp must be exposed as a macro instead of a function,
   // despite the allowance in C for setjmp to also be an extern function.
   PP->addPPCallbacks(std::make_unique<SetJmpMacroCallbacks>(*this));
 }
 
-void SetLongJmpCheck::registerMatchers(MatchFinder *Finder) {
+void AvoidSetjmpLongjmpCheck::registerMatchers(MatchFinder *Finder) {
   // In case there is an implementation that happens to define setjmp as a
   // function instead of a macro, this will also catch use of it. However, we
   // are primarily searching for uses of longjmp.
@@ -57,9 +57,9 @@ void SetLongJmpCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void SetLongJmpCheck::check(const MatchFinder::MatchResult &Result) {
+void AvoidSetjmpLongjmpCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<CallExpr>("expr");
   diag(E->getExprLoc(), DiagWording) << cast<NamedDecl>(E->getCalleeDecl());
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::modernize
