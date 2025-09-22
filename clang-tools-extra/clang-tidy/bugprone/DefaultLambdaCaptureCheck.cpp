@@ -27,11 +27,7 @@ void DefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
 
 void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
-  if (!Lambda)
-    return;
-
-  // No need to check getCaptureDefault() != LCD_None since our custom matcher
-  // hasDefaultCapture() already ensures this condition
+  assert(Lambda);
 
   SourceLocation DefaultCaptureLoc = Lambda->getCaptureDefaultLoc();
   if (DefaultCaptureLoc.isInvalid())
