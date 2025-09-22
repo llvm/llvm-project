@@ -3,11 +3,19 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-;define void @sve_load_store_nxv1i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i8>, ptr %a
-;  store <vscale x 1 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i8>, ptr %a
+  store <vscale x 1 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2i8:
@@ -21,11 +29,21 @@ define void @sve_load_store_nxv2i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i8>, ptr %a
-;  store <vscale x 3 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i8>, ptr %a
+  store <vscale x 3 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4i8:
@@ -39,11 +57,21 @@ define void @sve_load_store_nxv4i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv5i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i8>, ptr %a
-;  store <vscale x 5 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv5i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv5i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i8>, ptr %a
+  store <vscale x 5 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv6i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv6i8:
@@ -64,11 +92,21 @@ define void @sve_load_store_nxv6i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv7i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i8>, ptr %a
-;  store <vscale x 7 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv7i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv7i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i8>, ptr %a
+  store <vscale x 7 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv8i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv8i8:
@@ -82,11 +120,21 @@ define void @sve_load_store_nxv8i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv9i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 9 x i8>, ptr %a
-;  store <vscale x 9 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv9i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv9i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #9 // =0x9
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 9 x i8>, ptr %a
+  store <vscale x 9 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv10i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv10i8:
@@ -110,11 +158,21 @@ define void @sve_load_store_nxv10i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv11i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 11 x i8>, ptr %a
-;  store <vscale x 11 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv11i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv11i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #11 // =0xb
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 11 x i8>, ptr %a
+  store <vscale x 11 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv12i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv12i8:
@@ -136,11 +194,21 @@ define void @sve_load_store_nxv12i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv13i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 13 x i8>, ptr %a
-;  store <vscale x 13 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv13i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv13i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #13 // =0xd
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 13 x i8>, ptr %a
+  store <vscale x 13 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv14i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv14i8:
@@ -168,11 +236,21 @@ define void @sve_load_store_nxv14i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv15i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 15 x i8>, ptr %a
-;  store <vscale x 15 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv15i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv15i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 15 x i8>, ptr %a
+  store <vscale x 15 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv16i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv16i8:
@@ -185,11 +263,24 @@ define void @sve_load_store_nxv16i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv17i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 17 x i8>, ptr %a
-;  store <vscale x 17 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv17i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv17i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #17 // =0x11
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 17 x i8>, ptr %a
+  store <vscale x 17 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv18i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv18i8:
@@ -261,11 +352,24 @@ define void @sve_load_store_nxv18i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv19i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 19 x i8>, ptr %a
-;  store <vscale x 19 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv19i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv19i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #19 // =0x13
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 19 x i8>, ptr %a
+  store <vscale x 19 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv20i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv20i8:
@@ -297,11 +401,24 @@ define void @sve_load_store_nxv20i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv21i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 21 x i8>, ptr %a
-;  store <vscale x 21 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv21i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv21i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #21 // =0x15
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 21 x i8>, ptr %a
+  store <vscale x 21 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv22i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv22i8:
@@ -340,11 +457,24 @@ define void @sve_load_store_nxv22i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv23i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 23 x i8>, ptr %a
-;  store <vscale x 23 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv23i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv23i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #23 // =0x17
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 23 x i8>, ptr %a
+  store <vscale x 23 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv24i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv24i8:
@@ -362,11 +492,24 @@ define void @sve_load_store_nxv24i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv25i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 25 x i8>, ptr %a
-;  store <vscale x 25 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv25i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv25i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #25 // =0x19
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 25 x i8>, ptr %a
+  store <vscale x 25 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv26i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv26i8:
@@ -393,11 +536,24 @@ define void @sve_load_store_nxv26i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv27i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 27 x i8>, ptr %a
-;  store <vscale x 27 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv27i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv27i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #27 // =0x1b
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 27 x i8>, ptr %a
+  store <vscale x 27 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv28i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv28i8:
@@ -421,11 +577,24 @@ define void @sve_load_store_nxv28i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv29i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 29 x i8>, ptr %a
-;  store <vscale x 29 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv29i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv29i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #29 // =0x1d
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 29 x i8>, ptr %a
+  store <vscale x 29 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv30i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv30i8:
@@ -456,11 +625,24 @@ define void @sve_load_store_nxv30i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv31i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 31 x i8>, ptr %a
-;  store <vscale x 31 x i8> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv31i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv31i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w10, #31 // =0x1f
+; CHECK-NEXT:    lsr x9, x8, #4
+; CHECK-NEXT:    mul x9, x9, x10
+; CHECK-NEXT:    whilelo p0.b, x8, x9
+; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x0]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 31 x i8>, ptr %a
+  store <vscale x 31 x i8> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv32i8:
@@ -475,11 +657,19 @@ define void @sve_load_store_nxv32i8(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i16>, ptr %a
-;  store <vscale x 1 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i16>, ptr %a
+  store <vscale x 1 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2i16:
@@ -493,11 +683,21 @@ define void @sve_load_store_nxv2i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i16>, ptr %a
-;  store <vscale x 3 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i16>, ptr %a
+  store <vscale x 3 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4i16:
@@ -511,11 +711,21 @@ define void @sve_load_store_nxv4i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv5i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i16>, ptr %a
-;  store <vscale x 5 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv5i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv5i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i16>, ptr %a
+  store <vscale x 5 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv6i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv6i16:
@@ -537,11 +747,21 @@ define void @sve_load_store_nxv6i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv7i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i16>, ptr %a
-;  store <vscale x 7 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv7i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv7i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i16>, ptr %a
+  store <vscale x 7 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv8i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv8i16:
@@ -554,11 +774,25 @@ define void @sve_load_store_nxv8i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv9i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 9 x i16>, ptr %a
-;  store <vscale x 9 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv9i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv9i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #9 // =0x9
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 9 x i16>, ptr %a
+  store <vscale x 9 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv10i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv10i16:
@@ -590,11 +824,25 @@ define void @sve_load_store_nxv10i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv11i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 11 x i16>, ptr %a
-;  store <vscale x 11 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv11i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv11i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #11 // =0xb
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 11 x i16>, ptr %a
+  store <vscale x 11 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv12i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv12i16:
@@ -612,11 +860,25 @@ define void @sve_load_store_nxv12i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv13i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 13 x i16>, ptr %a
-;  store <vscale x 13 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv13i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv13i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #13 // =0xd
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 13 x i16>, ptr %a
+  store <vscale x 13 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv14i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv14i16:
@@ -640,11 +902,25 @@ define void @sve_load_store_nxv14i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv15i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 15 x i16>, ptr %a
-;  store <vscale x 15 x i16> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv15i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv15i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 15 x i16>, ptr %a
+  store <vscale x 15 x i16> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv16i16:
@@ -659,11 +935,19 @@ define void @sve_load_store_nxv16i16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i32>, ptr %a
-;  store <vscale x 1 x i32> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i32>, ptr %a
+  store <vscale x 1 x i32> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2i32:
@@ -677,11 +961,21 @@ define void @sve_load_store_nxv2i32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i32>, ptr %a
-;  store <vscale x 3 x i32> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i32>, ptr %a
+  store <vscale x 3 x i32> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4i32:
@@ -694,11 +988,25 @@ define void @sve_load_store_nxv4i32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv5i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i32>, ptr %a
-;  store <vscale x 5 x i32> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv5i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv5i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i32>, ptr %a
+  store <vscale x 5 x i32> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv6i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv6i32:
@@ -716,11 +1024,25 @@ define void @sve_load_store_nxv6i32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv7i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i32>, ptr %a
-;  store <vscale x 7 x i32> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv7i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv7i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i32>, ptr %a
+  store <vscale x 7 x i32> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv8i32:
@@ -735,11 +1057,19 @@ define void @sve_load_store_nxv8i32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1i64(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i64>, ptr %a
-;  store <vscale x 1 x i64> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1i64(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i64>, ptr %a
+  store <vscale x 1 x i64> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2i64:
@@ -752,11 +1082,25 @@ define void @sve_load_store_nxv2i64(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3i64(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i64>, ptr %a
-;  store <vscale x 3 x i64> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3i64(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i64>, ptr %a
+  store <vscale x 3 x i64> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4i64:
@@ -771,11 +1115,19 @@ define void @sve_load_store_nxv4i64(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x half>, ptr %a
-;  store <vscale x 1 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x half>, ptr %a
+  store <vscale x 1 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2f16:
@@ -789,11 +1141,21 @@ define void @sve_load_store_nxv2f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x half>, ptr %a
-;  store <vscale x 3 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x half>, ptr %a
+  store <vscale x 3 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4f16:
@@ -807,11 +1169,21 @@ define void @sve_load_store_nxv4f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv5f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x half>, ptr %a
-;  store <vscale x 5 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv5f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv5f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x half>, ptr %a
+  store <vscale x 5 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv6f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv6f16:
@@ -832,11 +1204,21 @@ define void @sve_load_store_nxv6f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv7f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x half>, ptr %a
-;  store <vscale x 7 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv7f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv7f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x half>, ptr %a
+  store <vscale x 7 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv8f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv8f16:
@@ -849,11 +1231,25 @@ define void @sve_load_store_nxv8f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv9f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 9 x half>, ptr %a
-;  store <vscale x 9 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv9f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv9f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #9 // =0x9
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 9 x half>, ptr %a
+  store <vscale x 9 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv10f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv10f16:
@@ -869,11 +1265,25 @@ define void @sve_load_store_nxv10f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv11f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 11 x half>, ptr %a
-;  store <vscale x 11 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv11f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv11f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #11 // =0xb
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 11 x half>, ptr %a
+  store <vscale x 11 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv12f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv12f16:
@@ -889,11 +1299,25 @@ define void @sve_load_store_nxv12f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv13f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 13 x half>, ptr %a
-;  store <vscale x 13 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv13f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv13f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #13 // =0xd
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 13 x half>, ptr %a
+  store <vscale x 13 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv14f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv14f16:
@@ -916,11 +1340,25 @@ define void @sve_load_store_nxv14f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv15f16(ptr %a, ptr %b) {
-;  %c = load <vscale x 15 x half>, ptr %a
-;  store <vscale x 15 x half> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv15f16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv15f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 15 x half>, ptr %a
+  store <vscale x 15 x half> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv16f16:
@@ -935,11 +1373,19 @@ define void @sve_load_store_nxv16f16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1f32(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x float>, ptr %a
-;  store <vscale x 1 x float> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1f32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x float>, ptr %a
+  store <vscale x 1 x float> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2f32:
@@ -953,11 +1399,21 @@ define void @sve_load_store_nxv2f32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3f32(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x float>, ptr %a
-;  store <vscale x 3 x float> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3f32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x float>, ptr %a
+  store <vscale x 3 x float> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4f32:
@@ -970,11 +1426,25 @@ define void @sve_load_store_nxv4f32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv5f32(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x float>, ptr %a
-;  store <vscale x 5 x float> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv5f32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv5f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x float>, ptr %a
+  store <vscale x 5 x float> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv6f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv6f32:
@@ -990,11 +1460,25 @@ define void @sve_load_store_nxv6f32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv7f32(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x float>, ptr %a
-;  store <vscale x 7 x float> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv7f32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv7f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x float>, ptr %a
+  store <vscale x 7 x float> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv8f32:
@@ -1009,11 +1493,19 @@ define void @sve_load_store_nxv8f32(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1f64(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x double>, ptr %a
-;  store <vscale x 1 x double> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1f64(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x double>, ptr %a
+  store <vscale x 1 x double> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2f64:
@@ -1026,11 +1518,25 @@ define void @sve_load_store_nxv2f64(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3f64(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x double>, ptr %a
-;  store <vscale x 3 x double> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3f64(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x double>, ptr %a
+  store <vscale x 3 x double> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4f64:
@@ -1045,11 +1551,19 @@ define void @sve_load_store_nxv4f64(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv1bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x bfloat>, ptr %a
-;  store <vscale x 1 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv1bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv1bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x bfloat>, ptr %a
+  store <vscale x 1 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv2bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv2bf16:
@@ -1063,11 +1577,21 @@ define void @sve_load_store_nxv2bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv3bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x bfloat>, ptr %a
-;  store <vscale x 3 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv3bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv3bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x bfloat>, ptr %a
+  store <vscale x 3 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv4bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv4bf16:
@@ -1081,11 +1605,21 @@ define void @sve_load_store_nxv4bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv5bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x bfloat>, ptr %a
-;  store <vscale x 5 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv5bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv5bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x bfloat>, ptr %a
+  store <vscale x 5 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv6bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv6bf16:
@@ -1106,11 +1640,21 @@ define void @sve_load_store_nxv6bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv7bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x bfloat>, ptr %a
-;  store <vscale x 7 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv7bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv7bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x bfloat>, ptr %a
+  store <vscale x 7 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv8bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv8bf16:
@@ -1123,11 +1667,25 @@ define void @sve_load_store_nxv8bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv9bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 9 x bfloat>, ptr %a
-;  store <vscale x 9 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv9bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv9bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #9 // =0x9
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 9 x bfloat>, ptr %a
+  store <vscale x 9 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv10bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv10bf16:
@@ -1143,11 +1701,25 @@ define void @sve_load_store_nxv10bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv11bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 11 x bfloat>, ptr %a
-;  store <vscale x 11 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv11bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv11bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #11 // =0xb
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 11 x bfloat>, ptr %a
+  store <vscale x 11 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv12bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv12bf16:
@@ -1163,11 +1735,25 @@ define void @sve_load_store_nxv12bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv13bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 13 x bfloat>, ptr %a
-;  store <vscale x 13 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv13bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv13bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #13 // =0xd
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 13 x bfloat>, ptr %a
+  store <vscale x 13 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv14bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv14bf16:
@@ -1190,11 +1776,25 @@ define void @sve_load_store_nxv14bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define void @sve_load_store_nxv15bf16(ptr %a, ptr %b) {
-;  %c = load <vscale x 15 x bfloat>, ptr %a
-;  store <vscale x 15 x bfloat> %c, ptr %b
-;  ret void
-;}
+define void @sve_load_store_nxv15bf16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_load_store_nxv15bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 15 x bfloat>, ptr %a
+  store <vscale x 15 x bfloat> %c, ptr %b
+  ret void
+}
 
 define void @sve_load_store_nxv16bf16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_load_store_nxv16bf16:
@@ -1209,11 +1809,18 @@ define void @sve_load_store_nxv16bf16(ptr %a, ptr %b) {
   ret void
 }
 
-;define <vscale x 1 x i16> @sve_sextload_nxv1i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i8>, ptr %a
-;  %c.sext = sext <vscale x 1 x i8> %c to <vscale x 1 x i16>
-;  ret <vscale x 1 x i16> %c.sext
-;}
+define <vscale x 1 x i16> @sve_sextload_nxv1i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv1i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i8>, ptr %a
+  %c.sext = sext <vscale x 1 x i8> %c to <vscale x 1 x i16>
+  ret <vscale x 1 x i16> %c.sext
+}
 
 define <vscale x 2 x i16> @sve_sextload_nxv2i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv2i8:
@@ -1226,11 +1833,20 @@ define <vscale x 2 x i16> @sve_sextload_nxv2i8(ptr %a, ptr %b) {
   ret <vscale x 2 x i16> %c.sext
 }
 
-;define <vscale x 3 x i16> @sve_sextload_nxv3i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i8>, ptr %a
-;  %c.sext = sext <vscale x 3 x i8> %c to <vscale x 3 x i16>
-;  ret <vscale x 3 x i16> %c.sext
-;}
+define <vscale x 3 x i16> @sve_sextload_nxv3i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i8>, ptr %a
+  %c.sext = sext <vscale x 3 x i8> %c to <vscale x 3 x i16>
+  ret <vscale x 3 x i16> %c.sext
+}
 
 define <vscale x 4 x i16> @sve_sextload_nxv4i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv4i8:
@@ -1243,23 +1859,47 @@ define <vscale x 4 x i16> @sve_sextload_nxv4i8(ptr %a, ptr %b) {
   ret <vscale x 4 x i16> %c.sext
 }
 
-;define <vscale x 5 x i16> @sve_sextload_nxv5i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i8>, ptr %a
-;  %c.sext = sext <vscale x 5 x i8> %c to <vscale x 5 x i16>
-;  ret <vscale x 5 x i16> %c.sext
-;}
+define <vscale x 5 x i16> @sve_sextload_nxv5i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv5i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i8>, ptr %a
+  %c.sext = sext <vscale x 5 x i8> %c to <vscale x 5 x i16>
+  ret <vscale x 5 x i16> %c.sext
+}
 
-;define <vscale x 6 x i16> @sve_sextload_nxv6i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 6 x i8>, ptr %a
-;  %c.sext = sext <vscale x 6 x i8> %c to <vscale x 6 x i16>
-;  ret <vscale x 6 x i16> %c.sext
-;}
+define <vscale x 6 x i16> @sve_sextload_nxv6i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv6i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntd x8, all, mul #3
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 6 x i8>, ptr %a
+  %c.sext = sext <vscale x 6 x i8> %c to <vscale x 6 x i16>
+  ret <vscale x 6 x i16> %c.sext
+}
 
-;define <vscale x 7 x i16> @sve_sextload_nxv7i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i8>, ptr %a
-;  %c.sext = sext <vscale x 7 x i8> %c to <vscale x 7 x i16>
-;  ret <vscale x 7 x i16> %c.sext
-;}
+define <vscale x 7 x i16> @sve_sextload_nxv7i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv7i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i8>, ptr %a
+  %c.sext = sext <vscale x 7 x i8> %c to <vscale x 7 x i16>
+  ret <vscale x 7 x i16> %c.sext
+}
 
 define <vscale x 8 x i16> @sve_sextload_nxv8i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv8i8:
@@ -1272,47 +1912,203 @@ define <vscale x 8 x i16> @sve_sextload_nxv8i8(ptr %a, ptr %b) {
   ret <vscale x 8 x i16> %c.sext
 }
 
-;define <vscale x 9 x i16> @sve_sextload_nxv9i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 9 x i8>, ptr %a
-;  %c.sext = sext <vscale x 9 x i8> %c to <vscale x 9 x i16>
-;  ret <vscale x 9 x i16> %c.sext
-;}
+define <vscale x 9 x i16> @sve_sextload_nxv9i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv9i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #9 // =0x9
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 9 x i8>, ptr %a
+  %c.sext = sext <vscale x 9 x i8> %c to <vscale x 9 x i16>
+  ret <vscale x 9 x i16> %c.sext
+}
 
-;define <vscale x 10 x i16> @sve_sextload_nxv10i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 10 x i8>, ptr %a
-;  %c.sext = sext <vscale x 10 x i8> %c to <vscale x 10 x i16>
-;  ret <vscale x 10 x i16> %c.sext
-;}
+define <vscale x 10 x i16> @sve_sextload_nxv10i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv10i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8, all, mul #5
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #4, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 10 x i8>, ptr %a
+  %c.sext = sext <vscale x 10 x i8> %c to <vscale x 10 x i16>
+  ret <vscale x 10 x i16> %c.sext
+}
 
-;define <vscale x 11 x i16> @sve_sextload_nxv11i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 11 x i8>, ptr %a
-;  %c.sext = sext <vscale x 11 x i8> %c to <vscale x 11 x i16>
-;  ret <vscale x 11 x i16> %c.sext
-;}
+define <vscale x 11 x i16> @sve_sextload_nxv11i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv11i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #11 // =0xb
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 11 x i8>, ptr %a
+  %c.sext = sext <vscale x 11 x i8> %c to <vscale x 11 x i16>
+  ret <vscale x 11 x i16> %c.sext
+}
 
-;define <vscale x 12 x i16> @sve_sextload_nxv12i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 12 x i8>, ptr %a
-;  %c.sext = sext <vscale x 12 x i8> %c to <vscale x 12 x i16>
-;  ret <vscale x 12 x i16> %c.sext
-;}
+define <vscale x 12 x i16> @sve_sextload_nxv12i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv12i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntw x8, all, mul #3
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    st1h { z0.s }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 12 x i8>, ptr %a
+  %c.sext = sext <vscale x 12 x i8> %c to <vscale x 12 x i16>
+  ret <vscale x 12 x i16> %c.sext
+}
 
-;define <vscale x 13 x i16> @sve_sextload_nxv13i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 13 x i8>, ptr %a
-;  %c.sext = sext <vscale x 13 x i8> %c to <vscale x 13 x i16>
-;  ret <vscale x 13 x i16> %c.sext
-;}
+define <vscale x 13 x i16> @sve_sextload_nxv13i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv13i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #13 // =0xd
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 13 x i8>, ptr %a
+  %c.sext = sext <vscale x 13 x i8> %c to <vscale x 13 x i16>
+  ret <vscale x 13 x i16> %c.sext
+}
 
-;define <vscale x 14 x i16> @sve_sextload_nxv14i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 14 x i8>, ptr %a
-;  %c.sext = sext <vscale x 14 x i8> %c to <vscale x 14 x i16>
-;  ret <vscale x 14 x i16> %c.sext
-;}
+define <vscale x 14 x i16> @sve_sextload_nxv14i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv14i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8, all, mul #7
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ld1sb { z2.h }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpkhi z1.s, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    str z2, [sp]
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    st1h { z0.s }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    st1h { z1.d }, p0, [sp, #6, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 14 x i8>, ptr %a
+  %c.sext = sext <vscale x 14 x i8> %c to <vscale x 14 x i16>
+  ret <vscale x 14 x i16> %c.sext
+}
 
-;define <vscale x 15 x i16> @sve_sextload_nxv15i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 15 x i8>, ptr %a
-;  %c.sext = sext <vscale x 15 x i8> %c to <vscale x 15 x i16>
-;  ret <vscale x 15 x i16> %c.sext
-;}
+define <vscale x 15 x i16> @sve_sextload_nxv15i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv15i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 15 x i8>, ptr %a
+  %c.sext = sext <vscale x 15 x i8> %c to <vscale x 15 x i16>
+  ret <vscale x 15 x i16> %c.sext
+}
 
 define <vscale x 16 x i16> @sve_sextload_nxv16i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv16i8:
@@ -1326,11 +2122,18 @@ define <vscale x 16 x i16> @sve_sextload_nxv16i8(ptr %a, ptr %b) {
   ret <vscale x 16 x i16> %c.sext
 }
 
-;define <vscale x 1 x i32> @sve_sextload_nxv1i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i16>, ptr %a
-;  %c.sext = sext <vscale x 1 x i16> %c to <vscale x 1 x i32>
-;  ret <vscale x 1 x i32> %c.sext
-;}
+define <vscale x 1 x i32> @sve_sextload_nxv1i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i16>, ptr %a
+  %c.sext = sext <vscale x 1 x i16> %c to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %c.sext
+}
 
 define <vscale x 2 x i32> @sve_sextload_nxv2i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv2i16:
@@ -1343,11 +2146,20 @@ define <vscale x 2 x i32> @sve_sextload_nxv2i16(ptr %a, ptr %b) {
   ret <vscale x 2 x i32> %c.sext
 }
 
-;define <vscale x 3 x i32> @sve_sextload_nxv3i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i16>, ptr %a
-;  %c.sext = sext <vscale x 3 x i16> %c to <vscale x 3 x i32>
-;  ret <vscale x 3 x i32> %c.sext
-;}
+define <vscale x 3 x i32> @sve_sextload_nxv3i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv3i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i16>, ptr %a
+  %c.sext = sext <vscale x 3 x i16> %c to <vscale x 3 x i32>
+  ret <vscale x 3 x i32> %c.sext
+}
 
 define <vscale x 4 x i32> @sve_sextload_nxv4i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv4i16:
@@ -1360,23 +2172,88 @@ define <vscale x 4 x i32> @sve_sextload_nxv4i16(ptr %a, ptr %b) {
   ret <vscale x 4 x i32> %c.sext
 }
 
-;define <vscale x 5 x i32> @sve_sextload_nxv5i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i16>, ptr %a
-;  %c.sext = sext <vscale x 5 x i16> %c to <vscale x 5 x i32>
-;  ret <vscale x 5 x i32> %c.sext
-;}
+define <vscale x 5 x i32> @sve_sextload_nxv5i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv5i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sh { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i16>, ptr %a
+  %c.sext = sext <vscale x 5 x i16> %c to <vscale x 5 x i32>
+  ret <vscale x 5 x i32> %c.sext
+}
 
-;define <vscale x 6 x i32> @sve_sextload_nxv6i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 6 x i16>, ptr %a
-;  %c.sext = sext <vscale x 6 x i16> %c to <vscale x 6 x i32>
-;  ret <vscale x 6 x i32> %c.sext
-;}
+define <vscale x 6 x i32> @sve_sextload_nxv6i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv6i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8, all, mul #3
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sh { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    st1w { z0.d }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 6 x i16>, ptr %a
+  %c.sext = sext <vscale x 6 x i16> %c to <vscale x 6 x i32>
+  ret <vscale x 6 x i32> %c.sext
+}
 
-;define <vscale x 7 x i32> @sve_sextload_nxv7i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i16>, ptr %a
-;  %c.sext = sext <vscale x 7 x i16> %c to <vscale x 7 x i32>
-;  ret <vscale x 7 x i32> %c.sext
-;}
+define <vscale x 7 x i32> @sve_sextload_nxv7i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv7i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sh { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i16>, ptr %a
+  %c.sext = sext <vscale x 7 x i16> %c to <vscale x 7 x i32>
+  ret <vscale x 7 x i32> %c.sext
+}
 
 define <vscale x 8 x i32> @sve_sextload_nxv8i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv8i16:
@@ -1390,11 +2267,18 @@ define <vscale x 8 x i32> @sve_sextload_nxv8i16(ptr %a, ptr %b) {
   ret <vscale x 8 x i32> %c.sext
 }
 
-;define <vscale x 1 x i64> @sve_sextload_nxv1i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i32>, ptr %a
-;  %c.sext = sext <vscale x 1 x i32> %c to <vscale x 1 x i64>
-;  ret <vscale x 1 x i64> %c.sext
-;}
+define <vscale x 1 x i64> @sve_sextload_nxv1i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i32>, ptr %a
+  %c.sext = sext <vscale x 1 x i32> %c to <vscale x 1 x i64>
+  ret <vscale x 1 x i64> %c.sext
+}
 
 define <vscale x 2 x i64> @sve_sextload_nxv2i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv2i32:
@@ -1407,11 +2291,33 @@ define <vscale x 2 x i64> @sve_sextload_nxv2i32(ptr %a, ptr %b) {
   ret <vscale x 2 x i64> %c.sext
 }
 
-;define <vscale x 3 x i64> @sve_sextload_nxv3i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i32>, ptr %a
-;  %c.sext = sext <vscale x 3 x i32> %c to <vscale x 3 x i64>
-;  ret <vscale x 3 x i64> %c.sext
-;}
+define <vscale x 3 x i64> @sve_sextload_nxv3i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_sextload_nxv3i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sw { z0.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sw { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i32>, ptr %a
+  %c.sext = sext <vscale x 3 x i32> %c to <vscale x 3 x i64>
+  ret <vscale x 3 x i64> %c.sext
+}
 
 define <vscale x 4 x i64> @sve_sextload_nxv4i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_sextload_nxv4i32:
@@ -1425,11 +2331,18 @@ define <vscale x 4 x i64> @sve_sextload_nxv4i32(ptr %a, ptr %b) {
   ret <vscale x 4 x i64> %c.sext
 }
 
-;define <vscale x 1 x i16> @sve_zextload_nxv1i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i8>, ptr %a
-;  %c.zext = sext <vscale x 1 x i8> %c to <vscale x 1 x i16>
-;  ret <vscale x 1 x i16> %c.zext
-;}
+define <vscale x 1 x i16> @sve_zextload_nxv1i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv1i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i8>, ptr %a
+  %c.zext = sext <vscale x 1 x i8> %c to <vscale x 1 x i16>
+  ret <vscale x 1 x i16> %c.zext
+}
 
 define <vscale x 2 x i16> @sve_zextload_nxv2i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv2i8:
@@ -1442,11 +2355,20 @@ define <vscale x 2 x i16> @sve_zextload_nxv2i8(ptr %a, ptr %b) {
   ret <vscale x 2 x i16> %c.zext
 }
 
-;define <vscale x 3 x i16> @sve_zextload_nxv3i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i8>, ptr %a
-;  %c.zext = sext <vscale x 3 x i8> %c to <vscale x 3 x i16>
-;  ret <vscale x 3 x i16> %c.zext
-;}
+define <vscale x 3 x i16> @sve_zextload_nxv3i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i8>, ptr %a
+  %c.zext = sext <vscale x 3 x i8> %c to <vscale x 3 x i16>
+  ret <vscale x 3 x i16> %c.zext
+}
 
 define <vscale x 4 x i16> @sve_zextload_nxv4i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv4i8:
@@ -1459,23 +2381,47 @@ define <vscale x 4 x i16> @sve_zextload_nxv4i8(ptr %a, ptr %b) {
   ret <vscale x 4 x i16> %c.zext
 }
 
-;define <vscale x 5 x i16> @sve_zextload_nxv5i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i8>, ptr %a
-;  %c.zext = sext <vscale x 5 x i8> %c to <vscale x 5 x i16>
-;  ret <vscale x 5 x i16> %c.zext
-;}
+define <vscale x 5 x i16> @sve_zextload_nxv5i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv5i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i8>, ptr %a
+  %c.zext = sext <vscale x 5 x i8> %c to <vscale x 5 x i16>
+  ret <vscale x 5 x i16> %c.zext
+}
 
-;define <vscale x 6 x i16> @sve_zextload_nxv6i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 6 x i8>, ptr %a
-;  %c.zext = sext <vscale x 6 x i8> %c to <vscale x 6 x i16>
-;  ret <vscale x 6 x i16> %c.zext
-;}
+define <vscale x 6 x i16> @sve_zextload_nxv6i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv6i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntd x8, all, mul #3
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 6 x i8>, ptr %a
+  %c.zext = sext <vscale x 6 x i8> %c to <vscale x 6 x i16>
+  ret <vscale x 6 x i16> %c.zext
+}
 
-;define <vscale x 7 x i16> @sve_zextload_nxv7i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i8>, ptr %a
-;  %c.zext = sext <vscale x 7 x i8> %c to <vscale x 7 x i16>
-;  ret <vscale x 7 x i16> %c.zext
-;}
+define <vscale x 7 x i16> @sve_zextload_nxv7i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv7i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i8>, ptr %a
+  %c.zext = sext <vscale x 7 x i8> %c to <vscale x 7 x i16>
+  ret <vscale x 7 x i16> %c.zext
+}
 
 define <vscale x 8 x i16> @sve_zextload_nxv8i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv8i8:
@@ -1488,47 +2434,203 @@ define <vscale x 8 x i16> @sve_zextload_nxv8i8(ptr %a, ptr %b) {
   ret <vscale x 8 x i16> %c.zext
 }
 
-;define <vscale x 9 x i16> @sve_zextload_nxv9i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 9 x i8>, ptr %a
-;  %c.zext = sext <vscale x 9 x i8> %c to <vscale x 9 x i16>
-;  ret <vscale x 9 x i16> %c.zext
-;}
+define <vscale x 9 x i16> @sve_zextload_nxv9i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv9i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #9 // =0x9
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 9 x i8>, ptr %a
+  %c.zext = sext <vscale x 9 x i8> %c to <vscale x 9 x i16>
+  ret <vscale x 9 x i16> %c.zext
+}
 
-;define <vscale x 10 x i16> @sve_zextload_nxv10i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 10 x i8>, ptr %a
-;  %c.zext = sext <vscale x 10 x i8> %c to <vscale x 10 x i16>
-;  ret <vscale x 10 x i16> %c.zext
-;}
+define <vscale x 10 x i16> @sve_zextload_nxv10i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv10i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8, all, mul #5
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #4, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 10 x i8>, ptr %a
+  %c.zext = sext <vscale x 10 x i8> %c to <vscale x 10 x i16>
+  ret <vscale x 10 x i16> %c.zext
+}
 
-;define <vscale x 11 x i16> @sve_zextload_nxv11i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 11 x i8>, ptr %a
-;  %c.zext = sext <vscale x 11 x i8> %c to <vscale x 11 x i16>
-;  ret <vscale x 11 x i16> %c.zext
-;}
+define <vscale x 11 x i16> @sve_zextload_nxv11i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv11i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #11 // =0xb
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 11 x i8>, ptr %a
+  %c.zext = sext <vscale x 11 x i8> %c to <vscale x 11 x i16>
+  ret <vscale x 11 x i16> %c.zext
+}
 
-;define <vscale x 12 x i16> @sve_zextload_nxv12i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 12 x i8>, ptr %a
-;  %c.zext = sext <vscale x 12 x i8> %c to <vscale x 12 x i16>
-;  ret <vscale x 12 x i16> %c.zext
-;}
+define <vscale x 12 x i16> @sve_zextload_nxv12i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv12i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntw x8, all, mul #3
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    st1h { z0.s }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 12 x i8>, ptr %a
+  %c.zext = sext <vscale x 12 x i8> %c to <vscale x 12 x i16>
+  ret <vscale x 12 x i16> %c.zext
+}
 
-;define <vscale x 13 x i16> @sve_zextload_nxv13i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 13 x i8>, ptr %a
-;  %c.zext = sext <vscale x 13 x i8> %c to <vscale x 13 x i16>
-;  ret <vscale x 13 x i16> %c.zext
-;}
+define <vscale x 13 x i16> @sve_zextload_nxv13i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv13i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #13 // =0xd
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 13 x i8>, ptr %a
+  %c.zext = sext <vscale x 13 x i8> %c to <vscale x 13 x i16>
+  ret <vscale x 13 x i16> %c.zext
+}
 
-;define <vscale x 14 x i16> @sve_zextload_nxv14i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 14 x i8>, ptr %a
-;  %c.zext = sext <vscale x 14 x i8> %c to <vscale x 14 x i16>
-;  ret <vscale x 14 x i16> %c.zext
-;}
+define <vscale x 14 x i16> @sve_zextload_nxv14i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv14i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8, all, mul #7
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ld1sb { z2.h }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpkhi z1.s, z0.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    str z2, [sp]
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    st1h { z0.s }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    st1h { z1.d }, p0, [sp, #6, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 14 x i8>, ptr %a
+  %c.zext = sext <vscale x 14 x i8> %c to <vscale x 14 x i16>
+  ret <vscale x 14 x i16> %c.zext
+}
 
-;define <vscale x 15 x i16> @sve_zextload_nxv15i8(ptr %a, ptr %b) {
-;  %c = load <vscale x 15 x i8>, ptr %a
-;  %c.zext = sext <vscale x 15 x i8> %c to <vscale x 15 x i16>
-;  ret <vscale x 15 x i16> %c.zext
-;}
+define <vscale x 15 x i16> @sve_zextload_nxv15i8(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv15i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #15 // =0xf
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sb { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    st1h { z0.h }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 15 x i8>, ptr %a
+  %c.zext = sext <vscale x 15 x i8> %c to <vscale x 15 x i16>
+  ret <vscale x 15 x i16> %c.zext
+}
 
 define <vscale x 16 x i16> @sve_zextload_nxv16i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv16i8:
@@ -1542,11 +2644,18 @@ define <vscale x 16 x i16> @sve_zextload_nxv16i8(ptr %a, ptr %b) {
   ret <vscale x 16 x i16> %c.zext
 }
 
-;define <vscale x 1 x i32> @sve_zextload_nxv1i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i16>, ptr %a
-;  %c.zext = sext <vscale x 1 x i16> %c to <vscale x 1 x i32>
-;  ret <vscale x 1 x i32> %c.zext
-;}
+define <vscale x 1 x i32> @sve_zextload_nxv1i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i16>, ptr %a
+  %c.zext = sext <vscale x 1 x i16> %c to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %c.zext
+}
 
 define <vscale x 2 x i32> @sve_zextload_nxv2i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv2i16:
@@ -1559,11 +2668,20 @@ define <vscale x 2 x i32> @sve_zextload_nxv2i16(ptr %a, ptr %b) {
   ret <vscale x 2 x i32> %c.zext
 }
 
-;define <vscale x 3 x i32> @sve_zextload_nxv3i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i16>, ptr %a
-;  %c.zext = sext <vscale x 3 x i16> %c to <vscale x 3 x i32>
-;  ret <vscale x 3 x i32> %c.zext
-;}
+define <vscale x 3 x i32> @sve_zextload_nxv3i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv3i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i16>, ptr %a
+  %c.zext = sext <vscale x 3 x i16> %c to <vscale x 3 x i32>
+  ret <vscale x 3 x i32> %c.zext
+}
 
 define <vscale x 4 x i32> @sve_zextload_nxv4i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv4i16:
@@ -1576,23 +2694,88 @@ define <vscale x 4 x i32> @sve_zextload_nxv4i16(ptr %a, ptr %b) {
   ret <vscale x 4 x i32> %c.zext
 }
 
-;define <vscale x 5 x i32> @sve_zextload_nxv5i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 5 x i16>, ptr %a
-;  %c.zext = sext <vscale x 5 x i16> %c to <vscale x 5 x i32>
-;  ret <vscale x 5 x i32> %c.zext
-;}
+define <vscale x 5 x i32> @sve_zextload_nxv5i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv5i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #5 // =0x5
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sh { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 5 x i16>, ptr %a
+  %c.zext = sext <vscale x 5 x i16> %c to <vscale x 5 x i32>
+  ret <vscale x 5 x i32> %c.zext
+}
 
-;define <vscale x 6 x i32> @sve_zextload_nxv6i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 6 x i16>, ptr %a
-;  %c.zext = sext <vscale x 6 x i16> %c to <vscale x 6 x i32>
-;  ret <vscale x 6 x i32> %c.zext
-;}
+define <vscale x 6 x i32> @sve_zextload_nxv6i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv6i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8, all, mul #3
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sh { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    st1w { z0.d }, p1, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 6 x i16>, ptr %a
+  %c.zext = sext <vscale x 6 x i16> %c to <vscale x 6 x i32>
+  ret <vscale x 6 x i32> %c.zext
+}
 
-;define <vscale x 7 x i32> @sve_zextload_nxv7i16(ptr %a, ptr %b) {
-;  %c = load <vscale x 7 x i16>, ptr %a
-;  %c.zext = sext <vscale x 7 x i16> %c to <vscale x 7 x i32>
-;  ret <vscale x 7 x i32> %c.zext
-;}
+define <vscale x 7 x i32> @sve_zextload_nxv7i16(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv7i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sh { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.s }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 7 x i16>, ptr %a
+  %c.zext = sext <vscale x 7 x i16> %c to <vscale x 7 x i32>
+  ret <vscale x 7 x i32> %c.zext
+}
 
 define <vscale x 8 x i32> @sve_zextload_nxv8i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv8i16:
@@ -1606,11 +2789,18 @@ define <vscale x 8 x i32> @sve_zextload_nxv8i16(ptr %a, ptr %b) {
   ret <vscale x 8 x i32> %c.zext
 }
 
-;define <vscale x 1 x i64> @sve_zextload_nxv1i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 1 x i32>, ptr %a
-;  %c.zext = sext <vscale x 1 x i32> %c to <vscale x 1 x i64>
-;  ret <vscale x 1 x i64> %c.zext
-;}
+define <vscale x 1 x i64> @sve_zextload_nxv1i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %c = load <vscale x 1 x i32>, ptr %a
+  %c.zext = sext <vscale x 1 x i32> %c to <vscale x 1 x i64>
+  ret <vscale x 1 x i64> %c.zext
+}
 
 define <vscale x 2 x i64> @sve_zextload_nxv2i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv2i32:
@@ -1623,11 +2813,33 @@ define <vscale x 2 x i64> @sve_zextload_nxv2i32(ptr %a, ptr %b) {
   ret <vscale x 2 x i64> %c.zext
 }
 
-;define <vscale x 3 x i64> @sve_zextload_nxv3i32(ptr %a, ptr %b) {
-;  %c = load <vscale x 3 x i32>, ptr %a
-;  %c.zext = sext <vscale x 3 x i32> %c to <vscale x 3 x i64>
-;  ret <vscale x 3 x i64> %c.zext
-;}
+define <vscale x 3 x i64> @sve_zextload_nxv3i32(ptr %a, ptr %b) {
+; CHECK-LABEL: sve_zextload_nxv3i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mul x8, x8, x9
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ld1sw { z0.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sw { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p1, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %c = load <vscale x 3 x i32>, ptr %a
+  %c.zext = sext <vscale x 3 x i32> %c to <vscale x 3 x i64>
+  ret <vscale x 3 x i64> %c.zext
+}
 
 define <vscale x 4 x i64> @sve_zextload_nxv4i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: sve_zextload_nxv4i32:
