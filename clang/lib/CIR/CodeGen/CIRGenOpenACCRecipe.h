@@ -27,134 +27,134 @@ template <typename RecipeTy> class OpenACCRecipeBuilder {
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
 
-mlir::Block *createRecipeBlock(mlir::Region &region, mlir::Type opTy,
-                               mlir::Location loc, size_t numBounds,
-                               bool isInit) {
-  llvm::SmallVector<mlir::Type> types;
-  types.reserve(numBounds + 2);
-  types.push_back(opTy);
-  // The init section is the only one that doesn't have TWO copies of the
-  // operation-type.  Copy has a to/from, and destroy has a
-  // 'reference'/'privatized' copy version.
-  if (!isInit)
+  mlir::Block *createRecipeBlock(mlir::Region &region, mlir::Type opTy,
+                                 mlir::Location loc, size_t numBounds,
+                                 bool isInit) {
+    llvm::SmallVector<mlir::Type> types;
+    types.reserve(numBounds + 2);
     types.push_back(opTy);
+    // The init section is the only one that doesn't have TWO copies of the
+    // operation-type.  Copy has a to/from, and destroy has a
+    // 'reference'/'privatized' copy version.
+    if (!isInit)
+      types.push_back(opTy);
 
-  auto boundsTy = mlir::acc::DataBoundsType::get(&cgf.getMLIRContext());
-  for (size_t i = 0; i < numBounds; ++i)
-    types.push_back(boundsTy);
+    auto boundsTy = mlir::acc::DataBoundsType::get(&cgf.getMLIRContext());
+    for (size_t i = 0; i < numBounds; ++i)
+      types.push_back(boundsTy);
 
-  llvm::SmallVector<mlir::Location> locs{types.size(), loc};
-  return builder.createBlock(&region, region.end(), types, locs);
-}
-// Creates a loop through an 'acc.bounds', leaving the 'insertion' point to be
-// the inside of the loop body. Traverses LB->UB UNLESS `inverse` is set.
-// Returns the 'subscriptedValue' changed with the new bounds subscript.
-mlir::Value createBoundsLoop(mlir::Value subscriptedValue, mlir::Value bound,
-                             mlir::Location loc, bool inverse) {
-  mlir::Operation *bodyInsertLoc;
+    llvm::SmallVector<mlir::Location> locs{types.size(), loc};
+    return builder.createBlock(&region, region.end(), types, locs);
+  }
+  // Creates a loop through an 'acc.bounds', leaving the 'insertion' point to be
+  // the inside of the loop body. Traverses LB->UB UNLESS `inverse` is set.
+  // Returns the 'subscriptedValue' changed with the new bounds subscript.
+  mlir::Value createBoundsLoop(mlir::Value subscriptedValue, mlir::Value bound,
+                               mlir::Location loc, bool inverse) {
+    mlir::Operation *bodyInsertLoc;
 
-  mlir::Type itrTy = cgf.cgm.convertType(cgf.getContext().UnsignedLongLongTy);
-  auto itrPtrTy = cir::PointerType::get(itrTy);
-  mlir::IntegerAttr itrAlign =
-      cgf.cgm.getSize(cgf.getContext().getTypeAlignInChars(
-          cgf.getContext().UnsignedLongLongTy));
-  auto idxType = mlir::IndexType::get(&cgf.getMLIRContext());
+    mlir::Type itrTy = cgf.cgm.convertType(cgf.getContext().UnsignedLongLongTy);
+    auto itrPtrTy = cir::PointerType::get(itrTy);
+    mlir::IntegerAttr itrAlign =
+        cgf.cgm.getSize(cgf.getContext().getTypeAlignInChars(
+            cgf.getContext().UnsignedLongLongTy));
+    auto idxType = mlir::IndexType::get(&cgf.getMLIRContext());
 
-  auto doSubscriptOp = [&](mlir::Value subVal,
-                           cir::LoadOp idxLoad) -> mlir::Value {
-    auto eltTy = cast<cir::PointerType>(subVal.getType()).getPointee();
+    auto doSubscriptOp = [&](mlir::Value subVal,
+                             cir::LoadOp idxLoad) -> mlir::Value {
+      auto eltTy = cast<cir::PointerType>(subVal.getType()).getPointee();
 
-    if (auto arrayTy = dyn_cast<cir::ArrayType>(eltTy))
-      return builder.getArrayElement(loc, loc, subVal, arrayTy.getElementType(),
-                                     idxLoad.getResult(),
-                                     /*shouldDecay=*/true);
+      if (auto arrayTy = dyn_cast<cir::ArrayType>(eltTy))
+        return builder.getArrayElement(
+            loc, loc, subVal, arrayTy.getElementType(), idxLoad.getResult(),
+            /*shouldDecay=*/true);
 
-    assert(isa<cir::PointerType>(eltTy));
+      assert(isa<cir::PointerType>(eltTy));
 
-    auto eltLoad = cir::LoadOp::create(builder, loc, {subVal});
+      auto eltLoad = cir::LoadOp::create(builder, loc, {subVal});
 
-    return cir::PtrStrideOp::create(builder, loc, eltLoad.getType(), eltLoad,
-                                    idxLoad.getResult())
-        .getResult();
-  };
+      return cir::PtrStrideOp::create(builder, loc, eltLoad.getType(), eltLoad,
+                                      idxLoad.getResult())
+          .getResult();
+    };
 
-  auto forStmtBuilder = [&]() {
-    // get the lower and upper bound for iterating over.
-    auto lowerBoundVal =
-        mlir::acc::GetLowerboundOp::create(builder, loc, idxType, bound);
-    auto lbConversion = mlir::UnrealizedConversionCastOp::create(
-        builder, loc, itrTy, lowerBoundVal.getResult());
-    auto upperBoundVal =
-        mlir::acc::GetUpperboundOp::create(builder, loc, idxType, bound);
-    auto ubConversion = mlir::UnrealizedConversionCastOp::create(
-        builder, loc, itrTy, upperBoundVal.getResult());
+    auto forStmtBuilder = [&]() {
+      // get the lower and upper bound for iterating over.
+      auto lowerBoundVal =
+          mlir::acc::GetLowerboundOp::create(builder, loc, idxType, bound);
+      auto lbConversion = mlir::UnrealizedConversionCastOp::create(
+          builder, loc, itrTy, lowerBoundVal.getResult());
+      auto upperBoundVal =
+          mlir::acc::GetUpperboundOp::create(builder, loc, idxType, bound);
+      auto ubConversion = mlir::UnrealizedConversionCastOp::create(
+          builder, loc, itrTy, upperBoundVal.getResult());
 
-    // Create a memory location for the iterator.
-    auto itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "iter", itrAlign);
-    // Store to the iterator: either lower bound, or if inverse loop, upper
-    // bound.
-    if (inverse) {
-      cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
+      // Create a memory location for the iterator.
+      auto itr = cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "iter",
+                                       itrAlign);
+      // Store to the iterator: either lower bound, or if inverse loop, upper
+      // bound.
+      if (inverse) {
+        cir::ConstantOp constOne = builder.getConstInt(loc, itrTy, 1);
 
-      auto sub =
-          cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
-                             ubConversion.getResult(0), constOne.getResult());
+        auto sub =
+            cir::BinOp::create(builder, loc, itrTy, cir::BinOpKind::Sub,
+                               ubConversion.getResult(0), constOne.getResult());
 
-      // Upperbound is exclusive, so subtract 1.
-      builder.CIRBaseBuilderTy::createStore(loc, sub.getResult(), itr);
-    } else {
-      // Lowerbound is inclusive, so we can include it.
-      builder.CIRBaseBuilderTy::createStore(loc, lbConversion.getResult(0),
-                                            itr);
-    }
-    // Save the 'end' iterator based on whether we are inverted or not. This
-    // end iterator never changes, so we can just get it and convert it, so no
-    // need to store/load/etc.
-    auto endItr = inverse ? lbConversion : ubConversion;
+        // Upperbound is exclusive, so subtract 1.
+        builder.CIRBaseBuilderTy::createStore(loc, sub.getResult(), itr);
+      } else {
+        // Lowerbound is inclusive, so we can include it.
+        builder.CIRBaseBuilderTy::createStore(loc, lbConversion.getResult(0),
+                                              itr);
+      }
+      // Save the 'end' iterator based on whether we are inverted or not. This
+      // end iterator never changes, so we can just get it and convert it, so no
+      // need to store/load/etc.
+      auto endItr = inverse ? lbConversion : ubConversion;
 
-    builder.createFor(
-        loc,
-        /*condBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          auto loadCur = cir::LoadOp::create(builder, loc, {itr});
-          // Use 'not equal' since we are just doing an increment/decrement.
-          auto cmp = builder.createCompare(
-              loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt,
-              loadCur.getResult(), endItr.getResult(0));
-          builder.createCondition(cmp);
-        },
-        /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          auto load = cir::LoadOp::create(builder, loc, {itr});
+      builder.createFor(
+          loc,
+          /*condBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            auto loadCur = cir::LoadOp::create(builder, loc, {itr});
+            // Use 'not equal' since we are just doing an increment/decrement.
+            auto cmp = builder.createCompare(
+                loc, inverse ? cir::CmpOpKind::ge : cir::CmpOpKind::lt,
+                loadCur.getResult(), endItr.getResult(0));
+            builder.createCondition(cmp);
+          },
+          /*bodyBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            auto load = cir::LoadOp::create(builder, loc, {itr});
 
-          if (subscriptedValue)
-            subscriptedValue = doSubscriptOp(subscriptedValue, load);
-          bodyInsertLoc = builder.createYield(loc);
-        },
-        /*stepBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          auto load = cir::LoadOp::create(builder, loc, {itr});
-          auto unary = cir::UnaryOp::create(builder, loc, load.getType(),
-                                            inverse ? cir::UnaryOpKind::Dec
-                                                    : cir::UnaryOpKind::Inc,
-                                            load.getResult());
-          builder.CIRBaseBuilderTy::createStore(loc, unary.getResult(), itr);
-          builder.createYield(loc);
-        });
-  };
+            if (subscriptedValue)
+              subscriptedValue = doSubscriptOp(subscriptedValue, load);
+            bodyInsertLoc = builder.createYield(loc);
+          },
+          /*stepBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            auto load = cir::LoadOp::create(builder, loc, {itr});
+            auto unary = cir::UnaryOp::create(builder, loc, load.getType(),
+                                              inverse ? cir::UnaryOpKind::Dec
+                                                      : cir::UnaryOpKind::Inc,
+                                              load.getResult());
+            builder.CIRBaseBuilderTy::createStore(loc, unary.getResult(), itr);
+            builder.createYield(loc);
+          });
+    };
 
-  cir::ScopeOp::create(builder, loc,
-                       [&](mlir::OpBuilder &b, mlir::Location loc) {
-                         forStmtBuilder();
-                         builder.createYield(loc);
-                       });
+    cir::ScopeOp::create(builder, loc,
+                         [&](mlir::OpBuilder &b, mlir::Location loc) {
+                           forStmtBuilder();
+                           builder.createYield(loc);
+                         });
 
-  // Leave the insertion point to be inside the body, so we can loop over
-  // these things.
-  builder.setInsertionPoint(bodyInsertLoc);
-  return subscriptedValue;
-}
+    // Leave the insertion point to be inside the body, so we can loop over
+    // these things.
+    builder.setInsertionPoint(bodyInsertLoc);
+    return subscriptedValue;
+  }
 
   mlir::acc::ReductionOperator convertReductionOp(OpenACCReductionOperator op) {
     switch (op) {
@@ -238,7 +238,7 @@ mlir::Value createBoundsLoop(mlir::Value subscriptedValue, mlir::Value bound,
       }
 
       //  The naming convention from Flang with bounds doesn't map to C++ types
-      //  very well, so we're just going to choose our own here.  
+      //  very well, so we're just going to choose our own here.
       if (numBounds)
         stream << "_Bcnt" << numBounds << '_';
 
@@ -492,7 +492,6 @@ public:
       boundTypes = {};
       numBounds = 0;
       origType = baseType;
-
     }
 
     mlir::ModuleOp mod = builder.getBlock()
