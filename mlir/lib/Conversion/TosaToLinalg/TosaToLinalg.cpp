@@ -189,16 +189,18 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     int64_t inZp = 0, outZp = 0;
     FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
     FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
-    if (!failed(maybeInZp))
+    bool hasInZp = !failed(maybeInZp);
+    bool hasOutZp = !failed(maybeOutZp);
+    if (hasInZp)
       inZp = *maybeInZp;
-    if (!failed(maybeOutZp))
+    if (hasOutZp)
       outZp = *maybeOutZp;
 
     if (isa<FloatType>(elementTy))
       return arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      if (!failed(maybeInZp) && !failed(maybeOutZp) && !inZp && !outZp) {
+      if (hasInZp && hasOutZp && !inZp && !outZp) {
         auto constant = arith::ConstantOp::create(
             rewriter, loc, IntegerAttr::get(elementTy, 0));
         return arith::SubIOp::create(rewriter, loc, resultTypes, constant,
@@ -211,7 +213,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       const int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
       int intermediateBitWidth = 64;
 
-      if (!failed(maybeInZp) && !failed(maybeOutZp)) {
+      if (hasInZp && hasOutZp) {
         // Compute the maximum value that can occur in the intermediate buffer.
         const int64_t zpAdd = inZp + outZp;
         const int64_t maxValue =
