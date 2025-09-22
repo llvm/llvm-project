@@ -1480,12 +1480,10 @@ public:
   static bool NeedsScope(const parser::OmpClause &);
 
   bool Pre(const parser::OmpMetadirectiveDirective &x) { //
-    metaDirective_ = &x;
     ++metaLevel_;
     return true;
   }
   void Post(const parser::OmpMetadirectiveDirective &) { //
-    metaDirective_ = nullptr;
     --metaLevel_;
   }
 
@@ -1583,7 +1581,8 @@ public:
     AddOmpSourceRange(x.source);
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        std::get<std::optional<parser::OmpClauseList>>(x.t), x);
+        std::get<std::optional<parser::OmpClauseList>>(x.t),
+        declaratives_.back());
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1692,9 +1691,11 @@ public:
     // can implicitly declare variables instead of only using the
     // ones already declared in the Fortran sources.
     SkipImplicitTyping(true);
+    declaratives_.push_back(&x);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeConstruct &) {
+    declaratives_.pop_back();
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1736,15 +1737,14 @@ public:
 private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
-  template <typename T>
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
       const std::optional<parser::OmpClauseList> &clauses,
-      const T &wholeConstruct);
+      const parser::OpenMPDeclarativeConstruct *wholeConstruct);
 
   void ResolveCriticalName(const parser::OmpArgument &arg);
 
   int metaLevel_{0};
-  const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
+  std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
 };
 
 bool OmpVisitor::NeedsScope(const parser::OmpBlockConstruct &x) {
@@ -1869,11 +1869,10 @@ std::string MangleDefinedOperator(const parser::CharBlock &name) {
   return "op" + name.ToString();
 }
 
-template <typename T>
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const std::optional<parser::OmpClauseList> &clauses,
-    const T &wholeOmpConstruct) {
+    const parser::OpenMPDeclarativeConstruct *construct) {
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -1960,7 +1959,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     PopScope();
   }
 
-  reductionDetails->AddDecl(&wholeOmpConstruct);
+  reductionDetails->AddDecl(construct);
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -2025,8 +2024,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        CHECK(metaDirective_);
-        ProcessReductionSpecifier(*spec, maybeClauses, *metaDirective_);
+        ProcessReductionSpecifier(*spec, maybeClauses, declaratives_.back());
       }
     }
     break;
