@@ -163,8 +163,9 @@ bubbleDownCastsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
       llvm::to_vector_of<NamedAttribute>(op->getDiscardableAttrs()));
 
   // Insert a memory-space cast to the original memory space of the op.
-  MemorySpaceCastOpInterface result =
-      castOp.cloneMemorySpaceCastOp(builder, tgtTy, newOp.getResult());
+  MemorySpaceCastOpInterface result = castOp.cloneMemorySpaceCastOp(
+      builder, tgtTy,
+      cast<TypedValue<PtrLikeTypeInterface>>(newOp.getResult()));
   return std::make_pair(SmallVector<Value>({result.getTargetPtr()}), false);
 }
 
@@ -1732,12 +1733,10 @@ bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
          tgt.clonePtrWith(src.getMemorySpace(), std::nullopt) == src;
 }
 
-MemorySpaceCastOpInterface
-MemorySpaceCastOp::cloneMemorySpaceCastOp(OpBuilder &b,
-                                          PtrLikeTypeInterface tgt, Value src) {
-  assert(
-      isValidMemorySpaceCast(tgt, cast<PtrLikeTypeInterface>(src.getType())) &&
-      "invalid arguments");
+MemorySpaceCastOpInterface MemorySpaceCastOp::cloneMemorySpaceCastOp(
+    OpBuilder &b, PtrLikeTypeInterface tgt,
+    TypedValue<PtrLikeTypeInterface> src) {
+  assert(isValidMemorySpaceCast(tgt, src.getType()) && "invalid arguments");
   return MemorySpaceCastOp::create(b, getLoc(), tgt, src);
 }
 
