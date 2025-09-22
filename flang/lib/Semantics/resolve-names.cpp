@@ -1976,15 +1976,18 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
 
   const parser::OmpArgumentList &args{x.Arguments()};
   const parser::OmpClauseList &clauses{x.Clauses()};
+  bool visitClauses{true};
 
   for (const parser::OmpArgument &arg : args.v) {
     common::visit( //
         common::visitors{
             [&](const parser::OmpMapperSpecifier &spec) {
               ProcessMapperSpecifier(spec, clauses);
+              visitClauses = false;
             },
             [&](const parser::OmpReductionSpecifier &spec) {
               ProcessReductionSpecifier(spec, clauses, declaratives_.back());
+              visitClauses = false;
             },
             [&](const parser::OmpLocator &locator) {
               // Manually resolve names in CRITICAL directives. This is because
@@ -2003,7 +2006,9 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
         arg.u);
   }
 
-  Walk(clauses);
+  if (visitClauses) {
+    Walk(clauses);
+  }
 
   return false;
 }
