@@ -83,6 +83,7 @@ const SomeExpr *HasStorageOverlap(
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 const parser::Block &GetInnermostExecPart(const parser::Block &block);
+bool IsStrictlyStructuredBlock(const parser::Block &block);
 } // namespace omp
 } // namespace Fortran::semantics
 

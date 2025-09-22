@@ -364,8 +364,8 @@ def Mem2Reg : Pass<"mem2reg"> {
   let description = [{
     This pass removes loads out of and stores into a memory slot, and turns
     them into direct uses of SSA values. This is done generically using the
-    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
-    `PromoteMemOpInterface` interfaces.
+    `PromotableAllocationOpInterface`, `PromotableOpInterface` and
+    `PromotableMemOpInterface` interfaces.
 
     This pass will attempt to compute which definitions of the content of
     the memory slot reach operations that use the memory slot pointer. It

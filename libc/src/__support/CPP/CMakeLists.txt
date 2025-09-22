@@ -20,6 +20,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.src.__support.macros.attributes
     libc.src.__support.macros.sanitizer
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
@@ -209,11 +210,23 @@ add_object_library(
     libc.hdr.func.malloc
     libc.hdr.func.aligned_alloc
     libc.src.__support.common
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  tuple
+  HDRS
+    tuple.h
+  DEPENDS
+    .utility
 )
 
 add_header_library(
   simd
   HDRS
     simd.h
+  DEPENDS
+    .utility
+    .tuple
 )

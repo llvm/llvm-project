@@ -2745,11 +2745,11 @@ _mm_xor_si128(__m128i __a, __m128i __b) {
 ///    \a a.
 /// \returns A 128-bit integer vector containing the left-shifted value.
 #define _mm_slli_si128(a, imm)                                                 \
-  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 #define _mm_bslli_si128(a, imm)                                                \
-  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 /// Left-shifts each 16-bit value in the 128-bit integer vector operand
@@ -2954,11 +2954,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi32(__m128i __a,
 ///    \a a.
 /// \returns A 128-bit integer vector containing the right-shifted value.
 #define _mm_srli_si128(a, imm)                                                 \
-  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 #define _mm_bsrli_si128(a, imm)                                                \
-  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 /// Right-shifts each of 16-bit values in the 128-bit integer vector

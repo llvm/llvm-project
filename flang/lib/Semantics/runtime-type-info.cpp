@@ -771,6 +771,8 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   auto &foldingContext{context_.foldingContext()};
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
       symbol, foldingContext)};
+  bool isDevice{object.cudaDataAttr() &&
+      *object.cudaDataAttr() == common::CUDADataAttr::Device};
   CHECK(typeAndShape.has_value());
   auto dyType{typeAndShape->type()};
   int rank{typeAndShape->Rank()};
@@ -883,9 +885,19 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   // Default component initialization
   bool hasDataInit{false};
   if (IsAllocatable(symbol)) {
-    AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
+    if (isDevice) {
+      AddValue(values, componentSchema_, "genre"s,
+          GetEnumValue("allocatabledevice"));
+    } else {
+      AddValue(values, componentSchema_, "genre"s, GetEnumValue("allocatable"));
+    }
   } else if (IsPointer(symbol)) {
-    AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
+    if (isDevice) {
+      AddValue(
+          values, componentSchema_, "genre"s, GetEnumValue("pointerdevice"));
+    } else {
+      AddValue(values, componentSchema_, "genre"s, GetEnumValue("pointer"));
+    }
     hasDataInit = InitializeDataPointer(
         values, symbol, object, scope, dtScope, distinctName);
   } else if (IsAutomatic(symbol)) {
@@ -1373,12 +1385,31 @@ CollectNonTbpDefinedIoGenericInterfaces(
           if (const DeclTypeSpec *
               declType{GetDefinedIoSpecificArgType(*specific)}) {
             const DerivedTypeSpec &derived{DEREF(declType->AsDerived())};
-            if (const Symbol *
-                dtDesc{derived.scope()
-                        ? derived.scope()->runtimeDerivedTypeDescription()
+            const Scope *derivedScope{derived.scope()};
+            if (!declType->IsPolymorphic()) {
+              // A defined I/O subroutine with a monomorphic "dtv" dummy
+              // argument implies a non-extensible sequence or BIND(C) derived
+              // type.  Such types may be defined more than once in the program
+              // so long as they are structurally equivalent.  If the current
+              // scope has an equivalent type, use it for the table rather
+              // than the "dtv" argument's type.
+              if (const Symbol *inScope{scope.FindSymbol(derived.name())}) {
+                const Symbol &ultimate{inScope->GetUltimate()};
+                DerivedTypeSpec localDerivedType{inScope->name(), ultimate};
+                if (ultimate.has<DerivedTypeDetails>() &&
+                    evaluate::DynamicType{derived, /*isPolymorphic=*/false}
+                        .IsTkCompatibleWith(evaluate::DynamicType{
+                            localDerivedType, /*iP=*/false})) {
+                  derivedScope = ultimate.scope();
+                }
+              }
+            }
+            if (const Symbol *dtDesc{derivedScope
+                        ? derivedScope->runtimeDerivedTypeDescription()
                         : nullptr}) {
               if (useRuntimeTypeInfoEntries &&
-                  &derived.scope()->parent() == &generic->owner()) {
+                  derivedScope == derived.scope() &&
+                  &derivedScope->parent() == &generic->owner()) {
                 // This non-TBP defined I/O generic was defined in the
                 // same scope as the derived type, and it will be
                 // included in the derived type's special bindings
@@ -1442,7 +1473,8 @@ static const Symbol *FindSpecificDefinedIo(const Scope &scope,
       const Symbol &specific{*ref};
       if (const DeclTypeSpec *
           thisType{GetDefinedIoSpecificArgType(specific)}) {
-        if (evaluate::DynamicType{DEREF(thisType->AsDerived()), true}
+        if (evaluate::DynamicType{
+                DEREF(thisType->AsDerived()), thisType->IsPolymorphic()}
                 .IsTkCompatibleWith(derived)) {
           return &specific.GetUltimate();
         }

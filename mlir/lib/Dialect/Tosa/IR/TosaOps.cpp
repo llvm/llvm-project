@@ -512,20 +512,20 @@ void ReduceMinOp::print(OpAsmPrinter &parser) {
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
 
-std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
+static std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
   if (lhs % rhs != 0)
     return std::nullopt;
   return lhs / rhs;
 }
 
-Type getStorageElementTypeOrSelf(Type type) {
+static Type getStorageElementTypeOrSelf(Type type) {
   auto srcType = getElementTypeOrSelf(type);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
     srcType = quantType.getStorageType();
   return srcType;
 }
 
-Type getStorageElementTypeOrSelf(Value value) {
+static Type getStorageElementTypeOrSelf(Value value) {
   return getStorageElementTypeOrSelf(value.getType());
 }
 
@@ -3056,7 +3056,7 @@ static LogicalResult verifyReduceOp(T op) {
     int64_t inputRank = inputType.getRank();
     // We allow for a special case where the input/output shape has rank 0 and
     // axis is also 0.
-    if (reduceAxis >= inputRank && !(reduceAxis == 0 && inputRank == 0)) {
+    if (reduceAxis >= inputRank && (reduceAxis != 0 || inputRank != 0)) {
       op.emitOpError("expect input tensor rank (")
           << inputRank << ") to be larger than reduce axis (" << reduceAxis
           << ")";
@@ -3070,7 +3070,7 @@ static LogicalResult verifyReduceOp(T op) {
           "expect output tensor rank to be equal to input tensor rank");
       return failure();
     }
-    if (reduceAxis >= outputRank && !(reduceAxis == 0 && outputRank == 0)) {
+    if (reduceAxis >= outputRank && (reduceAxis != 0 || outputRank != 0)) {
       op.emitOpError("expect output tensor rank (")
           << outputRank << ") to be larger than reduce axis (" << reduceAxis
           << ")";
@@ -4105,7 +4105,7 @@ LogicalResult ReverseOp::verify() {
     int64_t inputRank = inputType.getRank();
     // We allow for a special case where the input/output shape has rank 0 and
     // axis is also 0.
-    if (reverseAxis >= inputRank && !(reverseAxis == 0 && inputRank == 0))
+    if (reverseAxis >= inputRank && (reverseAxis != 0 || inputRank != 0))
       return emitOpError("expect input tensor rank (")
              << inputRank << ") to be larger than reverse axis (" << reverseAxis
              << ")";
@@ -4115,7 +4115,7 @@ LogicalResult ReverseOp::verify() {
     if (inputType.hasRank() && outputRank != inputType.getRank())
       return emitOpError(
           "expect output tensor rank to be equal to input tensor rank");
-    if (reverseAxis >= outputRank && !(reverseAxis == 0 && outputRank == 0))
+    if (reverseAxis >= outputRank && (reverseAxis != 0 || outputRank != 0))
       return emitOpError("expect output tensor rank (")
              << outputRank << ") to be larger than reverse axis ("
              << reverseAxis << ")";
@@ -4330,7 +4330,7 @@ LogicalResult tosa::ConstShapeOp::verify() {
   // check that number of elements in values attr equal to rank of result shape
   auto count = getValues().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();
-  if (!(count == rank || (count == 1 && rank == 0))) {
+  if (count != rank && (count != 1 || rank != 0)) {
     return emitOpError("expect number of elements in attribute values (")
            << count << ") to be equal to the rank (" << rank
            << ") for the result shape type";
