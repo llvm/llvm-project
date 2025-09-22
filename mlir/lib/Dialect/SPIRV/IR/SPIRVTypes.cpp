@@ -20,6 +20,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <cstdint>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -172,14 +173,6 @@ Type ArrayType::getElementType() const { return getImpl()->elementType; }
 
 unsigned ArrayType::getArrayStride() const { return getImpl()->stride; }
 
-std::optional<int64_t> ArrayType::getSizeInBytes() {
-  auto elementType = llvm::cast<SPIRVType>(getElementType());
-  std::optional<int64_t> size = elementType.getSizeInBytes();
-  if (!size)
-    return std::nullopt;
-  return (*size + getArrayStride()) * getNumElements();
-}
-
 //===----------------------------------------------------------------------===//
 // CompositeType
 //===----------------------------------------------------------------------===//
@@ -243,28 +236,6 @@ void TypeCapabilityVisitor::addConcrete(VectorType type) {
     static constexpr auto cap = Capability::Vector16;
     capabilities.push_back(cap);
   }
-}
-
-std::optional<int64_t> CompositeType::getSizeInBytes() {
-  if (auto arrayType = llvm::dyn_cast<ArrayType>(*this))
-    return arrayType.getSizeInBytes();
-  if (auto structType = llvm::dyn_cast<StructType>(*this))
-    return structType.getSizeInBytes();
-  if (auto vectorType = llvm::dyn_cast<VectorType>(*this)) {
-    std::optional<int64_t> elementSize =
-        llvm::cast<ScalarType>(vectorType.getElementType()).getSizeInBytes();
-    if (!elementSize)
-      return std::nullopt;
-    return *elementSize * vectorType.getNumElements();
-  }
-  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
-    std::optional<int64_t> elementSize =
-        llvm::cast<ScalarType>(tensorArmType.getElementType()).getSizeInBytes();
-    if (!elementSize)
-      return std::nullopt;
-    return *elementSize * tensorArmType.getNumElements();
-  }
-  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -714,19 +685,6 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
 #undef WIDTH_CASE
 }
 
-std::optional<int64_t> ScalarType::getSizeInBytes() {
-  auto bitWidth = getIntOrFloatBitWidth();
-  // According to the SPIR-V spec:
-  // "There is no physical size or bit pattern defined for values with boolean
-  // type. If they are stored (in conjunction with OpVariable), they can only
-  // be used with logical addressing operations, not physical, and only with
-  // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
-  // Private, Function, Input, and Output."
-  if (bitWidth == 1)
-    return std::nullopt;
-  return bitWidth / 8;
-}
-
 //===----------------------------------------------------------------------===//
 // SPIRVType
 //===----------------------------------------------------------------------===//
@@ -760,11 +718,35 @@ void SPIRVType::getCapabilities(
 }
 
 std::optional<int64_t> SPIRVType::getSizeInBytes() {
-  if (auto scalarType = llvm::dyn_cast<ScalarType>(*this))
-    return scalarType.getSizeInBytes();
-  if (auto compositeType = llvm::dyn_cast<CompositeType>(*this))
-    return compositeType.getSizeInBytes();
-  return std::nullopt;
+  return TypeSwitch<SPIRVType, std::optional<int64_t>>(*this)
+      .Case<ScalarType>([](ScalarType type) -> std::optional<int64_t> {
+        // According to the SPIR-V spec:
+        // "There is no physical size or bit pattern defined for values with
+        // boolean type. If they are stored (in conjunction with OpVariable),
+        // they can only be used with logical addressing operations, not
+        // physical, and only with non-externally visible shader Storage
+        // Classes: Workgroup, CrossWorkgroup, Private, Function, Input, and
+        // Output."
+        int64_t bitWidth = type.getIntOrFloatBitWidth();
+        if (bitWidth == 1)
+          return std::nullopt;
+        return bitWidth / 8;
+      })
+      .Case<ArrayType>([](ArrayType type) -> std::optional<int64_t> {
+        // Since array type may have an explicit stride declaration (in bytes),
+        // we also include it in the calculation.
+        auto elementType = cast<SPIRVType>(type.getElementType());
+        if (std::optional<int64_t> size = elementType.getSizeInBytes())
+          return (*size + type.getArrayStride()) * type.getNumElements();
+        return std::nullopt;
+      })
+      .Case<VectorType, TensorArmType>([](auto type) -> std::optional<int64_t> {
+        if (std::optional<int64_t> elementSize =
+                cast<ScalarType>(type.getElementType()).getSizeInBytes())
+          return *elementSize * type.getNumElements();
+        return std::nullopt;
+      })
+      .Default(std::optional<int64_t>());
 }
 
 //===----------------------------------------------------------------------===//
