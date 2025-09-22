@@ -52,3 +52,7 @@ function start-group {
     echo "Starting $groupname"
   fi
 }
+
+if [[ "$GITHUB_ACTIONS" != "" ]]; then
+  python .ci/cache_lit_timing_files.py download
+fi
