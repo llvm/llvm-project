@@ -269,7 +269,8 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
-  if (std::holds_alternative<parser::Name>(object.u)) {
+  if (std::holds_alternative<parser::Name>(object.u) ||
+      std::holds_alternative<parser::OmpObject::Invalid>(object.u)) {
     // Do not analyze common block names. The analyzer will flag an error
     // on those.
     return;
@@ -294,7 +295,12 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
   }
   evaluate::ExpressionAnalyzer ea{context_};
   auto restore{ea.AllowWholeAssumedSizeArray(true)};
-  common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
+  common::visit( //
+      common::visitors{
+          [&](auto &&s) { ea.Analyze(s); },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
 }
 
 void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
@@ -538,6 +544,7 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
             [&](const parser::Name &name) {
               CheckPredefinedAllocatorRestriction(source, name);
             },
+            [&](const parser::OmpObject::Invalid &invalid) {},
         },
         ompObject.u);
   }
@@ -596,10 +603,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return std::get<parser::OmpBeginDirective>(t).DirName();
   }
 
-  bool Pre(const parser::OmpSectionsDirective &x) {
-    checker_(x.source, x.v);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
@@ -608,25 +611,12 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
     return false;
   }
-  bool Pre(const parser::OmpErrorDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_error);
-    return false;
-  }
-  bool Pre(const parser::OmpNothingDirective &x) {
-    checker_(x.source, Directive::OMPD_nothing);
-    return false;
-  }
   bool Pre(const parser::OpenMPExecutableAllocate &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
   }
   bool Pre(const parser::OpenMPAllocatorsConstruct &x) {
     checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
-    return false;
-  }
-  bool Pre(const parser::OmpMetadirectiveDirective &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_metadirective);
     return false;
   }
   bool Pre(const parser::OpenMPDeclarativeAssumes &x) {
@@ -662,11 +652,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(x.v.DirName().source, Directive::OMPD_groupprivate);
     return false;
   }
-  bool Pre(const parser::OpenMPThreadprivate &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_threadprivate);
-    return false;
-  }
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_requires);
     return false;
@@ -677,10 +662,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   }
   bool Pre(const parser::OmpEndDirective &x) {
     checker_(x.DirName().source, x.DirId());
-    return false;
-  }
-  bool Pre(const parser::OmpLoopDirective &x) {
-    checker_(x.source, x.v);
     return false;
   }
 
@@ -1154,34 +1135,30 @@ void OmpStructureChecker::Leave(const parser::OmpBeginDirective &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
-  const auto &beginSectionsDir{
-      std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &endSectionsDir{
-      std::get<std::optional<parser::OmpEndSectionsDirective>>(x.t)};
-  const auto &beginDir{
-      std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  PushContextAndClauseSets(beginDir.source, beginDir.v);
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+  const auto &endSpec{x.EndDir()};
+  PushContextAndClauseSets(beginName.source, beginName.v);
 
-  if (!endSectionsDir) {
-    context_.Say(beginSectionsDir.source,
-        "Expected OpenMP END SECTIONS directive"_err_en_US);
+  if (!endSpec) {
+    context_.Say(
+        beginName.source, "Expected OpenMP END SECTIONS directive"_err_en_US);
     // Following code assumes the option is present.
     return;
   }
 
-  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir->t)};
-  CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
+  CheckMatching<parser::OmpDirectiveName>(beginName, endSpec->DirName());
 
-  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir->t));
+  AddEndDirectiveClauses(endSpec->Clauses());
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
     auto &section{std::get<parser::OpenMPSectionConstruct>(construct.u)};
     CheckNoBranching(
-        std::get<parser::Block>(section.t), beginDir.v, beginDir.source);
+        std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
   HasInvalidWorksharingNesting(
-      beginDir.source, llvm::omp::nestedWorkshareErrSet);
+      beginName.source, llvm::omp::nestedWorkshareErrSet);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
@@ -1189,13 +1166,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
-  const auto &dir{std::get<parser::OmpSectionsDirective>(x.t)};
-  ResetPartialContext(dir.source);
-  switch (dir.v) {
+  const parser::OmpDirectiveName &dirName{x.DirName()};
+  ResetPartialContext(dirName.source);
+  switch (dirName.v) {
     // 2.7.2 end-sections -> END SECTIONS [nowait-clause]
   case llvm::omp::Directive::OMPD_sections:
     PushContextAndClauseSets(
-        dir.source, llvm::omp::Directive::OMPD_end_sections);
+        dirName.source, llvm::omp::Directive::OMPD_end_sections);
     break;
   default:
     // no clauses are allowed
@@ -1300,10 +1277,19 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 }
 
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
+    const parser::OmpObject &object) {
+  common::visit( //
+      common::visitors{
+          [&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
+}
+
+void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
-    common::visit([&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
-        ompObject.u);
+    CheckThreadprivateOrDeclareTargetVar(ompObject);
   }
 }
 
@@ -1363,18 +1349,20 @@ void OmpStructureChecker::Leave(const parser::OpenMPGroupprivate &x) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &c) {
-  const auto &dir{std::get<parser::Verbatim>(c.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_threadprivate);
+void OmpStructureChecker::Enter(const parser::OpenMPThreadprivate &x) {
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &c) {
-  const auto &dir{std::get<parser::Verbatim>(c.t)};
-  const auto &objectList{std::get<parser::OmpObjectList>(c.t)};
-  CheckSymbolNames(dir.source, objectList);
-  CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
-  CheckThreadprivateOrDeclareTargetVar(objectList);
+void OmpStructureChecker::Leave(const parser::OpenMPThreadprivate &x) {
+  const parser::OmpDirectiveSpecification &dirSpec{x.v};
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{GetArgumentObject(arg)}) {
+      CheckSymbolName(dirSpec.source, *object);
+      CheckVarIsNotPartOfAnotherVar(dirSpec.source, *object);
+      CheckThreadprivateOrDeclareTargetVar(*object);
+    }
+  }
   dirContext_.pop_back();
 }
 
@@ -1434,8 +1422,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
   // refer to the same depend object as the depobj argument of the construct.
   if (clause.Id() == llvm::omp::Clause::OMPC_destroy) {
     auto getObjSymbol{[&](const parser::OmpObject &obj) {
-      return common::visit(
-          [&](auto &&s) { return GetLastName(s).symbol; }, obj.u);
+      return common::visit( //
+          common::visitors{
+              [&](auto &&s) { return GetLastName(s).symbol; },
+              [&](const parser::OmpObject::Invalid &invalid) {
+                return static_cast<Symbol *>(nullptr);
+              },
+          },
+          obj.u);
     }};
     auto getArgSymbol{[&](const parser::OmpArgument &arg) {
       if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
@@ -1450,9 +1444,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
       const Symbol *constrSym{getArgSymbol(arguments.v.front())};
       const Symbol *clauseSym{getObjSymbol(destroy->v)};
-      assert(constrSym && "Unresolved depobj construct symbol");
-      assert(clauseSym && "Unresolved destroy symbol on depobj construct");
-      if (constrSym != clauseSym) {
+      if (constrSym && clauseSym && constrSym != clauseSym) {
         context_.Say(x.source,
             "The DESTROY clause must refer to the same object as the "
             "DEPOBJ construct"_err_en_US);
@@ -1669,29 +1661,35 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithList &x) {
   }
 }
 
-void OmpStructureChecker::CheckSymbolNames(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
-  for (const auto &ompObject : objList.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
-              if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
-                if (!name->symbol) {
-                  context_.Say(source,
-                      "The given %s directive clause has an invalid argument"_err_en_US,
-                      ContextDirectiveAsFortran());
-                }
-              }
-            },
-            [&](const parser::Name &name) {
-              if (!name.symbol) {
+void OmpStructureChecker::CheckSymbolName(
+    const parser::CharBlock &source, const parser::OmpObject &object) {
+  common::visit(
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            if (const auto *name{parser::Unwrap<parser::Name>(object)}) {
+              if (!name->symbol) {
                 context_.Say(source,
                     "The given %s directive clause has an invalid argument"_err_en_US,
                     ContextDirectiveAsFortran());
               }
-            },
-        },
-        ompObject.u);
+            }
+          },
+          [&](const parser::Name &name) {
+            if (!name.symbol) {
+              context_.Say(source,
+                  "The given %s directive clause has an invalid argument"_err_en_US,
+                  ContextDirectiveAsFortran());
+            }
+          },
+          [&](const parser::OmpObject::Invalid &invalid) {},
+      },
+      object.u);
+}
+
+void OmpStructureChecker::CheckSymbolNames(
+    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
+  for (const auto &ompObject : objList.v) {
+    CheckSymbolName(source, ompObject);
   }
 }
 
@@ -1755,8 +1753,17 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpNothingDirective &x) {
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpNothingDirective &x) {
+  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
@@ -2710,6 +2717,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
                       }
                     }
                   },
+                  [&](const parser::OmpObject::Invalid &invalid) {},
               },
               ompObject.u);
         }
@@ -3417,6 +3425,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
             }
           },
           [&](const parser::Name &name) {},
+          [&](const parser::OmpObject::Invalid &invalid) {},
       },
       ompObject.u);
 }
@@ -4102,11 +4111,11 @@ void OmpStructureChecker::CheckStructureComponent(
   }};
 
   for (const auto &object : objects.v) {
-    common::visit(
-        common::visitors{
-            CheckComponent,
-            [&](const parser::Name &name) {},
-        },
+    common::visit(common::visitors{
+                      CheckComponent,
+                      [&](const parser::Name &name) {},
+                      [&](const parser::OmpObject::Invalid &invalid) {},
+                  },
         object.u);
   }
 }
@@ -4648,12 +4657,7 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         } else if (const auto *ompSectionsConstruct{
                        std::get_if<parser::OpenMPSectionsConstruct>(
                            &ompConstruct->u)}) {
-          const auto &beginSectionsDir{
-              std::get<parser::OmpBeginSectionsDirective>(
-                  ompSectionsConstruct->t)};
-          const auto &beginDir{
-              std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-          currentDir = beginDir.v;
+          currentDir = ompSectionsConstruct->BeginDir().DirId();
         }
 
         if (!llvm::omp::topParallelSet.test(currentDir)) {
