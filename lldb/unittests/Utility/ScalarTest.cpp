@@ -118,11 +118,14 @@ TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;
   int c = 4;
+  unsigned d = 0xFFFFFFFF;
   Scalar a_scalar(a);
   Scalar b_scalar(b);
   Scalar c_scalar(c);
+  Scalar d_scalar(d);
   ASSERT_EQ(a >> c, a_scalar >> c_scalar);
   ASSERT_EQ(b >> c, b_scalar >> c_scalar);
+  ASSERT_EQ(d >> c, d_scalar >> c_scalar);
 }
 
 TEST(ScalarTest, GetBytes) {
