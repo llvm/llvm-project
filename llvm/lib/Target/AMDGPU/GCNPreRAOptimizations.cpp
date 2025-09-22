@@ -323,7 +323,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
               // Check if MFMA register is dead at current instruction
               const LiveInterval &MFMAInterval = LIS->getInterval(MFMAReg);
               if (!MFMAInterval.liveAt(CurrentSlot)) {
-                // Add bidirectional antihints
+                // Add bi-directional anti-hints
                 MRI->addRegAllocationAntiHints(CandidateReg, MFMARegs);
                 MRI->addRegAllocationAntiHints(MFMAReg, CandidateReg);
               }
