@@ -53,7 +53,7 @@ static Error tryFilter() {
       SerializerFormat = Format::YAML;
   }
 
-  auto MaybeOF = getOutputFileForRemarks(OutputFileName, Format::YAML);
+  auto MaybeOF = getOutputFileForRemarks(OutputFileName, SerializerFormat);
   if (!MaybeOF)
     return MaybeOF.takeError();
   auto OF = std::move(*MaybeOF);
