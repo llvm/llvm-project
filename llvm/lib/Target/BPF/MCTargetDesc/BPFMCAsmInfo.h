@@ -31,6 +31,7 @@ public:
     UsesELFSectionDirectiveForBSS = true;
     HasSingleParameterDotFile = true;
     HasDotTypeDotSizeDirective = true;
+    HasIdentDirective = false;
 
     SupportsDebugInformation = true;
     ExceptionsType = ExceptionHandling::DwarfCFI;
@@ -46,6 +47,10 @@ public:
 
   void setDwarfUsesRelocationsAcrossSections(bool enable) {
     DwarfUsesRelocationsAcrossSections = enable;
+  }
+
+  MCSection *getNonexecutableStackSection(MCContext &Ctx) const override {
+    return nullptr;
   }
 };
 }

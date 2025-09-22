@@ -18,7 +18,7 @@ namespace clang::tidy::openmp {
 /// out of the Structured Block it was thrown in.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/openmp/exception-escape.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/openmp/exception-escape.html
 class ExceptionEscapeCheck : public ClangTidyCheck {
 public:
   ExceptionEscapeCheck(StringRef Name, ClangTidyContext *Context);

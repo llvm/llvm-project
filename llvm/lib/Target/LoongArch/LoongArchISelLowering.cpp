@@ -18,6 +18,7 @@
 #include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -40,6 +41,34 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-isel-lowering"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+
+enum MaterializeFPImm {
+  NoMaterializeFPImm = 0,
+  MaterializeFPImm2Ins = 2,
+  MaterializeFPImm3Ins = 3,
+  MaterializeFPImm4Ins = 4,
+  MaterializeFPImm5Ins = 5,
+  MaterializeFPImm6Ins = 6
+};
+
+static cl::opt<MaterializeFPImm> MaterializeFPImmInsNum(
+    "loongarch-materialize-float-imm", cl::Hidden,
+    cl::desc("Maximum number of instructions used (including code sequence "
+             "to generate the value and moving the value to FPR) when "
+             "materializing floating-point immediates (default = 3)"),
+    cl::init(MaterializeFPImm3Ins),
+    cl::values(clEnumValN(NoMaterializeFPImm, "0", "Use constant pool"),
+               clEnumValN(MaterializeFPImm2Ins, "2",
+                          "Materialize FP immediate within 2 instructions"),
+               clEnumValN(MaterializeFPImm3Ins, "3",
+                          "Materialize FP immediate within 3 instructions"),
+               clEnumValN(MaterializeFPImm4Ins, "4",
+                          "Materialize FP immediate within 4 instructions"),
+               clEnumValN(MaterializeFPImm5Ins, "5",
+                          "Materialize FP immediate within 5 instructions"),
+               clEnumValN(MaterializeFPImm6Ins, "6",
+                          "Materialize FP immediate within 6 instructions "
+                          "(behaves same as 5 on loongarch64)")));
 
 static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
                                   cl::desc("Trap on integer division by zero."),
@@ -190,6 +219,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
+    setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
     setOperationAction(ISD::FMA, MVT::f32, Legal);
@@ -237,6 +267,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
 
+    setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
@@ -557,7 +588,64 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
     return lowerVECREDUCE(Op, DAG);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   }
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Op);
+  const APFloat &FPVal = CFP->getValueAPF();
+  SDLoc DL(CFP);
+
+  assert((VT == MVT::f32 && Subtarget.hasBasicF()) ||
+         (VT == MVT::f64 && Subtarget.hasBasicD()));
+
+  // If value is 0.0 or -0.0, just ignore it.
+  if (FPVal.isZero())
+    return SDValue();
+
+  // If lsx enabled, use cheaper 'vldi' instruction if possible.
+  if (isFPImmVLDILegal(FPVal, VT))
+    return SDValue();
+
+  // Construct as integer, and move to float register.
+  APInt INTVal = FPVal.bitcastToAPInt();
+
+  // If more than MaterializeFPImmInsNum instructions will be used to
+  // generate the INTVal and move it to float register, fallback to
+  // use floating point load from the constant pool.
+  auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
+  int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
+  if (InsNum > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
+    return SDValue();
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected floating point type!");
+    break;
+  case MVT::f32: {
+    SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i32);
+    if (Subtarget.is64Bit())
+      NewVal = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, NewVal);
+    return DAG.getNode(Subtarget.is64Bit() ? LoongArchISD::MOVGR2FR_W_LA64
+                                           : LoongArchISD::MOVGR2FR_W,
+                       DL, VT, NewVal);
+  }
+  case MVT::f64: {
+    if (Subtarget.is64Bit()) {
+      SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i64);
+      return DAG.getNode(LoongArchISD::MOVGR2FR_D, DL, VT, NewVal);
+    }
+    SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
+    SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
+    return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
+  }
+  }
+
   return SDValue();
 }
 
@@ -1978,9 +2066,8 @@ lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if (fitsRegularPattern<int>(Begin, 1, End - HalfSize, SplatIndex, 0) &&
       fitsRegularPattern<int>(Begin + HalfSize, 1, End, SplatIndex + HalfSize,
                               0)) {
-    APInt Imm(64, SplatIndex);
     return DAG.getNode(LoongArchISD::VREPLVEI, DL, VT, V1,
-                       DAG.getConstant(Imm, DL, Subtarget.getGRLenVT()));
+                       DAG.getConstant(SplatIndex, DL, Subtarget.getGRLenVT()));
   }
 
   return SDValue();
@@ -2647,9 +2734,47 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
   return SDValue();
 }
 
+// Sequentially insert elements from Ops into Vector, from low to high indices.
+// Note: Ops can have fewer elements than Vector.
+static void fillVector(ArrayRef<SDValue> Ops, SelectionDAG &DAG, SDLoc DL,
+                       const LoongArchSubtarget &Subtarget, SDValue &Vector,
+                       EVT ResTy) {
+  assert(Ops.size() <= ResTy.getVectorNumElements());
+
+  SDValue Op0 = Ops[0];
+  if (!Op0.isUndef())
+    Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
+  for (unsigned i = 1; i < Ops.size(); ++i) {
+    SDValue Opi = Ops[i];
+    if (Opi.isUndef())
+      continue;
+    Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
+                         DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+  }
+}
+
+// Build a ResTy subvector from Node, taking NumElts elements starting at index
+// 'first'.
+static SDValue fillSubVectorFromBuildVector(BuildVectorSDNode *Node,
+                                            SelectionDAG &DAG, SDLoc DL,
+                                            const LoongArchSubtarget &Subtarget,
+                                            EVT ResTy, unsigned first) {
+  unsigned NumElts = ResTy.getVectorNumElements();
+
+  assert(first >= 0 &&
+         first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
+
+  SmallVector<SDValue, 16> Ops(Node->op_begin() + first,
+                               Node->op_begin() + first + NumElts);
+  SDValue Vector = DAG.getUNDEF(ResTy);
+  fillVector(Ops, DAG, DL, Subtarget, Vector, ResTy);
+  return Vector;
+}
+
 SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
+  MVT VT = Node->getSimpleValueType(0);
   EVT ResTy = Op->getValueType(0);
   unsigned NumElts = ResTy.getVectorNumElements();
   SDLoc DL(Op);
@@ -2744,24 +2869,87 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   }
 
   if (!IsConstant) {
-    // Use INSERT_VECTOR_ELT operations rather than expand to stores.
-    // The resulting code is the same length as the expansion, but it doesn't
-    // use memory operations.
-    assert(ResTy.isVector());
+    // If the BUILD_VECTOR has a repeated pattern, use INSERT_VECTOR_ELT to fill
+    // the sub-sequence of the vector and then broadcast the sub-sequence.
+    //
+    // TODO: If the BUILD_VECTOR contains undef elements, consider falling
+    // back to use INSERT_VECTOR_ELT to materialize the vector, because it
+    // generates worse code in some cases. This could be further optimized
+    // with more consideration.
+    SmallVector<SDValue> Sequence;
+    BitVector UndefElements;
+    if (Node->getRepeatedSequence(Sequence, &UndefElements) &&
+        UndefElements.count() == 0) {
+      // Using LSX instructions to fill the sub-sequence of 256-bits vector,
+      // because the high part can be simply treated as undef.
+      SDValue Vector = DAG.getUNDEF(ResTy);
+      EVT FillTy = Is256Vec
+                       ? ResTy.getHalfNumVectorElementsVT(*DAG.getContext())
+                       : ResTy;
+      SDValue FillVec =
+          Is256Vec ? DAG.getExtractSubvector(DL, FillTy, Vector, 0) : Vector;
 
-    SDValue Op0 = Node->getOperand(0);
-    SDValue Vector = DAG.getUNDEF(ResTy);
+      fillVector(Sequence, DAG, DL, Subtarget, FillVec, FillTy);
 
-    if (!Op0.isUndef())
-      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
-    for (unsigned i = 1; i < NumElts; ++i) {
-      SDValue Opi = Node->getOperand(i);
-      if (Opi.isUndef())
-        continue;
-      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
-                           DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+      unsigned SeqLen = Sequence.size();
+      unsigned SplatLen = NumElts / SeqLen;
+      MVT SplatEltTy = MVT::getIntegerVT(VT.getScalarSizeInBits() * SeqLen);
+      MVT SplatTy = MVT::getVectorVT(SplatEltTy, SplatLen);
+
+      // If size of the sub-sequence is half of a 256-bits vector, bitcast the
+      // vector to v4i64 type in order to match the pattern of XVREPLVE0Q.
+      if (SplatEltTy == MVT::i128)
+        SplatTy = MVT::v4i64;
+
+      SDValue SplatVec;
+      SDValue SrcVec = DAG.getBitcast(
+          SplatTy,
+          Is256Vec ? DAG.getInsertSubvector(DL, Vector, FillVec, 0) : FillVec);
+      if (Is256Vec) {
+        SplatVec =
+            DAG.getNode((SplatEltTy == MVT::i128) ? LoongArchISD::XVREPLVE0Q
+                                                  : LoongArchISD::XVREPLVE0,
+                        DL, SplatTy, SrcVec);
+      } else {
+        SplatVec = DAG.getNode(LoongArchISD::VREPLVEI, DL, SplatTy, SrcVec,
+                               DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+      }
+
+      return DAG.getBitcast(ResTy, SplatVec);
     }
-    return Vector;
+
+    // Use INSERT_VECTOR_ELT operations rather than expand to stores, because
+    // using memory operations is much lower.
+    //
+    // For 256-bit vectors, normally split into two halves and concatenate.
+    // Special case: for v8i32/v8f32/v4i64/v4f64, if the upper half has only
+    // one non-undef element, skip spliting to avoid a worse result.
+    if (ResTy == MVT::v8i32 || ResTy == MVT::v8f32 || ResTy == MVT::v4i64 ||
+        ResTy == MVT::v4f64) {
+      unsigned NonUndefCount = 0;
+      for (unsigned i = NumElts / 2; i < NumElts; ++i) {
+        if (!Node->getOperand(i).isUndef()) {
+          ++NonUndefCount;
+          if (NonUndefCount > 1)
+            break;
+        }
+      }
+      if (NonUndefCount == 1)
+        return fillSubVectorFromBuildVector(Node, DAG, DL, Subtarget, ResTy, 0);
+    }
+
+    EVT VecTy =
+        Is256Vec ? ResTy.getHalfNumVectorElementsVT(*DAG.getContext()) : ResTy;
+    SDValue Vector =
+        fillSubVectorFromBuildVector(Node, DAG, DL, Subtarget, VecTy, 0);
+
+    if (Is128Vec)
+      return Vector;
+
+    SDValue VectorHi = fillSubVectorFromBuildVector(Node, DAG, DL, Subtarget,
+                                                    VecTy, NumElts / 2);
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResTy, Vector, VectorHi);
   }
 
   return SDValue();
@@ -7052,7 +7240,10 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(SRL_W)
     NODE_NAME_CASE(BSTRINS)
     NODE_NAME_CASE(BSTRPICK)
+    NODE_NAME_CASE(MOVGR2FR_W)
     NODE_NAME_CASE(MOVGR2FR_W_LA64)
+    NODE_NAME_CASE(MOVGR2FR_D)
+    NODE_NAME_CASE(MOVGR2FR_D_LO_HI)
     NODE_NAME_CASE(MOVFR2GR_S_LA64)
     NODE_NAME_CASE(FTINT)
     NODE_NAME_CASE(BUILD_PAIR_F64)
@@ -7110,6 +7301,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VREPLGR2VR)
     NODE_NAME_CASE(XVPERMI)
     NODE_NAME_CASE(XVPERM)
+    NODE_NAME_CASE(XVREPLVE0)
+    NODE_NAME_CASE(XVREPLVE0Q)
     NODE_NAME_CASE(VPICK_SEXT_ELT)
     NODE_NAME_CASE(VPICK_ZEXT_ELT)
     NODE_NAME_CASE(VREPLVE)
@@ -7332,16 +7525,23 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   unsigned StoreSizeBytes = GRLen / 8;
   Align StackAlign = Align(GRLen / 8);
 
-  if (ValVT == MVT::f32 && !UseGPRForFloat)
+  if (ValVT == MVT::f32 && !UseGPRForFloat) {
     Reg = State.AllocateReg(ArgFPR32s);
-  else if (ValVT == MVT::f64 && !UseGPRForFloat)
+  } else if (ValVT == MVT::f64 && !UseGPRForFloat) {
     Reg = State.AllocateReg(ArgFPR64s);
-  else if (ValVT.is128BitVector())
+  } else if (ValVT.is128BitVector()) {
     Reg = State.AllocateReg(ArgVRs);
-  else if (ValVT.is256BitVector())
+    UseGPRForFloat = false;
+    StoreSizeBytes = 16;
+    StackAlign = Align(16);
+  } else if (ValVT.is256BitVector()) {
     Reg = State.AllocateReg(ArgXRs);
-  else
+    UseGPRForFloat = false;
+    StoreSizeBytes = 32;
+    StackAlign = Align(32);
+  } else {
     Reg = State.AllocateReg(ArgGPRs);
+  }
 
   unsigned StackOffset =
       Reg ? 0 : State.AllocateStack(StoreSizeBytes, StackAlign);

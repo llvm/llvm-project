@@ -42,6 +42,12 @@ class Commit:
             raise RuntimeError(f'Error when trying to obtain the commit order for {self._sha} and {other._sha}')
         return res.returncode == 0
 
+    def __hash__(self):
+        """
+        Return the full revision for this commit.
+        """
+        return hash(self.fullrev)
+
     def show(self, include_diff=False):
         """
         Return the commit information equivalent to `git show` associated to this commit.
@@ -153,6 +159,29 @@ def parse_lnt(lines):
         results[name][metric].append(float(value))
     return results
 
+def find_outliers(xs, ys, threshold):
+    """
+    Given a list of x coordinates and a list of y coordinates, find (x, y) pairs where the y
+    value differs from the previous y value by more than the given relative difference.
+
+    The threshold is given as a floating point representing a percentage, e.g. 0.25 will result in
+    detecting points that differ from their previous value by more than 25%. The difference is in
+    absolute value, i.e. both positive and negative spikes are detected.
+    """
+    outliers = []
+    previous = None
+    for (x, y) in zip(xs, ys):
+        if y is None: # skip data points that don't contain values
+            continue
+
+        if previous is not None:
+            diff = y - previous
+            if (diff / previous) > threshold:
+                outliers.append((x, y))
+        previous = y
+    return outliers
+
+
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='visualize-historical',
@@ -176,6 +205,13 @@ def main(argv):
              'Since the chart is interactive, it generally makes most sense to include all the benchmarks '
              'and to then filter them in the browser, but in some cases producing a chart with a reduced '
              'number of data series is useful.')
+    parser.add_argument('--find-outliers', metavar='FLOAT', type=float, required=False,
+        help='When building the chart, detect commits that show a large spike (more than the given relative threshold) '
+             'with the previous result and print those to standard output. This can be used to generate a list of '
+             'potential outliers that we might want to re-generate the data for. The threshold is expressed as a '
+             'floating point number, e.g. 0.25 will detect points that differ by more than 25%% from their previous '
+             'result. This option respects --filter, i.e. only benchmarks that match the filter will be analyzed for '
+             'outliers.')
     parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
         help='Path to the git repository to use for ordering commits in time. '
              'By default, the current working directory is used.')
@@ -214,10 +250,20 @@ def main(argv):
         regex = re.compile(args.filter)
         benchmarks = {b for b in benchmarks if regex.search(b)}
 
+    # If requested, perform a basic pass to detect outliers
+    if args.find_outliers is not None:
+        threshold = args.find_outliers
+        outliers = set()
+        for benchmark in benchmarks:
+            commits = [commit for (commit, _) in historical_data]
+            series = [commit_data.get(benchmark, None) for (_, commit_data) in historical_data]
+            outliers |= set(commit for (commit, _) in find_outliers(commits, series, threshold=threshold))
+        print(f'Outliers (more than {threshold * 100}%): {" ".join(str(x) for x in outliers)}')
+
     # Plot the data for all the required benchmarks
     figure = create_plot([commit for (commit, _) in historical_data],
                          sorted(list(benchmarks)),
-                         [data for (_, data) in historical_data])
+                         [commit_data for (_, commit_data) in historical_data])
     do_open = args.output is None or args.open
     output = args.output if args.output is not None else tempfile.NamedTemporaryFile(suffix='.html').name
     plotly.io.write_html(figure, file=output, auto_open=do_open)
