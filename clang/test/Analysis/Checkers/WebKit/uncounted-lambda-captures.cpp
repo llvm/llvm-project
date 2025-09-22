@@ -17,6 +17,18 @@ void for_each(IteratorType first, IteratorType last, CallbackType callback) {
     callback(*it);
 }
 
+struct all_of_impl {
+  template <typename Collection, typename Predicate>
+  constexpr bool operator()(const Collection& collection, Predicate predicate) const {
+    for (auto it = collection.begin(); it != collection.end(); ++it) {
+      if (!predicate(*it))
+        return false;
+    }
+    return true;
+  }
+};
+inline constexpr auto all_of = all_of_impl {};
+
 }
 
 }
@@ -435,7 +447,7 @@ public:
   bool operator==(const Iterator&);
 
   Iterator& operator++();
-  void* operator*();
+  int& operator*();
 
 private:
   void* current { nullptr };
@@ -444,8 +456,48 @@ private:
 
 void ranges_for_each(RefCountable* obj) {
   int array[] = { 1, 2, 3, 4, 5 };
-  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](void* item) {
+  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](int& item) {
     obj->method();
-    ++(*static_cast<unsigned*>(item));
+    ++item;
   });
+}
+
+class IntCollection {
+public:
+  int* begin();
+  int* end();
+  const int* begin() const;
+  const int* end() const;
+};
+
+class RefCountedObj {
+public:
+  void ref();
+  void deref();
+
+  bool allOf(const IntCollection&);
+  bool isMatch(int);
+
+  void call() const;
+  void callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const;
+  void doSomeWork() const;
+};
+
+bool RefCountedObj::allOf(const IntCollection& collection) {
+  return std::ranges::all_of(collection, [&](auto& number) {
+    return isMatch(number);
+  });
+}
+
+void RefCountedObj::callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const
+{
+    callback();
+}
+
+void RefCountedObj::call() const
+{
+    auto lambda = [&] {
+        doSomeWork();
+    };
+    callLambda(lambda);
 }

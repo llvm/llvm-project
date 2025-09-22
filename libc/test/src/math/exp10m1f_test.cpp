@@ -69,7 +69,6 @@ TEST_F(LlvmLibcExp10m1fTest, TrickyInputs) {
   };
 
   for (float x : INPUTS) {
-    libc_errno = 0;
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10m1, x,
                                    LIBC_NAMESPACE::exp10m1f(x), 0.5);
   }

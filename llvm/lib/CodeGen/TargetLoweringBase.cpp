@@ -612,23 +612,23 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
     RTLIB::LibcallImpl Impl) const {
   switch (Impl) {
-  case RTLIB::__aeabi_dcmpeq__une:
-  case RTLIB::__aeabi_fcmpeq__une:
+  case RTLIB::impl___aeabi_dcmpeq__une:
+  case RTLIB::impl___aeabi_fcmpeq__une:
     // Usage in the eq case, so we have to invert the comparison.
     return ISD::SETEQ;
-  case RTLIB::__aeabi_dcmpeq__oeq:
-  case RTLIB::__aeabi_fcmpeq__oeq:
+  case RTLIB::impl___aeabi_dcmpeq__oeq:
+  case RTLIB::impl___aeabi_fcmpeq__oeq:
     // Normal comparison to boolean value.
     return ISD::SETNE;
-  case RTLIB::__aeabi_dcmplt:
-  case RTLIB::__aeabi_dcmple:
-  case RTLIB::__aeabi_dcmpge:
-  case RTLIB::__aeabi_dcmpgt:
-  case RTLIB::__aeabi_dcmpun:
-  case RTLIB::__aeabi_fcmplt:
-  case RTLIB::__aeabi_fcmple:
-  case RTLIB::__aeabi_fcmpge:
-  case RTLIB::__aeabi_fcmpgt:
+  case RTLIB::impl___aeabi_dcmplt:
+  case RTLIB::impl___aeabi_dcmple:
+  case RTLIB::impl___aeabi_dcmpge:
+  case RTLIB::impl___aeabi_dcmpgt:
+  case RTLIB::impl___aeabi_dcmpun:
+  case RTLIB::impl___aeabi_fcmplt:
+  case RTLIB::impl___aeabi_fcmple:
+  case RTLIB::impl___aeabi_fcmpge:
+  case RTLIB::impl___aeabi_fcmpgt:
     /// The AEABI versions return a typical boolean value, so we can compare
     /// against the integer result as simply != 0.
     return ISD::SETNE;
@@ -899,6 +899,9 @@ void TargetLoweringBase::initActions() {
 
     // Masked vector extracts default to expand.
     setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
+
+    setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Expand);
+    setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Expand);
 
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);

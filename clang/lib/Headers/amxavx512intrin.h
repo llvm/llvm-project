@@ -16,7 +16,7 @@
 
 #define __DEFAULT_FN_ATTRS_AVX512                                              \
   __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("amx-avx512,avx10.2-512")))
+                 __target__("amx-avx512,avx10.2")))
 
 /// Moves a row from a tile register to a zmm destination register, converting
 ///    the int32 source elements to fp32. The row of the tile is selected by a

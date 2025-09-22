@@ -361,9 +361,6 @@ def err_drv_optimization_remark_format : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' pointer size is incompatible with host '%1'">;
-def err_drv_omp_host_ir_file_not_found : Error<
-  "provided host compiler IR file '%0' is required to generate code for OpenMP "
-  "target regions but cannot be found">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
@@ -488,6 +485,9 @@ def warn_drv_overriding_option : Warning<
 def warn_drv_overriding_deployment_version
     : Warning<"overriding deployment version from '%0' to '%1'">,
       InGroup<DiagGroup<"overriding-deployment-version">>;
+def warn_drv_overriding_complex_range : Warning<
+  "'%1' sets complex range to \"%3\" overriding the setting of \"%2\" that was implied by '%0'">,
+  InGroup<DiagGroup<"overriding-complex-range">>;
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
