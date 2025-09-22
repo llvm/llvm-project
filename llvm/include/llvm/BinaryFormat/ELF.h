@@ -303,7 +303,7 @@ enum {
   EM_BA2 = 202,           // Beyond BA2 CPU architecture
   EM_XCORE = 203,         // XMOS xCORE processor family
   EM_MCHP_PIC = 204,      // Microchip 8-bit PIC(r) family
-  EM_INTEL205 = 205,      // Reserved by Intel
+  EM_INTELGT = 205,       // Intel Graphics Technology
   EM_INTEL206 = 206,      // Reserved by Intel
   EM_INTEL207 = 207,      // Reserved by Intel
   EM_INTEL208 = 208,      // Reserved by Intel
