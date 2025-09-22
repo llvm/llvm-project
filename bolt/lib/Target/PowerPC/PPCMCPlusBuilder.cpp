@@ -213,6 +213,8 @@ bool PPCMCPlusBuilder::analyzeBranch(InstructionIterator Begin,
   return false;
 }
 
+bool PPCMCPlusBuilder::lowerTailCall(MCInst &Inst) { return false; }
+
 namespace llvm {
 namespace bolt {
 

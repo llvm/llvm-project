@@ -49,6 +49,8 @@ public:
                      const llvm::MCSymbol *&Tgt,
                      const llvm::MCSymbol *&Fallthrough, llvm::MCInst *&CondBr,
                      llvm::MCInst *&UncondBr) const override;
+
+  bool lowerTailCall(llvm::MCInst &Inst) override;
 };
 
 } // namespace bolt
