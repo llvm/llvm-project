@@ -106,16 +106,8 @@ constexpr void test() {
   test<CharT, constexpr_char_traits<CharT>>();
 }
 
-class Test {
-public:
-  template <typename CharT>
-  constexpr void operator()() const {
-    test<CharT>();
-  }
-};
-
 constexpr bool test() {
-  types::for_each(types::character_types(), Test{});
+  types::for_each(types::character_types(), []<class CharT> { test<CharT>(); });
 
   return true;
 }
