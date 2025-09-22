@@ -363,7 +363,6 @@ class SDNode<string opcode, SDTypeProfile typeprof,
 
 // Special TableGen-recognized dag nodes
 def set;
-def implicit;
 def node;
 def srcvalue;
 
