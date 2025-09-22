@@ -4834,9 +4834,8 @@ struct OmpBlockConstruct {
 };
 
 struct OmpMetadirectiveDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<Verbatim, OmpClauseList> t;
-  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpMetadirectiveDirective, OmpDirectiveSpecification);
 };
 
 // Ref: [5.1:89-90], [5.2:216]
