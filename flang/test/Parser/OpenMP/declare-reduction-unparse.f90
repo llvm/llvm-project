@@ -19,8 +19,7 @@ function func(x, n, init)
      end subroutine initme
   end interface
 !$omp declare reduction(red_add:integer(4):omp_out=omp_out+omp_in) initializer(initme(omp_priv,0))
-!CHECK: !$OMP DECLARE REDUCTION(red_add:INTEGER(KIND=4_4): omp_out=omp_out+omp_in
-!CHECK: ) INITIALIZER(initme(omp_priv, 0_4))
+!CHECK: !$OMP DECLARE REDUCTION(red_add:INTEGER(KIND=4_4): omp_out = omp_out+omp_in) INITIALIZER(initme(omp_priv, 0_4))
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
@@ -60,8 +59,7 @@ end function func
 !CHECK-LABEL: program main
 program main
   integer :: my_var
-!CHECK: !$OMP DECLARE REDUCTION(my_add_red:INTEGER: omp_out=omp_out+omp_in
-!CHECK-NEXT: ) INITIALIZER(omp_priv=0_4)
+!CHECK: !$OMP DECLARE REDUCTION(my_add_red:INTEGER: omp_out = omp_out+omp_in) INITIALIZER(omp_priv = 0_4)
 
   !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
   my_var = 0
