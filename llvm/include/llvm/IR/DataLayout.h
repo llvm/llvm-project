@@ -388,7 +388,7 @@ public:
   /// and an out-of-band validity bit.
   ///
   /// In general, more specialized functions such as mustNotIntroduceIntToPtr(),
-  /// mustNotIntroducePtrToIntPtrToInt(), or hasExternalState() should be
+  /// mustNotIntroducePtrToInt(), or hasExternalState() should be
   /// preferred over this one when reasoning about the behavior of IR
   /// analysis/transforms.
   /// TODO: should remove/deprecate this once all uses have migrated.
@@ -447,7 +447,7 @@ public:
   /// "unstable" representation (hasUnstableRepresentation()) since the
   /// bitwise pattern of such pointers could change unless the pass knows it is
   /// within a critical section that retains the current representation.
-  bool mustNotIntroducePtrToIntPtrToInt(unsigned AddrSpace) const {
+  bool mustNotIntroducePtrToInt(unsigned AddrSpace) const {
     return hasUnstableRepresentation(AddrSpace);
   }
 
@@ -460,10 +460,9 @@ public:
     return PTy && isNonIntegralPointerType(PTy);
   }
 
-  bool mustNotIntroducePtrToIntPtrToInt(Type *Ty) const {
+  bool mustNotIntroducePtrToInt(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
-    return PTy &&
-           mustNotIntroducePtrToIntPtrToInt(PTy->getPointerAddressSpace());
+    return PTy && mustNotIntroducePtrToInt(PTy->getPointerAddressSpace());
   }
 
   bool mustNotIntroduceIntToPtr(Type *Ty) const {
