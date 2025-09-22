@@ -3420,14 +3420,17 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
       return false;
     auto *F = cast<Function>(V);
 
-    // static functions are local
+    // Static functions are local
     if (F->getLinkage() == GlobalValue::InternalLinkage)
       return true;
-    // for now, declarations we treat as potentially non-local
+    // We treat declarations as non-local because the visibility attribute
+    // on a declaration might not match the definition, and AIX linker
+    // ignores the visibility on a reference.
     if (F->isDeclarationForLinker())
       return false;
-    // hidden visibility definitions cannot be preempted, so treat as local.
-    if (F->getVisibility() == GlobalValue::HiddenVisibility)
+    // hidden or protected visibility definitions cannot be preempted.
+    if (F->getVisibility() == GlobalValue::HiddenVisibility ||
+        F->getVisibility() == GlobalValue::ProtectedVisibility)
       return true;
 
     return false;
@@ -3446,9 +3449,12 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
       return false;
   }
 
-  // if one of the return values of the resolver function is not a
-  // local function, then we have to conservatively do a TOC save/restore.
   auto *Resolver = GI.getResolverFunction();
+  // If the resolver is preemptible then we cannot rely on its implementation.
+  if (!isLocalFunc(Resolver))
+    return true;
+  // If one of the return values of the resolver function is not a
+  // local function, then we have to conservatively do a TOC save/restore.
   for (auto &BB : *Resolver) {
     if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
       Value *RV = Ret->getReturnValue();
@@ -3488,12 +3494,12 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
  *   .vbyte  4, 0
  *   .csect .foo[PR],5
  *   .ref ifunc_sec.foo[RW]
- *   ld 12, L..foo_desc(2)                   # load foo's descriptor address
- *   ld 11, 16(12)                           # load the env pointer if target might be a non-C/C++ function, otherwise this load is omitted
- *   ld 12, 0(12)                            # load foo.addr
+ *   lwz 12, L..foo_desc(2)                  # load foo's descriptor address
+ *   lwz 11, 8(12)                           # load the env pointer if target might be a non-C/C++ function
+ *   lwz 12, 0(12)                           # load foo.addr
  *   mtctr 12
  *   bctr                                    # branch to CR without setting LR so that callee returns to the caller of .foo
- *                                              # -- End function
+ *                                           # -- End function
  */
 void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // Set the Subtarget to that of the resolver.

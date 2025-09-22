@@ -51,17 +51,18 @@ ModulePass *llvm::createPPCPrepareIFuncsOnAIXPass() {
   return new PPCPrepareIFuncsOnAIX();
 }
 
-// @foo = ifunc i32 (), ptr @foo_resolver, !associated !0
-// define ptr @foo_resolver() {
-//  ...
+// For each ifunc `foo` with a resolver `foo_resolver`, create a global variable
+// `__update_foo` in the `ifunc_sec` section, representing the pair:
+//   { ptr @foo, ptr @foo_resolver }
+// The compiler arranges for the constructor function `__init_ifuncs` to be
+// included on the link step. The constructor walks the `ifunc_sec` section,
+// calling the resolver function and storing the result in foo's descriptor.
+// On AIX, the address of a function is the address of its descriptor, so the
+// constructor accesses foo's descriptor from the first field of the pair.
 //
-// %struct.IFUNC_PAIR = type { ptr, ptr }
-// @update_foo = internal global %struct.IFUNC_PAIR { ptr @foo, ptr
-// @foo_resolver }, section "ifunc_sec", align 8, !associated !1 declare void
-// @__init_ifuncs(...)
+// Since the global `__update_foo` is unreferenced, it's liveness needs to be
+// associated to the liveness of ifunc `foo`
 //
-// !0 = !{ptr @update_foo}
-// !1 = !{ptr @__init_ifuncs}
 bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
   if (M.ifuncs().empty())
     return false;
