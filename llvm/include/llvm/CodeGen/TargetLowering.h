@@ -2997,6 +2997,8 @@ public:
     case ISD::XOR:
     case ISD::SADDO:
     case ISD::UADDO:
+    case ISD::UADDO_CARRY:
+    case ISD::SADDO_CARRY:
     case ISD::ADDC:
     case ISD::ADDE:
     case ISD::SADDSAT:
@@ -3016,7 +3018,8 @@ public:
     case ISD::ABDS:
     case ISD::ABDU:
       return true;
-    default: return false;
+    default:
+      return false;
     }
   }
 
@@ -3028,6 +3031,14 @@ public:
     // These are non-commutative binops.
     switch (Opcode) {
     case ISD::SUB:
+    case ISD::SUBC:
+    case ISD::SUBE:
+    case ISD::USUBO:
+    case ISD::SSUBO:
+    case ISD::USUBO_CARRY:
+    case ISD::SSUBO_CARRY:
+    case ISD::SDIVREM:
+    case ISD::UDIVREM:
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
@@ -3042,6 +3053,10 @@ public:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
+    case ISD::UCMP:
+    case ISD::SCMP:
+    case ISD::SSHLSAT:
+    case ISD::USHLSAT:
       return true;
     default:
       return false;
