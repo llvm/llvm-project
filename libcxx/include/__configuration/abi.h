@@ -32,6 +32,8 @@
 #else
 #  if defined(_WIN32) && defined(_MSC_VER)
 #    define _LIBCPP_ABI_MICROSOFT
+#  elif defined(__arm__) || defined(__aarch64__)
+#    define _LIBCPP_ABI_ARM
 #  else
 #    define _LIBCPP_ABI_ITANIUM
 #  endif

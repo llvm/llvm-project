@@ -26,12 +26,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Trait representing whether a type requires an array cookie at the start of its allocation when
 // allocated as `new T[n]` and deallocated as `delete[] array`.
 //
-// Under the Itanium C++ ABI [1], we know that an array cookie is available unless `T` is trivially
-// destructible and the call to `operator delete[]` is not a sized operator delete. Under ABIs other
-// than the Itanium ABI, we assume there are no array cookies.
+// Under the Itanium C++ ABI [1] and the ARM ABI which derives from it, we know that an array cookie is available
+// unless `T` is trivially destructible and the call to `operator delete[]` is not a sized operator delete. Under
+// other ABIs, we assume there are no array cookies.
 //
 // [1]: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#array-cookies
-#ifdef _LIBCPP_ABI_ITANIUM
+#if defined(_LIBCPP_ABI_ITANIUM) || defined(_LIBCPP_ABI_ARM)
 // TODO: Use a builtin instead
 // TODO: We should factor in the choice of the usual deallocation function in this determination.
 template <class _Tp>
@@ -41,13 +41,73 @@ template <class _Tp>
 struct __has_array_cookie : false_type {};
 #endif
 
+// Return the array cookie located before the given pointer.
+//
+// In the Itanium ABI
+// ------------------
+// The array cookie is stored immediately before the first element of the array. If the preferred alignment
+// of array elements (which is different from the ABI alignment) is more than that of size_t, additional
+// padding bytes exist before the array cookie. Assuming array elements of size and alignment 16 bytes, that
+// gives us the following layout:
+//
+// |ooooooooxxxxxxxxaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccdddddddddddddddd|
+//  ^^^^^^^^        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//     |    ^^^^^^^^                               |
+//     |       |                              array elements
+//  padding    |
+//        array cookie
+//
+// In practice, it is sufficient to read the bytes immediately before the first array element.
+//
+//
+// In the ARM ABI
+// --------------
+// The array cookie is stored at the very start of the allocation and it has the following form:
+//
+//    struct array_cookie {
+//      std::size_t element_size; // element_size != 0
+//      std::size_t element_count;
+//    };
+//
+// Assuming elements of size and alignment 32 bytes, this gives us the following layout:
+//
+//  |xxxxxxxxXXXXXXXXooooooooooooooooaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb|
+//   ^^^^^^^^        ^^^^^^^^^^^^^^^^
+//      |    ^^^^^^^^        |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// element size  |        padding                                 |
+//         element count                                     array elements
+//
+// We calculate the starting address of the allocation by taking into account the ABI (not the preferred)
+// alignment of the type.
 template <class _Tp>
 // Avoid failures when -fsanitize-address-poison-custom-array-cookie is enabled
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie(_Tp const* __ptr) {
   static_assert(
       __has_array_cookie<_Tp>::value, "Trying to access the array cookie of a type that is not guaranteed to have one");
-  size_t const* __cookie = reinterpret_cast<size_t const*>(__ptr) - 1; // TODO: Use a builtin instead
+
+#if defined(_LIBCPP_ABI_ITANIUM)
+
+  size_t const* __cookie = reinterpret_cast<size_t const*>(__ptr) - 1;
   return *__cookie;
+
+#elif defined(_LIBCPP_ABI_ARM)
+
+  struct _ArrayCookie {
+    size_t __element_size;
+    size_t __element_count;
+  };
+
+  size_t __cookie_size_with_padding = // max(sizeof(_ArrayCookie), alignof(T))
+      sizeof(_ArrayCookie) < alignof(_Tp) ? alignof(_Tp) : sizeof(_ArrayCookie);
+  char const* __allocation_start = reinterpret_cast<char const*>(__ptr) - __cookie_size_with_padding;
+  _ArrayCookie const* __cookie   = reinterpret_cast<_ArrayCookie const*>(__allocation_start);
+  return __cookie->__element_count;
+
+#else
+
+  static_assert(sizeof(_Tp) == 0, "This function is not implemented for this ABI");
+
+#endif
 }
 
 _LIBCPP_END_NAMESPACE_STD
