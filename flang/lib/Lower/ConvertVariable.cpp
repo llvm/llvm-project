@@ -523,7 +523,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getElementType();
     if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
                   fir::LogicalType>(eleTy)) {
-      if (oeDetails->init()) {
+      if (oeDetails && oeDetails->init()) {
         global = Fortran::lower::tryCreatingDenseGlobal(
             builder, loc, symTy, globalName, linkage, isConst,
             oeDetails->init().value(), dataAttr);
