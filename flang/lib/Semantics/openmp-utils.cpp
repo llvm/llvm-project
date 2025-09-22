@@ -225,7 +225,7 @@ private:
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object) {
   return common::visit( //
-      common::visitors{
+      common::visitors{//
           [&](const parser::Name &x) {
             // Any member of a common block must be contiguous.
             return std::optional<bool>{true};
@@ -237,7 +237,9 @@ std::optional<bool> IsContiguous(
             }
             return std::optional<bool>{};
           },
-      },
+          [&](const parser::OmpObject::Invalid &) {
+            return std::optional<bool>{};
+          }},
       object.u);
 }
 
