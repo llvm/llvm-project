@@ -112,41 +112,25 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
-def AMDGPU_ScaledExtPacked8Op
-    : AMDGPU_Op<"scaled_ext_packed8", [Pure]>,
+def AMDGPU_ScaledExtPacked816Op
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure]>,
       Arguments<(
-          ins VectorOfLengthAndType<[8], [F4E2M1FN,F8E4M3FN,F8E5M2]>:$source,
+          ins AnyTypeOf<[VectorOfLengthAndType<[8], [F4E2M1FN,F8E4M3FN,F8E5M2]>,
+                         VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>]>:$source,
           F32:$scale,
           ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index)>,
       Results<(
           outs AnyTypeOf<[FixedVectorOfLengthAndType<[8], [F32]>,
                           FixedVectorOfLengthAndType<[8], [F16]>,
-                          FixedVectorOfLengthAndType<[8], [BF16]>]>:$res)> {
-  let summary = "Extend a vector of packed floating point values";
-
-  let description = [{
-    Extend and scale eight packed floats in to eight floats and return them.
-  }];
-
-  let assemblyFormat = [{
-    attr-dict $source `,` $scale `[` $index `]` `:` type($source) `to` type($res)
-  }];
-}
-
-def AMDGPU_ScaledExtPacked16Op
-    : AMDGPU_Op<"scaled_ext_packed16", [Pure]>,
-      Arguments<(
-          ins VectorOfLengthAndType<[16], [F6E2M3FN, F6E3M2FN]>:$source,
-          F32:$scale,
-          ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index)>,
-      Results<(
-          outs AnyTypeOf<[FixedVectorOfLengthAndType<[16], [F32]>,
+                          FixedVectorOfLengthAndType<[8], [BF16]>,
+                          FixedVectorOfLengthAndType<[16], [F32]>,
                           FixedVectorOfLengthAndType<[16], [F16]>,
                           FixedVectorOfLengthAndType<[16], [BF16]>]>:$res)> {
+
   let summary = "Extend a vector of packed floating point values";
 
   let description = [{
-    Extend and scale 16 packed floats to 16 floats and return them.
+    Extend and scale 8/16 packed floats in to 8/16 floats and return them.
   }];
 
   let assemblyFormat = [{
