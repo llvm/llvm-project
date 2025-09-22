@@ -57,7 +57,8 @@ static bool tryToImproveAlign(
         cast<ConstantInt>(II->getArgOperand(AlignOpIdx))->getAlignValue();
     Align PrefAlign = DL.getPrefTypeAlign(Type);
     Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
-    if (NewAlign <= OldAlign)
+    if (NewAlign <= OldAlign ||
+        NewAlign.value() > std::numeric_limits<uint32_t>().max())
       return false;
 
     Value *V =
