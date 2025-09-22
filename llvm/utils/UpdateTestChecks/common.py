@@ -918,6 +918,13 @@ class FunctionTestBuilder:
                 self._func_order.update({prefix: []})
                 self._global_var_dict.update({prefix: dict()})
 
+    # Return true if there is conflicting output for different runs for the
+    # given prefix and function name.
+    def has_conflicting_output(self, prefix, func):
+        # There was conflicting output if the func_dict is None for this
+        # prefix and function.
+        return self._func_dict[prefix].get(func) is None
+
     def finish_and_get_func_dict(self):
         all_funcs = set()
         for prefix in self._func_dict:
@@ -930,24 +937,16 @@ class FunctionTestBuilder:
                 if not prefixes:
                     continue
 
-                # Check if this RUN line produces this function at all.
-                run_contains_func = True
-                for p in prefixes:
-                    if func not in self._func_dict.get(p, {}):
-                        run_contains_func = False
-                        break
+                # Check if this RUN line produces this function at all. If
+                # not, we can skip analysing this function for this RUN.
+                run_contains_func = all(func in self._func_dict.get(p, {}) for p in prefixes)
                 if not run_contains_func:
                     continue
 
                 # Check if this RUN line can print any checks for this
                 # function. It can't if all of its prefixes have conflicting
                 # (None) output.
-                can_print_for_this_run = False
-                for p in prefixes:
-                    if self._func_dict[p].get(func) is not None:
-                        can_print_for_this_run = True
-                        break
-
+                can_print_for_this_run = not all(self.has_conflicting_output(p, func) for p in prefixes)
                 if not can_print_for_this_run:
                     warnings_to_print[func].append((i, prefixes))
 
@@ -955,12 +954,10 @@ class FunctionTestBuilder:
             conflict_strs = []
             for run_index, prefixes in warning_info:
                 conflict_strs.append(
-                    "RUN #{} (prefixes: {})".format(run_index + 1, ", ".join(prefixes))
+                     f"RUN #{run_index + 1} (prefixes: {', '.join(prefixes)})"
                 )
             warn(
-                "For function '{}', the following RUN lines will not generate checks due to conflicting output: {}".format(
-                    func, ", ".join(conflict_strs)
-                ),
+                f"For function '{func}', the following RUN lines will not generate checks due to conflicting output: {', '.join(conflict_strs)}",
                 test_file=self._path,
             )
 
