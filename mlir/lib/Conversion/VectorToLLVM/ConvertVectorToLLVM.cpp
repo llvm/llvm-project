@@ -2004,13 +2004,13 @@ public:
 /// Lower a qualifying `vector.contract %a, %b, %c` (with row-major matmul
 /// semantics directly into `llvm.intr.matrix.multiply`:
 /// BEFORE:
-/// ```
+/// ```mlir
 ///  %res = vector.contract #matmat_trait %lhs, %rhs, %acc
 ///    : vector<2x4xf32>, vector<4x3xf32> into vector<2x3xf32>
 /// ```
 ///
 /// AFTER:
-/// ```
+/// ```mlir
 ///   %lhs = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
 ///   %rhs = vector.shape_cast %arg1 : vector<4x3xf32> to vector<12xf32>
 ///   %matmul = llvm.intr.matrix.multiply %lhs, %rhs
@@ -2114,11 +2114,11 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
 /// Lowers vector.transpose directly to llvm.intr.matrix.transpose
 ///
 /// BEFORE:
-/// ```
+/// ```mlir
 ///  %tr = vector.transpose %vec, [1, 0] : vector<2x4xf32> to vector<4x2xf32>
 /// ```
 /// AFTER:
-/// ```
+/// ```mlir
 ///  %vec_cs = vector.shape_cast %vec : vector<2x4xf32> to vector<8xf32>
 ///  %tr = llvm.intr.matrix.transpose %vec_sc
 ///    {columns = 2 : i32, rows = 4 : i32} : vector<8xf32> into vector<8xf32>

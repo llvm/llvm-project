@@ -1489,7 +1489,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            VectorContractLoweringAttr.summary, [{::llvm::cl::values(
            clEnumValN(::mlir::vector::VectorContractLowering::Dot, "dot",
             "Progressively lower to finer grained `vector.contract` and dot-products. (default)"),
-           clEnumValN(::mlir::vector::VectorContractLowering::LLVM, "llvm",
+           clEnumValN(::mlir::vector::VectorContractLowering::LLVMIntr, "llvmintr",
             "Lower directly to `llvm.intr.matrix.multiply`."),
            clEnumValN(::mlir::vector::VectorContractLowering::OuterProduct, "outerproduct",
             "Lower to `vector.outerproduct`."),
@@ -1502,7 +1502,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            VectorTransposeLoweringAttr.summary, [{::llvm::cl::values(
            clEnumValN(::mlir::vector::VectorTransposeLowering::EltWise, "eltwise",
             "Lower transpose into element-wise extract and inserts (default)"),
-           clEnumValN(::mlir::vector::VectorTransposeLowering::LLVM, "llvm",
+           clEnumValN(::mlir::vector::VectorTransposeLowering::LLVMIntr, "llvmintr",
             "Lower 2-D transpose directly to `llvm.intr.matrix.transpose`"),
            clEnumValN(::mlir::vector::VectorTransposeLowering::Shuffle1D, "shuffle1d",
             "Lower 2-D transpose to `vector.shuffle` on 1-D vector."),

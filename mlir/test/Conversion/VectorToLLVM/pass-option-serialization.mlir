@@ -13,7 +13,7 @@
 
 // RUN: mlir-opt --convert-vector-to-llvm --dump-pass-pipeline %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
-// RUN: mlir-opt --convert-vector-to-llvm='vector-contract-lowering=llvm vector-transpose-lowering=llvm' \
+// RUN: mlir-opt --convert-vector-to-llvm='vector-contract-lowering=llvmintr vector-transpose-lowering=llvmintr' \
 // RUN:          --dump-pass-pipeline %s 2>&1 | FileCheck %s --check-prefix=NON-DEFAULT
 
 // CHECK: builtin.module(

@@ -15,8 +15,8 @@ include "mlir/IR/EnumAttr.td"
 def VectorTransposeLowering_Elementwise:
   I32EnumAttrCase<"EltWise",  0, "eltwise">;
 // Lower directly to LLVM matrix intrinsics.
-def VectorTransposeLowering_LLVM:
-  I32EnumAttrCase<"LLVM",  1, "llvm">;
+def VectorTransposeLowering_LLVMIntr:
+  I32EnumAttrCase<"LLVMIntr",  1, "llvmintr">;
 // Lower 2-D transpose to `vector.shuffle` on 1-D vector.
 def VectorTransposeLowering_Shuffle1D:
   I32EnumAttrCase<"Shuffle1D",  2, "shuffle_1d">;
@@ -26,7 +26,7 @@ def VectorTransposeLowering_Shuffle16x16:
 def VectorTransposeLoweringAttr : I32EnumAttr<
     "VectorTransposeLowering",
     "control the lowering of `vector.transpose` operations.",
-    [VectorTransposeLowering_Elementwise, VectorTransposeLowering_LLVM,
+    [VectorTransposeLowering_Elementwise, VectorTransposeLowering_LLVMIntr,
      VectorTransposeLowering_Shuffle1D, VectorTransposeLowering_Shuffle16x16]> {
   let cppNamespace = "::mlir::vector";
 }
@@ -48,8 +48,8 @@ def VectorMultiReductionLoweringAttr: I32EnumAttr<
 // Progressively lower to finer grained `vector.contract` and dot-products.
 def VectorContractLowering_Dot: I32EnumAttrCase<"Dot", 0, "dot">;
 // Lower directly to LLVM intrinsics. 
-def VectorContractLowering_LLVM:
-  I32EnumAttrCase<"LLVM", 1, "llvm">;
+def VectorContractLowering_LLVMIntr:
+  I32EnumAttrCase<"LLVMIntr", 1, "llvmintr">;
 // Lower to `vector.outerproduct`.
 def VectorContractLowering_OuterProduct:
   I32EnumAttrCase<"OuterProduct", 2, "outerproduct">;
@@ -60,7 +60,7 @@ def VectorContractLowering_ParallelArith:
 def VectorContractLoweringAttr: I32EnumAttr<
     "VectorContractLowering",
     "control the lowering of `vector.contract` operations.",
-  [VectorContractLowering_Dot, VectorContractLowering_LLVM,
+  [VectorContractLowering_Dot, VectorContractLowering_LLVMIntr,
    VectorContractLowering_OuterProduct, VectorContractLowering_ParallelArith]> {
   let cppNamespace = "::mlir::vector";
 }
