@@ -44,6 +44,11 @@ public:
                         MCInst *&FixedEntryLoadInstr) const override;
 
   bool isNoop(const MCInst &Inst) const override;
+
+  bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
+                     const llvm::MCSymbol *&Tgt,
+                     const llvm::MCSymbol *&Fallthrough, llvm::MCInst *&CondBr,
+                     llvm::MCInst *&UncondBr) const override;
 };
 
 } // namespace bolt
