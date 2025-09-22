@@ -5919,11 +5919,15 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
     Register LowHalf = B.buildOr(S64, ExtPointer, NumRecordsLHS).getReg(0);
 
     // Build the higher 64-bit value, which has the higher 38-bit num_records,
-    // 6-bit zero (omit), 14-bit stride and 6-bit zero (omit).
+    // 6-bit zero (omit), 16-bit stride and scale and 4-bit flag.
     auto NumRecordsRHS = B.buildLShr(S64, NumRecords, B.buildConstant(S32, 7));
     auto ExtStride = B.buildAnyExt(S64, Stride);
     auto ShiftedStride = B.buildShl(S64, ExtStride, B.buildConstant(S32, 44));
-    Register HighHalf = B.buildOr(S64, NumRecordsRHS, ShiftedStride).getReg(0);
+    auto ExtFlags = B.buildAnyExt(S64, Flags);
+    auto NewFlags = B.buildAnd(S64, ExtFlags, B.buildConstant(S64, 0x3));
+    auto ShiftedFlags = B.buildShl(S64, NewFlags, B.buildConstant(S32, 60));
+    auto CombinedFields = B.buildOr(S64, NumRecordsRHS, ShiftedStride);
+    Register HighHalf = B.buildOr(S64, CombinedFields, ShiftedFlags).getReg(0);
     B.buildMergeValues(Result, {LowHalf, HighHalf});
   } else {
     NumRecords = B.buildTrunc(S32, NumRecords).getReg(0);

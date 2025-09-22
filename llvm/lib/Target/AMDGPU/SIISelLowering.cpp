@@ -11615,7 +11615,7 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
         DAG.getNode(ISD::OR, Loc, MVT::i64, ExtPointer, NumRecordsLHS);
 
     // Build the higher 64-bit value, which has the higher 38-bit num_records,
-    // 6-bit zero (omit), 14-bit stride and 6-bit zero (omit).
+    // 6-bit zero (omit), 16-bit stride and scale and 4-bit flag.
     SDValue NumRecordsRHS =
         DAG.getNode(ISD::SRL, Loc, MVT::i64, NumRecords,
                     DAG.getShiftAmountConstant(7, MVT::i32, Loc));
@@ -11623,8 +11623,16 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
     SDValue ShiftedStride =
         DAG.getNode(ISD::SHL, Loc, MVT::i64, ExtStride,
                     DAG.getShiftAmountConstant(44, MVT::i32, Loc));
-    SDValue HighHalf =
+    SDValue ExtFlags = DAG.getAnyExtOrTrunc(Flags, Loc, MVT::i64);
+    SDValue NewFlags = DAG.getNode(ISD::AND, Loc, MVT::i64, ExtFlags,
+                                   DAG.getConstant(0x3, Loc, MVT::i64));
+    SDValue ShiftedFlags =
+        DAG.getNode(ISD::SHL, Loc, MVT::i64, NewFlags,
+                    DAG.getShiftAmountConstant(60, MVT::i32, Loc));
+    SDValue CombinedFields =
         DAG.getNode(ISD::OR, Loc, MVT::i64, NumRecordsRHS, ShiftedStride);
+    SDValue HighHalf =
+        DAG.getNode(ISD::OR, Loc, MVT::i64, CombinedFields, ShiftedFlags);
 
     Rsrc = DAG.getNode(ISD::BUILD_VECTOR, Loc, MVT::v2i64, LowHalf, HighHalf);
   } else {
