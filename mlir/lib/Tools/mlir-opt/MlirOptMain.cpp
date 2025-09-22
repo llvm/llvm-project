@@ -226,6 +226,18 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                                     "bitstream", "Print bitstream file")),
         llvm::cl::cat(remarkCategory)};
 
+    static llvm::cl::opt<RemarkPolicy, /*ExternalStorage=*/true> remarkPolicy{
+        "remark-policy",
+        llvm::cl::desc("Specify the policy for remark output."),
+        cl::location(remarkPolicyFlag),
+        llvm::cl::value_desc("format"),
+        llvm::cl::init(RemarkPolicy::REMARK_POLICY_ALL),
+        llvm::cl::values(clEnumValN(RemarkPolicy::REMARK_POLICY_ALL, "all",
+                                    "Print all remarks"),
+                         clEnumValN(RemarkPolicy::REMARK_POLICY_FINAL, "final",
+                                    "Print final remarks")),
+        llvm::cl::cat(remarkCategory)};
+
     static cl::opt<std::string, /*ExternalStorage=*/true> remarksAll(
         "remarks-filter",
         cl::desc("Show all remarks: passed, missed, failed, analysis"),
@@ -518,17 +530,23 @@ performActions(raw_ostream &os,
 
   context->enableMultithreading(wasThreadingEnabled);
 
+  // Set the remark categories and policy.
   remark::RemarkCategories cats{
       config.getRemarksAllFilter(), config.getRemarksPassedFilter(),
       config.getRemarksMissedFilter(), config.getRemarksAnalyseFilter(),
       config.getRemarksFailedFilter()};
+  remark::RemarkPolicy policy =
+      config.getRemarkPolicy() == RemarkPolicy::REMARK_POLICY_FINAL
+          ? policy = remark::RemarkPolicy::RemarkPolicyFinal
+          : remark::RemarkPolicy::RemarkPolicyAll;
+  remark::RemarkEngineOpts opts{cats, policy};
 
   mlir::MLIRContext &ctx = *context;
 
   switch (config.getRemarkFormat()) {
   case RemarkFormat::REMARK_FORMAT_STDOUT:
     if (failed(mlir::remark::enableOptimizationRemarks(
-            ctx, nullptr, cats, true /*printAsEmitRemarks*/)))
+            ctx, nullptr, opts, true /*printAsEmitRemarks*/)))
       return failure();
     break;
 
@@ -537,7 +555,7 @@ performActions(raw_ostream &os,
                            ? "mlir-remarks.yaml"
                            : config.getRemarksOutputFile();
     if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-            ctx, file, llvm::remarks::Format::YAML, cats)))
+            ctx, file, llvm::remarks::Format::YAML, opts)))
       return failure();
     break;
   }
@@ -547,7 +565,7 @@ performActions(raw_ostream &os,
                            ? "mlir-remarks.bitstream"
                            : config.getRemarksOutputFile();
     if (failed(mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-            ctx, file, llvm::remarks::Format::Bitstream, cats)))
+            ctx, file, llvm::remarks::Format::Bitstream, opts)))
       return failure();
     break;
   }

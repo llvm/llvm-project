@@ -70,7 +70,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   // Header: [Type] pass:remarkName
   StringRef type = getRemarkTypeString();
-  StringRef categoryName = getFullCategoryName();
+  StringRef categoryName = getCombinedCategoryName();
   StringRef name = remarkName;
 
   os << '[' << type << "] ";
@@ -140,7 +140,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.RemarkType = getRemarkType();
   r.RemarkName = getRemarkName();
   // MLIR does not use passes; instead, it has categories and sub-categories.
-  r.PassName = getFullCategoryName();
+  r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
   for (const Remark::Arg &arg : getArgs()) {
@@ -225,7 +225,7 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &&remark) {
+void RemarkEngine::reportImpl(const Remark &remark) {
   // Stream the remark
   if (remarkStreamer)
     remarkStreamer->streamOptimizationRemark(remark);
@@ -235,7 +235,25 @@ void RemarkEngine::report(const Remark &&remark) {
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
+void RemarkEngine::report(const Remark &&remark) {
+  // Postponed remarks are deferred to the end of pipeline.
+  if (remarkPolicy == RemarkPolicy::RemarkPolicyFinal) {
+    bool erased = postponedRemarks.erase(remark);
+    postponedRemarks.insert(remark);
+    return;
+  }
+
+  reportImpl(remark);
+}
+
+void RemarkEngine::emitPostponedRemarks() {
+  for (auto &remark : postponedRemarks)
+    reportImpl(remark);
+  postponedRemarks.clear();
+}
+
 RemarkEngine::~RemarkEngine() {
+  emitPostponedRemarks();
   if (remarkStreamer)
     remarkStreamer->finalize();
 }
@@ -288,24 +306,25 @@ buildFilter(const mlir::remark::RemarkCategories &cats,
 }
 
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
-                           const RemarkCategories &cats)
+                           const RemarkEngineOpts &opts)
     : printAsEmitRemarks(printAsEmitRemarks) {
-  if (cats.passed)
-    passedFilter = buildFilter(cats, cats.passed);
-  if (cats.missed)
-    missFilter = buildFilter(cats, cats.missed);
-  if (cats.analysis)
-    analysisFilter = buildFilter(cats, cats.analysis);
-  if (cats.failed)
-    failedFilter = buildFilter(cats, cats.failed);
+  if (opts.categories.passed)
+    passedFilter = buildFilter(opts.categories, opts.categories.passed);
+  if (opts.categories.missed)
+    missFilter = buildFilter(opts.categories, opts.categories.missed);
+  if (opts.categories.analysis)
+    analysisFilter = buildFilter(opts.categories, opts.categories.analysis);
+  if (opts.categories.failed)
+    failedFilter = buildFilter(opts.categories, opts.categories.failed);
+  remarkPolicy = opts.policy;
 }
 
 llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
     MLIRContext &ctx,
     std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-    const remark::RemarkCategories &cats, bool printAsEmitRemarks) {
+    const remark::RemarkEngineOpts &opts, bool printAsEmitRemarks) {
   auto engine =
-      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
+      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, opts);
 
   std::string errMsg;
   if (failed(engine->initialize(std::move(streamer), &errMsg))) {

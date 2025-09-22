@@ -32,6 +32,20 @@ struct RemarkCategories {
   std::optional<std::string> all, passed, missed, analysis, failed;
 };
 
+/// Define the policy to use for the remark engine.
+enum RemarkPolicy {
+  RemarkPolicyAll = 0,
+  RemarkPolicyFinal = 1,
+};
+
+/// Define the operations to perform on the remark engine.
+/// By default none are, the provided regex matches against the category names
+/// for each kind of remark.
+struct RemarkEngineOpts {
+  RemarkCategories categories;
+  RemarkPolicy policy;
+};
+
 /// Categories describe the outcome of an transformation, not the mechanics of
 /// emitting/serializing remarks.
 enum class RemarkKind {
@@ -144,7 +158,7 @@ public:
 
   llvm::StringRef getCategoryName() const { return categoryName; }
 
-  llvm::StringRef getFullCategoryName() const {
+  llvm::StringRef getCombinedCategoryName() const {
     if (categoryName.empty() && subCategoryName.empty())
       return {};
     if (subCategoryName.empty())
@@ -344,6 +358,10 @@ public:
 
 class RemarkEngine {
 private:
+  /// Postponed remarks. They are deferred to the end of the pipeline, where the
+  /// user can intercept them for custom processing, otherwise they will be
+  /// reported on engine destruction.
+  llvm::DenseSet<Remark> postponedRemarks;
   /// Regex that filters missed optimization remarks: only matching one are
   /// reported.
   std::optional<llvm::Regex> missFilter;
@@ -357,6 +375,8 @@ private:
   std::unique_ptr<MLIRRemarkStreamerBase> remarkStreamer;
   /// When is enabled, engine also prints remarks as mlir::emitRemarks.
   bool printAsEmitRemarks = false;
+  /// The policy to use for the remark engine.
+  RemarkPolicy remarkPolicy = RemarkPolicy::RemarkPolicyAll;
 
   /// Return true if missed optimization remarks are enabled, override
   /// to provide different implementation.
@@ -392,6 +412,11 @@ private:
   InFlightRemark emitIfEnabled(Location loc, RemarkOpts opts,
                                bool (RemarkEngine::*isEnabled)(StringRef)
                                    const);
+  /// Emit all postponed remarks.
+  void emitPostponedRemarks();
+
+  /// Report a remark.
+  void reportImpl(const Remark &remark);
 
 public:
   /// Default constructor is deleted, use the other constructor.
@@ -400,7 +425,7 @@ public:
   /// Constructs Remark engine with optional category names. If a category
   /// name is not provided, it is not enabled. The category names are used to
   /// filter the remarks that are emitted.
-  RemarkEngine(bool printAsEmitRemarks, const RemarkCategories &cats);
+  RemarkEngine(bool printAsEmitRemarks, const RemarkEngineOpts &opts);
 
   /// Destructor that will close the output file and reset the
   /// main remark streamer.
@@ -410,7 +435,9 @@ public:
   LogicalResult initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
                            std::string *errMsg);
 
-  /// Report a remark.
+  /// Report a remark. The remark is deferred to the end of the pipeline, where
+  /// the user can intercept them for custom processing, otherwise they will be
+  /// reported on engine destruction.
   void report(const Remark &&remark);
 
   /// Report a successful remark, this will create an InFlightRemark
@@ -513,8 +540,61 @@ inline detail::InFlightRemark analysis(Location loc, RemarkOpts opts) {
 LogicalResult enableOptimizationRemarks(
     MLIRContext &ctx,
     std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-    const remark::RemarkCategories &cats, bool printAsEmitRemarks = false);
+    const remark::RemarkEngineOpts &opts, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark
 
+// DenseMapInfo specialization for Remark
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::remark::detail::Remark> {
+  static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
+  static constexpr StringRef kTombstoneKey = "<TOMBSTONE_KEY>";
+
+  /// Helper to provide a static dummy context for sentinel keys.
+  static mlir::MLIRContext *getStaticDummyContext() {
+    static mlir::MLIRContext dummyContext;
+    return &dummyContext;
+  }
+
+  /// Create an empty remark
+  static inline mlir::remark::detail::Remark getEmptyKey() {
+    return mlir::remark::detail::Remark(
+        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
+        mlir::UnknownLoc::get(getStaticDummyContext()),
+        mlir::remark::RemarkOpts::name(kEmptyKey));
+  }
+
+  /// Create a dead remark
+  static inline mlir::remark::detail::Remark getTombstoneKey() {
+    return mlir::remark::detail::Remark(
+        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
+        mlir::UnknownLoc::get(getStaticDummyContext()),
+        mlir::remark::RemarkOpts::name(kTombstoneKey));
+  }
+
+  /// Compute the hash value of the remark
+  static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
+    return llvm::hash_combine(remark.getLocation().getAsOpaquePointer(),
+                              llvm::hash_value(remark.getRemarkName()),
+                              llvm::hash_value(remark.getCategoryName()));
+  }
+
+  static bool isEqual(const mlir::remark::detail::Remark &lhs,
+                      const mlir::remark::detail::Remark &rhs) {
+    // Check for empty/tombstone keys first
+    if (lhs.getRemarkName() == kEmptyKey ||
+        lhs.getRemarkName() == kTombstoneKey ||
+        rhs.getRemarkName() == kEmptyKey ||
+        rhs.getRemarkName() == kTombstoneKey) {
+      return lhs.getRemarkName() == rhs.getRemarkName();
+    }
+
+    // For regular remarks, compare key identifying fields
+    return lhs.getLocation() == rhs.getLocation() &&
+           lhs.getRemarkName() == rhs.getRemarkName() &&
+           lhs.getCategoryName() == rhs.getCategoryName();
+  }
+};
+} // namespace llvm
 #endif // MLIR_IR_REMARKS_H
