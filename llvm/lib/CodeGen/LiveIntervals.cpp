@@ -34,7 +34,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -1820,55 +1819,4 @@ void LiveIntervals::constructMainRangeFromSubranges(LiveInterval &LI) {
   assert(LICalc && "LICalc not initialized.");
   LICalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
   LICalc->constructMainRangeFromSubranges(LI);
-}
-
-bool LiveIntervals::allUsesAvailableAt(const MachineInstr &MI,
-                                       SlotIndex UseIdx) const {
-  SlotIndex OrigIdx = getInstructionIndex(MI).getRegSlot(true);
-  UseIdx = std::max(UseIdx, UseIdx.getRegSlot(true));
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-      continue;
-
-    // We can't remat physreg uses, unless it is a constant or target wants
-    // to ignore this use.
-    if (MO.getReg().isPhysical()) {
-      if (MRI->isConstantPhysReg(MO.getReg()) || TII->isIgnorableUse(MO))
-        continue;
-      return false;
-    }
-
-    const LiveInterval &li = getInterval(MO.getReg());
-    const VNInfo *OVNI = li.getVNInfoAt(OrigIdx);
-    if (!OVNI)
-      continue;
-
-    // Don't allow rematerialization immediately after the original def.
-    // It would be incorrect if OrigMI redefines the register.
-    // See PR14098.
-    if (SlotIndex::isSameInstr(OrigIdx, UseIdx))
-      return false;
-
-    if (OVNI != li.getVNInfoAt(UseIdx))
-      return false;
-
-    // Check that subrange is live at UseIdx.
-    if (li.hasSubRanges()) {
-      const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-      unsigned SubReg = MO.getSubReg();
-      LaneBitmask LM = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
-                              : MRI->getMaxLaneMaskForVReg(MO.getReg());
-      for (const LiveInterval::SubRange &SR : li.subranges()) {
-        if ((SR.LaneMask & LM).none())
-          continue;
-        if (!SR.liveAt(UseIdx))
-          return false;
-        // Early exit if all used lanes are checked. No need to continue.
-        LM &= ~SR.LaneMask;
-        if (LM.none())
-          break;
-      }
-    }
-  }
-  return true;
 }

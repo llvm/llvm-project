@@ -83,6 +83,13 @@ class VirtRegMap;
                                    const VirtRegMap &VRM,
                                    const TargetInstrInfo &TII);
 
+    /// \returns true if all registers used by \p OrigMI at \p OrigIdx are also
+    /// available with the same value at \p UseIdx.
+    static bool allUsesAvailableAt(const MachineInstr *MI, SlotIndex UseIdx,
+                                   const LiveIntervals &LIS,
+                                   const MachineRegisterInfo &MRI,
+                                   const TargetInstrInfo &TII);
+
   protected:
     /// Helper function for weight calculations.
     /// (Re)compute LI's spill weight and allocation hint, or, for non null
