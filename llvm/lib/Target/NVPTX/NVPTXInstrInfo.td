@@ -645,8 +645,8 @@ let hasSideEffects = false in {
                    CvtMode:$mode),
               "cvt${mode:base}${mode:relu}.satfinite." # F8Name # "x4.f32 \t$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
   
-  def CVT_e4m3x4_f32_rs_sf : CVT_TO_FP8X4<"e4m3">;
-  def CVT_e5m2x4_f32_rs_sf : CVT_TO_FP8X4<"e5m2">;
+  def CVT_e4m3x4_f32x4_rs_sf : CVT_TO_FP8X4<"e4m3">;
+  def CVT_e5m2x4_f32x4_rs_sf : CVT_TO_FP8X4<"e5m2">;
 
   // Float to TF32 conversions
   multiclass CVT_TO_TF32<string Modifier, list<Predicate> Preds = [hasPTX<78>, hasSM<90>]> {
@@ -686,8 +686,8 @@ let hasSideEffects = false in {
                    CvtMode:$mode),
               "cvt${mode:base}${mode:relu}.satfinite." # F6Name # "x4.f32 \t$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
 
-  def CVT_e2m3x4_f32_rs_sf : CVT_TO_FP6X4<"e2m3">;
-  def CVT_e3m2x4_f32_rs_sf : CVT_TO_FP6X4<"e3m2">;
+  def CVT_e2m3x4_f32x4_rs_sf : CVT_TO_FP6X4<"e2m3">;
+  def CVT_e3m2x4_f32x4_rs_sf : CVT_TO_FP6X4<"e3m2">;
   
   // FP4 conversions.
   def CVT_e2m1x2_f32_sf : NVPTXInst<(outs B16:$dst),
@@ -706,7 +706,7 @@ let hasSideEffects = false in {
                  "cvt${mode:base}${mode:relu}.f16x2.e2m1x2 \t$dst, %e2m1x2_in; \n\t",
                  "}}"), []>;
                  
-  def CVT_e2m1x4_f32_rs_sf :
+  def CVT_e2m1x4_f32x4_rs_sf :
     NVPTXInst<(outs B16:$dst),
               (ins B32:$src1, B32:$src2, B32:$src3, B32:$src4, B32:$src5,
                    CvtMode:$mode),

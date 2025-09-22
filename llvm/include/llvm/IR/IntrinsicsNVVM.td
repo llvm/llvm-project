@@ -1530,8 +1530,8 @@ let TargetPrefix = "nvvm" in {
   // RS rounding mode conversions for f8x4 types
   foreach type = ["e4m3x4", "e5m2x4"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v4i8_ty], [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+      def int_nvvm_f32x4_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_v4i8_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
     }
   }
 
@@ -1546,8 +1546,8 @@ let TargetPrefix = "nvvm" in {
   
   // RS rounding mode conversions for f4x4 type
   foreach relu = ["", "_relu"] in {
-    def int_nvvm_ff_to_e2m1x4_rs # relu # _satfinite : NVVMBuiltin,
-        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+    def int_nvvm_f32x4_to_e2m1x4_rs # relu # _satfinite : NVVMBuiltin,
+        PureIntrinsic<[llvm_i16_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
   }
 
   // FP6 conversions.
@@ -1564,8 +1564,8 @@ let TargetPrefix = "nvvm" in {
   // RS rounding mode conversions for f6x4 types
   foreach type = ["e2m3x4", "e3m2x4"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v4i8_ty], [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+      def int_nvvm_f32x4_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_v4i8_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
     }
   }
 

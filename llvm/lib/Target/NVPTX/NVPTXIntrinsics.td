@@ -1950,43 +1950,58 @@ let Predicates = [hasPTX<86>, hasSM<100>, hasArchAccelFeatures] in {
             (CVT_bf16x2_ue8m0x2 $a)>;
 }
 
+def SDT_CVT_F32X4_TO_FP8X4_RS :
+  SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+                       SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
+
+def SDT_CVT_F32X4_TO_FP6X4_RS :
+  SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+                       SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
+
+def SDT_CVT_F32X4_TO_FP4X4_RS :
+  SDTypeProfile<1, 6, [SDTCisInt<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+                       SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
+
+class CVT_F32X4_TO_FPX4_RS_SF_NODE<string FPName, SDTypeProfile SDT> :
+  SDNode<"NVPTXISD::CVT_" # FPName # "X4_F32X4_RS_SF", SDT, []>;
+
 // RS rounding mode conversions
 let Predicates = [hasPTX<87>, hasSM100aOrSM103a] in {
 // FP8x4 conversions
-def : Pat<(int_nvvm_ff_to_e4m3x4_rs_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e4m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
-def : Pat<(int_nvvm_ff_to_e4m3x4_rs_relu_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e4m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
-def : Pat<(int_nvvm_ff_to_e5m2x4_rs_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e5m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
-def : Pat<(int_nvvm_ff_to_e5m2x4_rs_relu_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e5m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E4M3", SDT_CVT_F32X4_TO_FP8X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+          (CVT_e4m3x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E5M2", SDT_CVT_F32X4_TO_FP8X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+          (CVT_e5m2x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E4M3", SDT_CVT_F32X4_TO_FP8X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+          (CVT_e4m3x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E5M2", SDT_CVT_F32X4_TO_FP8X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+          (CVT_e5m2x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
 
 // FP6x4 conversions
-def : Pat<(int_nvvm_ff_to_e2m3x4_rs_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e2m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
-def : Pat<(int_nvvm_ff_to_e2m3x4_rs_relu_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e2m3x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
-def : Pat<(int_nvvm_ff_to_e3m2x4_rs_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e3m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
-def : Pat<(int_nvvm_ff_to_e3m2x4_rs_relu_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e3m2x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M3", SDT_CVT_F32X4_TO_FP6X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+          (CVT_e2m3x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E3M2", SDT_CVT_F32X4_TO_FP6X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+          (CVT_e3m2x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M3", SDT_CVT_F32X4_TO_FP6X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+          (CVT_e2m3x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
+def : Pat<(v4i8 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E3M2", SDT_CVT_F32X4_TO_FP6X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+          (CVT_e3m2x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
 
 // FP4x4 conversions
-def : Pat<(int_nvvm_ff_to_e2m1x4_rs_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e2m1x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS)>;
-def : Pat<(int_nvvm_ff_to_e2m1x4_rs_relu_satfinite
-             f32:$a, f32:$b, f32:$c, f32:$d, i32:$e),
-          (CVT_e2m1x4_f32_rs_sf $a, $b, $c, $d, $e, CvtRS_RELU)>;
+def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", SDT_CVT_F32X4_TO_FP4X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
+          (CVT_e2m1x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
+def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", SDT_CVT_F32X4_TO_FP4X4_RS>
+                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
+          (CVT_e2m1x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
 }
 
 //
