@@ -2092,10 +2092,12 @@ private:
       const parser::OpenMPConstruct &x) const {
     return common::visit(
         common::visitors{
-            [&](const parser::OmpBlockConstruct &y) -> decltype(auto) {
+            [&](const parser::OmpBlockConstruct &y)
+                -> const parser::OmpDirectiveSpecification & {
               return y.BeginDir();
             },
-            [&](const parser::OpenMPLoopConstruct &y) -> decltype(auto) {
+            [&](const parser::OpenMPLoopConstruct &y)
+                -> const parser::OmpDirectiveSpecification & {
               return y.BeginDir();
             },
             [&](const parser::OpenMPStandaloneConstruct &y)
