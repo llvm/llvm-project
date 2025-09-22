@@ -2585,12 +2585,12 @@ static bool OptimizeNonTrivialIFuncs(
       if (auto *CB = dyn_cast<CallBase>(U)) {
         if (CB->getCalledOperand() == CalleeIF) {
           Function *Caller = CB->getFunction();
-          GlobalIFunc *CallerIFunc = nullptr;
+          GlobalIFunc *CallerIF = nullptr;
           TargetTransformInfo &TTI = GetTTI(*Caller);
           bool CallerIsFMV = TTI.isMultiversionedFunction(*Caller);
           // The caller is a version of a known IFunc.
           if (auto It = VersionOf.find(Caller); It != VersionOf.end())
-            CallerIFunc = It->second;
+            CallerIF = It->second;
           else if (!CallerIsFMV && OptimizeNonFMVCallers) {
             // The caller is non-FMV.
             auto [It, Inserted] = FeatureMask.try_emplace(Caller);
@@ -2602,7 +2602,7 @@ static bool OptimizeNonTrivialIFuncs(
           auto [It, Inserted] = CallSites.try_emplace(Caller);
           if (Inserted) {
             if (CallerIsFMV)
-              CallerIFuncs.push_back(CallerIFunc);
+              CallerIFuncs.push_back(CallerIF);
             else
               NonFMVCallers.push_back(Caller);
           }
