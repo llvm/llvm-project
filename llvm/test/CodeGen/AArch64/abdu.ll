@@ -361,13 +361,9 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 define i64 @vector_legalized(i16 %a, i16 %b) {
 ; CHECK-LABEL: vector_legalized:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    subs w8, w8, w1, uxth
-; CHECK-NEXT:    cneg w8, w8, mi
-; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    cneg w0, w8, mi
 ; CHECK-NEXT:    ret
   %ea = zext i16 %a to i32
   %eb = zext i16 %b to i32

@@ -25,6 +25,8 @@ def Is32Bit : SubtargetFeature<"32bit-mode", "Is32Bit", "true",
                                "32-bit mode (80386)">;
 def Is16Bit : SubtargetFeature<"16bit-mode", "Is16Bit", "true",
                                "16-bit mode (i8086)">;
+def IsX32 : SubtargetFeature<"x32", "IsX32", "true",
+                             "64-bit with ILP32 programming model (e.g. x32 ABI)">;
 
 //===----------------------------------------------------------------------===//
 // X86 Subtarget ISA features
