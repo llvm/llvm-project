@@ -6824,14 +6824,12 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                             const int64_t Diff,
                             StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = VL.size();
-  // Simple check if not a strided access - clear order.
-  bool IsPossibleStrided = Diff % (Sz - 1) == 0;
-  if (!IsPossibleStrided)
+  if (Diff % (Sz - 1) != 0)
     return false;
 
   // Try to generate strided load node.
   auto IsAnyPointerUsedOutGraph =
-      IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
+      Iany_of(PointerOps, [&](Value *V) {
         return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
                  return !isVectorized(U) && !MustGather.contains(U);
                });
