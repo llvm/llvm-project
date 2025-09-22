@@ -202,7 +202,7 @@ namespace llvm {
     /// bitwidth.
     MVT changeVectorElementTypeToInteger() const {
       MVT EltTy = getVectorElementType();
-      MVT IntTy = MVT::getIntegerVT(EltTy.getSizeInBits());
+      MVT IntTy = MVT::getIntegerVT(EltTy.getFixedSizeInBits());
       MVT VecTy = MVT::getVectorVT(IntTy, getVectorElementCount());
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Simple vector VT not representable by simple integer vector VT!");
@@ -224,7 +224,7 @@ namespace llvm {
     MVT changeTypeToInteger() {
       if (isVector())
         return changeVectorElementTypeToInteger();
-      return MVT::getIntegerVT(getSizeInBits());
+      return MVT::getIntegerVT(getFixedSizeInBits());
     }
 
     /// Return a VT for a vector type with the same element type but
