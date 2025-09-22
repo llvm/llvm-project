@@ -237,6 +237,159 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
+static bool matchingIteratorTypes(ArrayRef<utils::IteratorType> iteratorTypes,
+ArrayRef<mlir::utils::IteratorType> expectedIteratorTypes) {
+  if (iteratorTypes.size() != expectedIteratorTypes.size()) return false;
+  for (auto [orig, expected] : llvm::zip_equal(iteratorTypes, expectedIteratorTypes)) {
+    if (orig != expected) return false;
+  }
+  return true;
+}
+
+static mlir::AffineExpr getAffineMapDim(ArrayAttr indexingMaps,
+                                        uint32_t mapIndex, uint32_t dimIndex) {
+  auto affineMap = cast<AffineMapAttr>(indexingMaps[mapIndex]).getValue();
+  // uint32_t nResults = affineMap.getNumResults();
+  // llvm::outs()<<affineMap<<"\n";
+  // llvm::outs()<<"Total result = "<<affineMap.getNumResults()<<"\n";
+  // llvm::outs()<<"N = "<<nResults<<", dimIndex = "<<dimIndex<<"\n";
+  // llvm::outs().flush();
+  return affineMap.getResult(dimIndex);
+}
+
+static std::string inferBasedOnRank2ConvIteratorTypes(GenericOp genericOp) {
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  SmallVector<utils::IteratorType> expectedIteratorTypes = {
+    utils::IteratorType::parallel, utils::IteratorType::reduction
+  };
+
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
+    return "linalg.conv_1d";
+  return "";
+}
+
+static std::string inferBasedOnRank4ConvIteratorTypes(GenericOp genericOp) {
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
+  if (indexingMaps.size() != 3) return "";
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  // Conv 1D
+  // depthwise_conv_1d_ncw_cw
+  // depthwise_conv_1d_nwc_wc
+  // ["parallel", "parallel", "parallel", "reduction"]
+  SmallVector<utils::IteratorType> expectedIteratorTypes = {
+    utils::IteratorType::parallel, utils::IteratorType::parallel,
+    utils::IteratorType::parallel, utils::IteratorType::reduction
+  };
+  // inputMapIndex = 0, filterMapIndex = 1, outputMapIndex = 2;
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes)) {
+    if (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1))
+      return "linalg.depthwise_conv_1d_ncw_cw";
+    else if (getAffineMapDim(indexingMaps, fIndex, 1) == getAffineMapDim(indexingMaps, oIndex, 2))
+      return "linalg.depthwise_conv_1d_nwc_wc";
+  }
+
+  //
+  expectedIteratorTypes[2] = utils::IteratorType::reduction;
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes)) {
+    return "linalg.conv_2d";
+  }
+  return "";
+}
+
+static std::string inferBasedOnRank5ConvIteratorTypes(GenericOp genericOp) {
+  ArrayAttr indexingMaps = genericOp.getIndexingMaps();
+  if (indexingMaps.size() != 3) return "";
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  // "parallel", "parallel", "parallel", "reduction", "reduction"]
+  SmallVector<utils::IteratorType> expectedIteratorTypes = {
+    utils::IteratorType::parallel, utils::IteratorType::parallel,
+    utils::IteratorType::parallel, utils::IteratorType::parallel,
+    utils::IteratorType::reduction
+  };
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
+    return "linalg.depthwise_conv_1d_nwc_wcm";
+
+  expectedIteratorTypes[3] = utils::IteratorType::reduction;
+  // inputMapIndex = 0, filterMapIndex = 1, outputMapIndex = 2;
+  unsigned iIndex = 0, fIndex = 1, oIndex = 2;
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes)) {
+    if (getAffineMapDim(indexingMaps, fIndex, 2) == getAffineMapDim(indexingMaps, oIndex, 2))
+      return "linalg.conv_1d_nwc_wcf";
+    else if (getAffineMapDim(indexingMaps, fIndex, 0) == getAffineMapDim(indexingMaps, oIndex, 1))
+      return "linalg.conv_1d_ncw_fcw";
+  }
+  return "";
+}
+
+static std::string inferBasedOnRank7ConvIteratorTypes(GenericOp genericOp) {
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  SmallVector<utils::IteratorType> expectedIteratorTypes = {
+    utils::IteratorType::parallel, utils::IteratorType::reduction
+  };
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
+    return "linalg.conv_1d";
+  return "";
+}
+
+static std::string inferBasedOnRank8ConvIteratorTypes(GenericOp genericOp) {
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  SmallVector<utils::IteratorType> expectedIteratorTypes = {
+    utils::IteratorType::parallel, utils::IteratorType::reduction
+  };
+  if (matchingIteratorTypes(iteratorTypes, expectedIteratorTypes))
+    return "linalg.conv_1d";
+  return "";
+}
+
+static std::string inferConvolutionKind(GenericOp genericOp) {
+  SmallVector<utils::IteratorType> iteratorTypes = genericOp.getIteratorTypesArray();
+  unsigned totalIterators = iteratorTypes.size();
+  switch(totalIterators) {
+    case 2:
+      return inferBasedOnRank2ConvIteratorTypes(genericOp);
+    case 4:
+      return inferBasedOnRank4ConvIteratorTypes(genericOp);
+    case 5:
+      return inferBasedOnRank5ConvIteratorTypes(genericOp);
+    case 7:
+      return inferBasedOnRank7ConvIteratorTypes(genericOp);
+    case 8:
+      return inferBasedOnRank8ConvIteratorTypes(genericOp);
+  }
+  return "";
+}
+
+// Converts linalg.generic to named linalg.*conv* where possible.
+static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
+                                                        GenericOp genericOp) {
+  std::string convKind = inferConvolutionKind(genericOp);
+  if (convKind == "") return failure();
+  SmallVector<Value> inputs = genericOp.getDpsInputs();
+  ValueRange outputs = genericOp.getDpsInits();
+  SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
+  SmallVector<Type> resultTypes = genericOp.hasPureTensorSemantics()
+                                      ? TypeRange(ValueRange(outputs))
+                                      : TypeRange{};
+  LinalgOp namedOp;
+  if (convKind == "linalg.conv_1d") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv1DOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_1d_nwc_wcf") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv1DNwcWcfOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_1d_ncw_fcw") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv1DNcwFcwOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.depthwise_conv_1d_ncw_cw") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNcwCwOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.depthwise_conv_1d_nwc_wc") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::DepthwiseConv1DNwcWcOp>(genericOp, resultTypes, inputs, outputs);
+  } else if (convKind == "linalg.conv_2d") {
+    namedOp = rewriter.replaceOpWithNewOp<linalg::Conv2DOp>(genericOp, resultTypes, inputs, outputs);
+  }
+  return namedOp;
+
+  return failure();
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -315,6 +468,11 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp);
+  }
+
+  // Convolution - e.g. *conv*
+  if (isaConvolutionOpInterface(genericOp)) {
+    return specializeLinalgConvolutions(rewriter, genericOp);
   }
   return failure();
 }
