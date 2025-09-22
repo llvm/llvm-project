@@ -14,6 +14,7 @@
 #include "clang/Lex/Lexer.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -105,7 +106,6 @@ enum {
 #include "SymbolFilePDBPropertiesEnum.inc"
 };
 
-#if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
 bool ShouldUseNativeReaderByDefault() {
   static bool g_use_native_by_default = true;
 
@@ -117,11 +117,16 @@ bool ShouldUseNativeReaderByDefault() {
         !env_value.equals_insensitive("1") &&
         !env_value.equals_insensitive("true"))
       g_use_native_by_default = false;
+
+#if !LLVM_ENABLE_DIA_SDK || !defined(_WIN32)
+    // if the environment value is unset, the native reader is requested
+    if (env_value.empty())
+      g_use_native_by_default = true;
+#endif
   });
 
   return g_use_native_by_default;
 }
-#endif
 
 class PluginProperties : public Properties {
 public:
@@ -136,6 +141,21 @@ public:
 
   bool UseNativeReader() const {
 #if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
+    return IsNativeReaderRequested();
+#else
+    if (!IsNativeReaderRequested()) {
+      static std::once_flag g_warning_shown;
+      Debugger::ReportWarning(
+          "The DIA PDB reader was explicitly requested, but LLDB was built "
+          "without the DIA SDK. The native reader will be used instead.",
+          {}, &g_warning_shown);
+    }
+    return true;
+#endif
+  }
+
+private:
+  bool IsNativeReaderRequested() const {
     auto value =
         GetPropertyAtIndexAs<PDBReader>(ePropertyReader, ePDBReaderDefault);
     switch (value) {
@@ -147,9 +167,6 @@ public:
     case ePDBReaderDefault:
       return ShouldUseNativeReaderByDefault();
     }
-#else
-    return true;
-#endif
   }
 };
 
