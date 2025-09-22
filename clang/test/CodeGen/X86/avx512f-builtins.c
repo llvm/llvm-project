@@ -8656,6 +8656,12 @@ __mmask16 test_kand_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, _
                                                     __E, __F);
 }
 
+TEST_CONSTEXPR(_kand_mask16(0xCC, 0xAA) == 0x88);        // data correctness
+TEST_CONSTEXPR(_kand_mask16(0x12345, 0xFFFF) == 0x2345); // should be truncated
+TEST_CONSTEXPR(_kand_mask16(0xABCD, 0x0000) == 0x0000);  // all-zero
+TEST_CONSTEXPR(_kand_mask16(0x5678, 0xFFFF) == 0x5678);  // all-one
+TEST_CONSTEXPR(_kand_mask16(0xAAAA, 0x5555) == 0x0000);  // intersect
+
 __mmask16 test_kandn_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kandn_mask16
   // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
