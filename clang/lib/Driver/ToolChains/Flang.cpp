@@ -190,6 +190,25 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fcoarray");
 }
 
+void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+  const ToolChain &TC = getToolChain();
+  const Driver &D = TC.getDriver();
+  DiagnosticsEngine &Diags = D.getDiags();
+  LTOKind LTOMode = D.getLTOMode();
+  // LTO mode is parsed by the Clang driver library.
+  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
+  if (LTOMode == LTOK_Full)
+    CmdArgs.push_back("-flto=full");
+  else if (LTOMode == LTOK_Thin) {
+    Diags.Report(
+        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
+                              "the option '-flto=thin' is a work in progress"));
+    CmdArgs.push_back("-flto=thin");
+  }
+  Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
+                            options::OPT_fno_fat_lto_objects});
+}
+
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   // ParsePICArgs parses -fPIC/-fPIE and their variants and returns a tuple of
   // (RelocationModel, PICLevel, IsPIE).
@@ -829,7 +848,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
-  DiagnosticsEngine &Diags = D.getDiags();
 
   // Invoke ourselves in -fc1 mode.
   CmdArgs.push_back("-fc1");
@@ -892,17 +910,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
-  // LTO mode is parsed by the Clang driver library.
-  LTOKind LTOMode = D.getLTOMode();
-  assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
-  if (LTOMode == LTOK_Full)
-    CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
-    CmdArgs.push_back("-flto=thin");
-  }
+  addLTOOptions(Args, CmdArgs);
 
   // -fPIC and related options.
   addPicOptions(Args, CmdArgs);

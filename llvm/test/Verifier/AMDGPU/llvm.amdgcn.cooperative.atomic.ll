@@ -1,4 +1,5 @@
 ; RUN: not opt -mtriple=amdgcn -mcpu=gfx1250 -passes=verify  -disable-output <%s 2>&1 | FileCheck %s
+; RUN: not opt -mtriple=amdgcn -mcpu=gfx1251 -passes=verify  -disable-output <%s 2>&1 | FileCheck %s
 
 ; CHECK: cooperative atomic intrinsics require a generic or global pointer
 define i32 @load_local_as(ptr addrspace(3) noundef %addr)  {

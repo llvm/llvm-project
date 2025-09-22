@@ -394,6 +394,12 @@ def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
 def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
 def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar PPC32 = DefaultMode;
+def PPC64 : HwMode<[In64BitMode]>;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -689,7 +695,7 @@ def : ProcessorModel<"e500mc", PPCE500mcModel,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"e5500", PPCE5500Model,
-                  [DirectiveE5500, FeatureMFOCRF, Feature64Bit,
+                  [DirectiveE5500, FeatureMFOCRF, Feature64BitSupport,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"a2", PPCA2Model,

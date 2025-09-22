@@ -131,9 +131,7 @@ public:
     if (e->isGLValue())
       return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
                               e->getExprLoc());
-
-    // Otherwise, assume the mapping is the scalar directly.
-    return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
+    return cgf.getOrCreateOpaqueRValueMapping(e).getComplexValue();
   }
 
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
