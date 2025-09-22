@@ -2,7 +2,7 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 --mattr=+lasx < %s | FileCheck %s --check-prefix=LA64
 
-define fastcc <64 x i64> @test1(<64 x i64> %0) nounwind {
+define <64 x i64> @test1(<64 x i64> %0) nounwind {
 ; LA32-LABEL: test1:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -32
@@ -80,7 +80,7 @@ entry:
   ret <64 x i64> %0
 }
 
-define fastcc <32 x double> @test2(<32 x double> %0, <32 x double> %1) nounwind {
+define <32 x double> @test2(<32 x double> %0, <32 x double> %1) nounwind {
 ; LA32-LABEL: test2:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $sp, $sp, -32
