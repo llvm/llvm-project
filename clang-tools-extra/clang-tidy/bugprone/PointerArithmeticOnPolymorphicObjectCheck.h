@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// virtual function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object.html
 class PointerArithmeticOnPolymorphicObjectCheck : public ClangTidyCheck {
 public:
   PointerArithmeticOnPolymorphicObjectCheck(StringRef Name,
