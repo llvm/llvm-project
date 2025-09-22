@@ -164,7 +164,6 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   }
 
   for (const auto &S : Data.samplers()) {
-
     if (!dxbc::isValidSamplerFilter(S.Filter))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for static sampler filter");

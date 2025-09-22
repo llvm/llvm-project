@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstddef>
-
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"

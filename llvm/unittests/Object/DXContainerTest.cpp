@@ -1172,7 +1172,7 @@ TEST(RootSignature, ParseStaticSamplers) {
         0x00, 0x00, 0x00, 0x00, 0x85, 0xeb, 0x91, 0x40, 0x66, 0x66, 0x0e, 0x41,
         0x1f, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00};
     DXContainer C =
-        llvm::cantFail(DXContainer::create(getMemoryBuffer<144>(Buffer)));
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
 
     auto MaybeRS = C.getRootSignature();
     ASSERT_TRUE(MaybeRS.has_value());

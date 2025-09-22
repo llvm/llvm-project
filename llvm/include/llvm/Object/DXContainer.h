@@ -124,25 +124,25 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 
-template <typename T> Expected<T> readParameter(StringRef Data) {
-  T Struct;
-  if (sizeof(T) != Data.size())
-    return make_error<GenericBinaryError>(
-        "Reading structure out of file bounds", object_error::parse_failed);
-
-  memcpy(&Struct, Data.data(), sizeof(T));
-  // DXContainer is always little endian
-  if (sys::IsBigEndianHost)
-    Struct.swapBytes();
-  return Struct;
-}
-
 struct RootParameterView {
   const dxbc::RTS0::v1::RootParameterHeader &Header;
   StringRef ParamData;
 
   RootParameterView(const dxbc::RTS0::v1::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
+
+  template <typename T> Expected<T> readParameter() {
+    T Struct;
+    if (sizeof(T) != ParamData.size())
+      return make_error<GenericBinaryError>(
+          "Reading structure out of file bounds", object_error::parse_failed);
+
+    memcpy(&Struct, ParamData.data(), sizeof(T));
+    // DXContainer is always little endian
+    if (sys::IsBigEndianHost)
+      Struct.swapBytes();
+    return Struct;
+  }
 };
 
 struct RootConstantView : RootParameterView {
@@ -152,7 +152,7 @@ struct RootConstantView : RootParameterView {
   }
 
   llvm::Expected<dxbc::RTS0::v1::RootConstants> read() {
-    return readParameter<dxbc::RTS0::v1::RootConstants>(ParamData);
+    return readParameter<dxbc::RTS0::v1::RootConstants>();
   }
 };
 
@@ -168,8 +168,7 @@ struct RootDescriptorView : RootParameterView {
 
   llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
     if (Version == 1) {
-      auto Descriptor =
-          readParameter<dxbc::RTS0::v1::RootDescriptor>(ParamData);
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
       if (Error E = Descriptor.takeError())
         return E;
       return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
@@ -178,7 +177,7 @@ struct RootDescriptorView : RootParameterView {
       return make_error<GenericBinaryError>("Invalid Root Signature version: " +
                                                 Twine(Version),
                                             object_error::parse_failed);
-    return readParameter<dxbc::RTS0::v2::RootDescriptor>(ParamData);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
 
