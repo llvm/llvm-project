@@ -696,8 +696,6 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
 
   // Special case for 'bits<0>'.
   if (OpInfo.Fields.empty() && !OpInfo.InitValue) {
-    if (IgnoreNonDecodableOperands)
-      return;
     assert(!OpInfo.Decoder.empty());
     // The operand has no encoding, so the corresponding argument is omitted.
     // This avoids confusion and allows the function to be overloaded if the
