@@ -1177,7 +1177,7 @@ getTrivialTypeTemplateArgument(Sema &S, SourceLocation Loc, QualType T) {
 namespace { enum class IsTupleLike { TupleLike, NotTupleLike, Error }; }
 
 static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
-                               llvm::APSInt &Size) {
+                               unsigned &OutSize) {
   EnterExpressionEvaluationContext ContextRAII(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
@@ -1218,10 +1218,24 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
   if (E.isInvalid())
     return IsTupleLike::Error;
 
+  llvm::APSInt Size;
   E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser);
   if (E.isInvalid())
     return IsTupleLike::Error;
 
+  // The implementation limit is UINT_MAX-1, to allow this to be passed down on
+  // an UnsignedOrNone.
+  if (Size < 0 || Size >= UINT_MAX) {
+    llvm::SmallVector<char, 16> Str;
+    Size.toString(Str);
+    S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_invalid)
+        << printTemplateArgs(S.Context.getPrintingPolicy(), Args,
+                             /*Params=*/nullptr)
+        << StringRef(Str.data(), Str.size());
+    return IsTupleLike::Error;
+  }
+
+  OutSize = Size.getExtValue();
   return IsTupleLike::TupleLike;
 }
 
@@ -1279,9 +1293,8 @@ struct InitializingBinding {
 static bool checkTupleLikeDecomposition(Sema &S,
                                         ArrayRef<BindingDecl *> Bindings,
                                         VarDecl *Src, QualType DecompType,
-                                        const llvm::APSInt &TupleSize) {
+                                        unsigned NumElems) {
   auto *DD = cast<DecompositionDecl>(Src);
-  unsigned NumElems = (unsigned)TupleSize.getLimitedValue(UINT_MAX);
   if (CheckBindingsCount(S, DD, DecompType, Bindings, NumElems))
     return true;
 
@@ -1641,7 +1654,7 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   // C++1z [dcl.decomp]/3:
   //   if the expression std::tuple_size<E>::value is a well-formed integral
   //   constant expression, [...]
-  llvm::APSInt TupleSize(32);
+  unsigned TupleSize;
   switch (isTupleLike(*this, DD->getLocation(), DecompType, TupleSize)) {
   case IsTupleLike::Error:
     DD->setInvalidDecl();
@@ -1690,12 +1703,12 @@ UnsignedOrNone Sema::GetDecompositionElementCount(QualType T,
   if (T->getAs<ComplexType>())
     return 2u;
 
-  llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
+  unsigned TupleSize;
   switch (isTupleLike(*this, Loc, T, TupleSize)) {
   case IsTupleLike::Error:
     return std::nullopt;
   case IsTupleLike::TupleLike:
-    return static_cast<unsigned>(TupleSize.getExtValue());
+    return TupleSize;
   case IsTupleLike::NotTupleLike:
     break;
   }

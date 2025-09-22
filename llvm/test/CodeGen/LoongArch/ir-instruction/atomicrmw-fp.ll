@@ -6,9 +6,8 @@ define float @float_fadd_acquire(ptr %p) nounwind {
 ; LA64F-LABEL: float_fadd_acquire:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB0_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -76,8 +75,9 @@ define float @float_fsub_acquire(ptr %p) nounwind {
 ; LA64F-LABEL: float_fsub_acquire:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; LA64F-NEXT:    fld.s $fa1, $a1, %pc_lo12(.LCPI1_0)
+; LA64F-NEXT:    lu12i.w $a1, -264192
+; LA64F-NEXT:    lu32i.d $a1, 0
+; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB1_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -145,9 +145,8 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmin_acquire:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -215,9 +214,8 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmax_acquire:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -573,9 +571,8 @@ define float @float_fadd_release(ptr %p) nounwind {
 ; LA64F-LABEL: float_fadd_release:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB8_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -643,8 +640,9 @@ define float @float_fsub_release(ptr %p) nounwind {
 ; LA64F-LABEL: float_fsub_release:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI9_0)
-; LA64F-NEXT:    fld.s $fa1, $a1, %pc_lo12(.LCPI9_0)
+; LA64F-NEXT:    lu12i.w $a1, -264192
+; LA64F-NEXT:    lu32i.d $a1, 0
+; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB9_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -712,9 +710,8 @@ define float @float_fmin_release(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmin_release:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -782,9 +779,8 @@ define float @float_fmax_release(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmax_release:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1140,9 +1136,8 @@ define float @float_fadd_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: float_fadd_acq_rel:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB16_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1210,8 +1205,9 @@ define float @float_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: float_fsub_acq_rel:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI17_0)
-; LA64F-NEXT:    fld.s $fa1, $a1, %pc_lo12(.LCPI17_0)
+; LA64F-NEXT:    lu12i.w $a1, -264192
+; LA64F-NEXT:    lu32i.d $a1, 0
+; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB17_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1279,9 +1275,8 @@ define float @float_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmin_acq_rel:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB18_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1349,9 +1344,8 @@ define float @float_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmax_acq_rel:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB19_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1707,9 +1701,8 @@ define float @float_fadd_seq_cst(ptr %p) nounwind {
 ; LA64F-LABEL: float_fadd_seq_cst:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB24_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1777,8 +1770,9 @@ define float @float_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F-LABEL: float_fsub_seq_cst:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI25_0)
-; LA64F-NEXT:    fld.s $fa1, $a1, %pc_lo12(.LCPI25_0)
+; LA64F-NEXT:    lu12i.w $a1, -264192
+; LA64F-NEXT:    lu32i.d $a1, 0
+; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB25_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1846,9 +1840,8 @@ define float @float_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmin_seq_cst:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB26_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -1916,9 +1909,8 @@ define float @float_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmax_seq_cst:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB27_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -2274,9 +2266,8 @@ define float @float_fadd_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: float_fadd_monotonic:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB32_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -2344,8 +2335,9 @@ define float @float_fsub_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: float_fsub_monotonic:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI33_0)
-; LA64F-NEXT:    fld.s $fa1, $a1, %pc_lo12(.LCPI33_0)
+; LA64F-NEXT:    lu12i.w $a1, -264192
+; LA64F-NEXT:    lu32i.d $a1, 0
+; LA64F-NEXT:    movgr2fr.w $fa1, $a1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB33_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -2413,9 +2405,8 @@ define float @float_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmin_monotonic:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB34_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
@@ -2483,9 +2474,8 @@ define float @float_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-LABEL: float_fmax_monotonic:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 0
-; LA64F-NEXT:    addi.w $a1, $zero, 1
+; LA64F-NEXT:    lu12i.w $a1, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa1, $a1
-; LA64F-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB35_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1

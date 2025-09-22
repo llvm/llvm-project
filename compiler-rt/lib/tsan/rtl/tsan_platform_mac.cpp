@@ -238,7 +238,8 @@ void InitializePlatformEarly() {
   if (IsAddressInMappedRegion(HiAppMemEnd() - 1)) {
     Report(
         "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
-        "already mapped.\n");
+        "already mapped.\n",
+        HiAppMemEnd() - 1);
     Die();
   }
 #endif

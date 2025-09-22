@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// xvalues as arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/return-const-ref-from-parameter.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/return-const-ref-from-parameter.html
 class ReturnConstRefFromParameterCheck : public ClangTidyCheck {
 public:
   ReturnConstRefFromParameterCheck(StringRef Name, ClangTidyContext *Context)
