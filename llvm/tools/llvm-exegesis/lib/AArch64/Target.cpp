@@ -395,13 +395,13 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
                                    APInt(64, PROT_READ | PROT_WRITE))); // prot
   MmapCode.push_back(loadImmediate(AArch64::X3, 64, APInt(64, flags))); // flags
   // Copy file descriptor location from aux memory into X4
-  MmapCode.push_back(
-      loadImmediate(ArgumentRegisters::TempRegister, 64, APInt(64, FileDescriptorAddress)));
+  MmapCode.push_back(loadImmediate(ArgumentRegisters::TempRegister, 64,
+                                   APInt(64, FileDescriptorAddress)));
   // Dereference file descriptor into X4 (32-bit load from [X16])
   MmapCode.push_back(MCInstBuilder(AArch64::LDRWui)
-                         .addReg(AArch64::W4)   // destination: W4 (X4 lower 32 bits)
-                         .addReg(ArgumentRegisters::TempRegister)   // base address: X16
-                         .addImm(0));           // offset: 0
+                         .addReg(AArch64::W4)
+                         .addReg(ArgumentRegisters::TempRegister)
+                         .addImm(0));
   MmapCode.push_back(loadImmediate(AArch64::X5, 64, APInt(64, 0))); // offset
   generateSysCall(SYS_mmap, MmapCode); // SYS_mmap is 222
   return MmapCode;
@@ -412,7 +412,7 @@ void ExegesisAArch64Target::generateMmapAuxMem(
   int fd = -1;
   int flags = MAP_SHARED;
   uintptr_t address = getAuxiliaryMemoryStartAddress();
-  if (fd == -1){
+  if (fd == -1) {
     dbgs() << "Warning: generateMmapAuxMem using anonymous mapping\n";
     flags |= MAP_ANONYMOUS;
   }
@@ -473,8 +473,16 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   if (SaveRegisters)
     saveSyscallRegisters(ConfigurePerfCounterCode, 3);
 
-  ConfigurePerfCounterCode.push_back(loadImmediate(
-      AArch64::X0, 64, APInt(64, getAuxiliaryMemoryStartAddress()))); // fd
+  // Load actual file descriptor from auxiliary memory location [address + 0]
+  // CounterFileDescriptor was stored at AuxiliaryMemoryMapping[0]
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(ArgumentRegisters::TempRegister, 64,
+                    APInt(64, getAuxiliaryMemoryStartAddress())));
+  ConfigurePerfCounterCode.push_back(
+      MCInstBuilder(AArch64::LDRWui)
+          .addReg(AArch64::W0)
+          .addReg(ArgumentRegisters::TempRegister)
+          .addImm(0));
   ConfigurePerfCounterCode.push_back(
       loadImmediate(AArch64::X1, 64, APInt(64, Request))); // cmd
   ConfigurePerfCounterCode.push_back(
