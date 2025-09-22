@@ -324,7 +324,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
               const LiveInterval &MFMAInterval = LIS->getInterval(MFMAReg);
               if (!MFMAInterval.liveAt(CurrentSlot)) {
                 // Add bi-directional anti-hints
-                MRI->addRegAllocationAntiHints(CandidateReg, MFMARegs);
+                MRI->addRegAllocationAntiHints(CandidateReg, MFMAReg);
                 MRI->addRegAllocationAntiHints(MFMAReg, CandidateReg);
               }
             }
