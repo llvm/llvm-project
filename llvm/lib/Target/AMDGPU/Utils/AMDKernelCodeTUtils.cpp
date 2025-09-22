@@ -56,18 +56,15 @@ using namespace llvm::AMDGPU;
                        std::true_type>;                                        \
   };                                                                           \
   class IsMCExpr##member {                                                     \
-    template <typename U,                                                      \
-              typename std::enable_if_t<                                       \
-                  HasMember##member::RESULT &&                                 \
-                      std::is_same_v<decltype(U::member), const MCExpr *>,     \
-                  U> * = nullptr>                                              \
-    static constexpr std::true_type HasMCExprType(decltype(U::member) *);      \
+    template <typename U>                                                      \
+    static constexpr auto HasMCExprType(int) -> std::bool_constant<            \
+        HasMember##member::RESULT &&                                           \
+        std::is_same_v<decltype(U::member), const MCExpr *>>;                  \
     template <typename U> static constexpr std::false_type HasMCExprType(...); \
                                                                                \
   public:                                                                      \
     static constexpr bool RESULT =                                             \
-        std::is_same_v<decltype(HasMCExprType<AMDGPUMCKernelCodeT>(nullptr)),  \
-                       std::true_type>;                                        \
+        decltype(HasMCExprType<AMDGPUMCKernelCodeT>(0))::value;                \
   };                                                                           \
   class GetMember##member {                                                    \
   public:                                                                      \
