@@ -78,6 +78,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -2508,6 +2509,8 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
+  if (!RS.getFilename())
+    return;
 
   MCSection *RemarksSection =
       OutContext.getObjectFileInfo()->getRemarksSection();
@@ -2518,20 +2521,16 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
     return;
   }
 
-  remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
-
-  std::optional<SmallString<128>> Filename;
-  if (std::optional<StringRef> FilenameRef = RS.getFilename()) {
-    Filename = *FilenameRef;
-    sys::fs::make_absolute(*Filename);
-    assert(!Filename->empty() && "The filename can't be empty.");
-  }
+  SmallString<128> Filename = *RS.getFilename();
+  sys::fs::make_absolute(Filename);
+  assert(!Filename.empty() && "The filename can't be empty.");
 
   std::string Buf;
   raw_string_ostream OS(Buf);
+
+  remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
   std::unique_ptr<remarks::MetaSerializer> MetaSerializer =
-      Filename ? RemarkSerializer.metaSerializer(OS, Filename->str())
-               : RemarkSerializer.metaSerializer(OS);
+      RemarkSerializer.metaSerializer(OS, Filename);
   MetaSerializer->emit();
 
   // Switch to the remarks section.
