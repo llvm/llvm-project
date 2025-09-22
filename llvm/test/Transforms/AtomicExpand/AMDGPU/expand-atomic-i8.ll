@@ -1759,7 +1759,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_remote_memory(ptr addrs
 ; GCN-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; GCN-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GCN-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; GCN-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; GCN-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0:![0-9]+]]
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1785,7 +1785,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_remote_memory(ptr addrs
 ; R600-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; R600-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; R600-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; R600-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; R600-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0:![0-9]+]]
 ; R600-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; R600-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; R600-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1817,7 +1817,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory(ptr
 ; GCN-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; GCN-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GCN-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; GCN-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; GCN-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1843,7 +1843,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory(ptr
 ; R600-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; R600-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; R600-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; R600-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; R600-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; R600-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; R600-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; R600-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1875,7 +1875,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory__am
 ; GCN-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; GCN-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GCN-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; GCN-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; GCN-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1901,7 +1901,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory__am
 ; R600-NEXT:    [[TMP5:%.*]] = and i32 [[NEW]], [[MASK]]
 ; R600-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; R600-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[TMP5]]
-; R600-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
+; R600-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; R600-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; R600-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; R600-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -2258,7 +2258,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent_align2(
 ; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -4)
 ; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i32
-; R600NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; R600-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
@@ -2284,6 +2284,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
+; R600NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
   %res = atomicrmw usub_cond ptr %ptr, i8 %value syncscope("agent") seq_cst, align 2
   ret i8 %res
 }
