@@ -260,10 +260,10 @@ struct BufferizationOptions {
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
-  /// Tensor -> MemRef type converter.
-  /// Parameters: tensor type, memory space, func op, bufferization options
+  /// Tensor-like -> Buffer-like type converter.
+  /// Parameters: tensor-like type, memory space, func op, bufferization options
   using FunctionArgTypeConverterFn =
-      std::function<BaseMemRefType(TensorType, Attribute memorySpace,
+      std::function<BufferLikeType(TensorLikeType, Attribute memorySpace,
                                    func::FuncOp, const BufferizationOptions &)>;
   /// Tensor -> MemRef type converter.
   /// Parameters: tensor type, memory space, bufferization options
@@ -335,10 +335,12 @@ struct BufferizationOptions {
   /// predictable.
   void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
 
-  /// Type converter from tensors to memrefs. This type converter is used to
-  /// determine bufferized function argument and result types. By default, a
-  /// type converter that returns a memref type with a fully dynamic layout map
-  /// is used.
+  /// Type converter from tensors to buffers. This type converter is used to
+  /// determine bufferized function argument and result types.
+  ///
+  /// By default, if tensor is a (builtin) tensor type, a type converter that
+  /// returns a memref type with a fully dynamic layout map is used; if tensor
+  /// is a (generic) tensor-like type, TensorLikeType::getBufferType() is used.
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
   FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;

@@ -49,30 +49,38 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
 #endif // NDEBUG
 }
 
+// Note: this is a local adaptor to unify TensorType and TensorLikeType code
+// paths that both work with BufferizationOptions.
+static mlir::Attribute
+getDefaultMemorySpace(const BufferizationOptions &options,
+                      TensorLikeType type) {
+  if (auto tensorType = dyn_cast<TensorType>(type)) {
+    return *options.defaultMemorySpaceFn(tensorType);
+  }
+  return nullptr;
+}
+
 /// Return the index-th bufferized function argument type. This assumes that the
 /// specified argument is a tensor. If the tensor is ranked, a layout map may be
 /// specified by the user (as per `options.functionArgTypeConverterFn`).
 static BufferLikeType
 getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
                              const BufferizationOptions &options) {
-  auto tensorType =
+  auto type =
       dyn_cast<TensorLikeType>(funcOp.getFunctionType().getInput(index));
-  assert(tensorType && "expected TensorLikeType");
-  auto maybeBufferType = tensorType.getBufferTypeAtFunctionBoundary(
-      funcOp, options, [&]() { return funcOp->emitError(); });
-  assert(mlir::succeeded(maybeBufferType) &&
-         "a valid buffer is always expected");
-
-  auto bufferType = *maybeBufferType;
+  assert(type && "expected TensorLikeType");
 
   // Note: For builtin tensors there is additional logic related to layout.
-  if (isa<TensorType>(tensorType)) {
+  if (auto tensorType = dyn_cast<TensorType>(type)) {
+    BufferLikeType memrefType = options.functionArgTypeConverterFn(
+        type, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
+
     auto layoutAttr = funcOp.getArgAttrOfType<MemRefLayoutAttrInterface>(
         index, BufferizationDialect::kBufferLayoutAttrName);
     if (!layoutAttr)
-      return bufferType;
+      return memrefType;
 
-    auto rankedMemrefType = dyn_cast<MemRefType>(bufferType);
+    auto rankedMemrefType = dyn_cast<MemRefType>(memrefType);
     assert(rankedMemrefType &&
            "buffer layout not supported on unranked tensors");
     return cast<BufferLikeType>(MemRefType::get(
@@ -80,7 +88,8 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
         layoutAttr, rankedMemrefType.getMemorySpace()));
   }
 
-  return bufferType;
+  return options.functionArgTypeConverterFn(type, /*memSpace=*/nullptr, funcOp,
+                                            options);
 }
 
 /// Return the FuncOp called by `callOp`.
@@ -241,8 +250,9 @@ struct CallOpInterface
 
     // Otherwise, call the type converter to compute the bufferized type.
     auto tensorType = cast<TensorLikeType>(resultType);
-    return tensorType.getBufferTypeAtFunctionBoundary(
-        funcOp, options, [&]() { return funcOp->emitError(); });
+    return cast<BufferLikeType>(options.functionArgTypeConverterFn(
+        tensorType, getDefaultMemorySpace(options, tensorType), funcOp,
+        options));
   }
 
   /// All function arguments are writable. It is the responsibility of the
@@ -450,12 +460,10 @@ struct FuncOpInterface
     SmallVector<Type> retTypes;
     for (Type resultType : funcType.getResults()) {
       if (auto tensorType = dyn_cast<TensorLikeType>(resultType)) {
-        FailureOr<BufferLikeType> resultType =
-            tensorType.getBufferTypeAtFunctionBoundary(
-                funcOp, options, [&]() { return funcOp->emitError(); });
-        assert(mlir::succeeded(resultType) &&
-               "a valid buffer is always expected");
-        retTypes.push_back(*resultType);
+        BufferLikeType resultType = options.functionArgTypeConverterFn(
+            tensorType, getDefaultMemorySpace(options, tensorType), funcOp,
+            options);
+        retTypes.push_back(resultType);
         continue;
       }
       retTypes.push_back(resultType);

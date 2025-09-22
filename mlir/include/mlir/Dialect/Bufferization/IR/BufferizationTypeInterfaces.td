@@ -43,18 +43,6 @@ def Bufferization_TensorLikeTypeInterface
       /*args=*/(ins
         "::mlir::bufferization::BufferLikeType":$bufferType,
         "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
-    >,
-    InterfaceMethod<[{
-        Returns a BufferLike type for this TensorLike type in the context of
-        this type being function argument or result.
-      }],
-      /*retTy=*/"::mlir::FailureOr<::mlir::bufferization::BufferLikeType>",
-      /*methodName=*/"getBufferTypeAtFunctionBoundary",
-      /*args=*/(ins
-        "::mlir::func::FuncOp":$funcOp,
-        "const ::mlir::bufferization::BufferizationOptions &":$options,
-        "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError
-      )
     >
   ];
 }
