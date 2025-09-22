@@ -3075,6 +3075,63 @@ bool VPReplicateRecipe::shouldPack() const {
   });
 }
 
+/// Returns true if \p Ptr is a pointer computation for which the legacy cost
+/// model computes a SCEV expression when comping the address cost.
+static bool shouldUseAddressAccessSCEV(VPValue *Ptr) {
+  auto *PtrR = Ptr->getDefiningRecipe();
+  if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
+                  cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
+                      Instruction::GetElementPtr) ||
+                 isa<VPWidenGEPRecipe>(PtrR)))
+    return false;
+
+  // We are looking for a gep with all loop invariant indices except for one
+  // which should be an induction variable.
+  unsigned NumOperands = PtrR->getNumOperands();
+  for (unsigned Idx = 1; Idx < NumOperands; ++Idx) {
+    VPValue *Opd = PtrR->getOperand(Idx);
+    if (!(Opd->isDefinedOutsideLoopRegions()) &&
+        !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
+      return false;
+  }
+
+  return true;
+}
+
+/// Returns true of \p V is used as part of the address of another load or
+/// store.
+static bool isUsedByLoadStoreAddress(const VPUser *V) {
+  SmallPtrSet<const VPUser *, 4> Seen;
+  SmallVector<const VPUser *> WorkList = {V};
+
+  while (!WorkList.empty()) {
+    auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
+    if (!Cur || !Seen.insert(Cur).second)
+      continue;
+
+    for (VPUser *U : Cur->users()) {
+      if (auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(U))
+        if (InterleaveR->getAddr() == Cur)
+          return true;
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(U)) {
+        if (RepR->getOpcode() == Instruction::Load &&
+            RepR->getOperand(0) == Cur)
+          return true;
+        if (RepR->getOpcode() == Instruction::Store &&
+            RepR->getOperand(1) == Cur)
+          return true;
+      }
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+        if (MemR->getAddr() == Cur && MemR->isConsecutive())
+          return true;
+      }
+    }
+
+    append_range(WorkList, cast<VPSingleDefRecipe>(Cur)->users());
+  }
+  return false;
+}
+
 InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   Instruction *UI = cast<Instruction>(getUnderlyingValue());
@@ -3182,21 +3239,54 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    if (isSingleScalar()) {
-      bool IsLoad = UI->getOpcode() == Instruction::Load;
-      Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
-      Type *ScalarPtrTy = Ctx.Types.inferScalarType(getOperand(IsLoad ? 0 : 1));
-      const Align Alignment = getLoadStoreAlignment(UI);
-      unsigned AS = getLoadStoreAddressSpace(UI);
-      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
-      InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
-          UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo, UI);
-      return ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
-                                   ScalarPtrTy, nullptr, nullptr, Ctx.CostKind);
-    }
+    if (VF.isScalable() && !isSingleScalar())
+      return InstructionCost::getInvalid();
+
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
-    break;
+    if (getParent()->getParent() && getParent()->getParent()->isReplicator())
+      break;
+
+    bool IsLoad = UI->getOpcode() == Instruction::Load;
+    // TODO: Handle cases where we need to pass a SCEV to
+    // getAddressComputationCost.
+    if (shouldUseAddressAccessSCEV(getOperand(!IsLoad)))
+      break;
+
+    Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
+    Type *ScalarPtrTy = Ctx.Types.inferScalarType(getOperand(IsLoad ? 0 : 1));
+    const Align Alignment = getLoadStoreAlignment(UI);
+    unsigned AS = getLoadStoreAddressSpace(UI);
+    TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
+    InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
+        UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
+
+    Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
+
+    InstructionCost ScalarCost =
+        ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
+                              PtrTy, &Ctx.SE, nullptr, Ctx.CostKind);
+    if (isSingleScalar())
+      return ScalarCost;
+
+    SmallVector<const VPValue *> OpsToScalarize;
+    Type *ResultTy = Type::getVoidTy(getParent()->getPlan()->getContext());
+    // Set ResultTy and OpsToScalarize, if scalarization is needed. Currently we
+    // don't assign scalarization overhead in general, if the target prefers
+    // vectorized addressing or the loaded value is used as part of an address
+    // of another load or store.
+    if (Ctx.TTI.prefersVectorizedAddressing() ||
+        !isUsedByLoadStoreAddress(this)) {
+      if (!(IsLoad && !Ctx.TTI.prefersVectorizedAddressing()) &&
+          !(!IsLoad && Ctx.TTI.supportsEfficientVectorElementLoadStore()))
+        append_range(OpsToScalarize, operands());
+
+      if (!Ctx.TTI.supportsEfficientVectorElementLoadStore())
+        ResultTy = Ctx.Types.inferScalarType(this);
+    }
+
+    return (ScalarCost * VF.getFixedValue()) +
+           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, true);
   }
   }
 
