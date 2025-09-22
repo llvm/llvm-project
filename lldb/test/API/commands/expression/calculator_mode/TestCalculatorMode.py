@@ -21,7 +21,7 @@ class TestCalculatorMode(TestBase):
         )
         # Now try it with a specific language:
         self.expect(
-            "expression -l c -- 11 + 22",
+            "expression -l c++ -- 11 + 22",
             "11 + 22 didn't get the expected result",
             substrs=["33"],
         )
