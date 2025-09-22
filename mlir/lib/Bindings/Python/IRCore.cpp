@@ -1550,8 +1550,8 @@ nb::typed<nb::object, PyOpView> PyOperation::createOpView() {
   auto operationCls = PyGlobals::get().lookupOperationClass(
       StringRef(identStr.data, identStr.length));
   if (operationCls)
-    return PyOpView::constructDerived(*operationCls, getRef().getObject());
-  return nb::cast(PyOpView(getRef().getObject()));
+    return nanobind::cast<nanobind::typed<nanobind::object, PyOpView>>(PyOpView::constructDerived(*operationCls, getRef().getObject()));
+  return nanobind::cast<nanobind::typed<nanobind::object, PyOpView>>(nb::cast(PyOpView(getRef().getObject())));
 }
 
 void PyOperation::erase() {
@@ -2143,8 +2143,8 @@ nb::typed<nb::object, PyAttribute> PyAttribute::maybeDownCast() {
   // contents into a new instance that will be owned by Python.
   nb::object thisObj = nb::cast(this, nb::rv_policy::move);
   if (!typeCaster)
-    return thisObj;
-  return typeCaster.value()(thisObj);
+    return nanobind::cast<nanobind::typed<nanobind::object, PyAttribute>>(thisObj);
+  return nanobind::cast<nanobind::typed<nanobind::object, PyAttribute>>(typeCaster.value()(thisObj));
 }
 
 //------------------------------------------------------------------------------
@@ -2189,8 +2189,8 @@ nb::typed<nb::object, PyType> PyType::maybeDownCast() {
   // contents into a new instance that will be owned by Python.
   nb::object thisObj = nb::cast(this, nb::rv_policy::move);
   if (!typeCaster)
-    return thisObj;
-  return typeCaster.value()(thisObj);
+    return nanobind::cast<nanobind::typed<nanobind::object, PyType>>(thisObj);
+  return nanobind::cast<nanobind::typed<nanobind::object, PyType>>(typeCaster.value()(thisObj));
 }
 
 //------------------------------------------------------------------------------
@@ -2230,8 +2230,8 @@ nanobind::typed<nanobind::object, PyValue> PyValue::maybeDownCast() {
   // contents into a new instance that will be owned by Python.
   nb::object thisObj = nb::cast(this, nb::rv_policy::move);
   if (!valueCaster)
-    return thisObj;
-  return valueCaster.value()(thisObj);
+    return nanobind::cast<nanobind::typed<nanobind::object, PyValue>>(thisObj);
+  return nanobind::cast<nanobind::typed<nanobind::object, PyValue>>(valueCaster.value()(thisObj));
 }
 
 PyValue PyValue::createFromCapsule(nb::object capsule) {
