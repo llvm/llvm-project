@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /** Flags lambdas that use default capture modes
  *
  * For the user-facing documentation see:
- * http://clang.llvm.org/extra/clang-tidy/checks/bugprone/default-lambda-capture.html
+ * https://clang.llvm.org/extra/clang-tidy/checks/bugprone/default-lambda-capture.html
  */
 class DefaultLambdaCaptureCheck : public ClangTidyCheck {
 public:
