@@ -1978,9 +1978,8 @@ lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if (fitsRegularPattern<int>(Begin, 1, End - HalfSize, SplatIndex, 0) &&
       fitsRegularPattern<int>(Begin + HalfSize, 1, End, SplatIndex + HalfSize,
                               0)) {
-    APInt Imm(64, SplatIndex);
     return DAG.getNode(LoongArchISD::VREPLVEI, DL, VT, V1,
-                       DAG.getConstant(Imm, DL, Subtarget.getGRLenVT()));
+                       DAG.getConstant(SplatIndex, DL, Subtarget.getGRLenVT()));
   }
 
   return SDValue();
@@ -2647,6 +2646,43 @@ static SDValue lowerBUILD_VECTORAsBroadCastLoad(BuildVectorSDNode *BVOp,
   return SDValue();
 }
 
+// Sequentially insert elements from Ops into Vector, from low to high indices.
+// Note: Ops can have fewer elements than Vector.
+static void fillVector(ArrayRef<SDValue> Ops, SelectionDAG &DAG, SDLoc DL,
+                       const LoongArchSubtarget &Subtarget, SDValue &Vector,
+                       EVT ResTy) {
+  assert(Ops.size() <= ResTy.getVectorNumElements());
+
+  SDValue Op0 = Ops[0];
+  if (!Op0.isUndef())
+    Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
+  for (unsigned i = 1; i < Ops.size(); ++i) {
+    SDValue Opi = Ops[i];
+    if (Opi.isUndef())
+      continue;
+    Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
+                         DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+  }
+}
+
+// Build a ResTy subvector from Node, taking NumElts elements starting at index
+// 'first'.
+static SDValue fillSubVectorFromBuildVector(BuildVectorSDNode *Node,
+                                            SelectionDAG &DAG, SDLoc DL,
+                                            const LoongArchSubtarget &Subtarget,
+                                            EVT ResTy, unsigned first) {
+  unsigned NumElts = ResTy.getVectorNumElements();
+
+  assert(first >= 0 &&
+         first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
+
+  SmallVector<SDValue, 16> Ops(Node->op_begin() + first,
+                               Node->op_begin() + first + NumElts);
+  SDValue Vector = DAG.getUNDEF(ResTy);
+  fillVector(Ops, DAG, DL, Subtarget, Vector, ResTy);
+  return Vector;
+}
+
 SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
@@ -2756,29 +2792,18 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     BitVector UndefElements;
     if (Node->getRepeatedSequence(Sequence, &UndefElements) &&
         UndefElements.count() == 0) {
-      SDValue Vector = DAG.getUNDEF(ResTy);
-      SDValue FillVec = Vector;
-      EVT FillTy = ResTy;
-
       // Using LSX instructions to fill the sub-sequence of 256-bits vector,
       // because the high part can be simply treated as undef.
-      if (Is256Vec) {
-        FillTy = ResTy.getHalfNumVectorElementsVT(*DAG.getContext());
-        FillVec = DAG.getExtractSubvector(DL, FillTy, Vector, 0);
-      }
+      SDValue Vector = DAG.getUNDEF(ResTy);
+      EVT FillTy = Is256Vec
+                       ? ResTy.getHalfNumVectorElementsVT(*DAG.getContext())
+                       : ResTy;
+      SDValue FillVec =
+          Is256Vec ? DAG.getExtractSubvector(DL, FillTy, Vector, 0) : Vector;
 
-      SDValue Op0 = Sequence[0];
+      fillVector(Sequence, DAG, DL, Subtarget, FillVec, FillTy);
+
       unsigned SeqLen = Sequence.size();
-      if (!Op0.isUndef())
-        FillVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, FillTy, Op0);
-      for (unsigned i = 1; i < SeqLen; ++i) {
-        SDValue Opi = Sequence[i];
-        if (Opi.isUndef())
-          continue;
-        FillVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, FillTy, FillVec, Opi,
-                              DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
-      }
-
       unsigned SplatLen = NumElts / SeqLen;
       MVT SplatEltTy = MVT::getIntegerVT(VT.getScalarSizeInBits() * SeqLen);
       MVT SplatTy = MVT::getVectorVT(SplatEltTy, SplatLen);
@@ -2805,24 +2830,38 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
       return DAG.getBitcast(ResTy, SplatVec);
     }
 
-    // Use INSERT_VECTOR_ELT operations rather than expand to stores.
-    // The resulting code is the same length as the expansion, but it doesn't
-    // use memory operations.
-    assert(ResTy.isVector());
-
-    SDValue Op0 = Node->getOperand(0);
-    SDValue Vector = DAG.getUNDEF(ResTy);
-
-    if (!Op0.isUndef())
-      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
-    for (unsigned i = 1; i < NumElts; ++i) {
-      SDValue Opi = Node->getOperand(i);
-      if (Opi.isUndef())
-        continue;
-      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
-                           DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+    // Use INSERT_VECTOR_ELT operations rather than expand to stores, because
+    // using memory operations is much lower.
+    //
+    // For 256-bit vectors, normally split into two halves and concatenate.
+    // Special case: for v8i32/v8f32/v4i64/v4f64, if the upper half has only
+    // one non-undef element, skip spliting to avoid a worse result.
+    if (ResTy == MVT::v8i32 || ResTy == MVT::v8f32 || ResTy == MVT::v4i64 ||
+        ResTy == MVT::v4f64) {
+      unsigned NonUndefCount = 0;
+      for (unsigned i = NumElts / 2; i < NumElts; ++i) {
+        if (!Node->getOperand(i).isUndef()) {
+          ++NonUndefCount;
+          if (NonUndefCount > 1)
+            break;
+        }
+      }
+      if (NonUndefCount == 1)
+        return fillSubVectorFromBuildVector(Node, DAG, DL, Subtarget, ResTy, 0);
     }
-    return Vector;
+
+    EVT VecTy =
+        Is256Vec ? ResTy.getHalfNumVectorElementsVT(*DAG.getContext()) : ResTy;
+    SDValue Vector =
+        fillSubVectorFromBuildVector(Node, DAG, DL, Subtarget, VecTy, 0);
+
+    if (Is128Vec)
+      return Vector;
+
+    SDValue VectorHi = fillSubVectorFromBuildVector(Node, DAG, DL, Subtarget,
+                                                    VecTy, NumElts / 2);
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResTy, Vector, VectorHi);
   }
 
   return SDValue();
