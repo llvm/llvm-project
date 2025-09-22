@@ -40,7 +40,7 @@ FileHeader:
   Machine:        EM_X86_64
 ProgramHeaders:
   - Type:         PT_NOTE
-    FileSize:     0xffffffffffffffff
+    FileSize:     0xffffffffffffff88
     FirstSec:     .note.gnu.build-id
     LastSec:      .note.gnu.build-id
 Sections:
@@ -61,6 +61,7 @@ Sections:
   return WithoutSection;
 }
 
+// The BuildID can be looked up from a section header, if there is no program header.
 TEST(BuildIDTest, InvalidPhdrFileSizeWithShdrs) {
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
@@ -72,6 +73,7 @@ TEST(BuildIDTest, InvalidPhdrFileSizeWithShdrs) {
       "\xAB\xB5\x0D\x82\xB6\xBD\xC8\x61");
 }
 
+// The code handles a malformed program header that points at data outside the file.
 TEST(BuildIDTest, InvalidPhdrFileSizeNoShdrs) {
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
@@ -80,9 +82,10 @@ TEST(BuildIDTest, InvalidPhdrFileSizeNoShdrs) {
   BuildIDRef BuildID = getBuildID(&ElfOrErr.get());
   EXPECT_EQ(
       StringRef(reinterpret_cast<const char *>(BuildID.data()), BuildID.size()),
-      "\xAB\xB5\x0D\x82\xB6\xBD\xC8\x61");
+      "");
 }
 
+// the code handles a malformed section header that points at data outside the file.
 TEST(BuildIDTest, InvalidSectionHeader) {
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
@@ -100,7 +103,7 @@ Sections:
   - Name:         .note.gnu.build-id
     Type:         SHT_NOTE
     AddressAlign: 0x04
-    ShOffset:     0x8000
+    ShOffset:     0xffffffffffffff88
     Notes:
       - Name:     "GNU"
         Desc:     "abb50d82b6bdc861"
