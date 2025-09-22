@@ -82,6 +82,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+MACHINE_FUNCTION_ANALYSIS("reaching-def", ReachingDefAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())
 MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis())
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
@@ -96,8 +97,7 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 // MachinePostDominatorTreeAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-region-info",
 // MachineRegionInfoPassAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("reaching-def",
-// ReachingDefAnalysisAnalysis()) MACHINE_FUNCTION_ANALYSIS("gc-analysis",
+// MACHINE_FUNCTION_ANALYSIS("gc-analysis",
 // GCMachineCodeAnalysisPass())
 #undef MACHINE_FUNCTION_ANALYSIS
 
@@ -151,6 +151,7 @@ MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-uniformity>",
                       MachineUniformityPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<reaching-def>", ReachingDefPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<virtregmap>", VirtRegMapPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("process-imp-defs", ProcessImplicitDefsPass())

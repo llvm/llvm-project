@@ -232,7 +232,6 @@ template <class... Types>
 #  include <__memory/uses_allocator.h>
 #  include <__tuple/find_index.h>
 #  include <__tuple/ignore.h>
-#  include <__tuple/make_tuple_types.h>
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_like.h>
 #  include <__tuple/tuple_like_ext.h>
@@ -534,11 +533,10 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES
 
   template <class _Tuple>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_impl(__from_tuple, _Tuple&& __t) noexcept(
-      (__all<is_nothrow_constructible<
-           _Tp,
-           typename tuple_element<_Indx, typename __make_tuple_types<_Tuple>::type>::type>::value...>::value))
+      (__all<is_nothrow_constructible<_Tp, __copy_cvref_t<_Tuple, __tuple_element_t<_Indx, __remove_cvref_t<_Tuple>>>>::
+                 value...>::value))
       : __tuple_leaf<_Indx, _Tp>(
-            std::forward<typename tuple_element<_Indx, typename __make_tuple_types<_Tuple>::type>::type>(
+            std::forward<__copy_cvref_t<_Tuple, __tuple_element_t<_Indx, __remove_cvref_t<_Tuple>>>>(
                 std::get<_Indx>(__t)))... {}
 
   template <class _Alloc, class _Tuple>
@@ -547,9 +545,9 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES
       : __tuple_leaf<_Indx, _Tp>(
             __uses_alloc_ctor<_Tp,
                               _Alloc,
-                              typename tuple_element<_Indx, typename __make_tuple_types<_Tuple>::type>::type>(),
+                              __copy_cvref_t<_Tuple, __tuple_element_t<_Indx, __remove_cvref_t<_Tuple>>>>(),
             __a,
-            std::forward<typename tuple_element<_Indx, typename __make_tuple_types<_Tuple>::type>::type>(
+            std::forward<__copy_cvref_t<_Tuple, __tuple_element_t<_Indx, __remove_cvref_t<_Tuple>>>>(
                 std::get<_Indx>(__t)))... {}
 
   __tuple_impl(const __tuple_impl&) = default;
@@ -1272,47 +1270,37 @@ operator<=(const tuple<_Tp...>& __x, const tuple<_Up...>& __y) {
 
 // tuple_cat
 
-template <class _Tp, class _Up>
-struct __tuple_cat_type;
+template <class... _Tuples>
+struct __tuple_cat_return_impl;
 
-template <class... _Ttypes, class... _Utypes>
-struct __tuple_cat_type<tuple<_Ttypes...>, __tuple_types<_Utypes...> > {
-  using type _LIBCPP_NODEBUG = tuple<_Ttypes..., _Utypes...>;
+template <class _Tuple>
+struct __tuple_cat_return_impl<_Tuple> {
+  using type _LIBCPP_NODEBUG = _Tuple;
 };
 
-template <class _ResultTuple, bool _Is_Tuple0TupleLike, class... _Tuples>
-struct __tuple_cat_return_1 {};
+template <class... _Types0, template <class...> class _Tuple, class... _Types1, class... _Tuples>
+struct __tuple_cat_return_impl<tuple<_Types0...>, _Tuple<_Types1...>, _Tuples...>
+    : __tuple_cat_return_impl<tuple<_Types0..., _Types1...>, _Tuples...> {};
 
-template <class... _Types, class _Tuple0>
-struct __tuple_cat_return_1<tuple<_Types...>, true, _Tuple0> {
-  using type _LIBCPP_NODEBUG =
-      typename __tuple_cat_type< tuple<_Types...>,
-                                 typename __make_tuple_types<__remove_cvref_t<_Tuple0> >::type >::type;
+template <class, class, class>
+struct __tuple_cat_array;
+
+template <class... _Types, class _ValueT, size_t... _Indices>
+struct __tuple_cat_array<tuple<_Types...>, _ValueT, __index_sequence<_Indices...>> {
+  template <size_t>
+  using __value_type _LIBCPP_NODEBUG = _ValueT;
+
+  using type _LIBCPP_NODEBUG = tuple<_Types..., __value_type<_Indices>...>;
 };
 
-template <class... _Types, class _Tuple0, class _Tuple1, class... _Tuples>
-struct __tuple_cat_return_1<tuple<_Types...>, true, _Tuple0, _Tuple1, _Tuples...>
-    : public __tuple_cat_return_1<
-          typename __tuple_cat_type< tuple<_Types...>,
-                                     typename __make_tuple_types<__remove_cvref_t<_Tuple0> >::type >::type,
-          __tuple_like_ext<__libcpp_remove_reference_t<_Tuple1> >::value,
-          _Tuple1,
-          _Tuples...> {};
+template <class... _Types, class _ValueT, size_t _Np, class... _Tuples>
+struct __tuple_cat_return_impl<tuple<_Types...>, array<_ValueT, _Np>, _Tuples...>
+    : __tuple_cat_return_impl<typename __tuple_cat_array<tuple<_Types...>, _ValueT, __make_index_sequence<_Np>>::type,
+                              _Tuples...> {};
 
 template <class... _Tuples>
-struct __tuple_cat_return;
-
-template <class _Tuple0, class... _Tuples>
-struct __tuple_cat_return<_Tuple0, _Tuples...>
-    : public __tuple_cat_return_1<tuple<>,
-                                  __tuple_like_ext<__libcpp_remove_reference_t<_Tuple0> >::value,
-                                  _Tuple0,
-                                  _Tuples...> {};
-
-template <>
-struct __tuple_cat_return<> {
-  using type _LIBCPP_NODEBUG = tuple<>;
-};
+using __tuple_cat_return_t _LIBCPP_NODEBUG =
+    typename __tuple_cat_return_impl<tuple<>, __remove_cvref_t<_Tuples>...>::type;
 
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<> tuple_cat() { return tuple<>(); }
 
@@ -1381,11 +1369,15 @@ __tuple_cat_select_element_wise(_TupleSrc&& __src, __index_sequence<_Indices...>
   return _TupleDst(std::get<_Indices>(std::forward<_TupleSrc>(__src))...);
 }
 
-template <class _Tuple0, class... _Tuples>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __tuple_cat_return<_Tuple0, _Tuples...>::type
+template <class _Tuple0,
+          class... _Tuples,
+          __enable_if_t<
+              _And<__tuple_like_ext<__remove_cvref_t<_Tuple0>>, __tuple_like_ext<__remove_cvref_t<_Tuples>>...>::value,
+              int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_cat_return_t<_Tuple0, _Tuples...>
 tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
   using _T0 _LIBCPP_NODEBUG          = __libcpp_remove_reference_t<_Tuple0>;
-  using _TRet _LIBCPP_NODEBUG        = typename __tuple_cat_return<_Tuple0, _Tuples...>::type;
+  using _TRet _LIBCPP_NODEBUG        = __tuple_cat_return_t<_Tuple0, _Tuples...>;
   using _T0Indices _LIBCPP_NODEBUG   = __make_index_sequence<tuple_size<_T0>::value>;
   using _TRetIndices _LIBCPP_NODEBUG = __make_index_sequence<tuple_size<_TRet>::value>;
   return std::__tuple_cat_select_element_wise<_TRet>(

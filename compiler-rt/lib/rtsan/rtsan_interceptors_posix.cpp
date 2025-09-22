@@ -47,40 +47,11 @@
 
 using namespace __sanitizer;
 
-DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize size)
-DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
-
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
   static bool UseImpl() { return !__rtsan_is_initialized(); }
 };
 } // namespace
-
-// See note in tsan as to why this is necessary
-static pthread_cond_t *init_cond(pthread_cond_t *c, bool force = false) {
-  if (!common_flags()->legacy_pthread_cond)
-    return c;
-
-  atomic_uintptr_t *p = (atomic_uintptr_t *)c;
-  uptr cond = atomic_load(p, memory_order_acquire);
-  if (!force && cond != 0)
-    return (pthread_cond_t *)cond;
-  void *newcond = WRAP(malloc)(sizeof(pthread_cond_t));
-  internal_memset(newcond, 0, sizeof(pthread_cond_t));
-  if (atomic_compare_exchange_strong(p, &cond, (uptr)newcond,
-                                     memory_order_acq_rel))
-    return (pthread_cond_t *)newcond;
-  WRAP(free)(newcond);
-  return (pthread_cond_t *)cond;
-}
-
-static void destroy_cond(pthread_cond_t *cond) {
-  if (common_flags()->legacy_pthread_cond) {
-    // Free our aux cond and zero the pointer to not leave dangling pointers.
-    WRAP(free)(cond);
-    atomic_store((atomic_uintptr_t *)cond, 0, memory_order_relaxed);
-  }
-}
 
 // Filesystem
 
@@ -799,42 +770,34 @@ INTERCEPTOR(int, pthread_join, pthread_t thread, void **value_ptr) {
 INTERCEPTOR(int, pthread_cond_init, pthread_cond_t *cond,
             const pthread_condattr_t *a) {
   __rtsan_notify_intercepted_call("pthread_cond_init");
-  pthread_cond_t *c = init_cond(cond, true);
-  return REAL(pthread_cond_init)(c, a);
+  return REAL(pthread_cond_init)(cond, a);
 }
 
 INTERCEPTOR(int, pthread_cond_signal, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_signal");
-  pthread_cond_t *c = init_cond(cond);
-  return REAL(pthread_cond_signal)(c);
+  return REAL(pthread_cond_signal)(cond);
 }
 
 INTERCEPTOR(int, pthread_cond_broadcast, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_broadcast");
-  pthread_cond_t *c = init_cond(cond);
-  return REAL(pthread_cond_broadcast)(c);
+  return REAL(pthread_cond_broadcast)(cond);
 }
 
 INTERCEPTOR(int, pthread_cond_wait, pthread_cond_t *cond,
             pthread_mutex_t *mutex) {
   __rtsan_notify_intercepted_call("pthread_cond_wait");
-  pthread_cond_t *c = init_cond(cond);
-  return REAL(pthread_cond_wait)(c, mutex);
+  return REAL(pthread_cond_wait)(cond, mutex);
 }
 
 INTERCEPTOR(int, pthread_cond_timedwait, pthread_cond_t *cond,
             pthread_mutex_t *mutex, const timespec *ts) {
   __rtsan_notify_intercepted_call("pthread_cond_timedwait");
-  pthread_cond_t *c = init_cond(cond);
-  return REAL(pthread_cond_timedwait)(c, mutex, ts);
+  return REAL(pthread_cond_timedwait)(cond, mutex, ts);
 }
 
 INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_destroy");
-  pthread_cond_t *c = init_cond(cond);
-  int res = REAL(pthread_cond_destroy)(c);
-  destroy_cond(c);
-  return res;
+  return REAL(pthread_cond_destroy)(cond);
 }
 
 INTERCEPTOR(int, pthread_rwlock_rdlock, pthread_rwlock_t *lock) {

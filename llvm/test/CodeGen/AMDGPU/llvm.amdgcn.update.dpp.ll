@@ -213,9 +213,9 @@ define weak_odr amdgpu_kernel void @dpp_test1(ptr %arg) local_unnamed_addr {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffc, v0
 ; GFX11-NEXT:    ds_load_b32 v1, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_barrier
 ; GFX11-NEXT:    buffer_gl0_inv
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, s0, v0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v1, v1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

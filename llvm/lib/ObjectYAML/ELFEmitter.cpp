@@ -206,6 +206,9 @@ template <class ELFT> class ELFState {
   NameToIdxMap DynSymN2I;
   ELFYAML::Object &Doc;
 
+  std::vector<std::pair<Elf_Shdr *, ELFYAML::Section>>
+      SectionHeadersOverrideHelper;
+
   StringSet<> ExcludedSectionHeaders;
 
   uint64_t LocationCounter = 0;
@@ -226,6 +229,7 @@ template <class ELFT> class ELFState {
                           StringRef SecName, ELFYAML::Section *YAMLSec);
   void initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
                           ContiguousBlobAccumulator &CBA);
+  void overrideSectionHeaders(std::vector<Elf_Shdr> &SHeaders);
   void initSymtabSectionHeader(Elf_Shdr &SHeader, SymtabType STType,
                                ContiguousBlobAccumulator &CBA,
                                ELFYAML::Section *YAMLSec);
@@ -849,7 +853,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       }
 
       LocationCounter += SHeader.sh_size;
-      overrideFields<ELFT>(Sec, SHeader);
+      SectionHeadersOverrideHelper.push_back({&SHeader, *Sec});
       continue;
     }
 
@@ -903,10 +907,15 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     }
 
     LocationCounter += SHeader.sh_size;
-
-    // Override section fields if requested.
-    overrideFields<ELFT>(Sec, SHeader);
+    SectionHeadersOverrideHelper.push_back({&SHeader, *Sec});
   }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::overrideSectionHeaders(std::vector<Elf_Shdr> &SHeaders) {
+  for (std::pair<Elf_Shdr *, ELFYAML::Section> &HeaderAndSec :
+       SectionHeadersOverrideHelper)
+    overrideFields<ELFT>(&HeaderAndSec.second, *HeaderAndSec.first);
 }
 
 template <class ELFT>
@@ -2104,6 +2113,11 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
 
   // Now we can decide segment offsets.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
+
+  // Override section fields, if requested. This needs to happen after program
+  // header layout happens, because otherwise the layout will use the new
+  // values.
+  State.overrideSectionHeaders(SHeaders);
 
   bool ReachedLimit = CBA.getOffset() > MaxSize;
   if (Error E = CBA.takeLimitError()) {

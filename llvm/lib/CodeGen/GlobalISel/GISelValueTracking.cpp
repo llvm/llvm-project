@@ -93,12 +93,8 @@ KnownBits GISelValueTracking::getKnownBits(Register R) {
 KnownBits GISelValueTracking::getKnownBits(Register R,
                                            const APInt &DemandedElts,
                                            unsigned Depth) {
-  // For now, we only maintain the cache during one request.
-  assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
-
   KnownBits Known;
   computeKnownBitsImpl(R, Known, DemandedElts, Depth);
-  ComputeKnownBitsCache.clear();
   return Known;
 }
 
@@ -187,14 +183,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 #endif
 
   unsigned BitWidth = DstTy.getScalarSizeInBits();
-  auto CacheEntry = ComputeKnownBitsCache.find(R);
-  if (CacheEntry != ComputeKnownBitsCache.end()) {
-    Known = CacheEntry->second;
-    LLVM_DEBUG(dbgs() << "Cache hit at ");
-    LLVM_DEBUG(dumpResult(MI, Known, Depth));
-    assert(Known.getBitWidth() == BitWidth && "Cache entry size doesn't match");
-    return;
-  }
   Known = KnownBits(BitWidth); // Don't know anything
 
   // Depth may get bigger than max depth if it gets passed to a different
@@ -254,16 +242,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     // point of the pipeline, otherwise the main live-range will be
     // defined more than once, which is against SSA.
     assert(MI.getOperand(0).getSubReg() == 0 && "Is this code in SSA?");
-    // Record in the cache that we know nothing for MI.
-    // This will get updated later and in the meantime, if we reach that
-    // phi again, because of a loop, we will cut the search thanks to this
-    // cache entry.
-    // We could actually build up more information on the phi by not cutting
-    // the search, but that additional information is more a side effect
-    // than an intended choice.
-    // Therefore, for now, save on compile time until we derive a proper way
-    // to derive known bits for PHIs within loops.
-    ComputeKnownBitsCache[R] = KnownBits(BitWidth);
     // PHI's operand are a mix of registers and basic blocks interleaved.
     // We only care about the register ones.
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
@@ -697,12 +675,17 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_ABS: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.abs();
+    Known.Zero.setHighBits(computeNumSignBits(SrcReg, DemandedElts, Depth + 1) -
+                           1);
+    break;
+  }
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
-
-  // Update the cache.
-  ComputeKnownBitsCache[R] = Known;
 }
 
 static bool outputDenormalIsIEEEOrPosZero(const MachineFunction &MF, LLT Ty) {
@@ -1890,6 +1873,44 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     FirstAnswer = computeNumSignBits(Src1, DemandedElts, Depth + 1);
     if (auto C = getValidMinimumShiftAmount(Src2, DemandedElts, Depth + 1))
       FirstAnswer = std::min<uint64_t>(FirstAnswer + *C, TyBits);
+    break;
+  }
+  case TargetOpcode::G_SHL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    if (std::optional<ConstantRange> ShAmtRange =
+            getValidShiftAmountRange(Src2, DemandedElts, Depth + 1)) {
+      uint64_t MaxShAmt = ShAmtRange->getUnsignedMax().getZExtValue();
+      uint64_t MinShAmt = ShAmtRange->getUnsignedMin().getZExtValue();
+
+      MachineInstr &ExtMI = *MRI.getVRegDef(Src1);
+      unsigned ExtOpc = ExtMI.getOpcode();
+
+      // Try to look through ZERO/SIGN/ANY_EXTEND. If all extended bits are
+      // shifted out, then we can compute the number of sign bits for the
+      // operand being extended. A future improvement could be to pass along the
+      // "shifted left by" information in the recursive calls to
+      // ComputeKnownSignBits. Allowing us to handle this more generically.
+      if (ExtOpc == TargetOpcode::G_SEXT || ExtOpc == TargetOpcode::G_ZEXT ||
+          ExtOpc == TargetOpcode::G_ANYEXT) {
+        LLT ExtTy = MRI.getType(Src1);
+        Register Extendee = ExtMI.getOperand(1).getReg();
+        LLT ExtendeeTy = MRI.getType(Extendee);
+        uint64_t SizeDiff =
+            ExtTy.getScalarSizeInBits() - ExtendeeTy.getScalarSizeInBits();
+
+        if (SizeDiff <= MinShAmt) {
+          unsigned Tmp =
+              SizeDiff + computeNumSignBits(Extendee, DemandedElts, Depth + 1);
+          if (MaxShAmt < Tmp)
+            return Tmp - MaxShAmt;
+        }
+      }
+      // shl destroys sign bits, ensure it doesn't shift out all sign bits.
+      unsigned Tmp = computeNumSignBits(Src1, DemandedElts, Depth + 1);
+      if (MaxShAmt < Tmp)
+        return Tmp - MaxShAmt;
+    }
     break;
   }
   case TargetOpcode::G_TRUNC: {

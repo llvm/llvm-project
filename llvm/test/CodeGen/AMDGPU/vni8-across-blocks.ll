@@ -958,8 +958,7 @@ define amdgpu_kernel void @v8i8_mfma_half(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_mfma_f32_32x32x4_2b_f16 a[0:31], v[2:3], v[2:3], a[0:31] cbsz:1 abid:2 blgp:3
-; GFX942-NEXT:    s_nop 7
-; GFX942-NEXT:    s_nop 7
+; GFX942-NEXT:    s_nop 15
 ; GFX942-NEXT:    s_nop 2
 ; GFX942-NEXT:    global_store_dwordx4 v0, a[28:31], s[40:41] offset:112
 ; GFX942-NEXT:    global_store_dwordx4 v0, a[24:27], s[40:41] offset:96

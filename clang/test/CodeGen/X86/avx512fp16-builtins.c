@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
+// RUN: %clang_cc1 -x c -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=x86_64-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK
+
+
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
@@ -376,18 +382,21 @@ __m256h test_mm256_zextph128_ph256(__m128h __a) {
   // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> {{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm256_zextph128_ph256(__a);
 }
+TEST_CONSTEXPR(match_m256h(_mm256_zextph128_ph256((__m128h){1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16}), 1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16));
 
 __m512h test_mm512_zextph128_ph512(__m128h __a) {
   // CHECK-LABEL: test_mm512_zextph128_ph512
   // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> {{.*}}, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm512_zextph128_ph512(__a);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_zextph128_ph512((__m128h){1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16}), 1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16));
 
 __m512h test_mm512_zextph256_ph512(__m256h __a) {
   // CHECK-LABEL: test_mm512_zextph256_ph512
   // CHECK: shufflevector <16 x half> %{{.*}}, <16 x half> {{.*}}, <32 x i32>
   return _mm512_zextph256_ph512(__a);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_zextph256_ph512((__m256h){1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16, 9.0f16, 10.0f16, 11.0f16, 12.0f16, 13.0f16, 14.0f16, 15.0f16, 16.0f16}), 1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16, 9.0f16, 10.0f16, 11.0f16, 12.0f16, 13.0f16, 14.0f16, 15.0f16, 16.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16));
 
 int test_mm_comi_round_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comi_round_sh
@@ -709,6 +718,7 @@ __m512h test_mm512_abs_ph(__m512h a) {
   // CHECK: and <16 x i32>
   return _mm512_abs_ph(a);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_abs_ph((__m512h){-1.0, 2.0, -3.0, 4.0, -5.0, 6.0, -7.0, 8.0, -9.0, 10.0, -11.0, 12.0, -13.0, 14.0, -15.0, -16.0, -17.0, 18.0, -19.0, 20.0, -21.0, 22.0, -23.0, 24.0, -25.0, 26.0, -27.0, 28.0, -29.0, 30.0, -31.0, 32.0}), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0));
 
 __m512h test_mm512_conj_pch(__m512h __A) {
   // CHECK-LABEL: test_mm512_conj_pch

@@ -15,6 +15,7 @@ static_library("modernize") {
   sources = [
     "AvoidBindCheck.cpp",
     "AvoidCArraysCheck.cpp",
+    "AvoidVariadicFunctionsCheck.cpp",
     "ConcatNestedNamespacesCheck.cpp",
     "DeprecatedHeadersCheck.cpp",
     "DeprecatedIosBaseAliasesCheck.cpp",

@@ -73,8 +73,10 @@ if (NOT FLANG_STANDALONE_BUILD)
     count
     not
     llvm-dis
+    llvm-objcopy
     llvm-objdump
     llvm-profdata
+    llvm-readelf
     llvm-readobj
     split-file
   )

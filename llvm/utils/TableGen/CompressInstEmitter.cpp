@@ -237,7 +237,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
       // Source instructions can have at most 1 tied operand.
       if (IsSourceInst && (OpNo - DAGOpNo > 1))
         PrintFatalError(Rec->getLoc(),
-                        "Input operands for Inst '" + Inst.TheDef->getName() +
+                        "Input operands for Inst '" + Inst.getName() +
                             "' and input Dag operand count mismatch");
 
       continue;
@@ -249,7 +249,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         OpndRec = cast<DefInit>(Opnd.MIOperandInfo->getArg(SubOp))->getDef();
 
       if (DAGOpNo >= Dag->getNumArgs())
-        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.getName() +
                                            "' and Dag operand count mismatch");
 
       if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
@@ -328,7 +328,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
 
   // We shouldn't have extra Dag operands.
   if (DAGOpNo != Dag->getNumArgs())
-    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.getName() +
                                        "' and Dag operand count mismatch");
 }
 
@@ -590,8 +590,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   llvm::stable_sort(CompressPatterns, [EType](const CompressPat &LHS,
                                               const CompressPat &RHS) {
     if (EType == EmitterType::Compress || EType == EmitterType::CheckCompress)
-      return (LHS.Source.TheDef->getName() < RHS.Source.TheDef->getName());
-    return (LHS.Dest.TheDef->getName() < RHS.Dest.TheDef->getName());
+      return LHS.Source.getName() < RHS.Source.getName();
+    return LHS.Dest.getName() < RHS.Dest.getName();
   });
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
@@ -678,7 +678,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         CompressOrCheck ? CompressPat.DestOperandMap
                         : CompressPat.SourceOperandMap;
 
-    CurOp = Source.TheDef->getName();
+    CurOp = Source.getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
       if (!PrevOp.empty()) {
@@ -768,7 +768,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     CodeStream.indent(6) << "// " << Dest.AsmString << "\n";
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setOpcode(" << TargetName
-                           << "::" << Dest.TheDef->getName() << ");\n";
+                           << "::" << Dest.getName() << ");\n";
     OpNo = 0;
     for (const auto &DestOperand : Dest.Operands) {
       CodeStream.indent(6) << "// Operand: " << DestOperand.Name << "\n";

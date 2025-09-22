@@ -453,6 +453,12 @@ inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
   return A;
 }
 
+struct DisableDebugLocationUpdates {
+  CodeGenFunction &CGF;
+  DisableDebugLocationUpdates(CodeGenFunction &CGF);
+  ~DisableDebugLocationUpdates();
+};
+
 } // end namespace CodeGen
 } // end namespace clang
 

@@ -1192,13 +1192,6 @@ DEF_TRAVERSE_TYPE(DependentNameType, {
     TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
 })
 
-DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
-  const DependentTemplateStorage &S = T->getDependentTemplateName();
-  if (TraverseQualifier)
-    TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
-  TRY_TO(TraverseTemplateArguments(T->template_arguments()));
-})
-
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
   if (TraverseQualifier) {
     TRY_TO(TraverseTemplateName(T->getTemplateName()));
@@ -1546,15 +1539,6 @@ DEF_TRAVERSE_TYPELOC(DependentNameType, {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 })
 
-DEF_TRAVERSE_TYPELOC(DependentTemplateSpecializationType, {
-  if (TraverseQualifier)
-    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
-
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
-    TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
-  }
-})
-
 DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
   if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
@@ -1898,6 +1882,12 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
+  for (auto *I : D->varlist()) {
+    TRY_TO(TraverseStmt(I));
+  }
+})
+
+DEF_TRAVERSE_DECL(OMPGroupPrivateDecl, {
   for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
   }

@@ -14,7 +14,9 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 
@@ -129,6 +131,12 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
 bool mlir::emitc::isPointerWideType(Type type) {
   return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
       type);
+}
+
+bool mlir::emitc::isFundamentalType(Type type) {
+  return llvm::isa<IndexType>(type) || isPointerWideType(type) ||
+         isSupportedIntegerType(type) || isSupportedFloatType(type) ||
+         isa<emitc::PointerType>(type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -375,6 +383,52 @@ OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 // ExpressionOp
 //===----------------------------------------------------------------------===//
 
+ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand> operands;
+  if (parser.parseOperandList(operands))
+    return parser.emitError(parser.getCurrentLocation()) << "expected operands";
+  if (succeeded(parser.parseOptionalKeyword("noinline")))
+    result.addAttribute(ExpressionOp::getDoNotInlineAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+  Type type;
+  if (parser.parseColonType(type))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  auto fnType = llvm::dyn_cast<FunctionType>(type);
+  if (!fnType)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected function type");
+  if (parser.resolveOperands(operands, fnType.getInputs(),
+                             parser.getCurrentLocation(), result.operands))
+    return failure();
+  if (fnType.getNumResults() != 1)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected single return type");
+  result.addTypes(fnType.getResults());
+  Region *body = result.addRegion();
+  SmallVector<OpAsmParser::Argument> argsInfo;
+  for (auto [unresolvedOperand, operandType] :
+       llvm::zip(operands, fnType.getInputs())) {
+    OpAsmParser::Argument argInfo;
+    argInfo.ssaName = unresolvedOperand;
+    argInfo.type = operandType;
+    argsInfo.push_back(argInfo);
+  }
+  if (parser.parseRegion(*body, argsInfo, /*enableNameShadowing=*/true))
+    return failure();
+  return success();
+}
+
+void emitc::ExpressionOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printOperands(getDefs());
+  p << " : ";
+  p.printFunctionalType(getOperation());
+  p.shadowRegionArgs(getRegion(), getDefs());
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+}
+
 Operation *ExpressionOp::getRootOp() {
   auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
   Value yieldedValue = yieldOp.getResult();
@@ -410,12 +464,34 @@ LogicalResult ExpressionOp::verify() {
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!isa<emitc::CExpressionInterface>(op))
+    auto expressionInterface = dyn_cast<emitc::CExpressionInterface>(op);
+    if (!expressionInterface)
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
-    if (!op.getResult(0).hasOneUse())
-      return emitOpError("requires exactly one use for each operation");
+    Value result = op.getResult(0);
+    if (result.use_empty())
+      return emitOpError("contains an unused operation");
+  }
+
+  // Make sure any operation with side effect is only reachable once from
+  // the root op, otherwise emission will be replicating side effects.
+  SmallPtrSet<Operation *, 16> visited;
+  SmallVector<Operation *> worklist;
+  worklist.push_back(rootOp);
+  while (!worklist.empty()) {
+    Operation *op = worklist.back();
+    worklist.pop_back();
+    if (visited.contains(op)) {
+      if (cast<CExpressionInterface>(op).hasSideEffects())
+        return emitOpError(
+            "requires exactly one use for operations with side effects");
+    }
+    visited.insert(op);
+    for (Value operand : op->getOperands())
+      if (Operation *def = operand.getDefiningOp()) {
+        worklist.push_back(def);
+      }
   }
 
   return success();
@@ -1244,7 +1320,11 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   // global has non-array type
   auto lvalueType = dyn_cast<LValueType>(resultType);
-  if (!lvalueType || lvalueType.getValueType() != globalType)
+  if (!lvalueType)
+    return emitOpError("on non-array type expects result type to be an "
+                       "lvalue type for the global @")
+           << getName();
+  if (lvalueType.getValueType() != globalType)
     return emitOpError("on non-array type expects result inner type ")
            << lvalueType.getValueType() << " to match type " << globalType
            << " of the global @" << getName();

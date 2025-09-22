@@ -4,7 +4,7 @@
 define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK-LABEL: @uitofp_preserve_nneg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[FOR_BODY_PREHEADER4:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -26,7 +26,7 @@ define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER4]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER4:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = uitofp nneg i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[CONV]], [[Y]]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = zext nneg i32 [[TMP4]] to i64
@@ -34,7 +34,7 @@ define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 256
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_EXIT]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret void
 ;

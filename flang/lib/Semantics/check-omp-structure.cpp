@@ -596,10 +596,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return std::get<parser::OmpBeginDirective>(t).DirName();
   }
 
-  bool Pre(const parser::OmpSectionsDirective &x) {
-    checker_(x.source, x.v);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
@@ -677,10 +673,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   }
   bool Pre(const parser::OmpEndDirective &x) {
     checker_(x.DirName().source, x.DirId());
-    return false;
-  }
-  bool Pre(const parser::OmpLoopDirective &x) {
-    checker_(x.source, x.v);
     return false;
   }
 
@@ -814,12 +806,12 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   parser::CharBlock source;
   common::visit(
       common::visitors{
-          [&](const parser::OpenMPBlockConstruct &c) {
-            const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
-            source = beginSpec.DirName().source;
-            if (beginSpec.DirId() == llvm::omp::Directive::OMPD_target_data) {
+          [&](const parser::OmpBlockConstruct &c) {
+            const parser::OmpDirectiveName &beginName{c.BeginDir().DirName()};
+            source = beginName.source;
+            if (beginName.v == llvm::omp::Directive::OMPD_target_data) {
               eligibleTarget = false;
-              ineligibleTargetDir = beginSpec.DirId();
+              ineligibleTargetDir = beginName.v;
             }
           },
           [&](const parser::OpenMPStandaloneConstruct &c) {
@@ -843,14 +835,11 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
                 c.u);
           },
           [&](const parser::OpenMPLoopConstruct &c) {
-            const auto &beginLoopDir{
-                std::get<parser::OmpBeginLoopDirective>(c.t)};
-            const auto &beginDir{
-                std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-            source = beginLoopDir.source;
-            if (llvm::omp::allTargetSet.test(beginDir.v)) {
+            const parser::OmpDirectiveName &beginName{c.BeginDir().DirName()};
+            source = beginName.source;
+            if (llvm::omp::allTargetSet.test(beginName.v)) {
               eligibleTarget = false;
-              ineligibleTargetDir = beginDir.v;
+              ineligibleTargetDir = beginName.v;
             }
           },
           [&](const auto &c) {},
@@ -864,7 +853,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
   const parser::Block &block{std::get<parser::Block>(x.t)};
@@ -874,24 +863,18 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   // Missing mandatory end block: this is checked in semantics because that
   // makes it easier to control the error messages.
   // The end block is mandatory when the construct is not applied to a strictly
-  // structured block (aka it is applied to a loosely structured block). In
-  // other words, the body doesn't contain exactly one parser::BlockConstruct.
-  auto isStrictlyStructuredBlock{[](const parser::Block &block) -> bool {
-    if (block.size() != 1) {
-      return false;
+  // structured block (aka it is applied to a loosely structured block).
+  if (!endSpec && !IsStrictlyStructuredBlock(block)) {
+    llvm::omp::Directive dirId{beginSpec.DirId()};
+    auto &msg{context_.Say(beginSpec.source,
+        "Expected OpenMP END %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirId)))};
+    // ORDERED has two variants, so be explicit about which variant we think
+    // this is.
+    if (dirId == llvm::omp::Directive::OMPD_ordered) {
+      msg.Attach(
+          beginSpec.source, "The ORDERED directive is block-associated"_en_US);
     }
-    const parser::ExecutionPartConstruct &contents{block.front()};
-    auto *executableConstruct{
-        std::get_if<parser::ExecutableConstruct>(&contents.u)};
-    if (!executableConstruct) {
-      return false;
-    }
-    return std::holds_alternative<common::Indirection<parser::BlockConstruct>>(
-        executableConstruct->u);
-  }};
-  if (!endSpec && !isStrictlyStructuredBlock(block)) {
-    context_.Say(
-        x.BeginDir().source, "Expected OpenMP end directive"_err_en_US);
   }
 
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {
@@ -1045,7 +1028,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 }
 
 void OmpStructureChecker::CheckMasterNesting(
-    const parser::OpenMPBlockConstruct &x) {
+    const parser::OmpBlockConstruct &x) {
   // A MASTER region may not be `closely nested` inside a worksharing, loop,
   // task, taskloop, or atomic region.
   // TODO:  Expand the check to include `LOOP` construct as well when it is
@@ -1074,7 +1057,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
   }
@@ -1163,34 +1146,30 @@ void OmpStructureChecker::Leave(const parser::OmpBeginDirective &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
-  const auto &beginSectionsDir{
-      std::get<parser::OmpBeginSectionsDirective>(x.t)};
-  const auto &endSectionsDir{
-      std::get<std::optional<parser::OmpEndSectionsDirective>>(x.t)};
-  const auto &beginDir{
-      std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-  PushContextAndClauseSets(beginDir.source, beginDir.v);
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
+  const auto &endSpec{x.EndDir()};
+  PushContextAndClauseSets(beginName.source, beginName.v);
 
-  if (!endSectionsDir) {
-    context_.Say(beginSectionsDir.source,
-        "Expected OpenMP END SECTIONS directive"_err_en_US);
+  if (!endSpec) {
+    context_.Say(
+        beginName.source, "Expected OpenMP END SECTIONS directive"_err_en_US);
     // Following code assumes the option is present.
     return;
   }
 
-  const auto &endDir{std::get<parser::OmpSectionsDirective>(endSectionsDir->t)};
-  CheckMatching<parser::OmpSectionsDirective>(beginDir, endDir);
+  CheckMatching<parser::OmpDirectiveName>(beginName, endSpec->DirName());
 
-  AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir->t));
+  AddEndDirectiveClauses(endSpec->Clauses());
 
   const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
   for (const parser::OpenMPConstruct &construct : sectionBlocks) {
     auto &section{std::get<parser::OpenMPSectionConstruct>(construct.u)};
     CheckNoBranching(
-        std::get<parser::Block>(section.t), beginDir.v, beginDir.source);
+        std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
   HasInvalidWorksharingNesting(
-      beginDir.source, llvm::omp::nestedWorkshareErrSet);
+      beginName.source, llvm::omp::nestedWorkshareErrSet);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
@@ -1198,13 +1177,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
-  const auto &dir{std::get<parser::OmpSectionsDirective>(x.t)};
-  ResetPartialContext(dir.source);
-  switch (dir.v) {
+  const parser::OmpDirectiveName &dirName{x.DirName()};
+  ResetPartialContext(dirName.source);
+  switch (dirName.v) {
     // 2.7.2 end-sections -> END SECTIONS [nowait-clause]
   case llvm::omp::Directive::OMPD_sections:
     PushContextAndClauseSets(
-        dir.source, llvm::omp::Directive::OMPD_end_sections);
+        dirName.source, llvm::omp::Directive::OMPD_end_sections);
     break;
   default:
     // no clauses are allowed
@@ -2785,6 +2764,8 @@ CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
 CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
+CHECK_SIMPLE_CLAUSE(GraphId, OMPC_graph_id)
+CHECK_SIMPLE_CLAUSE(GraphReset, OMPC_graph_reset)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
@@ -2794,6 +2775,7 @@ CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
 CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
 CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
+CHECK_SIMPLE_CLAUSE(Groupprivate, OMPC_groupprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
@@ -2835,6 +2817,8 @@ CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
+CHECK_SIMPLE_CLAUSE(Replayable, OMPC_replayable)
+CHECK_SIMPLE_CLAUSE(Transparent, OMPC_transparent)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
@@ -3489,9 +3473,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
           x.v, llvm::omp::OMPC_aligned, GetContext().clauseSource, context_)) {
     auto &modifiers{OmpGetModifiers(x.v)};
     if (auto *align{OmpGetUniqueModifier<parser::OmpAlignment>(modifiers)}) {
-      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+      const auto &v{GetIntValue(align->v)};
+      if (!v || *v <= 0) {
         context_.Say(OmpGetModifierSource(modifiers, align),
             "The alignment value should be a constant positive integer"_err_en_US);
+      } else if (((*v) & (*v - 1)) != 0) {
+        context_.Warn(common::UsageWarning::OpenMPUsage,
+            OmpGetModifierSource(modifiers, align),
+            "Alignment is not a power of 2, Aligned clause will be ignored"_warn_en_US);
       }
     }
   }
@@ -3965,16 +3954,6 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
   // Ignore any mismatch between the size of the iteration vector and the
   // number of DO constructs on the stack. This is checked elsewhere.
 
-  auto GetLoopDirective{[](const parser::OpenMPLoopConstruct &x) {
-    auto &begin{std::get<parser::OmpBeginLoopDirective>(x.t)};
-    return std::get<parser::OmpLoopDirective>(begin.t).v;
-  }};
-  auto GetLoopClauses{[](const parser::OpenMPLoopConstruct &x)
-                          -> const std::list<parser::OmpClause> & {
-    auto &begin{std::get<parser::OmpBeginLoopDirective>(x.t)};
-    return std::get<parser::OmpClauseList>(begin.t).v;
-  }};
-
   std::set<const Symbol *> inductionVars;
   for (const LoopConstruct &loop : llvm::reverse(loopStack_)) {
     if (auto *doc{std::get_if<const parser::DoConstruct *>(&loop)}) {
@@ -3988,13 +3967,14 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       // Omp-loop-construct, check if it's do/simd with an ORDERED clause.
       auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&loop)};
       assert(loopc && "Expecting OpenMPLoopConstruct");
-      llvm::omp::Directive loopDir{GetLoopDirective(**loopc)};
+      const parser::OmpDirectiveSpecification &beginSpec{(*loopc)->BeginDir()};
+      llvm::omp::Directive loopDir{beginSpec.DirId()};
       if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
         auto IsOrdered{[](const parser::OmpClause &c) {
           return c.Id() == llvm::omp::OMPC_ordered;
         }};
         // If it has ORDERED clause, stop the traversal.
-        if (llvm::any_of(GetLoopClauses(**loopc), IsOrdered)) {
+        if (llvm::any_of(beginSpec.Clauses().v, IsOrdered)) {
           break;
         }
       }
@@ -4600,7 +4580,7 @@ bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
     if (const auto *ompConstruct{
             parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
       if (const auto *ompBlockConstruct{
-              std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+              std::get_if<parser::OmpBlockConstruct>(&ompConstruct->u)}) {
         llvm::omp::Directive dirId{ompBlockConstruct->BeginDir().DirId()};
         if (dirId == llvm::omp::Directive::OMPD_teams) {
           nestedTeams = true;
@@ -4647,25 +4627,16 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         // 'Parallel' constructs
         auto currentDir{llvm::omp::Directive::OMPD_unknown};
         if (const auto *ompBlockConstruct{
-                std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+                std::get_if<parser::OmpBlockConstruct>(&ompConstruct->u)}) {
           currentDir = ompBlockConstruct->BeginDir().DirId();
         } else if (const auto *ompLoopConstruct{
                        std::get_if<parser::OpenMPLoopConstruct>(
                            &ompConstruct->u)}) {
-          const auto &beginLoopDir{
-              std::get<parser::OmpBeginLoopDirective>(ompLoopConstruct->t)};
-          const auto &beginDir{
-              std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
-          currentDir = beginDir.v;
+          currentDir = ompLoopConstruct->BeginDir().DirId();
         } else if (const auto *ompSectionsConstruct{
                        std::get_if<parser::OpenMPSectionsConstruct>(
                            &ompConstruct->u)}) {
-          const auto &beginSectionsDir{
-              std::get<parser::OmpBeginSectionsDirective>(
-                  ompSectionsConstruct->t)};
-          const auto &beginDir{
-              std::get<parser::OmpSectionsDirective>(beginSectionsDir.t)};
-          currentDir = beginDir.v;
+          currentDir = ompSectionsConstruct->BeginDir().DirId();
         }
 
         if (!llvm::omp::topParallelSet.test(currentDir)) {

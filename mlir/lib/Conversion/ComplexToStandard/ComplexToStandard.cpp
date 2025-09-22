@@ -926,6 +926,30 @@ static Value powOpConversionImpl(mlir::ImplicitLocOpBuilder &builder,
   return cutoff4;
 }
 
+struct PowiOpConversion : public OpConversionPattern<complex::PowiOp> {
+  using OpConversionPattern<complex::PowiOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::PowiOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder builder(op.getLoc(), rewriter);
+    auto type = cast<ComplexType>(op.getType());
+    auto elementType = cast<FloatType>(type.getElementType());
+
+    Value floatExponent =
+        builder.create<arith::SIToFPOp>(elementType, adaptor.getRhs());
+    Value zero = arith::ConstantOp::create(
+        builder, elementType, builder.getFloatAttr(elementType, 0.0));
+    Value complexExponent =
+        complex::CreateOp::create(builder, type, floatExponent, zero);
+
+    auto pow = builder.create<complex::PowOp>(
+        type, adaptor.getLhs(), complexExponent, op.getFastmathAttr());
+    rewriter.replaceOp(op, pow.getResult());
+    return success();
+  }
+};
+
 struct PowOpConversion : public OpConversionPattern<complex::PowOp> {
   using OpConversionPattern<complex::PowOp>::OpConversionPattern;
 
@@ -1070,6 +1094,7 @@ void mlir::populateComplexToStandardConversionPatterns(
       SqrtOpConversion,
       TanTanhOpConversion<complex::TanOp>,
       TanTanhOpConversion<complex::TanhOp>,
+      PowiOpConversion,
       PowOpConversion,
       RsqrtOpConversion
   >(patterns.getContext());

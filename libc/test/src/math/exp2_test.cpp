@@ -8,7 +8,6 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/exp2.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -80,7 +79,6 @@ TEST_F(LlvmLibcExp2Test, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      libc_errno = 0;
       double result = LIBC_NAMESPACE::exp2(x);
       ++cc;
       if (FPBits(result).is_nan() || FPBits(result).is_inf())

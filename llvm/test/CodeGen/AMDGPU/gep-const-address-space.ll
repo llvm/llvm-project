@@ -6,21 +6,21 @@ define protected amdgpu_kernel void @IllegalGEPConst(i32 %a, ptr addrspace(1) %b
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; CHECK-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; CHECK-NEXT:    s_load_dword s6, s[4:5], 0x24
+; CHECK-NEXT:    s_load_dword s8, s[4:5], 0x24
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
 ; CHECK-NEXT:    s_mov_b32 s14, -1
 ; CHECK-NEXT:    s_mov_b32 s15, 0xe00000
 ; CHECK-NEXT:    s_add_u32 s12, s12, s11
 ; CHECK-NEXT:    s_addc_u32 s13, s13, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
-; CHECK-NEXT:    s_lshl_b64 s[6:7], s[6:7], 3
-; CHECK-NEXT:    s_add_u32 s0, s0, s6
-; CHECK-NEXT:    s_addc_u32 s1, s1, s7
+; CHECK-NEXT:    s_ashr_i32 s9, s8, 31
+; CHECK-NEXT:    s_lshl_b64 s[4:5], s[8:9], 3
+; CHECK-NEXT:    s_add_u32 s0, s0, s4
+; CHECK-NEXT:    s_addc_u32 s1, s1, s5
 ; CHECK-NEXT:    s_add_u32 s0, s0, -8
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; CHECK-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; CHECK-NEXT:    s_addc_u32 s1, s1, -1
-; CHECK-NEXT:    s_cmp_eq_u32 s1, s5
+; CHECK-NEXT:    s_cmp_eq_u32 s1, s7
 ; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], -1

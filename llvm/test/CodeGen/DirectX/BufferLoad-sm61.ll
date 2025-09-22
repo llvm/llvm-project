@@ -7,7 +7,7 @@ target triple = "dxil-pc-shadermodel6.1-compute"
 define void @loadf32_struct(i32 %index) {
   %buffer = call target("dx.RawBuffer", float, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle %{{.*}}, i32 %index, i32 0)
   %load = call {float, i1}
@@ -23,7 +23,7 @@ define void @loadf32_struct(i32 %index) {
 define void @loadv4f32_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle %{{.*}}, i32 %offset, i32 0)
   %load = call {<4 x float>, i1}
@@ -39,7 +39,7 @@ define void @loadv4f32_byte(i32 %offset) {
 define void @loadnested(i32 %index) {
   %buffer = call
       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATAI32:%.*]] = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %{{.*}}, i32 %index, i32 0)
   %loadi32 = call {i32, i1} @llvm.dx.resource.load.rawbuffer.i32(

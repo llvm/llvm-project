@@ -7,26 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Protocol/MCP/Transport.h"
-#include "lldb/Host/JSONTransport.h"
-#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
-#include <string>
 #include <utility>
 
+using namespace lldb_protocol::mcp;
 using namespace llvm;
-using namespace lldb;
 
-namespace lldb_protocol::mcp {
-
-Transport::Transport(IOObjectSP in, IOObjectSP out, std::string client_name,
+Transport::Transport(lldb::IOObjectSP in, lldb::IOObjectSP out,
                      LogCallback log_callback)
-    : JSONRPCTransport(in, out), m_client_name(std::move(client_name)),
-      m_log_callback(log_callback) {}
+    : JSONRPCTransport(in, out), m_log_callback(std::move(log_callback)) {}
 
 void Transport::Log(StringRef message) {
   if (m_log_callback)
-    m_log_callback(formatv("{0}: {1}", m_client_name, message).str());
+    m_log_callback(message);
 }
-
-} // namespace lldb_protocol::mcp

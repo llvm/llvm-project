@@ -7852,4 +7852,28 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
     EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
 }
 
+TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Test calling spliceBB with an empty Block (but having trailing debug
+  // records).
+  DIBuilder DIB(*M);
+  DISubprogram *SP = F->getSubprogram();
+  DIType *VoidPtrTy =
+      DIB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+  DILocalVariable *Var = DIB.createParameterVariable(
+      SP, "test", /*ArgNo*/ 1, SP->getFile(), /*LineNo=*/0, VoidPtrTy);
+  DIB.insertDeclare(F->getArg(0), Var, DIB.createExpression(), DL,
+                    Builder.GetInsertPoint());
+  BasicBlock *New = BasicBlock::Create(Ctx, "", F);
+  spliceBB(Builder.saveIP(), New, true, DL);
+  Instruction *Terminator = BB->getTerminator();
+  EXPECT_NE(Terminator, nullptr);
+  EXPECT_FALSE(Terminator->getDbgRecordRange().empty());
+}
+
 } // namespace
