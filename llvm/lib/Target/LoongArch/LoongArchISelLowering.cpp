@@ -18,6 +18,7 @@
 #include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -40,6 +41,34 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-isel-lowering"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+
+enum MaterializeFPImm {
+  NoMaterializeFPImm = 0,
+  MaterializeFPImm2Ins = 2,
+  MaterializeFPImm3Ins = 3,
+  MaterializeFPImm4Ins = 4,
+  MaterializeFPImm5Ins = 5,
+  MaterializeFPImm6Ins = 6
+};
+
+static cl::opt<MaterializeFPImm> MaterializeFPImmInsNum(
+    "loongarch-materialize-float-imm", cl::Hidden,
+    cl::desc("Maximum number of instructions used (including code sequence "
+             "to generate the value and moving the value to FPR) when "
+             "materializing floating-point immediates (default = 3)"),
+    cl::init(MaterializeFPImm3Ins),
+    cl::values(clEnumValN(NoMaterializeFPImm, "0", "Use constant pool"),
+               clEnumValN(MaterializeFPImm2Ins, "2",
+                          "Materialize FP immediate within 2 instructions"),
+               clEnumValN(MaterializeFPImm3Ins, "3",
+                          "Materialize FP immediate within 3 instructions"),
+               clEnumValN(MaterializeFPImm4Ins, "4",
+                          "Materialize FP immediate within 4 instructions"),
+               clEnumValN(MaterializeFPImm5Ins, "5",
+                          "Materialize FP immediate within 5 instructions"),
+               clEnumValN(MaterializeFPImm6Ins, "6",
+                          "Materialize FP immediate within 6 instructions "
+                          "(behaves same as 5 on loongarch64)")));
 
 static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
                                   cl::desc("Trap on integer division by zero."),
@@ -190,6 +219,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
+    setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
     setOperationAction(ISD::FMA, MVT::f32, Legal);
@@ -237,6 +267,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
 
+    setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
@@ -557,7 +588,64 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
     return lowerVECREDUCE(Op, DAG);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   }
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Op);
+  const APFloat &FPVal = CFP->getValueAPF();
+  SDLoc DL(CFP);
+
+  assert((VT == MVT::f32 && Subtarget.hasBasicF()) ||
+         (VT == MVT::f64 && Subtarget.hasBasicD()));
+
+  // If value is 0.0 or -0.0, just ignore it.
+  if (FPVal.isZero())
+    return SDValue();
+
+  // If lsx enabled, use cheaper 'vldi' instruction if possible.
+  if (isFPImmVLDILegal(FPVal, VT))
+    return SDValue();
+
+  // Construct as integer, and move to float register.
+  APInt INTVal = FPVal.bitcastToAPInt();
+
+  // If more than MaterializeFPImmInsNum instructions will be used to
+  // generate the INTVal and move it to float register, fallback to
+  // use floating point load from the constant pool.
+  auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
+  int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
+  if (InsNum > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
+    return SDValue();
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected floating point type!");
+    break;
+  case MVT::f32: {
+    SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i32);
+    if (Subtarget.is64Bit())
+      NewVal = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, NewVal);
+    return DAG.getNode(Subtarget.is64Bit() ? LoongArchISD::MOVGR2FR_W_LA64
+                                           : LoongArchISD::MOVGR2FR_W,
+                       DL, VT, NewVal);
+  }
+  case MVT::f64: {
+    if (Subtarget.is64Bit()) {
+      SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i64);
+      return DAG.getNode(LoongArchISD::MOVGR2FR_D, DL, VT, NewVal);
+    }
+    SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
+    SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
+    return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
+  }
+  }
+
   return SDValue();
 }
 
@@ -7152,7 +7240,10 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(SRL_W)
     NODE_NAME_CASE(BSTRINS)
     NODE_NAME_CASE(BSTRPICK)
+    NODE_NAME_CASE(MOVGR2FR_W)
     NODE_NAME_CASE(MOVGR2FR_W_LA64)
+    NODE_NAME_CASE(MOVGR2FR_D)
+    NODE_NAME_CASE(MOVGR2FR_D_LO_HI)
     NODE_NAME_CASE(MOVFR2GR_S_LA64)
     NODE_NAME_CASE(FTINT)
     NODE_NAME_CASE(BUILD_PAIR_F64)
