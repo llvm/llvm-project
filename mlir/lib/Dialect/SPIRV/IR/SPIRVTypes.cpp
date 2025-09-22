@@ -41,7 +41,7 @@ public:
   // Main visitor entry point. Adds all extensions to the vector. Saves `type`
   // as seen and dispatches to the right concrete `.add` function.
   void add(SPIRVType type) {
-    if (auto [_it, inserted] = seen.insert(type); !inserted)
+    if (auto [_it, inserted] = seen.insert({type, storage}); !inserted)
       return;
 
     TypeSwitch<SPIRVType>(type)
@@ -70,7 +70,7 @@ private:
 
   SPIRVType::ExtensionArrayRefVector &extensions;
   std::optional<StorageClass> storage;
-  llvm::SmallDenseSet<Type> seen;
+  llvm::SmallDenseSet<std::pair<Type, std::optional<StorageClass>>> seen;
 };
 
 } // namespace
