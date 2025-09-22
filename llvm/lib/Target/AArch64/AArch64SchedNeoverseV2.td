@@ -2251,13 +2251,13 @@ def : InstRW<[V2Write_20c_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                            "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S")>;
+def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[V2Wr_ZDOTB, V2Rd_ZDOTB], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D")>;
+def : InstRW<[V2Wr_ZDOTH, V2Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_HtoD")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[V2Write_2c_1V], (instregex "^DUP_ZI_[BHSD]",
@@ -2614,7 +2614,7 @@ def : InstRW<[V2Write_4c_1V02], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[V2Wr_ZBFDOT, V2Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[V2Wr_ZBFMMA, V2Rd_ZBFMMA], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[V2Wr_ZBFMMA, V2Rd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[V2Wr_ZBFMAL, V2Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZI?")>;
