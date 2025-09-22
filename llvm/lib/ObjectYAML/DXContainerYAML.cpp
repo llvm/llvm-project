@@ -211,12 +211,10 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     NewS.ShaderVisibility = dxbc::ShaderVisibility(S.ShaderVisibility);
 
     if (Version > 2) {
-      if (Version > 1) {
 #define STATIC_SAMPLER_FLAG(Num, Enum, Flag)                                   \
   NewS.Enum =                                                                  \
       (S.Flags & llvm::to_underlying(dxbc::StaticSamplerFlags::Enum)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-      }
     }
     RootSigDesc.StaticSamplers.push_back(NewS);
   }
