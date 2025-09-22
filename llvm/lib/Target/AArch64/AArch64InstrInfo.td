@@ -842,7 +842,7 @@ def AArch64csinc         : SDNode<"AArch64ISD::CSINC", SDT_AArch64CSel>;
 // Return with a glue operand. Operand 0 is the chain operand.
 def AArch64retglue       : SDNode<"AArch64ISD::RET_GLUE", SDTNone,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def AArch64adc       : SDNode<"AArch64ISD::ADC",  SDTBinaryArithWithFlagsIn >;
+def AArch64adc       : SDNode<"AArch64ISD::ADC",  SDTBinaryArithWithFlagsIn, [SDNPCommutative]>;
 def AArch64sbc       : SDNode<"AArch64ISD::SBC",  SDTBinaryArithWithFlagsIn>;
 
 // Arithmetic instructions which write flags.
@@ -851,7 +851,7 @@ def AArch64add_flag  : SDNode<"AArch64ISD::ADDS",  SDTBinaryArithWithFlagsOut,
 def AArch64sub_flag  : SDNode<"AArch64ISD::SUBS",  SDTBinaryArithWithFlagsOut>;
 def AArch64and_flag  : SDNode<"AArch64ISD::ANDS",  SDTBinaryArithWithFlagsOut,
                             [SDNPCommutative]>;
-def AArch64adc_flag  : SDNode<"AArch64ISD::ADCS",  SDTBinaryArithWithFlagsInOut>;
+def AArch64adc_flag  : SDNode<"AArch64ISD::ADCS",  SDTBinaryArithWithFlagsInOut, [SDNPCommutative]>;
 def AArch64sbc_flag  : SDNode<"AArch64ISD::SBCS",  SDTBinaryArithWithFlagsInOut>;
 
 // Conditional compares. Operands: left,right,falsecc,cc,flags

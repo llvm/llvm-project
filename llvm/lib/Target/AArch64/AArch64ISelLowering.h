@@ -250,6 +250,11 @@ public:
   bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
 
+  /// Add AArch64-specific opcodes to the default list.
+  bool isBinOp(unsigned Opcode) const override;
+
+  bool isCommutativeBinOp(unsigned Opcode) const override;
+
   bool isMulAddWithConstProfitable(SDValue AddNode,
                                    SDValue ConstNode) const override;
 

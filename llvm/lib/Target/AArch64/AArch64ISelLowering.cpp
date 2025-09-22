@@ -17194,6 +17194,28 @@ bool AArch64TargetLowering::shouldRemoveRedundantExtend(SDValue Extend) const {
   return true;
 }
 
+bool AArch64TargetLowering::isBinOp(unsigned Opcode) const {
+  switch (Opcode) {
+  // TODO: Add more?
+  case AArch64ISD::SUBS:
+  case AArch64ISD::SBC:
+  case AArch64ISD::SBCS:
+    return true;
+  }
+  return TargetLoweringBase::isBinOp(Opcode);
+}
+
+bool AArch64TargetLowering::isCommutativeBinOp(unsigned Opcode) const {
+  switch (Opcode) {
+  case AArch64ISD::ANDS:
+  case AArch64ISD::ADDS:
+  case AArch64ISD::ADC:
+  case AArch64ISD::ADCS:
+    return true;
+  }
+  return TargetLoweringBase::isCommutativeBinOp(Opcode);
+}
+
 // Truncations from 64-bit GPR to 32-bit GPR is free.
 bool AArch64TargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
   if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
