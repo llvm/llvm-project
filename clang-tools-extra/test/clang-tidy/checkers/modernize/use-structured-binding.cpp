@@ -503,3 +503,101 @@ void OtherNonPairTest() {
     int y = P.second;
   }
 }
+
+template<typename PairType>
+PairType getCertainPair();
+
+struct ConstFieldPair {
+  const int first;
+  int second;
+};
+
+void ConstFieldPairTests() {
+  {
+    const ConstFieldPair P = getCertainPair<ConstFieldPair>();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: const auto [x, y] = getCertainPair<ConstFieldPair>();
+    const int x = P.first;
+    const int y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+
+  {
+    const ConstFieldPair& P = getCertainPair<ConstFieldPair>();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: const auto& [x, y] = getCertainPair<ConstFieldPair>();
+    const int& x = P.first;
+    const int& y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+
+  {
+    ConstFieldPair P = getCertainPair<ConstFieldPair>(); // no warning
+    int x = P.first;
+    int y = P.second;
+  }
+}
+
+struct PointerFieldPair {
+  int* first;
+  int second;
+};
+
+void PointerFieldPairTests() {
+  {
+    PointerFieldPair P = getCertainPair<PointerFieldPair>();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: auto [x, y] = getCertainPair<PointerFieldPair>();
+    int* x = P.first;
+    int y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+
+  {
+    PointerFieldPair P = getCertainPair<PointerFieldPair>(); // no warning
+    const int* x = P.first;
+    int y = P.second;
+  }
+}
+
+struct ConstRefFieldPair {
+  const int& first;
+  int second;
+  ConstRefFieldPair(int& f, int s) : first(f), second(s) {}
+};
+
+void ConstRefFieldPairTests() {
+  {
+    ConstRefFieldPair P = getCertainPair<ConstRefFieldPair>();
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
+    // CHECK-FIXES-ALL: auto [x, y] = getCertainPair<ConstRefFieldPair>();
+    const int& x = P.first;
+    int y = P.second; // REMOVE
+    // CHECK-FIXES-ALL: // REMOVE
+  }
+
+  {
+    ConstRefFieldPair P = getCertainPair<ConstRefFieldPair>();; // no warning
+    int x = P.first;
+    int y = P.second;
+  }
+}
+
+struct StaticFieldPair {
+  static int first;
+  int second;
+};
+
+void StaticFieldPairTests() {
+  {
+    StaticFieldPair P; // Should not warn
+    int x = P.first;
+    int y = P.second;
+  }
+
+  {
+    StaticFieldPair P; // Should not warn
+    static int x = P.first;
+    int y = P.second;
+  }
+}
