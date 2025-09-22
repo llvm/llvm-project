@@ -262,16 +262,15 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot5;
-; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.b64 %rd1, [escape_ptr_gep_store_param_0];
 ; PTX-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; PTX-NEXT:    add.u64 %rd3, %SP, 0;
-; PTX-NEXT:    add.u64 %rd4, %SPL, 0;
+; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
 ; PTX-NEXT:    ld.param.b32 %r1, [escape_ptr_gep_store_param_1+4];
-; PTX-NEXT:    st.local.b32 [%rd4+4], %r1;
+; PTX-NEXT:    st.local.b32 [%rd3+4], %r1;
 ; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_gep_store_param_1];
-; PTX-NEXT:    st.local.b32 [%rd4], %r2;
-; PTX-NEXT:    add.s64 %rd5, %rd3, 4;
+; PTX-NEXT:    st.local.b32 [%rd3], %r2;
+; PTX-NEXT:    add.s64 %rd4, %rd3, 4;
+; PTX-NEXT:    cvta.local.u64 %rd5, %rd4;
 ; PTX-NEXT:    st.global.b64 [%rd2], %rd5;
 ; PTX-NEXT:    ret;
 entry:
