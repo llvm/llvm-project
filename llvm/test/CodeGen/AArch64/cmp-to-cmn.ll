@@ -845,14 +845,21 @@ define i1 @cmn_nsw_neg_64(i64 %a, i64 %b) {
 }
 
 define i1 @cmn_and_adds(i32 %num, i32 %num2, ptr %use)  {
-; CHECK-LABEL: cmn_and_adds:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn w0, w1
-; CHECK-NEXT:    add w9, w1, w0
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    str w9, [x2]
-; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmn_and_adds:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adds w8, w0, w1
+; CHECK-SD-NEXT:    cset w0, lt
+; CHECK-SD-NEXT:    str w8, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmn_and_adds:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmn w0, w1
+; CHECK-GI-NEXT:    add w9, w1, w0
+; CHECK-GI-NEXT:    cset w8, lt
+; CHECK-GI-NEXT:    str w9, [x2]
+; CHECK-GI-NEXT:    mov w0, w8
+; CHECK-GI-NEXT:    ret
   %add = add nsw i32 %num2, %num
   store i32 %add, ptr %use, align 4
   %sub = sub nsw i32 0, %num2
