@@ -8,19 +8,17 @@
 ; GCN-ISEL: S_UADDO_PSEUDO
 ; GCN-ISEL: S_ADD_CO_PSEUDO
 
-define amdgpu_ps i32 @s_uaddo_pseudo(i32 inreg %val0, i32 inreg %val1) {
+define amdgpu_ps i32 @s_uaddo_pseudo(i32 inreg %val0) {
 ; CHECK-LABEL: s_uaddo_pseudo:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_i32 s0, s0, s1
+; CHECK-NEXT:    s_add_i32 s0, s0, 1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_addc_u32 s0, 1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
-  %pair = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %val0, i32 %val1)
-  %carryout = extractvalue {i32, i1} %pair, 1
-  %add_overflow = sext i1 %carryout to i32
-  %cmp_carryout = icmp ult i32 0, %add_overflow
-  %zext_carryout = zext i1 %cmp_carryout to i32
+  %pair = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %val0, i32 1)
+  %carryout = extractvalue { i32, i1 } %pair, 1
+  %zext_carryout = zext i1 %carryout to i32
   %result = add i32 %zext_carryout, 1
   ret i32 %result
 }
