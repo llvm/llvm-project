@@ -483,7 +483,7 @@ LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (!mayBeConstantTripCount.has_value())
     return failure();
-  APInt &tripCount = *mayBeConstantTripCount;
+  const APInt &tripCount = *mayBeConstantTripCount;
   if (tripCount.isZero())
     return success();
   if (tripCount.getSExtValue() == 1)

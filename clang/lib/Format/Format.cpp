@@ -1028,6 +1028,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowAllParametersOfDeclarationOnNextLine);
     IO.mapOptional("AllowBreakBeforeNoexceptSpecifier",
                    Style.AllowBreakBeforeNoexceptSpecifier);
+    IO.mapOptional("AllowBreakBeforeQtProperty",
+                   Style.AllowBreakBeforeQtProperty);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
     IO.mapOptional("AllowShortCaseExpressionOnASingleLine",
@@ -1567,6 +1569,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
+  LLVMStyle.AllowBreakBeforeQtProperty = false;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   LLVMStyle.AllowShortCaseExpressionOnASingleLine = true;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
@@ -3158,6 +3161,7 @@ private:
         "UIImage",
         "UIView",
     };
+    assert(llvm::is_sorted(FoundationIdentifiers));
 
     for (auto *Line : AnnotatedLines) {
       if (Line->First && (Line->First->TokenText.starts_with("#") ||
