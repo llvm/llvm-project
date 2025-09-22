@@ -245,13 +245,13 @@ Error BitstreamParserHelper::parseMeta() {
   if (Error E = parseBlockInfoBlock())
     return E;
 
-  // Parse early meta block
+  // Parse early meta block.
   if (Error E = MetaHelper.expectBlock())
     return E;
   if (Error E = MetaHelper.parseBlock())
     return E;
 
-  // Skip all Remarks blocks
+  // Skip all Remarks blocks.
   while (!Stream.AtEndOfStream()) {
     auto MaybeBlockID = expectSubBlock(Stream);
     if (!MaybeBlockID)
@@ -271,7 +271,7 @@ Error BitstreamParserHelper::parseMeta() {
   if (Stream.AtEndOfStream())
     return Error::success();
 
-  // Parse late meta block
+  // Parse late meta block.
   if (Error E = MetaHelper.parseBlock())
     return E;
   return Error::success();
@@ -306,7 +306,7 @@ BitstreamRemarkParser::BitstreamRemarkParser(StringRef Buf)
 
 Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
   if (!IsMetaReady) {
-    // Container is completely empty
+    // Container is completely empty.
     if (ParserHelper->Stream.AtEndOfStream())
       return make_error<EndOfFileError>();
 
@@ -314,7 +314,7 @@ Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
       return std::move(E);
     IsMetaReady = true;
 
-    // Container has meta, but no remarks blocks
+    // Container has meta, but no remarks blocks.
     if (!ParserHelper->RemarkStartBitPos)
       return error(
           "Container is non-empty, but does not contain any remarks blocks.");

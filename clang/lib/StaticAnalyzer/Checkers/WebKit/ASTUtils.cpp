@@ -115,7 +115,7 @@ bool tryToFindPtrOrigin(
         if (auto *Callee = operatorCall->getDirectCallee()) {
           auto ClsName = safeGetName(Callee->getParent());
           if (isRefType(ClsName) || isCheckedPtr(ClsName) ||
-              isRetainPtr(ClsName) || ClsName == "unique_ptr" ||
+              isRetainPtrOrOSPtr(ClsName) || ClsName == "unique_ptr" ||
               ClsName == "UniqueRef" || ClsName == "WeakPtr" ||
               ClsName == "WeakRef") {
             if (operatorCall->getNumArgs() == 1) {

@@ -188,8 +188,13 @@ struct BitstreamParserHelper {
   /// The block info block.
   BitstreamBlockInfo BlockInfo;
 
+  /// Helper to parse the metadata blocks in this bitstream.
   BitstreamMetaParserHelper MetaHelper;
+  /// Helper to parse the remark blocks in this bitstream. Only needed
+  /// for ContainerType RemarksFile.
   std::optional<BitstreamRemarkParserHelper> RemarksHelper;
+  /// The position of the first remark block we encounter after
+  /// the initial metadata block.
   std::optional<uint64_t> RemarkStartBitPos;
 
   /// Start parsing at \p Buffer.
