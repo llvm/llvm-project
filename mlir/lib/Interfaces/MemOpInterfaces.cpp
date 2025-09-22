@@ -59,7 +59,7 @@ FailureOr<std::pair<SmallVector<Value>, bool>>
 mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(OpOperand &operand,
                                                    ValueRange results) {
   MemorySpaceCastOpInterface castOp =
-      MemorySpaceCastOpInterface::getIfLosslessCast(operand.get());
+      MemorySpaceCastOpInterface::getIfPromotableCast(operand.get());
 
   // Bail if the src is not valid.
   if (!castOp)

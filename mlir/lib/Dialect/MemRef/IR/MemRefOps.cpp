@@ -116,7 +116,7 @@ static void constifyIndexValues(SmallVectorImpl<OpFoldResult> &values,
 static std::tuple<MemorySpaceCastOpInterface, PtrLikeTypeInterface, Type>
 getMemorySpaceCastInfo(BaseMemRefType resultTy, Value src) {
   MemorySpaceCastOpInterface castOp =
-      MemorySpaceCastOpInterface::getIfLosslessCast(src);
+      MemorySpaceCastOpInterface::getIfPromotableCast(src);
 
   // Bail if the cast is not lossless.
   if (!castOp)
@@ -1740,8 +1740,8 @@ MemorySpaceCastOpInterface MemorySpaceCastOp::cloneMemorySpaceCastOp(
   return MemorySpaceCastOp::create(b, getLoc(), tgt, src);
 }
 
-bool MemorySpaceCastOp::isLosslessCast() {
-  // The only cast we recognize as lossless is to the generic space.
+bool MemorySpaceCastOp::isSourcePromotable() {
+  // The only cast we recognize as promotable is to the generic space.
   return getDest().getType().getMemorySpace() == nullptr;
 }
 

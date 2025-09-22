@@ -87,12 +87,11 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
            "::mlir::TypedValue<::mlir::PtrLikeTypeInterface>":$src)
     >,
     InterfaceMethod<[{
-        Returns whether the memory-space cast is lossless. A lossless
-        memory-space cast must not lose any information encoded in the memory
-        space. An example of such cast, is any conversion to the generic memory
-        space.
+        Returns whether the source pointer of the memory-space cast can be used
+        by the `MemorySpaceCastConsumerOpInterface::bubbleDownCasts` method to
+        promote the source pointer and bubble down the cast.
       }],
-      "bool", "isLosslessCast"
+      "bool", "isSourcePromotable"
     >
   ];
   let verify = [{
@@ -102,12 +101,12 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
   let extraClassDeclaration = [{
     /// Returns the underlying `MemorySpaceCastOpInterface` op if `value`
     /// is produced by a `MemorySpaceCastOpInterface` op, and
-    /// `isLosslessCast` returns true, otherwise it returns null.
+    /// `isSourcePromotable` returns true, otherwise it returns null.
     static ::mlir::MemorySpaceCastOpInterface
-    getIfLosslessCast(::mlir::Value value) {
+    getIfPromotableCast(::mlir::Value value) {
       auto op = ::llvm::dyn_cast_or_null<::mlir::MemorySpaceCastOpInterface>(
         value.getDefiningOp());
-      if (!op || !op.isLosslessCast())
+      if (!op || !op.isSourcePromotable())
         return nullptr;
       return op;
     }
