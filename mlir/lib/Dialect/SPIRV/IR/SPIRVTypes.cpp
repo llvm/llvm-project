@@ -72,7 +72,7 @@ private:
 
   SPIRVType::ExtensionArrayRefVector &extensions;
   std::optional<StorageClass> storage;
-  DenseSet<Type> seen;
+  llvm::SmallDenseSet<Type> seen;
 };
 
 } // namespace
