@@ -24,6 +24,7 @@
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DefaultLambdaCaptureCheck.h"
+#include "DerivedMethodShadowingBaseMethodCheck.h"
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
@@ -88,6 +89,7 @@
 #include "TaggedUnionMemberCountCheck.h"
 #include "TerminatingContinueCheck.h"
 #include "ThrowKeywordMissingCheck.h"
+#include "ThrowingStaticInitializationCheck.h"
 #include "TooSmallLoopVariableCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
 #include "UncheckedStringToNumberConversionCheck.h"
@@ -137,6 +139,8 @@ public:
         "bugprone-dangling-handle");
     CheckFactories.registerCheck<DefaultLambdaCaptureCheck>(
         "bugprone-default-lambda-capture");
+    CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
+        "bugprone-derived-method-shadowing-base-method");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
@@ -261,6 +265,8 @@ public:
         "bugprone-terminating-continue");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
         "bugprone-throw-keyword-missing");
+    CheckFactories.registerCheck<ThrowingStaticInitializationCheck>(
+        "bugprone-throwing-static-initialization");
     CheckFactories.registerCheck<TooSmallLoopVariableCheck>(
         "bugprone-too-small-loop-variable");
     CheckFactories.registerCheck<UncheckedOptionalAccessCheck>(

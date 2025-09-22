@@ -20,6 +20,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DefaultLambdaCaptureCheck.cpp
+  DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
@@ -90,6 +91,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
+  ThrowingStaticInitializationCheck.cpp
   TooSmallLoopVariableCheck.cpp
   UncheckedOptionalAccessCheck.cpp
   UncheckedStringToNumberConversionCheck.cpp
