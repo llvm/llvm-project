@@ -8,6 +8,7 @@
 declare <2 x i64> @llvm.x86.avx512.vpmadd52h.uq.128(<2 x i64>, <2 x i64>, <2 x i64>)
 declare <4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64>, <4 x i64>, <4 x i64>)
 
+; High-52, 25x25 masked inputs, accumulator = 1, expected constant fold.
 define <2 x i64> @kb52h_128_mask25_and1(<2 x i64> %x, <2 x i64> %y) {
 ; AVX512VL-LABEL: kb52h_128_mask25_and1:
 ; AVX512VL:       # %bb.0:
@@ -30,6 +31,7 @@ define <2 x i64> @kb52h_128_mask25_and1(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %ret
 }
 
+; High-52, 25x26 masked inputs, accumulator = 1, expected constant fold.
 define <4 x i64> @kb52h_256_mask25x26_acc1(<4 x i64> %x, <4 x i64> %y) {
 ; AVX512VL-LABEL: kb52h_256_mask25x26_acc1:
 ; AVX512VL:       # %bb.0:
@@ -53,6 +55,7 @@ define <4 x i64> @kb52h_256_mask25x26_acc1(<4 x i64> %x, <4 x i64> %y) {
 declare <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64>, <2 x i64>, <2 x i64>)
 declare <4 x i64> @llvm.x86.avx512.vpmadd52l.uq.256(<4 x i64>, <4 x i64>, <4 x i64>)
 
+; Low-52, 26x26 masked inputs, add with accumulator.
 define <2 x i64> @kb52l_128_mask26x26_add_intrin(<2 x i64> %x, <2 x i64> %y, <2 x i64> %acc) {
 ; AVX512VL-LABEL: kb52l_128_mask26x26_add_intrin:
 ; AVX512VL:       # %bb.0:
@@ -78,6 +81,7 @@ define <2 x i64> @kb52l_128_mask26x26_add_intrin(<2 x i64> %x, <2 x i64> %y, <2 
   ret <2 x i64> %r
 }
 
+; Low-52, 50-bit × 2-bit masked inputs, add with accumulator.
 define <4 x i64> @kb52l_256_mask50x3_add_intrin(<4 x i64> %x, <4 x i64> %y, <4 x i64> %acc) {
 ; AVX512VL-LABEL: kb52l_256_mask50x3_add_intrin:
 ; AVX512VL:       # %bb.0:
@@ -97,7 +101,7 @@ define <4 x i64> @kb52l_256_mask50x3_add_intrin(<4 x i64> %x, <4 x i64> %y, <4 x
 ; AVXIFMA-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVXIFMA-NEXT:    retq
   %xm = and <4 x i64> %x, splat (i64 1125899906842623) ; (1<<50)-1
-  %ym = and <4 x i64> %y, splat (i64 3)
+  %ym = and <4 x i64> %y, splat (i64 3) ; (1<<2)-1
   %r  = call <4 x i64> @llvm.x86.avx512.vpmadd52l.uq.256(
             <4 x i64> %acc, <4 x i64> %xm, <4 x i64> %ym)
   ret <4 x i64> %r
