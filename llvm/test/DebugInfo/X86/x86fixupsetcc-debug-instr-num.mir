@@ -1,7 +1,8 @@
 # RUN: llc %s  --run-pass=x86-fixup-setcc -o - | FileCheck %s
 
-## Check the debug-isntr-number transfers from MOVZX32rr8
-## to its replacement INSERT_SUBREG.
+## Check the debug-isntr-number transfers from MOVZX32rr8 to the SETCC
+## after the mov is replaced with an INSERT_SUBREG, updating the substitutions
+## table.
 
 # CHECK: debugValueSubstitutions:
 # CHECK:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
