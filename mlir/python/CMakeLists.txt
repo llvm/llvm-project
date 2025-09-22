@@ -174,6 +174,15 @@ ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
 declare_mlir_dialect_extension_python_bindings(
 ADD_TO_PARENT MLIRPythonSources.Dialects
 ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/TransformSMTExtensionOps.td
+  SOURCES
+    dialects/transform/smt.py
+  DIALECT_NAME transform
+  EXTENSION_NAME transform_smt_extension)
+
+declare_mlir_dialect_extension_python_bindings(
+ADD_TO_PARENT MLIRPythonSources.Dialects
+ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformDebugExtensionOps.td
   SOURCES
     dialects/transform/debug.py

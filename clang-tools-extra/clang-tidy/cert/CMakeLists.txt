@@ -14,9 +14,7 @@ add_clang_library(clangTidyCERTModule STATIC
   NonTrivialTypesLibcMemoryCallsCheck.cpp
   ProperlySeededRandomGeneratorCheck.cpp
   SetLongJmpCheck.cpp
-  StaticObjectExceptionCheck.cpp
   ThrownExceptionTypeCheck.cpp
-  VariadicFunctionDefCheck.cpp
 
   LINK_LIBS
   clangTidy
@@ -24,6 +22,7 @@ add_clang_library(clangTidyCERTModule STATIC
   clangTidyConcurrencyModule
   clangTidyGoogleModule
   clangTidyMiscModule
+  clangTidyModernizeModule
   clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTidyUtils

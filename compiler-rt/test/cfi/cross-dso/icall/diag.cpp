@@ -6,35 +6,36 @@
 // * otherwise, the callee decides between trap/recover/norecover.
 
 // Full-recover.
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_cfi_dso_diag -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso_diag -g %s -o %t %ld_flags_rpath_exe
+// RUN: %clangxx_cfi_dso_diag -g %s -o %t.dir/exe %ld_flags_rpath_exe
 
-// RUN: %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-DIAG \
-// RUN:                            --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
+// RUN: %t.dir/exe icv 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-DIAG \
+// RUN:                                    --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
 
-// RUN: %t i_v 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-NODIAG \
-// RUN:                            --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
+// RUN: %t.dir/exe i_v 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-NODIAG \
+// RUN:                                    --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
 
-// RUN: %t _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-DIAG \
-// RUN:                            --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
+// RUN: %t.dir/exe _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-DIAG \
+// RUN:                                    --check-prefix=VCALL-DIAG --check-prefix=ALL-RECOVER
 
-// RUN: %t ic_ 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-DIAG \
-// RUN:                            --check-prefix=VCALL-NODIAG --check-prefix=ALL-RECOVER
+// RUN: %t.dir/exe ic_ 2>&1 | FileCheck %s --check-prefix=ICALL-DIAG --check-prefix=CAST-DIAG \
+// RUN:                                    --check-prefix=VCALL-NODIAG --check-prefix=ALL-RECOVER
 
 // Trap on icall, no-recover on cast.
 // RUN: %clangxx_cfi_dso_diag -fsanitize-trap=cfi-icall -fno-sanitize-recover=cfi-unrelated-cast \
 // RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso_diag -fsanitize-trap=cfi-icall -fno-sanitize-recover=cfi-unrelated-cast \
-// RUN:     -g %s -o %t %ld_flags_rpath_exe
+// RUN:     -g %s -o %t.dir/exe %ld_flags_rpath_exe
 
-// RUN: %expect_crash %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
+// RUN: %expect_crash %t.dir/exe icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                                  --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
 
-// RUN: not %t _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-DIAG \
-// RUN:                                --check-prefix=VCALL-NODIAG --check-prefix=CAST-FATAL
+// RUN: not %t.dir/exe _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-DIAG \
+// RUN:                                        --check-prefix=VCALL-NODIAG --check-prefix=CAST-FATAL
 
-// RUN: %t __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                            --check-prefix=VCALL-DIAG
+// RUN: %t.dir/exe __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                    --check-prefix=VCALL-DIAG
 
 // Callee: trap on icall, no-recover on cast.
 // Caller: recover on everything.
@@ -42,16 +43,16 @@
 // RUN: %clangxx_cfi_dso_diag -fsanitize-trap=cfi-icall -fno-sanitize-recover=cfi-unrelated-cast \
 // RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso_diag \
-// RUN:     -g %s -o %t %ld_flags_rpath_exe
+// RUN:     -g %s -o %t.dir/exe %ld_flags_rpath_exe
 
-// RUN: %expect_crash %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
+// RUN: %expect_crash %t.dir/exe icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                                  --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
 
-// RUN: not %t _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-DIAG \
-// RUN:                                --check-prefix=VCALL-NODIAG --check-prefix=CAST-FATAL
+// RUN: not %t.dir/exe _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-DIAG \
+// RUN:                                        --check-prefix=VCALL-NODIAG --check-prefix=CAST-FATAL
 
-// RUN: %t __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                            --check-prefix=VCALL-DIAG
+// RUN: %t.dir/exe __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                    --check-prefix=VCALL-DIAG
 
 // Caller in trapping mode, callee with full diagnostic+recover.
 // Caller wins.
@@ -59,16 +60,16 @@
 // RUN: %clangxx_cfi_dso_diag \
 // RUN:     -g -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_cfi_dso -fno-sanitize-trap=cfi-nvcall \
-// RUN:     -g %s -o %t %ld_flags_rpath_exe
+// RUN:     -g %s -o %t.dir/exe %ld_flags_rpath_exe
 
-// RUN: %expect_crash %t icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
+// RUN: %expect_crash %t.dir/exe icv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                                  --check-prefix=VCALL-NODIAG --check-prefix=ICALL-FATAL
 
-// RUN: %expect_crash %t _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=CAST-FATAL
+// RUN: %expect_crash %t.dir/exe _cv 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                                  --check-prefix=VCALL-NODIAG --check-prefix=CAST-FATAL
 
-// RUN: %expect_crash %t __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
-// RUN:                                          --check-prefix=VCALL-NODIAG --check-prefix=VCALL-FATAL
+// RUN: %expect_crash %t.dir/exe __v 2>&1 | FileCheck %s --check-prefix=ICALL-NODIAG --check-prefix=CAST-NODIAG \
+// RUN:                                                  --check-prefix=VCALL-NODIAG --check-prefix=VCALL-FATAL
 
 // REQUIRES: cxxabi
 

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "StaticObjectExceptionCheck.h"
+#include "ThrowingStaticInitializationCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
-void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
+void ThrowingStaticInitializationCheck::registerMatchers(MatchFinder *Finder) {
   // Match any static or thread_local variable declaration that has an
   // initializer that can throw.
   Finder->addMatcher(
@@ -34,7 +34,8 @@ void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void StaticObjectExceptionCheck::check(const MatchFinder::MatchResult &Result) {
+void ThrowingStaticInitializationCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var");
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
@@ -52,4 +53,4 @@ void StaticObjectExceptionCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
