@@ -61,6 +61,25 @@ static Value createI32Constant(ConversionPatternRewriter &rewriter,
   return LLVM::ConstantOp::create(rewriter, loc, i32, value);
 }
 
+/// Convert an unsigned number `val` to i64.
+static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val) {
+  IntegerType i64 = rewriter.getI64Type();
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (i64 == valTy)
+    return val;
+  return valTy.getWidth() > 64
+             ? Value(LLVM::TruncOp::create(rewriter, loc, i64, val))
+             : Value(LLVM::ZExtOp::create(rewriter, loc, i64, val));
+}
+
+static Value createI64Constant(ConversionPatternRewriter &rewriter,
+                               Location loc, int64_t value) {
+  Type i64 = rewriter.getI64Type();
+  return LLVM::ConstantOp::create(rewriter, loc, i64, value);
+}
+
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
                               bool value) {
   Type llvmI1 = rewriter.getI1Type();
@@ -95,7 +114,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefType memrefType,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides,
-                           uint32_t elementByteWidth) {
+                           int64_t elementByteWidth) {
   if (memrefType.hasStaticShape() &&
       !llvm::any_of(strides, ShapedType::isDynamic)) {
     int64_t size = memrefType.getRank() == 0 ? 1 : 0;
@@ -103,9 +122,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
     for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
       size = std::max(shape[i] * strides[i], size);
     size = size * elementByteWidth;
-    assert(size < std::numeric_limits<uint32_t>::max() &&
-           "the memref buffer is too large");
-    return createI32Constant(rewriter, loc, static_cast<int32_t>(size));
+    return createI64Constant(rewriter, loc, static_cast<int32_t>(size));
   }
   Value maxIndex;
   for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
@@ -116,9 +133,9 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                    ? LLVM::UMaxOp::create(rewriter, loc, maxIndex, maxThisDim)
                    : maxThisDim;
   }
-  Value maxIndexI32 = convertUnsignedToI32(rewriter, loc, maxIndex);
-  Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
-  return LLVM::MulOp::create(rewriter, loc, maxIndexI32, byteWidthConst);
+  Value maxIndexI64 = convertUnsignedToI64(rewriter, loc, maxIndex);
+  Value byteWidthConst = createI64Constant(rewriter, loc, elementByteWidth);
+  return LLVM::MulOp::create(rewriter, loc, maxIndexI64, byteWidthConst);
 }
 
 static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
