@@ -741,7 +741,7 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
         return std::nullopt;
       })
       .Case<VectorType, TensorArmType>([](auto type) -> std::optional<int64_t> {
-        if(std::optional<int64_t> elementSize =
+        if (std::optional<int64_t> elementSize =
                 cast<ScalarType>(type.getElementType()).getSizeInBytes())
           return *elementSize * type.getNumElements();
         return std::nullopt;
