@@ -28,7 +28,7 @@ void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   assert(Lambda);
 
-  SourceLocation DefaultCaptureLoc = Lambda->getCaptureDefaultLoc();
+  const SourceLocation DefaultCaptureLoc = Lambda->getCaptureDefaultLoc();
   if (DefaultCaptureLoc.isInvalid())
     return;
 
