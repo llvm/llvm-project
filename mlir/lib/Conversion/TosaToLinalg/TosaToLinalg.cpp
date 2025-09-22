@@ -186,56 +186,63 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::NegateOp>(op)) {
     auto negate = cast<tosa::NegateOp>(op);
 
+    int64_t inZp = 0, outZp = 0;
     FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
-    if (failed(maybeInZp)) {
-      (void)rewriter.notifyMatchFailure(
-          op, "input1 zero point cannot be statically determined");
-      return nullptr;
-    }
-
     FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
-    if (failed(maybeOutZp)) {
-      (void)rewriter.notifyMatchFailure(
-          op, "output zero point cannot be statically determined");
-      return nullptr;
-    }
-
-    int64_t inZp = *maybeInZp;
-    int64_t outZp = *maybeOutZp;
+    bool hasInZp = !failed(maybeInZp);
+    bool hasOutZp = !failed(maybeOutZp);
+    if (hasInZp)
+      inZp = *maybeInZp;
+    if (hasOutZp)
+      outZp = *maybeOutZp;
 
     if (isa<FloatType>(elementTy))
       return arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      if (!inZp && !outZp) {
+      if (hasInZp && hasOutZp && !inZp && !outZp) {
         auto constant = arith::ConstantOp::create(
             rewriter, loc, IntegerAttr::get(elementTy, 0));
         return arith::SubIOp::create(rewriter, loc, resultTypes, constant,
                                      args[0]);
       }
 
+      Value zpAddValue;
+      Type intermediateType;
       // Compute the maximum value that can occur in the intermediate buffer.
       const int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
-      const int64_t zpAdd = inZp + outZp;
-      const int64_t maxValue =
-          APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
-          std::abs(zpAdd) + 1;
-
-      // Convert that maximum value into the maximum bitwidth needed to
-      // represent it. We assume 48-bit numbers may be supported further in
-      // the pipeline.
       int intermediateBitWidth = 64;
-      if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
-        intermediateBitWidth = 16;
-      } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
-        intermediateBitWidth = 32;
-      } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
-        intermediateBitWidth = 48;
-      }
 
-      Type intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-      Value zpAddValue = arith::ConstantOp::create(
-          rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+      if (hasInZp && hasOutZp) {
+        // Compute the maximum value that can occur in the intermediate buffer.
+        const int64_t zpAdd = inZp + outZp;
+        const int64_t maxValue =
+            APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
+            std::abs(zpAdd) + 1;
+
+        // Convert that maximum value into the maximum bitwidth needed to
+        // represent it. We assume 48-bit numbers may be supported further in
+        // the pipeline.
+        if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
+          intermediateBitWidth = 16;
+        } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
+          intermediateBitWidth = 32;
+        } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
+          intermediateBitWidth = 48;
+        }
+
+        intermediateType = rewriter.getIntegerType(intermediateBitWidth);
+        zpAddValue = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+      } else {
+        intermediateType = rewriter.getIntegerType(intermediateBitWidth);
+        auto arg1 =
+            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[1]);
+        auto arg2 =
+            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[2]);
+        zpAddValue =
+            rewriter.create<arith::AddIOp>(loc, intermediateType, arg1, arg2);
+      }
 
       // The negation can be applied by doing:
       //  outputValue = inZp + outZp - inputValue
@@ -1013,9 +1020,14 @@ static ValueRange getBroadcastableOperands(Operation *operation,
     else
       return operands.take_front(3);
   }
-  // Input1_zp and output_zp cannot broadcast
-  if (isa<tosa::NegateOp>(operation))
+  if (auto negate = dyn_cast<tosa::NegateOp>(operation)) {
+    FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
+    FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
+    if (failed(maybeOutZp) && failed(maybeInZp))
+      return operands;
+    // Input1_zp and output_zp cannot broadcast when they are constants.
     return operands.take_front(1);
+  }
   return operands;
 }
 
