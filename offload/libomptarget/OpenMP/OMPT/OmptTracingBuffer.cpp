@@ -22,21 +22,21 @@
 #include <limits>
 
 // When set to true, helper threads terminate their work
-static bool done_tracing{false};
+static bool DoneTracing{false};
 
 // Unique buffer id in creation order
-static std::atomic<uint64_t> buf_id{0};
+static std::atomic<uint64_t> BufId{0};
 
 // Unique id in buffer flush order
-static std::atomic<uint64_t> flush_id{0};
+static std::atomic<uint64_t> FlushId{0};
 
 thread_local OmptTracingBufferMgr::BufPtr
     OmptTracingBufferMgr::ArrayOfBufPtr[MAX_NUM_DEVICES];
 
-static uint64_t get_and_inc_buf_id() { return buf_id++; }
+static uint64_t get_and_inc_buf_id() { return BufId++; }
 
-static uint64_t get_and_inc_flush_id() { return flush_id++; }
-static uint64_t get_flush_id() { return flush_id; }
+static uint64_t get_and_inc_flush_id() { return FlushId++; }
+static uint64_t get_flush_id() { return FlushId; }
 
 /*
  * Used by OpenMP threads for assigning space for a trace record. If
@@ -97,7 +97,7 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t Type,
       // because the helper thread uses this info to decide whether a buffer
       // can be scheduled for removal. In the worst case, the buffer will be
       // removed late.
-      DeviceBuf->isFull.store(true, std::memory_order_release);
+      DeviceBuf->IsFull.store(true, std::memory_order_release);
     }
   }
   void *NewBuffer = nullptr;
@@ -115,7 +115,7 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t Type,
       NewBufId, DeviceId, /*Start=*/NewBuffer, TotalBytes,
       /*RemainingBytes=*/TotalBytes - RecSize,
       /*Cursor=*/NewBuffer,
-      /*isFull=*/false);
+      /*IsFull=*/false);
 
   // Initialize trace record status before publishing it to helper threads.
   initTraceRecordMetaData(new_buf->Cursor.load(std::memory_order_acquire));
@@ -142,7 +142,7 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t Type,
 
 /*
  * Called by an OpenMP thread when a buffer fills up and should be
- * flushed. This function assigns a new flush_id to the buffer, adds
+ * flushed. This function assigns a new FlushId to the buffer, adds
  * to the flush-related metadata and wakes up a helper thread to
  * dispatch a buffer-completion callback. This function should be
  * called without holding any lock.
@@ -191,15 +191,15 @@ void OmptTracingBufferMgr::driveCompletion() {
   while (true) {
     bool should_signal_workers = false;
     std::unique_lock<std::mutex> flush_lock(FlushMutex);
-    if (done_tracing) {
+    if (DoneTracing) {
       // An upper layer serializes flush_trace and stop_trace. In
-      // addition, before done_tracing is set, a flush is performed as
+      // addition, before DoneTracing is set, a flush is performed as
       // part of stop_trace. So assert that no flush is in progress.
       assert(ThreadFlushTracker == 0);
       break;
     }
     FlushCv.wait(flush_lock, [this] {
-      return done_tracing ||
+      return DoneTracing ||
              (!Id2FlushMdMap.empty() &&
               llvm::omp::target::ompt::TracingActive) ||
              isThisThreadFlushWaitedUpon();
@@ -225,7 +225,7 @@ void OmptTracingBufferMgr::driveCompletion() {
   }
   bool is_last_helper = false;
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
-  assert(done_tracing && "Helper thread exiting but not yet done");
+  assert(DoneTracing && "Helper thread exiting but not yet done");
   assert(isThisThreadShutdownWaitedUpon() &&
          "Helper thread exiting but not waited upon");
   resetThisThreadShutdown();
@@ -362,12 +362,12 @@ void OmptTracingBufferMgr::flushBuffer(FlushInfo flush_info) {
 }
 
 // Given a range of trace records, dispatch a buffer-completion callback
-void OmptTracingBufferMgr::dispatchCallback(int64_t DeviceId, void *buffer,
-                                            void *first_cursor,
-                                            void *last_cursor) {
-  assert(first_cursor != nullptr && last_cursor != nullptr &&
+void OmptTracingBufferMgr::dispatchCallback(int64_t DeviceId, void *Buffer,
+                                            void *FirstCursor,
+                                            void *LastCursor) {
+  assert(FirstCursor != nullptr && LastCursor != nullptr &&
          "Callback with nullptr");
-  addLastCursor(last_cursor);
+  addLastCursor(LastCursor);
 
   // This is best effort.
   // There is a small window when the buffer-completion callback may
@@ -375,15 +375,15 @@ void OmptTracingBufferMgr::dispatchCallback(int64_t DeviceId, void *buffer,
   // Note that we don't want to hold a lock when dispatching the callback.
   if (llvm::omp::target::ompt::isTracedDevice(DeviceId)) {
     DP("Dispatch callback w/ range (inclusive) to be flushed: %p -> %p\n",
-       first_cursor, last_cursor);
+       FirstCursor, LastCursor);
     llvm::omp::target::ompt::ompt_callback_buffer_complete(
-        DeviceId, buffer,
+        DeviceId, Buffer,
         /* bytes returned in this callback */
-        (char *)getNextTR(last_cursor) - (char *)first_cursor,
-        (ompt_buffer_cursor_t)first_cursor, false /* buffer_owned */);
+        (char *)getNextTR(LastCursor) - (char *)FirstCursor,
+        (ompt_buffer_cursor_t)FirstCursor, false /* buffer_owned */);
   }
 
-  removeLastCursor(last_cursor);
+  removeLastCursor(LastCursor);
 }
 
 // Dispatch a buffer-completion callback with buffer_owned set so that
@@ -438,15 +438,15 @@ OmptTracingBufferMgr::TRStatus OmptTracingBufferMgr::getTRStatus(void *Rec) {
       std::memory_order_acquire);
 }
 
-void *OmptTracingBufferMgr::getNextTR(void *Rec) {
-  size_t rec_size = getTRSize();
+void *OmptTracingBufferMgr::getNextTR(void *TR) {
+  size_t RecSize = getTRSize();
   // warning: no overflow check done
-  return (char *)Rec + rec_size;
+  return (char *)TR + RecSize;
 }
 
 bool OmptTracingBufferMgr::isBufferFull(const FlushInfo &flush_info) {
   std::unique_lock<std::mutex> buf_lock(BufferMgrMutex);
-  return flush_info.FlushBuf->isFull;
+  return flush_info.FlushBuf->IsFull;
 }
 
 void *OmptTracingBufferMgr::getBufferCursor(BufPtr buf) {
@@ -484,10 +484,10 @@ bool OmptTracingBufferMgr::isBufferOwned(const FlushInfo &flush_info) {
  * list of buffers to be flushed.
  */
 OmptTracingBufferMgr::FlushInfo
-OmptTracingBufferMgr::findAndReserveFlushedBuf(uint64_t flush_id) {
+OmptTracingBufferMgr::findAndReserveFlushedBuf(uint64_t FlushId) {
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
   MapId2Md::iterator flush_itr;
-  if (flush_id == std::numeric_limits<uint64_t>::max()) {
+  if (FlushId == std::numeric_limits<uint64_t>::max()) {
     // Reserve the first waiting buffer and return it
     if (Id2FlushMdMap.empty())
       return FlushInfo();
@@ -500,7 +500,7 @@ OmptTracingBufferMgr::findAndReserveFlushedBuf(uint64_t flush_id) {
     if (flush_itr == Id2FlushMdMap.end())
       return FlushInfo();
   } else {
-    flush_itr = Id2FlushMdMap.find(flush_id);
+    flush_itr = Id2FlushMdMap.find(FlushId);
     if (flush_itr == Id2FlushMdMap.end() ||
         flush_itr->second.FlushStatus == Flush_processing)
       return FlushInfo();
@@ -562,16 +562,16 @@ void OmptTracingBufferMgr::destroyFlushedBuf(const FlushInfo &flush_info) {
  * Generate a new flush id and add the buffer to the flush metadata
  * maps. This function must be called while holding the flush lock.
  */
-uint64_t OmptTracingBufferMgr::addNewFlushEntry(BufPtr buf, void *cursor) {
-  assert(FlushBufPtr2IdMap.find(buf) == FlushBufPtr2IdMap.end());
-  uint64_t flush_id = get_and_inc_flush_id();
-  FlushBufPtr2IdMap.emplace(buf, flush_id);
-  assert(Id2FlushMdMap.find(flush_id) == Id2FlushMdMap.end());
-  Id2FlushMdMap.emplace(flush_id, FlushMd(cursor, buf, Flush_waiting));
+uint64_t OmptTracingBufferMgr::addNewFlushEntry(BufPtr Buf, void *Cursor) {
+  assert(FlushBufPtr2IdMap.find(Buf) == FlushBufPtr2IdMap.end());
+  uint64_t FlushId = get_and_inc_flush_id();
+  FlushBufPtr2IdMap.emplace(Buf, FlushId);
+  assert(Id2FlushMdMap.find(FlushId) == Id2FlushMdMap.end());
+  Id2FlushMdMap.emplace(FlushId, FlushMd(Cursor, Buf, Flush_waiting));
 
-  DP("Added new flush id %lu cursor %p buf %p\n", flush_id, cursor, buf->Start);
+  DP("Added new flush id %lu cursor %p buf %p\n", FlushId, Cursor, Buf->Start);
 
-  return flush_id;
+  return FlushId;
 }
 
 /*
@@ -674,7 +674,7 @@ void OmptTracingBufferMgr::init() {
     ArrayOfBufPtr[i] = nullptr;
   ThreadFlushTracker = 0;
   ThreadShutdownTracker = 0;
-  done_tracing = false; // TODO make it a class member
+  DoneTracing = false; // TODO make it a class member
 }
 
 void OmptTracingBufferMgr::startHelperThreads() {
@@ -683,7 +683,7 @@ void OmptTracingBufferMgr::startHelperThreads() {
   // repeated calls to start-trace.
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
   if (!HelperThreadIdMap.empty()) {
-    assert(!done_tracing && "Helper threads exist but tracing is done");
+    assert(!DoneTracing && "Helper threads exist but tracing is done");
     return;
   }
   init();
@@ -692,7 +692,7 @@ void OmptTracingBufferMgr::startHelperThreads() {
 
 bool OmptTracingBufferMgr::areHelperThreadsAvailable() {
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
-  if (done_tracing // If another thread called stop, assume there are no threads
+  if (DoneTracing // If another thread called stop, assume there are no threads
       || HelperThreadIdMap.empty() // Threads were never started
   ) {
     // Don't assert on HelperThreadIdMap since shutdown by another
@@ -713,11 +713,11 @@ void OmptTracingBufferMgr::shutdownHelperThreads() {
   assert(ThreadShutdownTracker == 0);
 
   // Set the done flag which helper threads will look at
-  done_tracing = true;
+  DoneTracing = true;
   // Wait to make sure all helper threads exit
   for (uint32_t i = 0; i < OMPT_NUM_HELPER_THREADS; ++i)
     setThreadShutdown(i);
-  // Signal indicating that done_tracing is set
+  // Signal indicating that DoneTracing is set
   FlushCv.notify_all();
   ThreadShutdownCv.wait(flush_lock,
                         [this] { return ThreadShutdownTracker == 0; });

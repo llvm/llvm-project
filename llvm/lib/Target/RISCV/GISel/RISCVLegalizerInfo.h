@@ -39,7 +39,6 @@ public:
 
 private:
   bool shouldBeInConstantPool(const APInt &APImm, bool ShouldOptForSize) const;
-  bool shouldBeInFConstantPool(const APFloat &APImm) const;
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
 

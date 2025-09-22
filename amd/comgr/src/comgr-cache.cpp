@@ -236,7 +236,7 @@ amd_comgr_status_t CommandCache::execute(CachedCommandAdaptor &C,
   AddStreamFn &AddStream = *AddStreamOrErr;
   if (!AddStream && readEntryFromCache(C, *CachedBuffer, LogS)) {
     if (env::shouldEmitVerboseLogs())
-      LogS << "Comgr cache: entry " << *MaybeId << " found in cache.\n";
+      LogS << "Comgr cache: found entry " << *MaybeId << " in cache.\n";
     return AMD_COMGR_STATUS_SUCCESS;
   }
 
@@ -247,6 +247,8 @@ amd_comgr_status_t CommandCache::execute(CachedCommandAdaptor &C,
   LogS << CapturedLogS;
 
   if (Result == AMD_COMGR_STATUS_SUCCESS && AddStream) {
+    if (env::shouldEmitVerboseLogs())
+      LogS << "Comgr cache: stored entry " << *MaybeId << " in cache.\n";
     saveCommandOutput(C, AddStream, CapturedLogS, LogS);
   }
 

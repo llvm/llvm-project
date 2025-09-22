@@ -15,9 +15,9 @@ d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 Revert "[SLP]Support LShr as base for copyable elements"
 breaks build rocPRIM
 ---
-breaks offload build
-209d91d9e4c4 [Offload] Fix CHECK string in llvm-omp-device-info test (#156872)
+needs more offload patches
+[Offload] Port llvm-offload-device-info to new offload API (#155626)
+[Offload]  Implement 'olIsValidBinary' in offload
 ---
-breaks build flang nekbone
-[flang] Attach proper storage to [hl]fir.declare in lowering. (#155742)
+akashB: 8afea0d0ea1c [OpenMP][MLIR] Preserve to/from flags in mappe
 ---

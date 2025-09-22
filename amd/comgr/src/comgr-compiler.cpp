@@ -670,7 +670,7 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
     // Internally this call refers to the invocation created above, so at
     // this point the DiagnosticsEngine should accurately reflect all user
     // requested configuration from Argv.
-    Clang->createDiagnostics(FS, &DiagClient, /* ShouldOwnClient */ false);
+    Clang->createDiagnostics(&DiagClient, /* ShouldOwnClient */ false);
     if (!Clang->hasDiagnostics()) {
       return AMD_COMGR_STATUS_ERROR;
     }
