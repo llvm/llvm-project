@@ -17,7 +17,7 @@ fi
 TMP_FILE=$(mktemp)
 
 # Check for external functions. Calls to llvm intrinsics are OK
-$DIS < $FILE | grep '^\s*declare ' | grep -v '@llvm' > "$TMP_FILE"
+$DIS < $FILE | grep '^[[:space:]]*declare ' | grep -v '@llvm' > "$TMP_FILE"
 COUNT=$(wc -l < "$TMP_FILE")
 
 if [ "$COUNT" -ne "0" ]; then
