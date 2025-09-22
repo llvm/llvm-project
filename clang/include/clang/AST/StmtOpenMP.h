@@ -5966,21 +5966,14 @@ class OMPCanonicalLoopSequenceTransformationDirective
       public OMPLoopTransformationDirective {
   friend class ASTStmtReader;
 
-  /// Number of loops contained in the canonical loop sequence.
-  unsigned NumLoopsInSequence = 1;
-
 protected:
   explicit OMPCanonicalLoopSequenceTransformationDirective(
       StmtClass SC, OpenMPDirectiveKind Kind, SourceLocation StartLoc,
-      SourceLocation EndLoc, unsigned NumLoopsInSequence)
+      SourceLocation EndLoc)
       : OMPExecutableDirective(SC, Kind, StartLoc, EndLoc),
-        OMPLoopTransformationDirective(this),
-        NumLoopsInSequence(NumLoopsInSequence) {}
+        OMPLoopTransformationDirective(this) {}
 
 public:
-  /// Returns the number of canonical loop nests contained in this sequence.
-  unsigned getNumLoopsInSequence() const { return NumLoopsInSequence; }
-
   /// Get the de-sugared statements after the loop transformation.
   ///
   /// Might be nullptr if either the directive generates no loops and is handled
@@ -6018,13 +6011,9 @@ class OMPFuseDirective final
     TransformedStmtOffset,
   };
 
-  unsigned NumGeneratedLoopNests = 1;
-
-  explicit OMPFuseDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-                            unsigned NumLoopsInSequence)
+  explicit OMPFuseDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPCanonicalLoopSequenceTransformationDirective(
-            OMPFuseDirectiveClass, llvm::omp::OMPD_fuse, StartLoc, EndLoc,
-            NumLoopsInSequence) {}
+            OMPFuseDirectiveClass, llvm::omp::OMPD_fuse, StartLoc, EndLoc) {}
 
   void setPreInits(Stmt *PreInits) {
     Data->getChildren()[PreInitsOffset] = PreInits;
@@ -6051,17 +6040,16 @@ public:
   /// \param PreInits Helper preinits statements for the loop nest
   static OMPFuseDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-         ArrayRef<OMPClause *> Clauses, unsigned NumLoops,
-         unsigned NumGeneratedTopLevelLoops, Stmt *AssociatedStmt,
-         Stmt *TransformedStmt, Stmt *PreInits);
+         ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
+         Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits);
 
   /// Build an empty '#pragma omp fuse' AST node for deserialization
   ///
   /// \param C Context of the AST
   /// \param NumClauses Number of clauses to allocate
   /// \param NumLoops Number of top level loops to allocate
-  static OMPFuseDirective *CreateEmpty(const ASTContext &C, unsigned NumClauses,
-                                       unsigned NumLoops);
+  static OMPFuseDirective *CreateEmpty(const ASTContext &C,
+                                       unsigned NumClauses);
 
   /// Gets the associated loops after the transformation. This is the de-sugared
   /// replacement or nulltpr in dependent contexts.

@@ -2472,8 +2472,6 @@ void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
 void ASTStmtReader::VisitOMPCanonicalLoopSequenceTransformationDirective(
     OMPCanonicalLoopSequenceTransformationDirective *D) {
   VisitStmt(D);
-  // Field NumLoopsInSequence was read in ReadStmtFromStream.
-  Record.skipInts(1);
   VisitOMPExecutableDirective(D);
   D->setNumGeneratedTopLevelLoops(Record.readUInt32());
 }
@@ -3627,11 +3625,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = OMPReverseDirective::CreateEmpty(Context, NumLoops);
       break;
     }
+
     case STMT_OMP_FUSE_DIRECTIVE: {
-      unsigned NumLoopsInSequence = Record[ASTStmtReader::NumStmtFields];
-      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
-      S = OMPFuseDirective::CreateEmpty(Context, NumClauses,
-                                        NumLoopsInSequence);
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OMPFuseDirective::CreateEmpty(Context, NumClauses);
       break;
     }
 

@@ -2490,7 +2490,6 @@ void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
 void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(
     OMPCanonicalLoopSequenceTransformationDirective *D) {
   VisitStmt(D);
-  Record.writeUInt32(D->getNumLoopsInSequence());
   VisitOMPExecutableDirective(D);
   Record.writeUInt32(D->getNumGeneratedTopLevelLoops());
 }

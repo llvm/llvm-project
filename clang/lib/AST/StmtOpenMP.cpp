@@ -552,16 +552,13 @@ OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPFuseDirective *
-OMPFuseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
-                         SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                         unsigned NumLoops, unsigned NumGeneratedTopLevelLoops,
-                         Stmt *AssociatedStmt, Stmt *TransformedStmt,
-                         Stmt *PreInits) {
+OMPFuseDirective *OMPFuseDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
+    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits) {
 
   OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
@@ -569,11 +566,10 @@ OMPFuseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
 }
 
 OMPFuseDirective *OMPFuseDirective::CreateEmpty(const ASTContext &C,
-                                                unsigned NumClauses,
-                                                unsigned NumLoops) {
+                                                unsigned NumClauses) {
   OMPFuseDirective *Dir = createEmptyDirective<OMPFuseDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
-      SourceLocation(), SourceLocation(), NumLoops);
+      SourceLocation(), SourceLocation());
   return Dir;
 }
 

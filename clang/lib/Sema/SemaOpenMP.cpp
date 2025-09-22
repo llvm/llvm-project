@@ -16005,11 +16005,9 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // The NumLoopNests argument is set to a placeholder 1 (even though
   // using looprange fuse could yield up to 3 top level loop nests)
   // because a dependent context could prevent determining its true value
-  if (CurrContext->isDependentContext()) {
+  if (CurrContext->isDependentContext())
     return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    /* NumLoops */ 1, /* LoopSeqSize */ 1,
-                                    AStmt, nullptr, nullptr);
-  }
+                                    /* NumLoops */ 1, AStmt, nullptr, nullptr);
 
   // Validate that the potential loop sequence is transformable for fusion
   // Also collect the HelperExprs, Loop Stmts, Inits, and Number of loops
@@ -16464,7 +16462,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                                       SourceLocation(), SourceLocation());
   }
   return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                  SeqAnalysis.LoopSeqSize,
                                   NumGeneratedTopLevelLoops, AStmt, FusionStmt,
                                   buildPreInits(Context, PreInits));
 }
