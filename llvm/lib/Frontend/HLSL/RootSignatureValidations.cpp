@@ -115,53 +115,12 @@ bool verifyNumDescriptors(uint32_t NumDescriptors) {
   return NumDescriptors > 0;
 }
 
-bool verifySamplerFilter(uint32_t Value) {
-  switch (Value) {
-#define FILTER(Num, Val) case llvm::to_underlying(dxbc::SamplerFilter::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
-}
-
-// Values allowed here:
-// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode#syntax
-bool verifyAddress(uint32_t Address) {
-  switch (Address) {
-#define TEXTURE_ADDRESS_MODE(Num, Val)                                         \
-  case llvm::to_underlying(dxbc::TextureAddressMode::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
-}
-
 bool verifyMipLODBias(float MipLODBias) {
   return MipLODBias >= -16.f && MipLODBias <= 15.99f;
 }
 
 bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
   return MaxAnisotropy <= 16u;
-}
-
-bool verifyComparisonFunc(uint32_t ComparisonFunc) {
-  switch (ComparisonFunc) {
-#define COMPARISON_FUNC(Num, Val)                                              \
-  case llvm::to_underlying(dxbc::ComparisonFunc::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
-}
-
-bool verifyBorderColor(uint32_t BorderColor) {
-  switch (BorderColor) {
-#define STATIC_BORDER_COLOR(Num, Val)                                          \
-  case llvm::to_underlying(dxbc::StaticBorderColor::Val):
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-    return true;
-  }
-  return false;
 }
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }

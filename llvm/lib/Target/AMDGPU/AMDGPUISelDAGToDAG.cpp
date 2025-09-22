@@ -1531,7 +1531,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
       C1 = nullptr;
   }
 
-  if (N0.getOpcode() == ISD::ADD) {
+  if (N0->isAnyAdd()) {
     // (add N2, N3) -> addr64, or
     // (add (add N2, N3), C1) -> addr64
     SDValue N2 = N0.getOperand(0);
@@ -1993,7 +1993,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   }
 
   // Match the variable offset.
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (Addr->isAnyAdd()) {
     LHS = Addr.getOperand(0);
 
     if (!LHS->isDivergent()) {
@@ -2495,7 +2495,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDNode *N, SDValue Addr,
 
   SDValue N0, N1;
   // Extract the base and offset if possible.
-  if (CurDAG->isBaseWithConstantOffset(Addr) || Addr.getOpcode() == ISD::ADD) {
+  if (Addr->isAnyAdd() || CurDAG->isADDLike(Addr)) {
     N0 = Addr.getOperand(0);
     N1 = Addr.getOperand(1);
   } else if (getBaseWithOffsetUsingSplitOR(*CurDAG, Addr, N0, N1)) {
@@ -3302,29 +3302,52 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
   if (IsCanonicalizing)
     return true;
 
-  unsigned Opc = Src->getOpcode();
+  // v2i32 xor/or/and are legal. A vselect using these instructions as operands
+  // is scalarised into two selects with EXTRACT_VECTOR_ELT operands. Peek
+  // through the extract to the bitwise op.
+  SDValue PeekSrc =
+      Src->getOpcode() == ISD::EXTRACT_VECTOR_ELT ? Src->getOperand(0) : Src;
+  // Convert various sign-bit masks to src mods. Currently disabled for 16-bit
+  // types as the codegen replaces the operand without adding a srcmod.
+  // This is intentionally finding the cases where we are performing float neg
+  // and abs on int types, the goal is not to obtain two's complement neg or
+  // abs.
+  // TODO: Add 16-bit support.
+  unsigned Opc = PeekSrc.getOpcode();
   EVT VT = Src.getValueType();
   if ((Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR) ||
-      (VT != MVT::i32 && VT != MVT::i64))
+      (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
     return true;
 
-  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1));
+  ConstantSDNode *CRHS = isConstOrConstSplat(PeekSrc->getOperand(1));
   if (!CRHS)
     return true;
 
-  // Recognise (xor a, 0x80000000) as NEG SrcMod.
-  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
-  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
+  auto ReplaceSrc = [&]() -> SDValue {
+    if (Src->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return Src.getOperand(0);
+
+    SDValue LHS = PeekSrc->getOperand(0);
+    SDValue Index = Src->getOperand(1);
+    return CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Src),
+                           Src.getValueType(), LHS, Index);
+  };
+
+  // Recognise Srcmods:
+  // (xor a, 0x80000000) or v2i32 (xor a, {0x80000000,0x80000000}) as NEG.
+  // (and a, 0x7fffffff) or v2i32 (and a, {0x7fffffff,0x7fffffff}) as ABS.
+  // (or a, 0x80000000) or v2i32 (or a, {0x80000000,0x80000000}) as NEG+ABS
+  // SrcModifiers.
   if (Opc == ISD::XOR && CRHS->getAPIntValue().isSignMask()) {
     Mods |= SISrcMods::NEG;
-    Src = Src.getOperand(0);
+    Src = ReplaceSrc();
   } else if (Opc == ISD::AND && AllowAbs &&
              CRHS->getAPIntValue().isMaxSignedValue()) {
     Mods |= SISrcMods::ABS;
-    Src = Src.getOperand(0);
+    Src = ReplaceSrc();
   } else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
     Mods |= SISrcMods::ABS | SISrcMods::NEG;
-    Src = Src.getOperand(0);
+    Src = ReplaceSrc();
   }
 
   return true;

@@ -29,7 +29,7 @@ namespace {
 
 /// Converts ptr::AtomicOrdering to llvm::AtomicOrdering
 static llvm::AtomicOrdering
-convertAtomicOrdering(ptr::AtomicOrdering ordering) {
+translateAtomicOrdering(ptr::AtomicOrdering ordering) {
   switch (ordering) {
   case ptr::AtomicOrdering::not_atomic:
     return llvm::AtomicOrdering::NotAtomic;
@@ -49,10 +49,10 @@ convertAtomicOrdering(ptr::AtomicOrdering ordering) {
   llvm_unreachable("Unknown atomic ordering");
 }
 
-/// Convert ptr.ptr_add operation
+/// Translate ptr.ptr_add operation to LLVM IR.
 static LogicalResult
-convertPtrAddOp(PtrAddOp ptrAddOp, llvm::IRBuilderBase &builder,
-                LLVM::ModuleTranslation &moduleTranslation) {
+translatePtrAddOp(PtrAddOp ptrAddOp, llvm::IRBuilderBase &builder,
+                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *basePtr = moduleTranslation.lookupValue(ptrAddOp.getBase());
   llvm::Value *offset = moduleTranslation.lookupValue(ptrAddOp.getOffset());
 
@@ -83,18 +83,19 @@ convertPtrAddOp(PtrAddOp ptrAddOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.load operation
-static LogicalResult convertLoadOp(LoadOp loadOp, llvm::IRBuilderBase &builder,
-                                   LLVM::ModuleTranslation &moduleTranslation) {
+/// Translate ptr.load operation to LLVM IR.
+static LogicalResult
+translateLoadOp(LoadOp loadOp, llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *ptr = moduleTranslation.lookupValue(loadOp.getPtr());
   if (!ptr)
     return loadOp.emitError("Failed to lookup pointer operand");
 
-  // Convert result type to LLVM type
+  // Translate result type to LLVM type
   llvm::Type *resultType =
       moduleTranslation.convertType(loadOp.getValue().getType());
   if (!resultType)
-    return loadOp.emitError("Failed to convert result type");
+    return loadOp.emitError("Failed to translate result type");
 
   // Create the load instruction.
   llvm::MaybeAlign alignment(loadOp.getAlignment().value_or(0));
@@ -102,7 +103,7 @@ static LogicalResult convertLoadOp(LoadOp loadOp, llvm::IRBuilderBase &builder,
       resultType, ptr, alignment, loadOp.getVolatile_());
 
   // Set op flags and metadata.
-  loadInst->setAtomic(convertAtomicOrdering(loadOp.getOrdering()));
+  loadInst->setAtomic(translateAtomicOrdering(loadOp.getOrdering()));
   // Set sync scope if specified
   if (loadOp.getSyncscope().has_value()) {
     llvm::LLVMContext &ctx = builder.getContext();
@@ -135,10 +136,10 @@ static LogicalResult convertLoadOp(LoadOp loadOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.store operation
+/// Translate ptr.store operation to LLVM IR.
 static LogicalResult
-convertStoreOp(StoreOp storeOp, llvm::IRBuilderBase &builder,
-               LLVM::ModuleTranslation &moduleTranslation) {
+translateStoreOp(StoreOp storeOp, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *value = moduleTranslation.lookupValue(storeOp.getValue());
   llvm::Value *ptr = moduleTranslation.lookupValue(storeOp.getPtr());
 
@@ -151,7 +152,7 @@ convertStoreOp(StoreOp storeOp, llvm::IRBuilderBase &builder,
       builder.CreateAlignedStore(value, ptr, alignment, storeOp.getVolatile_());
 
   // Set op flags and metadata.
-  storeInst->setAtomic(convertAtomicOrdering(storeOp.getOrdering()));
+  storeInst->setAtomic(translateAtomicOrdering(storeOp.getOrdering()));
   // Set sync scope if specified
   if (storeOp.getSyncscope().has_value()) {
     llvm::LLVMContext &ctx = builder.getContext();
@@ -178,21 +179,21 @@ convertStoreOp(StoreOp storeOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.type_offset operation
+/// Translate ptr.type_offset operation to LLVM IR.
 static LogicalResult
-convertTypeOffsetOp(TypeOffsetOp typeOffsetOp, llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation) {
-  // Convert the element type to LLVM type
+translateTypeOffsetOp(TypeOffsetOp typeOffsetOp, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  // Translate the element type to LLVM type
   llvm::Type *elementType =
       moduleTranslation.convertType(typeOffsetOp.getElementType());
   if (!elementType)
-    return typeOffsetOp.emitError("Failed to convert the element type");
+    return typeOffsetOp.emitError("Failed to translate the element type");
 
-  // Convert result type
+  // Translate result type
   llvm::Type *resultType =
       moduleTranslation.convertType(typeOffsetOp.getResult().getType());
   if (!resultType)
-    return typeOffsetOp.emitError("Failed to convert the result type");
+    return typeOffsetOp.emitError("Failed to translate the result type");
 
   // Use GEP with null pointer to compute type size/offset.
   llvm::Value *nullPtr = llvm::Constant::getNullValue(builder.getPtrTy(0));
@@ -204,10 +205,10 @@ convertTypeOffsetOp(TypeOffsetOp typeOffsetOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.gather operation
+/// Translate ptr.gather operation to LLVM IR.
 static LogicalResult
-convertGatherOp(GatherOp gatherOp, llvm::IRBuilderBase &builder,
-                LLVM::ModuleTranslation &moduleTranslation) {
+translateGatherOp(GatherOp gatherOp, llvm::IRBuilderBase &builder,
+                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *ptrs = moduleTranslation.lookupValue(gatherOp.getPtrs());
   llvm::Value *mask = moduleTranslation.lookupValue(gatherOp.getMask());
   llvm::Value *passthrough =
@@ -216,11 +217,11 @@ convertGatherOp(GatherOp gatherOp, llvm::IRBuilderBase &builder,
   if (!ptrs || !mask || !passthrough)
     return gatherOp.emitError("Failed to lookup operands");
 
-  // Convert result type to LLVM type.
+  // Translate result type to LLVM type.
   llvm::Type *resultType =
       moduleTranslation.convertType(gatherOp.getResult().getType());
   if (!resultType)
-    return gatherOp.emitError("Failed to convert result type");
+    return gatherOp.emitError("Failed to translate result type");
 
   // Get the alignment.
   llvm::MaybeAlign alignment(gatherOp.getAlignment().value_or(0));
@@ -233,10 +234,10 @@ convertGatherOp(GatherOp gatherOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.masked_load operation
+/// Translate ptr.masked_load operation to LLVM IR.
 static LogicalResult
-convertMaskedLoadOp(MaskedLoadOp maskedLoadOp, llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation) {
+translateMaskedLoadOp(MaskedLoadOp maskedLoadOp, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *ptr = moduleTranslation.lookupValue(maskedLoadOp.getPtr());
   llvm::Value *mask = moduleTranslation.lookupValue(maskedLoadOp.getMask());
   llvm::Value *passthrough =
@@ -245,11 +246,11 @@ convertMaskedLoadOp(MaskedLoadOp maskedLoadOp, llvm::IRBuilderBase &builder,
   if (!ptr || !mask || !passthrough)
     return maskedLoadOp.emitError("Failed to lookup operands");
 
-  // Convert result type to LLVM type.
+  // Translate result type to LLVM type.
   llvm::Type *resultType =
       moduleTranslation.convertType(maskedLoadOp.getResult().getType());
   if (!resultType)
-    return maskedLoadOp.emitError("Failed to convert result type");
+    return maskedLoadOp.emitError("Failed to translate result type");
 
   // Get the alignment.
   llvm::MaybeAlign alignment(maskedLoadOp.getAlignment().value_or(0));
@@ -262,10 +263,11 @@ convertMaskedLoadOp(MaskedLoadOp maskedLoadOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.masked_store operation
+/// Translate ptr.masked_store operation to LLVM IR.
 static LogicalResult
-convertMaskedStoreOp(MaskedStoreOp maskedStoreOp, llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation) {
+translateMaskedStoreOp(MaskedStoreOp maskedStoreOp,
+                       llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *value = moduleTranslation.lookupValue(maskedStoreOp.getValue());
   llvm::Value *ptr = moduleTranslation.lookupValue(maskedStoreOp.getPtr());
   llvm::Value *mask = moduleTranslation.lookupValue(maskedStoreOp.getMask());
@@ -281,10 +283,10 @@ convertMaskedStoreOp(MaskedStoreOp maskedStoreOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.scatter operation
+/// Translate ptr.scatter operation to LLVM IR.
 static LogicalResult
-convertScatterOp(ScatterOp scatterOp, llvm::IRBuilderBase &builder,
-                 LLVM::ModuleTranslation &moduleTranslation) {
+translateScatterOp(ScatterOp scatterOp, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *value = moduleTranslation.lookupValue(scatterOp.getValue());
   llvm::Value *ptrs = moduleTranslation.lookupValue(scatterOp.getPtrs());
   llvm::Value *mask = moduleTranslation.lookupValue(scatterOp.getMask());
@@ -300,7 +302,56 @@ convertScatterOp(ScatterOp scatterOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Implementation of the dialect interface that converts operations belonging
+/// Translate ptr.constant operation to LLVM IR.
+static LogicalResult
+translateConstantOp(ConstantOp constantOp, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation) {
+  // Translate result type to LLVM type
+  llvm::PointerType *resultType = dyn_cast_or_null<llvm::PointerType>(
+      moduleTranslation.convertType(constantOp.getResult().getType()));
+  if (!resultType)
+    return constantOp.emitError("Expected a valid pointer type");
+
+  llvm::Value *result = nullptr;
+
+  TypedAttr value = constantOp.getValue();
+  if (auto nullAttr = dyn_cast<ptr::NullAttr>(value)) {
+    // Create a null pointer constant
+    result = llvm::ConstantPointerNull::get(resultType);
+  } else if (auto addressAttr = dyn_cast<ptr::AddressAttr>(value)) {
+    // Create an integer constant and translate it to pointer
+    llvm::APInt addressValue = addressAttr.getValue();
+
+    // Determine the integer type width based on the target's pointer size
+    llvm::DataLayout dataLayout =
+        moduleTranslation.getLLVMModule()->getDataLayout();
+    unsigned pointerSizeInBits =
+        dataLayout.getPointerSizeInBits(resultType->getAddressSpace());
+
+    // Extend or truncate the address value to match pointer size if needed
+    if (addressValue.getBitWidth() != pointerSizeInBits) {
+      if (addressValue.getBitWidth() > pointerSizeInBits) {
+        constantOp.emitWarning()
+            << "Truncating address value to fit pointer size";
+      }
+      addressValue = addressValue.getBitWidth() < pointerSizeInBits
+                         ? addressValue.zext(pointerSizeInBits)
+                         : addressValue.trunc(pointerSizeInBits);
+    }
+
+    // Create integer constant and translate to pointer
+    llvm::Type *intType = builder.getIntNTy(pointerSizeInBits);
+    llvm::Value *intValue = llvm::ConstantInt::get(intType, addressValue);
+    result = builder.CreateIntToPtr(intValue, resultType);
+  } else {
+    return constantOp.emitError("Unsupported constant attribute type");
+  }
+
+  moduleTranslation.mapValue(constantOp.getResult(), result);
+  return success();
+}
+
+/// Implementation of the dialect interface that translates operations belonging
 /// to the `ptr` dialect to LLVM IR.
 class PtrDialectLLVMIRTranslationInterface
     : public LLVMTranslationDialectInterface {
@@ -314,30 +365,35 @@ public:
                    LLVM::ModuleTranslation &moduleTranslation) const final {
 
     return llvm::TypeSwitch<Operation *, LogicalResult>(op)
+        .Case([&](ConstantOp constantOp) {
+          return translateConstantOp(constantOp, builder, moduleTranslation);
+        })
         .Case([&](PtrAddOp ptrAddOp) {
-          return convertPtrAddOp(ptrAddOp, builder, moduleTranslation);
+          return translatePtrAddOp(ptrAddOp, builder, moduleTranslation);
         })
         .Case([&](LoadOp loadOp) {
-          return convertLoadOp(loadOp, builder, moduleTranslation);
+          return translateLoadOp(loadOp, builder, moduleTranslation);
         })
         .Case([&](StoreOp storeOp) {
-          return convertStoreOp(storeOp, builder, moduleTranslation);
+          return translateStoreOp(storeOp, builder, moduleTranslation);
         })
         .Case([&](TypeOffsetOp typeOffsetOp) {
-          return convertTypeOffsetOp(typeOffsetOp, builder, moduleTranslation);
+          return translateTypeOffsetOp(typeOffsetOp, builder,
+                                       moduleTranslation);
         })
         .Case<GatherOp>([&](GatherOp gatherOp) {
-          return convertGatherOp(gatherOp, builder, moduleTranslation);
+          return translateGatherOp(gatherOp, builder, moduleTranslation);
         })
         .Case<MaskedLoadOp>([&](MaskedLoadOp maskedLoadOp) {
-          return convertMaskedLoadOp(maskedLoadOp, builder, moduleTranslation);
+          return translateMaskedLoadOp(maskedLoadOp, builder,
+                                       moduleTranslation);
         })
         .Case<MaskedStoreOp>([&](MaskedStoreOp maskedStoreOp) {
-          return convertMaskedStoreOp(maskedStoreOp, builder,
-                                      moduleTranslation);
+          return translateMaskedStoreOp(maskedStoreOp, builder,
+                                        moduleTranslation);
         })
         .Case<ScatterOp>([&](ScatterOp scatterOp) {
-          return convertScatterOp(scatterOp, builder, moduleTranslation);
+          return translateScatterOp(scatterOp, builder, moduleTranslation);
         })
         .Default([&](Operation *op) {
           return op->emitError("Translation for operation '")

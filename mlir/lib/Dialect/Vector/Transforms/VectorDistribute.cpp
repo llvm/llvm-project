@@ -1341,7 +1341,7 @@ struct WarpOpExtractStridedSlice : public WarpDistributionPattern {
         VectorType::get(newDistributedShape, distributedType.getElementType());
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {extractOp.getVector()}, {newDistributedType},
+        rewriter, warpOp, {extractOp.getSource()}, {newDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Attribute> distributedSizes = llvm::map_to_vector(
@@ -1395,7 +1395,7 @@ struct WarpOpExtract : public WarpDistributionPattern {
       // the 1d case).
       SmallVector<size_t> newRetIndices;
       WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-          rewriter, warpOp, {extractOp.getVector()},
+          rewriter, warpOp, {extractOp.getSource()},
           {extractOp.getSourceVectorType()}, newRetIndices);
       rewriter.setInsertionPointAfter(newWarpOp);
       Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
@@ -1424,7 +1424,7 @@ struct WarpOpExtract : public WarpDistributionPattern {
         VectorType::get(newDistributedShape, distributedType.getElementType());
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {extractOp.getVector()}, {newDistributedType},
+        rewriter, warpOp, {extractOp.getSource()}, {newDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
     Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
@@ -1478,7 +1478,7 @@ struct WarpOpExtractScalar : public WarpDistributionPattern {
       distributedVecType = extractSrcType;
     }
     // Yield source vector and position (if present) from warp op.
-    SmallVector<Value> additionalResults{extractOp.getVector()};
+    SmallVector<Value> additionalResults{extractOp.getSource()};
     SmallVector<Type> additionalResultTypes{distributedVecType};
     additionalResults.append(
         SmallVector<Value>(extractOp.getDynamicPosition()));

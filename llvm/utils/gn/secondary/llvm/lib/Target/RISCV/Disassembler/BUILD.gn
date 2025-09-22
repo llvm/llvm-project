@@ -5,7 +5,6 @@ tablegen("RISCVGenDisassemblerTables") {
   args = [
     "-gen-disassembler",
     "-specialize-decoders-per-bitwidth",
-    "-ignore-non-decodable-operands",
   ]
   td_file = "../RISCV.td"
 }

@@ -60,6 +60,22 @@ struct DescriptorTable {
   }
 };
 
+struct StaticSampler {
+  dxbc::SamplerFilter Filter;
+  dxbc::TextureAddressMode AddressU;
+  dxbc::TextureAddressMode AddressV;
+  dxbc::TextureAddressMode AddressW;
+  float MipLODBias;
+  uint32_t MaxAnisotropy;
+  dxbc::ComparisonFunc ComparisonFunc;
+  dxbc::StaticBorderColor BorderColor;
+  float MinLOD;
+  float MaxLOD;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  dxbc::ShaderVisibility ShaderVisibility;
+};
+
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
@@ -125,7 +141,7 @@ struct RootSignatureDesc {
   uint32_t StaticSamplersOffset = 0u;
   uint32_t NumStaticSamplers = 0u;
   mcdxbc::RootParametersContainer ParametersContainer;
-  SmallVector<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
+  SmallVector<StaticSampler> StaticSamplers;
 
   LLVM_ABI void write(raw_ostream &OS) const;
 
