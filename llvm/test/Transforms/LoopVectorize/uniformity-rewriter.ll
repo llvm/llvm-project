@@ -105,35 +105,19 @@ define void @uniformityrew_binop(ptr %src.a, ptr noalias %src.b, ptr noalias %ds
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i64> [[TMP3]], splat (i64 2)
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[SRC_B]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[SRC_B]], i32 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP5]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[SRC_B]], i32 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[N]]
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[SRC_B]], i32 [[TMP11]]
-; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP25]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> poison, i32 [[TMP29]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP12]], i32 1
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP13]], i32 2
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP14]], i32 3
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP33]], ptr [[TMP34]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

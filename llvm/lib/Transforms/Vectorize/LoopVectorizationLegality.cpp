@@ -531,8 +531,7 @@ public:
   const SCEV *visitUnknown(const SCEVUnknown *S) {
     if (SE.isLoopInvariant(S, TheLoop))
       return S;
-    // The value could vary across iterations.
-    CannotAnalyze = true;
+    CannotAnalyze = !isa<BinaryOperator, CastInst>(S->getValue());
     return S;
   }
 
