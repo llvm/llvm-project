@@ -564,7 +564,6 @@ unsigned RuntimeArrayType::getArrayStride() const { return getImpl()->stride; }
 
 void TypeCapabilityVisitor::addConcrete(RuntimeArrayType type) {
   add(type.getElementType());
-
   static constexpr auto cap = Capability::Shader;
   capabilities.push_back(cap);
 }
@@ -1261,7 +1260,6 @@ unsigned MatrixType::getNumElements() const {
 
 void TypeCapabilityVisitor::addConcrete(MatrixType type) {
   add(type.getColumnType());
-
   static constexpr auto cap = Capability::Matrix;
   capabilities.push_back(cap);
 }
