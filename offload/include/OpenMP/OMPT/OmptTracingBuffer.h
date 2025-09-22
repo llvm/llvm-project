@@ -79,7 +79,7 @@ public:
    *
    * Id, DeviceId, Start, and TotalBytes are not changed once set.
    * RemainingBytes could be written multiple times but only by the same
-   * thread. But Cursor and isFull may be read/written by an OpenMP worker
+   * thread. But Cursor and IsFull may be read/written by an OpenMP worker
    * thread and read by helper threads. Hence, accesses of
    * this 2nd set of locations need to be atomic or synchronized.
    */
@@ -91,12 +91,12 @@ public:
     size_t RemainingBytes;      // Total number of unused bytes
                                 // corresponding to Cursor
     std::atomic<void *> Cursor; // Address of the last trace record carved out
-    std::atomic<bool> isFull;   // true if no more trace records can be
+    std::atomic<bool> IsFull;   // true if no more trace records can be
                                 // accomodated, otherwise false
     Buffer(uint64_t BufId, int64_t DevId, void *S, size_t Bytes, size_t Rem,
            void *C, bool F)
         : Id(BufId), DeviceId(DevId), Start(S), TotalBytes(Bytes),
-          RemainingBytes(Rem), Cursor(C), isFull(F) {}
+          RemainingBytes(Rem), Cursor(C), IsFull(F) {}
     Buffer() = delete;
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
@@ -152,8 +152,8 @@ private:
     void *FlushCursor;
     BufPtr FlushBuf;
     FlushInfo() = default;
-    FlushInfo(uint64_t id, void *cr, BufPtr buf)
-        : FlushId{id}, FlushCursor{cr}, FlushBuf{buf} {}
+    FlushInfo(uint64_t Id, void *CR, BufPtr Buf)
+        : FlushId{Id}, FlushCursor{CR}, FlushBuf{Buf} {}
   };
 
   /*
@@ -171,8 +171,8 @@ private:
     void *FlushCursor;
     BufPtr FlushBuf;
     BufferFlushStatus FlushStatus;
-    FlushMd(void *cr, BufPtr buf, BufferFlushStatus status)
-        : FlushCursor{cr}, FlushBuf{buf}, FlushStatus{status} {}
+    FlushMd(void *CR, BufPtr Buf, BufferFlushStatus Status)
+        : FlushCursor{CR}, FlushBuf{Buf}, FlushStatus{Status} {}
     FlushMd() = delete;
   };
 
@@ -232,20 +232,20 @@ private:
   void flushBuffer(FlushInfo);
 
   // Dispatch a buffer-completion callback with a range of trace records
-  void dispatchCallback(int64_t DeviceId, void *buffer, void *first_cursor,
-                        void *last_cursor);
+  void dispatchCallback(int64_t DeviceId, void *Buffer, void *FirstCursor,
+                        void *LastCursor);
 
   // Add a last cursor
-  void addLastCursor(void *cursor) {
+  void addLastCursor(void *Cursor) {
     std::unique_lock<std::mutex> Lock(LastCursorMutex);
-    LastCursors.emplace(cursor);
+    LastCursors.emplace(Cursor);
   }
 
   // Remove a last cursor
-  void removeLastCursor(void *cursor) {
+  void removeLastCursor(void *Cursor) {
     std::unique_lock<std::mutex> Lock(LastCursorMutex);
-    assert(LastCursors.find(cursor) != LastCursors.end());
-    LastCursors.erase(cursor);
+    assert(LastCursors.find(Cursor) != LastCursors.end());
+    LastCursors.erase(Cursor);
   }
 
   // Given a trace record pointer, initialize its metadata
@@ -257,7 +257,7 @@ private:
 
   // Reserve a candidate buffer for flushing, preventing other helper threads
   // from accessing it
-  FlushInfo findAndReserveFlushedBuf(uint64_t id);
+  FlushInfo findAndReserveFlushedBuf(uint64_t FlushId);
 
   // Unreserve a buffer so that other helper threads can process it
   void unreserveFlushedBuf(const FlushInfo &);
@@ -266,10 +266,10 @@ private:
   void destroyFlushedBuf(const FlushInfo &);
 
   // Add a new buffer by an OpenMP thread so that a helper thread can process it
-  uint64_t addNewFlushEntry(BufPtr buf, void *cursor);
+  uint64_t addNewFlushEntry(BufPtr Buf, void *Cursor);
 
   // Get the next trace record
-  void *getNextTR(void *tr);
+  void *getNextTR(void *TR);
 
   // Given a buffer, return the latest cursor
   void *getBufferCursor(BufPtr);
@@ -295,45 +295,45 @@ private:
 
   // Given a thread number, set the corresponding bit in the flush
   // tracker. The caller must hold the flush lock.
-  void setThreadFlush(uint32_t thd_num) {
-    ThreadFlushTracker |= (1 << thd_num);
+  void setThreadFlush(uint32_t ThreadNum) {
+    ThreadFlushTracker |= (1 << ThreadNum);
   }
 
   // Reset this thread's flush bit. The caller must hold the flush lock
   void resetThisThreadFlush() {
-    std::thread::id id = std::this_thread::get_id();
-    assert(HelperThreadIdMap.find(id) != HelperThreadIdMap.end());
-    ThreadFlushTracker &= ~(1 << HelperThreadIdMap[id]);
+    std::thread::id ID = std::this_thread::get_id();
+    assert(HelperThreadIdMap.find(ID) != HelperThreadIdMap.end());
+    ThreadFlushTracker &= ~(1 << HelperThreadIdMap[ID]);
   }
 
   // Given a thread number, set the corresponding bit in the shutdown
   // tracker. The caller must hold the flush lock.
-  void setThreadShutdown(uint32_t thd_num) {
-    ThreadShutdownTracker |= (1 << thd_num);
+  void setThreadShutdown(uint32_t ThreadNum) {
+    ThreadShutdownTracker |= (1 << ThreadNum);
   }
 
   // Reset this thread's shutdown bit. The caller must hold the flush
   // lock
   void resetThisThreadShutdown() {
-    std::thread::id id = std::this_thread::get_id();
-    assert(HelperThreadIdMap.find(id) != HelperThreadIdMap.end());
-    ThreadShutdownTracker &= ~(1 << HelperThreadIdMap[id]);
+    std::thread::id ID = std::this_thread::get_id();
+    assert(HelperThreadIdMap.find(ID) != HelperThreadIdMap.end());
+    ThreadShutdownTracker &= ~(1 << HelperThreadIdMap[ID]);
   }
 
   // Return true if this thread's flush bit is set. The caller must
   // hold the flush lock
   bool isThisThreadFlushWaitedUpon() {
-    std::thread::id id = std::this_thread::get_id();
-    assert(HelperThreadIdMap.find(id) != HelperThreadIdMap.end());
-    return (ThreadFlushTracker & (1 << HelperThreadIdMap[id])) != 0;
+    std::thread::id ID = std::this_thread::get_id();
+    assert(HelperThreadIdMap.find(ID) != HelperThreadIdMap.end());
+    return (ThreadFlushTracker & (1 << HelperThreadIdMap[ID])) != 0;
   }
 
   // Return true if this thread's shutdown bit is set. The caller must
   // hold the flush lock
   bool isThisThreadShutdownWaitedUpon() {
-    std::thread::id id = std::this_thread::get_id();
-    assert(HelperThreadIdMap.find(id) != HelperThreadIdMap.end());
-    return (ThreadShutdownTracker & (1 << HelperThreadIdMap[id])) != 0;
+    std::thread::id ID = std::this_thread::get_id();
+    assert(HelperThreadIdMap.find(ID) != HelperThreadIdMap.end());
+    return (ThreadShutdownTracker & (1 << HelperThreadIdMap[ID])) != 0;
   }
 
   // The caller must not hold the flush lock

@@ -14,7 +14,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(CMakePackageConfigHelpers)
   include(GNUInstallDirs)
 
-  find_package(ROCM)
+  find_package(ROCmCMakeBuildTools)
   if (ROCM_FOUND)
     include(ROCMSetupVersion)
     rocm_setup_version(VERSION "${PROJECT_VERSION}")

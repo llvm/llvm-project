@@ -438,6 +438,10 @@ private:
       collectRewrite(declareOp.getMemref(), region, rewriteValues,
                      parentValRewrites);
 
+      if (declareOp.getStorage())
+        collectRewrite(declareOp.getStorage(), region, rewriteValues,
+                       parentValRewrites);
+
       // Shape and typeparams aren't needed for target device codegen, but
       // removing them would break verifiers.
       Value zero;
