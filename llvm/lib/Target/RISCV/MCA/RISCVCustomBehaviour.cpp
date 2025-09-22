@@ -95,8 +95,8 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
                                          llvm::StringRef Data) {
   if (Desc == RISCVLMULInstrument::DESC_NAME) {
     if (!RISCVLMULInstrument::isDataValid(Data)) {
-      LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc
-                        << ": " << Data << '\n');
+      LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc << ": "
+                        << Data << '\n');
       return nullptr;
     }
     return std::make_unique<RISCVLMULInstrument>(Data);
@@ -111,8 +111,8 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
     return std::make_unique<RISCVSEWInstrument>(Data);
   }
 
-  LLVM_DEBUG(dbgs() << "RVCB: Creating default instrument for Desc: "
-                    << Desc << '\n');
+  LLVM_DEBUG(dbgs() << "RVCB: Creating default instrument for Desc: " << Desc
+                    << '\n');
   return InstrumentManager::createInstrument(Desc, Data);
 }
 
