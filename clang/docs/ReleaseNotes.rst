@@ -530,6 +530,7 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
+- Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyIfAttached`` for LLVM style.
 
 libclang
 --------
