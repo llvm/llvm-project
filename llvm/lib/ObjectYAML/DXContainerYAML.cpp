@@ -163,11 +163,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     }
   }
 
-  for (llvm::Expected<dxbc::RTS0::v3::StaticSampler> MaybeSampler :
-       Data.samplers()) {
-    if (Error E = MaybeSampler.takeError())
-      return std::move(E);
-    const llvm::dxbc::RTS0::v3::StaticSampler &S = *MaybeSampler;
+  for (const auto &S : Data.samplers()) {
 
     if (!dxbc::isValidSamplerFilter(S.Filter))
       return createStringError(std::errc::invalid_argument,

@@ -223,28 +223,6 @@ static Error parseFailed(const Twine &Msg) {
 
 class RootSignature {
 private:
-  struct samplers_iterator {
-    const RootSignature *Parent = nullptr;
-    uint32_t Index = 0;
-
-    llvm::Expected<dxbc::RTS0::v3::StaticSampler> operator*() const {
-      return Parent->getSampler(Index);
-    }
-
-    samplers_iterator &operator++() {
-      ++Index;
-      return *this;
-    }
-
-    bool operator==(const samplers_iterator &Other) const {
-      return Parent == Other.Parent && Index == Other.Index;
-    }
-
-    bool operator!=(const samplers_iterator &Other) const {
-      return !(*this == Other);
-    }
-  };
-
   uint32_t Version;
   uint32_t NumParameters;
   uint32_t RootParametersOffset;
@@ -253,32 +231,11 @@ private:
   uint32_t Flags;
   ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
-  ViewArray<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
-
-  llvm::Expected<dxbc::RTS0::v3::StaticSampler> getSampler(uint32_t Loc) const {
-    if (Loc >= getNumStaticSamplers())
-      return parseFailed("Static sampler index out of range");
-
-    auto SamplerSize = (Version <= 2) ? sizeof(dxbc::RTS0::v1::StaticSampler)
-                                     : sizeof(dxbc::RTS0::v3::StaticSampler);
-
-    StringRef Buff = PartData.substr(StaticSamplersOffset + (Loc * SamplerSize),
-                                     SamplerSize);
-    if (Version < 3) {
-      auto Sampler = readParameter<dxbc::RTS0::v1::StaticSampler>(Buff);
-      if (Error E = Sampler.takeError())
-        return E;
-      return dxbc::RTS0::v3::StaticSampler(*Sampler);
-    }
-    if (Version != 3)
-      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
-                                                Twine(Version),
-                                            object_error::parse_failed);
-    return readParameter<dxbc::RTS0::v3::StaticSampler>(Buff);
-  }
+  ViewArray<dxbc::RTS0::v3::StaticSampler> StaticSamplers;
 
   using param_header_iterator =
       ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
+  using samplers_iterator = ViewArray<dxbc::RTS0::v3::StaticSampler>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
@@ -290,21 +247,12 @@ public:
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
   uint32_t getNumRootParameters() const { return ParametersHeaders.size(); }
-
-  samplers_iterator samplers_begin() const {
-    return samplers_iterator{this, 0};
-  }
-
-  samplers_iterator samplers_end() const {
-    return samplers_iterator{this, getNumStaticSamplers()};
+  llvm::iterator_range<param_header_iterator> param_headers() const {
+    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
 
   llvm::iterator_range<samplers_iterator> samplers() const {
-    return llvm::make_range(samplers_begin(), samplers_end());
-  }
-
-  llvm::iterator_range<param_header_iterator> param_headers() const {
-    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
+    return llvm::make_range(StaticSamplers.begin(), StaticSamplers.end());
   }
 
   uint32_t getFlags() const { return Flags; }
