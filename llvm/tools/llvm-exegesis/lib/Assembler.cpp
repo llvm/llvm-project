@@ -66,8 +66,6 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       assert(MM.Address % getpagesize() == 0 &&
              "Memory mappings need to be aligned to page boundaries.");
 #endif
-      // FIXME: file descriptor for aux memory seems not initialized.
-      // TODO: Invoke openat syscall to get correct fd for aux memory
       const MemoryValue &MemVal = Key.MemoryValues.at(MM.MemoryValueName);
       BBF.addInstructions(ET.generateMmap(
           MM.Address, MemVal.SizeBytes,

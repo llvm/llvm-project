@@ -384,9 +384,8 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
                                     uintptr_t FileDescriptorAddress) const {
   // mmap(address, length, prot, flags, fd, offset=0)
   int flags = MAP_SHARED;
-  if (Address != 0) {
+  if (Address != 0)
     flags |= MAP_FIXED_NOREPLACE;
-  }
   std::vector<MCInst> MmapCode;
   MmapCode.push_back(
       loadImmediate(AArch64::X0, 64, APInt(64, Address))); // map adr
@@ -395,10 +394,14 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
   MmapCode.push_back(loadImmediate(AArch64::X2, 64,
                                    APInt(64, PROT_READ | PROT_WRITE))); // prot
   MmapCode.push_back(loadImmediate(AArch64::X3, 64, APInt(64, flags))); // flags
-  // FIXME: File descriptor address is not initialized.
   // Copy file descriptor location from aux memory into X4
   MmapCode.push_back(
-      loadImmediate(AArch64::X4, 64, APInt(64, FileDescriptorAddress))); // fd
+      loadImmediate(ArgumentRegisters::TempRegister, 64, APInt(64, FileDescriptorAddress)));
+  // Dereference file descriptor into X4 (32-bit load from [X16])
+  MmapCode.push_back(MCInstBuilder(AArch64::LDRWui)
+                         .addReg(AArch64::W4)   // destination: W4 (X4 lower 32 bits)
+                         .addReg(ArgumentRegisters::TempRegister)   // base address: X16
+                         .addImm(0));           // offset: 0
   MmapCode.push_back(loadImmediate(AArch64::X5, 64, APInt(64, 0))); // offset
   generateSysCall(SYS_mmap, MmapCode); // SYS_mmap is 222
   return MmapCode;
@@ -406,12 +409,13 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
 
 void ExegesisAArch64Target::generateMmapAuxMem(
     std::vector<MCInst> &GeneratedCode) const {
-  dbgs() << "Warning: generateMmapAuxMem using anonymous mapping\n";
   int fd = -1;
   int flags = MAP_SHARED;
   uintptr_t address = getAuxiliaryMemoryStartAddress();
-  if (fd == -1)
+  if (fd == -1){
+    dbgs() << "Warning: generateMmapAuxMem using anonymous mapping\n";
     flags |= MAP_ANONYMOUS;
+  }
   if (address != 0)
     flags |= MAP_FIXED_NOREPLACE;
   int prot = PROT_READ | PROT_WRITE;
