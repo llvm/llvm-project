@@ -38,14 +38,6 @@ foreach i = 0...4 in {
   def R#i  : NVPTXReg<"%r"#i>;  // 32-bit
   def RL#i : NVPTXReg<"%rd"#i>; // 64-bit
   def RQ#i : NVPTXReg<"%rq"#i>; // 128-bit
-  def H#i  : NVPTXReg<"%h"#i>;  // 16-bit float
-  def HH#i : NVPTXReg<"%hh"#i>; // 2x16-bit float
-
-  // Arguments
-  def ia#i : NVPTXReg<"%ia"#i>;
-  def la#i : NVPTXReg<"%la"#i>;
-  def fa#i : NVPTXReg<"%fa"#i>;
-  def da#i : NVPTXReg<"%da"#i>;
 }
 
 foreach i = 0...31 in {

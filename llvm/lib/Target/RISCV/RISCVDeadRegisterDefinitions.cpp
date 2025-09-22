@@ -89,7 +89,7 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
         Register X0Reg;
-        const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
+        const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI);
         if (RC && RC->contains(RISCV::X0)) {
           X0Reg = RISCV::X0;
         } else if (RC && RC->contains(RISCV::X0_W)) {

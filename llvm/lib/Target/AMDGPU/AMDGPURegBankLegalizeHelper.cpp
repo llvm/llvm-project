@@ -294,7 +294,8 @@ void RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
       BasePlusOffset = Base;
     } else {
       auto Offset = B.buildConstant({PtrRB, OffsetTy}, ByteOffset);
-      BasePlusOffset = B.buildPtrAdd({PtrRB, PtrTy}, Base, Offset).getReg(0);
+      BasePlusOffset =
+          B.buildObjectPtrOffset({PtrRB, PtrTy}, Base, Offset).getReg(0);
     }
     auto *OffsetMMO = MF.getMachineMemOperand(&BaseMMO, ByteOffset, PartTy);
     auto LoadPart = B.buildLoad({DstRB, PartTy}, BasePlusOffset, *OffsetMMO);
@@ -348,6 +349,32 @@ void RegBankLegalizeHelper::widenLoad(MachineInstr &MI, LLT WideTy,
     }
     B.buildMergeLikeInstr(Dst, MergeTyParts);
   }
+  MI.eraseFromParent();
+}
+
+void RegBankLegalizeHelper::widenMMOToS32(GAnyLoad &MI) const {
+  Register Dst = MI.getDstReg();
+  Register Ptr = MI.getPointerReg();
+  MachineMemOperand &MMO = MI.getMMO();
+  unsigned MemSize = 8 * MMO.getSize().getValue();
+
+  MachineMemOperand *WideMMO = B.getMF().getMachineMemOperand(&MMO, 0, S32);
+
+  if (MI.getOpcode() == G_LOAD) {
+    B.buildLoad(Dst, Ptr, *WideMMO);
+  } else {
+    auto Load = B.buildLoad(SgprRB_S32, Ptr, *WideMMO);
+
+    if (MI.getOpcode() == G_ZEXTLOAD) {
+      APInt Mask = APInt::getLowBitsSet(S32.getSizeInBits(), MemSize);
+      auto MaskCst = B.buildConstant(SgprRB_S32, Mask);
+      B.buildAnd(Dst, Load, MaskCst);
+    } else {
+      assert(MI.getOpcode() == G_SEXTLOAD);
+      B.buildSExtInReg(Dst, Load, MemSize);
+    }
+  }
+
   MI.eraseFromParent();
 }
 
@@ -743,6 +770,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     }
     break;
   }
+  case WidenMMOToS32:
+    return widenMMOToS32(cast<GAnyLoad>(MI));
   }
 
   if (!WaterfallSgprs.empty()) {
@@ -758,6 +787,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::scalar(1);
   case Sgpr16:
   case Vgpr16:
+  case UniInVgprS16:
     return LLT::scalar(16);
   case Sgpr32:
   case Sgpr32_WF:
@@ -894,6 +924,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprB256:
   case SgprB512:
   case UniInVcc:
+  case UniInVgprS16:
   case UniInVgprS32:
   case UniInVgprV2S16:
   case UniInVgprV4S32:
@@ -1012,6 +1043,18 @@ void RegBankLegalizeHelper::applyMappingDst(
       auto CopyS32_Vcc =
           B.buildInstr(AMDGPU::G_AMDGPU_COPY_SCC_VCC, {SgprRB_S32}, {NewDst});
       B.buildTrunc(Reg, CopyS32_Vcc);
+      break;
+    }
+    case UniInVgprS16: {
+      assert(Ty == getTyFromID(MethodIDs[OpIdx]));
+      assert(RB == SgprRB);
+      Register NewVgprDstS16 = MRI.createVirtualRegister({VgprRB, S16});
+      Register NewVgprDstS32 = MRI.createVirtualRegister({VgprRB, S32});
+      Register NewSgprDstS32 = MRI.createVirtualRegister({SgprRB, S32});
+      Op.setReg(NewVgprDstS16);
+      B.buildAnyExt(NewVgprDstS32, NewVgprDstS16);
+      buildReadAnyLane(B, NewSgprDstS32, NewVgprDstS32, RBI);
+      B.buildTrunc(Reg, NewSgprDstS32);
       break;
     }
     case UniInVgprS32:

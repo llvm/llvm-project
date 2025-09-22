@@ -310,7 +310,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF2-SAME: ptr noalias [[P:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -325,13 +325,13 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
-; VF2:       [[SCALAR_PH]]:
+; VF2-NEXT:    br [[EXIT:label %.*]]
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF2IC2-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF2IC2-SAME: ptr noalias [[P:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
@@ -352,13 +352,13 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
-; VF2IC2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
-; VF2IC2:       [[SCALAR_PH]]:
+; VF2IC2-NEXT:    br [[EXIT:label %.*]]
+; VF2IC2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF4-SAME: ptr noalias [[P:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -378,8 +378,8 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
-; VF4:       [[SCALAR_PH]]:
+; VF4-NEXT:    br [[EXIT:label %.*]]
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop

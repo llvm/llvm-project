@@ -95,3 +95,7 @@ def CSR_XLEN_F32_V_Interrupt_RVE: CalleeSavedRegs<(sub CSR_XLEN_F32_V_Interrupt,
 // Same as CSR_XLEN_F64_V_Interrupt, but excluding X16-X31.
 def CSR_XLEN_F64_V_Interrupt_RVE: CalleeSavedRegs<(sub CSR_XLEN_F64_V_Interrupt,
                                                    (sequence "X%u", 16, 31))>;
+
+def CSR_RT_MostRegs : CalleeSavedRegs<(sub CSR_Interrupt, X6, X7, X28)>;
+def CSR_RT_MostRegs_RVE : CalleeSavedRegs<(sub CSR_RT_MostRegs,
+                                               (sequence "X%u", 16, 31))>;

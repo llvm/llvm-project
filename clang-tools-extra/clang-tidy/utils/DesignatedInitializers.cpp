@@ -1,4 +1,4 @@
-//===--- DesignatedInitializers.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 
 #include "DesignatedInitializers.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 

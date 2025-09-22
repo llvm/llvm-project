@@ -270,7 +270,6 @@ add_libc_test(
      libc.src.stdio.vasprintf
      libc.src.string.memset
      libc.include.stdlib
-     libc.src.stdio.sprintf
  )
 
 if(LLVM_LIBC_FULL_BUILD)

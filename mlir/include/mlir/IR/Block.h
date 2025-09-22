@@ -205,12 +205,14 @@ public:
   }
 
   /// Return an iterator range over the operation within this block excluding
-  /// the terminator operation at the end.
+  /// the terminator operation at the end. If the block has no terminator,
+  /// return an iterator range over the entire block. If it is unknown if the
+  /// block has a terminator (i.e., last block operation is unregistered), also
+  /// return an iterator range over the entire block.
   iterator_range<iterator> without_terminator() {
     if (begin() == end())
       return {begin(), end()};
-    auto endIt = --end();
-    return {begin(), endIt};
+    return without_terminator_impl();
   }
 
   //===--------------------------------------------------------------------===//
@@ -221,7 +223,8 @@ public:
   /// the block might have a valid terminator operation.
   Operation *getTerminator();
 
-  /// Check whether this block might have a terminator.
+  /// Return "true" if this block might have a terminator. Return "true" if
+  /// the last operation is unregistered.
   bool mightHaveTerminator();
 
   //===--------------------------------------------------------------------===//
@@ -402,6 +405,9 @@ public:
   void printAsOperand(raw_ostream &os, AsmState &state);
 
 private:
+  /// Same as `without_terminator`, but assumes that the block is not empty.
+  iterator_range<iterator> without_terminator_impl();
+
   /// Pair of the parent object that owns this block and a bit that signifies if
   /// the operations within this block have a valid ordering.
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;

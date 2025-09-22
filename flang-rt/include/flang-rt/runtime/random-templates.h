@@ -33,7 +33,7 @@ static constexpr int rangeBits{
 
 extern Lock lock;
 extern Generator generator;
-extern Fortran::common::optional<GeneratedWord> nextValue;
+extern common::optional<GeneratedWord> nextValue;
 
 // Call only with lock held
 static GeneratedWord GetNextValue() {

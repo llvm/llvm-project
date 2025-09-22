@@ -286,8 +286,7 @@ define i1 @PR8882(i64 %i) {
 
 define i1 @test24_as1(i64 %i) {
 ; CHECK-LABEL: @test24_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[I:%.*]], 65535
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 1000
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1:%.*]], 1000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %p1 = getelementptr inbounds i32, ptr addrspace(1) @X_as1, i64 %i
@@ -449,9 +448,9 @@ define i1 @test_gep_eq_no_inbounds(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test60_as1(ptr addrspace(1) %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[I:%.*]] to i16
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[J:%.*]] to i16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -686,13 +685,13 @@ define i1 @test_scalable_ij(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @gep_nuw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: @gep_nuw(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nuw i64 [[A:%.*]], 2
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = shl nuw i64 [[B:%.*]], 1
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nuw i64 [[GEP1_IDX]], [[GEP1_IDX1]]
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nuw i64 [[C:%.*]], 3
-; CHECK-NEXT:    [[GEP2_IDX2:%.*]] = shl nuw i64 [[D:%.*]], 2
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nuw i64 [[GEP2_IDX]], [[GEP2_IDX2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP1_SPLIT_IDX:%.*]] = shl nuw i64 [[A:%.*]], 2
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nuw i64 [[B:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[GEP1_SPLIT_IDX]], [[GEP1_IDX]]
+; CHECK-NEXT:    [[GEP2_SPLIT_IDX:%.*]] = shl nuw i64 [[C:%.*]], 3
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nuw i64 [[D:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[GEP2_SPLIT_IDX]], [[GEP2_IDX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr nuw [2 x i16], ptr %p, i64 %a, i64 %b
@@ -703,13 +702,13 @@ define i1 @gep_nuw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 
 define i1 @gep_nusw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: @gep_nusw(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[A:%.*]], 2
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = shl nsw i64 [[B:%.*]], 1
-; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[GEP1_IDX]], [[GEP1_IDX1]]
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nsw i64 [[C:%.*]], 3
-; CHECK-NEXT:    [[GEP2_IDX2:%.*]] = shl nsw i64 [[D:%.*]], 2
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[GEP2_IDX]], [[GEP2_IDX2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    [[GEP1_SPLIT_IDX:%.*]] = shl nsw i64 [[A:%.*]], 2
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[B:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[GEP1_SPLIT_IDX]], [[GEP1_IDX]]
+; CHECK-NEXT:    [[GEP2_SPLIT_IDX:%.*]] = shl nsw i64 [[C:%.*]], 3
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nsw i64 [[D:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[GEP2_SPLIT_IDX]], [[GEP2_IDX]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr nusw [2 x i16], ptr %p, i64 %a, i64 %b
@@ -839,9 +838,9 @@ define i1 @gep_mugtiple_ugt_not_all_nuw(ptr %base, i64 %idx, i64 %idx2) {
 
 define i1 @gep_mugtiple_ugt_inbounds_nusw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_mugtiple_ugt_inbounds_nusw(
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[GEP1_IDX1]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP2]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr inbounds i32, ptr %base, i64 %idx

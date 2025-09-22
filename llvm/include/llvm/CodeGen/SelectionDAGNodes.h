@@ -182,7 +182,7 @@ public:
     return SDValue(Node, R);
   }
 
-  /// Return true if this node is an operand of N.
+  /// Return true if the referenced return value is an operand of N.
   LLVM_ABI bool isOperandOf(const SDNode *N) const;
 
   /// Return the ValueType of the referenced return value.
@@ -1885,6 +1885,12 @@ LLVM_ABI SDValue peekThroughOneUseBitcasts(SDValue V);
 /// If \p V is not an extracted subvector, it is returned as-is.
 LLVM_ABI SDValue peekThroughExtractSubvectors(SDValue V);
 
+/// Recursively peek through INSERT_VECTOR_ELT nodes, returning the source
+/// vector operand of \p V, as long as \p V is an INSERT_VECTOR_ELT operation
+/// that do not insert into any of the demanded vector elts.
+LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
+                                            const APInt &DemandedElts);
+
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
@@ -1999,22 +2005,18 @@ public:
   }
 };
 
-/// This SDNode is used for LIFETIME_START/LIFETIME_END values, which indicate
-/// the offet and size that are started/ended in the underlying FrameIndex.
+/// This SDNode is used for LIFETIME_START/LIFETIME_END values.
 class LifetimeSDNode : public SDNode {
   friend class SelectionDAG;
-  int64_t Size;
 
   LifetimeSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
-                 SDVTList VTs, int64_t Size)
-      : SDNode(Opcode, Order, dl, VTs), Size(Size) {}
+                 SDVTList VTs)
+      : SDNode(Opcode, Order, dl, VTs) {}
 
 public:
   int64_t getFrameIndex() const {
     return cast<FrameIndexSDNode>(getOperand(1))->getIndex();
   }
-
-  int64_t getSize() const { return Size; }
 
   // Methods to support isa and dyn_cast
   static bool classof(const SDNode *N) {
@@ -3103,6 +3105,23 @@ public:
   }
 };
 
+class VPLoadFFSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  VPLoadFFSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs, EVT MemVT,
+                 MachineMemOperand *MMO)
+      : MemSDNode(ISD::VP_LOAD_FF, Order, DL, VTs, MemVT, MMO) {}
+
+  const SDValue &getBasePtr() const { return getOperand(1); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getVectorLength() const { return getOperand(3); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::VP_LOAD_FF;
+  }
+};
+
 class FPStateAccessSDNode : public MemSDNode {
 public:
   friend class SelectionDAG;
@@ -3323,6 +3342,22 @@ namespace ISD {
   inline bool isUNINDEXEDStore(const SDNode *N) {
     auto *St = dyn_cast<StoreSDNode>(N);
     return St && St->getAddressingMode() == ISD::UNINDEXED;
+  }
+
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked load.
+  inline bool isNormalMaskedLoad(const SDNode *N) {
+    auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
+           Ld->getAddressingMode() == ISD::UNINDEXED;
+  }
+
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked store.
+  inline bool isNormalMaskedStore(const SDNode *N) {
+    auto *St = dyn_cast<MaskedStoreSDNode>(N);
+    return St && !St->isTruncatingStore() &&
+           St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

@@ -278,18 +278,18 @@ define i32 @min2u32(i32, i32) {
 define zeroext i1 @mini1(i1 zeroext, i1 zeroext) {
 ; CHECK-LABEL: mini1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    and %s2, %s1, %s0
-; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
-; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
+; CHECK-NEXT:    and %s2, 1, %s0
+; CHECK-NEXT:    and %s0, %s1, %s0
+; CHECK-NEXT:    cmov.w.ne %s0, %s1, %s2
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
 ; OPT-LABEL: mini1:
 ; OPT:       # %bb.0:
-; OPT-NEXT:    and %s0, %s0, (32)0
-; OPT-NEXT:    and %s2, %s1, %s0
-; OPT-NEXT:    cmov.w.ne %s2, %s1, %s0
-; OPT-NEXT:    adds.w.zx %s0, %s2, (0)1
+; OPT-NEXT:    and %s2, 1, %s0
+; OPT-NEXT:    and %s0, %s1, %s0
+; OPT-NEXT:    cmov.w.ne %s0, %s1, %s2
+; OPT-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; OPT-NEXT:    b.l.t (, %s10)
   %3 = xor i1 %0, true
   %4 = and i1 %3, %1

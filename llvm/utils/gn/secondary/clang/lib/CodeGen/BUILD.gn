@@ -143,6 +143,7 @@ static_library("CodeGen") {
     "Targets/WebAssembly.cpp",
     "Targets/X86.cpp",
     "Targets/XCore.cpp",
+    "TrapReasonBuilder.cpp",
     "VarBypassDetector.cpp",
   ]
 }

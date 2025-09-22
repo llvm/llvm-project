@@ -78,7 +78,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     Location loc = extractOp.getLoc();
 
     Value newSrcVector = vector::ExtractOp::create(
-        rewriter, loc, extractOp.getVector(), splatZero(dropCount));
+        rewriter, loc, extractOp.getSource(), splatZero(dropCount));
 
     // The offsets/sizes/strides attribute can have a less number of elements
     // than the input vector's rank: it is meant for the leading dimensions.
@@ -466,9 +466,9 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
   }
 
-  return rewriter
-      .create<vector::BroadcastOp>(loc, contractOp->getResultTypes()[0],
-                                   newOp->getResults()[0])
+  return vector::BroadcastOp::create(rewriter, loc,
+                                     contractOp->getResultTypes()[0],
+                                     newOp->getResults()[0])
       .getResult();
 }
 

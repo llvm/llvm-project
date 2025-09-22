@@ -17,6 +17,6 @@ _CLC_DEF _CLC_OVERLOAD size_t __clc_get_group_id(uint dim) {
   case 2:
     return __builtin_amdgcn_workgroup_id_z();
   default:
-    return 1;
+    return 0;
   }
 }

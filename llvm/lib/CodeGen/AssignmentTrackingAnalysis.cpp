@@ -1403,7 +1403,7 @@ void AssignmentTrackingLowering::addMemDef(BlockInfo *LiveSet, VariableID Var,
                                            const Assignment &AV) {
   LiveSet->setAssignment(BlockInfo::Stack, Var, AV);
 
-  // Use this assigment for all fragments contained within Var, but do not
+  // Use this assignment for all fragments contained within Var, but do not
   // provide a Source because we cannot convert Var's value to a value for the
   // fragment.
   Assignment FragAV = AV;
@@ -1416,7 +1416,7 @@ void AssignmentTrackingLowering::addDbgDef(BlockInfo *LiveSet, VariableID Var,
                                            const Assignment &AV) {
   LiveSet->setAssignment(BlockInfo::Debug, Var, AV);
 
-  // Use this assigment for all fragments contained within Var, but do not
+  // Use this assignment for all fragments contained within Var, but do not
   // provide a Source because we cannot convert Var's value to a value for the
   // fragment.
   Assignment FragAV = AV;
