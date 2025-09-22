@@ -1301,7 +1301,7 @@ OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
       std::move(clauses), std::move(flags)};
 }
 
-TYPE_PARSER(sourced(
+TYPE_PARSER(
     // Parse the old syntax: FLUSH [clauses] [(objects)]
     sourced(construct<OmpDirectiveSpecification>(
         // Force this old-syntax parser to fail for FLUSH followed by '('.
@@ -1319,7 +1319,7 @@ TYPE_PARSER(sourced(
         sourced(OmpDirectiveNameParser{}),
         maybe(parenthesized(Parser<OmpArgumentList>{})),
         maybe(Parser<OmpClauseList>{}),
-        pure(OmpDirectiveSpecification::Flags::None)))))
+        pure(OmpDirectiveSpecification::Flags::None))))
 
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
   // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
