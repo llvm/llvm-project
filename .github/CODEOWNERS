@@ -59,6 +59,10 @@
 /mlir/**/BufferizableOpInterfaceImpl.* @matthias-springer
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
+# DLTI Dialect in MLIR
+/mlir/**/Dialect/DLTI @rolfmorel
+/mlir/**/DataLayoutInterfaces.* @rolfmorel
+
 # Linalg Dialect in MLIR.
 /mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
