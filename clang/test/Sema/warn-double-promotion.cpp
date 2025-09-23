@@ -155,3 +155,96 @@ void MultiplicationAssignment(float f, double d, long double ld) {
   ld *= LongDouble(f);
   ld *= LongDouble(d);
 }
+
+struct ConstructWithDouble {
+  ConstructWithDouble(double);
+};
+
+struct ConstructWithLongDouble {
+  ConstructWithLongDouble(long double);
+};
+
+void Construct(float f, double d) {
+  ConstructWithDouble{f};  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+  ConstructWithLongDouble{f};  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+  ConstructWithLongDouble{d};  // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  ConstructWithDouble{static_cast<double>(f)};
+  ConstructWithLongDouble{static_cast<long double>(f)};
+  ConstructWithLongDouble{static_cast<long double>(d)};
+  ConstructWithDouble{double{f}};
+  ConstructWithLongDouble{LongDouble{f}};
+  ConstructWithLongDouble{LongDouble{d}};
+  ConstructWithDouble{double(f)};
+  ConstructWithLongDouble{LongDouble(f)};
+  ConstructWithLongDouble{LongDouble(d)};
+}
+
+template <class T> T ReturnTFromFloat(float f) {
+  return f;  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}} \
+             // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+}
+
+template <class T> T ReturnTFromDouble(double d) {
+  return d;  // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+}
+
+template <class T> T ReturnTFromFloatWithStaticCast(float f) {
+  return static_cast<T>(f);
+}
+
+template <class T> T ReturnTFromDoubleWithStaticCast(double d) {
+  return static_cast<T>(d);
+}
+
+template <class T> T ReturnTFromFloatWithExplicitListInitialization(float f) {
+  return T{f};
+}
+
+template <class T> T ReturnTFromDoubleWithExplicitListInitialization(double d) {
+  return T{d};
+}
+
+template <class T> T ReturnTFromFloatWithFunctionStyleCast(float f) {
+  return T(f);
+}
+
+template <class T> T ReturnTFromDoubleWithFunctionStyleCast(double d) {
+  return T(d);
+}
+
+void TestTemplate(float f, double d) {
+  ReturnTFromFloat<double>(f);  // expected-note{{in instantiation of function template specialization 'ReturnTFromFloat<double>' requested here}}
+  ReturnTFromFloat<long double>(f);  // expected-note{{in instantiation of function template specialization 'ReturnTFromFloat<long double>' requested here}}
+  ReturnTFromDouble<long double>(d);  // expected-note{{in instantiation of function template specialization 'ReturnTFromDouble<long double>' requested here}}
+  ReturnTFromFloatWithStaticCast<double>(f);
+  ReturnTFromFloatWithStaticCast<long double>(f);
+  ReturnTFromDoubleWithStaticCast<long double>(d);
+  ReturnTFromFloatWithExplicitListInitialization<double>(f);
+  ReturnTFromFloatWithExplicitListInitialization<long double>(f);
+  ReturnTFromDoubleWithExplicitListInitialization<long double>(d);
+  ReturnTFromFloatWithFunctionStyleCast<double>(f);
+  ReturnTFromFloatWithFunctionStyleCast<long double>(f);
+  ReturnTFromDoubleWithFunctionStyleCast<long double>(d);
+}
+
+struct MemberInitializerListParens {
+  double m_d;
+  long double m_ld0;
+  long double m_ld1;
+  MemberInitializerListParens(float f, double d):
+    m_d(f),  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+    m_ld0(f),  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+    m_ld1(d)  // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  {}
+};
+
+struct MemberInitializerListBraces {
+  double m_d;
+  long double m_ld0;
+  long double m_ld1;
+  MemberInitializerListBraces(float f, double d):
+    m_d{f},  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+    m_ld0{f},  // expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+    m_ld1{d}  // expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  {}
+};
