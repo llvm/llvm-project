@@ -2379,7 +2379,7 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
     if (BF->isInConstantIsland(Address)) {
       this->outs() << "BOLT-WARNING: symbol " << Symbol->getName()
                    << " is in data region of function 0x"
-                   << Twine::utohexstr(Address) << ".\n";
+                   << Twine::utohexstr(BF->getAddress()) << ".\n";
       return nullptr;
     }
     *EntryDesc = BF->getEntryIDForSymbol(Symbol);

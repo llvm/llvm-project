@@ -1,5 +1,5 @@
 // This test checks that when looking for a function
-// correspnding to a symbol, BOLT is not looking 
+// corresponding to a symbol, BOLT is not looking 
 // through a data area (constant island).
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
