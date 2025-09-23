@@ -773,10 +773,22 @@ def RotateLeft : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Prototype = "T(T, T)";
 }
 
+def StdcRotateLeft : Builtin {
+  let Spellings = ["__builtin_stdc_rotate_left"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def RotateRight : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Spellings = ["__builtin_rotateright"];
   let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T(T, T)";
+}
+
+def StdcRotateRight : Builtin {
+  let Spellings = ["__builtin_stdc_rotate_right"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 // Random GCC builtins

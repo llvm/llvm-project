@@ -16336,23 +16336,17 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
-  case Builtin::BI_rotl8: // Microsoft variants of rotate right
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
-      return false;
-
-    return Success(Val.rotl(Amt), E);
-  }
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
@@ -16363,7 +16357,45 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), Amt, Info))
       return false;
 
-    return Success(Val.rotr(Amt), E);
+    // Normalize shift amount to [0, BitWidth) range to match runtime behavior
+    unsigned BitWidth = Val.getBitWidth();
+    unsigned AmtBitWidth = Amt.getBitWidth();
+    if (BitWidth == 1) {
+      // if BitWidth is 1, Amt % Divisor = 0
+      // No need for rotation
+      Amt = APSInt(APInt(AmtBitWidth, 0), Amt.isUnsigned());
+    } else {
+      APSInt Divisor;
+      if (AmtBitWidth > BitWidth) {
+        Divisor = APSInt(llvm::APInt(AmtBitWidth, BitWidth), Amt.isUnsigned());
+      } else {
+        Divisor = APSInt(llvm::APInt(BitWidth, BitWidth), Amt.isUnsigned());
+        if (AmtBitWidth < BitWidth) {
+          Amt = Amt.extend(BitWidth);
+        }
+      }
+
+      Amt = Amt % Divisor;
+      if (Amt.isNegative()) {
+        Amt += Divisor;
+      }
+    }
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      return Success(APSInt(Val.rotr(Amt.getZExtValue()), Val.isUnsigned()), E);
+    default:
+      return Success(APSInt(Val.rotl(Amt.getZExtValue()), Val.isUnsigned()), E);
+    }
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
