@@ -11,7 +11,7 @@
 define i16 @test_true_and_false_branch_equal() {
 ; CHECK-LABEL: @test_true_and_false_branch_equal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -47,7 +47,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i16 [ 99, [[SCALAR_PH]] ], [ [[INC7:%.*]], [[FOR_LATCH:%.*]] ]
+; CHECK-NEXT:    [[I_07:%.*]] = phi i16 [ 99, [[SCALAR_PH:%.*]] ], [ [[INC7:%.*]], [[FOR_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr @v_38, align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[LV]], 32767
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[COND_END:%.*]], label [[COND_END]]
@@ -62,7 +62,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[COND6]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RV:%.*]] = load i16, ptr @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]
