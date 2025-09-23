@@ -2248,7 +2248,6 @@ public:
   /// Return true if an array of scalar loads can be replaced with a strided
   ///  load (with constant stride).
   ///
-  ///  TODO:
   ///  It is possible that the load gets "widened". Suppose that originally each
   ///  load loads `k` bytes and `PointerOps` can be arranged as follows (`%s` is
   ///  constant): %b + 0 * %s + 0 %b + 0 * %s + 1 %b + 0 * %s + 2
@@ -6938,36 +6937,104 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
-    const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align Alignment,
+    const ArrayRef<Value *> PointerOps, Type *ElemTy, Align Alignment,
     const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
     Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
-  if (!isStridedLoad(PointerOps, ScalarTy, Alignment, Diff, Sz))
-    return false;
+  SmallVector<int64_t> SortedOffsetsFromBase(Sz);
+  // Go through `PointerOps` in sorted order and record offsets from `Ptr0`.
+  for (unsigned I : seq<unsigned>(Sz)) {
+    Value *Ptr =
+        SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
+    SortedOffsetsFromBase[I] =
+        *getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, *DL, *SE);
+  }
 
-  int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
+  // The code below checks that `SortedOffsetsFromBase` looks as follows:
+  // ```
+  // [
+  //   (e_{0, 0}, e_{0, 1}, ..., e_{0, GroupSize - 1}), // first group
+  //   (e_{1, 0}, e_{1, 1}, ..., e_{1, GroupSize - 1}), // secon group
+  //   ...
+  //   (e_{NumGroups - 1, 0}, e_{NumGroups - 1, 1}, ..., e_{NumGroups - 1,
+  //   GroupSize - 1}), // last group
+  // ]
+  // ```
+  // The distance between consecutive elements within each group should all be
+  // the same `StrideWithinGroup`. The distance between the first elements of
+  // consecutive groups should all be the same `StrideBetweenGroups`.
 
-  // Iterate through all pointers and check if all distances are
-  // unique multiple of Dist.
-  SmallSet<int64_t, 4> Dists;
-  for (Value *Ptr : PointerOps) {
-    int64_t Dist = 0;
-    if (Ptr == PtrN)
-      Dist = Diff;
-    else if (Ptr != Ptr0)
-      Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
-    // If the strides are not the same or repeated, we can't
-    // vectorize.
-    if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
+  int64_t StrideWithinGroup =
+      SortedOffsetsFromBase[1] - SortedOffsetsFromBase[0];
+  // Determine size of the first group. Later we will check that all other
+  // groups have the same size.
+  unsigned GroupSize = 1;
+  for (; GroupSize != SortedOffsetsFromBase.size(); ++GroupSize) {
+    if (SortedOffsetsFromBase[GroupSize] -
+            SortedOffsetsFromBase[GroupSize - 1] !=
+        StrideWithinGroup)
       break;
   }
-  if (Dists.size() == Sz) {
-    Type *StrideTy = DL->getIndexType(Ptr0->getType());
-    SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
-    SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
-    return true;
+  unsigned VecSz = Sz;
+  Type *ScalarTy = ElemTy;
+  int64_t StrideIntVal = StrideWithinGroup;
+  FixedVectorType *StridedLoadTy = getWidenedType(ScalarTy, VecSz);
+
+  // Quick detour: at this point we can say what the type of strided load would
+  // be if all the checks pass. Check if this type is legal for the target.
+  bool NeedsWidening = Sz != GroupSize;
+  if (NeedsWidening) {
+    if (Sz % GroupSize != 0)
+      return false;
+    VecSz = Sz / GroupSize;
+
+    if (StrideWithinGroup != 1)
+      return false;
+    unsigned VecSz = Sz / GroupSize;
+    ScalarTy = Type::getIntNTy(SE->getContext(),
+                               DL->getTypeSizeInBits(ElemTy).getFixedValue() *
+                                   GroupSize);
+    StridedLoadTy = getWidenedType(ScalarTy, VecSz);
   }
-  return false;
+
+  if (!isStridedLoad(PointerOps, ScalarTy, Alignment, Diff, VecSz))
+    return false;
+
+  if (NeedsWidening) {
+    // Continue with checking the "shape" of `SortedOffsetsFromBase`.
+    // Check that the strides between groups are all the same.
+    unsigned CurrentGroupStartIdx = GroupSize;
+    int64_t StrideBetweenGroups =
+        SortedOffsetsFromBase[GroupSize] - SortedOffsetsFromBase[0];
+    StrideIntVal = StrideBetweenGroups;
+    for (; CurrentGroupStartIdx < Sz; CurrentGroupStartIdx += GroupSize) {
+      if (SortedOffsetsFromBase[CurrentGroupStartIdx] -
+              SortedOffsetsFromBase[CurrentGroupStartIdx - GroupSize] !=
+          StrideBetweenGroups)
+        return false;
+    }
+
+    auto CheckGroup = [&](const unsigned StartIdx, const unsigned GroupSize0,
+                          const int64_t StrideWithinGroup) -> bool {
+      unsigned GroupEndIdx = StartIdx + 1;
+      for (; GroupEndIdx != Sz; ++GroupEndIdx) {
+        if (SortedOffsetsFromBase[GroupEndIdx] -
+                SortedOffsetsFromBase[GroupEndIdx - 1] !=
+            StrideWithinGroup)
+          break;
+      }
+      return GroupEndIdx - StartIdx == GroupSize0;
+    };
+    for (unsigned I = 0; I < Sz; I += GroupSize) {
+      if (!CheckGroup(I, GroupSize, StrideWithinGroup))
+        return false;
+    }
+  }
+
+  Type *StrideTy = DL->getIndexType(Ptr0->getType());
+  SPtrInfo.StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
+  SPtrInfo.Ty = StridedLoadTy;
+  return true;
 }
 
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
@@ -14989,11 +15056,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         }
         break;
       case TreeEntry::StridedVectorize: {
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
+        assert(StridedLoadTy && "Missing StridedPoinerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, VecTy, LI0->getPointerOperand(),
+            Instruction::Load, StridedLoadTy, LI0->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind);
+        if (StridedLoadTy != VecTy)
+          VecLdCost +=
+              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
+                                    getCastContextHint(*E), CostKind);
+
         break;
       }
       case TreeEntry::CompressVectorize: {
@@ -19760,6 +19835,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                      ? NewLI
                      : ::propagateMetadata(NewLI, E->Scalars);
 
+      if (StridedLoadTy != VecTy)
+        V = Builder.CreateBitOrPointerCast(V, VecTy);
       V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
