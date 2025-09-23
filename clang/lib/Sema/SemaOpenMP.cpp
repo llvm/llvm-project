@@ -14718,7 +14718,7 @@ bool SemaOpenMP::checkTransformableLoopSequence(
     return false;
 
   // Diagnose an empty loop sequence.
-  if (SeqAnalysis.LoopSeqSize <= 0) {
+  if (!SeqAnalysis.LoopSeqSize) {
     Diag(AStmt->getBeginLoc(), diag::err_omp_empty_loop_sequence)
         << getOpenMPDirectiveName(Kind);
     return false;
@@ -16118,7 +16118,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
         if (NeedsNewVD) {
           VD = buildVarDecl(SemaRef, SourceLocation(), IVType, Name);
           SemaRef.AddInitializerToDecl(VD, TransformedExpr, false);
-
         } else {
           // Create a unique variable name
           DeclRefExpr *DRE = cast<DeclRefExpr>(TransformedExpr);
@@ -16434,7 +16433,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     // Pre-fusion and post-fusion loops are inserted in order exploiting their
     // symmetry, along with their corresponding transformation pre-inits if
     // needed. The fused loop is added between the two regions.
-    for (unsigned I = 0; I < SeqAnalysis.LoopSeqSize; ++I) {
+    for (unsigned I : llvm::seq<unsigned>(SeqAnalysis.LoopSeqSize)) {
       if (I >= FirstVal - 1 && I < FirstVal + CountVal - 1) {
         // Update the Transformation counter to skip already treated
         // loop transformations
