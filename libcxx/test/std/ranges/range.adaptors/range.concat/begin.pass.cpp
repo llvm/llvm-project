@@ -40,6 +40,7 @@ constexpr void tests() {
     static_assert(std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
     assert(*v.begin() == buffer[0]);
+    assert(*std::as_const(v).begin() == buffer[0]);
 
     using View = decltype(v);
     static_assert(HasOnlyConstBegin<View>);
@@ -54,6 +55,7 @@ constexpr void tests() {
     static_assert(!std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
     assert(*v.begin() == buffer[0]);
+    assert(*std::as_const(v).begin() == buffer[0]);
 
     using View = decltype(v);
     static_assert(!HasOnlyConstBegin<View>);
