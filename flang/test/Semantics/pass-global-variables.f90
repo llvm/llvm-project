@@ -97,7 +97,9 @@ subroutine module_test(n)
 
   !WARNING: Passing global variable 'i1' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int(i1)              !< warn:    i1 from common
+  !WARNING: Passing global variable 'i2' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int(i2(1))           !< ok:      single element/begin of mem block
+  !WARNING: Passing global variable 'i2' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int(i2(n))           !< ok:      single element/begin of mem block
   !WARNING: Passing global variable 'i3' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int(i3(1))           !< warn:    shape /= [1]
@@ -108,6 +110,7 @@ subroutine module_test(n)
 
   !WARNING: Passing global variable 'i2' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int_1d(i2)           !< warn:    i2 from module
+  !WARNING: Passing global variable 'i2' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int_1d(i2(n:n+3))    !< ok:      mem block
   !WARNING: Passing global variable 'i3' from MODULE 'explicit_test_mod' as function argument [-Wpass-global-variable]
   call imp_pass_int_1d(i3)           !< warn:    i3 from module & shape /= [1]
