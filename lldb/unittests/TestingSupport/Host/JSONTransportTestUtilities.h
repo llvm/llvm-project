@@ -46,7 +46,7 @@ public:
     m_dummy_file = std::move(*dummy_file);
   }
 
-  llvm::Error Send(const Proto::Evt &evt) override {
+  llvm::Error Send(const typename Proto::Evt &evt) override {
     EXPECT_TRUE(m_loop && m_handler)
         << "Send called before RegisterMessageHandler";
     m_loop->AddPendingCallback([this, evt](lldb_private::MainLoopBase &) {
@@ -55,7 +55,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error Send(const Proto::Req &req) override {
+  llvm::Error Send(const typename Proto::Req &req) override {
     EXPECT_TRUE(m_loop && m_handler)
         << "Send called before RegisterMessageHandler";
     m_loop->AddPendingCallback([this, req](lldb_private::MainLoopBase &) {
@@ -64,7 +64,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error Send(const Proto::Resp &resp) override {
+  llvm::Error Send(const typename Proto::Resp &resp) override {
     EXPECT_TRUE(m_loop && m_handler)
         << "Send called before RegisterMessageHandler";
     m_loop->AddPendingCallback([this, resp](lldb_private::MainLoopBase &) {
