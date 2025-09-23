@@ -29,6 +29,19 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
   return markDivergent(cast<Value>(&Instr));
 }
 
+template <>
+bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
+    const Use &U) const {
+  const auto *V = U.get();
+  if (isDivergent(V))
+    return true;
+  if (const auto *DefInstr = dyn_cast<Instruction>(V)) {
+    const auto *UseInstr = cast<Instruction>(U.getUser());
+    return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
+  }
+  return false;
+}
+
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   for (auto &I : instructions(F)) {
     if (TTI->isSourceOfDivergence(&I))
@@ -86,19 +99,6 @@ void llvm::GenericUniformityAnalysisImpl<
     markDivergent(*UserInstr);
     recordTemporalDivergence(&I, UserInstr, &DefCycle);
   }
-}
-
-template <>
-bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
-    const Use &U) const {
-  const auto *V = U.get();
-  if (isDivergent(V))
-    return true;
-  if (const auto *DefInstr = dyn_cast<Instruction>(V)) {
-    const auto *UseInstr = cast<Instruction>(U.getUser());
-    return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
-  }
-  return false;
 }
 
 // This ensures explicit instantiation of
