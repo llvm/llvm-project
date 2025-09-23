@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// Detect redundant parentheses.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-parentheses.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-parentheses.html
 class RedundantParenthesesCheck : public ClangTidyCheck {
 public:
   RedundantParenthesesCheck(StringRef Name, ClangTidyContext *Context)
