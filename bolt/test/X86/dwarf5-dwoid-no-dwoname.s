@@ -1,5 +1,4 @@
-## This test checks that broken DWARF—having 
-## a DWOId but missing a DWOName—is correctly detected.
+## Check that DWARF CU with a valid DWOId but missing a dwo_name is correctly detected.
 # RUN: rm -rf %t && mkdir -p %t && cd %t
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -split-dwarf-file=main.dwo -o main.o
 # RUN: %clang -O3 -g -gdwarf-5 -gsplit-dwarf -Wl,-q %t/main.o -o main.exe
