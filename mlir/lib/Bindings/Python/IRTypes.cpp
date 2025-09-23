@@ -501,7 +501,10 @@ public:
         "Create a complex type");
     c.def_prop_ro(
         "element_type",
-        [](PyComplexType &self) { return mlirComplexTypeGetElementType(self); },
+        [](PyComplexType &self) {
+          return PyType(self.getContext(), mlirComplexTypeGetElementType(self))
+              .maybeDownCast();
+        },
         "Returns element type.");
   }
 };
@@ -512,7 +515,10 @@ public:
 void mlir::PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
-      [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
+      [](PyShapedType &self) {
+        return PyType(self.getContext(), mlirShapedTypeGetElementType(self))
+            .maybeDownCast();
+      },
       "Returns the element type of the shaped type.");
   c.def_prop_ro(
       "has_rank",
@@ -718,14 +724,15 @@ public:
         nb::arg("shape"), nb::arg("element_type"),
         nb::arg("encoding") = nb::none(), nb::arg("loc") = nb::none(),
         "Create a ranked tensor type");
-    c.def_prop_ro("encoding",
-                  [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
-                    MlirAttribute encoding =
-                        mlirRankedTensorTypeGetEncoding(self.get());
-                    if (mlirAttributeIsNull(encoding))
-                      return std::nullopt;
-                    return encoding;
-                  });
+    c.def_prop_ro(
+        "encoding",
+        [](PyRankedTensorType &self)
+            -> std::optional<nb::typed<nb::object, PyAttribute>> {
+          MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
+          if (mlirAttributeIsNull(encoding))
+            return std::nullopt;
+          return PyAttribute(self.getContext(), encoding).maybeDownCast();
+        });
   }
 };
 
@@ -785,8 +792,10 @@ public:
          nb::arg("loc") = nb::none(), "Create a memref type")
         .def_prop_ro(
             "layout",
-            [](PyMemRefType &self) -> MlirAttribute {
-              return mlirMemRefTypeGetLayout(self);
+            [](PyMemRefType &self) -> nb::typed<nb::object, PyAttribute> {
+              return PyAttribute(self.getContext(),
+                                 mlirMemRefTypeGetLayout(self))
+                  .maybeDownCast();
             },
             "The layout of the MemRef type.")
         .def(
@@ -810,11 +819,12 @@ public:
             "The layout of the MemRef type as an affine map.")
         .def_prop_ro(
             "memory_space",
-            [](PyMemRefType &self) -> std::optional<MlirAttribute> {
+            [](PyMemRefType &self)
+                -> std::optional<nb::typed<nb::object, PyAttribute>> {
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return a;
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -850,11 +860,12 @@ public:
          nb::arg("loc") = nb::none(), "Create a unranked memref type")
         .def_prop_ro(
             "memory_space",
-            [](PyUnrankedMemRefType &self) -> std::optional<MlirAttribute> {
+            [](PyUnrankedMemRefType &self)
+                -> std::optional<nb::typed<nb::object, PyAttribute>> {
               MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return a;
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -872,9 +883,14 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_tuple",
-        [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
+        [](const std::vector<PyType> &elements,
+           DefaultingPyMlirContext context) {
+          std::vector<MlirType> mlirElements;
+          mlirElements.reserve(elements.size());
+          for (const auto &element : elements)
+            mlirElements.push_back(element.get());
           MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
-                                        elements.data());
+                                        mlirElements.data());
           return PyTupleType(context->getRef(), t);
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
@@ -882,7 +898,8 @@ public:
     c.def(
         "get_type",
         [](PyTupleType &self, intptr_t pos) {
-          return mlirTupleTypeGetType(self, pos);
+          return PyType(self.getContext(), mlirTupleTypeGetType(self, pos))
+              .maybeDownCast();
         },
         nb::arg("pos"), "Returns the pos-th type in the tuple type.");
     c.def_prop_ro(
@@ -906,11 +923,20 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::vector<MlirType> inputs, std::vector<MlirType> results,
+        [](std::vector<PyType> inputs, std::vector<PyType> results,
            DefaultingPyMlirContext context) {
-          MlirType t =
-              mlirFunctionTypeGet(context->get(), inputs.size(), inputs.data(),
-                                  results.size(), results.data());
+          std::vector<MlirType> mlirInputs;
+          mlirInputs.reserve(inputs.size());
+          for (const auto &input : inputs)
+            mlirInputs.push_back(input.get());
+          std::vector<MlirType> mlirResults;
+          mlirResults.reserve(results.size());
+          for (const auto &result : results)
+            mlirResults.push_back(result.get());
+
+          MlirType t = mlirFunctionTypeGet(context->get(), inputs.size(),
+                                           mlirInputs.data(), results.size(),
+                                           mlirResults.data());
           return PyFunctionType(context->getRef(), t);
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),

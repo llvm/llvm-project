@@ -6450,8 +6450,6 @@ defm PseudoVFWMACC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMACC : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWMSAC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMSAC : VPseudoVWMAC_VV_VF_RM;
-let Predicates = [HasStdExtZvfbfwma] in
-defm PseudoVFWMACCBF16  : VPseudoVWMAC_VV_VF_BF_RM;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6544,7 +6542,6 @@ defm PseudoVFWCVT_F_XU     : VPseudoVWCVTF_V;
 defm PseudoVFWCVT_F_X      : VPseudoVWCVTF_V;
 
 defm PseudoVFWCVT_F_F      : VPseudoVWCVTD_V;
-defm PseudoVFWCVTBF16_F_F :  VPseudoVWCVTD_V;
 } // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
@@ -6561,7 +6558,6 @@ defm PseudoVFNCVT_F_XU     : VPseudoVNCVTF_W_RM;
 defm PseudoVFNCVT_F_X      : VPseudoVNCVTF_W_RM;
 
 defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W_RM;
-defm PseudoVFNCVTBF16_F_F :  VPseudoVNCVTD_W_RM;
 
 defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
 } // mayRaiseFPException = true
@@ -7090,9 +7086,6 @@ defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmsac", "PseudoVFWMSAC",
                              AllWidenableFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmsac", "PseudoVFWNMSAC",
                              AllWidenableFloatVectors, isSEWAware=1>;
-let Predicates = [HasStdExtZvfbfwma] in
-defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
-                              AllWidenableBFloatToFloatVectors, isSEWAware=1>;
 
 //===----------------------------------------------------------------------===//
 // 13.8. Vector Floating-Point Square-Root Instruction
@@ -7206,8 +7199,6 @@ defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_x_v", "PseudoVFWCVT_F_X",
                            isSEWAware=1>;
 defm : VPatConversionWF_VF<"int_riscv_vfwcvt_f_f_v", "PseudoVFWCVT_F_F",
                            isSEWAware=1>;
-defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
-                              "PseudoVFWCVTBF16_F_F", isSEWAware=1>;
 
 //===----------------------------------------------------------------------===//
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
@@ -7224,8 +7215,6 @@ defm : VPatConversionVF_WI_RM<"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X",
                               isSEWAware=1>;
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F",
                               AllWidenableFloatVectors, isSEWAware=1>;
-defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w", 
-                                 "PseudoVFNCVTBF16_F_F", isSEWAware=1>;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F",
                            isSEWAware=1>;
 

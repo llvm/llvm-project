@@ -1829,7 +1829,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
                                                     const CallExpr *Call,
                                                     unsigned BuiltinID) {
   const bool HasZeroArg = Call->getNumArgs() == 2;
-  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_cttz;
+  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_ctzg;
   assert(Call->getNumArgs() == 1 || HasZeroArg);
   if (Call->getArg(0)->getType()->isIntegerType()) {
     PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
@@ -1853,7 +1853,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       return false;
     }
 
-    if (BuiltinID == Builtin::BI__builtin_elementwise_ctlz) {
+    if (BuiltinID == Builtin::BI__builtin_elementwise_clzg) {
       pushInteger(S, Val.countLeadingZeros(), Call->getType());
     } else {
       pushInteger(S, Val.countTrailingZeros(), Call->getType());
@@ -3232,8 +3232,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ctzg:
     return interp__builtin_ctz(S, OpPC, Frame, Call, BuiltinID);
 
-  case Builtin::BI__builtin_elementwise_ctlz:
-  case Builtin::BI__builtin_elementwise_cttz:
+  case Builtin::BI__builtin_elementwise_clzg:
+  case Builtin::BI__builtin_elementwise_ctzg:
     return interp__builtin_elementwise_countzeroes(S, OpPC, Frame, Call,
                                                    BuiltinID);
 

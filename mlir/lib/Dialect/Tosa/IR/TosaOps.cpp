@@ -4025,19 +4025,27 @@ LogicalResult IfOp::verify() {
           .failed())
     return failure();
 
-  auto thenYield = cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, thenYield.getInputs(),
-                                 "'then_graph' results", getOutputList(),
-                                 "'output_list'")
-          .failed())
-    return failure();
+  // MLIR will verify the absence of the terminator for us if otherwise.
+  if (getThenGraph().front().mightHaveTerminator()) {
+    auto thenYield =
+        dyn_cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
+    if (thenYield && errorIfTypeOrShapeMismatch(
+                         *this, thenYield.getInputs(), "'then_graph' results",
+                         getOutputList(), "'output_list'")
+                         .failed())
+      return failure();
+  }
 
-  auto elseYield = cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, elseYield.getInputs(),
-                                 "'else_graph' results", getOutputList(),
-                                 "'output_list'")
-          .failed())
-    return failure();
+  // MLIR will verify the absence of the terminator for us if otherwise.
+  if (getElseGraph().front().mightHaveTerminator()) {
+    auto elseYield =
+        dyn_cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
+    if (elseYield && errorIfTypeOrShapeMismatch(
+                         *this, elseYield.getInputs(), "'else_graph' results",
+                         getOutputList(), "'output_list'")
+                         .failed())
+      return failure();
+  }
 
   auto condType = getCondition().getType();
   if (errorIfShapeNotSizeOne(*this, condType).failed())

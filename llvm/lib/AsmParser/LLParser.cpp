@@ -1258,6 +1258,9 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       GV->setPartition(Lex.getStrVal());
       if (parseToken(lltok::StringConstant, "expected partition string"))
         return true;
+    } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
+      if (parseGlobalObjectMetadataAttachment(*GI.get()))
+        return true;
     } else {
       return tokError("unknown alias or ifunc property!");
     }
