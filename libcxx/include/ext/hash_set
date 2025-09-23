@@ -265,7 +265,7 @@ public:
            const hasher& __hf,
            const key_equal& __eql,
            const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI hash_set(const hash_set& __u);
+  _LIBCPP_HIDE_FROM_ABI hash_set(const hash_set& __u) = default;
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return allocator_type(__table_.__node_alloc()); }
 
@@ -356,12 +356,6 @@ hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-hash_set<_Value, _Hash, _Pred, _Alloc>::hash_set(const hash_set& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void hash_set<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
@@ -445,7 +439,7 @@ public:
       const hasher& __hf,
       const key_equal& __eql,
       const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI hash_multiset(const hash_multiset& __u);
+  _LIBCPP_HIDE_FROM_ABI hash_multiset(const hash_multiset& __u) = default;
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return allocator_type(__table_.__node_alloc()); }
 
@@ -531,12 +525,6 @@ hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(
     : __table_(__hf, __eql, __a) {
   __table_.__rehash_multi(__n);
   insert(__first, __last);
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
-hash_multiset<_Value, _Hash, _Pred, _Alloc>::hash_multiset(const hash_multiset& __u) : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>

@@ -472,7 +472,7 @@ public:
            const hasher& __hf,
            const key_equal& __eql,
            const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI hash_map(const hash_map& __u);
+  _LIBCPP_HIDE_FROM_ABI hash_map(const hash_map& __u) = default;
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return allocator_type(__table_.__node_alloc()); }
 
@@ -567,12 +567,6 @@ hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(
     : __table_(__hf, __eql, __a) {
   __table_.__rehash_unique(__n);
   insert(__first, __last);
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(const hash_map& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -696,7 +690,7 @@ public:
       const hasher& __hf,
       const key_equal& __eql,
       const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI hash_multimap(const hash_multimap& __u);
+  _LIBCPP_HIDE_FROM_ABI hash_multimap(const hash_multimap& __u) = default;
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return allocator_type(__table_.__node_alloc()); }
 
@@ -785,9 +779,6 @@ hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(
   __table_.__rehash_multi(__n);
   insert(__first, __last);
 }
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
