@@ -811,7 +811,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // General implementation of F'23 15.5.2.5 note 5
   // Adds a less specific error message for any copy-out that could overwrite
   // a unread value in the actual argument.
-  // Occurences of volatileOrAsyncNeedsTempDiagnosticIssued = true indicate a
+  // Occurences of `volatileOrAsyncNeedsTempDiagnosticIssued = true` indicate a
   // more specific error message has already been issued. We might be able to
   // clean this up by switching the coding style of MayNeedCopy to be more like
   // WhyNotDefinable.
@@ -828,8 +828,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // If there are any cases where we don't need a copy and some other compiler
   // does, we issue a portability warning here.
   if (context.ShouldWarn(common::UsageWarning::Portability)) {
-    // Nag, GFortran, and NVFortran all error on this case, even though it is
-    // ok, prossibly as an over-restriction of F'23 C1548.
+    // 3 other compilers error on this case even though it is ok.
+    // Possibly as an over-restriction of F'23 C1548.
     if (!copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued &&
         (!dummyIsValue && (dummyIsAsynchronous || dummyIsVolatile)) &&
         !(actualIsAsynchronous || actualIsVolatile) &&
@@ -842,7 +842,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           actual.AsFortran(), dummyName,
           dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
     }
-    // Probably an over-restriction of F'23 15.5.2.5 note 5
+    // Possibly an over-restriction of F'23 15.5.2.5 note 5
     if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
       if ((dummyIsVolatile && !actualIsVolatile && !actualIsAsynchronous) ||
           (dummyIsAsynchronous && !actualIsVolatile && !actualIsAsynchronous)) {

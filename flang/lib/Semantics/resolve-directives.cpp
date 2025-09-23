@@ -315,6 +315,7 @@ public:
 
 private:
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::AccClauseList &);
+  bool HasForceCollapseModifier(const parser::AccClauseList &);
 
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::AccShared,
       Symbol::Flag::AccPrivate, Symbol::Flag::AccFirstPrivate,
@@ -333,7 +334,7 @@ private:
       Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
       Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
-  void CheckAssociatedLoop(const parser::DoConstruct &);
+  void CheckAssociatedLoop(const parser::DoConstruct &, bool forceCollapsed);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
@@ -413,7 +414,7 @@ public:
   }
 
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
-    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }
@@ -1168,7 +1169,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  CheckAssociatedLoop(*outer);
+  CheckAssociatedLoop(*outer, HasForceCollapseModifier(clauseList));
   return true;
 }
 
@@ -1366,7 +1367,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   const auto &clauseList{std::get<parser::AccClauseList>(beginBlockDir.t)};
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  CheckAssociatedLoop(*outer);
+  CheckAssociatedLoop(*outer, HasForceCollapseModifier(clauseList));
   ClearDataSharingAttributeObjects();
   return true;
 }
@@ -1478,6 +1479,18 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
   return true;
 }
 
+bool AccAttributeVisitor::HasForceCollapseModifier(
+    const parser::AccClauseList &x) {
+  for (const auto &clause : x.v) {
+    if (const auto *collapseClause{
+            std::get_if<parser::AccClause::Collapse>(&clause.u)}) {
+      const parser::AccCollapseArg &arg = collapseClause->v;
+      return std::get<bool>(arg.t);
+    }
+  }
+  return false;
+}
+
 std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
     const parser::AccClauseList &x) {
   std::int64_t collapseLevel{0};
@@ -1499,14 +1512,14 @@ std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
 }
 
 void AccAttributeVisitor::CheckAssociatedLoop(
-    const parser::DoConstruct &outerDoConstruct) {
+    const parser::DoConstruct &outerDoConstruct, bool forceCollapsed) {
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) { // collapse value was negative or 0
     return;
   }
 
   const auto getNextDoConstruct =
-      [this](const parser::Block &block,
+      [this, forceCollapsed](const parser::Block &block,
           std::int64_t &level) -> const parser::DoConstruct * {
     for (const auto &entry : block) {
       if (const auto *doConstruct = GetDoConstructIf(entry)) {
@@ -1524,7 +1537,9 @@ void AccAttributeVisitor::CheckAssociatedLoop(
             "LOOP directive not expected in COLLAPSE loop nest"_err_en_US);
         level = 0;
       } else {
-        break;
+        if (!forceCollapsed) {
+          break;
+        }
       }
     }
     return nullptr;
@@ -2342,9 +2357,14 @@ bool OmpAttributeVisitor::Pre(
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpThreadprivate);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
+
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (auto *object{omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpThreadprivate);
+    }
+  }
   return true;
 }
 
@@ -3121,14 +3141,24 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
 
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  common::visit(common::visitors{
-                    [&](const parser::Designator &designator) {
-                      ResolveOmpDesignator(designator, ompFlag);
-                    },
-                    [&](const parser::Name &name) { // common block
-                      ResolveOmpCommonBlock(name, ompFlag);
-                    },
-                },
+  common::visit( //
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            ResolveOmpDesignator(designator, ompFlag);
+          },
+          [&](const parser::Name &name) { // common block
+            ResolveOmpCommonBlock(name, ompFlag);
+          },
+          [&](const parser::OmpObject::Invalid &invalid) {
+            switch (invalid.v) {
+              SWITCH_COVERS_ALL_CASES
+            case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+              context_.Say(invalid.source,
+                  "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+              break;
+            }
+          },
+      },
       ompObject.u);
 }
 
