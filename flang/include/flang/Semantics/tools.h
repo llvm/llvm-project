@@ -225,12 +225,18 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 
 bool HasCUDAComponent(const Symbol &sym);
 
+inline bool IsCUDADevice(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Device;
+  }
+  return false;
+}
+
 inline bool IsCUDAShared(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
-      return true;
-    }
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared;
   }
   return false;
 }
@@ -261,7 +267,7 @@ bool IsAccessible(const Symbol &, const Scope &);
 
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &, const Symbol &);
+    const Scope &, const Symbol &, bool inStructureConstructor = false);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);

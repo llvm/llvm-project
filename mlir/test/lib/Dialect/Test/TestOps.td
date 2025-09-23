@@ -23,7 +23,6 @@ include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -553,9 +552,10 @@ def OneRegionWithOperandsOp : TEST_Op<"one_region_with_operands_op", []> {
 
 def IsolatedOneRegionOp : TEST_Op<"isolated_one_region_op", [IsolatedFromAbove]> {
   let arguments = (ins Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$my_region);
   let assemblyFormat = [{
-    attr-dict-with-keyword $operands $my_region `:` type($operands)
+    attr-dict-with-keyword $operands $my_region `:` type($operands) `->` type($results)
   }];
 }
 
@@ -2322,10 +2322,10 @@ def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
 }
 
 //===----------------------------------------------------------------------===//
-// Test CopyOpInterface
+// Copy Operation Test 
 //===----------------------------------------------------------------------===//
 
-def CopyOp : TEST_Op<"copy", [CopyOpInterface]> {
+def CopyOp : TEST_Op<"copy", []> {
   let description = [{
     Represents a copy operation.
   }];

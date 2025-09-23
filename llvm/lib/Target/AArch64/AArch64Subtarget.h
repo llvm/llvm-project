@@ -246,8 +246,8 @@ public:
   /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCCSelect() ||
-           hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
+           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
   unsigned getEpilogueVectorizationMinVF() const {

@@ -223,16 +223,16 @@ define amdgpu_kernel void @kernel_explicit_worst_case() #9 {
 attributes #9 = {"amdgpu-max-num-workgroups"="4294967295,4294967295,4294967295"}
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-max-num-workgroups"="1,2,3" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-max-num-workgroups"="100,10,99" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-max-num-workgroups"="100,8,32" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-max-num-workgroups"="16,10,99" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-max-num-workgroups"="4294967295,1,1" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-max-num-workgroups"="1,4294967295,1" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-max-num-workgroups"="1,1,4294967295" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR8]] = { "amdgpu-max-num-workgroups"="42,99,123" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR9]] = { "amdgpu-max-num-workgroups"="256,128,1024" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR10]] = { "amdgpu-max-num-workgroups"="256,128,2048" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR11]] = { "amdgpu-max-num-workgroups"="4294967295,4294967295,4294967295" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-max-num-workgroups"="1,2,3" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-max-num-workgroups"="100,10,99" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-max-num-workgroups"="100,8,32" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-max-num-workgroups"="16,10,99" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-max-num-workgroups"="4294967295,1,1" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-max-num-workgroups"="1,4294967295,1" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-max-num-workgroups"="1,1,4294967295" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-max-num-workgroups"="42,99,123" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-max-num-workgroups"="256,128,1024" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-max-num-workgroups"="256,128,2048" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-max-num-workgroups"="4294967295,4294967295,4294967295" "uniform-work-group-size"="false" }
 ;.

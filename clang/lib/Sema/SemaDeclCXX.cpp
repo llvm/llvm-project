@@ -1138,8 +1138,9 @@ static QualType getStdTrait(Sema &S, SourceLocation Loc, StringRef Trait,
   }
 
   // Build the template-id.
-  QualType TraitTy = S.CheckTemplateIdType(ElaboratedTypeKeyword::None,
-                                           TemplateName(TraitTD), Loc, Args);
+  QualType TraitTy = S.CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, TemplateName(TraitTD), Loc, Args,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
   if (TraitTy.isNull())
     return QualType();
 
@@ -1176,7 +1177,7 @@ getTrivialTypeTemplateArgument(Sema &S, SourceLocation Loc, QualType T) {
 namespace { enum class IsTupleLike { TupleLike, NotTupleLike, Error }; }
 
 static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
-                               llvm::APSInt &Size) {
+                               unsigned &OutSize) {
   EnterExpressionEvaluationContext ContextRAII(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
@@ -1217,10 +1218,24 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
   if (E.isInvalid())
     return IsTupleLike::Error;
 
+  llvm::APSInt Size;
   E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser);
   if (E.isInvalid())
     return IsTupleLike::Error;
 
+  // The implementation limit is UINT_MAX-1, to allow this to be passed down on
+  // an UnsignedOrNone.
+  if (Size < 0 || Size >= UINT_MAX) {
+    llvm::SmallVector<char, 16> Str;
+    Size.toString(Str);
+    S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_invalid)
+        << printTemplateArgs(S.Context.getPrintingPolicy(), Args,
+                             /*Params=*/nullptr)
+        << StringRef(Str.data(), Str.size());
+    return IsTupleLike::Error;
+  }
+
+  OutSize = Size.getExtValue();
   return IsTupleLike::TupleLike;
 }
 
@@ -1278,9 +1293,8 @@ struct InitializingBinding {
 static bool checkTupleLikeDecomposition(Sema &S,
                                         ArrayRef<BindingDecl *> Bindings,
                                         VarDecl *Src, QualType DecompType,
-                                        const llvm::APSInt &TupleSize) {
+                                        unsigned NumElems) {
   auto *DD = cast<DecompositionDecl>(Src);
-  unsigned NumElems = (unsigned)TupleSize.getLimitedValue(UINT_MAX);
   if (CheckBindingsCount(S, DD, DecompType, Bindings, NumElems))
     return true;
 
@@ -1640,7 +1654,7 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   // C++1z [dcl.decomp]/3:
   //   if the expression std::tuple_size<E>::value is a well-formed integral
   //   constant expression, [...]
-  llvm::APSInt TupleSize(32);
+  unsigned TupleSize;
   switch (isTupleLike(*this, DD->getLocation(), DecompType, TupleSize)) {
   case IsTupleLike::Error:
     DD->setInvalidDecl();
@@ -1689,12 +1703,12 @@ UnsignedOrNone Sema::GetDecompositionElementCount(QualType T,
   if (T->getAs<ComplexType>())
     return 2u;
 
-  llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
+  unsigned TupleSize;
   switch (isTupleLike(*this, Loc, T, TupleSize)) {
   case IsTupleLike::Error:
     return std::nullopt;
   case IsTupleLike::TupleLike:
-    return static_cast<unsigned>(TupleSize.getExtValue());
+    return TupleSize;
   case IsTupleLike::NotTupleLike:
     break;
   }
@@ -2187,10 +2201,7 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
       return false;
     }
   } else if (Field->isAnonymousStructOrUnion()) {
-    const RecordDecl *RD = Field->getType()
-                               ->castAs<RecordType>()
-                               ->getOriginalDecl()
-                               ->getDefinitionOrSelf();
+    const auto *RD = Field->getType()->castAsRecordDecl();
     for (auto *I : RD->fields())
       // If an anonymous union contains an anonymous struct of which any member
       // is initialized, all members must be initialized.
@@ -5475,7 +5486,8 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
     CXXCtorInitializer *Member = Initializers[i];
 
     if (Member->isBaseInitializer())
-      Info.AllBaseFields[Member->getBaseClass()->getAs<RecordType>()] = Member;
+      Info.AllBaseFields[Member->getBaseClass()->getAsCanonical<RecordType>()] =
+          Member;
     else {
       Info.AllBaseFields[Member->getAnyMember()->getCanonicalDecl()] = Member;
 
@@ -5503,8 +5515,8 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
 
   // Push virtual bases before others.
   for (auto &VBase : ClassDecl->vbases()) {
-    if (CXXCtorInitializer *Value
-        = Info.AllBaseFields.lookup(VBase.getType()->getAs<RecordType>())) {
+    if (CXXCtorInitializer *Value = Info.AllBaseFields.lookup(
+            VBase.getType()->getAsCanonical<RecordType>())) {
       // [class.base.init]p7, per DR257:
       //   A mem-initializer where the mem-initializer-id names a virtual base
       //   class is ignored during execution of a constructor of any class that
@@ -5542,8 +5554,8 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
     if (Base.isVirtual())
       continue;
 
-    if (CXXCtorInitializer *Value
-          = Info.AllBaseFields.lookup(Base.getType()->getAs<RecordType>())) {
+    if (CXXCtorInitializer *Value = Info.AllBaseFields.lookup(
+            Base.getType()->getAsCanonical<RecordType>())) {
       Info.AllToInit.push_back(Value);
     } else if (!AnyErrors) {
       CXXCtorInitializer *CXXBaseInit;
@@ -5631,7 +5643,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
 }
 
 static void PopulateKeysForFields(FieldDecl *Field, SmallVectorImpl<const void*> &IdealInits) {
-  if (const RecordType *RT = Field->getType()->getAs<RecordType>()) {
+  if (const RecordType *RT = Field->getType()->getAsCanonical<RecordType>()) {
     const RecordDecl *RD = RT->getOriginalDecl();
     if (RD->isAnonymousStructOrUnion()) {
       for (auto *Field : RD->getDefinitionOrSelf()->fields())
@@ -7631,7 +7643,7 @@ static bool defaultedSpecialMemberIsConstexpr(
           F->hasInClassInitializer())
         continue;
       QualType BaseType = S.Context.getBaseElementType(F->getType());
-      if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
+      if (const RecordType *RecordTy = BaseType->getAsCanonical<RecordType>()) {
         CXXRecordDecl *FieldRecDecl =
             cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
                 ->getDefinitionOrSelf();
@@ -10471,11 +10483,7 @@ public:
   /// method overloads virtual methods in a base class without overriding any,
   /// to be used with CXXRecordDecl::lookupInBases().
   bool operator()(const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-    RecordDecl *BaseRecord = Specifier->getType()
-                                 ->castAs<RecordType>()
-                                 ->getOriginalDecl()
-                                 ->getDefinitionOrSelf();
-
+    auto *BaseRecord = Specifier->getType()->castAsRecordDecl();
     DeclarationName Name = Method->getDeclName();
     assert(Name.getNameKind() == DeclarationName::Identifier);
 
@@ -10630,7 +10638,8 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
       return;
     }
 
-    if (const auto *RT = FT->getBaseElementTypeUnsafe()->getAs<RecordType>())
+    if (const auto *RT =
+            FT->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
       if (!RT->isDependentType() &&
           !cast<CXXRecordDecl>(RT->getOriginalDecl()->getDefinitionOrSelf())
                ->canPassInRegisters()) {
@@ -11128,8 +11137,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       Loc = RD->getLocation();
 
     // If we have a virtual destructor, look up the deallocation function
-    if (FunctionDecl *OperatorDelete =
-            FindDeallocationFunctionForDestructor(Loc, RD)) {
+    if (FunctionDecl *OperatorDelete = FindDeallocationFunctionForDestructor(
+            Loc, RD, /*Diagnose=*/true, /*LookForGlobal=*/false)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial
@@ -11164,6 +11173,22 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       DiagnoseUseOfDecl(OperatorDelete, Loc);
       MarkFunctionReferenced(Loc, OperatorDelete);
       Destructor->setOperatorDelete(OperatorDelete, ThisArg);
+
+      if (isa<CXXMethodDecl>(OperatorDelete) &&
+          Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
+              Context.getLangOpts())) {
+        // In Microsoft ABI whenever a class has a defined operator delete,
+        // scalar deleting destructors check the 3rd bit of the implicit
+        // parameter and if it is set, then, global operator delete must be
+        // called instead of the class-specific one. Find and save the global
+        // operator delete for that case. Do not diagnose at this point because
+        // the lack of a global operator delete is not an error if there are no
+        // delete calls that require it.
+        FunctionDecl *GlobalOperatorDelete =
+            FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
+                                                  /*LookForGlobal*/ true);
+        Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+      }
     }
   }
 
@@ -12320,7 +12345,8 @@ static QualType BuildStdClassTemplate(Sema &S, ClassTemplateDecl *CTD,
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(TypeParam), TSI));
 
   return S.CheckTemplateIdType(ElaboratedTypeKeyword::None, TemplateName(CTD),
-                               Loc, Args);
+                               Loc, Args, /*Scope=*/nullptr,
+                               /*ForNestedNameSpecifier=*/false);
 }
 
 QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
@@ -12633,16 +12659,17 @@ Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation UsingLoc,
                                       SourceLocation EnumLoc, SourceRange TyLoc,
                                       const IdentifierInfo &II, ParsedType Ty,
-                                      CXXScopeSpec *SS) {
-  assert(SS && !SS->isInvalid() && "ScopeSpec is invalid");
+                                      const CXXScopeSpec &SS) {
   TypeSourceInfo *TSI = nullptr;
   SourceLocation IdentLoc = TyLoc.getBegin();
   QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
-    Diag(IdentLoc, isDependentScopeSpecifier(*SS)
+    Diag(IdentLoc, isDependentScopeSpecifier(SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
-        << II.getName() << SourceRange(SS->getBeginLoc(), TyLoc.getEnd());
+        << II.getName()
+        << SourceRange(SS.isValid() ? SS.getBeginLoc() : IdentLoc,
+                       TyLoc.getEnd());
     return nullptr;
   }
 
@@ -12651,14 +12678,11 @@ Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
     return nullptr;
   }
 
-  auto *Enum = dyn_cast_if_present<EnumDecl>(EnumTy->getAsTagDecl());
+  auto *Enum = EnumTy->getAsEnumDecl();
   if (!Enum) {
     Diag(IdentLoc, diag::err_using_enum_not_enum) << EnumTy;
     return nullptr;
   }
-
-  if (auto *Def = Enum->getDefinition())
-    Enum = Def;
 
   if (TSI == nullptr)
     TSI = Context.getTrivialTypeSourceInfo(EnumTy, IdentLoc);
@@ -16971,9 +16995,9 @@ checkLiteralOperatorTemplateParameterList(Sema &SemaRef,
     // first template parameter as its type.
     if (PmType && PmArgs && !PmType->isTemplateParameterPack() &&
         PmArgs->isTemplateParameterPack()) {
-      const TemplateTypeParmType *TArgs =
-          PmArgs->getType()->getAs<TemplateTypeParmType>();
-      if (TArgs && TArgs->getDepth() == PmType->getDepth() &&
+      if (const auto *TArgs =
+              PmArgs->getType()->getAsCanonical<TemplateTypeParmType>();
+          TArgs && TArgs->getDepth() == PmType->getDepth() &&
           TArgs->getIndex() == PmType->getIndex()) {
         if (!SemaRef.inTemplateInstantiation())
           SemaRef.Diag(TpDecl->getLocation(),
@@ -19152,9 +19176,7 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
     return;
 
   for (const auto &I : RD->bases()) {
-    const auto *Base = cast<CXXRecordDecl>(
-                           I.getType()->castAs<RecordType>()->getOriginalDecl())
-                           ->getDefinitionOrSelf();
+    const auto *Base = I.getType()->castAsCXXRecordDecl();
     if (Base->getNumVBases() == 0)
       continue;
     MarkVirtualMembersReferenced(Loc, Base);

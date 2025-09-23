@@ -705,19 +705,13 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.blocksareclusters,
 // CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
 // CHECK: attributes #[[ATTR0]] = { "nvvm.blocksareclusters" "nvvm.cluster_dim"="3,5,7" "nvvm.reqntid"="1,23,32" }
 // -----
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK: !nvvm.annotations =
-// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
-// CHECK: ![[ID]] = !{i32 1}
+// CHECK: define ptx_kernel void @kernel_func(ptr byval(i32) "nvvm.grid_constant" %0)
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
 
 // -----
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK: !nvvm.annotations =
-// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
-// CHECK: ![[ID]] = !{i32 1, i32 3}
+// CHECK: define ptx_kernel void @kernel_func(ptr byval(i32) "nvvm.grid_constant" %0, float %1, ptr byval(float) "nvvm.grid_constant" %2)
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }

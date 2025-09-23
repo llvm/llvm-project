@@ -72,7 +72,7 @@
 //
 // We also allow users to force-disable availability markup via the `_LIBCPP_DISABLE_AVAILABILITY`
 // macro because that is the only way to work around a Clang bug related to availability
-// attributes: https://github.com/llvm/llvm-project/issues/134151.
+// attributes: https://llvm.org/PR134151.
 // Once that bug has been fixed, we should remove the macro.
 #if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) ||                                       \
     !defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_DISABLE_AVAILABILITY)
@@ -307,7 +307,7 @@
 // This controls the availability of the C++17 std::pmr library,
 // which is implemented in large part in the built library.
 //
-// TODO: Enable std::pmr markup once https://github.com/llvm/llvm-project/issues/40340 has been fixed
+// TODO: Enable std::pmr markup once https://llvm.org/PR40340 has been fixed
 //       Until then, it is possible for folks to try to use `std::pmr` when back-deploying to targets that don't support
 //       it and it'll be a load-time error, but we don't have a good alternative because the library won't compile if we
 //       use availability annotations until that bug has been fixed.
