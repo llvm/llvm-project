@@ -2559,21 +2559,10 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &z) {
+  void Unparse(const OpenMPDeclareMapperConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE MAPPER (");
-    const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
-    const auto &mapperName{std::get<std::string>(spec.t)};
-    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
-      Walk(mapperName);
-      Put(":");
-    }
-    Walk(std::get<TypeSpec>(spec.t));
-    Put("::");
-    Walk(std::get<Name>(spec.t));
-    Put(")");
-
-    Walk(std::get<OmpClauseList>(z.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
