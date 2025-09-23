@@ -15,13 +15,24 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-struct Range : std::ranges::view_base {
+struct ForwardRange : std::ranges::view_base {
   using Iterator = forward_iterator<int*>;
   using Sentinel = sentinel_wrapper<Iterator>;
-  constexpr explicit Range(int* b, int* e) : begin_(b), end_(e) {}
+  constexpr explicit ForwardRange(int* b, int* e) : begin_(b), end_(e) {}
   constexpr Iterator begin() const { return Iterator(begin_); }
   constexpr Sentinel end() const { return Sentinel(Iterator(end_)); }
 
+private:
+  int* begin_;
+  int* end_;
+};
+
+struct BidirectionalRange : std::ranges::view_base {
+  using Iterator = bidirectional_iterator<int*>;
+  using Sentinel = sentinel_wrapper<Iterator>;
+  constexpr explicit BidirectionalRange(int* b, int* e): begin_(b), end_(e) {}
+  constexpr Iterator begin() const { return Iterator(begin_); }
+  constexpr Sentinel end() const { return Sentinel(Iterator(end_)); }
 private:
   int* begin_;
   int* end_;
@@ -46,8 +57,9 @@ constexpr bool test() {
   int arr[]  = {0, 1, 2, 3};
   int arr2[] = {4, 5, 6, 7};
 
+  // one range
   {
-    Range range(arr, arr + 4);
+    ForwardRange range(arr, arr + 4);
 
     {
       decltype(auto) result = std::views::concat(range);
@@ -56,14 +68,27 @@ constexpr bool test() {
     }
   }
 
+  // more than one range of same types
   {
-    Range first(arr, arr + 4);
-    Range tail(arr2, arr2 + 4);
+    ForwardRange first(arr, arr + 4);
+    ForwardRange tail(arr2, arr2 + 4);
 
     {
       decltype(auto) result = std::views::concat(first, tail);
       compareViews(result, {0, 1, 2, 3, 4, 5, 6, 7});
-      using Type = std::ranges::concat_view<Range, Range>;
+      using Type = std::ranges::concat_view<ForwardRange, ForwardRange>;
+      ASSERT_SAME_TYPE(Type, decltype(result));
+    }
+  }
+
+  // more than one range of different types
+  {
+    ForwardRange first(arr, arr + 4);
+    BidirectionalRange tail(arr2, arr2 + 4);
+    {
+      decltype(auto) result = std::views::concat(first, tail);
+      compareViews(result, {0, 1, 2, 3, 4, 5, 6, 7});
+      using Type = std::ranges::concat_view<ForwardRange, BidirectionalRange>;
       ASSERT_SAME_TYPE(Type, decltype(result));
     }
   }
