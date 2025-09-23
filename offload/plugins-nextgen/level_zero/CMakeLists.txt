@@ -32,37 +32,25 @@ target_include_directories(omptarget.rtl.level_zero PRIVATE
 
 if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES} AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building Level Zero NG plugin linked against level_zero library")
-
-  if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+ if(UNIX)
     target_link_libraries(omptarget.rtl.level_zero PRIVATE
-                        ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES})
-  elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    # Full path to the L0 library is recognized as a linker option, so we
+        ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY})
+  elseif(WIN32)
+    # Full path to the Level Zero library is recognized as a linker option, so we
     # separate directory and file name
-    get_filename_component(LEVEL_ZERO_LIBRARY_PATH
-                           ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES} DIRECTORY)
-    get_filename_component(LEVEL_ZERO_LIBRARY_NAME
-                           ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES} NAME)
-    target_link_libraries(omptarget.rtl.level_zero PRIVATE
-                          ${LEVEL_ZERO_LIBRARY_NAME} ${LIBOMP_LIB_FILE})
-    target_link_directories(omptarget.rtl.level_zero PRIVATE 
-                            ${LEVEL_ZERO_LIBRARY_PATH})
-    target_link_options(omptarget.rtl.level_zero PRIVATE 
-                        "LINKER:-def:${CMAKE_CURRENT_SOURCE_DIR}/src/rtl.def")
-    libomptarget_add_resource_file(omptarget.rtl.level_zero)
+    cmake_path(GET LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY PARENT_PATH LEVEL_ZERO_LIBRARY_PATH)
+    target_link_libraries(omptarget.rtl.level_zero PRIVATE ${LEVEL_ZERO_LIBRARY_NAME}
+        ${LIBOMP_LIB_FILE})
+    target_link_directories(omptarget.rtl.level_zero PRIVATE ${LEVEL_ZERO_LIBRARY_PATH})
   else()
     message(FATAL_ERROR "Missing platform support")
   endif()
 else()
   message(STATUS "Building Level Zero NG plugin for dlopened level_zero")
-  get_filename_component(LEVEL_ZERO_LIBRARY_NAME 
-                         ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES} NAME)
-  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-    # Windows uses dll instead of lib files at runtime
-    string(REGEX REPLACE "lib$" "dll" LEVEL_ZERO_LIBRARY_NAME 
-           ${LEVEL_ZERO_LIBRARY_NAME})
+  if(WIN32)
+    cmake_path(REPLACE_EXTENSION LEVEL_ZERO_LIBRARY_NAME dll)
   endif()
-  target_compile_options(omptarget.rtl.level_zero PRIVATE 
-                         "-DLEVEL_ZERO_LIBRARY=\"${LEVEL_ZERO_LIBRARY_NAME}\"")
+  target_compile_definitions(omptarget.rtl.level_zero PRIVATE
+      LEVEL_ZERO_LIBRARY="${LEVEL_ZERO_LIBRARY_NAME}")
   target_sources(omptarget.rtl.level_zero PRIVATE src/L0DynWrapper.cpp)
 endif()
