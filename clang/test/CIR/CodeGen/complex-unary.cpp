@@ -506,7 +506,7 @@ void foo10() {
 // OGCG: store half %[[RESULT_REAL]], ptr %[[B_REAL_PTR]], align 2
 // OGCG: store half %[[RESULT_IMAG]], ptr %[[B_IMAG_PTR]], align 2
 
-void foo11() {
+void complex_unary_inc_lvalue() {
   float _Complex a;
   ++a;
 }
@@ -545,7 +545,7 @@ void foo11() {
 // OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
 // OGCG: store float %[[A_IMAG]], ptr %[[A_IMAG_PTR]], align 4
 
-void foo12() {
+void complex_unary_dec_lvalue() {
   float _Complex a;
   --a;
 }
