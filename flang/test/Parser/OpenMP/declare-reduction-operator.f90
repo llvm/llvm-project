@@ -16,8 +16,7 @@ subroutine reduce_1 ( n, tts )
   type(tt) :: tts(n)
   type(tt2) :: tts2(n)
 
-!CHECK: !$OMP DECLARE REDUCTION(+:tt: omp_out=tt(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)
-!CHECK: ) INITIALIZER(omp_priv=tt(x=0_4,y=0_4))
+!CHECK: !$OMP DECLARE REDUCTION(+:tt: omp_out = tt(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)) INITIALIZER(omp_priv = tt(x=0_4,y=0_4))
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
@@ -31,8 +30,7 @@ subroutine reduce_1 ( n, tts )
   !$omp declare reduction(+ : tt :  omp_out = tt(omp_out%x - omp_in%x , omp_out%y - omp_in%y)) initializer(omp_priv = tt(0,0))
 
   
-!CHECK: !$OMP DECLARE REDUCTION(+:tt2: omp_out=tt2(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)
-!CHECK: ) INITIALIZER(omp_priv=tt2(x=0._8,y=0._8)
+!CHECK: !$OMP DECLARE REDUCTION(+:tt2: omp_out = tt2(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)) INITIALIZER(omp_priv = tt2(x=0._8,y=0._8)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
