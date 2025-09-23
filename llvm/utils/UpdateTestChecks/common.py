@@ -939,14 +939,18 @@ class FunctionTestBuilder:
 
                 # Check if this RUN line produces this function at all. If
                 # not, we can skip analysing this function for this RUN.
-                run_contains_func = all(func in self._func_dict.get(p, {}) for p in prefixes)
+                run_contains_func = all(
+                    func in self._func_dict.get(p, {}) for p in prefixes
+                )
                 if not run_contains_func:
                     continue
 
                 # Check if this RUN line can print any checks for this
                 # function. It can't if all of its prefixes have conflicting
                 # (None) output.
-                cannot_print_for_this_run = all(self.has_conflicting_output(p, func) for p in prefixes)
+                cannot_print_for_this_run = all(
+                    self.has_conflicting_output(p, func) for p in prefixes
+                )
                 if cannot_print_for_this_run:
                     warnings_to_print[func].append((i, prefixes))
 
@@ -954,7 +958,7 @@ class FunctionTestBuilder:
             conflict_strs = []
             for run_index, prefixes in warning_info:
                 conflict_strs.append(
-                     f"RUN #{run_index + 1} (prefixes: {', '.join(prefixes)})"
+                    f"RUN #{run_index + 1} (prefixes: {', '.join(prefixes)})"
                 )
             warn(
                 f"For function '{func}', the following RUN lines will not generate checks due to conflicting output: {', '.join(conflict_strs)}",
