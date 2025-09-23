@@ -4576,10 +4576,17 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
     // * for k != 0, change SETNE to SETUGT (k > 0)
     // * for 0 != k, change SETNE to SETULT (0 < k)
     if (CC == ISD::SETNE) {
+      EVT VT = LHS.getValueType();
+
+      // Only optimize for integer types (avoid FP completely)
+      bool IsIntegerType =
+          VT.isInteger() ||
+          (VT.isVector() && VT.getVectorElementType().isInteger());
+      if(IsIntegerType){
       if (ISD::isBuildVectorAllZeros(RHS.getNode()))
         CC = ISD::SETUGT;
       else if (ISD::isBuildVectorAllZeros(LHS.getNode()))
-        CC = ISD::SETULT;
+        CC = ISD::SETULT;}
     }
     EVT VecVT = LHS.getValueType();
     bool Swap, Negate;
