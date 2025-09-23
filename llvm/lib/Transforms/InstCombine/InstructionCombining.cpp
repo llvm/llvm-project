@@ -5034,11 +5034,13 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
     if (auto *PN = dyn_cast<PHINode>(V)) {
       BasicBlock *BB = PN->getParent();
       SmallPtrSet<BasicBlock *, 8> VisitedBBs;
-      for (Use &U : PN->incoming_values()) {
-        BasicBlock *InBB = PN->getIncomingBlock(U);
+      for (unsigned I = 0; I < PN->getNumIncomingValues(); ++I) {
+        Value *InV = PN->getIncomingValue(I);
+        BasicBlock *InBB = PN->getIncomingBlock(I);
+
         // We can't move freeze if the start value is the result of a
         // terminator (e.g. an invoke).
-        if (auto *OpI = dyn_cast<Instruction>(U)) {
+        if (auto *OpI = dyn_cast<Instruction>(InV)) {
           if (OpI->isTerminator())
             return false;
         }
@@ -5048,7 +5050,7 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
         // invalidating the iterator. We simply don't support this case, but it
         // could be handled if there's a use case.
         if (isBackEdge(InBB, BB) || !VisitedBBs.insert(InBB).second ||
-            match(U.get(), m_Undef()))
+            match(InV, m_Undef()))
           return false;
         VisitedBBs.insert(InBB);
       }
