@@ -567,6 +567,73 @@ exit:
   ret ptr %res
 }
 
+define i64 @loop_guards_needed_to_prove_deref_multiple(i32 %x, i1 %c, ptr dereferenceable(1024) %src) {
+; CHECK-LABEL: define i64 @loop_guards_needed_to_prove_deref_multiple(
+; CHECK-SAME: i32 [[X:%.*]], i1 [[C:%.*]], ptr dereferenceable(1024) [[SRC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_AND:%.*]] = and i32 [[X]], -2
+; CHECK-NEXT:    [[PRE_0:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[PRE_0]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[X_AND]], i32 0
+; CHECK-NEXT:    [[PRE_1:%.*]] = icmp ugt i32 [[SEL]], 1024
+; CHECK-NEXT:    br i1 [[PRE_1]], label [[EXIT]], label [[PH:%.*]]
+; CHECK:       ph:
+; CHECK-NEXT:    [[PRE_2:%.*]] = icmp ne i32 [[SEL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_2]])
+; CHECK-NEXT:    [[N:%.*]] = add i32 [[SEL]], -1
+; CHECK-NEXT:    [[N_EXT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[PH]] ]
+; CHECK-NEXT:    [[GEP_SRC_I:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC_I]], align 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N_EXT]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT_LOOPEXIT]], label [[LOOP_HEADER]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi i64 [ [[IV]], [[LOOP_HEADER]] ], [ 0, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ -1, [[ENTRY:%.*]] ], [ -2, [[THEN]] ], [ [[RES_PH]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %x.and = and i32 %x, -2
+  %pre.0 = icmp eq i32 %x, 0
+  br i1 %pre.0, label %then, label %exit
+
+then:
+  %sel = select i1 %c, i32 %x.and,  i32 0
+  %pre.1 = icmp ugt i32 %sel, 1024
+  br i1 %pre.1, label %exit, label %ph
+
+ph:
+  %pre.2 = icmp ne i32 %sel, 0
+  call void @llvm.assume(i1 %pre.2)
+  %n = add i32 %sel, -1
+  %n.ext = zext i32 %n to i64
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %iv.next, %loop.latch ], [ 0, %ph ]
+  %gep.src.i = getelementptr i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep.src.i, align 1
+  %c.1 = icmp eq i8 %l, 0
+  br i1 %c.1, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %n.ext
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  %res = phi i64 [ -1, %entry ], [ -2, %then ], [ 0, %loop.latch ], [ %iv, %loop.header ]
+  ret i64 %res
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

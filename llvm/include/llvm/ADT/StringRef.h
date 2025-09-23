@@ -90,15 +90,7 @@ namespace llvm {
 
     /// Construct a string ref from a cstring.
     /*implicit*/ constexpr StringRef(const char *Str LLVM_LIFETIME_BOUND)
-        : Data(Str), Length(Str ?
-    // GCC 7 doesn't have constexpr char_traits. Fall back to __builtin_strlen.
-#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 8
-                                __builtin_strlen(Str)
-#else
-                                std::char_traits<char>::length(Str)
-#endif
-                                : 0) {
-    }
+        : StringRef(Str ? std::string_view(Str) : std::string_view()) {}
 
     /// Construct a string ref from a pointer and length.
     /*implicit*/ constexpr StringRef(const char *data LLVM_LIFETIME_BOUND,

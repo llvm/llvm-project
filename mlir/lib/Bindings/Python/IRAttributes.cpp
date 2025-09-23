@@ -485,7 +485,7 @@ public:
 
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
-    nb::typed<nb::object, PyAttribute> dunderNext() {
+    nb::object dunderNext() {
       // TODO: Throw is an inefficient way to stop iteration.
       if (nextIndex >= mlirArrayAttrGetNumElements(attr.get()))
         throw nb::stop_iteration();

@@ -826,7 +826,7 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   if (!cgm.getCXXABI().needsVTTParameter(gd))
     return nullptr;
 
-  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curFuncDecl)->getParent();
+  const CXXRecordDecl *rd = cast<CXXMethodDecl>(curCodeDecl)->getParent();
   const CXXRecordDecl *base = cast<CXXMethodDecl>(gd.getDecl())->getParent();
 
   uint64_t subVTTIndex;

@@ -38999,6 +38999,26 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::VPMADD52L:
+  case X86ISD::VPMADD52H: {
+    assert(Op.getValueType().isVector() &&
+           Op.getValueType().getScalarType() == MVT::i64 &&
+           "Unexpected VPMADD52 type");
+    KnownBits K0 =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits K1 =
+        DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    KnownBits KAcc =
+        DAG.computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+    K0 = K0.trunc(52);
+    K1 = K1.trunc(52);
+    KnownBits KnownMul = (Op.getOpcode() == X86ISD::VPMADD52L)
+                             ? KnownBits::mul(K0, K1)
+                             : KnownBits::mulhu(K0, K1);
+    KnownMul = KnownMul.zext(64);
+    Known = KnownBits::add(KAcc, KnownMul);
+    return;
+  }
   }
 
   // Handle target shuffles.

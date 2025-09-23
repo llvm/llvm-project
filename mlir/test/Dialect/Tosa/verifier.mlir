@@ -687,6 +687,48 @@ func.func @test_cond_if_incorrect_type_simple(%arg0: tensor<f32>, %arg1: tensor<
 }
 
 // -----
+func.func @test_while_loop_wrong_terminator(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<i32> {
+    %0 = tosa.while_loop (%arg2 = %arg0) : (tensor<i32>) -> tensor<i32> {
+      // expected-error@+2 {{'func.return' op expects parent op 'func.func'}}
+      %1 = tosa.greater_equal %arg1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+      "func.return"(%arg2) : (tensor<i32>) -> ()
+    } do {
+    ^bb0(%arg2: tensor<i32>):
+      %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+      %2 = tosa.add %arg2, %1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+      tosa.yield %2 : tensor<i32>
+    }
+    return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_while_loop_missing_cond_terminator(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<i32> {
+    %0 = tosa.while_loop (%arg2 = %arg0) : (tensor<i32>) -> tensor<i32> {
+      // expected-error@+1 {{block with no terminator}}
+      %1 = tosa.greater_equal %arg1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+    } do {
+    ^bb0(%arg2: tensor<i32>):
+      %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+      %2 = tosa.add %arg2, %1 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+      tosa.yield %2 : tensor<i32>
+    }
+    return %0 : tensor<i32>
+}
+
+// -----
+func.func @test_while_loop_missing_body_terminator(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<i32> {
+    %0 = tosa.while_loop (%arg2 = %arg0) : (tensor<i32>) -> tensor<i32> {
+      %1 = tosa.greater_equal %arg1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+      tosa.yield %1 : tensor<i1>
+    } do {
+    ^bb0(%arg2: tensor<i32>):
+      // expected-error@+1 {{block with no terminator}}
+      %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+    }
+    return %0 : tensor<i32>
+}
+
+// -----
 
 func.func @test_while_loop_input_list_mismatch_body_block_in(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
   %0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>

@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 /// domain.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-comparison.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-comparison.html
 class DurationComparisonCheck : public ClangTidyCheck {
 public:
   DurationComparisonCheck(StringRef Name, ClangTidyContext *Context)
