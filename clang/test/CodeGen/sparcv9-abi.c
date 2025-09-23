@@ -261,15 +261,16 @@ int f_variable(char *f, ...) {
     break;
 
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
-// CHECK-DAG: %[[NXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
+// CHECK-DAG: %[[TMP:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
+// CHECK-DAG: %[[ALIGNED:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP]], i64 -16)
+// CHECK-DAG: %[[NXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGNED]], i64 16
 // CHECK-DAG: store ptr %[[NXT]], ptr %ap
-// CHECK-DAG: %[[ADR:[^ ]+]] = load ptr, ptr %[[CUR]]
-// CHECK-DAG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 {{.*}}, ptr align 16 %[[ADR]], i64 32, i1 false)
+// CHECK-DAG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 {{.*}}, ptr align 16 %[[ALIGNED]], i64 16, i1 false)
 // CHECK: br
-  case 'M':
-    s += *va_arg(ap, struct medium_aligned).a;
+  case 'a':
+    s += va_arg(ap, struct align16_int).x;
     break;
   }
-
+  va_end(ap);
   return s;
 }
