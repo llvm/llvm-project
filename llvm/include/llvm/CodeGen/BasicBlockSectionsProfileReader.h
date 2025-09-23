@@ -192,7 +192,8 @@ public:
   SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID, const UniqueBBID &DestBBID) const;
+  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                        const UniqueBBID &DestBBID) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

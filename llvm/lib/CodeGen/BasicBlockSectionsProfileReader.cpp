@@ -76,21 +76,19 @@ BasicBlockSectionsProfileReader::getClonePathsForFunction(
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).ClonePaths;
 }
 
-  uint64_t BasicBlockSectionsProfileReader::getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
-                        const UniqueBBID &SinkBBID) {
-        auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-        if (It == ProgramPathAndClusterInfo.end())
-      return 0;
-    auto NodeIt = It->second.EdgeCounts.find(SrcBBID);
-    if (NodeIt == It->second.EdgeCounts.end())
-      return 0;
-    auto EdgeIt = NodeIt->second.find(DestBBID);
-    if (EdgeIt == NodeIt->second.end())
-      return 0;
-    return EdgeIt->second;
-  }
-
-
+uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
+    StringRef FuncName, const UniqueBBID &SrcBBID, const UniqueBBID &SinkBBID) {
+  auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+  if (It == ProgramPathAndClusterInfo.end())
+    return 0;
+  auto NodeIt = It->second.EdgeCounts.find(SrcBBID);
+  if (NodeIt == It->second.EdgeCounts.end())
+    return 0;
+  auto EdgeIt = NodeIt->second.find(DestBBID);
+  if (EdgeIt == NodeIt->second.end())
+    return 0;
+  return EdgeIt->second;
+}
 
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
@@ -488,7 +486,9 @@ BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
   return BBSPR.getClonePathsForFunction(FuncName);
 }
 
-uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID, const UniqueBBID &SinkBBID) const {
+uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(
+    StringRef FuncName, const UniqueBBID &SrcBBID,
+    const UniqueBBID &SinkBBID) const {
   return BBSPR.getEdgeCount(FuncName, SrcBBID, SinkBBID);
 }
 
@@ -496,8 +496,6 @@ BasicBlockSectionsProfileReader &
 BasicBlockSectionsProfileReaderWrapperPass::getBBSPR() {
   return BBSPR;
 }
-
-
 
 ImmutablePass *llvm::createBasicBlockSectionsProfileReaderWrapperPass(
     const MemoryBuffer *Buf) {
