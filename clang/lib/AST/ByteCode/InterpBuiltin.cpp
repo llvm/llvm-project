@@ -1380,32 +1380,6 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (!CallType->isIntegerType() ||
-      !Call->getArg(0)->getType()->isIntegerType())
-    return false;
-
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.countLeadingZeros(), CallType);
-  return true;
-}
-
-static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (!CallType->isIntegerType() ||
-      !Call->getArg(0)->getType()->isIntegerType())
-    return false;
-
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.countTrailingZeros(), CallType);
-  return true;
-}
-
 static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
@@ -2551,6 +2525,24 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_elementwise_int_unaryop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &)> Fn) {
+  assert(Call->getNumArgs() == 1);
+  assert(Call->getType()->isIntegerType());
+
+  // Single integer case.
+  if (!Call->getArg(0)->getType()->isVectorType()) {
+    APSInt Src = popToAPSInt(S, Call->getArg(0));
+    APInt Result = Fn(Src);
+    pushInteger(S, APSInt(std::move(Result), !Src.isSigned()), Call->getType());
+    return true;
+  }
+
+  // TODO: Add vector integer handling.
+  return false;
+}
+
 static bool interp__builtin_elementwise_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -3283,12 +3275,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
-    return interp__builtin_ia32_lzcnt(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.countLeadingZeros());
+        });
 
   case clang::X86::BI__builtin_ia32_tzcnt_u16:
   case clang::X86::BI__builtin_ia32_tzcnt_u32:
   case clang::X86::BI__builtin_ia32_tzcnt_u64:
-    return interp__builtin_ia32_tzcnt(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.countTrailingZeros());
+        });
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
