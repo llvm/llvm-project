@@ -1624,15 +1624,15 @@ DWARFContext *BinaryContext::getDWOContext() const {
   return &DWOCUs.begin()->second->getContext();
 }
 
-bool BinaryContext::isValidDwarfUnit(DWARFUnit *const DU) const {
+bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
   // Invalid DWARF unit with a DWOId but lacking a dwo_name.
-  if (DU->getDWOId() && !DU->isDWOUnit() &&
-      !DU->getUnitDIE().find(
+  if (DU.getDWOId() && !DU.isDWOUnit() &&
+      !DU.getUnitDIE().find(
           {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name})) {
-    this->outs() << "BOLT-ERROR: Broken DWARF found in CU at offset 0x"
-                 << Twine::utohexstr(DU->getOffset()) << " (DWOId=0x"
-                 << Twine::utohexstr(*(DU->getDWOId()))
-                 << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name).\n";
+    this->outs() << "BOLT-ERROR: broken DWARF found in CU at offset 0x"
+                 << Twine::utohexstr(DU.getOffset()) << " (DWOId=0x"
+                 << Twine::utohexstr(*(DU.getDWOId()))
+                 << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name)\n";
     return false;
   }
   return true;
@@ -1642,7 +1642,7 @@ bool BinaryContext::isValidDwarfUnit(DWARFUnit *const DU) const {
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
-    if (!isValidDwarfUnit(DwarfUnit))
+    if (!isValidDwarfUnit(*DwarfUnit))
       continue;
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       std::string DWOName = dwarf::toString(

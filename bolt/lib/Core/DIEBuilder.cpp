@@ -1010,7 +1010,7 @@ static uint64_t getHash(const DWARFUnit &DU) {
 }
 
 bool DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
-  if (!BC.isValidDwarfUnit(&DU))
+  if (!BC.isValidDwarfUnit(DU))
     return false;
   auto IterGlobal = AllProcessed.insert(getHash(DU));
   // If DU is already in a current working set or was already processed we can
