@@ -17,13 +17,13 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -954,7 +954,8 @@ public:
     visitNode(DynTypedNode::create(*POE));
     // Traverse only the syntactic form to find the *written* references.
     // (The semantic form also contains lots of duplication)
-    return ConstDynamicRecursiveASTVisitor::TraverseStmt(POE->getSyntacticForm());
+    return ConstDynamicRecursiveASTVisitor::TraverseStmt(
+        POE->getSyntacticForm());
   }
 
   // We re-define Traverse*, since there's no corresponding Visit*.
@@ -1010,7 +1011,8 @@ public:
 
   bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
     visitNode(DynTypedNode::create(*Init));
-    return ConstDynamicRecursiveASTVisitor::TraverseConstructorInitializer(Init);
+    return ConstDynamicRecursiveASTVisitor::TraverseConstructorInitializer(
+        Init);
   }
 
   bool VisitConceptReference(const ConceptReference *CR) override {
@@ -1125,8 +1127,7 @@ void findExplicitReferences(const Decl *D,
 void findExplicitReferences(const ASTContext &AST,
                             llvm::function_ref<void(ReferenceLoc)> Out,
                             const HeuristicResolver *Resolver) {
-  ExplicitReferenceCollector(Out, Resolver)
-      .TraverseAST(AST);
+  ExplicitReferenceCollector(Out, Resolver).TraverseAST(AST);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, DeclRelation R) {

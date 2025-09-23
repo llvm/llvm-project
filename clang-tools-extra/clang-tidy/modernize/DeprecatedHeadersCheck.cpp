@@ -44,7 +44,7 @@ private:
   bool CheckHeaderFile;
 };
 
-class ExternCRefutationVisitor : public ConstDynamicRecursiveASTVisitor{
+class ExternCRefutationVisitor : public ConstDynamicRecursiveASTVisitor {
   std::vector<IncludeMarker> &IncludesToBeProcessed;
   const SourceManager &SM;
 

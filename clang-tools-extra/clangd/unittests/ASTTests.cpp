@@ -305,8 +305,8 @@ TEST(ClangdAST, GetOnlyInstantiation) {
     PrintingPolicy PP = AST.getASTContext().getPrintingPolicy();
     PP.TerseOutput = true;
     std::string Name;
-    if (const auto *Result = getOnlyInstantiation(
-            &findDecl(AST, [&](const NamedDecl &D) {
+    if (const auto *Result =
+            getOnlyInstantiation(&findDecl(AST, [&](const NamedDecl &D) {
               return D.getDescribedTemplate() != nullptr &&
                      D.getDeclKindName() == Case.NodeType;
             }))) {

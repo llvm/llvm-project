@@ -35,8 +35,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1119,7 +1119,7 @@ public:
     found(Case, C->getKeywordLoc());
     return true;
   }
-  bool VisitCXXThrowExpr(const CXXThrowExpr *T) override  {
+  bool VisitCXXThrowExpr(const CXXThrowExpr *T) override {
     found(Throw, T->getThrowLoc());
     return true;
   }

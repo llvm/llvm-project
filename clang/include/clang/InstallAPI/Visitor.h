@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_INSTALLAPI_VISITOR_H
 #define LLVM_CLANG_INSTALLAPI_VISITOR_H
 
-#include "clang/AST/Mangle.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/InstallAPI/Context.h"

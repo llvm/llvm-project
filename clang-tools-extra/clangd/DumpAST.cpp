@@ -11,11 +11,11 @@
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -379,19 +379,26 @@ public:
   bool dataTraverseStmtPre(const Stmt *S) override {
     return S && traverseNodePre(isa<Expr>(S) ? "expression" : "statement", S);
   }
-  bool dataTraverseStmtPost(const Stmt *X) override { return traverseNodePost(); }
+  bool dataTraverseStmtPost(const Stmt *X) override {
+    return traverseNodePost();
+  }
 
   // QualifiedTypeLoc is handled strangely in RecursiveASTVisitor: the derived
   // TraverseTypeLoc is not called for the inner UnqualTypeLoc.
   // This means we'd never see 'int' in 'const int'! Work around that here.
   // (The reason for the behavior is to avoid traversing the nested Type twice,
   // but we ignore TraverseType anyway).
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QTL, bool TraverseQualifier) override {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QTL,
+                                bool TraverseQualifier) override {
     return TraverseTypeLoc(QTL.getUnqualifiedLoc());
   }
   // Uninteresting parts of the AST that don't have locations within them.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier) override { return true; }
-  bool TraverseType(QualType, bool TraverseQualifier = true) override { return true; }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier) override {
+    return true;
+  }
+  bool TraverseType(QualType, bool TraverseQualifier = true) override {
+    return true;
+  }
 
   // OpaqueValueExpr blocks traversal, we must explicitly traverse it.
   bool TraverseOpaqueValueExpr(const OpaqueValueExpr *E) override {

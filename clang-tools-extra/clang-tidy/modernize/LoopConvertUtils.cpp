@@ -683,7 +683,8 @@ bool ForLoopIndexUseVisitor::TraverseCXXOperatorCallExpr(
 /// \endcode
 /// and further checking needs to be done later to ensure that exactly one array
 /// is referenced.
-bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(const ArraySubscriptExpr *E) {
+bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(
+    const ArraySubscriptExpr *E) {
   const Expr *Arr = E->getBase();
   if (!isIndexInSubscriptExpr(E->getIdx(), IndexVar))
     return VisitorBase::TraverseArraySubscriptExpr(E);

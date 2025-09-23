@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SimplifyBooleanExprCheck.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -258,7 +258,8 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   return false;
 }
 
-class SimplifyBooleanExprCheck::Visitor : public ConstDynamicRecursiveASTVisitor {
+class SimplifyBooleanExprCheck::Visitor
+    : public ConstDynamicRecursiveASTVisitor {
   using Base = ConstDynamicRecursiveASTVisitor;
 
 public:

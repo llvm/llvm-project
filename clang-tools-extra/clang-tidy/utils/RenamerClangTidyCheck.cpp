@@ -297,8 +297,8 @@ public:
     return true;
   }
 
-  bool
-  VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *DepMemberRef) override {
+  bool VisitCXXDependentScopeMemberExpr(
+      const CXXDependentScopeMemberExpr *DepMemberRef) override {
     QualType BaseType = DepMemberRef->isArrow()
                             ? DepMemberRef->getBaseType()->getPointeeType()
                             : DepMemberRef->getBaseType();
@@ -342,8 +342,8 @@ public:
     return true;
   }
 
-  bool
-  VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc Loc) override {
+  bool VisitTemplateSpecializationTypeLoc(
+      TemplateSpecializationTypeLoc Loc) override {
     const TemplateDecl *Decl =
         Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
             /*IgnoreDeduced=*/true);

@@ -534,9 +534,15 @@ public:
         HadErrors(HadErrors) {}
 
   bool TraverseStmt(const Stmt *S) override { return true; }
-  bool TraverseType(QualType T, bool TraverseQualifier) override { return true; }
-  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override { return true; }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) override { return true; }
+  bool TraverseType(QualType T, bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) override {
+    return true;
+  }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
     return true;
   }
@@ -544,12 +550,18 @@ public:
     return true;
   }
   bool TraverseTemplateName(TemplateName Template) override { return true; }
-  bool TraverseTemplateArgument(const TemplateArgument &Arg) override { return true; }
+  bool TraverseTemplateArgument(const TemplateArgument &Arg) override {
+    return true;
+  }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) override {
     return true;
   }
-  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) override { return true; }
-  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override { return true; }
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) override {
+    return true;
+  }
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
+    return true;
+  }
   bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C,
                              const Expr *Init) override {
     return true;
@@ -718,9 +730,15 @@ public:
   CompileCheckVisitor() {}
 
   bool TraverseStmt(const Stmt *S) override { return true; }
-  bool TraverseType(QualType T, bool TraverseQualifier) override { return true; }
-  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override { return true; }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) override { return true; }
+  bool TraverseType(QualType T, bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) override {
+    return true;
+  }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
     return true;
   }
@@ -728,31 +746,31 @@ public:
     return true;
   }
   bool TraverseTemplateName(TemplateName Template) override { return true; }
-  bool TraverseTemplateArgument(const TemplateArgument &Arg) override { return true; }
+  bool TraverseTemplateArgument(const TemplateArgument &Arg) override {
+    return true;
+  }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) override {
     return true;
   }
-  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) override { return true; }
-  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override { return true; }
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) override {
+    return true;
+  }
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
+    return true;
+  }
   bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C,
                              const Expr *Init) override {
     return true;
   }
 
   // Check 'extern "*" {}' block for #include directives.
-  bool VisitLinkageSpecDecl(const LinkageSpecDecl *D) override {
-    return true;
-  }
+  bool VisitLinkageSpecDecl(const LinkageSpecDecl *D) override { return true; }
 
   // Check 'namespace (name) {}' block for #include directives.
-  bool VisitNamespaceDecl(const NamespaceDecl *D) override {
-    return true;
-  }
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override { return true; }
 
   // Collect definition entities.
-  bool VisitNamedDecl(const NamedDecl *ND) override {
-    return true;
-  }
+  bool VisitNamedDecl(const NamedDecl *ND) override { return true; }
 };
 
 class CompileCheckConsumer : public ASTConsumer {

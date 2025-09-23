@@ -17,10 +17,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeLoc.h"
@@ -861,7 +861,8 @@ public:
 private:
   // inspects the given callee with the given args to check whether it
   // contains Parameters, and sets Info accordingly.
-  void handleCall(const FunctionDecl *Callee, typename CallExpr::const_arg_range Args) {
+  void handleCall(const FunctionDecl *Callee,
+                  typename CallExpr::const_arg_range Args) {
     // Skip functions with less parameters, they can't be the target.
     if (Callee->parameters().size() < Parameters.size())
       return;

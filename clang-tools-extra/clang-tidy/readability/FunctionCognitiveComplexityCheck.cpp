@@ -10,8 +10,8 @@
 #include "../ClangTidyDiagnosticConsumer.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -241,7 +241,7 @@ public:
   }
 
   bool TraverseIfStmt(const IfStmt *Node) override {
-      return traverseIfStmt(Node);
+    return traverseIfStmt(Node);
   }
 
   bool traverseIfStmt(const IfStmt *Node, bool InElseIf = false) {
@@ -467,9 +467,7 @@ public:
   // function is the entry point, then the Nesting level should not be
   // increased. Thus that parameter is there and is used to fall-through
   // directly to traversing if this is the main function that is being analyzed.
-  bool TraverseDecl(const Decl *Node) override {
-    return traverseDecl(Node);
-  }
+  bool TraverseDecl(const Decl *Node) override { return traverseDecl(Node); }
 
   bool traverseDecl(const Decl *Node, bool MainAnalyzedFunction = false) {
     if (!Node || MainAnalyzedFunction)

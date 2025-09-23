@@ -44,7 +44,9 @@ public:
     return true;
   }
 
-  bool VisitNamespaceDecl(const NamespaceDecl *D) override { return mapDecl(D); }
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override {
+    return mapDecl(D);
+  }
 
   bool VisitFunctionDecl(const FunctionDecl *D) override {
     // Don't visit CXXMethodDecls twice
@@ -53,7 +55,9 @@ public:
     return mapDecl(D);
   }
 
-  bool VisitCXXMethodDecl(const CXXMethodDecl *D) override { return mapDecl(D); }
+  bool VisitCXXMethodDecl(const CXXMethodDecl *D) override {
+    return mapDecl(D);
+  }
 
   bool VisitRecordDecl(const RecordDecl *D) override { return mapDecl(D); }
 
@@ -61,7 +65,9 @@ public:
 
   bool VisitTypedefDecl(const TypedefDecl *D) override { return mapDecl(D); }
 
-  bool VisitTypeAliasDecl(const TypeAliasDecl *D) override { return mapDecl(D); }
+  bool VisitTypeAliasDecl(const TypeAliasDecl *D) override {
+    return mapDecl(D);
+  }
 };
 
 void ExtractInfosFromCode(StringRef Code, size_t NumExpectedInfos, bool Public,

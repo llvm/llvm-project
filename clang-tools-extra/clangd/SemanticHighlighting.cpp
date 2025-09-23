@@ -19,8 +19,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LangOptions.h"
@@ -671,7 +671,8 @@ public:
     return true;
   }
 
-  bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) override {
+  bool
+  VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) override {
     if (auto *Args = E->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
@@ -691,21 +692,22 @@ public:
     return true;
   }
 
-  bool
-  VisitClassTemplateSpecializationDecl(const ClassTemplateSpecializationDecl *D) override {
+  bool VisitClassTemplateSpecializationDecl(
+      const ClassTemplateSpecializationDecl *D) override {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
   bool VisitClassTemplatePartialSpecializationDecl(
-      const ClassTemplatePartialSpecializationDecl *D) override  {
+      const ClassTemplatePartialSpecializationDecl *D) override {
     if (auto *TPL = D->getTemplateParameters())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
     return true;
   }
 
-  bool VisitVarTemplateSpecializationDecl(const VarTemplateSpecializationDecl *D) override {
+  bool VisitVarTemplateSpecializationDecl(
+      const VarTemplateSpecializationDecl *D) override {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
@@ -1046,7 +1048,8 @@ public:
     return true;
   }
 
-  bool VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) override {
+  bool VisitCXXDependentScopeMemberExpr(
+      const CXXDependentScopeMemberExpr *E) override {
     H.addToken(E->getMemberNameInfo().getLoc(), HighlightingKind::Unknown)
         .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
@@ -1054,7 +1057,8 @@ public:
     return true;
   }
 
-  bool VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) override {
+  bool
+  VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) override {
     H.addToken(E->getNameInfo().getLoc(), HighlightingKind::Unknown)
         .addModifier(HighlightingModifier::DependentName)
         .addModifier(HighlightingModifier::ClassScope);
@@ -1081,7 +1085,8 @@ public:
     return true;
   }
 
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) override {
+  bool
+  VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) override {
     if (!L.getTypePtr()->getTemplateName().getAsTemplateDecl(
             /*IgnoreDeduced=*/true))
       H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)

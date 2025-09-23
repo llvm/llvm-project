@@ -35,9 +35,7 @@ void AssignmentInIfConditionCheck::check(
             : Check(Check) {}
 
         // Dont traverse into any lambda expressions.
-        bool TraverseLambdaExpr(const LambdaExpr *) override {
-          return true;
-        }
+        bool TraverseLambdaExpr(const LambdaExpr *) override { return true; }
 
         // Dont traverse into any requires expressions.
         bool TraverseRequiresExpr(const RequiresExpr *) override {

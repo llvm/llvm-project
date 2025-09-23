@@ -87,9 +87,7 @@ public:
   ComponentFinderASTVisitor() = default;
 
   /// Find the components of an expression and place them in a ComponentVector.
-  void findExprComponents(const Expr *SourceExpr) {
-    TraverseStmt(SourceExpr);
-  }
+  void findExprComponents(const Expr *SourceExpr) { TraverseStmt(SourceExpr); }
 
   /// Accessor for Components.
   const ComponentVector &getComponents() { return Components; }
@@ -332,7 +330,8 @@ private:
   bool TraverseArraySubscriptExpr(const ArraySubscriptExpr *E) override;
   bool TraverseCXXMemberCallExpr(const CXXMemberCallExpr *MemberCall) override;
   bool TraverseCXXOperatorCallExpr(const CXXOperatorCallExpr *OpCall) override;
-  bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C, const Expr *Init) override;
+  bool TraverseLambdaCapture(const LambdaExpr *LE, const LambdaCapture *C,
+                             const Expr *Init) override;
   bool TraverseMemberExpr(const MemberExpr *Member) override;
   bool TraverseUnaryOperator(const UnaryOperator *Uop) override;
   bool VisitDeclRefExpr(const DeclRefExpr *E) override;

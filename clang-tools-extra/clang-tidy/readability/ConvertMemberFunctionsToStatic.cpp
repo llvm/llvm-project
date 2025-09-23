@@ -66,7 +66,9 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
 
     // If we enter a class declaration, don't traverse into it as any usages of
     // `this` will correspond to the nested class.
-    bool TraverseCXXRecordDecl(const CXXRecordDecl *RD) override { return true; }
+    bool TraverseCXXRecordDecl(const CXXRecordDecl *RD) override {
+      return true;
+    }
 
   } UsageOfThis;
 

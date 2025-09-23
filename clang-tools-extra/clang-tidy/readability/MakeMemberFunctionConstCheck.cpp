@@ -8,8 +8,8 @@
 
 #include "MakeMemberFunctionConstCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 

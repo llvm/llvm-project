@@ -114,13 +114,14 @@ struct UnqualNameVisitor : ConstDynamicRecursiveASTVisitor {
       break;
     }
 
-    return ConstDynamicRecursiveASTVisitor::TraverseTypeLoc(
-        TL, TraverseQualifier);
+    return ConstDynamicRecursiveASTVisitor::TraverseTypeLoc(TL,
+                                                            TraverseQualifier);
   }
 
   // Replace the base method in order to call our own
   // TraverseTypeLoc().
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL, bool TraverseQualifier) override {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL,
+                                bool TraverseQualifier) override {
     return TraverseTypeLoc(TL.getUnqualifiedLoc(), TraverseQualifier);
   }
 

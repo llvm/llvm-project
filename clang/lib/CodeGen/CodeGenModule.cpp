@@ -34,8 +34,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -4269,9 +4269,7 @@ namespace {
   struct DLLImportFunctionVisitor : DynamicRecursiveASTVisitor {
     bool SafeToInline = true;
 
-    DLLImportFunctionVisitor() {
-      ShouldVisitImplicitCode = true;
-    }
+    DLLImportFunctionVisitor() { ShouldVisitImplicitCode = true; }
 
     bool VisitVarDecl(VarDecl *VD) override {
       if (VD->getTLSKind()) {

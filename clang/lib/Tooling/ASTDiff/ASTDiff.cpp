@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/ASTDiff/ASTDiff.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ParentMapContext.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/PriorityQueue.h"
 
@@ -247,7 +247,9 @@ struct PreorderVisitor : DynamicRecursiveASTVisitor {
     PostTraverse(SavedState);
     return true;
   }
-  bool TraverseType(QualType T, bool TraverseQualifier = true) override { return true; }
+  bool TraverseType(QualType T, bool TraverseQualifier = true) override {
+    return true;
+  }
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) override {
     if (isNodeExcluded(Tree.AST.getSourceManager(), Init))
       return true;

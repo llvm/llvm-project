@@ -11,8 +11,8 @@
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
@@ -56,7 +56,7 @@ class PCHContainerGenerator : public ASTConsumer {
   std::shared_ptr<PCHBuffer> Buffer;
 
   /// Visit every type and emit debug info for it.
-  struct DebugTypeVisitor : DynamicRecursiveASTVisitor{
+  struct DebugTypeVisitor : DynamicRecursiveASTVisitor {
     clang::CodeGen::CGDebugInfo &DI;
     ASTContext &Ctx;
     DebugTypeVisitor(clang::CodeGen::CGDebugInfo &DI, ASTContext &Ctx)

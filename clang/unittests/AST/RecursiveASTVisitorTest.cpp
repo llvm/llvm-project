@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
@@ -94,10 +94,11 @@ public:
     return Ret;
   }
 
-  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL, bool TraverseQualifier) override {
+  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL,
+                              bool TraverseQualifier) override {
     Events.push_back(VisitEvent::StartTraverseTypedefType);
-    bool Ret =
-        DynamicRecursiveASTVisitor::TraverseTypedefTypeLoc(TL, TraverseQualifier);
+    bool Ret = DynamicRecursiveASTVisitor::TraverseTypedefTypeLoc(
+        TL, TraverseQualifier);
     Events.push_back(VisitEvent::EndTraverseTypedefType);
 
     return Ret;
