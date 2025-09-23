@@ -6480,12 +6480,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     const Function *F = Call->getFunction();
     auto ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
-    if (ScalableTy && F->hasFnAttribute(Attribute::VScaleRange)) {
-      Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
+    Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
+    if (ScalableTy && Attr.isValid()) {
       std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
       if (!VScaleMax)
         break;
-      unsigned MaxPossibleMaskElements =
+      uint64_t MaxPossibleMaskElements =
           ScalableTy->getMinNumElements() * (*VScaleMax);
 
       const APInt *Op1Val;
