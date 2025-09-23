@@ -149,6 +149,9 @@ protected:
     dataSharingAttributeObjects_.clear();
   }
   bool HasDataSharingAttributeObject(const Symbol &);
+  std::tuple<const parser::Name *, const parser::ScalarExpr *,
+      const parser::ScalarExpr *, const parser::ScalarExpr *>
+  GetLoopBounds(const parser::DoConstruct &);
   const parser::Name *GetLoopIndex(const parser::DoConstruct &);
   const parser::DoConstruct *GetDoConstructIf(
       const parser::ExecutionPartConstruct &);
@@ -933,6 +936,13 @@ private:
     privateDataSharingAttributeObjects_.clear();
   }
 
+  /// Check that loops in the loop nest are perfectly nested, as well that lower
+  /// bound, upper bound, and step expressions do not use the iv
+  /// of a surrounding loop of the associated loops nest.
+  /// We do not support non-perfectly nested loops not non-rectangular loops yet
+  /// (both introduced in OpenMP 5.0)
+  void CheckPerfectNestAndRectangularLoop(const parser::OpenMPLoopConstruct &x);
+
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
       const parser::OpenMPLoopConstruct &);
@@ -1009,14 +1019,15 @@ bool DirectiveAttributeVisitor<T>::HasDataSharingAttributeObject(
 }
 
 template <typename T>
-const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
-    const parser::DoConstruct &x) {
+std::tuple<const parser::Name *, const parser::ScalarExpr *,
+    const parser::ScalarExpr *, const parser::ScalarExpr *>
+DirectiveAttributeVisitor<T>::GetLoopBounds(const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
     if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
-      return &b->name.thing;
-    } else {
-      return nullptr;
+      auto &&step = b->step;
+      return {&b->name.thing, &b->lower, &b->upper,
+          step.has_value() ? &step.value() : nullptr};
     }
   } else {
     context_
@@ -1024,8 +1035,15 @@ const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
             "Loop control is not present in the DO LOOP"_err_en_US)
         .Attach(GetContext().directiveSource,
             "associated with the enclosing LOOP construct"_en_US);
-    return nullptr;
   }
+  return {nullptr, nullptr, nullptr, nullptr};
+}
+
+template <typename T>
+const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
+    const parser::DoConstruct &x) {
+  auto &&[iv, lb, ub, step] = GetLoopBounds(x);
+  return iv;
 }
 
 template <typename T>
@@ -1957,6 +1975,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
       }
     }
   }
+  CheckPerfectNestAndRectangularLoop(x);
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
   ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
@@ -2149,6 +2168,121 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
       levels.push_back(tclause->v.size());
       clauses.push_back(&clause);
     }
+  }
+}
+
+void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
+    const parser::OpenMPLoopConstruct
+        &x) { // GetAssociatedLoopLevelFromClauses(clauseList);
+  auto &&dirContext = GetContext();
+  std::int64_t dirDepth{dirContext.associatedLoopLevel};
+  if (dirDepth <= 0)
+    return;
+
+  Symbol::Flag ivDSA;
+  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
+    ivDSA = Symbol::Flag::OmpPrivate;
+  } else if (dirDepth == 1) {
+    ivDSA = Symbol::Flag::OmpLinear;
+  } else {
+    ivDSA = Symbol::Flag::OmpLastPrivate;
+  }
+
+  auto checkExprHasSymbols = [&](llvm::SmallVector<Symbol *> &ivs,
+                                 const parser::ScalarExpr *bound) {
+    if (ivs.empty())
+      return;
+
+    if (auto boundExpr{semantics::AnalyzeExpr(context_, *bound)}) {
+      semantics::UnorderedSymbolSet boundSyms =
+          evaluate::CollectSymbols(*boundExpr);
+      for (auto iv : ivs) {
+        if (boundSyms.count(*iv) != 0) {
+          // TODO: Point to occurence of iv in boundExpr, directiveSource as a
+          // note
+          context_.Say(dirContext.directiveSource,
+              "Trip count must be computable and invariant"_err_en_US);
+        }
+      }
+    }
+  };
+
+  // Skip over loop transformation directives
+  const parser::OpenMPLoopConstruct *innerMostLoop = &x;
+  const parser::NestedConstruct *innerMostNest = nullptr;
+  while (auto &optLoopCons{
+      std::get<std::optional<parser::NestedConstruct>>(innerMostLoop->t)}) {
+    innerMostNest = &(optLoopCons.value());
+    if (const auto *innerLoop{
+            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                innerMostNest)}) {
+      innerMostLoop = &(innerLoop->value());
+    } else
+      break;
+  }
+
+  if (!innerMostNest)
+    return;
+  const auto &outer{std::get_if<parser::DoConstruct>(innerMostNest)};
+  if (!outer)
+    return;
+
+  llvm::SmallVector<Symbol *> ivs;
+  int curLevel = 0;
+  const parser::DoConstruct *loop{outer};
+  while (true) {
+    auto [iv, lb, ub, step] = GetLoopBounds(*loop);
+
+    if (lb)
+      checkExprHasSymbols(ivs, lb);
+    if (ub)
+      checkExprHasSymbols(ivs, ub);
+    if (step)
+      checkExprHasSymbols(ivs, step);
+    if (iv) {
+      if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())})
+        ivs.push_back(symbol);
+    }
+
+    // Stop after processing all affected loops
+    if (curLevel + 1 >= dirDepth)
+      break;
+
+    // Recurse into nested loop
+    const auto &block{std::get<parser::Block>(loop->t)};
+    if (block.empty()) {
+      // Insufficient number of nested loops already reported by
+      // CheckAssocLoopLevel()
+      break;
+    }
+
+    loop = GetDoConstructIf(block.front());
+    if (!loop) {
+      // Insufficient number of nested loops already reported by
+      // CheckAssocLoopLevel()
+      break;
+    }
+
+    auto checkPerfectNest = [&, this]() {
+      auto blockSize = block.size();
+      if (blockSize <= 1)
+        return;
+
+      if (parser::Unwrap<parser::ContinueStmt>(x))
+        blockSize -= 1;
+
+      if (blockSize <= 1)
+        return;
+
+      // Non-perfectly nested loop
+      // TODO: Point to non-DO statement, directiveSource as a note
+      context_.Say(dirContext.directiveSource,
+          "Canonical loop nest must be perfectly nested."_err_en_US);
+    };
+
+    checkPerfectNest();
+
+    ++curLevel;
   }
 }
 
