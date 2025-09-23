@@ -1559,12 +1559,7 @@ public:
 
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
-    parser::OmpClauseList empty(std::list<parser::OmpClause>{});
-    auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
-    ProcessReductionSpecifier(
-        std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        maybeClauses ? *maybeClauses : empty, declaratives_.back());
-    return false;
+    return true;
   }
   bool Pre(const parser::OmpMapClause &);
 
@@ -1697,6 +1692,11 @@ public:
     // should not reach a point where it calls this function.
     llvm_unreachable("This function should not be reached by AST traversal");
   }
+  bool Pre(const parser::OmpReductionSpecifier &x) {
+    // OmpReductionSpecifier is handled explicitly, and the AST traversal
+    // should not reach a point where it calls this function.
+    llvm_unreachable("This function should not be reached by AST traversal");
+  }
   bool Pre(const parser::OmpDirectiveSpecification &x);
   void Post(const parser::OmpDirectiveSpecification &) {
     messageHandler().set_currStmtSource(std::nullopt);
@@ -1724,8 +1724,7 @@ private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const parser::OmpClauseList &clauses,
-      const parser::OpenMPDeclarativeConstruct *wholeConstruct);
+      const parser::OmpClauseList &clauses);
 
   void ResolveCriticalName(const parser::OmpArgument &arg);
 
@@ -1856,8 +1855,7 @@ std::string MangleDefinedOperator(const parser::CharBlock &name) {
 
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const parser::OmpClauseList &clauses,
-    const parser::OpenMPDeclarativeConstruct *construct) {
+    const parser::OmpClauseList &clauses) {
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -1944,7 +1942,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     PopScope();
   }
 
-  reductionDetails->AddDecl(construct);
+  reductionDetails->AddDecl(declaratives_.back());
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -1997,7 +1995,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               visitClauses = false;
             },
             [&](const parser::OmpReductionSpecifier &spec) {
-              ProcessReductionSpecifier(spec, clauses, declaratives_.back());
+              ProcessReductionSpecifier(spec, clauses);
               visitClauses = false;
             },
             [&](const parser::OmpLocator &locator) {

@@ -624,11 +624,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
     return false;
   }
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source,
-        Directive::OMPD_declare_reduction);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_simd);
@@ -1626,9 +1621,21 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareMapperConstruct &) {
 
 void OmpStructureChecker::Enter(
     const parser::OpenMPDeclareReductionConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_declare_reduction);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.size() != 1) {
+    context_.Say(args.source,
+        "DECLARE_REDUCTION directive should have a single argument"_err_en_US);
+    return;
+  }
+
+  const parser::OmpArgument &arg{args.v.front()};
+  if (!std::holds_alternative<parser::OmpReductionSpecifier>(arg.u)) {
+    context_.Say(arg.source,
+        "The argument to the DECLARE_REDUCTION directive should be a reduction-specifier"_err_en_US);
+  }
 }
 
 void OmpStructureChecker::Leave(

@@ -1274,6 +1274,8 @@ public:
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
 
+  void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
+
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
@@ -1292,6 +1294,9 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
+                                  CallArgList &callArgs);
 
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
@@ -1354,6 +1359,9 @@ public:
 
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
+
+  void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
+  void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 

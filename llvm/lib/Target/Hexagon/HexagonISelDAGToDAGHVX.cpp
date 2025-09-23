@@ -2483,8 +2483,15 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     }
     ++I;
 
+    // Upper bits of the vdeal/vshuff parameter that do not cover any byte in
+    // the vector are ignored. Technically, A2_tfrsi takes a signed value, which
+    // is sign-extended to 32 bit if there is no extender. The practical
+    // advantages are that signed values are smaller in common use cases and are
+    // not sensitive to the vector size.
+    int SS = SignExtend32(S, HwLog);
+
     NodeTemplate Res;
-    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(S, dl)});
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getSignedConst32(SS, dl)});
     Res.Opc = IsInc ? Hexagon::V6_vshuffvdd : Hexagon::V6_vdealvdd;
     Res.Ty = PairTy;
     Res.Ops = {OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1)};

@@ -24,6 +24,7 @@
 #include <set>
 #include <stdlib.h>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
@@ -150,14 +151,8 @@ void TestAllocator<Config>::operator delete(void *ptr) {
 }
 
 template <class TypeParam> struct ScudoCombinedTest : public Test {
-  ScudoCombinedTest() {
-    UseQuarantine = std::is_same<TypeParam, scudo::AndroidConfig>::value;
-    Allocator = std::make_unique<AllocatorT>();
-  }
-  ~ScudoCombinedTest() {
-    Allocator->releaseToOS(scudo::ReleaseToOS::Force);
-    UseQuarantine = true;
-  }
+  ScudoCombinedTest() { Allocator = std::make_unique<AllocatorT>(); }
+  ~ScudoCombinedTest() { Allocator->releaseToOS(scudo::ReleaseToOS::Force); }
 
   void RunTest();
 
@@ -525,30 +520,25 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   auto *Allocator = this->Allocator.get();
   // Allocates a bunch of chunks, then iterate over all the chunks, ensuring
   // they are the ones we allocated. This requires the allocator to not have any
-  // other allocated chunk at this point (eg: won't work with the Quarantine).
-  // FIXME: Make it work with UseQuarantine and tagging enabled. Internals of
-  // iterateOverChunks reads header by tagged and non-tagger pointers so one of
-  // them will fail.
-  if (!UseQuarantine) {
-    std::vector<void *> V;
-    for (scudo::uptr I = 0; I < 64U; I++)
-      V.push_back(Allocator->allocate(
-          static_cast<scudo::uptr>(std::rand()) %
-              (TypeParam::Primary::SizeClassMap::MaxSize / 2U),
-          Origin));
-    Allocator->disable();
-    Allocator->iterateOverChunks(
-        0U, static_cast<scudo::uptr>(SCUDO_MMAP_RANGE_SIZE - 1),
-        [](uintptr_t Base, UNUSED size_t Size, void *Arg) {
-          std::vector<void *> *V = reinterpret_cast<std::vector<void *> *>(Arg);
-          void *P = reinterpret_cast<void *>(Base);
-          EXPECT_NE(std::find(V->begin(), V->end(), P), V->end());
-        },
-        reinterpret_cast<void *>(&V));
-    Allocator->enable();
-    for (auto P : V)
-      Allocator->deallocate(P, Origin);
-  }
+  // other allocated chunk at this point.
+  std::vector<void *> V;
+  for (scudo::uptr I = 0; I < 64U; I++)
+    V.push_back(Allocator->allocate(
+        static_cast<scudo::uptr>(std::rand()) %
+            (TypeParam::Primary::SizeClassMap::MaxSize / 2U),
+        Origin));
+  Allocator->disable();
+  Allocator->iterateOverChunks(
+      0U, static_cast<scudo::uptr>(SCUDO_MMAP_RANGE_SIZE - 1),
+      [](uintptr_t Base, UNUSED size_t Size, void *Arg) {
+        std::vector<void *> *V = reinterpret_cast<std::vector<void *> *>(Arg);
+        void *P = reinterpret_cast<void *>(Base);
+        EXPECT_NE(std::find(V->begin(), V->end(), P), V->end());
+      },
+      reinterpret_cast<void *>(&V));
+  Allocator->enable();
+  for (auto P : V)
+    Allocator->deallocate(P, Origin);
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
@@ -1160,4 +1150,35 @@ TEST(ScudoCombinedTest, QuarantineDisabled) {
 
   // No quarantine stats should not be present.
   EXPECT_EQ(Stats.find("Stats: Quarantine"), std::string::npos);
+}
+
+// Verify that no special quarantine blocks appear in iterateOverChunks.
+TEST(ScudoCombinedTest, QuarantineIterateOverChunks) {
+  using AllocatorT = scudo::Allocator<TestQuarantineConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  // Do a bunch of allocations and deallocations. At the end there should
+  // be no special quarantine blocks in our callbacks, and no blocks at all.
+  std::vector<scudo::uptr> Sizes = {128, 128, 256, 256};
+  for (auto const Size : Sizes) {
+    void *Ptr = Allocator->allocate(Size, Origin);
+    EXPECT_NE(Ptr, nullptr);
+    Allocator->deallocate(Ptr, Origin);
+  }
+  std::unordered_map<uintptr_t, size_t> Pointers;
+  Allocator->disable();
+  Allocator->iterateOverChunks(
+      0, static_cast<scudo::uptr>(SCUDO_MMAP_RANGE_SIZE - 1),
+      [](uintptr_t Base, size_t Size, void *Arg) {
+        std::unordered_map<uintptr_t, size_t> *Pointers =
+            reinterpret_cast<std::unordered_map<uintptr_t, size_t> *>(Arg);
+        (*Pointers)[Base] = Size;
+      },
+      reinterpret_cast<void *>(&Pointers));
+  Allocator->enable();
+
+  for (const auto [Base, Size] : Pointers) {
+    EXPECT_TRUE(false) << "Unexpected pointer found in iterateOverChunks "
+                       << std::hex << Base << " Size " << std::dec << Size;
+  }
 }

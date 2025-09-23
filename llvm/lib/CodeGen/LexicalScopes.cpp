@@ -23,7 +23,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -37,16 +36,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "lexicalscopes"
 
-static bool skipUnit(const DICompileUnit *CU) {
-  return CU->getEmissionKind() == DICompileUnit::NoDebug;
-}
-
-void LexicalScopes::resetModule() {
-  FunctionMap.clear();
-  resetFunction();
-}
-
-void LexicalScopes::resetFunction() {
+/// reset - Reset the instance so that it's prepared for another function.
+void LexicalScopes::reset() {
   MF = nullptr;
   CurrentFnLexicalScope = nullptr;
   LexicalScopeMap.clear();
@@ -56,19 +47,12 @@ void LexicalScopes::resetFunction() {
   DominatedBlocks.clear();
 }
 
-void LexicalScopes::initialize(const Module &M) {
-  resetModule();
-  for (const Function &F : M) {
-    DISubprogram *SP = F.getSubprogram();
-    if (SP && (!SP->getUnit() || !skipUnit(SP->getUnit())))
-      FunctionMap[SP] = &F;
-  }
-}
-
-void LexicalScopes::scanFunction(const MachineFunction &Fn) {
-  resetFunction();
+/// initialize - Scan machine function and constuct lexical scope nest.
+void LexicalScopes::initialize(const MachineFunction &Fn) {
+  reset();
   // Don't attempt any lexical scope creation for a NoDebug compile unit.
-  if (skipUnit(Fn.getFunction().getSubprogram()->getUnit()))
+  if (Fn.getFunction().getSubprogram()->getUnit()->getEmissionKind() ==
+      DICompileUnit::NoDebug)
     return;
   MF = &Fn;
   SmallVector<InsnRange, 4> MIRanges;
@@ -159,7 +143,8 @@ LexicalScope *LexicalScopes::getOrCreateLexicalScope(const DILocalScope *Scope,
                                                      const DILocation *IA) {
   if (IA) {
     // Skip scopes inlined from a NoDebug compile unit.
-    if (skipUnit(Scope->getSubprogram()->getUnit()))
+    if (Scope->getSubprogram()->getUnit()->getEmissionKind() ==
+        DICompileUnit::NoDebug)
       return getOrCreateLexicalScope(IA);
     // Create an abstract scope for inlined function.
     getOrCreateAbstractScope(Scope);

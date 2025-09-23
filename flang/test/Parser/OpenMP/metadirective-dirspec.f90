@@ -105,8 +105,8 @@ end
 !UNPARSE:  TYPE :: tt2
 !UNPARSE:   REAL :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1,tt2: omp_out%x=omp_in%x+omp_out%x
-!UNPARSE: ))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1,tt2: omp_out%x = omp_in%x+omp_out%x)&
+!UNPARSE: !$OMP&)
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective

@@ -238,8 +238,8 @@ static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
                        cgf.makeAddrLValue(newPtr, allocType), false);
     return;
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI(init->getSourceRange(),
-                     "storeAnyExprIntoOneUnit: complex");
+    cgf.emitComplexExprIntoLValue(init, cgf.makeAddrLValue(newPtr, allocType),
+                                  /*isInit*/ true);
     return;
   case cir::TEK_Aggregate: {
     assert(!cir::MissingFeatures::aggValueSlotGC());

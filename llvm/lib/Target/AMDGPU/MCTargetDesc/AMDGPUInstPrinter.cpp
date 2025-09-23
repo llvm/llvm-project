@@ -332,8 +332,16 @@ static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
   if (Idx < 0x100)
     return Reg;
 
+  unsigned RegNo = Idx % 0x100;
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  return RC->getRegister(Idx % 0x100);
+  if (RC->getID() == AMDGPU::VGPR_16RegClassID) {
+    // This class has 2048 registers with interleaved lo16 and hi16.
+    RegNo *= 2;
+    if (Enc & AMDGPU::HWEncoding::IS_HI16)
+      ++RegNo;
+  }
+
+  return RC->getRegister(RegNo);
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.

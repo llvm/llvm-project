@@ -65,7 +65,6 @@ set(LLVM_TEST_DEPENDS_COMMON
   count
   llvm-config
   not
-  prepare-check-lit
   )
 
 set(LLVM_TEST_DEPENDS

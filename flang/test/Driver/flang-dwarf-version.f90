@@ -1,9 +1,18 @@
+// RUN: %if !target={{.*aix.*}} %{ \
 // RUN: %flang -### -S %s -g -gdwarf-5  2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-DWARF5 %s
+// RUN:             | FileCheck --check-prefix=CHECK-DWARF5 %s \
+// RUN: %}
+
+// RUN: %if !target={{.*aix.*}} %{ \
 // RUN: %flang -### -S %s -gdwarf-5  2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-DWARF5 %s
+// RUN:             | FileCheck --check-prefix=CHECK-DWARF5 %s \
+// RUN: %}
+
+// RUN: %if !target={{.*aix.*}} %{ \
 // RUN: %flang -### -S %s -g1 -gdwarf-5  2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G1-DWARF5 %s
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G1-DWARF5 %s \
+// RUN: %}
+
 // RUN: %flang -### -S %s -gdwarf-4  2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-DWARF4 %s
 // RUN: %flang -### -S %s -gdwarf-3  2>&1 \

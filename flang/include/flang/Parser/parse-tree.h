@@ -4962,11 +4962,9 @@ struct OpenMPDeclareMapperConstruct {
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
 struct OpenMPDeclareReductionConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareReductionConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
-      std::optional<OmpClauseList>>
-      t;
 };
 
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]

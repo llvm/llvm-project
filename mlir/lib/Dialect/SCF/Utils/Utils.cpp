@@ -671,9 +671,10 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   return success();
 }
 
-Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter, Location loc,
-                                           OpFoldResult lb, OpFoldResult ub,
-                                           OpFoldResult step) {
+static Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter,
+                                                  Location loc, OpFoldResult lb,
+                                                  OpFoldResult ub,
+                                                  OpFoldResult step) {
   Range normalizedLoopBounds;
   normalizedLoopBounds.offset = rewriter.getIndexAttr(0);
   normalizedLoopBounds.stride = rewriter.getIndexAttr(1);

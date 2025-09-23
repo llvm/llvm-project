@@ -91,13 +91,13 @@ def main(argv):
 
             subprocess.call(test_cmd)
             output_file.parent.mkdir(parents=True, exist_ok=True)
+            mode = 'a' if args.existing == 'append' else 'w'
             if output_file.exists() and args.existing == 'append':
                 logging.info(f'Appending to existing data for {commit}')
-                mode = 'a'
-            else:
-                assert args.existing == 'overwrite'
+            elif output_file.exists() and args.existing == 'overwrite':
                 logging.info(f'Overwriting existing data for {commit}')
-                mode = 'w'
+            else:
+                logging.info(f'Writing data for {commit}')
             with open(output_file, mode) as out:
                 subprocess.check_call([(PARENT_DIR / 'consolidate-benchmarks'), build_dir], stdout=out)
 
