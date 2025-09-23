@@ -1831,6 +1831,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // in ICP.
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
+    MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::ThinLTOPostLink));
     // Drop available_externally and unreferenced globals. This is necessary
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
