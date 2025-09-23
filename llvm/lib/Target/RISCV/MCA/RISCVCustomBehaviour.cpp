@@ -121,7 +121,7 @@ RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
   if (Inst.getOpcode() == RISCV::VSETVLI ||
       Inst.getOpcode() == RISCV::VSETIVLI) {
     LDBG() << "RVCB: Found VSETVLI and creating instrument for it: " << Inst
-           << "\n");
+           << "\n";
     unsigned VTypeI = Inst.getOperand(2).getImm();
     RISCVVType::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
 
