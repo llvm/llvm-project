@@ -1307,6 +1307,10 @@ def MemRef_MemorySpaceCastOp : MemRef_Op<"memory_space_cast", [
 
     If the source and target address spaces are the same, this operation is a noop.
 
+    Finally, if the target memory-space is the generic/default memory-space,
+    then it is assumed this cast can be bubbled down safely. See the docs of
+    `MemorySpaceCastOpInterface` interface for more details.
+
     Example:
 
     ```mlir
