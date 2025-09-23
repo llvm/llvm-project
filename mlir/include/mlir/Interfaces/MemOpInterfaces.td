@@ -14,13 +14,15 @@
 #define MLIR_INTERFACES_MEMOPINTERFACES_TD
 
 include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def MemorySpaceCastConsumerOpInterface :
     OpInterface<"MemorySpaceCastConsumerOpInterface"> {
   let description = [{
     An interface for operations that can consume memory-space cast-like
     operations.
+
+    This interface can be used to bubble-down memory-space cast operations,
+    see the `bubble-down-memory-space-casts` pass for an example.
   }];
   let cppNamespace = "::mlir";
   let methods = [
@@ -59,6 +61,10 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
 
     These operations expect to have a well-defined ptr-like operand, and
     a well-defined target ptr-like result.
+
+    This interface also allows to determine whether a cast can be bubbled-down
+    by the `MemorySpaceCastConsumerOpInterface`, allowing control over which
+    casts can be bubbled-down or not.
   }];
   let cppNamespace = "::mlir";
   let methods = [
@@ -91,6 +97,9 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
         Returns whether the source pointer of the memory-space cast can be used
         by the `MemorySpaceCastConsumerOpInterface::bubbleDownCasts` method to
         promote the source pointer and bubble down the cast.
+
+        For example, a cast operation might decide that all casts to the generic
+        memory-space can be promoted. 
       }],
       "bool", "isSourcePromotable"
     >
@@ -98,7 +107,6 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
   let verify = [{
     return ::mlir::detail::verifyMemorySpaceCastOpInterface($_op);
   }];
-  let dependentTraits = [Pure];
   let extraClassDeclaration = [{
     /// Returns the underlying `MemorySpaceCastOpInterface` op if `value`
     /// is produced by a `MemorySpaceCastOpInterface` op, and

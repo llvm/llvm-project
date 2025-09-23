@@ -590,8 +590,12 @@ def BubbleDownMemorySpaceCasts :
   let summary = "Bubbles down memory-space cast operations.";
   let description = [{
     This pass tries to iteratively bubble down all possible memory-space cast
-    operations. It does this by looking for `MemorySpaceCastConsumerOpInterface`
-    operations, and invoking the interface methods to perform the bubbling down.
+    operations. It is important to note that the determination of which casts
+    are bubbled down is based on the interfaces
+    `MemorySpaceCastConsumerOpInterface`, and `MemorySpaceCastOpInterface`, and
+    not the pass. The pass only looks for operations implementing the
+    `MemorySpaceCastConsumerOpInterface` interface, and invoking the interface
+    methods to perform the bubbling down.
 
     Example:
 
