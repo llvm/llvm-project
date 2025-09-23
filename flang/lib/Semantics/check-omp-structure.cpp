@@ -1371,8 +1371,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
     }
     if (sym->test(Symbol::Flag::Implicit)) {
       context_.Say(arg.source,
-          "The name '%s' has been implicitly declared"_err_en_US,
-          sym->name());
+          "The name '%s' has been implicitly declared"_err_en_US, sym->name());
     }
   } else {
     context_.Say(arg.source,
