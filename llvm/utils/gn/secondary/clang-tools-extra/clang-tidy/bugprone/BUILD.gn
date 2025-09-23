@@ -97,6 +97,7 @@ static_library("bugprone") {
     "TaggedUnionMemberCountCheck.cpp",
     "TerminatingContinueCheck.cpp",
     "ThrowKeywordMissingCheck.cpp",
+    "ThrowingStaticInitializationCheck.cpp",
     "TooSmallLoopVariableCheck.cpp",
     "UncheckedOptionalAccessCheck.cpp",
     "UncheckedStringToNumberConversionCheck.cpp",

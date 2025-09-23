@@ -297,6 +297,7 @@ def MEMMOVE : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 def BZERO : RuntimeLibcall;
+def STRLEN : RuntimeLibcall;
 
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
@@ -2272,6 +2273,7 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
@@ -2279,6 +2281,7 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strlen : RuntimeLibcallImpl<STRLEN>;
 }
 
 defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);
