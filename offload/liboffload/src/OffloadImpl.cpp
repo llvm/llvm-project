@@ -250,17 +250,15 @@ Error initPlugins(OffloadContext &Context) {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Context.Platforms.emplace_back(ol_platform_impl_t{                         \
-        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),               \
-        pluginNameToBackend(#Name)});                                          \
+    if (StringRef(#Name) != "host")                                            \
+      Context.Platforms.emplace_back(ol_platform_impl_t{                       \
+          std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),             \
+          pluginNameToBackend(#Name)});                                        \
   } while (false);
 #include "Shared/Targets.def"
 
   // Preemptively initialize all devices in the plugin
   for (auto &Platform : Context.Platforms) {
-    // Do not use the host plugin - it isn't supported.
-    if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
-      continue;
     auto Err = Platform.Plugin->init();
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
