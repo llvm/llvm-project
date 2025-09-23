@@ -106,7 +106,7 @@ typedef int I, &LVal, &&RVal, *Ptr, *const ConstPtr, Vec3[3], Fn(), (*FnPtr)();
 // CHECK-MESSAGES: :[[@LINE-5]]:35: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-6]]:52: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-7]]:61: warning: use 'using' instead of 'typedef'
-// CHECK-MESSAGES: :[[@LINE-7]]:69: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-7]]:67: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using I = int;
 // CHECK-FIXES-NEXT: using LVal = I &;
 // CHECK-FIXES-NEXT: using RVal = I &&;
