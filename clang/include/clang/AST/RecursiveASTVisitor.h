@@ -91,6 +91,8 @@ isSameMethod([[maybe_unused]] FirstMethodPtrTy FirstMethodPtr,
 /// A class that does preorder or postorder
 /// depth-first traversal on the entire Clang AST and visits each node.
 ///
+/// Prefer to use (Const)DynamicRecursiveASTVisitor instead if possible.
+///
 /// This class performs three distinct tasks:
 ///   1. traverse the AST (i.e. go to each node);
 ///   2. at a given node, walk up the class hierarchy, starting from

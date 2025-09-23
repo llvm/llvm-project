@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyTest.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -83,19 +83,19 @@ public:
                                                       VD->getLocation()),
                        NewName);
 
-    class UsageVisitor : public RecursiveASTVisitor<UsageVisitor> {
+    class UsageVisitor : public ConstDynamicRecursiveASTVisitor {
     public:
       UsageVisitor(const ValueDecl *VD, StringRef NewName,
                    DiagnosticBuilder &Diag)
           : VD(VD), NewName(NewName), Diag(Diag) {}
-      bool VisitDeclRefExpr(DeclRefExpr *E) {
+      bool VisitDeclRefExpr(const DeclRefExpr *E) override {
         if (const ValueDecl *D = E->getDecl()) {
           if (VD->getCanonicalDecl() == D->getCanonicalDecl()) {
             Diag << FixItHint::CreateReplacement(
                 CharSourceRange::getTokenRange(E->getSourceRange()), NewName);
           }
         }
-        return RecursiveASTVisitor<UsageVisitor>::VisitDeclRefExpr(E);
+        return ConstDynamicRecursiveASTVisitor::VisitDeclRefExpr(E);
       }
 
     private:

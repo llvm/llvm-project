@@ -14,7 +14,7 @@
 #include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -156,8 +156,8 @@ static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
 }
 
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
-struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
-  using Base = RecursiveASTVisitor<MapRegionCounters>;
+struct MapRegionCounters : ConstDynamicRecursiveASTVisitor {
+  using Base = ConstDynamicRecursiveASTVisitor;
 
   /// The next counter value to assign.
   unsigned NextCounter;
@@ -184,16 +184,16 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
-  bool TraverseBlockExpr(BlockExpr *BE) { return true; }
-  bool TraverseLambdaExpr(LambdaExpr *LE) {
+  bool TraverseBlockExpr(const BlockExpr *BE) override { return true; }
+  bool TraverseLambdaExpr(const LambdaExpr *LE) override {
     // Traverse the captures, but not the body.
     for (auto C : zip(LE->captures(), LE->capture_inits()))
       TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
     return true;
   }
-  bool TraverseCapturedStmt(CapturedStmt *CS) { return true; }
+  bool TraverseCapturedStmt(const CapturedStmt *CS) override { return true; }
 
-  bool VisitDecl(const Decl *D) {
+  bool VisitDecl(const Decl *D) override {
     switch (D->getKind()) {
     default:
       break;
@@ -213,7 +213,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 
   /// If \p S gets a fresh counter, update the counter mappings. Return the
   /// V1 hash of \p S.
-  PGOHash::HashType updateCounterMappings(Stmt *S) {
+  PGOHash::HashType updateCounterMappings(const Stmt *S) {
     auto Type = getHashType(PGO_HASH_V1, S);
     if (Type != PGOHash::None)
       CounterMap[S] = NextCounter++;
@@ -235,7 +235,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   SmallVector<const BinaryOperator *, 16> LogOpStack;
 
   // Hook: dataTraverseStmtPre() is invoked prior to visiting an AST Stmt node.
-  bool dataTraverseStmtPre(Stmt *S) {
+  bool dataTraverseStmtPre(const Stmt *S) override {
     /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
     if (MCDCMaxCond == 0)
       return true;
@@ -275,7 +275,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   // Hook: dataTraverseStmtPost() is invoked by the AST visitor after visiting
   // an AST Stmt node.  MC/DC will use it to to signal when the top of a
   // logical operation (boolean expression) nest is encountered.
-  bool dataTraverseStmtPost(Stmt *S) {
+  bool dataTraverseStmtPost(const Stmt *S) override {
     /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
     if (MCDCMaxCond == 0)
       return true;
@@ -328,7 +328,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// semantics of the operator. This is only valid for ">= v7" of the profile
   /// version so that we facilitate backward compatibility. In addition, in
   /// order to use MC/DC, count the number of total LHS and RHS conditions.
-  bool VisitBinaryOperator(BinaryOperator *S) {
+  bool VisitBinaryOperator(const BinaryOperator *S) override {
     if (S->isLogicalOp()) {
       if (CodeGenFunction::isInstrumentedCondition(S->getLHS()))
         NumCond++;
@@ -343,7 +343,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return Base::VisitBinaryOperator(S);
   }
 
-  bool VisitConditionalOperator(ConditionalOperator *S) {
+  bool VisitConditionalOperator(const ConditionalOperator *S) override {
     if (llvm::EnableSingleByteCoverage && S->getTrueExpr())
       CounterMap[S->getTrueExpr()] = NextCounter++;
     if (llvm::EnableSingleByteCoverage && S->getFalseExpr())
@@ -352,7 +352,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   }
 
   /// Include \p S in the function hash.
-  bool VisitStmt(Stmt *S) {
+  bool VisitStmt(const Stmt *S) override {
     auto Type = updateCounterMappings(S);
     if (Hash.getHashVersion() != PGO_HASH_V1)
       Type = getHashType(Hash.getHashVersion(), S);
@@ -361,7 +361,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseIfStmt(IfStmt *If) {
+  bool TraverseIfStmt(const IfStmt *If) override {
     // If we used the V1 hash, use the default traversal.
     if (Hash.getHashVersion() == PGO_HASH_V1)
       return Base::TraverseIfStmt(If);
@@ -369,7 +369,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     // When single byte coverage mode is enabled, add a counter to then and
     // else.
     bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : If->children()) {
+    for (const Stmt *CS : If->children()) {
       if (!CS || NoSingleByteCoverage)
         continue;
       if (CS == If->getThen())
@@ -381,7 +381,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     // Otherwise, keep track of which branch we're in while traversing.
     VisitStmt(If);
 
-    for (Stmt *CS : If->children()) {
+    for (const Stmt *CS : If->children()) {
       if (!CS)
         continue;
       if (CS == If->getThen())
@@ -394,11 +394,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseWhileStmt(WhileStmt *While) {
+  bool TraverseWhileStmt(const WhileStmt *While) override {
     // When single byte coverage mode is enabled, add a counter to condition and
     // body.
     bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : While->children()) {
+    for (const Stmt *CS : While->children()) {
       if (!CS || NoSingleByteCoverage)
         continue;
       if (CS == While->getCond())
@@ -413,11 +413,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseDoStmt(DoStmt *Do) {
+  bool TraverseDoStmt(const DoStmt *Do) override {
     // When single byte coverage mode is enabled, add a counter to condition and
     // body.
     bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : Do->children()) {
+    for (const Stmt *CS : Do->children()) {
       if (!CS || NoSingleByteCoverage)
         continue;
       if (CS == Do->getCond())
@@ -432,11 +432,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseForStmt(ForStmt *For) {
+  bool TraverseForStmt(const ForStmt *For) override {
     // When single byte coverage mode is enabled, add a counter to condition,
     // increment and body.
     bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : For->children()) {
+    for (const Stmt *CS : For->children()) {
       if (!CS || NoSingleByteCoverage)
         continue;
       if (CS == For->getCond())
@@ -453,10 +453,10 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseCXXForRangeStmt(CXXForRangeStmt *ForRange) {
+  bool TraverseCXXForRangeStmt(const CXXForRangeStmt *ForRange) override {
     // When single byte coverage mode is enabled, add a counter to body.
     bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : ForRange->children()) {
+    for (const Stmt *CS : ForRange->children()) {
       if (!CS || NoSingleByteCoverage)
         continue;
       if (CS == ForRange->getBody())
@@ -473,7 +473,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 // stability, define a custom traversal which tracks the end of the statement
 // in the hash (provided we're not using the V1 hash).
 #define DEFINE_NESTABLE_TRAVERSAL(N)                                           \
-  bool Traverse##N(N *S) {                                                     \
+  bool Traverse##N(const N *S) override {                                      \
     Base::Traverse##N(S);                                                      \
     if (Hash.getHashVersion() != PGO_HASH_V1)                                  \
       Hash.combine(PGOHash::EndOfScope);                                       \

@@ -11,7 +11,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TestTU.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -32,9 +32,9 @@ TEST_P(ASTUtils, PrintTemplateArgs) {
   auto Pair = GetParam();
   Annotations Test(Pair.AnnotatedCode);
   auto AST = TestTU::withCode(Test.code()).build();
-  struct Visitor : RecursiveASTVisitor<Visitor> {
+  struct Visitor : ConstDynamicRecursiveASTVisitor {
     Visitor(std::vector<Position> Points) : Points(std::move(Points)) {}
-    bool VisitNamedDecl(const NamedDecl *ND) {
+    bool VisitNamedDecl(const NamedDecl *ND) override {
       if (TemplateArgsAtPoints.size() == Points.size())
         return true;
       auto Pos = sourceLocToPosition(ND->getASTContext().getSourceManager(),

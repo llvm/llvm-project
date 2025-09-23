@@ -10,7 +10,7 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
@@ -51,10 +51,10 @@ public:
         }()) {}
 
   const Decl &findDecl(llvm::StringRef SymbolName) {
-    struct Visitor : RecursiveASTVisitor<Visitor> {
+    struct Visitor : ConstDynamicRecursiveASTVisitor {
       llvm::StringRef NameToFind;
       const NamedDecl *Out = nullptr;
-      bool VisitNamedDecl(const NamedDecl *ND) {
+      bool VisitNamedDecl(const NamedDecl *ND) override {
         // Skip the templated decls, as they have the same name and matches in
         // this file care about the outer template name.
         if (auto *TD = ND->getDescribedTemplate())

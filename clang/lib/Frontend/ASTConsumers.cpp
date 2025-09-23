@@ -13,9 +13,10 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,8 +27,8 @@ using namespace clang;
 
 namespace {
   class ASTPrinter : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTPrinter> {
-    typedef RecursiveASTVisitor<ASTPrinter> base;
+                     public DynamicRecursiveASTVisitor {
+    using base = DynamicRecursiveASTVisitor;
 
   public:
     enum Kind { DumpFull, Dump, Print, None };
@@ -36,14 +37,18 @@ namespace {
                bool DumpLookups = false, bool DumpDeclTypes = false)
         : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)),
           OutputKind(K), OutputFormat(Format), FilterString(FilterString),
-          DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {}
+          DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {
+      ShouldWalkTypesOfTypeLocs = false;
+    }
 
     ASTPrinter(raw_ostream &Out, Kind K, ASTDumpOutputFormat Format,
                StringRef FilterString, bool DumpLookups = false,
                bool DumpDeclTypes = false)
         : Out(Out), OwnedOut(nullptr), OutputKind(K), OutputFormat(Format),
           FilterString(FilterString), DumpLookups(DumpLookups),
-          DumpDeclTypes(DumpDeclTypes) {}
+          DumpDeclTypes(DumpDeclTypes) {
+      ShouldWalkTypesOfTypeLocs = false;
+    }
 
     void HandleTranslationUnit(ASTContext &Context) override {
       TranslationUnitDecl *D = Context.getTranslationUnitDecl();
@@ -54,9 +59,7 @@ namespace {
       TraverseDecl(D);
     }
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool TraverseDecl(Decl *D) {
+    bool TraverseDecl(Decl *D) override {
       if (D && filterMatches(D)) {
         bool ShowColors = Out.has_colors();
         if (ShowColors)
@@ -142,18 +145,18 @@ namespace {
   };
 
   class ASTDeclNodeLister : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTDeclNodeLister> {
+                            public DynamicRecursiveASTVisitor {
   public:
     ASTDeclNodeLister(raw_ostream *Out = nullptr)
-        : Out(Out ? *Out : llvm::outs()) {}
+        : Out(Out ? *Out : llvm::outs()) {
+      ShouldWalkTypesOfTypeLocs = false;
+    }
 
     void HandleTranslationUnit(ASTContext &Context) override {
       TraverseDecl(Context.getTranslationUnitDecl());
     }
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitNamedDecl(NamedDecl *D) {
+    bool VisitNamedDecl(NamedDecl *D) override {
       D->printQualifiedName(Out);
       Out << '\n';
       return true;

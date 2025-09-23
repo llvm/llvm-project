@@ -18,7 +18,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MAPPER_H
 
 #include "Representation.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Tooling/Execution.h"
 
 using namespace clang::comments;
@@ -27,22 +27,22 @@ using namespace clang::tooling;
 namespace clang {
 namespace doc {
 
-class MapASTVisitor : public clang::RecursiveASTVisitor<MapASTVisitor>,
+class MapASTVisitor : public ConstDynamicRecursiveASTVisitor,
                       public ASTConsumer {
 public:
   explicit MapASTVisitor(ASTContext *Ctx, ClangDocContext CDCtx)
       : CDCtx(CDCtx) {}
 
   void HandleTranslationUnit(ASTContext &Context) override;
-  bool VisitNamespaceDecl(const NamespaceDecl *D);
-  bool VisitRecordDecl(const RecordDecl *D);
-  bool VisitEnumDecl(const EnumDecl *D);
-  bool VisitCXXMethodDecl(const CXXMethodDecl *D);
-  bool VisitFunctionDecl(const FunctionDecl *D);
-  bool VisitTypedefDecl(const TypedefDecl *D);
-  bool VisitTypeAliasDecl(const TypeAliasDecl *D);
-  bool VisitConceptDecl(const ConceptDecl *D);
-  bool VisitVarDecl(const VarDecl *D);
+  bool VisitNamespaceDecl(const NamespaceDecl *D) override;
+  bool VisitRecordDecl(const RecordDecl *D) override;
+  bool VisitEnumDecl(const EnumDecl *D) override;
+  bool VisitCXXMethodDecl(const CXXMethodDecl *D) override;
+  bool VisitFunctionDecl(const FunctionDecl *D) override;
+  bool VisitTypedefDecl(const TypedefDecl *D) override;
+  bool VisitTypeAliasDecl(const TypeAliasDecl *D) override;
+  bool VisitConceptDecl(const ConceptDecl *D) override;
+  bool VisitVarDecl(const VarDecl *D) override;
 
 private:
   template <typename T> bool mapDecl(const T *D, bool IsDefinition);

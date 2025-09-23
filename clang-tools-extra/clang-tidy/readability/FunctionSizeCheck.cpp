@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FunctionSizeCheck.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/BitVector.h"
 
@@ -16,11 +16,11 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 namespace {
 
-class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
-  using Base = RecursiveASTVisitor<FunctionASTVisitor>;
+class FunctionASTVisitor : public ConstDynamicRecursiveASTVisitor {
+  using Base = ConstDynamicRecursiveASTVisitor;
 
 public:
-  bool VisitVarDecl(VarDecl *VD) {
+  bool VisitVarDecl(const VarDecl *VD) override {
     // Do not count function params.
     // Do not count decomposition declarations (C++17's structured bindings).
     if (StructNesting == 0 &&
@@ -28,14 +28,14 @@ public:
       ++Info.Variables;
     return true;
   }
-  bool VisitBindingDecl(BindingDecl *BD) {
+  bool VisitBindingDecl(const BindingDecl *BD) override {
     // Do count each of the bindings (in the decomposition declaration).
     if (StructNesting == 0)
       ++Info.Variables;
     return true;
   }
 
-  bool TraverseStmt(Stmt *Node) {
+  bool TraverseStmt(const Stmt *Node) override {
     if (!Node)
       return Base::TraverseStmt(Node);
 
@@ -66,7 +66,7 @@ public:
     return true;
   }
 
-  bool TraverseCompoundStmt(CompoundStmt *Node) {
+  bool TraverseCompoundStmt(const CompoundStmt *Node) override {
     // If this new compound statement is located in a compound statement, which
     // is already nested NestingThreshold levels deep, record the start location
     // of this new compound statement.
@@ -80,35 +80,35 @@ public:
     return true;
   }
 
-  bool TraverseDecl(Decl *Node) {
+  bool TraverseDecl(const Decl *Node) override {
     TrackedParent.push_back(false);
     Base::TraverseDecl(Node);
     TrackedParent.pop_back();
     return true;
   }
 
-  bool TraverseLambdaExpr(LambdaExpr *Node) {
+  bool TraverseLambdaExpr(const LambdaExpr *Node) override {
     ++StructNesting;
     Base::TraverseLambdaExpr(Node);
     --StructNesting;
     return true;
   }
 
-  bool TraverseCXXRecordDecl(CXXRecordDecl *Node) {
+  bool TraverseCXXRecordDecl(const CXXRecordDecl *Node) override {
     ++StructNesting;
     Base::TraverseCXXRecordDecl(Node);
     --StructNesting;
     return true;
   }
 
-  bool TraverseStmtExpr(StmtExpr *SE) {
+  bool TraverseStmtExpr(const StmtExpr *SE) override {
     ++StructNesting;
     Base::TraverseStmtExpr(SE);
     --StructNesting;
     return true;
   }
 
-  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+  bool TraverseConstructorInitializer(const CXXCtorInitializer *Init) override {
     if (CountMemberInitAsStmt)
       ++Info.Statements;
 
@@ -173,7 +173,7 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   FunctionASTVisitor Visitor;
   Visitor.Info.NestingThreshold = NestingThreshold.value_or(-1);
   Visitor.CountMemberInitAsStmt = CountMemberInitAsStmt;
-  Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func));
+  Visitor.TraverseDecl(Func);
   auto &FI = Visitor.Info;
 
   if (FI.Statements == 0)

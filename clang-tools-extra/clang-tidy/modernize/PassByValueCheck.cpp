@@ -8,7 +8,7 @@
 
 #include "PassByValueCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -93,10 +93,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
   /// \c ParmVarDecl is used exactly one time.
   ///
   /// \see ExactlyOneUsageVisitor::hasExactlyOneUsageIn()
-  class ExactlyOneUsageVisitor
-      : public RecursiveASTVisitor<ExactlyOneUsageVisitor> {
-    friend class RecursiveASTVisitor<ExactlyOneUsageVisitor>;
-
+  class ExactlyOneUsageVisitor : public ConstDynamicRecursiveASTVisitor {
   public:
     ExactlyOneUsageVisitor(const ParmVarDecl *ParamDecl)
         : ParamDecl(ParamDecl) {}
@@ -106,7 +103,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     /// given constructor.
     bool hasExactlyOneUsageIn(const CXXConstructorDecl *Ctor) {
       Count = 0U;
-      TraverseDecl(const_cast<CXXConstructorDecl *>(Ctor));
+      TraverseDecl(Ctor);
       return Count == 1U;
     }
 
@@ -114,7 +111,7 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     /// Counts the number of references to a variable.
     ///
     /// Stops the AST traversal if more than one usage is found.
-    bool VisitDeclRefExpr(DeclRefExpr *D) {
+    bool VisitDeclRefExpr(const DeclRefExpr *D) override {
       if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl())) {
         if (To == ParamDecl) {
           ++Count;

@@ -180,7 +180,7 @@ TemplateTypeParmTypeLoc getContainedAutoParamType(TypeLoc TL);
 
 // If TemplatedDecl is the generic body of a template, and the template has
 // exactly one visible instantiation, return the instantiated body.
-NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl);
+const NamedDecl *getOnlyInstantiation(const NamedDecl *TemplatedDecl);
 
 /// Return attributes attached directly to a node.
 std::vector<const Attr *> getAttributes(const DynTypedNode &);

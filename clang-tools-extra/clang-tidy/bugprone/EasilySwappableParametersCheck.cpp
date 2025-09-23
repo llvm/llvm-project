@@ -9,7 +9,7 @@
 #include "EasilySwappableParametersCheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1600,8 +1600,8 @@ static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
 /// a usage for both in the same strict expression subtree. A strict
 /// expression subtree is a tree which only includes Expr nodes, i.e. no
 /// Stmts and no Decls.
-class AppearsInSameExpr : public RecursiveASTVisitor<AppearsInSameExpr> {
-  using Base = RecursiveASTVisitor<AppearsInSameExpr>;
+class AppearsInSameExpr : public ConstDynamicRecursiveASTVisitor {
+  using Base = ConstDynamicRecursiveASTVisitor;
 
   const FunctionDecl *FD;
   const Expr *CurrentExprOnlyTreeRoot = nullptr;
@@ -1612,7 +1612,7 @@ class AppearsInSameExpr : public RecursiveASTVisitor<AppearsInSameExpr> {
 public:
   void setup(const FunctionDecl *FD) {
     this->FD = FD;
-    TraverseFunctionDecl(const_cast<FunctionDecl *>(FD));
+    TraverseFunctionDecl(FD);
   }
 
   bool operator()(const ParmVarDecl *Param1, const ParmVarDecl *Param2) const {
@@ -1620,13 +1620,13 @@ public:
                                            Param2);
   }
 
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(const Decl *D) override {
     CurrentExprOnlyTreeRoot = nullptr;
     return Base::TraverseDecl(D);
   }
 
-  bool TraverseStmt(Stmt *S, DataRecursionQueue *Queue = nullptr) {
-    if (auto *E = dyn_cast_or_null<Expr>(S)) {
+  bool TraverseStmt(const Stmt *S) override {
+    if (const auto *E = dyn_cast_or_null<Expr>(S)) {
       bool RootSetInCurrentStackFrame = false;
       if (!CurrentExprOnlyTreeRoot) {
         CurrentExprOnlyTreeRoot = E;
@@ -1646,11 +1646,11 @@ public:
     return Base::TraverseStmt(S);
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
     if (!CurrentExprOnlyTreeRoot)
       return true;
 
-    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
       if (llvm::find(FD->parameters(), PVD))
         ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
 

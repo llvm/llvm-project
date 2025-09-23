@@ -27,7 +27,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/SourceManager.h"
@@ -5697,10 +5697,9 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
     case TemplateArgument::Pack:
       return ReferencesAnonymousEntity(TA.getPackAsArray());
     case TemplateArgument::Type: {
-      struct ReferencesAnonymous
-          : public RecursiveASTVisitor<ReferencesAnonymous> {
+      struct ReferencesAnonymous : DynamicRecursiveASTVisitor {
         bool RefAnon = false;
-        bool VisitRecordType(RecordType *RT) {
+        bool VisitRecordType(RecordType *RT) override {
           if (ReferencesAnonymousEntity(RT)) {
             RefAnon = true;
             return false;
@@ -5721,17 +5720,17 @@ static bool ReferencesAnonymousEntity(ArrayRef<TemplateArgument> Args) {
   });
 }
 namespace {
-struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
+struct ReconstitutableType : DynamicRecursiveASTVisitor {
   bool Reconstitutable = true;
-  bool VisitVectorType(VectorType *FT) {
+  bool VisitVectorType(VectorType *FT) override {
     Reconstitutable = false;
     return false;
   }
-  bool VisitAtomicType(AtomicType *FT) {
+  bool VisitAtomicType(AtomicType *FT) override {
     Reconstitutable = false;
     return false;
   }
-  bool VisitType(Type *T) {
+  bool VisitType(Type *T) override {
     // _BitInt(N) isn't reconstitutable because the bit width isn't encoded in
     // the DWARF, only the byte width.
     if (T->isBitIntType()) {
@@ -5740,7 +5739,7 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
     }
     return true;
   }
-  bool TraverseEnumType(EnumType *ET, bool = false) {
+  bool TraverseEnumType(EnumType *ET, bool = false) override {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
     if (const auto *ED = dyn_cast<EnumDecl>(ET->getOriginalDecl())) {
@@ -5755,13 +5754,13 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
     }
     return true;
   }
-  bool VisitFunctionProtoType(FunctionProtoType *FT) {
+  bool VisitFunctionProtoType(FunctionProtoType *FT) override {
     // noexcept is not encoded in DWARF, so the reversi
     Reconstitutable &= !isNoexceptExceptionSpec(FT->getExceptionSpecType());
     Reconstitutable &= !FT->getNoReturnAttr();
     return Reconstitutable;
   }
-  bool VisitRecordType(RecordType *RT, bool = false) {
+  bool VisitRecordType(RecordType *RT) override {
     if (ReferencesAnonymousEntity(RT)) {
       Reconstitutable = false;
       return false;
