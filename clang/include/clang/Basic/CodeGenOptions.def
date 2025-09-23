@@ -509,6 +509,9 @@ CODEGENOPT(StaticClosure, 1, 0, Benign)
 /// Assume that UAVs/SRVs may alias if enabled
 CODEGENOPT(ResMayAlias, 1, 0, Benign)
 
+/// Enable the Ripple pass
+CODEGENOPT(EnableRipple, 1, 0, Benign)
+
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 

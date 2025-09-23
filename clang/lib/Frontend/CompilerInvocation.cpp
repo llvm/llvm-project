@@ -4403,6 +4403,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (Args.hasArg(options::OPT_fopenacc))
     Opts.OpenACC = true;
 
+  // Ripple Configuration
+  if (Args.hasArg(options::OPT_fenable_ripple))
+    Opts.Ripple = true;
+
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
     if (Val == "fast")
