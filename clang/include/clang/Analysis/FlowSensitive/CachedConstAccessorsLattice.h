@@ -90,7 +90,7 @@ public:
     return Base::operator==(Other);
   }
 
-  LatticeJoinEffect join(const CachedConstAccessorsLattice &Other);
+  LatticeEffect join(const CachedConstAccessorsLattice &Other);
 
 private:
   // Maps a record storage location and const method to the value to return
@@ -127,7 +127,7 @@ joinConstMethodMap(
   for (auto &[Loc, DeclToT] : Map1) {
     auto It = Map2.find(Loc);
     if (It == Map2.end()) {
-      Effect = LatticeJoinEffect::Changed;
+      Effect = LatticeEffect::Changed;
       continue;
     }
     const auto &OtherDeclToT = It->second;
@@ -135,7 +135,7 @@ joinConstMethodMap(
     for (auto [Func, Var] : DeclToT) {
       T *OtherVar = OtherDeclToT.lookup(Func);
       if (OtherVar == nullptr || OtherVar != Var) {
-        Effect = LatticeJoinEffect::Changed;
+        Effect = LatticeEffect::Changed;
         continue;
       }
       JoinedDeclToT.insert({Func, Var});
