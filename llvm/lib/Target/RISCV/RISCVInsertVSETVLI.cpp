@@ -1067,8 +1067,6 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
   assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
 
   if (RISCVII::hasTWidenOp(TSFlags)) {
-    assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
-
     const MachineOperand &TWidenOp =
         MI.getOperand(MI.getNumExplicitOperands() - 1);
     unsigned TWiden = TWidenOp.getImm();
