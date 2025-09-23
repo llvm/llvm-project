@@ -218,7 +218,7 @@ StringRef ArgList::getSubcommand(
 
     size_t OldSize = SubCommands.size();
     for (const OptTable::Command &CMD : Commands) {
-      if (StringRef(CMD.Name) == "TopLevelCommand")
+      if (StringRef(CMD.Name) == opt::TopLevelCommandName)
         continue;
       if (StringRef(CMD.Name) == A->getValue())
         SubCommands.push_back(A->getValue());
@@ -227,12 +227,12 @@ StringRef ArgList::getSubcommand(
     if (SubCommands.size() == OldSize)
       OtherPositionals.push_back(A->getValue());
   }
-  if (SubCommands.size() > 1) {
+  // Invoke callbacks if necessary.
+  if (SubCommands.size() > 1)
     HandleMultipleSubcommands(SubCommands);
-  }
-  if (!OtherPositionals.empty()) {
+  if (!OtherPositionals.empty())
     HandleOtherPositionals(OtherPositionals);
-  }
+
   if (SubCommands.size() == 1)
     return SubCommands.front();
   return {}; // No valid usage of subcommand found.

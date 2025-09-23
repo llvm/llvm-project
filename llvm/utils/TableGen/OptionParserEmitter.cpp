@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
@@ -263,7 +264,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       Records.getAllDerivedDefinitions("Command");
   // TopLevelCommand should come first.
   std::stable_partition(Commands.begin(), Commands.end(), [](const Record *R) {
-    return R->getName() == "TopLevelCommand";
+    return R->getName() == opt::TopLevelCommandName;
   });
 
   emitSourceFileHeader("Option Parsing Definitions", OS);

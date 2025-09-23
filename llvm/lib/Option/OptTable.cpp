@@ -418,7 +418,7 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
 
 std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                                            Visibility VisibilityMask) const {
-  return internalParseOneArg(Args, Index, nullptr,
+  return internalParseOneArg(Args, Index, /*ActiveCommand=*/nullptr,
                              [VisibilityMask](const Option &Opt) {
                                return !Opt.hasVisibilityFlag(VisibilityMask);
                              });
@@ -428,7 +428,7 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
                                            unsigned FlagsToInclude,
                                            unsigned FlagsToExclude) const {
   return internalParseOneArg(
-      Args, Index, nullptr,
+      Args, Index, /*ActiveCommand=*/nullptr,
       [FlagsToInclude, FlagsToExclude](const Option &Opt) {
         if (FlagsToInclude && !Opt.hasFlag(FlagsToInclude))
           return true;
@@ -766,7 +766,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
   bool ShowHidden = !(FlagsToExclude & HelpHidden);
   FlagsToExclude &= ~HelpHidden;
   return internalPrintHelp(
-      OS, Usage, Title, {}, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, /*Subcommand=*/{}, ShowHidden, ShowAllAliases,
       [FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
         if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
           return true;
@@ -800,7 +800,7 @@ void OptTable::internalPrintHelp(
       // This loop prints subcommands list and sets ActiveCommand to
       // TopLevelCommand while iterating over all commands.
       for (const auto &C : Commands) {
-        if (StringRef(C.Name) == "TopLevelCommand") {
+        if (StringRef(C.Name) == opt::TopLevelCommandName) {
           ActiveCommand = &C;
           continue;
         }

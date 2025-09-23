@@ -45,6 +45,8 @@ public:
   operator unsigned() const { return Mask; }
 };
 
+inline constexpr StringRef TopLevelCommandName = "TopLevelCommand";
+
 /// Provide access to the Option info table.
 ///
 /// The OptTable class provides a layer of indirection which allows Option

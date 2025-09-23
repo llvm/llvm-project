@@ -44,8 +44,9 @@ static constexpr OptTable::Info InfoTable[] = {
 class HelloSubOptTable : public GenericOptTable {
 public:
   HelloSubOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable, false,
-                        OptionCommands, OptionCommandIDsTable) {}
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                        /*IgnoreCase=*/false, OptionCommands,
+                        OptionCommandIDsTable) {}
 };
 } // namespace
 
@@ -97,9 +98,8 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (Subcommand.empty()) {
-    if (Args.hasArg(OPT_version)) {
+    if (Args.hasArg(OPT_version))
       llvm::outs() << "LLVM Hello Subcommand Example 1.0\n";
-    }
   } else if (Subcommand == "foo") {
     if (Args.hasArg(OPT_uppercase))
       llvm::outs() << "FOO\n";
