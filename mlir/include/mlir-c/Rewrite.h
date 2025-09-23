@@ -327,32 +327,52 @@ MLIR_CAPI_EXPORTED void mlirPDLPatternModuleDestroy(MlirPDLPatternModule op);
 MLIR_CAPI_EXPORTED MlirRewritePatternSet
 mlirRewritePatternSetFromPDLPatternModule(MlirPDLPatternModule op);
 
-MLIR_CAPI_EXPORTED bool mlirPDLValueIsValue(MlirPDLValue value);
+/// Cast the MlirPDLValue to an MlirValue.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
 MLIR_CAPI_EXPORTED MlirValue mlirPDLValueAsValue(MlirPDLValue value);
-MLIR_CAPI_EXPORTED bool mlirPDLValueIsType(MlirPDLValue value);
+
+/// Cast the MlirPDLValue to an MlirType.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
 MLIR_CAPI_EXPORTED MlirType mlirPDLValueAsType(MlirPDLValue value);
-MLIR_CAPI_EXPORTED bool mlirPDLValueIsOperation(MlirPDLValue value);
+
+/// Cast the MlirPDLValue to an MlirOperation.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
 MLIR_CAPI_EXPORTED MlirOperation mlirPDLValueAsOperation(MlirPDLValue value);
-MLIR_CAPI_EXPORTED bool mlirPDLValueIsAttribute(MlirPDLValue value);
+
+/// Cast the MlirPDLValue to an MlirAttribute.
+/// Return a null value if the cast fails, just like llvm::dyn_cast.
 MLIR_CAPI_EXPORTED MlirAttribute mlirPDLValueAsAttribute(MlirPDLValue value);
 
+/// Push the MlirValue into the given MlirPDLResultList.
 MLIR_CAPI_EXPORTED void
 mlirPDLResultListPushBackValue(MlirPDLResultList results, MlirValue value);
+
+/// Push the MlirType into the given MlirPDLResultList.
 MLIR_CAPI_EXPORTED void mlirPDLResultListPushBackType(MlirPDLResultList results,
                                                       MlirType value);
+
+/// Push the MlirOperation into the given MlirPDLResultList.
 MLIR_CAPI_EXPORTED void
 mlirPDLResultListPushBackOperation(MlirPDLResultList results,
                                    MlirOperation value);
+
+/// Push the MlirAttribute into the given MlirPDLResultList.
 MLIR_CAPI_EXPORTED void
 mlirPDLResultListPushBackAttribute(MlirPDLResultList results,
                                    MlirAttribute value);
 
+/// This function type is used as callbacks for PDL native rewrite functions.
+/// Input values can be accessed by `values` with its size `nValues`;
+/// output values can be added into `results` by `mlirPDLResultListPushBack*`
+/// APIs. And the return value indicates whether the rewrite succeeds.
 typedef MlirLogicalResult (*MlirPDLRewriteFunction)(
     MlirPatternRewriter rewriter, MlirPDLResultList results, size_t nValues,
     MlirPDLValue *values, void *userData);
 
+/// Register a rewrite function into the given PDL pattern module.
+/// `userData` will be provided as an argument to the rewrite function.
 MLIR_CAPI_EXPORTED void mlirPDLPatternModuleRegisterRewriteFunction(
-    MlirPDLPatternModule module, MlirStringRef name,
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
     MlirPDLRewriteFunction rewriteFn, void *userData);
 
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH

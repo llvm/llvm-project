@@ -363,36 +363,20 @@ inline MlirPDLResultList wrap(mlir::PDLResultList *results) {
   return {results};
 }
 
-bool mlirPDLValueIsValue(MlirPDLValue value) {
-  return unwrap(value)->isa<mlir::Value>();
-}
-
 MlirValue mlirPDLValueAsValue(MlirPDLValue value) {
-  return wrap(unwrap(value)->cast<mlir::Value>());
-}
-
-bool mlirPDLValueIsType(MlirPDLValue value) {
-  return unwrap(value)->isa<mlir::Type>();
+  return wrap(unwrap(value)->dyn_cast<mlir::Value>());
 }
 
 MlirType mlirPDLValueAsType(MlirPDLValue value) {
-  return wrap(unwrap(value)->cast<mlir::Type>());
-}
-
-bool mlirPDLValueIsOperation(MlirPDLValue value) {
-  return unwrap(value)->isa<mlir::Operation *>();
+  return wrap(unwrap(value)->dyn_cast<mlir::Type>());
 }
 
 MlirOperation mlirPDLValueAsOperation(MlirPDLValue value) {
-  return wrap(unwrap(value)->cast<mlir::Operation *>());
-}
-
-bool mlirPDLValueIsAttribute(MlirPDLValue value) {
-  return unwrap(value)->isa<mlir::Attribute>();
+  return wrap(unwrap(value)->dyn_cast<mlir::Operation *>());
 }
 
 MlirAttribute mlirPDLValueAsAttribute(MlirPDLValue value) {
-  return wrap(unwrap(value)->cast<mlir::Attribute>());
+  return wrap(unwrap(value)->dyn_cast<mlir::Attribute>());
 }
 
 void mlirPDLResultListPushBackValue(MlirPDLResultList results,
@@ -422,6 +406,7 @@ void mlirPDLPatternModuleRegisterRewriteFunction(
       [userData, rewriteFn](PatternRewriter &rewriter, PDLResultList &results,
                             ArrayRef<PDLValue> values) -> LogicalResult {
         std::vector<MlirPDLValue> mlirValues;
+        mlirValues.reserve(values.size());
         for (auto &value : values) {
           mlirValues.push_back(wrap(&value));
         }

@@ -27,20 +27,24 @@ using namespace mlir::python;
 namespace {
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-nb::object objectFromPDLValue(MlirPDLValue value) {
-  if (mlirPDLValueIsValue(value))
-    return nb::cast(mlirPDLValueAsValue(value));
-  if (mlirPDLValueIsOperation(value))
-    return nb::cast(mlirPDLValueAsOperation(value));
-  if (mlirPDLValueIsAttribute(value))
-    return nb::cast(mlirPDLValueAsAttribute(value));
-  if (mlirPDLValueIsType(value))
-    return nb::cast(mlirPDLValueAsType(value));
+static nb::object objectFromPDLValue(MlirPDLValue value) {
+  if (MlirValue v = mlirPDLValueAsValue(value); !mlirValueIsNull(v))
+    return nb::cast(v);
+  if (MlirOperation v = mlirPDLValueAsOperation(value); !mlirOperationIsNull(v))
+    return nb::cast(v);
+  if (MlirAttribute v = mlirPDLValueAsAttribute(value); !mlirAttributeIsNull(v))
+    return nb::cast(v);
+  if (MlirType v = mlirPDLValueAsType(value); !mlirTypeIsNull(v))
+    return nb::cast(v);
 
   throw std::runtime_error("unsupported PDL value type");
 }
 
-MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
+// Convert the Python object to a boolean.
+// If it evaluates to False, treat it as success;
+// otherwise, treat it as failure.
+// Note that None is considered success.
+static MlirLogicalResult logicalResultFromObject(const nb::object &obj) {
   if (obj.is_none())
     return mlirLogicalResultSuccess();
 
@@ -126,39 +130,39 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   nb::class_<MlirPDLResultList>(m, "PDLResultList")
       .def(
-          "push_back",
+          "append",
           [](MlirPDLResultList results, const PyValue &value) {
             mlirPDLResultListPushBackValue(results, value);
           },
           // clang-format off
-          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
+          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
           // clang-format on
           )
       .def(
-          "push_back",
+          "append",
           [](MlirPDLResultList results, const PyOperation &op) {
             mlirPDLResultListPushBackOperation(results, op);
           },
           // clang-format off
-          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
+          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
           // clang-format on
           )
       .def(
-          "push_back",
+          "append",
           [](MlirPDLResultList results, const PyType &type) {
             mlirPDLResultListPushBackType(results, type);
           },
           // clang-format off
-          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
+          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
           // clang-format on
           )
       .def(
-          "push_back",
+          "append",
           [](MlirPDLResultList results, const PyAttribute &attr) {
             mlirPDLResultListPushBackAttribute(results, attr);
           },
           // clang-format off
-          nb::sig("def push_back(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
+          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
           // clang-format on
       );
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
