@@ -24,7 +24,6 @@ static_library("cert") {
     "MutatingCopyCheck.cpp",
     "NonTrivialTypesLibcMemoryCallsCheck.cpp",
     "ProperlySeededRandomGeneratorCheck.cpp",
-    "SetLongJmpCheck.cpp",
     "ThrownExceptionTypeCheck.cpp",
   ]
 }
