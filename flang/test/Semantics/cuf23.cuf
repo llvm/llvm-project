@@ -1,0 +1,34 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
+
+program test
+  real, device :: a(10)
+  a = 1.0
+!ERROR: device data not allowed in I/O statements
+  print *, a(1)
+!ERROR: device data not allowed in I/O statements
+  print *, a
+end
+
+subroutine host()
+  integer :: i
+  real, device :: a(10)
+  !$acc parallel loop
+  do i = 1, 10
+    print*, a(i) ! ok
+  end do
+
+  !$cuf kernel do
+  do i = 1, 10
+    print*, a(i) ! ok
+  end do
+end subroutine
+
+attributes(global) subroutine global1()
+  real, device :: a(10)
+  print*, a ! ok
+end subroutine
+
+attributes(device) subroutine device1()
+  real, device :: a(10)
+  print*, a ! ok
+end subroutine
