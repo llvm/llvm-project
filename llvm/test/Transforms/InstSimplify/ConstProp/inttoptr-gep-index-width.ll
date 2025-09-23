@@ -4,9 +4,11 @@
 target datalayout = "p:16:16:16:8"
 
 ; The GEP should only modify the low 8 bits of the pointer.
+;; We need to use finer-grained DataLayout properties for non-integral pointers
+;; FIXME: Should be: ret ptr inttoptr (i16 -256 to ptr)
 define ptr @test() {
 ; CHECK-LABEL: define ptr @test() {
-; CHECK-NEXT:    ret ptr inttoptr (i16 -256 to ptr)
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr inttoptr (i16 -1 to ptr), i8 1)
 ;
   %base = inttoptr i16 -1 to ptr
   %gep = getelementptr i8, ptr %base, i8 1
