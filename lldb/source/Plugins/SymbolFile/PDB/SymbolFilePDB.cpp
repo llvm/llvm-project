@@ -106,7 +106,7 @@ enum {
 #include "SymbolFilePDBPropertiesEnum.inc"
 };
 
-static bool g_should_use_native_reader_by_default = [] {
+static const bool g_should_use_native_reader_by_default = [] {
   llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
 
 #if !LLVM_ENABLE_DIA_SDK || !defined(_WIN32)
