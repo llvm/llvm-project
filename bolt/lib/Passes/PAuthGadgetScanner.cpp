@@ -372,7 +372,7 @@ protected:
 
   std::optional<MCPhysReg> getRegMadeTrustedByChecking(const MCInst &Inst,
                                                        SrcState Cur) const {
-    // This functions cannot return multiple registers. This is never the case
+    // This function cannot return multiple registers. This is never the case
     // on AArch64.
     std::optional<MCPhysReg> RegCheckedByInst =
         BC.MIB->getAuthCheckedReg(Inst, /*MayOverwrite=*/false);
