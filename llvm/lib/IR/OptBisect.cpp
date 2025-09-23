@@ -108,7 +108,8 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   int CurBisectNum = ++LastBisectNum;
 
   // Check if current pass number falls within any of the specified intervals.
-  bool ShouldRun = IntegerIntervalUtils::contains(BisectIntervals, CurBisectNum);
+  bool ShouldRun =
+      IntegerIntervalUtils::contains(BisectIntervals, CurBisectNum);
 
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);

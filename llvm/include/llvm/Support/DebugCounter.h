@@ -57,8 +57,8 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  LLVM_ABI static void printChunks(raw_ostream &OS,
-                                   ArrayRef<IntegerInclusiveInterval> Intervals);
+  LLVM_ABI static void
+  printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
