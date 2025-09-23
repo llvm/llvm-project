@@ -300,6 +300,12 @@ private:
 
 namespace {
 
+struct EncodingIsland {
+  unsigned StartBit;
+  unsigned NumBits;
+  uint64_t FieldVal;
+};
+
 /// Filter - Filter works with FilterChooser to produce the decoding tree for
 /// the ISA.
 ///
@@ -425,12 +431,6 @@ class FilterChooser {
   /// Set to true if decoding conflict was encountered.
   bool HasConflict = false;
 
-  struct Island {
-    unsigned StartBit;
-    unsigned NumBits;
-    uint64_t FieldVal;
-  };
-
 public:
   /// Constructs a top-level filter chooser.
   FilterChooser(ArrayRef<InstructionEncoding> Encodings,
@@ -482,12 +482,6 @@ private:
   bool isPositionFiltered(unsigned Idx) const {
     return FilterBits.Zero[Idx] || FilterBits.One[Idx];
   }
-
-  // Calculates the island(s) needed to decode the instruction.
-  // This returns a list of undecoded bits of an instructions, for example,
-  // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
-  // decoded bits in order to verify that the instruction matches the Opcode.
-  std::vector<Island> getIslands(const KnownBits &EncodingBits) const;
 
   /// Scans the well-known encoding bits of the encodings and, builds up a list
   /// of candidate filters, and then returns the best one, if any.
@@ -948,48 +942,36 @@ void FilterChooser::dumpStack(raw_ostream &OS, indent Indent,
 // This returns a list of undecoded bits of an instructions, for example,
 // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
 // decoded bits in order to verify that the instruction matches the Opcode.
-std::vector<FilterChooser::Island>
-FilterChooser::getIslands(const KnownBits &EncodingBits) const {
-  std::vector<Island> Islands;
+static std::vector<EncodingIsland> getIslands(const KnownBits &EncodingBits,
+                                              const KnownBits &FilterBits) {
+  std::vector<EncodingIsland> Islands;
   uint64_t FieldVal;
   unsigned StartBit;
 
-  // 0: Init
-  // 1: Water (the bit value does not affect decoding)
-  // 2: Island (well-known bit value needed for decoding)
-  unsigned State = 0;
-
+  bool OnIsland = false;
   unsigned FilterWidth = FilterBits.getBitWidth();
-  for (unsigned i = 0; i != FilterWidth; ++i) {
-    bool IsKnown = EncodingBits.Zero[i] || EncodingBits.One[i];
-    bool Filtered = isPositionFiltered(i);
-    switch (State) {
-    default:
-      llvm_unreachable("Unreachable code!");
-    case 0:
-    case 1:
-      if (Filtered || !IsKnown) {
-        State = 1; // Still in Water
+  for (unsigned I = 0; I != FilterWidth; ++I) {
+    bool IsKnown = EncodingBits.Zero[I] || EncodingBits.One[I];
+    bool IsFiltered = FilterBits.Zero[I] || FilterBits.One[I];
+    if (!IsFiltered && IsKnown) {
+      if (OnIsland) {
+        // Accumulate island bits.
+        FieldVal |= static_cast<uint64_t>(EncodingBits.One[I])
+                    << (I - StartBit);
       } else {
-        State = 2; // Into the Island
-        StartBit = i;
-        FieldVal = static_cast<uint64_t>(EncodingBits.One[i]);
+        // Onto an island.
+        StartBit = I;
+        FieldVal = static_cast<uint64_t>(EncodingBits.One[I]);
+        OnIsland = true;
       }
-      break;
-    case 2:
-      if (Filtered || !IsKnown) {
-        State = 1; // Into the Water
-        Islands.push_back({StartBit, i - StartBit, FieldVal});
-      } else {
-        State = 2; // Still in Island
-        FieldVal |= static_cast<uint64_t>(EncodingBits.One[i])
-                    << (i - StartBit);
-      }
-      break;
+    } else if (OnIsland) {
+      // Into the water.
+      Islands.push_back({StartBit, I - StartBit, FieldVal});
+      OnIsland = false;
     }
   }
-  // If we are still in Island after the loop, do some housekeeping.
-  if (State == 2)
+
+  if (OnIsland)
     Islands.push_back({StartBit, FilterWidth - StartBit, FieldVal});
 
   return Islands;
@@ -1140,17 +1122,17 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   KnownBits EncodingBits = Encoding.getMandatoryBits();
 
   // Look for islands of undecoded bits of the singleton.
-  std::vector<FilterChooser::Island> Islands = FC.getIslands(EncodingBits);
+  std::vector<EncodingIsland> Islands = getIslands(EncodingBits, FC.FilterBits);
 
   // Emit the predicate table entry if one is needed.
   emitPredicateTableEntry(EncodingID);
 
   // Check any additional encoding fields needed.
-  for (const FilterChooser::Island &Ilnd : reverse(Islands)) {
+  for (const EncodingIsland &Island : reverse(Islands)) {
     TableInfo.Table.insertOpcode(OPC_CheckField);
-    TableInfo.Table.insertULEB128(Ilnd.StartBit);
-    TableInfo.Table.insertUInt8(Ilnd.NumBits);
-    TableInfo.Table.insertULEB128(Ilnd.FieldVal);
+    TableInfo.Table.insertULEB128(Island.StartBit);
+    TableInfo.Table.insertUInt8(Island.NumBits);
+    TableInfo.Table.insertULEB128(Island.FieldVal);
   }
 
   // Check for soft failure of the match.
@@ -1186,7 +1168,8 @@ FilterChooser::findBestFilter(ArrayRef<bitAttr_t> BitAttrs, bool AllowMixed,
       KnownBits EncodingBits = Encoding.getMandatoryBits();
 
       // Look for islands of undecoded bits of any instruction.
-      std::vector<Island> Islands = getIslands(EncodingBits);
+      std::vector<EncodingIsland> Islands =
+          getIslands(EncodingBits, FilterBits);
       if (!Islands.empty()) {
         // Found an instruction with island(s).  Now just assign a filter.
         return std::make_unique<Filter>(

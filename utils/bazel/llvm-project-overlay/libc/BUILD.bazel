@@ -2306,6 +2306,7 @@ libc_support_library(
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":__support_macros_properties_types",
     ],

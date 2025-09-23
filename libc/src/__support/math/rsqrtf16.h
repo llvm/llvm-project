@@ -28,36 +28,39 @@ LIBC_INLINE static constexpr float16 rsqrtf16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 
-  const uint16_t x_u = xbits.uintval();
-  const uint16_t x_abs = x_u & 0x7fff;
-  const uint16_t x_sign = x_u >> 15;
+  uint16_t x_u = xbits.uintval();
+  uint16_t x_abs = x_u & 0x7fff;
 
-  // x is NaN
-  if (LIBC_UNLIKELY(xbits.is_nan())) {
-    if (xbits.is_signaling_nan()) {
+  constexpr uint16_t INF_BIT = FPBits::inf().uintval();
+
+  // x is 0, inf/nan, or negative.
+  if (LIBC_UNLIKELY(x_u == 0 || x_u >= INF_BIT)) {
+    // x is NaN
+    if (x_abs > INF_BIT) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      return x;
+    }
+
+    // |x| = 0
+    if (x_abs == 0) {
+      fputil::raise_except_if_required(FE_DIVBYZERO);
+      fputil::set_errno_if_required(ERANGE);
+      return FPBits::inf(xbits.sign()).get_val();
+    }
+
+    // -inf <= x < 0
+    if (x_u > 0x7fff) {
       fputil::raise_except_if_required(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
       return FPBits::quiet_nan().get_val();
     }
-    return x;
-  }
 
-  // |x| = 0
-  if (LIBC_UNLIKELY(x_abs == 0x0)) {
-    fputil::raise_except_if_required(FE_DIVBYZERO);
-    fputil::set_errno_if_required(ERANGE);
-    return FPBits::inf(Sign::POS).get_val();
-  }
-
-  // -inf <= x < 0
-  if (LIBC_UNLIKELY(x_sign == 1)) {
-    fputil::raise_except_if_required(FE_INVALID);
-    fputil::set_errno_if_required(EDOM);
-    return FPBits::quiet_nan().get_val();
-  }
-
-  // x = +inf => rsqrt(x) = 0
-  if (LIBC_UNLIKELY(xbits.is_inf()))
+    // x = +inf => rsqrt(x) = 0
     return FPBits::zero().get_val();
+  }
 
   // TODO: add integer based implementation when LIBC_TARGET_CPU_HAS_FPU_FLOAT
   // is not defined

@@ -9118,6 +9118,9 @@ void DeclarationVisitor::NonPointerInitialization(
         if (details->init()) {
           SayWithDecl(name, *name.symbol,
               "'%s' has already been initialized"_err_en_US);
+        } else if (details->isCDefined()) {
+          context().Warn(common::UsageWarning::CdefinedInit, name.source,
+              "CDEFINED variable should not have an initializer"_warn_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
         } else if (ultimate.owner().IsParameterizedDerivedType()) {
