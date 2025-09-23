@@ -1829,6 +1829,8 @@ def note_unsatisfied_trait_reason
            "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "%NotClassOrUnion{is not a class or union type}|"
            "%NotMarkedFinal{is not marked 'final'}|"
+           "%PointerType{is a pointer type}|"
+           "%ArrayType{is an array type}|"
            "%UnionType{is a union type}|"
            "%NotStructOrClass{is not a struct or class type}|"
            "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}"

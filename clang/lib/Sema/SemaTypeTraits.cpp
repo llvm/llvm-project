@@ -2780,8 +2780,7 @@ static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
   // If this type has any abstract base classes, their respective virtual
   // functions must have been overridden.
   for (const CXXBaseSpecifier &B : D->bases()) {
-    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
-    if (B.getType()->getAsCXXRecordDecl()->isAbstract()) {
+    if (B.getType()->castAsCXXRecordDecl()->isAbstract()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::OverridesAllPureVirtual
           << B.getType() << B.getSourceRange();
@@ -2812,6 +2811,8 @@ static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
 
   if (SemaRef.Context.getAsArrayType(T)) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::ArrayType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::NotStructOrClass;
     return;
   }
@@ -2819,6 +2820,14 @@ static void DiagnoseNonAbstractReason(Sema &SemaRef, SourceLocation Loc,
   if (T->isFunctionType()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::FunctionType;
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotStructOrClass;
+    return;
+  }
+
+  if (T->isPointerType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PointerType;
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::NotStructOrClass;
     return;

@@ -991,6 +991,10 @@ static_assert(__is_abstract(Overrides));
 // expected-note@-1 {{because it overrides all pure virtual functions from base class 'Abstract1'}} \
 // expected-note@-1 {{because it overrides all pure virtual functions from base class 'Abstract2'}} \
 
+static_assert(__is_abstract(NonAbstract));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::NonAbstract)'}} \
+// expected-note@-1 {{'NonAbstract' is not abstract}}
+
 // Inheriting over two levels reports the last class only although the source of the pure virtual function
 // is the top-most base.
 struct Derived : Abstract1 {
@@ -1012,7 +1016,7 @@ static_assert(__is_abstract(I));
 // expected-note@-1 {{'I' (aka 'int') is not abstract}} \
 // expected-note@-1 {{because it is not a struct or class type}}
 
-using Fty = void(); // function type
+using Fty = void();
 static_assert(__is_abstract(Fty));
 // expected-error@-1 {{static assertion failed due to requirement '__is_abstract(void ())'}} \
 // expected-note@-1 {{'Fty' (aka 'void ()') is not abstract}} \
@@ -1023,6 +1027,7 @@ using Arr = int[3];
 static_assert(__is_abstract(Arr));
 // expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int[3])'}} \
 // expected-note@-1 {{'Arr' (aka 'int[3]') is not abstract}} \
+// expected-note@-1 {{because it is an array type}} \
 // expected-note@-1 {{because it is not a struct or class type}}
 
 using Ref = int&;
@@ -1036,7 +1041,14 @@ using Ptr = int*;
 static_assert(__is_abstract(Ptr));
 // expected-error@-1 {{static assertion failed due to requirement '__is_abstract(int *)'}} \
 // expected-note@-1 {{'Ptr' (aka 'int *') is not abstract}} \
+// expected-note@-1 {{because it is a pointer type}} \
 // expected-note@-1 {{because it is not a struct or class type}}
 
+union U { int x; float y;};
+static_assert(__is_abstract(U));
+// expected-error@-1 {{static assertion failed due to requirement '__is_abstract(is_abstract_tests::U)'}} \
+// expected-note@-1 {{'U' is not abstract}} \
+// expected-note@-1 {{because it is a union type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
 
 }
