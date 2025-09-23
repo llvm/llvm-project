@@ -683,6 +683,16 @@ def FlatSymbolRefArrayAttr :
   let constBuilderCall = ?;
 }
 
+def SymbolVisibilityAttr : Attr<
+    CPred<"::llvm::isa<::mlir::SymbolVisibilityAttr>($_self)">,
+    "symbol visibility attribute"> {
+  let storageType = [{ ::mlir::SymbolVisibilityAttr }];
+  let returnType = [{ ::mlir::SymbolVisibilityAttr }];
+  let valueType = NoneType;
+  let constBuilderCall = "::mlir::SymbolVisibilityAttr::get($_builder.getContext(), $0)";
+  let convertFromStorage = "$_self";
+}
+
 //===----------------------------------------------------------------------===//
 // Derive attribute kinds
 //===----------------------------------------------------------------------===//
