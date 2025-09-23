@@ -156,7 +156,7 @@ entry:
 define i32 @caller2._Msve() #1 {
 ; CHECK-LABEL: define i32 @caller2._Msve(
 ; CHECK-SAME: ) #[[ATTR1]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver()
+; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver._Msve()
 ;
 entry:
   %call = tail call i32 @test_multi_bb_resolver()
@@ -509,7 +509,7 @@ entry:
 define dso_local i32 @caller8._Msve2() #2 {
 ; CHECK-LABEL: define dso_local i32 @caller8._Msve2(
 ; CHECK-SAME: ) #[[ATTR2]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_unrelated_callers()
+; CHECK:    [[CALL:%.*]] = tail call i32 @test_unrelated_callers._Msve2()
 ;
 entry:
   %call = tail call i32 @test_unrelated_callers()
