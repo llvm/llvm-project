@@ -898,7 +898,19 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
-  if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
+  std::unique_ptr<llvm::ToolOutputFile> DwoOS;
+  if (!codeGenOpts.SplitDwarfOutput.empty()) {
+    std::error_code EC;
+    DwoOS = std::make_unique<llvm::ToolOutputFile>(codeGenOpts.SplitDwarfOutput,
+                                                   EC, llvm::sys::fs::OF_None);
+    if (EC) {
+      diags.Report(clang::diag::err_fe_unable_to_open_output)
+          << codeGenOpts.SplitDwarfOutput << EC.message();
+      return;
+    }
+  }
+  if (tm.addPassesToEmitFile(codeGenPasses, os, DwoOS ? &DwoOS->os() : nullptr,
+                             cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -908,6 +920,9 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
   // Run the passes
   codeGenPasses.run(llvmModule);
+
+  if (DwoOS)
+    DwoOS->keep();
 
   // Cleanup
   delete tlii;
@@ -1324,6 +1339,7 @@ void CodeGenAction::executeAction() {
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
+  targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
