@@ -54,7 +54,8 @@ llvm_config.clang_setup()
 
 if config.clang_tidy_staticanalyzer:
     config.available_features.add("static-analyzer")
-
+if config.clang_tidy_custom_check:
+    config.available_features.add("custom-check")
 python_exec = shlex.quote(config.python_executable)
 check_clang_tidy = os.path.join(
     config.test_source_root, "clang-tidy", "check_clang_tidy.py"

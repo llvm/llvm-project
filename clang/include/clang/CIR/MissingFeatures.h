@@ -289,7 +289,6 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool complexType() { return false; }
   static bool fixedPointType() { return false; }
   static bool stringTypeWithDifferentArraySize() { return false; }
 

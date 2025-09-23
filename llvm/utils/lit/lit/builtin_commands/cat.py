@@ -49,6 +49,9 @@ def main(argv):
             import os, msvcrt
 
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    if len(filenames) == 0:
+        sys.stdout.write(sys.stdin.read())
+        sys.exit(0)
     for filename in filenames:
         try:
             contents = None
