@@ -11,8 +11,8 @@
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
@@ -56,7 +56,7 @@ class PCHContainerGenerator : public ASTConsumer {
   std::shared_ptr<PCHBuffer> Buffer;
 
   /// Visit every type and emit debug info for it.
-  struct DebugTypeVisitor : DynamicRecursiveASTVisitor {
+  struct DebugTypeVisitor : public RecursiveASTVisitor<DebugTypeVisitor> {
     clang::CodeGen::CGDebugInfo &DI;
     ASTContext &Ctx;
     DebugTypeVisitor(clang::CodeGen::CGDebugInfo &DI, ASTContext &Ctx)
@@ -67,13 +67,13 @@ class PCHContainerGenerator : public ASTConsumer {
       return !Ty->isDependentType() && !Ty->isUndeducedType();
     }
 
-    bool VisitImportDecl(ImportDecl *D) override {
+    bool VisitImportDecl(ImportDecl *D) {
       if (!D->getImportedOwningModule())
         DI.EmitImportDecl(*D);
       return true;
     }
 
-    bool VisitTypeDecl(TypeDecl *D) override {
+    bool VisitTypeDecl(TypeDecl *D) {
       // TagDecls may be deferred until after all decls have been merged and we
       // know the complete type. Pure forward declarations will be skipped, but
       // they don't need to be emitted into the module anyway.
@@ -90,14 +90,14 @@ class PCHContainerGenerator : public ASTConsumer {
       return true;
     }
 
-    bool VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) override {
+    bool VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
       QualType QualTy(D->getTypeForDecl(), 0);
       if (!QualTy.isNull() && CanRepresent(QualTy.getTypePtr()))
         DI.getOrCreateStandaloneType(QualTy, D->getLocation());
       return true;
     }
 
-    bool VisitFunctionDecl(FunctionDecl *D) override {
+    bool VisitFunctionDecl(FunctionDecl *D) {
       // Skip deduction guides.
       if (isa<CXXDeductionGuideDecl>(D))
         return true;
@@ -118,7 +118,7 @@ class PCHContainerGenerator : public ASTConsumer {
       return true;
     }
 
-    bool VisitObjCMethodDecl(ObjCMethodDecl *D) override {
+    bool VisitObjCMethodDecl(ObjCMethodDecl *D) {
       if (!D->getClassInterface())
         return true;
 
