@@ -9320,6 +9320,7 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformSMTExtension",
         ":TransformTuneExtension",
         ":UBToLLVM",
         ":VectorToLLVM",
@@ -11874,6 +11875,49 @@ cc_library(
         ":TransformOpsIncGen",
         ":TransformTuneExtensionOpsIncGen",
         "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "TransformSMTExtensionOpsTdFiles",
+    srcs = ["include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td"],
+    includes = ["include"],
+    deps = [
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+        ":TransformInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformSMTExtensionOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.h.inc": [
+            "-gen-op-decls",
+        ],
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.cpp.inc": [
+            "-gen-op-defs",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td",
+    deps = [
+        ":TransformSMTExtensionOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "TransformSMTExtension",
+    srcs = glob(["lib/Dialect/Transform/SMTExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/SMTExtension/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":IR",
+        ":SMTDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformSMTExtensionOpsIncGen",
     ],
 )
 

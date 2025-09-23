@@ -2650,6 +2650,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_dsqrtl",
+    hdrs = ["src/__support/math/dsqrtl.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3525,7 +3533,7 @@ libc_math_function(name = "dmulf128")
 libc_math_function(
     name = "dsqrtl",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_dsqrtl",
     ],
 )
 

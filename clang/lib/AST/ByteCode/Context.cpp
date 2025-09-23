@@ -245,6 +245,9 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
     if (!FieldDesc->isPrimitiveArray())
       return false;
 
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
+      return false;
+
     unsigned N = Ptr.getNumElems();
     if (Ptr.elemSize() == 1) {
       Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
@@ -446,8 +449,6 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 
 const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   assert(FuncDecl);
-  FuncDecl = FuncDecl->getMostRecentDecl();
-
   if (const Function *Func = P->getFunction(FuncDecl))
     return Func;
 
