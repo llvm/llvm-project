@@ -5907,6 +5907,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
@@ -5947,7 +5949,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B64);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
-    const DebugLoc &DL = MI.getDebugLoc();
     MachineOperand &Dest0 = MI.getOperand(0);
     MachineOperand &Dest1 = MI.getOperand(1);
     MachineOperand &Src0 = MI.getOperand(2);
@@ -5975,9 +5976,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::V_ADD_U64_PSEUDO:
   case AMDGPU::V_SUB_U64_PSEUDO: {
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const DebugLoc &DL = MI.getDebugLoc();
-
     bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
 
     MachineOperand &Dest = MI.getOperand(0);
@@ -6070,9 +6068,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // This pseudo has a chance to be selected
     // only from uniform add/subcarry node. All the VGPR operands
     // therefore assumed to be splat vectors.
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     MachineBasicBlock::iterator MII = MI;
-    const DebugLoc &DL = MI.getDebugLoc();
     MachineOperand &Dest = MI.getOperand(0);
     MachineOperand &CarryDest = MI.getOperand(1);
     MachineOperand &Src0 = MI.getOperand(2);
@@ -6136,7 +6132,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // clang-format on
 
     unsigned SelOpc =
-        (ST.isWave64()) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+        ST.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
 
     BuildMI(*BB, MII, DL, TII->get(SelOpc), CarryDest.getReg())
         .addImm(-1)
@@ -6165,7 +6161,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::GET_GROUPSTATICSIZE: {
     assert(getTargetMachine().getTargetTriple().getOS() == Triple::AMDHSA ||
            getTargetMachine().getTargetTriple().getOS() == Triple::AMDPAL);
-    DebugLoc DL = MI.getDebugLoc();
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
         .add(MI.getOperand(0))
         .addImm(MFI->getLDSSize());
@@ -6174,8 +6169,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::GET_SHADERCYCLESHILO: {
     assert(MF->getSubtarget<GCNSubtarget>().hasShaderCyclesHiLoRegisters());
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    const DebugLoc &DL = MI.getDebugLoc();
     // The algorithm is:
     //
     // hi1 = getreg(SHADER_CYCLES_HI)
@@ -6238,12 +6231,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::SI_KILL_I1_PSEUDO:
     return splitKillBlock(MI, BB);
   case AMDGPU::V_CNDMASK_B64_PSEUDO: {
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-
     Register Dst = MI.getOperand(0).getReg();
     const MachineOperand &Src0 = MI.getOperand(1);
     const MachineOperand &Src1 = MI.getOperand(2);
-    const DebugLoc &DL = MI.getDebugLoc();
     Register SrcCond = MI.getOperand(3).getReg();
 
     Register DstLo = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -6296,7 +6286,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_BR_UNDEF: {
-    const DebugLoc &DL = MI.getDebugLoc();
     MachineInstr *Br = BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
                            .add(MI.getOperand(0));
     Br->getOperand(1).setIsUndef(); // read undef SCC
@@ -6312,8 +6301,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
-    const DebugLoc &DL = MI.getDebugLoc();
-
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
@@ -6330,7 +6317,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::V_SUB_CO_U32_e32:
   case AMDGPU::V_SUBREV_CO_U32_e32: {
     // TODO: Define distinct V_*_I32_Pseudo instructions instead.
-    const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc = MI.getOpcode();
 
     bool NeedClampOperand = false;
@@ -6411,7 +6397,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       }
 
       if (SetRoundOp || SetDenormOp) {
-        MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
         MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
         if (Def && Def->isMoveImmediate() && Def->getOperand(1).isImm()) {
           unsigned ImmVal = Def->getOperand(1).getImm();
@@ -6448,7 +6433,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.setDesc(TII->get(AMDGPU::COPY));
     return BB;
   case AMDGPU::ENDPGM_TRAP: {
-    const DebugLoc &DL = MI.getDebugLoc();
     if (BB->succ_empty() && std::next(MI.getIterator()) == BB->end()) {
       MI.setDesc(TII->get(AMDGPU::S_ENDPGM));
       MI.addOperand(MachineOperand::CreateImm(0));
@@ -6475,7 +6459,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::SIMULATED_TRAP: {
     assert(Subtarget->hasPrivEnabledTrap2NopBug());
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     MachineBasicBlock *SplitBB =
         TII->insertSimulatedTrap(MRI, *BB, MI, MI.getDebugLoc());
     MI.eraseFromParent();
