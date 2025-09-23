@@ -14,6 +14,7 @@
 #include <cassert>
 #include "test_iterators.h"
 #include "types.h"
+#include "../range_adaptor_types.h"
 
 template <class T>
 concept HasConstBegin = requires(const T& ct) { ct.begin(); };

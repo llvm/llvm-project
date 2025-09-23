@@ -13,6 +13,7 @@
 
 #include "test_iterators.h"
 #include "types.h"
+#include "../range_adaptor_types.h"
 
 constexpr bool test() {
   int buffer1[5] = {1, 2, 3, 4, 5};
