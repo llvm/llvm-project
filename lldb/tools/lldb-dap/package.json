@@ -27,6 +27,9 @@
   "categories": [
     "Debuggers"
   ],
+  "dependencies": {
+    "chokidar": "^4.0.3"
+  },
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
@@ -348,6 +351,9 @@
         "language": "objective-c"
       },
       {
+        "language": "objective-cpp"
+      },
+      {
         "language": "objectpascal"
       },
       {
@@ -375,6 +381,7 @@
           "fortran-modern",
           "nim",
           "objective-c",
+          "objective-cpp",
           "objectpascal",
           "pascal",
           "rust",

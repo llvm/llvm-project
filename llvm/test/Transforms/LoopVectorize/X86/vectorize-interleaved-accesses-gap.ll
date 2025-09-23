@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx13.0.0"
 define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-LABEL: @test_pr59090(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -78,7 +78,7 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_MUL:%.*]] = mul nuw i64 [[IV]], 6
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    store i8 [[L]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]

@@ -1370,32 +1370,6 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (!CallType->isIntegerType() ||
-      !Call->getArg(0)->getType()->isIntegerType())
-    return false;
-
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.countLeadingZeros(), CallType);
-  return true;
-}
-
-static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const CallExpr *Call) {
-  QualType CallType = Call->getType();
-  if (!CallType->isIntegerType() ||
-      !Call->getArg(0)->getType()->isIntegerType())
-    return false;
-
-  APSInt Val = popToAPSInt(S, Call->getArg(0));
-  pushInteger(S, Val.countTrailingZeros(), CallType);
-  return true;
-}
-
 static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
@@ -1829,7 +1803,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
                                                     const CallExpr *Call,
                                                     unsigned BuiltinID) {
   const bool HasZeroArg = Call->getNumArgs() == 2;
-  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_cttz;
+  const bool IsCTTZ = BuiltinID == Builtin::BI__builtin_elementwise_ctzg;
   assert(Call->getNumArgs() == 1 || HasZeroArg);
   if (Call->getArg(0)->getType()->isIntegerType()) {
     PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
@@ -1853,7 +1827,7 @@ static bool interp__builtin_elementwise_countzeroes(InterpState &S,
       return false;
     }
 
-    if (BuiltinID == Builtin::BI__builtin_elementwise_ctlz) {
+    if (BuiltinID == Builtin::BI__builtin_elementwise_clzg) {
       pushInteger(S, Val.countLeadingZeros(), Call->getType());
     } else {
       pushInteger(S, Val.countTrailingZeros(), Call->getType());
@@ -2539,6 +2513,24 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
 
   pushInteger(S, Result, Call->getType());
   return true;
+}
+
+static bool interp__builtin_elementwise_int_unaryop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APSInt &)> Fn) {
+  assert(Call->getNumArgs() == 1);
+  assert(Call->getType()->isIntegerType());
+
+  // Single integer case.
+  if (!Call->getArg(0)->getType()->isVectorType()) {
+    APSInt Src = popToAPSInt(S, Call->getArg(0));
+    APInt Result = Fn(Src);
+    pushInteger(S, APSInt(std::move(Result), !Src.isSigned()), Call->getType());
+    return true;
+  }
+
+  // TODO: Add vector integer handling.
+  return false;
 }
 
 static bool interp__builtin_elementwise_int_binop(
@@ -3232,8 +3224,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ctzg:
     return interp__builtin_ctz(S, OpPC, Frame, Call, BuiltinID);
 
-  case Builtin::BI__builtin_elementwise_ctlz:
-  case Builtin::BI__builtin_elementwise_cttz:
+  case Builtin::BI__builtin_elementwise_clzg:
+  case Builtin::BI__builtin_elementwise_ctzg:
     return interp__builtin_elementwise_countzeroes(S, OpPC, Frame, Call,
                                                    BuiltinID);
 
@@ -3273,12 +3265,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
-    return interp__builtin_ia32_lzcnt(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.countLeadingZeros());
+        });
 
   case clang::X86::BI__builtin_ia32_tzcnt_u16:
   case clang::X86::BI__builtin_ia32_tzcnt_u32:
   case clang::X86::BI__builtin_ia32_tzcnt_u64:
-    return interp__builtin_ia32_tzcnt(S, OpPC, Frame, Call);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.countTrailingZeros());
+        });
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
@@ -3606,6 +3604,61 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_kandqi:
+  case X86::BI__builtin_ia32_kandhi:
+  case X86::BI__builtin_ia32_kandsi:
+  case X86::BI__builtin_ia32_kanddi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS & RHS; });
+
+  case X86::BI__builtin_ia32_kandnqi:
+  case X86::BI__builtin_ia32_kandnhi:
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
+
+  case X86::BI__builtin_ia32_korqi:
+  case X86::BI__builtin_ia32_korhi:
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS | RHS; });
+
+  case X86::BI__builtin_ia32_kxnorqi:
+  case X86::BI__builtin_ia32_kxnorhi:
+  case X86::BI__builtin_ia32_kxnorsi:
+  case X86::BI__builtin_ia32_kxnordi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return ~(LHS ^ RHS); });
+
+  case X86::BI__builtin_ia32_kxorqi:
+  case X86::BI__builtin_ia32_kxorhi:
+  case X86::BI__builtin_ia32_kxorsi:
+  case X86::BI__builtin_ia32_kxordi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi:
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) { return ~Src; });
+
+  case X86::BI__builtin_ia32_kaddqi:
+  case X86::BI__builtin_ia32_kaddhi:
+  case X86::BI__builtin_ia32_kaddsi:
+  case X86::BI__builtin_ia32_kadddi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call,
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
 
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
