@@ -84,6 +84,8 @@ public:
   using ObjectPrefixMapTy = std::map<std::string, std::string>;
   using CompileUnitHandlerTy = function_ref<void(const DWARFUnit &Unit)>;
   using SwiftInterfacesMapTy = std::map<std::string, std::string>;
+  using CASLoaderTy =
+      std::function<Expected<DWARFFile *>(StringRef CASID, StringRef Filename)>;
   /// Type of output file.
   enum class OutputFileType : uint8_t {
     Object,
@@ -99,12 +101,15 @@ public:
   /// \p OnCUDieLoaded for each compile unit die. If \p File has reference to
   /// a Clang module and UpdateIndexTablesOnly == false then the module is be
   /// pre-loaded by \p Loader.
+  /// \p CASLoader for loading file from CAS when compilation caching is
+  /// enabled.
   ///
   /// \pre a call to setNoODR(true) and/or setUpdateIndexTablesOnly(bool Update)
   ///      must be made when required.
   virtual void addObjectFile(
       DWARFFile &File, ObjFileLoaderTy Loader = nullptr,
-      CompileUnitHandlerTy OnCUDieLoaded = [](const DWARFUnit &) {}) = 0;
+      CompileUnitHandlerTy OnCUDieLoaded = [](const DWARFUnit &) {},
+      CASLoaderTy CASLoader = nullptr) = 0;
   /// Link the debug info for all object files added through calls to
   /// addObjectFile.
   virtual Error link() = 0;

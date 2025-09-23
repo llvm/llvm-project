@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -46,7 +47,8 @@ public:
   };
 
   BinaryHolder(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-               BinaryHolder::Options Opts = {});
+               BinaryHolder::Options Opts = {},
+               std::shared_ptr<cas::ObjectStore> CAS = nullptr);
 
   // Forward declarations for friend declaration.
   class ObjectEntry;
@@ -66,6 +68,9 @@ public:
     /// Load the given object binary in memory.
     Error load(IntrusiveRefCntPtr<vfs::FileSystem> VFS, StringRef Filename,
                TimestampTy Timestamp, BinaryHolder::Options = {});
+
+    bool load(cas::ObjectStore &CAS, StringRef Filename,
+              BinaryHolder::Options = {});
 
     /// Access all owned ObjectFiles.
     std::vector<const object::ObjectFile *> getObjects() const;
@@ -132,6 +137,20 @@ public:
   Expected<const ObjectEntry &>
   getObjectEntry(StringRef Filename, TimestampTy Timestamp = TimestampTy());
 
+  /// Load ObjectEntry from CAS using a potential CASID string.
+  /// \param MaybeCASID Possible CASID to be lookup
+  /// \param Filename   The ondisk file where the CASID lookup initialiated.
+  ///
+  /// \returns
+  ///   ObjectEntry if loaded successfully, nullptr if input is not CASID or
+  ///   CASID is not in the CAS, error if CAS lookup failed due to CAS issues.
+  Expected<const ObjectEntry *> getObjectEntryFromCAS(StringRef MaybeCASID,
+                                                      StringRef Filename);
+
+  /// Search and create CAS.
+  Expected<std::shared_ptr<cas::ObjectStore>>
+  searchAndCreateCAS(StringRef Path);
+
   void clear();
   void eraseObjectEntry(StringRef Filename);
 
@@ -149,6 +168,11 @@ private:
 
   /// Virtual File System instance.
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
+
+  /// CAS Instance.
+  std::shared_ptr<cas::ObjectStore> GlobalCAS;
+  StringMap<std::shared_ptr<cas::ObjectStore>> LocalCAS;
+  std::mutex CASMutex;
 
   Options Opts;
 };

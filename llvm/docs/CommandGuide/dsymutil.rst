@@ -40,6 +40,19 @@ OPTIONS
  'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
  cause dyld to load the specified variant at runtime.
 
+.. option:: --cas <path to CAS>
+
+ Specify the path to a content addressable storage that dsymutil may used to
+ resolve CASID file paths in the debug info.
+
+.. option:: --cas-plugin-path <path to dylib>
+
+ Specify the path to CAS plugin dylib if used.
+
+.. option:: --cas-plugin-option <cas option>
+
+ Specify the options to pass to CAS plugin dylib if needed.
+
 .. option:: --dump-debug-map
 
  Dump the *executable*'s debug-map (the list of the object files containing the

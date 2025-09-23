@@ -155,6 +155,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-config
     FileCheck count not
     CASPluginTest
+    dsymutil
     llc
     llvm-ar
     llvm-as

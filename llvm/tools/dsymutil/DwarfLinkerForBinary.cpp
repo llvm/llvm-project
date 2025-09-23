@@ -303,6 +303,53 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
   return ErrorOrObj.getError();
 }
 
+Expected<std::unique_ptr<dwarf_linker::DWARFFile>>
+DwarfLinkerForBinary::loadObjectFromCAS(
+    const DebugMapObject &Obj, StringRef FileName, const DebugMap &DebugMap,
+    remarks::RemarkLinker &RL,
+    std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM) {
+  auto ErrorOrObj =
+      BinHolder.getObjectEntryFromCAS(Obj.getObjectFilename(), FileName);
+  if (!ErrorOrObj)
+    return ErrorOrObj.takeError();
+
+  if (!*ErrorOrObj)
+    return nullptr;
+
+  auto Object = (*ErrorOrObj)->getObject(DebugMap.getTriple());
+  if (!Object)
+    return Object.takeError();
+
+  std::unique_ptr<DWARFFile> Res;
+  auto Context = DWARFContext::create(
+      *Object, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
+      [&](Error Err) {
+        handleAllErrors(std::move(Err), [&](ErrorInfoBase &Info) {
+          reportError(Info.message());
+        });
+      },
+      [&](Error Warning) {
+        handleAllErrors(std::move(Warning), [&](ErrorInfoBase &Info) {
+          reportWarning(Info.message());
+        });
+      });
+
+  DLBRM->init(*Context);
+  Res = std::make_unique<DWARFFile>(
+      Obj.getObjectFilename(), std::move(Context),
+      std::make_unique<AddressManager>(*this, *Object, Obj, DLBRM),
+      [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+
+  Error E = RL.link(*Object);
+  if (Error NewE = handleErrors(
+          std::move(E), [&](std::unique_ptr<FileError> EC) -> Error {
+            return remarksErrorHandler(Obj, *this, std::move(EC));
+          }))
+    return std::move(NewE);
+
+  return std::move(Res);
+}
+
 static bool binaryHasStrippableSwiftReflectionSections(
     const DebugMap &Map, const LinkOptions &Options, BinaryHolder &BinHolder) {
   // If the input binary has strippable swift5 reflection sections, there is no
@@ -746,6 +793,23 @@ bool DwarfLinkerForBinary::linkImpl(
 
     llvm_unreachable("Unhandled DebugMap object");
   };
+  auto CASLoader = [&](StringRef CASID,
+                       StringRef Filename) -> Expected<DWARFFile *> {
+    auto &Obj = DebugMap.addDebugMapObject(
+        CASID, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
+
+    auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
+    auto ErrorOrObj =
+        loadObjectFromCAS(Obj, Filename, DebugMap, RL, DLBRelocMap);
+    if (!ErrorOrObj)
+      return ErrorOrObj.takeError();
+
+    if (!*ErrorOrObj)
+      return nullptr;
+
+    ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
+    return ObjectsForLinking.back().Object.get();
+  };
   GeneralLinker->setSwiftInterfacesMap(&ParseableSwiftInterfaces);
   bool ReflectionSectionsPresentInBinary = false;
   // If there is no output specified, no point in checking the binary for swift5
@@ -836,7 +900,7 @@ bool DwarfLinkerForBinary::linkImpl(
             loadObject(*Obj, Map, RL, DLBRelocMap)) {
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
-                                   OnCUDieLoaded);
+                                   OnCUDieLoaded, CASLoader);
     } else {
       ObjectsForLinking.push_back(
           {std::make_unique<DWARFFile>(Obj->getObjectFilename(), nullptr,

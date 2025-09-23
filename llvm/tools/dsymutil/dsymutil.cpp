@@ -23,6 +23,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/CASConfiguration.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
@@ -120,6 +123,7 @@ struct DsymutilOptions {
   DWARFVerify Verify = DWARFVerify::Default;
   ReproducerMode ReproMode = ReproducerMode::GenerateOnCrash;
   dsymutil::LinkOptions LinkOpts;
+  cas::CASConfiguration CASOptions;
 };
 
 /// Return a list of input files. This function has logic for dealing with the
@@ -397,6 +401,17 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
 
+  if (opt::Arg *CASPath = Args.getLastArg(OPT_cas))
+    Options.CASOptions.CASPath = CASPath->getValue();
+
+  if (opt::Arg *CASPluginPath = Args.getLastArg(OPT_cas_plugin_path))
+    Options.CASOptions.PluginPath = CASPluginPath->getValue();
+
+  for (auto CASPluginOpt : Args.getAllArgValues(OPT_cas_plugin_option)) {
+    auto [Name, Val] = StringRef(CASPluginOpt).split('=');
+    Options.CASOptions.PluginOptions.emplace_back(Name, Val);
+  }
+
   if (Error E = verifyOptions(Options))
     return std::move(E);
   return Options;
@@ -666,12 +681,24 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
 
+  // Create CAS. Only support unified database for now.
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
+  if (!Options.CASOptions.CASPath.empty()) {
+    auto DB = Options.CASOptions.createDatabases();
+    if (!DB) {
+      WithColor::error() << "failed to open CAS: " << toString(DB.takeError())
+                         << "\n";
+      return EXIT_FAILURE;
+    }
+    CAS = std::move(DB->first);
+  }
+
   for (auto &InputFile : Options.InputFiles) {
     // Shared a single binary holder for all the link steps.
     BinaryHolder::Options BinOpts;
     BinOpts.Verbose = Options.LinkOpts.Verbose;
     BinOpts.Warn = !Options.NoObjectTimestamp;
-    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts);
+    BinaryHolder BinHolder(Options.LinkOpts.VFS, BinOpts, CAS);
 
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {

@@ -244,6 +244,10 @@ private:
   loadObject(const DebugMapObject &Obj, const DebugMap &DebugMap,
              remarks::RemarkLinker &RL,
              std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM);
+  Expected<std::unique_ptr<dwarf_linker::DWARFFile>>
+  loadObjectFromCAS(const DebugMapObject &Obj, StringRef FileName,
+                    const DebugMap &DebugMap, remarks::RemarkLinker &RL,
+                    std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM);
 
   void collectRelocationsToApplyToSwiftReflectionSections(
       const object::SectionRef &Section, StringRef &Contents,

@@ -1,0 +1,52 @@
+REQUIRES: ondisk_cas
+
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: split-file %s %t
+RUN: dsymutil -f -oso-prepend-path=%S/Inputs/CAS \
+RUN:   -y %t/debug.map -o %t/a.dSYM 2>&1 | FileCheck %s --check-prefix=WARN
+
+RUN: dsymutil -cas %t/cas -f -oso-prepend-path=%S/Inputs/CAS \
+RUN:   -y %t/debug.map -o %t/a.dSYM 2>&1 | FileCheck %s --check-prefix=WARN --check-prefix=WARN-MISS
+
+WARN-MISS: warning:
+WARN-MISS-SAME: failed to load CAS object: unknown object
+WARN: warning:
+WARN-SAME: No such file or directory
+
+RUN: llvm-cas --cas %t/cas --make-blob --data %S/Inputs/CAS/A.pcm
+
+RUN: dsymutil -cas %t/cas -f -oso-prepend-path=%S/Inputs/CAS \
+RUN:   -y %t/debug.map -o - \
+RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
+
+CHECK: DW_TAG_compile_unit
+CHECK: DW_AT_producer [DW_FORM_strx]
+CHECK: DW_AT_language [DW_FORM_data2]    (DW_LANG_C11)
+CHECK: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "A")
+CHECK: DW_TAG_module [2] * (0x0000000c)
+CHECK: DW_AT_name [DW_FORM_strx]       (indexed (00000001) string = "A")
+CHECK: DW_TAG_structure_type
+CHECK: DW_AT_name [DW_FORM_strx]     (indexed (00000001) string = "A")
+CHECK: DW_AT_byte_size [DW_FORM_data1]       (0x04)
+CHECK: DW_AT_decl_file [DW_FORM_data1]       ("/^tmp/A.h")
+CHECK: DW_TAG_member
+
+CHECK: DW_TAG_compile_unit [7] *
+CHECK: DW_AT_producer [DW_FORM_strx]
+CHECK: DW_AT_language [DW_FORM_data2]    (DW_LANG_C11)
+CHECK: DW_AT_name [DW_FORM_strx] (indexed (00000005) string = "/^tmp/tu.c")
+CHECK: DW_TAG_subprogram
+
+CHECK-NOT: warning: 
+
+//--- debug.map
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename:        'tu.o'
+    timestamp:       1762315873
+    type:            102
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x100000328, size: 0x14 }
+...

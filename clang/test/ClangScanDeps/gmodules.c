@@ -35,6 +35,26 @@
 // RUN: %clang @%t/Right.rsp
 // RUN: %clang @%t/tu.rsp
 
+// RUN: llvm-dwarfdump --debug-info %t/tu.o | FileCheck %s --check-prefix=OBJECT-DWARF
+// OBJECT-DWARF: DW_TAG_compile_unit
+// OBJECT-DWARF: DW_AT_name        ("Left")
+// OBJECT-DWARF: DW_AT_dwo_name    ("llvmcas://
+
+/// Check debug info is correct.
+// RUN: %clang %t/tu.o -o %t/a.out
+// RUN: dsymutil -cas %t/cas %t/a.out -o %t/a.dSYM 2>&1 | FileCheck %s --check-prefix=WARN --allow-empty
+// RUN: dsymutil %t/a.out -o %t/a2.dSYM 2>&1 | FileCheck %s --check-prefix=WARN --allow-empty
+// WARN-NOT: warning:
+
+// RUN: dsymutil -cas %t/cas-empty %t/a.out -o %t/a3.dSYM 2>&1 | FileCheck %s --check-prefix=WARN-CAS --check-prefix=WARN-FILE
+// WARN-CAS: warning: failed to load CAS object
+// RUN: echo "bad" > %t/.cas-config
+// RUN: dsymutil %t/a.out -o %t/a4.dSYM 2>&1 | FileCheck %s --check-prefix=WARN-FILE
+// WARN-FILE: warning:
+// WARN-FILE-SAME: No such file or directory
+
+// RUN: llvm-dwarfdump --debug-info %t/a.dSYM | FileCheck %s --check-prefix=DWARF
+
 /// Check module in a different directory and compare output.
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/outputs-2 \
@@ -58,6 +78,39 @@
 /// Diff all outputs
 // RUN: diff %t/prefix.h.pch %t/prefix_2.pch
 // RUN: diff %t/tu.o %t/tu_2.o
+
+// Check all the types are available
+// DWARF: DW_TAG_compile_unit
+// DWARF: DW_TAG_module
+// DWARF-NEXT: DW_AT_name      ("Top")
+// DWARF: DW_TAG_structure_type
+// DWARF-NEXT: DW_AT_name    ("Top")
+// DWARF: DW_TAG_compile_unit
+// DWARF: DW_TAG_module
+// DWARF-NEXT: DW_AT_name      ("Left")
+// DWARF: DW_TAG_structure_type
+// DWARF-NEXT: DW_AT_name    ("Left")
+// DWARF: DW_TAG_member
+// DWARF-NEXT: DW_AT_name  ("top")
+// DWARF-NEXT: DW_AT_type
+// DWARF-SAME: "Top::Top"
+// DWARF: DW_TAG_compile_unit
+// DWARF: DW_TAG_module
+// DWARF-NEXT: DW_AT_name      ("Right")
+// DWARF: DW_TAG_structure_type
+// DWARF-NEXT: DW_AT_name    ("Right")
+// DWARF: DW_TAG_member
+// DWARF-NEXT: DW_AT_name  ("top")
+// DWARF-NEXT: DW_AT_type
+// DWARF-SAME: "Top::Top"
+// DWARF: DW_TAG_compile_unit
+// DWARF: DW_TAG_module
+// DWARF: DW_TAG_structure_type
+// DWARF-NEXT: DW_AT_name    ("Prefix")
+// DWARF: DW_TAG_member
+// DWARF-NEXT: DW_AT_name  ("top")
+// DWARF-NEXT: DW_AT_type
+// DWARF-SAME: "Top::Top"
 
 
 // CHECK:      {

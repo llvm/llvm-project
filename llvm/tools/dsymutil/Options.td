@@ -218,3 +218,16 @@ def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,
   HelpText<"Specify a directory that contain dSYM files to search for.">,
   Group<grp_general>;
+
+def cas : Separate<["-", "--"], "cas">,
+  MetaVarName<"<path>">,
+  HelpText<"Specify CAS directory to load CAS references from.">,
+  Group<grp_general>;
+def cas_plugin_path : Separate<["-", "--"], "cas-plugin-path">,
+  MetaVarName<"<path>">,
+  HelpText<"Path to CAS plugin library if used">,
+  Group<grp_general>;
+def cas_plugin_option : Separate<["-", "--"], "cas-plugin-option">,
+  MetaVarName<"<Option>=<Value>">,
+  HelpText<"Plugin CAS options">,
+  Group<grp_general>;

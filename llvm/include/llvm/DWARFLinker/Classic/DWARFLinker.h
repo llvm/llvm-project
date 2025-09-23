@@ -239,7 +239,8 @@ public:
   /// \pre NoODR, Update options should be set before call to addObjectFile.
   void addObjectFile(
       DWARFFile &File, ObjFileLoaderTy Loader = nullptr,
-      CompileUnitHandlerTy OnCUDieLoaded = [](const DWARFUnit &) {}) override;
+      CompileUnitHandlerTy OnCUDieLoaded = [](const DWARFUnit &) {},
+      CASLoaderTy CASLoader = nullptr) override;
 
   /// Link debug info for added objFiles. Object files are linked all together.
   Error link() override;
@@ -487,7 +488,7 @@ private:
   bool registerModuleReference(const DWARFDie &CUDie, LinkContext &Context,
                                ObjFileLoaderTy Loader,
                                CompileUnitHandlerTy OnCUDieLoaded,
-                               unsigned Indent = 0);
+                               CASLoaderTy CASLoader, unsigned Indent = 0);
 
   /// Recursively add the debug info in this clang module .pcm
   /// file (and all the modules imported by it in a bottom-up fashion)
@@ -495,7 +496,7 @@ private:
   Error loadClangModule(ObjFileLoaderTy Loader, const DWARFDie &CUDie,
                         const std::string &PCMFile, LinkContext &Context,
                         CompileUnitHandlerTy OnCUDieLoaded,
-                        unsigned Indent = 0);
+                        CASLoaderTy CASLoader, unsigned Indent = 0);
 
   /// Clone specified Clang module unit \p Unit.
   Error cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,

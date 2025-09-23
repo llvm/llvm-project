@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BinaryHolder.h"
+#include "llvm/CAS/CASConfiguration.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,8 +43,9 @@ getMachOFatMemoryBuffers(StringRef Filename, MemoryBuffer &Mem,
 }
 
 BinaryHolder::BinaryHolder(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                           BinaryHolder::Options Opts)
-    : VFS(VFS), Opts(Opts) {}
+                           BinaryHolder::Options Opts,
+                           std::shared_ptr<cas::ObjectStore> CAS)
+    : VFS(VFS), GlobalCAS(std::move(CAS)), Opts(Opts) {}
 
 Error BinaryHolder::ArchiveEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                                        StringRef Filename,
@@ -144,6 +146,40 @@ Error BinaryHolder::ObjectEntry::load(IntrusiveRefCntPtr<vfs::FileSystem> VFS,
   return Error::success();
 }
 
+bool BinaryHolder::ObjectEntry::load(cas::ObjectStore &CAS,
+                                     StringRef PossibleID, Options Opts) {
+  auto ID = CAS.parseID(PossibleID);
+  if (!ID) {
+    // This maybe not a CASID since we always try to load from CAS first. Ignore
+    // any error happening when parsing the CASID.
+    consumeError(ID.takeError());
+    return false;
+  }
+
+  if (Opts.Verbose)
+    WithColor::note() << "resolving cas object " << PossibleID << "\n";
+
+  auto Ref = CAS.getProxy(*ID);
+  if (!Ref) {
+    WithColor::warning() << "failed to load CAS object: "
+                         << toString(Ref.takeError()) << "\n";
+    return false;
+  }
+
+  // Only module files should be loaded here. Always not fat.
+  MemBuffer = Ref->getMemoryBuffer();
+  auto ErrOrObjectFile =
+      object::ObjectFile::createObjectFile(MemBuffer->getMemBufferRef());
+  if (!ErrOrObjectFile) {
+    WithColor::warning() << "malformed object loaded via " << PossibleID
+                         << "\n";
+    return false;
+  }
+
+  Objects.push_back(std::move(*ErrOrObjectFile));
+  return true;
+}
+
 std::vector<const object::ObjectFile *>
 BinaryHolder::ObjectEntry::getObjects() const {
   std::vector<const object::ObjectFile *> Result;
@@ -231,6 +267,26 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
   return *(MemberCache[Key] = std::move(OE));
 }
 
+Expected<std::shared_ptr<cas::ObjectStore>>
+BinaryHolder::searchAndCreateCAS(StringRef Path) {
+  std::scoped_lock<std::mutex> CASLock(CASMutex);
+  auto Opened = LocalCAS.find(Path);
+  if (Opened != LocalCAS.end())
+    return Opened->second;
+
+  auto Config = cas::CASConfiguration::createFromSearchConfigFile(Path);
+  if (!Config)
+    return nullptr;
+
+  auto DB = Config->second.createDatabases();
+  if (!DB)
+    return DB.takeError();
+
+  WithColor::note() << "create CAS using configuration: " << Config->first
+                    << "'\n";
+  return LocalCAS.try_emplace(Path, std::move(DB->first)).first->second;
+}
+
 Expected<const BinaryHolder::ObjectEntry &>
 BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
   if (Opts.Verbose)
@@ -272,6 +328,35 @@ BinaryHolder::getObjectEntry(StringRef Filename, TimestampTy Timestamp) {
   }
 
   return *ObjectCache[Filename];
+}
+
+Expected<const BinaryHolder::ObjectEntry *>
+BinaryHolder::getObjectEntryFromCAS(StringRef MaybeCASID, StringRef Filename) {
+  if (Opts.Verbose)
+    WithColor::note() << "trying to load '" << MaybeCASID << "' from '"
+                      << Filename << "'\n";
+
+  auto DB = GlobalCAS;
+  if (!DB) {
+    // If no global CAS, infer from Filename.
+    auto MaybeCAS = searchAndCreateCAS(Filename);
+    if (!MaybeCAS)
+      return MaybeCAS.takeError();
+    DB = std::move(*MaybeCAS);
+  }
+  // No CAS available to lookup, return nullptr.
+  if (!DB)
+    return nullptr;
+
+  std::lock_guard<std::mutex> Lock(ObjectCacheMutex);
+  ObjectRefCounter[MaybeCASID]++;
+  if (!ObjectCache.count(MaybeCASID)) {
+    auto OE = std::make_unique<ObjectEntry>();
+    if (!OE->load(*DB, MaybeCASID, Opts))
+      return nullptr;
+    ObjectCache[MaybeCASID] = std::move(OE);
+  }
+  return ObjectCache[MaybeCASID].get();
 }
 
 void BinaryHolder::clear() {

@@ -2611,6 +2611,7 @@ bool DWARFLinker::registerModuleReference(const DWARFDie &CUDie,
                                           LinkContext &Context,
                                           ObjFileLoaderTy Loader,
                                           CompileUnitHandlerTy OnCUDieLoaded,
+                                          CASLoaderTy CASLoader,
                                           unsigned Indent) {
   std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
   std::pair<bool, bool> IsClangModuleRef =
@@ -2630,47 +2631,62 @@ bool DWARFLinker::registerModuleReference(const DWARFDie &CUDie,
   ClangModules.insert({PCMFile, getDwoId(CUDie)});
 
   if (Error E = loadClangModule(Loader, CUDie, PCMFile, Context, OnCUDieLoaded,
-                                Indent + 2)) {
+                                CASLoader, Indent + 2)) {
     consumeError(std::move(E));
     return false;
   }
   return true;
 }
 
-Error DWARFLinker::loadClangModule(
-    ObjFileLoaderTy Loader, const DWARFDie &CUDie, const std::string &PCMFile,
-    LinkContext &Context, CompileUnitHandlerTy OnCUDieLoaded, unsigned Indent) {
+Error DWARFLinker::loadClangModule(ObjFileLoaderTy Loader,
+                                   const DWARFDie &CUDie,
+                                   const std::string &PCMFile,
+                                   LinkContext &Context,
+                                   CompileUnitHandlerTy OnCUDieLoaded,
+                                   CASLoaderTy CASLoader, unsigned Indent) {
 
   uint64_t DwoId = getDwoId(CUDie);
   std::string ModuleName = dwarf::toString(CUDie.find(dwarf::DW_AT_name), "");
 
-  /// Using a SmallString<0> because loadClangModule() is recursive.
-  SmallString<0> Path(Options.PrependPath);
-  if (sys::path::is_relative(PCMFile))
-    resolveRelativeObjectPath(Path, CUDie);
-  sys::path::append(Path, PCMFile);
-  // Don't use the cached binary holder because we have no thread-safety
-  // guarantee and the lifetime is limited.
-
-  if (Loader == nullptr) {
-    reportError("Could not load clang module: loader is not specified.\n",
-                Context.File);
-    return Error::success();
+  DWARFFile *PCM = nullptr;
+  if (CASLoader) {
+    auto LoadPCM = CASLoader(PCMFile, Context.File.FileName);
+    if (!LoadPCM)
+      return LoadPCM.takeError();
+    PCM = *LoadPCM;
   }
 
-  auto ErrOrObj = Loader(Context.File.FileName, Path);
-  if (!ErrOrObj)
-    return Error::success();
+  if (!PCM) {
+    /// Using a SmallString<0> because loadClangModule() is recursive.
+    SmallString<0> Path(Options.PrependPath);
+    if (sys::path::is_relative(PCMFile))
+      resolveRelativeObjectPath(Path, CUDie);
+    sys::path::append(Path, PCMFile);
+    // Don't use the cached binary holder because we have no thread-safety
+    // guarantee and the lifetime is limited.
+
+    if (Loader == nullptr) {
+      reportError("Could not load clang module: loader is not specified.\n",
+                  Context.File);
+      return Error::success();
+    }
+
+    auto ErrOrObj = Loader(Context.File.FileName, Path);
+    if (!ErrOrObj)
+      return Error::success();
+
+    PCM = &*ErrOrObj;
+  }
 
   std::unique_ptr<CompileUnit> Unit;
-  for (const auto &CU : ErrOrObj->Dwarf->compile_units()) {
+  for (const auto &CU : PCM->Dwarf->compile_units()) {
     OnCUDieLoaded(*CU);
     // Recursively get all modules imported by this one.
     auto ChildCUDie = CU->getUnitDIE();
     if (!ChildCUDie)
       continue;
     if (!registerModuleReference(ChildCUDie, Context, Loader, OnCUDieLoaded,
-                                 Indent)) {
+                                 CASLoader, Indent)) {
       if (Unit) {
         std::string Err =
             (PCMFile +
@@ -2700,7 +2716,7 @@ Error DWARFLinker::loadClangModule(
   }
 
   if (Unit)
-    Context.ModuleUnits.emplace_back(RefModuleUnit{*ErrOrObj, std::move(Unit)});
+    Context.ModuleUnits.emplace_back(RefModuleUnit{*PCM, std::move(Unit)});
 
   return Error::success();
 }
@@ -2807,7 +2823,8 @@ void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
 }
 
 void DWARFLinker::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
-                                CompileUnitHandlerTy OnCUDieLoaded) {
+                                CompileUnitHandlerTy OnCUDieLoaded,
+                                CASLoaderTy CASLoader) {
   ObjectContexts.emplace_back(LinkContext(File));
 
   if (ObjectContexts.back().File.Dwarf) {
@@ -2822,7 +2839,7 @@ void DWARFLinker::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
 
       if (!LLVM_UNLIKELY(Options.Update))
         registerModuleReference(CUDie, ObjectContexts.back(), Loader,
-                                OnCUDieLoaded);
+                                OnCUDieLoaded, CASLoader);
     }
   }
 }
