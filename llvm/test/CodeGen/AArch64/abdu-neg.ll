@@ -355,7 +355,7 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x1
-; CHECK-NEXT:    cneg x0, x8, hs
+; CHECK-NEXT:    cneg x0, x8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i64 %a, %b
   %ab = sub i64 %a, %b

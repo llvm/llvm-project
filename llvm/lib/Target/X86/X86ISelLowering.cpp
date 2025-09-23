@@ -3405,10 +3405,7 @@ bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 
 bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
                                              bool) const {
-  // TODO: Allow vectors?
-  if (VT.isVector())
-    return false;
-  return VT.isSimple() || !isOperationExpand(Opcode, VT);
+  return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
 }
 
 bool X86TargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
