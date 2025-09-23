@@ -60,7 +60,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="-no-pie" \
-      -D LLVM_ENABLE_WERROR=ON
+      -D LLVM_ENABLE_WERROR=ON \
+      -DLLVM_INSTALL_UTILS=ON
 
 start-group "ninja"
 

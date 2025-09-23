@@ -1,0 +1,20 @@
+# RUN: echo "test install" | tee %t
+# CHECK: test install
+
+# RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
+# RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
+# RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx \
+# RUN: -DLLVM_EXTERNAL_LIT="%llvm_obj_root/bin/llvm-lit" \
+# RUN: -DMLIR_DIR="%standalone_install_test_prefix/lib/cmake/mlir" \
+# RUN: -DLLVM_DIR="%standalone_install_test_prefix/lib/cmake/llvm" \
+# RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
+# RUN: -DPython3_EXECUTABLE=%python \
+# RUN: -DPython_EXECUTABLE=%python | tee -a %t
+
+# RUN: "%cmake_exe" --build . --target check-standalone -j | tee -a %t
+
+# RUN: FileCheck --input-file=%t %s
+
+# CHECK: Passed
+# CHECK-NOT: Failed
+# UNSUPPORTED: target={{.*(android).*}}

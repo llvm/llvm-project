@@ -20,7 +20,7 @@ set(LIBS
   MLIRTransforms
   )
 
-add_mlir_tool(cir-lsp-server
+add_clang_tool(cir-lsp-server
   cir-lsp-server.cpp
 
   DEPENDS
