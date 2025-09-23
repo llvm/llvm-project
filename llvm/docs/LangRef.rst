@@ -661,7 +661,7 @@ Note: non-integral pointer types are a work in progress, and they should be
 considered experimental at this time.
 
 For most targets, the pointer representation is a direct mapping from the
-bitwise representation to the address of the underlying memory allocation.
+bitwise representation to the address of the underlying memory location.
 Such pointers are considered "integral", and any pointers where the
 representation is not just an integer address are called "non-integral".
 
@@ -684,13 +684,10 @@ Pointers with non-address bits
 
 Pointers in this address space have a bitwise representation that not only
 has address bits, but also some other target-specific metadata.
-In most cases pointers with a non-address bits behave exactly the same as an
-integral pointer, the only difference is that it is not possible to create a
+In most cases pointers with non-address bits behave exactly the same as
+integral pointers, the only difference is that it is not possible to create a
 pointer just from an address unless all the non-address bits are also recreated
 correctly in a target-specific way.
-Since the address width such a pointer is not equal to the bitwise
-representation, extracting the address will need to truncate to the index width
-of the pointer.
 
 An example of pointers with non-address bits are the AMDGPU buffer descriptors
 which are 160 bits: a 128-bit fat pointer and a 32-bit offset.
@@ -718,6 +715,7 @@ may not be stable, so two identical casts of the same operand may or may not
 return the same value.  Said differently, the conversion to or from the
 "unstable" pointer type depends on environmental state in an implementation
 defined manner.
+
 If the frontend wishes to observe a *particular* value following a cast, the
 generated IR must fence with the underlying environment in an implementation
 defined manner. (In practice, this tends to require ``noinline`` routines for
@@ -3347,7 +3345,7 @@ as follows:
     efficiently.
 ``ni:<address space0>:<address space1>:<address space2>...``
     This marks pointer types with the specified address spaces
-    as :ref:`non-integral and unstable <nointptrtype>`.
+    as :ref:`unstable <nointptrtype>`.
     The ``0`` address space cannot be specified as non-integral.
     It is only supported for backwards compatibility, the flags of the ``p``
     specifier should be used instead for new code.
