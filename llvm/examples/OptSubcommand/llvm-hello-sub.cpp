@@ -27,13 +27,13 @@ enum ID {
 #include "Opts.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
-#define OPTTABLE_COMMAND_IDS_TABLE_CODE
+#define OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_COMMAND_IDS_TABLE_CODE
+#undef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
 
-#define OPTTABLE_COMMANDS_CODE
+#define OPTTABLE_SUBCOMMANDS_CODE
 #include "Opts.inc"
-#undef OPTTABLE_COMMANDS_CODE
+#undef OPTTABLE_SUBCOMMANDS_CODE
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -45,8 +45,8 @@ class HelloSubOptTable : public GenericOptTable {
 public:
   HelloSubOptTable()
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        /*IgnoreCase=*/false, OptionCommands,
-                        OptionCommandIDsTable) {}
+                        /*IgnoreCase=*/false, OptionSubCommands,
+                        OptionSubCommandIDsTable) {}
 };
 } // namespace
 
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
                                   MissingArgCount);
 
   StringRef Subcommand = Args.getSubcommand(
-      T.getCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+      T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
   // Handle help. When help options is found, ignore all other options and exit
   // after printing help.
 

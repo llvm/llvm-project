@@ -293,7 +293,7 @@ public:
   /// this returns an empty StringRef. If multiple subcommands are found, the
   /// first one is returned.
   StringRef getSubcommand(
-      ArrayRef<OptTable::Command> Commands,
+      ArrayRef<OptTable::SubCommand> AllSubCommands,
       std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
       std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
 

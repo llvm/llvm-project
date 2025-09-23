@@ -98,18 +98,15 @@ class HelpTextVariant<list<OptionVisibility> visibilities, string text> {
   string Text = text;
 }
 
-// Base class for TopLevelCommand and Subcommands.
-class Command<string name> { string Name = name; }
-
 // Class definition for positional subcommands.
-class Subcommand<string name, string helpText, string usage = "">
-    : Command<name> {
+class SubCommand<string name, string helpText, string usage = ""> {
+  string Name = name;
   string HelpText = helpText;
   string Usage = usage;
 }
 
 class Option<list<string> prefixes, string name, OptionKind kind,
-             list<Command> commandGroup = []> {
+             list<SubCommand> subcommands = []> {
   string EnumName = ?; // Uses the def name if undefined.
   list<string> Prefixes = prefixes;
   string Name = name;
@@ -140,33 +137,34 @@ class Option<list<string> prefixes, string name, OptionKind kind,
   code ValueMerger = "mergeForwardValue";
   code ValueExtractor = "extractForwardValue";
   list<code> NormalizedValues = ?;
-  list<Command> CommandGroup = commandGroup;
+  list<SubCommand> SubCommands = subcommands;
 }
 
 // Helpers for defining options.
 
-class Flag<list<string> prefixes, string name, list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_FLAG, commandGroup>;
+class Flag<list<string> prefixes, string name,
+           list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_FLAG, subcommands>;
 class Joined<list<string> prefixes, string name,
-             list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_JOINED, commandGroup>;
+             list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_JOINED, subcommands>;
 class Separate<list<string> prefixes, string name,
-               list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_SEPARATE, commandGroup>;
+               list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_SEPARATE, subcommands>;
 class CommaJoined<list<string> prefixes, string name,
-                  list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_COMMAJOINED, commandGroup>;
+                  list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_COMMAJOINED, subcommands>;
 class MultiArg<list<string> prefixes, string name, int numargs,
-               list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_MULTIARG, commandGroup> {
+               list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_MULTIARG, subcommands> {
   int NumArgs = numargs;
 }
 class JoinedOrSeparate<list<string> prefixes, string name,
-                       list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_JOINED_OR_SEPARATE, commandGroup>;
+                       list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_JOINED_OR_SEPARATE, subcommands>;
 class JoinedAndSeparate<list<string> prefixes, string name,
-                        list<Command> commandGroup = []>
-    : Option<prefixes, name, KIND_JOINED_AND_SEPARATE, commandGroup>;
+                        list<SubCommand> subcommands = []>
+    : Option<prefixes, name, KIND_JOINED_AND_SEPARATE, subcommands>;
 
 // Mix-ins for adding optional attributes.
 

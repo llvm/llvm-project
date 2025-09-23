@@ -45,8 +45,6 @@ public:
   operator unsigned() const { return Mask; }
 };
 
-inline constexpr StringRef TopLevelCommandName = "TopLevelCommand";
-
 /// Provide access to the Option info table.
 ///
 /// The OptTable class provides a layer of indirection which allows Option
@@ -57,7 +55,7 @@ inline constexpr StringRef TopLevelCommandName = "TopLevelCommand";
 class LLVM_ABI OptTable {
 public:
   /// Represents a subcommand and its options in the option table.
-  struct Command {
+  struct SubCommand {
     const char *Name;
     const char *HelpText;
     const char *Usage;
@@ -107,16 +105,17 @@ public:
 
     bool hasCommands() const { return CommandIDsOffset != 0; }
 
-    unsigned getNumCommandIDs(ArrayRef<unsigned> CommandIDsTable) const {
+    unsigned getNumCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
       // We embed the number of command IDs in the value of the first offset.
-      return CommandIDsTable[CommandIDsOffset];
+      return SubCommandIDsTable[CommandIDsOffset];
     }
 
-    ArrayRef<unsigned> getCommandIDs(ArrayRef<unsigned> CommandIDsTable) const {
-      return hasCommands()
-                 ? CommandIDsTable.slice(CommandIDsOffset + 1,
-                                         getNumCommandIDs(CommandIDsTable))
-                 : ArrayRef<unsigned>();
+    ArrayRef<unsigned>
+    getCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
+      return hasCommands() ? SubCommandIDsTable.slice(
+                                 CommandIDsOffset + 1,
+                                 getNumCommandIDs(SubCommandIDsTable))
+                           : ArrayRef<unsigned>();
     }
 
     void appendPrefixes(const StringTable &StrTable,
@@ -161,10 +160,10 @@ private:
   bool IgnoreCase;
 
   /// The command information table.
-  ArrayRef<Command> Commands;
+  ArrayRef<SubCommand> SubCommands;
 
   /// The command IDs table.
-  ArrayRef<unsigned> CommandIDsTable;
+  ArrayRef<unsigned> SubCommandIDsTable;
 
   bool GroupedShortOptions = false;
   bool DashDashParsing = false;
@@ -201,8 +200,8 @@ protected:
   OptTable(const StringTable &StrTable,
            ArrayRef<StringTable::Offset> PrefixesTable,
            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
-           ArrayRef<Command> Commands = {},
-           ArrayRef<unsigned> CommandIDsTable = {});
+           ArrayRef<SubCommand> SubCommands = {},
+           ArrayRef<unsigned> SubCommandIDsTable = {});
 
   /// Build (or rebuild) the PrefixChars member.
   void buildPrefixChars();
@@ -213,7 +212,7 @@ public:
   /// Return the string table used for option names.
   const StringTable &getStrTable() const { return *StrTable; }
 
-  const ArrayRef<Command> getCommands() const { return Commands; }
+  const ArrayRef<SubCommand> getSubCommands() const { return SubCommands; }
 
   /// Return the prefixes table used for option names.
   ArrayRef<StringTable::Offset> getPrefixesTable() const {
@@ -386,7 +385,6 @@ public:
 private:
   std::unique_ptr<Arg>
   internalParseOneArg(const ArgList &Args, unsigned &Index,
-                      const Command *ActiveCommand,
                       std::function<bool(const Option &)> ExcludeOption) const;
 
 public:
@@ -468,8 +466,8 @@ protected:
   LLVM_ABI GenericOptTable(const StringTable &StrTable,
                            ArrayRef<StringTable::Offset> PrefixesTable,
                            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
-                           ArrayRef<Command> Commands = {},
-                           ArrayRef<unsigned> CommandIDsTable = {});
+                           ArrayRef<SubCommand> Commands = {},
+                           ArrayRef<unsigned> SubCommandIDsTable = {});
 };
 
 class PrecomputedOptTable : public OptTable {
@@ -478,10 +476,11 @@ protected:
                       ArrayRef<StringTable::Offset> PrefixesTable,
                       ArrayRef<Info> OptionInfos,
                       ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
-                      bool IgnoreCase = false, ArrayRef<Command> Commands = {},
-                      ArrayRef<unsigned> CommandIDsTable = {})
-      : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, Commands,
-                 CommandIDsTable) {
+                      bool IgnoreCase = false,
+                      ArrayRef<SubCommand> SubCommands = {},
+                      ArrayRef<unsigned> SubCommandIDsTable = {})
+      : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
+                 SubCommandIDsTable) {
     for (auto PrefixOffset : PrefixesUnionOffsets)
       PrefixesUnion.push_back(StrTable[PrefixOffset]);
     buildPrefixChars();

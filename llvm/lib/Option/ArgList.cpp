@@ -206,7 +206,7 @@ LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
 
 StringRef ArgList::getSubcommand(
-    ArrayRef<OptTable::Command> Commands,
+    ArrayRef<OptTable::SubCommand> AllSubCommands,
     std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
     std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const {
 
@@ -217,9 +217,7 @@ StringRef ArgList::getSubcommand(
       continue;
 
     size_t OldSize = SubCommands.size();
-    for (const OptTable::Command &CMD : Commands) {
-      // if (StringRef(CMD.Name) == opt::TopLevelCommandName)
-      //   continue;
+    for (const OptTable::SubCommand &CMD : AllSubCommands) {
       if (StringRef(CMD.Name) == A->getValue())
         SubCommands.push_back(A->getValue());
     }
