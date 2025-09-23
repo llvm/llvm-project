@@ -4442,7 +4442,7 @@ struct OmpGrainsizeClause {
 // graph_id-clause ->
 //    GRAPH_ID(graph-id-value)                      // since 6.0
 struct OmpGraphIdClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpGraphIdClause, common::Indirection<Expr>);
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphIdClause, ScalarIntExpr);
 };
 
 // Ref: [6.0:438-439]
@@ -4450,7 +4450,7 @@ struct OmpGraphIdClause {
 // graph_reset-clause ->
 //    GRAPH_RESET[(graph-reset-expression)]         // since 6.0
 struct OmpGraphResetClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, common::Indirection<Expr>);
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, ScalarLogicalExpr);
 };
 
 // Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
@@ -4953,20 +4953,18 @@ struct OpenMPDeclareTargetConstruct {
 // OMP v5.2: 5.8.8
 //  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
 struct OpenMPDeclareMapperConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareMapperConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpMapperSpecifier, OmpClauseList> t;
 };
 
 // ref: 5.2: Section 5.5.11 139-141
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
 struct OpenMPDeclareReductionConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareReductionConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
-      std::optional<OmpClauseList>>
-      t;
 };
 
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]
