@@ -2904,16 +2904,18 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // likely.
     ScalarizationCost = ScalarizationCost / getPredBlockCostDivisor(CostKind);
   }
+
   InstructionCost SafeDivisorCost = 0;
-
   auto *VecTy = toVectorTy(I->getType(), VF);
-
-  // The cost of the select guard to ensure all lanes are well defined
-  // after we speculate above any internal control flow.
-  SafeDivisorCost +=
-      TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
-                             toVectorTy(Type::getInt1Ty(I->getContext()), VF),
-                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  auto *DivisorI = dyn_cast<Instruction>(I->getOperand(1));
+  if (DivisorI && !Legal->isInvariant(DivisorI)) {
+    // The cost of the select guard to ensure all lanes are well defined
+    // after we speculate above any internal control flow.
+    SafeDivisorCost +=
+        TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
+                               toVectorTy(Type::getInt1Ty(I->getContext()), VF),
+                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  }
 
   SmallVector<const Value *, 4> Operands(I->operand_values());
   SafeDivisorCost += TTI.getArithmeticInstrCost(
@@ -5672,9 +5674,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.
-      if (const auto *Group = getInterleavedAccessGroup(&I))
-        setWideningDecision(Group, VF, Decision, Cost);
-      else
+      if (const auto *Group = getInterleavedAccessGroup(&I)) {
+        if (Decision == CM_Scalarize) {
+          for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
+            if (auto *I = Group->getMember(Idx)) {
+              setWideningDecision(I, VF, Decision,
+                                  getMemInstScalarizationCost(I, VF));
+            }
+          }
+        } else {
+          setWideningDecision(Group, VF, Decision, Cost);
+        }
+      } else
         setWideningDecision(&I, VF, Decision, Cost);
     }
   }
