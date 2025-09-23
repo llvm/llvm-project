@@ -444,9 +444,11 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
       if (OptionalFileEntryRef CurrentModuleMap =
               PP.getHeaderSearchInfo()
                   .getModuleMap()
-                  .getModuleMapFileForUniquing(CurrentModule))
+                  .getModuleMapFileForUniquing(CurrentModule)) {
         CI.getFrontendOpts().ModuleMapFiles.emplace_back(
             CurrentModuleMap->getNameAsRequested());
+        Consumer.handleFileDependency(CurrentModuleMap->getNameAsRequested());
+      }
 
     SmallVector<ModuleID> DirectDeps;
     for (const auto &KV : ModularDeps)
