@@ -48,7 +48,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Range.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 #include <string>
 
 namespace llvm {
@@ -72,7 +72,7 @@ public:
     uint64_t CurrChunkIdx = 0;
     StringRef Name;
     StringRef Desc;
-    RangeUtils::RangeList Chunks;
+    IntegerIntervalUtils::IntervalList Chunks;
 
   public:
     CounterInfo(StringRef Name, StringRef Desc) : Name(Name), Desc(Desc) {
@@ -80,11 +80,11 @@ public:
     }
   };
 
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Range> Ranges);
+  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Ranges);
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()
-  LLVM_ABI static bool parseChunks(StringRef Str, RangeUtils::RangeList &Res);
+  LLVM_ABI static bool parseChunks(StringRef Str, IntegerIntervalUtils::IntervalList &Res);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();

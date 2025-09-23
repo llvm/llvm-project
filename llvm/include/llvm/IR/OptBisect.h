@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Range.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 
 namespace llvm {
 
@@ -71,8 +71,8 @@ public:
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override { return !BisectRanges.empty(); }
 
-  /// Set ranges directly from a RangeList.
-  void setRanges(RangeUtils::RangeList Ranges) {
+  /// Set intervals directly from an IntervalList.
+  void setRanges(IntegerIntervalUtils::IntervalList Ranges) {
     BisectRanges = std::move(Ranges);
   }
 
@@ -84,7 +84,7 @@ public:
 
 private:
   mutable int LastBisectNum = 0;
-  RangeUtils::RangeList BisectRanges;
+  IntegerIntervalUtils::IntervalList BisectRanges;
 };
 
 /// This class implements a mechanism to disable passes and individual

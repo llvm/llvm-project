@@ -27,19 +27,19 @@ class raw_ostream;
 
 namespace llvm {
 
-/// Represents a range of integers [Begin, End], inclusive on both ends, where
-/// Begin <= End.
-class Range {
+/// Represents an inclusive integer interval [Begin, End] where Begin <= End.
+class IntegerInclusiveInterval {
   int64_t Begin;
   int64_t End;
 
 public:
-  /// Create a range [Begin, End].
-  Range(int64_t Begin, int64_t End) : Begin(Begin), End(End) {
+  /// Create an interval [Begin, End].
+  IntegerInclusiveInterval(int64_t Begin, int64_t End)
+      : Begin(Begin), End(End) {
     assert(Begin <= End && "Range Begin must be <= End");
   }
-  /// Create a range [Single, Single].
-  Range(int64_t Single) : Begin(Single), End(Single) {}
+  /// Create a singleton interval [Single, Single].
+  IntegerInclusiveInterval(int64_t Single) : Begin(Single), End(Single) {}
 
   int64_t getBegin() const { return Begin; }
   int64_t getEnd() const { return End; }
@@ -57,7 +57,7 @@ public:
   bool contains(int64_t Value) const { return Value >= Begin && Value <= End; }
 
   /// Check if this range overlaps with another range.
-  bool overlaps(const Range &Other) const {
+  bool overlaps(const IntegerInclusiveInterval &Other) const {
     return Begin <= Other.End && End >= Other.Begin;
   }
 
@@ -69,40 +69,40 @@ public:
       OS << Begin << "-" << End;
   }
 
-  bool operator==(const Range &Other) const {
+  bool operator==(const IntegerInclusiveInterval &Other) const {
     return Begin == Other.Begin && End == Other.End;
   }
 };
 
-/// Utility class for parsing and managing range specifications.
-class RangeUtils {
-public:
-  using RangeList = SmallVector<Range, 8>;
+namespace IntegerIntervalUtils {
 
-  /// Parse a range specification string like "1-10,20-30,45" or
-  /// "1-10:20-30:45". Ranges must be in increasing order and non-overlapping.
-  /// \param RangeStr The string to parse.
-  /// \param Separator The separator character to use (',' or ':').
-  /// \returns Expected<RangeList> containing the parsed ranges on success,
-  ///          or an Error on failure.
-  static Expected<RangeList> parseRanges(StringRef RangeStr,
-                                         char Separator = ',');
+/// A list of integer ranges.
+using IntervalList = SmallVector<IntegerInclusiveInterval, 8>;
 
-  /// Check if a value is contained in any of the ranges.
-  static bool contains(ArrayRef<Range> Ranges, int64_t Value);
+/// Parse a range specification string like "1-10,20-30,45" or
+/// "1-10:20-30:45". Ranges must be in increasing order and non-overlapping.
+/// \param RangeStr The string to parse.
+/// \param Separator The separator character to use (',' or ':').
+/// \returns Expected<RangeList> containing the parsed ranges on success,
+///          or an Error on failure.
+Expected<IntervalList> parseIntervals(StringRef RangeStr,
+                                      char Separator = ',');
 
-  /// Print ranges to output stream.
-  /// \param OS The output stream to print to.
-  /// \param Ranges The ranges to print.
-  /// \param Separator The separator character to use between ranges (i.e. ','
-  /// or ':').
-  static void printRanges(raw_ostream &OS, ArrayRef<Range> Ranges,
-                          char Separator = ',');
+/// Check if a value is contained in any of the ranges.
+bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
 
-  /// Merge adjacent/consecutive ranges into single ranges.
-  /// Example: [1-3, 4-6, 8-10] -> [1-6, 8-10].
-  static RangeList mergeAdjacentRanges(ArrayRef<Range> Ranges);
-};
+/// Print ranges to output stream.
+/// \param OS The output stream to print to.
+/// \param Ranges The ranges to print.
+/// \param Separator The separator character to use between ranges (i.e. ',' or ':').
+void printIntervals(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals,
+                    char Separator = ',');
+
+/// Merge adjacent/consecutive ranges into single ranges.
+/// Example: [1-3, 4-6, 8-10] -> [1-6, 8-10].
+IntervalList mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals);
+
+} // end namespace IntegerIntervalUtils
 
 } // end namespace llvm
 

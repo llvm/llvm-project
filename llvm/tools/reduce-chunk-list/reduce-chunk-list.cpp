@@ -13,7 +13,7 @@
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/Range.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 
 using namespace llvm;
 
@@ -25,13 +25,14 @@ static cl::opt<bool> Pessimist("pessimist", cl::init(false));
 
 namespace {
 
-bool isStillInteresting(ArrayRef<Range> Chunks) {
-  RangeUtils::RangeList SimpleChunks = RangeUtils::mergeAdjacentRanges(Chunks);
+bool isStillInteresting(ArrayRef<IntegerInclusiveInterval> Chunks) {
+  IntegerIntervalUtils::IntervalList SimpleChunks =
+      IntegerIntervalUtils::mergeAdjacentIntervals(Chunks);
 
   std::string ChunkStr;
   {
     raw_string_ostream OS(ChunkStr);
-    RangeUtils::printRanges(OS, SimpleChunks);
+    IntegerIntervalUtils::printIntervals(OS, SimpleChunks);
   }
 
   errs() << "Checking with: " << ChunkStr << "\n";
@@ -58,9 +59,9 @@ bool isStillInteresting(ArrayRef<Range> Chunks) {
   return Res;
 }
 
-bool increaseGranularity(RangeUtils::RangeList &Chunks) {
+bool increaseGranularity(IntegerIntervalUtils::IntervalList &Chunks) {
   errs() << "Increasing granularity\n";
-  RangeUtils::RangeList NewChunks;
+  IntegerIntervalUtils::IntervalList NewChunks;
   bool SplitOne = false;
 
   for (auto &C : Chunks) {
@@ -68,8 +69,8 @@ bool increaseGranularity(RangeUtils::RangeList &Chunks) {
       NewChunks.push_back(C);
     } else {
       int64_t Half = (C.getBegin() + C.getEnd()) / 2;
-      NewChunks.push_back(Range(C.getBegin(), Half));
-      NewChunks.push_back(Range(Half + 1, C.getEnd()));
+      NewChunks.push_back(IntegerInclusiveInterval(C.getBegin(), Half));
+      NewChunks.push_back(IntegerInclusiveInterval(Half + 1, C.getEnd()));
       SplitOne = true;
     }
   }
@@ -84,14 +85,14 @@ bool increaseGranularity(RangeUtils::RangeList &Chunks) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  auto ExpectedChunks = RangeUtils::parseRanges(StartChunks, ',');
+  auto ExpectedChunks = IntegerIntervalUtils::parseIntervals(StartChunks, ',');
   if (!ExpectedChunks) {
     handleAllErrors(ExpectedChunks.takeError(), [](const StringError &E) {
       errs() << "Error parsing chunks: " << E.getMessage() << "\n";
     });
     return 1;
   }
-  RangeUtils::RangeList CurrChunks = std::move(*ExpectedChunks);
+  IntegerIntervalUtils::IntervalList CurrChunks = std::move(*ExpectedChunks);
 
   auto Program = sys::findProgramByName(ReproductionCmd);
   if (!Program) {
@@ -131,7 +132,8 @@ int main(int argc, char **argv) {
   }
 
   errs() << "Minimal Chunks = ";
-  RangeUtils::printRanges(llvm::errs(),
-                          RangeUtils::mergeAdjacentRanges(CurrChunks));
+  IntegerIntervalUtils::printIntervals(
+      llvm::errs(),
+      IntegerIntervalUtils::mergeAdjacentIntervals(CurrChunks));
   errs() << "\n";
 }

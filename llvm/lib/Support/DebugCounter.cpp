@@ -10,8 +10,9 @@ using namespace llvm;
 
 namespace llvm {
 
-void DebugCounter::printChunks(raw_ostream &OS, ArrayRef<Range> Ranges) {
-  RangeUtils::printRanges(OS, Ranges, ':');
+void DebugCounter::printChunks(raw_ostream &OS,
+                               ArrayRef<IntegerInclusiveInterval> Ranges) {
+  IntegerIntervalUtils::printIntervals(OS, Ranges, ':');
 }
 
 } // namespace llvm
@@ -132,7 +133,7 @@ void DebugCounter::push_back(const std::string &Val) {
     return;
   }
 
-  auto ExpectedChunks = RangeUtils::parseRanges(CounterPair.second, ':');
+  auto ExpectedChunks = IntegerIntervalUtils::parseIntervals(CounterPair.second, ':');
   if (!ExpectedChunks) {
     handleAllErrors(ExpectedChunks.takeError(), [&](const StringError &E) {
       errs() << "DebugCounter Error: " << E.getMessage() << "\n";
