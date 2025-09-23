@@ -898,26 +898,23 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
   // Check if Src is a constant
   auto *SrcDef = MRI.getVRegDef(Src);
   Register RMBits;
+  Register MXCSRRMBits;
+
   if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
     uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
-    int FieldVal;
-    switch (static_cast<RoundingMode>(RM)) {
-    case RoundingMode::NearestTiesToEven:
-      FieldVal = X86::rmToNearest;
-      break;
-    case RoundingMode::TowardNegative:
-      FieldVal = X86::rmDownward;
-      break;
-    case RoundingMode::TowardPositive:
-      FieldVal = X86::rmUpward;
-      break;
-    case RoundingMode::TowardZero:
-      FieldVal = X86::rmTowardZero;
-      break;
-    default:
-      report_fatal_error("rounding mode is not supported by X86 hardware");
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(MI.getDebugLoc()), DS_Error));
+      return false;
     }
+
+    FieldVal = FieldVal << 3;
     RMBits = MIRBuilder.buildConstant(s16, FieldVal).getReg(0);
+    MXCSRRMBits = MIRBuilder.buildConstant(s32, FieldVal).getReg(0);
   } else {
     // Convert Src (rounding mode) to bits for control word
     // (0xc9 << (2 * Src + 4)) & 0xc00
@@ -930,6 +927,12 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
                                        ShiftAmt8);
     RMBits =
         MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00))
+            .getReg(0);
+
+    // For non-constant case, we still need to compute MXCSR bits dynamically
+    auto RMBits32 = MIRBuilder.buildZExt(s32, RMBits);
+    MXCSRRMBits =
+        MIRBuilder.buildShl(s32, RMBits32, MIRBuilder.buildConstant(s32, 3))
             .getReg(0);
   }
   // Update rounding mode bits
@@ -965,11 +968,6 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
     // Clear RM field (bits 14:13)
     auto ClearedMXCSR = MIRBuilder.buildAnd(
         s32, MXCSR, MIRBuilder.buildConstant(s32, 0xffff9fff));
-
-    // Shift x87 RM bits from 11:10 to 14:13
-    auto RMBits32 = MIRBuilder.buildZExt(s32, RMBits);
-    auto MXCSRRMBits =
-        MIRBuilder.buildShl(s32, RMBits32, MIRBuilder.buildConstant(s32, 3));
 
     // Update rounding mode bits
     auto NewMXCSR = MIRBuilder.buildOr(s32, ClearedMXCSR, MXCSRRMBits);
