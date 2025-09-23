@@ -1787,7 +1787,12 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     return false;
   if (DiscardResult)
     return this->emitPopPtr(E);
-  return true;
+
+  if (E->isGLValue())
+    return true;
+
+  OptPrimType T = classifyPrim(E);
+  return this->emitLoadPop(*T, E);
 }
 
 template <class Emitter>
