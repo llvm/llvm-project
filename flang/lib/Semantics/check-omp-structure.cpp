@@ -1377,7 +1377,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
 
   auto InvalidArgument{[&](parser::CharBlock source) {
     context_.Say(source,
-        "The argument to the DECLARE_MAPPER directive should be [base-name:]variant-name"_err_en_US);
+        "The argument to the DECLARE_VARIANT directive should be [base-name:]variant-name"_err_en_US);
   }};
 
   auto CheckSymbol{[&](const Symbol *sym, parser::CharBlock source) {
