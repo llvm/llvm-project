@@ -3406,6 +3406,11 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
         PCM = Mod.getPath();
     }
     llvm::sys::path::append(PCM, Mod.getASTFile());
+
+    // If module file has CASID, use CASID as PCM path.
+    if (!Mod.getCASID().empty())
+      PCM = Mod.getCASID();
+
     DIB.createCompileUnit(
         TheCU->getSourceLanguage(),
         // TODO: Support "Source" from external AST providers?

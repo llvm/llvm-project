@@ -147,6 +147,9 @@ public:
   /// The \c ActionCache key for this module, or empty.
   std::string ModuleCacheKey;
 
+  /// The \c CASID for the module, or empty.
+  std::string CASID;
+
   /// The CAS filesystem root ID for implicit modules built with the dependency
   /// scanner, or empty.
   std::string CASFileSystemRootID;

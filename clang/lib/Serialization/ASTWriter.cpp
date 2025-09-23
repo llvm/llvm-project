@@ -1624,6 +1624,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // CASIDIsKey
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Cache key len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
@@ -1653,16 +1654,27 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(0);
         // FIXME: cache support for standard C++ modules.
         Record.push_back(0);
+        Record.push_back(0);
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
         Record.push_back(M.Signature ? 0 : M.File.getSize());
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
+        // Encode CacheKey if it is implicit module, otherwise encode CASID of
+        // module file.
+        bool CASIDIsKey = M.Kind == serialization::MK_ImplicitModule;
+        Record.push_back(CASIDIsKey);
 
         llvm::append_range(Blob, M.Signature);
 
         AddPathBlob(M.FileName, Record, Blob);
-        AddStringBlob(M.ModuleCacheKey, Record, Blob);
+        if (CASIDIsKey)
+          AddStringBlob(M.ModuleCacheKey, Record, Blob);
+        else {
+          assert(!(M.CASID.empty() && !M.ModuleCacheKey.empty()) &&
+                 "should not have module cache key without CASID");
+          AddStringBlob(M.CASID, Record, Blob);
+        }
       }
 
       Stream.EmitRecordWithBlob(AbbrevCode, Record, Blob);

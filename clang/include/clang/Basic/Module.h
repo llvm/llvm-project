@@ -274,6 +274,9 @@ private:
   /// The \c ActionCache key for this module, if any.
   std::optional<std::string> ModuleCacheKey;
 
+  /// The \c CASID for the loaded module, if any.
+  std::optional<std::string> CASID;
+
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
 
@@ -771,6 +774,15 @@ public:
   void setModuleCacheKey(std::string Key) {
     assert(!getModuleCacheKey() || *getModuleCacheKey() == Key);
     getTopLevelModule()->ModuleCacheKey = std::move(Key);
+  }
+
+  std::optional<StringRef> getCASID() const {
+    return getTopLevelModule()->CASID;
+  }
+
+  void setCASID(std::string ID) {
+    assert(!getCASID() || *getCASID() == ID);
+    getTopLevelModule()->CASID = std::move(ID);
   }
 
   /// Retrieve the umbrella directory as written.

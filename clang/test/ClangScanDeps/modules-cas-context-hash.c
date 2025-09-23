@@ -33,7 +33,7 @@
 // CHECK:         ],
 // CHECK:         "command-line": [
 // CHECK:           "-fmodule-file-cache-key"
-// CHECK:           "PREFIX{{/|\\\\}}outputs{{/|\\\\}}[[HASH]]{{/|\\\\}}Mod-[[HASH]].pcm"
+// CHECK:           "Mod-[[HASH]].pcm"
 // CHECK:           "llvmcas://[[KEY]]"
 // CHECK:         ]
 
@@ -57,7 +57,7 @@
 // CHECK:         ],
 // CHECK:         "command-line": [
 // CHECK:           "-fmodule-file-cache-key"
-// CHECK:           "PREFIX{{/|\\\\}}outputs{{/|\\\\}}[[HASH]]{{/|\\\\}}Mod-[[HASH]].pcm"
+// CHECK:           "Mod-[[HASH]].pcm"
 // CHECK:           "llvmcas://[[KEY]]"
 // CHECK:         ]
 

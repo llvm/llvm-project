@@ -25,7 +25,7 @@
 // DOT: digraph "dependencies"
 // DOT-DAG: [[TU:header_[0-9]+]] [ shape="box", label="{{.*}}{{/|\\}}tu.m"];
 // DOT-DAG: [[HEADER:header_[0-9]+]] [ shape="box", label="{{.*}}{{/|\\}}A.h"];
-// DOT-DAG: [[PCM:header_[0-9]+]] [ shape="box", label="{{.*}}{{/|\\}}Mod-{{.*}}.pcm"];
+// DOT-DAG: [[PCM:header_[0-9]+]] [ shape="box", label="Mod-{{.*}}.pcm"];
 // DOT-DAG: [[TU]] -> [[HEADER]]
 // DOT-DAG: [[HEADER]] -> [[PCM]]
 

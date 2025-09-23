@@ -30,14 +30,15 @@ class ASTSourceDescriptor {
   StringRef Path;
   StringRef ASTFile;
   ASTFileSignature Signature;
+  StringRef CASID;
   Module *ClangModule = nullptr;
 
 public:
   ASTSourceDescriptor() = default;
   ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                      ASTFileSignature Signature)
+                      ASTFileSignature Signature, StringRef CASID)
       : PCHModuleName(std::move(Name)), Path(std::move(Path)),
-        ASTFile(std::move(ASTFile)), Signature(Signature) {}
+        ASTFile(std::move(ASTFile)), Signature(Signature), CASID(CASID) {}
   ASTSourceDescriptor(Module &M);
 
   std::string getModuleName() const;
@@ -45,6 +46,7 @@ public:
   StringRef getASTFile() const { return ASTFile; }
   ASTFileSignature getSignature() const { return Signature; }
   Module *getModuleOrNull() const { return ClangModule; }
+  StringRef getCASID() const { return CASID; }
 };
 
 } // namespace clang

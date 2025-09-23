@@ -30,6 +30,8 @@ class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   struct PCM {
     std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
+    std::string CASID;
+
     /// Track whether this PCM is known to be good (either built or
     /// successfully imported by a CompilerInstance/ASTReader using this
     /// cache).
@@ -38,6 +40,9 @@ class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
     PCM() = default;
     PCM(std::unique_ptr<llvm::MemoryBuffer> Buffer)
         : Buffer(std::move(Buffer)) {}
+
+    PCM(std::unique_ptr<llvm::MemoryBuffer> Buffer, llvm::StringRef CASID)
+        : Buffer(std::move(Buffer)), CASID(CASID.str()) {}
   };
 
   /// Cache of buffers.
@@ -64,7 +69,8 @@ public:
   /// \post state is Tentative
   /// \return a reference to the buffer as a convenience.
   llvm::MemoryBuffer &addPCM(llvm::StringRef Filename,
-                             std::unique_ptr<llvm::MemoryBuffer> Buffer);
+                             std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                             llvm::StringRef CASID = "");
 
   /// Store a just-built PCM under the Filename.
   ///
@@ -89,6 +95,9 @@ public:
 
   /// Get a pointer to the pCM if it exists; else nullptr.
   llvm::MemoryBuffer *lookupPCM(llvm::StringRef Filename) const;
+
+  /// Get the PCM if it exits; else nullptr.
+  const PCM *lookup(llvm::StringRef Filename) const;
 
   /// Check whether the PCM is final and has been shown to work.
   ///

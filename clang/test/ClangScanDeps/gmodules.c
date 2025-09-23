@@ -1,40 +1,64 @@
 // REQUIRES: ondisk_cas
+// REQUIRES: system-darwin
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: sed "s|DIR|%/t|g" %t/cdb_pch.json.template > %t/cdb_pch.json
+// RUN: sed "s|DIR|%/t|g" %t/cas-config.template > %t/.cas-config
 
-// Scan PCH
+/// Scan PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps_pch.json
 
-// Build PCH
+/// Build PCH
 // RUN: %deps-to-rsp %t/deps_pch.json --module-name Top > %t/Top.rsp
 // RUN: %deps-to-rsp %t/deps_pch.json --module-name Left > %t/Left.rsp
 // RUN: %deps-to-rsp %t/deps_pch.json --tu-index 0 > %t/pch.rsp
 // RUN: %clang @%t/Top.rsp
 // RUN: %clang @%t/Left.rsp
-// RUN: rm -rf %t/outputs
 // RUN: %clang @%t/pch.rsp
-// RUN: rm -rf %t/outputs
 
-// Scan TU with PCH
+/// Scan TU with PCH
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/outputs \
 // RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
-// Build TU
+// RUN: cat %t/deps.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t %s
+
+/// Build TU
 // RUN: %deps-to-rsp %t/deps.json --module-name Right > %t/Right.rsp
 // RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/tu.rsp
 // RUN: %clang @%t/Right.rsp
-// RUN: rm -rf %t/outputs
 // RUN: %clang @%t/tu.rsp
 
-// RUN: cat %t/deps.json | %PathSanitizingFileCheck --sanitize PREFIX=%/t --enable-yaml-compatibility %s
+/// Check module in a different directory and compare output.
+// RUN: clang-scan-deps -compilation-database %t/cdb_pch.json \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs-2 \
+// RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
+// RUN:   > %t/deps_pch_2.json
+// RUN: %deps-to-rsp %t/deps_pch_2.json --module-name Top > %t/Top_2.rsp
+// RUN: %deps-to-rsp %t/deps_pch_2.json --module-name Left > %t/Left_2.rsp
+// RUN: %deps-to-rsp %t/deps_pch_2.json --tu-index 0 > %t/pch_2.rsp
+// RUN: %clang @%t/Top_2.rsp
+// RUN: %clang @%t/Left_2.rsp
+// RUN: %clang @%t/pch_2.rsp -o %t/prefix_2.pch
+// RUN: clang-scan-deps -compilation-database %t/cdb.json \
+// RUN:   -cas-path %t/cas -module-files-dir %t/outputs-2 \
+// RUN:   -format experimental-include-tree-full -mode preprocess-dependency-directives \
+// RUN:   > %t/deps_2.json
+// RUN: %deps-to-rsp %t/deps_2.json --module-name Right > %t/Right_2.rsp
+// RUN: %deps-to-rsp %t/deps_2.json --tu-index 0 > %t/tu_2.rsp
+// RUN: %clang @%t/Right_2.rsp
+// RUN: %clang @%t/tu_2.rsp -o %t/tu_2.o
+
+/// Diff all outputs
+// RUN: diff %t/prefix.h.pch %t/prefix_2.pch
+// RUN: diff %t/tu.o %t/tu_2.o
+
 
 // CHECK:      {
 // CHECK-NEXT:  "modules": [
@@ -89,7 +113,6 @@
 // CHECK:                  "-fcas-include-tree"
 // CHECK-NEXT:             "llvmcas://{{[[:xdigit:]]+}}"
 // CHECK:                  "-fcache-compile-job"
-// CHECK:                  "-fsyntax-only"
 // CHECK:                  "-fmodule-file-cache-key"
 // CHECK-NEXT:             "Right-{{.*}}.pcm"
 // CHECK-NEXT:             "llvmcas://{{[[:xdigit:]]+}}"
@@ -114,14 +137,14 @@
 [{
   "file": "DIR/prefix.h",
   "directory": "DIR",
-  "command": "clang -x c-header DIR/prefix.h -o DIR/prefix.h.pch -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
+  "command": "clang -x c-header DIR/prefix.h -o DIR/prefix.h.pch -fmodules -fimplicit-modules -fimplicit-module-maps -gmodules -fmodules-cache-path=DIR/module-cache"
 }]
 
 //--- cdb.json.template
 [{
   "file": "DIR/tu.c",
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu.c -include DIR/prefix.h -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache"
+  "command": "clang -c -o DIR/tu.o DIR/tu.c -include DIR/prefix.h -fmodules -fimplicit-modules -fimplicit-module-maps -gmodules -fmodules-cache-path=DIR/module-cache"
 }]
 
 //--- module.modulemap
@@ -145,12 +168,20 @@ struct Right { struct Top top; };
 
 //--- prefix.h
 #include "Left.h"
+struct Prefix { struct Top top; };
 
 //--- tu.c
 #include "Right.h"
 
-void tu(void) {
+int main(void) {
   struct Left _left;
   struct Right _right;
   struct Top _top;
+  struct Prefix _prefix;
+  return 0;
+}
+
+//--- cas-config.template
+{
+  "CASPath": "DIR/cas"
 }

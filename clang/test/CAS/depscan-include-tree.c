@@ -14,6 +14,8 @@
 // CHECK: "-fcas-path" "[[PREFIX]]/cas"
 // CHECK: "-fcas-include-tree"
 // CHECK: "-isysroot"
+// CHECK: "-fmodule-format=obj"
+// CHECK: "-dwarf-ext-refs"
 // CHECK: "-coverage-data-file=[[PREFIX]]/t.gcda"
 // CHECK: "-coverage-notes-file=[[PREFIX]]/t.gcno"
 // SHOULD-NOT: "-fcas-fs"
@@ -21,8 +23,6 @@
 // SHOULD-NOT: "-I"
 // SHOULD-NOT: "[[PREFIX]]/t.c"
 // SHOULD-NOT: "-D"
-// SHOULD-NOT: "-dwarf-ext-refs"
-// SHOULD-NOT: "-fmodule-format=obj"
 
 // RUN: FileCheck %s -input-file %t/inline.d -check-prefix=DEPS -DPREFIX=%t
 

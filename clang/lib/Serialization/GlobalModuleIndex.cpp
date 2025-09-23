@@ -635,6 +635,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
       off_t StoredSize = (off_t)Record[Idx++];
       time_t StoredModTime = (time_t)Record[Idx++];
 
+      // Skip CASIDIsKey
+      ++Idx;
+
       // Skip the stored signature.
       // FIXME: we could read the signature out of the import and validate it.
       StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);

@@ -186,7 +186,15 @@ public:
     CI.getFrontendOpts().ModuleCacheKeys.emplace_back(std::string(Filename),
                                                       std::string(CacheKey));
     // FIXME: add name/path of the importing module?
-    return CI.addCachedModuleFile(Filename, CacheKey, "imported module");
+    return CI.addCachedModuleFile(Filename, CacheKey, "imported module",
+                                  /*IsKey=*/true);
+  }
+
+  bool readModuleCASID(StringRef ModuleName, StringRef Filename,
+                       StringRef CASID) override {
+    // FIXME: add name/path of the importing module?
+    return CI.addCachedModuleFile(Filename, CASID, "imported module",
+                                  /*IsKey=*/false);
   }
 
 private:

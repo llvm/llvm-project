@@ -93,13 +93,6 @@ void tooling::dependencies::configureInvocationForCaching(
       PPOpts.MacroIncludes.clear();
       PPOpts.Includes.clear();
     }
-    if (!FrontendOpts.IncludeTreePreservePCHPath) {
-      // Disable `-gmodules` to avoid debug info referencing a non-existent PCH
-      // filename.
-      // FIXME: we should also allow -gmodules if there is no PCH involved.
-      CodeGenOpts.DebugTypeExtRefs = false;
-      HSOpts.ModuleFormat = "raw";
-    }
     // Clear APINotes options.
     CI.getAPINotesOpts().ModuleSearchPaths = {};
 
@@ -110,6 +103,9 @@ void tooling::dependencies::configureInvocationForCaching(
     updateRelativePath(CI.getDiagnosticOpts().DiagnosticLogFile, CWD);
     updateRelativePath(CI.getDependencyOutputOpts().OutputFile, CWD);
     FileSystemOpts.WorkingDir.clear();
+
+    // IncludeTree always use absolute path. Do not set debug comp dir.
+    CodeGenOpts.DebugCompilationDir.clear();
     break;
   }
   case CachingInputKind::FileSystemRoot: {
@@ -210,8 +206,6 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   mapInPlaceAll(FrontendOpts.ASTMergeFiles);
   Mapper.mapInPlace(FrontendOpts.OverrideRecordLayoutsFile);
   Mapper.mapInPlace(FrontendOpts.StatsFile);
-  for (auto &[Path, _] : FrontendOpts.ModuleCacheKeys)
-    Mapper.mapInPlace(Path);
 
   // Filesystem options.
   Mapper.mapInPlace(FileSystemOpts.WorkingDir);

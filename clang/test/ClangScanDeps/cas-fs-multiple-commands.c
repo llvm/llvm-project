@@ -109,12 +109,12 @@
 // CHECK-NOT:            "-fcas-input-file-cache-key"
 // CHECK:                "-E"
 // CHECK:                "-fmodule-file-cache-key"
-// CHECK-NEXT:           "[[PREFIX]]/modules/{{.*}}/Mod-{{.*}}.pcm"
+// CHECK-NEXT:           "Mod-{{.*}}.pcm"
 // CHECK-NEXT:           "[[M_CACHE_KEY]]"
 // CHECK:                "-x"
 // CHECK-NEXT:           "c"
 // CHECK:                "[[PREFIX]]/tu.c"
-// CHECK:                "-fmodule-file={{.*}}[[PREFIX]]/modules/{{.*}}/Mod-{{.*}}.pcm"
+// CHECK:                "-fmodule-file=Mod=Mod-{{.*}}.pcm"
 // CHECK:              ]
 // CHECK:              "file-deps": [
 // CHECK-NEXT:           "[[PREFIX]]/tu.c"
@@ -139,12 +139,12 @@
 // CHECK-NEXT:           "[[CPP_CACHE_KEY]]"
 // CHECK:                "-emit-llvm-bc"
 // CHECK:                "-fmodule-file-cache-key"
-// CHECK-NEXT:           "[[PREFIX]]/modules/{{.*}}/Mod-{{.*}}.pcm"
+// CHECK-NEXT:           "Mod-{{.*}}.pcm"
 // CHECK-NEXT:           "[[M_CACHE_KEY]]"
 // CHECK:                "-x"
 // CHECK-NEXT:           "c-cpp-output"
 // CHECK-NOT:            "{{.*}}tu.i"
-// CHECK:                "-fmodule-file={{.*}}[[PREFIX]]/modules/{{.*}}/Mod-{{.*}}.pcm"
+// CHECK:                "-fmodule-file=Mod=Mod-{{.*}}.pcm"
 // CHECK:              ]
 // CHECK:              "input-file": "[[PREFIX]]{{.}}tu.c"
 // CHECK-NEXT:       }
@@ -217,7 +217,7 @@
 // CHECK-LIBCLANG-NEXT:       [[PREFIX]]/tu.c
 // CHECK-LIBCLANG-NOT:             -fcas-input-file-cache-key
 // CHECK-LIBCLANG-NOT:             {{.*}}tu.c
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.i {{.*}} -E -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.i {{.*}} -E -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c {{.*}} -fmodule-file=Mod=Mod_{{.*}}.pcm
 // CHECK-LIBCLANG-NEXT:   command 1:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.
@@ -229,7 +229,7 @@
 // CHECK-LIBCLANG-NEXT:       [[PREFIX]]/tu.c
 // CHECK-LIBCLANG-NOT:                  -fcas-fs
 // CHECK-LIBCLANG-NOT:                  {{.*}}tu.i
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.bc {{.*}} -fcas-input-file-cache-key [[CPP_CACHE_KEY]] {{.*}} -emit-llvm-bc -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c-cpp-output {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[PREFIX]]/tu.bc {{.*}} -fcas-input-file-cache-key [[CPP_CACHE_KEY]] {{.*}} -emit-llvm-bc -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c-cpp-output {{.*}} -fmodule-file=Mod=Mod_{{.*}}.pcm
 // CHECK-LIBCLANG-NEXT:   command 2:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.

@@ -1259,7 +1259,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Provide any modules from the action cache.
   for (const auto &KeyPair : CI.getFrontendOpts().ModuleCacheKeys)
     if (CI.addCachedModuleFile(KeyPair.first, KeyPair.second,
-                               "-fmodule-file-cache-key"))
+                               "-fmodule-file-cache-key",
+                               /*IsKey=*/true))
       return false;
 
 
@@ -1324,9 +1325,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
             DeserialListener, DeleteDeserialListener);
         DeleteDeserialListener = true;
       }
+      std::string PCHCASID;
       if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
           IncludeTreePCH) {
-        StringRef PCHPath;
+        std::string PCHPath;
         DisableValidationForModuleKind DisableValidation;
         std::unique_ptr<llvm::MemoryBuffer> PCHBuffer;
         if (IncludeTreePCH) {
@@ -1335,7 +1337,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
           if (llvm::Error E =
                   IncludeTreePCH->getMemoryBuffer().moveInto(PCHBuffer))
             return reportError(std::move(E));
-          PCHPath = PCHBuffer->getBufferIdentifier();
+          auto PCHFile = IncludeTreePCH->getContents();
+          if (!PCHFile)
+            return reportError(PCHFile.takeError());
+          PCHCASID = PCHFile->getID().toString();
+          PCHPath = PCHCASID;
         } else {
           PCHPath = CI.getPreprocessorOpts().ImplicitPCHInclude;
           DisableValidation =
@@ -1347,6 +1353,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
             DeserialListener, DeleteDeserialListener, std::move(PCHBuffer));
         if (!CI.getASTContext().getExternalSource())
           return false;
+
+        // After loading PCH, set its CASID for content.
+        if (!PCHCASID.empty()) {
+          auto &MF = CI.getASTReader()->getModuleManager().getPrimaryModule();
+          MF.CASID = PCHCASID;
+        }
       }
       // If modules are enabled, create the AST reader before creating
       // any builtins, so that all declarations know that they might be

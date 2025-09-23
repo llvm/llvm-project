@@ -23,8 +23,9 @@ InMemoryModuleCache::getPCMState(llvm::StringRef Filename) const {
 
 llvm::MemoryBuffer &
 InMemoryModuleCache::addPCM(llvm::StringRef Filename,
-                            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  auto Insertion = PCMs.insert(std::make_pair(Filename, std::move(Buffer)));
+                            std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                            llvm::StringRef CASID) {
+  auto Insertion = PCMs.try_emplace(Filename, PCM{std::move(Buffer), CASID});
   assert(Insertion.second && "Already has a PCM");
   return *Insertion.first->second.Buffer;
 }
@@ -46,6 +47,14 @@ InMemoryModuleCache::lookupPCM(llvm::StringRef Filename) const {
   if (I == PCMs.end())
     return nullptr;
   return I->second.Buffer.get();
+}
+
+const InMemoryModuleCache::PCM *
+InMemoryModuleCache::lookup(llvm::StringRef Filename) const {
+  auto I = PCMs.find(Filename);
+  if (I == PCMs.end())
+    return nullptr;
+  return &I->second;
 }
 
 bool InMemoryModuleCache::isPCMFinal(llvm::StringRef Filename) const {
