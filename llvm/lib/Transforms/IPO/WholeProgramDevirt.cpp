@@ -636,9 +636,11 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
   PatternList FunctionsToSkip;
 
+  const bool DevirtSpeculatively;
   DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
-               const ModuleSummaryIndex *ImportSummary)
+               const ModuleSummaryIndex *ImportSummary,
+               bool DevirtSpeculatively)
       : M(M), MAM(MAM),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
@@ -651,7 +653,8 @@ struct DevirtModule {
         RemarksEnabled(areRemarksEnabled()),
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-        }) {
+        }),
+        DevirtSpeculatively(DevirtSpeculatively) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -765,7 +768,8 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM);
+  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                            bool DevirtSpeculatively);
 };
 
 struct DevirtIndex {
@@ -808,11 +812,22 @@ struct DevirtIndex {
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, MAM))
+    if (!DevirtModule::runForTesting(M, MAM, ClDevirtualizeSpeculatively))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
-  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary).run())
+
+  std::optional<ModuleSummaryIndex> Index;
+  if (!ExportSummary && !ImportSummary && DevirtSpeculatively) {
+    // Build the ExportSummary from the module.
+    assert(!ExportSummary &&
+           "ExportSummary is expected to be empty in non-LTO mode");
+    ProfileSummaryInfo PSI(M);
+    Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
+    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+  }
+  if (!DevirtModule(M, MAM, ExportSummary, ImportSummary, DevirtSpeculatively)
+           .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -1008,7 +1023,8 @@ static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
   return ErrorSuccess();
 }
 
-bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
+bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                                 bool DevirtSpeculatively) {
   std::unique_ptr<ModuleSummaryIndex> Summary =
       std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
@@ -1037,7 +1053,8 @@ bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
                    ClSummaryAction == PassSummaryAction::Export ? Summary.get()
                                                                 : nullptr,
                    ClSummaryAction == PassSummaryAction::Import ? Summary.get()
-                                                                : nullptr)
+                                                                : nullptr,
+                   DevirtSpeculatively)
           .run();
 
   if (!ClWriteSummary.empty()) {
@@ -1101,10 +1118,10 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // Without ClDevirtualizeSpeculatively, we cannot perform whole program
+    // Without DevirtSpeculatively, we cannot perform whole program
     // devirtualization analysis on a vtable with public LTO visibility.
-    if (!ClDevirtualizeSpeculatively && TM.Bits->GV->getVCallVisibility() ==
-                                            GlobalObject::VCallVisibilityPublic)
+    if (!DevirtSpeculatively && TM.Bits->GV->getVCallVisibility() ==
+                                    GlobalObject::VCallVisibilityPublic)
       return false;
 
     Function *Fn = nullptr;
@@ -1125,7 +1142,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // In most cases empty functions will be overridden by the
     // implementation of the derived class, so we can skip them.
-    if (ClDevirtualizeSpeculatively && Fn->getReturnType()->isVoidTy() &&
+    if (DevirtSpeculatively && Fn->getReturnType()->isVoidTy() &&
         Fn->getInstructionCount() <= 1)
       continue;
 
@@ -1251,8 +1268,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // add support to compare the virtual function pointer to the
       // devirtualized target. In case of a mismatch, fall back to indirect
       // call.
-      if (DevirtCheckMode == WPDCheckMode::Fallback ||
-          ClDevirtualizeSpeculatively) {
+      if (DevirtCheckMode == WPDCheckMode::Fallback || DevirtSpeculatively) {
         MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
@@ -1354,7 +1370,7 @@ bool DevirtModule::trySingleImplDevirt(
   // Out of speculative devirtualization mode, if the only implementation has
   // local linkage, we must promote to external to make it visible to thin LTO
   // objects.
-  if (!ClDevirtualizeSpeculatively && TheFn->hasLocalLinkage()) {
+  if (!DevirtSpeculatively && TheFn->hasLocalLinkage()) {
     std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
@@ -2378,7 +2394,7 @@ bool DevirtModule::run() {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   // If we are in speculative devirtualization mode, we can work on the public
   // type test intrinsics.
-  if (!TypeTestFunc && ClDevirtualizeSpeculatively)
+  if (!TypeTestFunc && DevirtSpeculatively)
     TypeTestFunc =
         Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeCheckedLoadFunc =
@@ -2507,7 +2523,7 @@ bool DevirtModule::run() {
           trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
       // Out of speculative devirtualization mode, Try to apply virtual constant
       // propagation or branch funneling.
-      if (!SingleImplDevirt && !ClDevirtualizeSpeculatively) {
+      if (!SingleImplDevirt && !DevirtSpeculatively) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
