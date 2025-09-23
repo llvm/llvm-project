@@ -32,9 +32,7 @@ namespace {
 class SystemZPostRewrite : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZPostRewrite() : MachineFunctionPass(ID) {
-    initializeSystemZPostRewritePass(*PassRegistry::getPassRegistry());
-  }
+  SystemZPostRewrite() : MachineFunctionPass(ID) {}
 
   const SystemZInstrInfo *TII;
 

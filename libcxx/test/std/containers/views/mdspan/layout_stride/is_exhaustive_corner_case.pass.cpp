@@ -23,7 +23,6 @@
 #include <cassert>
 #include <cstddef>
 #include <mdspan>
-#include <span> // dynamic_extent
 
 template <class E>
 constexpr void

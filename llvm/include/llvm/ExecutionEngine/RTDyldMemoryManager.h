@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -29,7 +30,7 @@ namespace object {
   class ObjectFile;
 } // end namespace object
 
-class MCJITMemoryManager : public RuntimeDyld::MemoryManager {
+class LLVM_ABI MCJITMemoryManager : public RuntimeDyld::MemoryManager {
 public:
   // Don't hide the notifyObjectLoaded method from RuntimeDyld::MemoryManager.
   using RuntimeDyld::MemoryManager::notifyObjectLoaded;
@@ -57,8 +58,8 @@ private:
 //
 // FIXME: As the RuntimeDyld fills out, additional routines will be needed
 //        for the varying types of objects to be allocated.
-class RTDyldMemoryManager : public MCJITMemoryManager,
-                            public LegacyJITSymbolResolver {
+class LLVM_ABI RTDyldMemoryManager : public MCJITMemoryManager,
+                                     public LegacyJITSymbolResolver {
 public:
   RTDyldMemoryManager() = default;
   RTDyldMemoryManager(const RTDyldMemoryManager&) = delete;

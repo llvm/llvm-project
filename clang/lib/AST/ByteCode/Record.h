@@ -52,7 +52,7 @@ public:
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
   /// Returns the name of the underlying declaration.
-  const std::string getName() const;
+  std::string getName() const;
   /// Checks if the record is a union.
   bool isUnion() const { return IsUnion; }
   /// Checks if the record is an anonymous union.
@@ -75,6 +75,10 @@ public:
       return CXXDecl->getDestructor();
     return nullptr;
   }
+
+  /// Returns true for anonymous unions and records
+  /// with no destructor or for those with a trivial destructor.
+  bool hasTrivialDtor() const;
 
   using const_field_iter = FieldList::const_iterator;
   llvm::iterator_range<const_field_iter> fields() const {

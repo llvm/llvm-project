@@ -1,4 +1,4 @@
-//===--- EnumInitialValueCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,7 +70,6 @@ static void cleanInitialValue(DiagnosticBuilder &Diag,
     return;
   Diag << FixItHint::CreateRemoval(EqualLoc)
        << FixItHint::CreateRemoval(InitExprRange);
-  return;
 }
 
 namespace {
@@ -123,14 +122,14 @@ AST_MATCHER(EnumDecl, hasSequentialInitialValues) {
   return !AllEnumeratorsArePowersOfTwo;
 }
 
-std::string getName(const EnumDecl *Decl) {
+} // namespace
+
+static std::string getName(const EnumDecl *Decl) {
   if (!Decl->getDeclName())
     return "<unnamed>";
 
   return Decl->getQualifiedNameAsString();
 }
-
-} // namespace
 
 EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
                                              ClangTidyContext *Context)

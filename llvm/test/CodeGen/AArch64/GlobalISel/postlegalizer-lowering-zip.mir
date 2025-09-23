@@ -161,7 +161,6 @@ body:             |
 
     ; This will fail because it expects 3 to be the second element of the
     ; shuffle vector mask.
-    ;
     ; CHECK-LABEL: name: zip2_no_combine_idx_mismatch
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
@@ -189,7 +188,6 @@ body:             |
 
     ; This will fail because it expects 2 to be the second element of the
     ; shuffle vector mask.
-    ;
     ; CHECK-LABEL: name: zip1_no_combine_idx_mismatch
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
@@ -214,7 +212,6 @@ body:             |
     liveins: $q0, $q1
 
     ; zip1/zip2 must have 0 or 1 as the first element in the shuffle mask.
-    ;
     ; CHECK-LABEL: name: no_combine_first_elt_of_mask_must_be_zero_or_one
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}

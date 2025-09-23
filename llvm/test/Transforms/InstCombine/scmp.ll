@@ -423,6 +423,19 @@ define i8 @scmp_from_select_eq_and_gt_commuted3(i32 %x, i32 %y) {
   ret i8 %r
 }
 
+define <3 x i2> @scmp_unary_shuffle_ops(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: define <3 x i2> @scmp_unary_shuffle_ops(
+; CHECK-SAME: <3 x i8> [[X:%.*]], <3 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i2> @llvm.scmp.v3i2.v3i8(<3 x i8> [[X]], <3 x i8> [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i2> [[TMP1]], <3 x i2> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    ret <3 x i2> [[R]]
+;
+  %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %sy = shufflevector <3 x i8> %y, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+  %r = call <3 x i2> @llvm.scmp(<3 x i8> %sx, <3 x i8> %sy)
+  ret <3 x i2> %r
+}
+
 ; Negative test: true value of outer select is not zero
 define i8 @scmp_from_select_eq_and_gt_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_from_select_eq_and_gt_neg1(

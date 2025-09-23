@@ -152,7 +152,7 @@ inline RT_API_ATTRS void CharacterMaxOrMinLoc(const char *intrinsic,
       CFI_attribute_allocatable);
   result.GetDimension(0).SetBounds(1, extent[0]);
   Terminator terminator{source, line};
-  if (int stat{result.Allocate()}) {
+  if (int stat{result.Allocate(kNoAsyncObject)}) {
     terminator.Crash(
         "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
   }
@@ -181,7 +181,7 @@ inline RT_API_ATTRS void TotalNumericMaxOrMinLoc(const char *intrinsic,
       CFI_attribute_allocatable);
   result.GetDimension(0).SetBounds(1, extent[0]);
   Terminator terminator{source, line};
-  if (int stat{result.Allocate()}) {
+  if (int stat{result.Allocate(kNoAsyncObject)}) {
     terminator.Crash(
         "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
   }
@@ -428,7 +428,7 @@ inline RT_API_ATTRS void TypedPartialMaxOrMinLoc(const char *intrinsic,
       CreatePartialReductionResult(result, x,
           Descriptor::BytesFor(TypeCategory::Integer, kind), dim, terminator,
           intrinsic, TypeCode{TypeCategory::Integer, kind});
-      std::memset(
+      runtime::memset(
           result.OffsetElement(), 0, result.Elements() * result.ElementBytes());
       return;
     }
@@ -584,11 +584,11 @@ public:
     static_assert(std::is_same_v<A, Type>);
     std::size_t byteSize{array_.ElementBytes()};
     if (extremum_) {
-      std::memcpy(p, extremum_, byteSize);
+      runtime::memcpy(p, extremum_, byteSize);
     } else {
       // Empty array; fill with character 0 for MAXVAL.
       // For MINVAL, set all of the bits.
-      std::memset(p, IS_MAXVAL ? 0 : 255, byteSize);
+      runtime::memset(p, IS_MAXVAL ? 0 : 255, byteSize);
     }
   }
   RT_API_ATTRS bool Accumulate(const Type *x) {

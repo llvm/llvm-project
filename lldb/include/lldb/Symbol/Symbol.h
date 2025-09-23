@@ -15,6 +15,7 @@
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
 
@@ -167,7 +168,7 @@ public:
 
   lldb::SymbolType GetType() const { return (lldb::SymbolType)m_type; }
 
-  void SetType(lldb::SymbolType type) { m_type = (lldb::SymbolType)type; }
+  void SetType(lldb::SymbolType type) { m_type = type; }
 
   const char *GetTypeAsString() const;
 
@@ -258,7 +259,7 @@ public:
   bool ContainsFileAddress(lldb::addr_t file_addr) const;
 
   static llvm::StringRef GetSyntheticSymbolPrefix() {
-    return "___lldb_unnamed_symbol";
+    return "___lldb_unnamed_symbol_";
   }
 
   /// Decode a serialized version of this object from data.
@@ -300,6 +301,10 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
   bool operator==(const Symbol &rhs) const;
+
+  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
+
+  static lldb::SymbolType GetTypeFromString(const char *str);
 
 protected:
   // This is the internal guts of ResolveReExportedSymbol, it assumes

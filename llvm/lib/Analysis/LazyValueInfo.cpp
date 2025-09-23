@@ -51,9 +51,7 @@ using namespace PatternMatch;
 static const unsigned MaxProcessedPerValue = 500;
 
 char LazyValueInfoWrapperPass::ID = 0;
-LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {
-  initializeLazyValueInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LazyValueInfoWrapperPass::LazyValueInfoWrapperPass() : FunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
@@ -929,8 +927,13 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  return ValueLatticeElement::getRange(LHSRange.castOp(CI->getOpcode(),
-                                                       ResultBitWidth));
+  ConstantRange Res = ConstantRange::getEmpty(ResultBitWidth);
+  if (auto *Trunc = dyn_cast<TruncInst>(CI))
+    Res = LHSRange.truncate(ResultBitWidth, Trunc->getNoWrapKind());
+  else
+    Res = LHSRange.castOp(CI->getOpcode(), ResultBitWidth);
+
+  return ValueLatticeElement::getRange(Res);
 }
 
 std::optional<ValueLatticeElement>
@@ -1490,6 +1493,24 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   br %Condition, label %then, label %else
             APInt ConditionVal(1, isTrueDest ? 1 : 0);
             Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
+          } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
+            ValueLatticeElement OpLatticeVal =
+                *getValueFromCondition(Usr->getOperand(0), Condition,
+                                       isTrueDest, /*UseBlockValue*/ false);
+
+            if (!OpLatticeVal.isConstantRange())
+              return OpLatticeVal;
+
+            const unsigned ResultBitWidth =
+                Usr->getType()->getScalarSizeInBits();
+            if (auto *Trunc = dyn_cast<TruncInst>(Usr))
+              return ValueLatticeElement::getRange(
+                  OpLatticeVal.getConstantRange().truncate(
+                      ResultBitWidth, Trunc->getNoWrapKind()));
+
+            return ValueLatticeElement::getRange(
+                OpLatticeVal.getConstantRange().castOp(
+                    cast<CastInst>(Usr)->getOpcode(), ResultBitWidth));
           } else {
             // If one of Val's operand has an inferred value, we may be able to
             // infer the value of Val.
@@ -1703,7 +1724,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     // of a cycle, we might end up reasoning about values from different cycle
     // iterations (PR60629).
     if (!CurrI->hasOneUse() ||
-        !isSafeToSpeculativelyExecuteWithVariableReplaced(CurrI))
+        !isSafeToSpeculativelyExecuteWithVariableReplaced(
+            CurrI, /*IgnoreUBImplyingAttrs=*/false))
       break;
     CurrU = &*CurrI->use_begin();
   }
@@ -1746,14 +1768,10 @@ LazyValueInfoImpl &LazyValueInfo::getOrCreateImpl(const Module *M) {
         Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
     PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
   }
-  return *static_cast<LazyValueInfoImpl *>(PImpl);
+  return *PImpl;
 }
 
-LazyValueInfoImpl *LazyValueInfo::getImpl() {
-  if (!PImpl)
-    return nullptr;
-  return static_cast<LazyValueInfoImpl *>(PImpl);
-}
+LazyValueInfoImpl *LazyValueInfo::getImpl() { return PImpl; }
 
 LazyValueInfo::~LazyValueInfo() { releaseMemory(); }
 

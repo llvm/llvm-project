@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -std=c++17 -verify %s
 // RUN: %clang_cc1 -std=c++17 -verify %s -fno-char8_t
 // RUN: %clang_cc1 -std=c++20 -verify %s -fno-char8_t
+// RUN: %clang_cc1 -x c -verify %s -fchar8_t
 
 #if defined(__cpp_char8_t) != defined(CHAR8_T)
 #error wrong setting for __cpp_char_t

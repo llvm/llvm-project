@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -106,11 +107,11 @@ public:
 
   /// Removes register units not preserved by the regmask \p RegMask.
   /// The regmask has the same format as the one in the RegMask machine operand.
-  void removeRegsNotPreserved(const uint32_t *RegMask);
+  LLVM_ABI void removeRegsNotPreserved(const uint32_t *RegMask);
 
   /// Adds register units not preserved by the regmask \p RegMask.
   /// The regmask has the same format as the one in the RegMask machine operand.
-  void addRegsInMask(const uint32_t *RegMask);
+  LLVM_ABI void addRegsInMask(const uint32_t *RegMask);
 
   /// Returns true if no part of physical register \p Reg is live.
   bool available(MCRegister Reg) const {
@@ -124,21 +125,21 @@ public:
   /// Updates liveness when stepping backwards over the instruction \p MI.
   /// This removes all register units defined or clobbered in \p MI and then
   /// adds the units used (as in use operands) in \p MI.
-  void stepBackward(const MachineInstr &MI);
+  LLVM_ABI void stepBackward(const MachineInstr &MI);
 
   /// Adds all register units used, defined or clobbered in \p MI.
   /// This is useful when walking over a range of instruction to find registers
   /// unused over the whole range.
-  void accumulate(const MachineInstr &MI);
+  LLVM_ABI void accumulate(const MachineInstr &MI);
 
   /// Adds registers living out of block \p MBB.
   /// Live out registers are the union of the live-in registers of the successor
   /// blocks and pristine registers. Live out registers of the end block are the
   /// callee saved registers.
-  void addLiveOuts(const MachineBasicBlock &MBB);
+  LLVM_ABI void addLiveOuts(const MachineBasicBlock &MBB);
 
   /// Adds registers living into block \p MBB.
-  void addLiveIns(const MachineBasicBlock &MBB);
+  LLVM_ABI void addLiveIns(const MachineBasicBlock &MBB);
 
   /// Adds all register units marked in the bitvector \p RegUnits.
   void addUnits(const BitVector &RegUnits) {

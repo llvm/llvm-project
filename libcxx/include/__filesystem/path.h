@@ -29,7 +29,6 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <iomanip> // for quoted
-#  include <locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -862,7 +861,7 @@ public:
   }
 
   // iterators
-  class _LIBCPP_EXPORTED_FROM_ABI iterator;
+  class iterator;
   typedef iterator const_iterator;
 
   iterator begin() const;

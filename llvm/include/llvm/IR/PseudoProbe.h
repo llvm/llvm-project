@@ -13,6 +13,7 @@
 #ifndef LLVM_IR_PSEUDOPROBE_H
 #define LLVM_IR_PSEUDOPROBE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -133,9 +134,9 @@ static inline bool hasDiscriminator(uint32_t Flags) {
   return Flags & (uint32_t)PseudoProbeAttributes::HasDiscriminator;
 }
 
-std::optional<PseudoProbe> extractProbe(const Instruction &Inst);
+LLVM_ABI std::optional<PseudoProbe> extractProbe(const Instruction &Inst);
 
-void setProbeDistributionFactor(Instruction &Inst, float Factor);
+LLVM_ABI void setProbeDistributionFactor(Instruction &Inst, float Factor);
 } // end namespace llvm
 
 #endif // LLVM_IR_PSEUDOPROBE_H

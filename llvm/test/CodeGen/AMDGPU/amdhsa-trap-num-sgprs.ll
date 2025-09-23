@@ -34,7 +34,7 @@ define amdgpu_kernel void @amdhsa_trap_num_sgprs(
     ptr addrspace(1) %out26, i32 %in26,
     ptr addrspace(1) %out27, i32 %in27,
     ptr addrspace(1) %out28, i32 %in28,
-    ptr addrspace(1) %out29, i32 %in29) {
+    ptr addrspace(1) %out29, i32 %in29) #0 {
 entry:
   store i32 %in0, ptr addrspace(1) %out0
   store i32 %in1, ptr addrspace(1) %out1
@@ -68,3 +68,5 @@ entry:
   store i32 %in29, ptr addrspace(1) %out29
   ret void
 }
+
+attributes #0 = { "amdgpu-no-flat-scratch-init" }

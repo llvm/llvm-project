@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_MEMORYBUFFERREF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -25,7 +26,7 @@ class MemoryBufferRef {
 
 public:
   MemoryBufferRef() = default;
-  MemoryBufferRef(const MemoryBuffer &Buffer);
+  LLVM_ABI MemoryBufferRef(const MemoryBuffer &Buffer);
   MemoryBufferRef(StringRef Buffer, StringRef Identifier)
       : Buffer(Buffer), Identifier(Identifier) {}
 

@@ -1,0 +1,30 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file This file defines the virtual output configurations.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef HANDLE_OUTPUT_CONFIG_FLAG
+#error "Missing macro definition of HANDLE_OUTPUT_CONFIG_FLAG"
+#endif
+
+// Define HANDLE_OUTPUT_CONFIG_FLAG before including.
+//
+// #define HANDLE_OUTPUT_CONFIG_FLAG(NAME, DEFAULT)
+
+HANDLE_OUTPUT_CONFIG_FLAG(Text, false) // OF_Text.
+HANDLE_OUTPUT_CONFIG_FLAG(CRLF, false) // OF_CRLF.
+HANDLE_OUTPUT_CONFIG_FLAG(Append, false) // OF_Append.
+HANDLE_OUTPUT_CONFIG_FLAG(DiscardOnSignal, true) // E.g., RemoveFileOnSignal.
+HANDLE_OUTPUT_CONFIG_FLAG(AtomicWrite, true) // E.g., use temporaries.
+HANDLE_OUTPUT_CONFIG_FLAG(ImplyCreateDirectories, true)
+// Skip atomic write if existing file content is the same
+HANDLE_OUTPUT_CONFIG_FLAG(OnlyIfDifferent, false)
+
+#undef HANDLE_OUTPUT_CONFIG_FLAG

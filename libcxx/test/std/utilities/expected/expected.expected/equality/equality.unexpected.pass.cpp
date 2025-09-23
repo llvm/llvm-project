@@ -16,19 +16,20 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
 
-struct Data {
-  int i;
-  constexpr Data(int ii) : i(ii) {}
-
-  friend constexpr bool operator==(const Data& data, int ii) { return data.i == ii; }
-};
+#if TEST_STD_VER >= 26
+// https://wg21.link/P3379R0
+static_assert(HasOperatorEqual<std::expected<EqualityComparable, EqualityComparable>, std::unexpected<int>>);
+static_assert(HasOperatorEqual<std::expected<EqualityComparable, int>, std::unexpected<EqualityComparable>>);
+static_assert(!HasOperatorEqual<std::expected<EqualityComparable, NonComparable>, std::unexpected<int>>);
+#endif
 
 constexpr bool test() {
   // x.has_value()
   {
-    const std::expected<Data, Data> e1(std::in_place, 5);
+    const std::expected<EqualityComparable, EqualityComparable> e1(std::in_place, 5);
     std::unexpected<int> un2(10);
     std::unexpected<int> un3(5);
     assert(e1 != un2);
@@ -37,7 +38,7 @@ constexpr bool test() {
 
   // !x.has_value()
   {
-    const std::expected<Data, Data> e1(std::unexpect, 5);
+    const std::expected<EqualityComparable, EqualityComparable> e1(std::unexpect, 5);
     std::unexpected<int> un2(10);
     std::unexpected<int> un3(5);
     assert(e1 != un2);

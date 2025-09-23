@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -39,7 +40,7 @@ using namespace llvm;
 void MipsInstrInfo::anchor() {}
 
 MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBr)
-    : MipsGenInstrInfo(Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
+    : MipsGenInstrInfo(STI, Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
       Subtarget(STI), UncondBrOpc(UncondBr) {}
 
 const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
@@ -51,6 +52,13 @@ const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
 
 bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
   return op.isImm() && op.getImm() == 0;
+}
+
+MCInst MipsInstrInfo::getNop() const {
+  return MCInstBuilder(Mips::SLL)
+      .addReg(Mips::ZERO)
+      .addReg(Mips::ZERO)
+      .addImm(0);
 }
 
 /// insertNoop - If data hazard condition is found insert the target nop

@@ -24,6 +24,23 @@
 ; RUN:                         %p/Inputs/test-dwarf-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
+; If `--output-sort=id`, elements are iterated in the order in which they
+; were added (which matches the increasing offset of the reference output).
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=id \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %p/Inputs/test-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; If `--output-sort=none`, `LVScope::Children` is not sorted; it, however,
+; reflects the order in which elements were added (same as `--output-sort=id`).
+; This is expected to change once #69160 is resolved though.
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=none \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %p/Inputs/test-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=elements \
@@ -45,8 +62,6 @@
 ; ONE-NEXT: [004]     6             {Line}
 ; ONE-NEXT: [004]                   {Code} 'movl	$0x7, -0x4(%rbp)'
 ; ONE-NEXT: [004]                   {Code} 'jmp	0x6'
-; ONE-NEXT: [004]     8             {Line}
-; ONE-NEXT: [004]                   {Code} 'movl	-0x14(%rbp), %eax'
 ; ONE-NEXT: [003]     4           {TypeAlias} 'INTEGER' -> 'int'
 ; ONE-NEXT: [003]     2           {Line}
 ; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
@@ -60,10 +75,12 @@
 ; ONE-NEXT: [003]                 {Code} 'testb	$0x1, -0x15(%rbp)'
 ; ONE-NEXT: [003]                 {Code} 'je	0x13'
 ; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x14(%rbp), %eax'
+; ONE-NEXT: [003]     8           {Line}
 ; ONE-NEXT: [003]                 {Code} 'movl	%eax, -0x4(%rbp)'
 ; ONE-NEXT: [003]     9           {Line}
 ; ONE-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'retq'
-; ONE-NEXT: [003]     9           {Line}
 ; ONE-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
+; ONE-NEXT: [002]     9         {Line}

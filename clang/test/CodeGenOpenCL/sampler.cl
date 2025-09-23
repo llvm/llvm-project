@@ -36,8 +36,12 @@ void fnc4smp(sampler_t s) {}
 
 kernel void foo(sampler_t smp_par) {
   // CHECK-SPIR-LABEL: define{{.*}} spir_kernel void @foo(target("spirv.Sampler") %smp_par)
+  // CHECK-SPIR: call spir_func void @__clang_ocl_kern_imp_foo(target("spirv.Sampler") %0)
+  // CHECK-SPIR-LABEL: define{{.*}} spir_func void @__clang_ocl_kern_imp_foo(target("spirv.Sampler") %smp_par)
   // CHECK-SPIR: [[smp_par_ptr:%[A-Za-z0-9_\.]+]] = alloca target("spirv.Sampler")
   // CHECK-X86-LABEL: define{{.*}} spir_kernel void @foo(ptr %smp_par)
+  // CHECK-X86: call void @__clang_ocl_kern_imp_foo(ptr %0)
+  // CHECK-X86-LABEL: define{{.*}} void @__clang_ocl_kern_imp_foo(ptr %smp_par)
   // CHECK-X86: [[smp_par_ptr:%[A-Za-z0-9_\.]+]] = alloca ptr
 
   // Case 2b

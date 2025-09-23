@@ -23,18 +23,11 @@
 
 using namespace llvm;
 
-namespace llvm {
-  FunctionPass *createHexagonOptimizeSZextends();
-  void initializeHexagonOptimizeSZextendsPass(PassRegistry&);
-}
-
 namespace {
   struct HexagonOptimizeSZextends : public FunctionPass {
   public:
     static char ID;
-    HexagonOptimizeSZextends() : FunctionPass(ID) {
-      initializeHexagonOptimizeSZextendsPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonOptimizeSZextends() : FunctionPass(ID) {}
     bool runOnFunction(Function &F) override;
 
     StringRef getPassName() const override { return "Remove sign extends"; }

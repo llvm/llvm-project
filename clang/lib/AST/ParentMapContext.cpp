@@ -81,7 +81,8 @@ class ParentMapContext::ParentMap {
         Items.push_back(Value);
       }
     }
-    llvm::ArrayRef<DynTypedNode> view() const { return Items; }
+    ArrayRef<DynTypedNode> view() const { return Items; }
+
   private:
     llvm::SmallVector<DynTypedNode, 1> Items;
     llvm::SmallPtrSet<const void *, 2> Dedup;
@@ -120,7 +121,7 @@ class ParentMapContext::ParentMap {
                                                         const MapTy &Map) {
     auto I = Map.find(Node);
     if (I == Map.end()) {
-      return llvm::ArrayRef<DynTypedNode>();
+      return ArrayRef<DynTypedNode>();
     }
     if (const auto *V = dyn_cast<ParentVector *>(I->second)) {
       return V->view();
@@ -437,10 +438,12 @@ private:
         DeclNode, DeclNode, [&] { return VisitorBase::TraverseDecl(DeclNode); },
         &Map.PointerParents);
   }
-  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
+  bool TraverseTypeLoc(TypeLoc TypeLocNode, bool TraverseQualifier = true) {
     return TraverseNode(
         TypeLocNode, DynTypedNode::create(TypeLocNode),
-        [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
+        [&] {
+          return VisitorBase::TraverseTypeLoc(TypeLocNode, TraverseQualifier);
+        },
         &Map.OtherParents);
   }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {

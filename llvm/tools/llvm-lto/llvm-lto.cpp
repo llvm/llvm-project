@@ -264,8 +264,6 @@ static cl::opt<bool>
     LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
                      cl::desc("Save the IR before running optimizations"));
 
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 namespace {
 
 struct ModuleInfo {
@@ -477,6 +475,8 @@ static void testLTOModule(const TargetOptions &Options) {
         printLTOSymbolAttributes(Module->getSymbolAttributes(I));
         outs() << "\n";
       }
+      for (int I = 0, E = Module->getAsmUndefSymbolCount(); I != E; ++I)
+        outs() << Module->getAsmUndefSymbolName(I) << "    { asm extern }\n";
     }
     if (QueryHasCtorDtor)
       outs() << Filename
@@ -1001,11 +1001,6 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
 
-  // Since llvm-lto collects multiple IR modules together, for simplicity's sake
-  // we disable the "PreserveInputDbgFormat" flag to enforce a single debug info
-  // format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
-
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
 
@@ -1143,7 +1138,6 @@ int main(int argc, char **argv) {
     if (SaveLinkedModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".linked.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing linked module failed.");
@@ -1157,7 +1151,6 @@ int main(int argc, char **argv) {
     if (SaveModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".merged.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing merged module failed.");

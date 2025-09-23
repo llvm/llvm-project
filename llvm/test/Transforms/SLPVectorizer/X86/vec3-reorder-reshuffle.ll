@@ -190,12 +190,12 @@ define i32 @reorder_indices_1(float %0) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[NOR1:%.*]] = alloca [0 x [3 x float]], i32 0, align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[NOR1]], align 4
-; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP1]]
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP2]]
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i32 0
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> zeroinitializer
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP3]], [[TMP5]]
-; NON-POW2-NEXT:    [[TMP10:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
-; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP10]])
+; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP6]])
 ; NON-POW2-NEXT:    [[TMP8:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP5]], <3 x float> [[TMP7]], <3 x float> zeroinitializer)
 ; NON-POW2-NEXT:    [[TMP9:%.*]] = fmul <3 x float> [[TMP8]], zeroinitializer
 ; NON-POW2-NEXT:    store <3 x float> [[TMP9]], ptr [[NOR1]], align 4

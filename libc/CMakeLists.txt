@@ -4,7 +4,7 @@ set(LLVM_SUBPROJECT_TITLE "libc")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
     "Builds should be rooted in the runtimes directory instead. "
-    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+    "Please see the documentation at https://libc.llvm.org/build_and_test.html for more info.")
 endif()
 
 # Include LLVM's cmake policies.
@@ -76,6 +76,13 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
 
+set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
+set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
+
+set(LIBC_TEST_CMD "" CACHE STRING
+  "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
+set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
+
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
 # Check --print-resource-dir to find the compiler resource dir if this flag
@@ -135,6 +142,7 @@ endif()
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
@@ -220,6 +228,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   if(LIBC_LIBDIR_SUBDIR)
     string(APPEND LIBC_TARGET_SUBDIR /${LIBC_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBC_TARGET_SUBDIR)
 endif()
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND (LIBC_ENABLE_USE_BY_CLANG OR LIBC_TARGET_OS_IS_GPU))

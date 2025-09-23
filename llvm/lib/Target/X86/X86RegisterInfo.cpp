@@ -21,8 +21,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TileShapeInfo.h"
@@ -50,16 +50,20 @@ static cl::opt<bool>
                             cl::desc("Disable two address hints for register "
                                      "allocation"));
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 X86RegisterInfo::X86RegisterInfo(const Triple &TT)
-    : X86GenRegisterInfo((TT.isArch64Bit() ? X86::RIP : X86::EIP),
+    : X86GenRegisterInfo((TT.isX86_64() ? X86::RIP : X86::EIP),
                          X86_MC::getDwarfRegFlavour(TT, false),
                          X86_MC::getDwarfRegFlavour(TT, true),
-                         (TT.isArch64Bit() ? X86::RIP : X86::EIP)) {
+                         (TT.isX86_64() ? X86::RIP : X86::EIP)) {
   X86_MC::initLLVMToSEHAndCVRegMapping(this);
 
   // Cache some information.
-  Is64Bit = TT.isArch64Bit();
+  Is64Bit = TT.isX86_64();
+  IsTarget64BitLP64 = Is64Bit && !TT.isX32();
   IsWin64 = Is64Bit && TT.isOSWindows();
+  IsUEFI64 = Is64Bit && TT.isUEFI();
 
   // Use a callee-saved register as the base pointer.  These registers must
   // not conflict with any ABI requirements.  For example, in 32-bit mode PIC
@@ -118,6 +122,11 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   // sub-class, so sub-classes like GR8_ABCD_L are allowed to expand to the
   // full GR8 class.
   if (RC == &X86::GR8_NOREXRegClass)
+    return RC;
+
+  // Keep using non-rex2 register class when APX feature (EGPR/NDD/NF) is not
+  // enabled for relocation.
+  if (!X86EnableAPXForRelocation && isNonRex2RegClass(RC))
     return RC;
 
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
@@ -184,58 +193,15 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                    unsigned Kind) const {
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  switch (Kind) {
-  default: llvm_unreachable("Unexpected Kind in getPointerRegClass!");
-  case 0: // Normal GPRs.
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64RegClass;
-    // If the target is 64bit but we have been told to use 32bit addresses,
-    // we can still use 64-bit register as long as we know the high bits
-    // are zeros.
-    // Reflect that in the returned register class.
-    if (Is64Bit) {
-      // When the target also allows 64-bit frame pointer and we do have a
-      // frame, this is fine to use it for the address accesses as well.
-      const X86FrameLowering *TFI = getFrameLowering(MF);
-      return TFI->hasFP(MF) && TFI->Uses64BitFramePtr
-                 ? &X86::LOW32_ADDR_ACCESS_RBPRegClass
-                 : &X86::LOW32_ADDR_ACCESSRegClass;
-    }
-    return &X86::GR32RegClass;
-  case 1: // Normal GPRs except the stack pointer (for encoding reasons).
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64_NOSPRegClass;
-    // NOSP does not contain RIP, so no special case here.
-    return &X86::GR32_NOSPRegClass;
-  case 2: // NOREX GPRs.
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64_NOREXRegClass;
-    return &X86::GR32_NOREXRegClass;
-  case 3: // NOREX GPRs except the stack pointer (for encoding reasons).
-    if (Subtarget.isTarget64BitLP64())
-      return &X86::GR64_NOREX_NOSPRegClass;
-    // NOSP does not contain RIP, so no special case here.
-    return &X86::GR32_NOREX_NOSPRegClass;
-  case 4: // Available for tailcall (not callee-saved GPRs).
-    return getGPRsForTailCall(MF);
-  }
-}
-
-const TargetRegisterClass *
-X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  if (IsWin64 || (F.getCallingConv() == CallingConv::Win64))
-    return &X86::GR64_TCW64RegClass;
-  else if (Is64Bit)
-    return &X86::GR64_TCRegClass;
-
-  bool hasHipeCC = (F.getCallingConv() == CallingConv::HiPE);
-  if (hasHipeCC)
-    return &X86::GR32RegClass;
-  return &X86::GR32_TCRegClass;
+X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
+  assert(Kind == 0 && "this should only be used for default cases");
+  if (IsTarget64BitLP64)
+    return &X86::GR64RegClass;
+  // If the target is 64bit but we have been told to use 32bit addresses,
+  // we can still use 64-bit register as long as we know the high bits
+  // are zeros.
+  // Reflect that in the returned register class.
+  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
 }
 
 const TargetRegisterClass *
@@ -389,7 +355,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return IsWin64 ? CSR_Win64_SwiftError_SaveList
                      : CSR_64_SwiftError_SaveList;
 
-    if (IsWin64)
+    if (IsWin64 || IsUEFI64)
       return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
@@ -514,7 +480,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
 
-    return IsWin64 ? CSR_Win64_RegMask : CSR_64_RegMask;
+    return (IsWin64 || IsUEFI64) ? CSR_Win64_RegMask : CSR_64_RegMask;
   }
 
   return CSR_32_RegMask;
@@ -554,7 +520,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
-  if (TFI->hasFP(MF)) {
+  if (TFI->hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF)) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
           SMLoc(),
@@ -899,7 +865,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   // Determine base register and offset.
-  int FIOffset;
+  int64_t FIOffset;
   Register BasePtr;
   if (MI.isReturn()) {
     assert((!hasStackRealignment(MF) ||
@@ -950,11 +916,41 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   if (MI.getOperand(FIOperandNum+3).isImm()) {
-    // Offset is a 32-bit integer.
-    int Imm = (int)(MI.getOperand(FIOperandNum + 3).getImm());
-    int Offset = FIOffset + Imm;
-    assert((!Is64Bit || isInt<32>((long long)FIOffset + Imm)) &&
-           "Requesting 64-bit offset in 32-bit immediate!");
+    const X86InstrInfo *TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+    int64_t Imm = MI.getOperand(FIOperandNum + 3).getImm();
+    int64_t Offset = FIOffset + Imm;
+    bool FitsIn32Bits = isInt<32>(Offset);
+    // If the offset will not fit in a 32-bit displacement, then for 64-bit
+    // targets, scavenge a register to hold it. Otherwise...
+    if (Is64Bit && !FitsIn32Bits) {
+      assert(RS && "RegisterScavenger was NULL");
+
+      RS->enterBasicBlockEnd(MBB);
+      RS->backward(std::next(II));
+
+      Register ScratchReg = RS->scavengeRegisterBackwards(
+          X86::GR64RegClass, II, /*RestoreAfter=*/false, /*SPAdj=*/0,
+          /*AllowSpill=*/true);
+      assert(ScratchReg != 0 && "scratch reg was 0");
+      RS->setRegUsed(ScratchReg);
+
+      BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
+
+      MI.getOperand(FIOperandNum + 3).setImm(0);
+      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+
+      return false;
+    }
+
+    // ... for 32-bit targets, this is a bug!
+    if (!Is64Bit && !FitsIn32Bits) {
+      MI.emitGenericError("64-bit offset calculated but target is 32-bit");
+      // Trap so that the instruction verification pass does not fail if run.
+      BuildMI(MBB, MBBI, DL, TII->get(X86::TRAP));
+      return false;
+    }
+
     if (Offset != 0 || !tryOptimizeLEAtoMOV(II))
       MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
   } else {
@@ -969,10 +965,9 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 unsigned X86RegisterInfo::findDeadCallerSavedReg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
   const MachineFunction *MF = MBB.getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   if (MF->callsEHReturn())
     return 0;
-
-  const TargetRegisterClass &AvailableRegs = *getGPRsForTailCall(*MF);
 
   if (MBBI == MBB.end())
     return 0;
@@ -988,26 +983,26 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::RETI64:
   case X86::TCRETURNdi:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64:
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
-    SmallSet<uint16_t, 8> Uses;
-    for (MachineOperand &MO : MBBI->operands()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
-        Uses.insert(*AI);
-    }
+    LiveRegUnits LRU(*this);
+    LRU.addLiveOuts(MBB);
+    LRU.stepBackward(*MBBI);
 
-    for (auto CS : AvailableRegs)
-      if (!Uses.count(CS) && CS != X86::RIP && CS != X86::RSP && CS != X86::ESP)
-        return CS;
+    const TargetRegisterClass &RC =
+        Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
+    for (MCRegister Reg : RC) {
+      if (LRU.available(Reg) && !MRI.isReserved(Reg))
+        return Reg;
+    }
   }
   }
 
@@ -1236,4 +1231,39 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 #undef DEBUG_TYPE
 
   return true;
+}
+
+const TargetRegisterClass *X86RegisterInfo::constrainRegClassToNonRex2(
+    const TargetRegisterClass *RC) const {
+  switch (RC->getID()) {
+  default:
+    return RC;
+  case X86::GR8RegClassID:
+    return &X86::GR8_NOREX2RegClass;
+  case X86::GR16RegClassID:
+    return &X86::GR16_NOREX2RegClass;
+  case X86::GR32RegClassID:
+    return &X86::GR32_NOREX2RegClass;
+  case X86::GR64RegClassID:
+    return &X86::GR64_NOREX2RegClass;
+  case X86::GR32_NOSPRegClassID:
+    return &X86::GR32_NOREX2_NOSPRegClass;
+  case X86::GR64_NOSPRegClassID:
+    return &X86::GR64_NOREX2_NOSPRegClass;
+  }
+}
+
+bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
+  switch (RC->getID()) {
+  default:
+    return false;
+  case X86::GR8_NOREX2RegClassID:
+  case X86::GR16_NOREX2RegClassID:
+  case X86::GR32_NOREX2RegClassID:
+  case X86::GR64_NOREX2RegClassID:
+  case X86::GR32_NOREX2_NOSPRegClassID:
+  case X86::GR64_NOREX2_NOSPRegClassID:
+  case X86::GR64_with_sub_16bit_in_GR16_NOREX2RegClassID:
+    return true;
+  }
 }

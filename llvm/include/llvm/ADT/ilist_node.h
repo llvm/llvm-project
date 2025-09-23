@@ -52,14 +52,10 @@ template <class OptionsT> class ilist_sentinel;
 
 // Selector for which iterator type to pick given the iterator-bits node option.
 template <bool use_iterator_bits, typename Opts, bool arg1, bool arg2>
-class ilist_select_iterator_type {
-public:
-  using type = ilist_iterator<Opts, arg1, arg2>;
-};
-template <typename Opts, bool arg1, bool arg2>
-class ilist_select_iterator_type<true, Opts, arg1, arg2> {
-public:
-  using type = ilist_iterator_w_bits<Opts, arg1, arg2>;
+struct ilist_select_iterator_type {
+  using type = std::conditional_t<use_iterator_bits,
+                                  ilist_iterator_w_bits<Opts, arg1, arg2>,
+                                  ilist_iterator<Opts, arg1, arg2>>;
 };
 
 /// Implementation for an ilist node.

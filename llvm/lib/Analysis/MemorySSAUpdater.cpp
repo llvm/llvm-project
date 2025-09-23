@@ -411,17 +411,11 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     FixupList.push_back(MD);
   }
 
-  // Remember the index where we stopped inserting new phis above, since the
-  // fixupDefs call in the loop below may insert more, that are already minimal.
+  // Update defining access of following defs.
   unsigned NewPhiIndexEnd = InsertedPHIs.size();
-
-  while (!FixupList.empty()) {
-    unsigned StartingPHISize = InsertedPHIs.size();
-    fixupDefs(FixupList);
-    FixupList.clear();
-    // Put any new phis on the fixup list, and process them
-    FixupList.append(InsertedPHIs.begin() + StartingPHISize, InsertedPHIs.end());
-  }
+  fixupDefs(FixupList);
+  assert(NewPhiIndexEnd == InsertedPHIs.size() &&
+         "Should not insert new phis during fixupDefs()");
 
   // Optimize potentially non-minimal phis added in this method.
   unsigned NewPhiSize = NewPhiIndexEnd - NewPhiIndex;
@@ -504,11 +498,8 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<WeakVH> &Vars) {
         assert(MSSA->dominates(NewDef, FirstDef) &&
                "Should have dominated the new access");
 
-        // This may insert new phi nodes, because we are not guaranteed the
-        // block we are processing has a single pred, and depending where the
-        // store was inserted, it may require phi nodes below it.
-        cast<MemoryDef>(FirstDef)->setDefiningAccess(getPreviousDef(FirstDef));
-        return;
+        cast<MemoryDef>(FirstDef)->setDefiningAccess(NewDef);
+        continue;
       }
       // We didn't find a def, so we must continue.
       for (const auto *S : successors(FixupBlock)) {
@@ -679,8 +670,8 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
   auto FixPhiIncomingValues = [&](MemoryPhi *Phi, MemoryPhi *NewPhi) {
     assert(Phi && NewPhi && "Invalid Phi nodes.");
     BasicBlock *NewPhiBB = NewPhi->getBlock();
-    SmallPtrSet<BasicBlock *, 4> NewPhiBBPreds(pred_begin(NewPhiBB),
-                                               pred_end(NewPhiBB));
+    SmallPtrSet<BasicBlock *, 4> NewPhiBBPreds(llvm::from_range,
+                                               predecessors(NewPhiBB));
     for (unsigned It = 0, E = Phi->getNumIncomingValues(); It < E; ++It) {
       MemoryAccess *IncomingAccess = Phi->getIncomingValue(It);
       BasicBlock *IncBB = Phi->getIncomingBlock(It);
@@ -1119,6 +1110,9 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
     if (auto DefsList = MSSA->getWritableBlockDefs(BlockWithDefsToReplace)) {
       for (auto &DefToReplaceUses : *DefsList) {
         BasicBlock *DominatingBlock = DefToReplaceUses.getBlock();
+        // We defer resetting optimized accesses until all uses are replaced, to
+        // avoid invalidating the iterator.
+        SmallVector<MemoryUseOrDef *, 4> ResetOptimized;
         for (Use &U : llvm::make_early_inc_range(DefToReplaceUses.uses())) {
           MemoryAccess *Usr = cast<MemoryAccess>(U.getUser());
           if (MemoryPhi *UsrPhi = dyn_cast<MemoryPhi>(Usr)) {
@@ -1135,10 +1129,13 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
                 assert(IDom && "Block must have a valid IDom.");
                 U.set(GetLastDef(IDom->getBlock()));
               }
-              cast<MemoryUseOrDef>(Usr)->resetOptimized();
+              ResetOptimized.push_back(cast<MemoryUseOrDef>(Usr));
             }
           }
         }
+
+        for (auto *Usr : ResetOptimized)
+          Usr->resetOptimized();
       }
     }
   }

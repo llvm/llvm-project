@@ -39,7 +39,7 @@ Annotate pointers on struct fields and function parameters if they are pointing
 to an array of object, with appropriate bounds annotations. Please see
 :doc:`BoundsSafety` to learn what kind of bounds annotations are available and
 their semantics. Note that local pointer variables typically don't need bounds
-annotations because they are implicitely a wide pointer (``__bidi_indexable``)
+annotations because they are implicitly a wide pointer (``__bidi_indexable``)
 that automatically carries the bounds information.
 
 Address compiler diagnostics

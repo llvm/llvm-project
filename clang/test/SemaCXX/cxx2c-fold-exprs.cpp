@@ -233,7 +233,7 @@ void g() {
     A<Thingy, Thingy> *ap;
     f(ap, ap); // expected-error{{no matching function for call to 'f'}} \
                // expected-note {{while checking constraint satisfaction}} \
-               // expected-note {{in instantiation of function template specialization}}
+               // expected-note {{while substituting deduced template arguments}}
 }
 
 }

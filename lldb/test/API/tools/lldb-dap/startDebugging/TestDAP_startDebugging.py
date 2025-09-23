@@ -2,7 +2,6 @@
 Test lldb-dap start-debugging reverse requests.
 """
 
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase

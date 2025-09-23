@@ -39,7 +39,7 @@ template <class Derived> struct StructVisitor {
 
   template <class... Ts>
   void visitStructFields(QualType QT, CharUnits CurStructOffset, Ts... Args) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const auto *RD = QT->castAsRecordDecl();
 
     // Iterate over the fields of the struct.
     for (const FieldDecl *FD : RD->fields()) {
@@ -266,6 +266,18 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
     this->appendStr("_tv" + llvm::to_string(OffsetInBits) + "w" +
                     llvm::to_string(getFieldSize(FD, FT, this->Ctx)));
   }
+
+  void visitPtrAuth(QualType FT, const FieldDecl *FD,
+                    CharUnits CurStructOffset) {
+    this->appendStr("_pa");
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth().withoutKeyNone();
+    this->appendStr(llvm::to_string(PtrAuth.getKey()) + "_");
+    this->appendStr(llvm::to_string(PtrAuth.getExtraDiscriminator()) + "_");
+    if (PtrAuth.authenticatesNullValues())
+      this->appendStr("anv_");
+    CharUnits FieldOffset = CurStructOffset + this->getFieldOffset(FD);
+    this->appendStr(llvm::to_string(FieldOffset.getQuantity()));
+  }
 };
 
 struct GenDefaultInitializeFuncName
@@ -452,7 +464,8 @@ template <class Derived> struct GenFuncBase {
 
       if (WrongType) {
         std::string FuncName = std::string(F->getName());
-        SourceLocation Loc = QT->castAs<RecordType>()->getDecl()->getLocation();
+        SourceLocation Loc =
+            QT->castAs<RecordType>()->getOriginalDecl()->getLocation();
         CGM.Error(Loc, "special function " + FuncName +
                            " for non-trivial C struct has incorrect type");
         return nullptr;
@@ -548,7 +561,8 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
       if (FD->isZeroLengthBitField())
         return;
 
-      QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
+      CanQualType RT =
+          this->CGF->getContext().getCanonicalTagType(FD->getParent());
       llvm::Type *Ty = this->CGF->ConvertType(RT);
       Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
       LValue DstBase =
@@ -567,6 +581,13 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
     }
     RValue SrcVal = this->CGF->EmitLoadOfLValue(SrcLV, SourceLocation());
     this->CGF->EmitStoreThroughLValue(SrcVal, DstLV);
+  }
+  void visitPtrAuth(QualType FT, const FieldDecl *FD, CharUnits CurStackOffset,
+                    std::array<Address, 2> Addrs) {
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth().withoutKeyNone();
+    Addrs[DstIdx] = this->getAddrWithOffset(Addrs[DstIdx], CurStackOffset, FD);
+    Addrs[SrcIdx] = this->getAddrWithOffset(Addrs[SrcIdx], CurStackOffset, FD);
+    this->CGF->EmitPointerAuthCopy(PtrAuth, FT, Addrs[DstIdx], Addrs[SrcIdx]);
   }
 };
 
@@ -652,7 +673,8 @@ struct GenDefaultInitialize
     CharUnits Size = Ctx.getTypeSizeInChars(QualType(AT, 0));
     QualType EltTy = Ctx.getBaseElementType(QualType(AT, 0));
 
-    if (Size < CharUnits::fromQuantity(16) || EltTy->getAs<RecordType>()) {
+    if (Size < CharUnits::fromQuantity(16) ||
+        EltTy->getAsCanonical<RecordType>()) {
       GenFuncBaseTy::visitArray(FK, AT, IsVolatile, FD, CurStructOffset, Addrs);
       return;
     }

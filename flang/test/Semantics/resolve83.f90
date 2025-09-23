@@ -3,7 +3,7 @@ module m
 
   ! For C1543
   interface intFace
-    !WARNING: Attribute 'MODULE' cannot be used more than once
+    !WARNING: Attribute 'MODULE' cannot be used more than once [-Wredundant-attribute]
     module pure module real function moduleFunc()
     end function moduleFunc
   end interface
@@ -27,17 +27,17 @@ contains
     real pure real function realFunc()
     end function realFunc
 
-    !WARNING: Attribute 'ELEMENTAL' cannot be used more than once
+    !WARNING: Attribute 'ELEMENTAL' cannot be used more than once [-Wredundant-attribute]
     elemental real elemental function elementalFunc(x)
       real, value :: x
       elementalFunc = x
     end function elementalFunc
 
-    !WARNING: Attribute 'IMPURE' cannot be used more than once
+    !WARNING: Attribute 'IMPURE' cannot be used more than once [-Wredundant-attribute]
     impure real impure function impureFunc()
     end function impureFunc
 
-    !WARNING: Attribute 'PURE' cannot be used more than once
+    !WARNING: Attribute 'PURE' cannot be used more than once [-Wredundant-attribute]
     pure real pure function pureFunc()
     end function pureFunc
 
@@ -45,11 +45,11 @@ contains
     impure real pure function impurePureFunc()
     end function impurePureFunc
 
-    !WARNING: Attribute 'RECURSIVE' cannot be used more than once
+    !WARNING: Attribute 'RECURSIVE' cannot be used more than once [-Wredundant-attribute]
     recursive real recursive function recursiveFunc()
     end function recursiveFunc
 
-    !WARNING: Attribute 'NON_RECURSIVE' cannot be used more than once
+    !WARNING: Attribute 'NON_RECURSIVE' cannot be used more than once [-Wredundant-attribute]
     non_recursive real non_recursive function non_recursiveFunc()
     end function non_recursiveFunc
 

@@ -21,6 +21,7 @@
 #ifndef LLVM_SUPPORT_SCALEDNUMBER_H
 #define LLVM_SUPPORT_SCALEDNUMBER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>
@@ -105,7 +106,7 @@ inline std::pair<uint64_t, int16_t> getAdjusted64(uint64_t Digits,
 /// Multiply two 64-bit integers to create a 64-bit scaled number.
 ///
 /// Implemented with four 64-bit integer multiplies.
-std::pair<uint64_t, int16_t> multiply64(uint64_t LHS, uint64_t RHS);
+LLVM_ABI std::pair<uint64_t, int16_t> multiply64(uint64_t LHS, uint64_t RHS);
 
 /// Multiply two 32-bit integers to create a 32-bit scaled number.
 ///
@@ -135,14 +136,16 @@ inline std::pair<uint64_t, int16_t> getProduct64(uint64_t LHS, uint64_t RHS) {
 /// Implemented with long division.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-std::pair<uint64_t, int16_t> divide64(uint64_t Dividend, uint64_t Divisor);
+LLVM_ABI std::pair<uint64_t, int16_t> divide64(uint64_t Dividend,
+                                               uint64_t Divisor);
 
 /// Divide two 32-bit integers to create a 32-bit scaled number.
 ///
 /// Implemented with one 64-bit integer divide/remainder pair.
 ///
 /// \pre \c Dividend and \c Divisor are non-zero.
-std::pair<uint32_t, int16_t> divide32(uint32_t Dividend, uint32_t Divisor);
+LLVM_ABI std::pair<uint32_t, int16_t> divide32(uint32_t Dividend,
+                                               uint32_t Divisor);
 
 /// Divide two 32-bit numbers to create a 32-bit scaled number.
 ///
@@ -242,7 +245,7 @@ template <class DigitsT> int32_t getLgCeiling(DigitsT Digits, int16_t Scale) {
 /// 1, and 0 for less than, greater than, and equal, respectively.
 ///
 /// \pre 0 <= ScaleDiff < 64.
-int compareImpl(uint64_t L, uint64_t R, int ScaleDiff);
+LLVM_ABI int compareImpl(uint64_t L, uint64_t R, int ScaleDiff);
 
 /// Compare two scaled numbers.
 ///
@@ -421,11 +424,11 @@ class ScaledNumberBase {
 public:
   static constexpr int DefaultPrecision = 10;
 
-  static void dump(uint64_t D, int16_t E, int Width);
-  static raw_ostream &print(raw_ostream &OS, uint64_t D, int16_t E, int Width,
-                            unsigned Precision);
-  static std::string toString(uint64_t D, int16_t E, int Width,
-                              unsigned Precision);
+  LLVM_ABI static void dump(uint64_t D, int16_t E, int Width);
+  LLVM_ABI static raw_ostream &print(raw_ostream &OS, uint64_t D, int16_t E,
+                                     int Width, unsigned Precision);
+  LLVM_ABI static std::string toString(uint64_t D, int16_t E, int Width,
+                                       unsigned Precision);
   static int countLeadingZeros32(uint32_t N) { return llvm::countl_zero(N); }
   static int countLeadingZeros64(uint64_t N) { return llvm::countl_zero(N); }
   static uint64_t getHalf(uint64_t N) { return (N >> 1) + (N & 1); }

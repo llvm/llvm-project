@@ -19,12 +19,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -496,8 +496,7 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  if ((CUDieOnly && !DieArray.empty()) ||
-      DieArray.size() > 1)
+  if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
     return Error::success(); // Already parsed.
 
   bool HasCUDie = !DieArray.empty();

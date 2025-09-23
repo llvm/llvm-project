@@ -37,6 +37,7 @@ class AssignmentChecker : public virtual BaseChecker {
 public:
   explicit AssignmentChecker(SemanticsContext &);
   ~AssignmentChecker();
+  void Enter(const parser::OpenMPDeclareReductionConstruct &x);
   void Enter(const parser::AssignmentStmt &);
   void Enter(const parser::PointerAssignmentStmt &);
   void Enter(const parser::WhereStmt &);
@@ -45,14 +46,8 @@ public:
   void Leave(const parser::EndWhereStmt &);
   void Enter(const parser::MaskedElsewhereStmt &);
   void Leave(const parser::MaskedElsewhereStmt &);
-  void Enter(const parser::CUFKernelDoConstruct &);
-  void Leave(const parser::CUFKernelDoConstruct &);
-  void Enter(const parser::OpenACCBlockConstruct &);
-  void Leave(const parser::OpenACCBlockConstruct &);
-  void Enter(const parser::OpenACCCombinedConstruct &);
-  void Leave(const parser::OpenACCCombinedConstruct &);
-  void Enter(const parser::OpenACCLoopConstruct &);
-  void Leave(const parser::OpenACCLoopConstruct &);
+
+  SemanticsContext &context();
 
 private:
   common::Indirection<AssignmentContext> context_;

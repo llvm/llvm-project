@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions                                         | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -o - %s -fcxx-exceptions -fexperimental-new-constant-interpreter | FileCheck %s
 
 #ifdef __SIZEOF_INT128__
 // CHECK: @PR11705 = global i128 0
@@ -23,6 +23,10 @@ S s;
 // CHECK: @sp = constant ptr getelementptr (i8, ptr @s, i64 16), align 8
 float &sp = s.c[3];
 
+namespace NearlyZeroInit {
+  // CHECK: @_ZN14NearlyZeroInit1bE ={{.*}} global{{.*}} { i32, <{ i32, [2147483647 x i32] }> } { i32 1, <{ i32, [2147483647 x i32] }> <{ i32 2, [2147483647 x i32] zeroinitializer }> }{{.*}}
+  struct B { int n; int arr[1024 * 1024 * 1024 * 2u]; } b = {1, {2}};
+}
 
 namespace BaseClassOffsets {
   struct A { int a; };
@@ -95,3 +99,43 @@ void f(A *a) {
   // CHECK: call void @_ZN1AD1Ev(
   A::E e3 = A().Foo;
 }
+
+int notdead() {
+  auto l = [c=0]() mutable {
+    return  c++ < 5 ? 10 : 12;
+  };
+  return l();
+}
+// CHECK: _ZZ7notdeadvEN3$_0clEv
+// CHECK: ret i32 %cond
+
+/// The conmparison of those two parameters should NOT work.
+bool paramcmp(const int& lhs, const int& rhs) {
+  if (&lhs == &rhs)
+    return true;
+  return false;
+}
+// CHECK: _Z8paramcmpRKiS0_
+// CHECK: if.then
+// CHECK: if.end
+
+/// &x == &OuterX should work and return 0.
+class X {
+public:
+  X();
+  X(const X&);
+  X(const volatile X &);
+  ~X();
+};
+
+extern X OuterX;
+
+X test24() {
+  X x;
+  if (&x == &OuterX)
+    throw 0;
+  return x;
+}
+// CHECK: _Z6test24v
+// CHECK-NOT: eh.resume
+// CHECK-NOT: unreachable

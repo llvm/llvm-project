@@ -134,8 +134,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
       ModuleSpec module_spec(file_spec, module_sp->GetArchitecture());
       module_spec.GetUUID() = module_sp->GetUUID();
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-      dsym_fspec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+
+      dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);

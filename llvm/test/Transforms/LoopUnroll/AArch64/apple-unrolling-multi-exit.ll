@@ -3,8 +3,7 @@
 ; RUN: opt -p loop-unroll -mcpu=apple-m2 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=apple-m3 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=apple-m4 -S %s | FileCheck --check-prefix=APPLE %s
-; RUN: opt -p loop-unroll -mcpu=apple-m1 -unroll-runtime-multi-exit=false -S %s | FileCheck --check-prefix=OTHER %s
-; RUN: opt -p loop-unroll -mcpu=cortex-a57 -S %s | FileCheck --check-prefix=OTHER %s
+; RUN: opt -p loop-unroll -mcpu=apple-m1 -unroll-runtime-multi-exit=false -S %s | FileCheck --check-prefix=NOUNROLL %s
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx15.0.0"
@@ -87,26 +86,26 @@ define i1 @multi_2_exit_find_i8_loop(ptr %vec, i8 %tgt) {
 ; APPLE-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
 ; APPLE-NEXT:    ret i1 [[C_3]]
 ;
-; OTHER-LABEL: define i1 @multi_2_exit_find_i8_loop(
-; OTHER-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0:[0-9]+]] {
-; OTHER-NEXT:  [[ENTRY:.*]]:
-; OTHER-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; OTHER-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
-; OTHER-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; OTHER-NEXT:    br label %[[LOOP_HEADER:.*]]
-; OTHER:       [[LOOP_HEADER]]:
-; OTHER-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
-; OTHER-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV]], align 8
-; OTHER-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L]], [[TGT]]
-; OTHER-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
-; OTHER:       [[LOOP_LATCH]]:
-; OTHER-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
-; OTHER-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; OTHER-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
-; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
-; OTHER-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
-; OTHER-NEXT:    ret i1 [[C_3]]
+; NOUNROLL-LABEL: define i1 @multi_2_exit_find_i8_loop(
+; NOUNROLL-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOUNROLL-NEXT:  [[ENTRY:.*]]:
+; NOUNROLL-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
+; NOUNROLL-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
+; NOUNROLL-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
+; NOUNROLL-NEXT:    br label %[[LOOP_HEADER:.*]]
+; NOUNROLL:       [[LOOP_HEADER]]:
+; NOUNROLL-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; NOUNROLL-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV]], align 8
+; NOUNROLL-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L]], [[TGT]]
+; NOUNROLL-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; NOUNROLL:       [[LOOP_LATCH]]:
+; NOUNROLL-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
+; NOUNROLL-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; NOUNROLL-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; NOUNROLL:       [[EXIT]]:
+; NOUNROLL-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; NOUNROLL-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
+; NOUNROLL-NEXT:    ret i1 [[C_3]]
 ;
 entry:
   %start = load ptr, ptr %vec, align 8
@@ -216,29 +215,29 @@ define i1 @multi_2_exit_find_ptr_loop(ptr %vec, ptr %tgt) {
 ; APPLE-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
 ; APPLE-NEXT:    ret i1 [[C_3]]
 ;
-; OTHER-LABEL: define i1 @multi_2_exit_find_ptr_loop(
-; OTHER-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]]) #[[ATTR0]] {
-; OTHER-NEXT:  [[ENTRY:.*]]:
-; OTHER-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; OTHER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
-; OTHER-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
-; OTHER-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; OTHER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
-; OTHER-NEXT:    br label %[[LOOP_HEADER:.*]]
-; OTHER:       [[LOOP_HEADER]]:
-; OTHER-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
-; OTHER-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR_IV]], align 8
-; OTHER-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L]], [[TGT]]
-; OTHER-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
-; OTHER:       [[LOOP_LATCH]]:
-; OTHER-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
-; OTHER-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; OTHER-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
-; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
-; OTHER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
-; OTHER-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
-; OTHER-NEXT:    ret i1 [[C_3]]
+; NOUNROLL-LABEL: define i1 @multi_2_exit_find_ptr_loop(
+; NOUNROLL-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]]) #[[ATTR0]] {
+; NOUNROLL-NEXT:  [[ENTRY:.*]]:
+; NOUNROLL-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
+; NOUNROLL-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
+; NOUNROLL-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; NOUNROLL-NEXT:    br label %[[LOOP_HEADER:.*]]
+; NOUNROLL:       [[LOOP_HEADER]]:
+; NOUNROLL-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; NOUNROLL-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR_IV]], align 8
+; NOUNROLL-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L]], [[TGT]]
+; NOUNROLL-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; NOUNROLL:       [[LOOP_LATCH]]:
+; NOUNROLL-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
+; NOUNROLL-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; NOUNROLL-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; NOUNROLL:       [[EXIT]]:
+; NOUNROLL-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; NOUNROLL-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
+; NOUNROLL-NEXT:    ret i1 [[C_3]]
 ;
 entry:
   %start = load ptr, ptr %vec, align 8
@@ -290,28 +289,28 @@ define i1 @multi_2_exit_find_i8_loop_too_large(ptr %vec, i8 %tgt) {
 ; APPLE-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
 ; APPLE-NEXT:    ret i1 [[C_3]]
 ;
-; OTHER-LABEL: define i1 @multi_2_exit_find_i8_loop_too_large(
-; OTHER-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0]] {
-; OTHER-NEXT:  [[ENTRY:.*]]:
-; OTHER-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; OTHER-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
-; OTHER-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; OTHER-NEXT:    br label %[[LOOP_HEADER:.*]]
-; OTHER:       [[LOOP_HEADER]]:
-; OTHER-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
-; OTHER-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV]], align 8
-; OTHER-NEXT:    [[UDIV:%.*]] = udiv i8 [[L]], [[TGT]]
-; OTHER-NEXT:    [[UDIV_2:%.*]] = udiv i8 [[UDIV]], 10
-; OTHER-NEXT:    [[C_1:%.*]] = icmp eq i8 [[UDIV_2]], 2
-; OTHER-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
-; OTHER:       [[LOOP_LATCH]]:
-; OTHER-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
-; OTHER-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; OTHER-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
-; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
-; OTHER-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
-; OTHER-NEXT:    ret i1 [[C_3]]
+; NOUNROLL-LABEL: define i1 @multi_2_exit_find_i8_loop_too_large(
+; NOUNROLL-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0]] {
+; NOUNROLL-NEXT:  [[ENTRY:.*]]:
+; NOUNROLL-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
+; NOUNROLL-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
+; NOUNROLL-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
+; NOUNROLL-NEXT:    br label %[[LOOP_HEADER:.*]]
+; NOUNROLL:       [[LOOP_HEADER]]:
+; NOUNROLL-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; NOUNROLL-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV]], align 8
+; NOUNROLL-NEXT:    [[UDIV:%.*]] = udiv i8 [[L]], [[TGT]]
+; NOUNROLL-NEXT:    [[UDIV_2:%.*]] = udiv i8 [[UDIV]], 10
+; NOUNROLL-NEXT:    [[C_1:%.*]] = icmp eq i8 [[UDIV_2]], 2
+; NOUNROLL-NEXT:    br i1 [[C_1]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; NOUNROLL:       [[LOOP_LATCH]]:
+; NOUNROLL-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
+; NOUNROLL-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; NOUNROLL-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; NOUNROLL:       [[EXIT]]:
+; NOUNROLL-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; NOUNROLL-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
+; NOUNROLL-NEXT:    ret i1 [[C_3]]
 ;
 entry:
   %start = load ptr, ptr %vec, align 8
@@ -365,31 +364,31 @@ define i1 @multi_3_exit_find_ptr_loop(ptr %vec, ptr %tgt, ptr %tgt2) {
 ; APPLE-NEXT:    [[C_4:%.*]] = icmp eq ptr [[RES]], [[END]]
 ; APPLE-NEXT:    ret i1 [[C_4]]
 ;
-; OTHER-LABEL: define i1 @multi_3_exit_find_ptr_loop(
-; OTHER-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]], ptr [[TGT2:%.*]]) #[[ATTR0]] {
-; OTHER-NEXT:  [[ENTRY:.*]]:
-; OTHER-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; OTHER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
-; OTHER-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
-; OTHER-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; OTHER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
-; OTHER-NEXT:    br label %[[LOOP_HEADER:.*]]
-; OTHER:       [[LOOP_HEADER]]:
-; OTHER-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
-; OTHER-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR_IV]], align 8
-; OTHER-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L]], [[TGT]]
-; OTHER-NEXT:    [[C_2:%.*]] = icmp eq ptr [[L]], [[TGT2]]
-; OTHER-NEXT:    [[OR_COND:%.*]] = select i1 [[C_1]], i1 true, i1 [[C_2]]
-; OTHER-NEXT:    br i1 [[OR_COND]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
-; OTHER:       [[LOOP_LATCH]]:
-; OTHER-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
-; OTHER-NEXT:    [[C_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; OTHER-NEXT:    br i1 [[C_3]], label %[[EXIT]], label %[[LOOP_HEADER]]
-; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
-; OTHER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
-; OTHER-NEXT:    [[C_4:%.*]] = icmp eq ptr [[RES]], [[END]]
-; OTHER-NEXT:    ret i1 [[C_4]]
+; NOUNROLL-LABEL: define i1 @multi_3_exit_find_ptr_loop(
+; NOUNROLL-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]], ptr [[TGT2:%.*]]) #[[ATTR0]] {
+; NOUNROLL-NEXT:  [[ENTRY:.*]]:
+; NOUNROLL-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
+; NOUNROLL-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
+; NOUNROLL-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; NOUNROLL-NEXT:    br label %[[LOOP_HEADER:.*]]
+; NOUNROLL:       [[LOOP_HEADER]]:
+; NOUNROLL-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; NOUNROLL-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR_IV]], align 8
+; NOUNROLL-NEXT:    [[C_1:%.*]] = icmp eq ptr [[L]], [[TGT]]
+; NOUNROLL-NEXT:    [[C_2:%.*]] = icmp eq ptr [[L]], [[TGT2]]
+; NOUNROLL-NEXT:    [[OR_COND:%.*]] = select i1 [[C_1]], i1 true, i1 [[C_2]]
+; NOUNROLL-NEXT:    br i1 [[OR_COND]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; NOUNROLL:       [[LOOP_LATCH]]:
+; NOUNROLL-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 8
+; NOUNROLL-NEXT:    [[C_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; NOUNROLL-NEXT:    br i1 [[C_3]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; NOUNROLL:       [[EXIT]]:
+; NOUNROLL-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; NOUNROLL-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
+; NOUNROLL-NEXT:    [[C_4:%.*]] = icmp eq ptr [[RES]], [[END]]
+; NOUNROLL-NEXT:    ret i1 [[C_4]]
 ;
 entry:
   %start = load ptr, ptr %vec, align 8
@@ -450,33 +449,33 @@ define i1 @multi_3_exit_find_i8_loop_switch(ptr %vec, i8 %tgt) {
 ; APPLE:       [[EXIT_2]]:
 ; APPLE-NEXT:    ret i1 true
 ;
-; OTHER-LABEL: define i1 @multi_3_exit_find_i8_loop_switch(
-; OTHER-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0]] {
-; OTHER-NEXT:  [[ENTRY:.*]]:
-; OTHER-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; OTHER-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
-; OTHER-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; OTHER-NEXT:    br label %[[LOOP_HEADER:.*]]
-; OTHER:       [[LOOP_HEADER]]:
-; OTHER-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
-; OTHER-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV]], align 8
-; OTHER-NEXT:    switch i8 [[L]], label %[[LOOP_LATCH]] [
-; OTHER-NEXT:      i8 0, label %[[EXIT_1:.*]]
-; OTHER-NEXT:      i8 1, label %[[EXIT_2:.*]]
-; OTHER-NEXT:      i8 2, label %[[EXIT:.*]]
-; OTHER-NEXT:    ]
-; OTHER:       [[LOOP_LATCH]]:
-; OTHER-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
-; OTHER-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
-; OTHER-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
-; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
-; OTHER-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
-; OTHER-NEXT:    ret i1 [[C_3]]
-; OTHER:       [[EXIT_1]]:
-; OTHER-NEXT:    ret i1 false
-; OTHER:       [[EXIT_2]]:
-; OTHER-NEXT:    ret i1 true
+; NOUNROLL-LABEL: define i1 @multi_3_exit_find_i8_loop_switch(
+; NOUNROLL-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0]] {
+; NOUNROLL-NEXT:  [[ENTRY:.*]]:
+; NOUNROLL-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
+; NOUNROLL-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
+; NOUNROLL-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
+; NOUNROLL-NEXT:    br label %[[LOOP_HEADER:.*]]
+; NOUNROLL:       [[LOOP_HEADER]]:
+; NOUNROLL-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[START]], %[[ENTRY]] ]
+; NOUNROLL-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV]], align 8
+; NOUNROLL-NEXT:    switch i8 [[L]], label %[[LOOP_LATCH]] [
+; NOUNROLL-NEXT:      i8 0, label %[[EXIT_1:.*]]
+; NOUNROLL-NEXT:      i8 1, label %[[EXIT_2:.*]]
+; NOUNROLL-NEXT:      i8 2, label %[[EXIT:.*]]
+; NOUNROLL-NEXT:    ]
+; NOUNROLL:       [[LOOP_LATCH]]:
+; NOUNROLL-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR_IV]], i64 1
+; NOUNROLL-NEXT:    [[C_2:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
+; NOUNROLL-NEXT:    br i1 [[C_2]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; NOUNROLL:       [[EXIT]]:
+; NOUNROLL-NEXT:    [[RES:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH]] ]
+; NOUNROLL-NEXT:    [[C_3:%.*]] = icmp eq ptr [[RES]], [[END]]
+; NOUNROLL-NEXT:    ret i1 [[C_3]]
+; NOUNROLL:       [[EXIT_1]]:
+; NOUNROLL-NEXT:    ret i1 false
+; NOUNROLL:       [[EXIT_2]]:
+; NOUNROLL-NEXT:    ret i1 true
 ;
 entry:
   %start = load ptr, ptr %vec, align 8

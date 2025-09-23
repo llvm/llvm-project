@@ -115,8 +115,7 @@ template <class T> struct C {
 };
 using type2 = typename C<int>::type1<void>;
 // CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:42> col:7 type2 'typename C<int>::type1<void>':'void (int)'
-// CHECK-NEXT: ElaboratedType 0x{{[^ ]*}} 'typename C<int>::type1<void>' sugar
-// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'type1<void>' sugar alias
+// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'typename C<int>::type1<void>' sugar alias
 // CHECK-NEXT: name: 'C<int>::type1':'PR55886::C<int>::type1' qualified
 // CHECK-NEXT: NestedNameSpecifier TypeSpec 'C<int>':'PR55886::C<int>'
 // CHECK-NEXT: TypeAliasTemplateDecl {{.+}} type1

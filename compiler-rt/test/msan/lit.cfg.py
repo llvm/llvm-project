@@ -20,7 +20,7 @@ clang_msan_cflags = (
     + config.debug_info_flags
 )
 # Some Msan tests leverage backtrace() which requires libexecinfo on FreeBSD.
-if config.host_os == "FreeBSD":
+if config.target_os == "FreeBSD":
     clang_msan_cflags += ["-lexecinfo", "-fPIC"]
 # On SystemZ we need -mbackchain to make the fast unwinder work.
 if config.target_arch == "s390x":
@@ -44,7 +44,7 @@ config.substitutions.append(("%clang_kmsan ", build_invocation(clang_kmsan_cflag
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["Linux", "NetBSD", "FreeBSD"]:
+if config.target_os not in ["Linux", "NetBSD", "FreeBSD"]:
     config.unsupported = True
 
 # For mips64, mips64el we have forced store_context_size to 1 because these
@@ -55,5 +55,5 @@ if config.host_arch in ["mips64", "mips64el"]:
 else:
     config.substitutions.append(("CHECK-%short-stack", "CHECK-FULL-STACK"))
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))

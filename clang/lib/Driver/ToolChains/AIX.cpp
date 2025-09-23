@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIX.h"
-#include "Arch/PPC.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -259,19 +258,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
 
@@ -606,14 +595,6 @@ void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
   }
 
   ToolChain::addProfileRTLibs(Args, CmdArgs);
-}
-
-void AIX::addFortranRuntimeLibs(const ArgList &Args,
-                                llvm::opt::ArgStringList &CmdArgs) const {
-  // Link flang_rt.runtime.a. On AIX, the static and shared library are all
-  // named .a
-  CmdArgs.push_back(
-      getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
 }
 
 ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {

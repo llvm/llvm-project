@@ -67,8 +67,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
       return false;
     Members *= NElements;
-  } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+  } else if (const auto *RD = Ty->getAsRecordDecl()) {
     if (RD->hasFlexibleArrayMember())
       return false;
 
@@ -218,8 +217,8 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     // only have "+" prefixes here.
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
-    return TI.getFMVPriority({LHS.substr(1)}) >
-           TI.getFMVPriority({RHS.substr(1)});
+    return TI.getFMVPriority({LHS.substr(1)})
+        .ugt(TI.getFMVPriority({RHS.substr(1)}));
   });
 
   bool IsFirst = true;
@@ -244,6 +243,14 @@ ABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *T,
   return T;
 }
 
+llvm::Value *ABIInfo::createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
+                                        CodeGenFunction &CGF) const {
+  return nullptr;
+}
+
+void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
+                                 const ABIArgInfo &AI, bool DestIsVolatile,
+                                 CodeGenFunction &CGF) const {}
 // Pin the vtable to this file.
 SwiftABIInfo::~SwiftABIInfo() = default;
 

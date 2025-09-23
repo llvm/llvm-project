@@ -64,6 +64,22 @@ public:
   }
 };
 
+/// RAII object that enters a new function expression evaluation context.
+class EnterExpressionEvaluationContextForFunction {
+  Sema &Actions;
+
+public:
+  EnterExpressionEvaluationContextForFunction(
+      Sema &Actions, Sema::ExpressionEvaluationContext NewContext,
+      FunctionDecl *FD = nullptr)
+      : Actions(Actions) {
+    Actions.PushExpressionEvaluationContextForFunction(NewContext, FD);
+  }
+  ~EnterExpressionEvaluationContextForFunction() {
+    Actions.PopExpressionEvaluationContext();
+  }
+};
+
 } // namespace clang
 
 #endif

@@ -220,7 +220,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsVectorDecreasingCstPHIWithLoop) {
   GISelValueTracking Info(*MF, /*MaxDepth=*/24);
   KnownBits Res = Info.getKnownBits(SrcReg);
   EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
-  EXPECT_EQ((uint64_t)0xC0, Res.Zero.getZExtValue());
+  EXPECT_EQ((uint64_t)0xFC, Res.Zero.getZExtValue());
 
   KnownBits Res2 = Info.getKnownBits(DstReg);
   EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
@@ -692,7 +692,7 @@ TEST_F(AArch64GISelMITest, TestVectorNumSignBitsConstant) {
   EXPECT_EQ(2u, Info.computeNumSignBits(CopyReg32));
   EXPECT_EQ(3u, Info.computeNumSignBits(CopyRegNeg32));
   EXPECT_EQ(3u, Info.computeNumSignBits(NonSplatSameSign));
-  EXPECT_EQ(1u, Info.computeNumSignBits(NonSplatDifferentSign));
+  EXPECT_EQ(2u, Info.computeNumSignBits(NonSplatDifferentSign));
 }
 
 TEST_F(AArch64GISelMITest, TestVectorNumSignBitsSext) {
@@ -1547,49 +1547,4 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsUAddoOverflow) {
 
   // Assert sign-extension from vector boolean
   EXPECT_EQ(32u, Info.computeNumSignBits(CopyOverflow));
-}
-
-TEST_F(AArch64GISelMITest, TestKnwonBitsUnmergeVectorScalar) {
-  StringRef MIRString = R"(
-   %copy_x0:_(<2 x s16>) = COPY $w0
-   %maskf:_(s16) = G_CONSTANT i16 15
-   %x0_x1:_(<2 x s16>) = G_BUILD_VECTOR %maskf, %maskf
-   %and:_(<2 x s16>) = G_AND %copy_x0, %x0_x1
-   %x0_0:_(s16), %x0_1:_(s16) = G_UNMERGE_VALUES %and
-   %result:_(s16) = COPY %x0_0
-)";
-
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-
-  Register CopyOverflow = Copies[Copies.size() - 1];
-
-  GISelValueTracking Info(*MF);
-
-  EXPECT_EQ(0xFFF0u, Info.getKnownBits(CopyOverflow).Zero.getZExtValue());
-}
-
-TEST_F(AArch64GISelMITest, TestKnwonBitsUnmergeVectorVector) {
-  StringRef MIRString = R"(
-   %copy_x0:_(<4 x s8>) = COPY $w0
-   %maskff:_(s8) = G_CONSTANT i8 255
-   %maskf:_(s8) = G_CONSTANT i8 15
-   %x0_x1:_(<4 x s8>) = G_BUILD_VECTOR %maskf, %maskf, %maskff, %maskff
-   %and:_(<4 x s8>) = G_AND %copy_x0, %x0_x1
-   %x0_0:_(<2 x s8>), %x0_1:_(<2 x s8>) = G_UNMERGE_VALUES %and
-   %result1:_(<2 x s8>) = COPY %x0_0
-   %result2:_(<2 x s8>) = COPY %x0_1
-)";
-
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-
-  GISelValueTracking Info(*MF);
-
-  Register CopyOverflow1 = Copies[Copies.size() - 2];
-  EXPECT_EQ(0xF0u, Info.getKnownBits(CopyOverflow1).Zero.getZExtValue());
-  Register CopyOverflow2 = Copies[Copies.size() - 1];
-  EXPECT_EQ(0x00u, Info.getKnownBits(CopyOverflow2).Zero.getZExtValue());
 }

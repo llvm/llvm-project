@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -24,7 +25,8 @@ namespace llvm {
 /// PrintRecyclingAllocatorStats - Helper for RecyclingAllocator for
 /// printing statistics.
 ///
-void PrintRecyclerStats(size_t Size, size_t Align, size_t FreeListSize);
+LLVM_ABI void PrintRecyclerStats(size_t Size, size_t Align,
+                                 size_t FreeListSize);
 
 /// Recycler - This class manages a linked-list of deallocated nodes
 /// and facilitates reusing deallocated memory in place of allocating

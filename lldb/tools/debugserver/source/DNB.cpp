@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <libproc.h>
 #include <map>
+#include <mutex>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -69,8 +70,8 @@ static ProcessMap *GetProcessMap(bool can_create) {
   static ProcessMap *g_process_map_ptr = NULL;
 
   if (can_create && g_process_map_ptr == NULL) {
-    static pthread_mutex_t g_process_map_mutex = PTHREAD_MUTEX_INITIALIZER;
-    PTHREAD_MUTEX_LOCKER(locker, &g_process_map_mutex);
+    static std::mutex g_process_map_mutex;
+    std::lock_guard<std::mutex> guard(g_process_map_mutex);
     if (g_process_map_ptr == NULL)
       g_process_map_ptr = new ProcessMap;
   }

@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -43,16 +44,25 @@ public:
   bool inSection(SanitizerMask Mask, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 
+  // Query ignorelisted entries if any bit in Mask matches the entry's section.
+  // Return NotFound (0,0) if not found. If found, return the file index number
+  // and the line number (FileIdx, LineNo) (FileIdx starts with 1 and LineNo
+  // starts with 0).
+  std::pair<unsigned, unsigned>
+  inSectionBlame(SanitizerMask Mask, StringRef Prefix, StringRef Query,
+                 StringRef Category = StringRef()) const;
+
 protected:
   // Initialize SanitizerSections.
   void createSanitizerSections();
 
   struct SanitizerSection {
-    SanitizerSection(SanitizerMask SM, SectionEntries &E)
-        : Mask(SM), Entries(E){};
+    SanitizerSection(SanitizerMask SM, SectionEntries &E, unsigned idx)
+        : Mask(SM), Entries(E), FileIdx(idx) {};
 
     SanitizerMask Mask;
     SectionEntries &Entries;
+    unsigned FileIdx;
   };
 
   std::vector<SanitizerSection> SanitizerSections;

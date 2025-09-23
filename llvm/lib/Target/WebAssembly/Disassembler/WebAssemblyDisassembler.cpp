@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -25,7 +26,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 
@@ -37,9 +38,9 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 #include "WebAssemblyGenDisassemblerTables.inc"
 
-namespace {
 static constexpr int WebAssemblyInstructionTableSize = 256;
 
+namespace {
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
 
@@ -65,7 +66,7 @@ static MCDisassembler *createWebAssemblyDisassembler(const Target &T,
   return new WebAssemblyDisassembler(STI, Ctx, std::move(MCII));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheWebAssemblyTarget32(),
@@ -170,10 +171,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
   // If this is a prefix byte, indirect to another table.
   if (WasmInst->ET == ET_Prefix) {
     WasmInst = nullptr;
-    // Linear search, so far only 2 entries.
-    for (auto PT = PrefixTable; PT->Table; PT++) {
-      if (PT->Prefix == Opc) {
-        WasmInst = PT->Table;
+    // Linear search, so far only 4 entries.
+    for (const auto &[Prefix, Table] : PrefixTable) {
+      if (Prefix == Opc) {
+        WasmInst = Table;
         break;
       }
     }
@@ -235,10 +236,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       } else {
         // We don't have access to the signature, so create a symbol without one
         MCSymbol *Sym = getContext().createTempSymbol("typeindex", true);
-        auto *WasmSym = cast<MCSymbolWasm>(Sym);
+        auto *WasmSym = static_cast<MCSymbolWasm *>(Sym);
         WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
         const MCExpr *Expr = MCSymbolRefExpr::create(
-            WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, getContext());
+            WasmSym, WebAssembly::S_TYPEINDEX, getContext());
         MI.addOperand(MCOperand::createExpr(Expr));
       }
       break;

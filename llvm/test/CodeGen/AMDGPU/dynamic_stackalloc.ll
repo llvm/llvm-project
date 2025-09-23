@@ -3,7 +3,6 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-GISEL %s
-target datalayout = "A5"
 
 define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
 ; GFX9-SDAG-LABEL: test_dynamic_stackalloc_kernel_uniform:
@@ -2251,7 +2250,6 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, s34
 ; GFX9-SDAG-NEXT:    s_mov_b32 s34, s12
 ; GFX9-SDAG-NEXT:    s_mov_b32 s33, s11
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_device_control_flow:
@@ -2318,7 +2316,6 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX9-GISEL-NEXT:    s_mov_b32 s32, s34
 ; GFX9-GISEL-NEXT:    s_mov_b32 s34, s12
 ; GFX9-GISEL-NEXT:    s_mov_b32 s33, s11
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_control_flow:
@@ -2539,12 +2536,13 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v1.h, 0
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v1, 2, 15
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fff0, v0

@@ -294,6 +294,42 @@ cleanup:
   ret i32 %retval.0
 }
 
+; Make sure that we don't branch into unreachable.
+
+define void @pr142286() {
+; CHECK-LABEL: define void @pr142286() {
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br label [[LOOP2:%.*]]
+; CHECK:       loop2:
+; CHECK-NEXT:    br label [[LOOP3:%.*]]
+; CHECK:       loop3:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+start:
+  br label %loop
+
+loop:
+  %phi = phi i8 [ -1, %start ], [ 0, %loop3 ]
+  br label %loop2
+
+loop2:
+  br label %loop3
+
+loop3:
+  switch i8 %phi, label %exit [
+  i8 0, label %loop3
+  i8 1, label %loop2
+  i8 2, label %loop
+  ]
+
+exit:
+  ret void
+}
+
 declare i32 @call0()
 declare i32 @call1()
 declare i32 @call2()

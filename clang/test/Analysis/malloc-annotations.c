@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -verify \
+// RUN:   -Wno-alloc-size \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true %s
@@ -45,13 +45,13 @@ void f1(void) {
 void f2(void) {
   int *p = malloc(12);
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2_realloc_0(void) {
   int *p = malloc(12);
   realloc(p,0);
-  realloc(p,0); // expected-warning{{Attempt to free released memory}}
+  realloc(p,0); // expected-warning{{Attempt to release already released memory}}
 }
 
 void f2_realloc_1(void) {
@@ -106,25 +106,25 @@ void af1_g(struct stuff **pps) {
 void af2(void) {
   int *p = my_malloc(12);
   my_free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void af2b(void) {
   int *p = my_malloc(12);
   free(p);
-  my_free(p); // expected-warning{{Attempt to free released memory}}
+  my_free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void af2c(void) {
   int *p = my_malloc(12);
   free(p);
-  my_hold(p); // expected-warning{{Attempt to free released memory}}
+  my_hold(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void af2d(void) {
   int *p = my_malloc(12);
   free(p);
-  my_hold2(0, 0, p); // expected-warning{{Attempt to free released memory}}
+  my_hold2(0, 0, p); // expected-warning{{Attempt to release already released memory}}
 }
 
 // No leak if malloc returns null.
@@ -139,13 +139,13 @@ void af2e(void) {
 void af3(void) {
   int *p = my_malloc(12);
   my_hold(p);
-  free(p); // expected-warning{{Attempt to free non-owned memory}}
+  free(p); // expected-warning{{Attempt to release non-owned memory}}
 }
 
 int * af4(void) {
   int *p = my_malloc(12);
   my_free(p);
-  return p; // expected-warning{{Use of memory after it is freed}}
+  return p; // expected-warning{{Use of memory after it is released}}
 }
 
 // This case is (possibly) ok, be conservative
@@ -211,22 +211,13 @@ void pr6293(void) {
 void f7(void) {
   char *x = (char*) malloc(4);
   free(x);
-  x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
+  x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
 }
 
 void f7_realloc(void) {
   char *x = (char*) malloc(4);
   realloc(x,0);
-  x[0] = 'a'; // expected-warning{{Use of memory after it is freed}}
-}
-
-void PR6123(void) {
-  int *x = malloc(11); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-}
-
-void PR7217(void) {
-  int *buf = malloc(2); // expected-warning{{Cast a region whose size is not a multiple of the destination type size}}
-  buf[1] = 'c'; // not crash
+  x[0] = 'a'; // expected-warning{{Use of memory after it is released}}
 }
 
 void mallocCastToVoid(void) {

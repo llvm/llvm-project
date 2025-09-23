@@ -462,8 +462,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -473,15 +473,12 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AMDGPUPostLegalizerCombiner::AMDGPUPostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeAMDGPUPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
 bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
@@ -492,7 +489,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const AMDGPULegalizerInfo *LI =
       static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
 
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -514,13 +512,11 @@ INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone) {
+FunctionPass *llvm::createAMDGPUPostLegalizeCombiner(bool IsOptNone) {
   return new AMDGPUPostLegalizerCombiner(IsOptNone);
 }
-} // end namespace llvm

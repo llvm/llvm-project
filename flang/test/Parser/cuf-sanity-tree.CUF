@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-parse-tree -x cuda %s 2>&1 | FileCheck %s
 include "cuf-sanity-common"
 !CHECK: Program -> ProgramUnit -> SubroutineSubprogram
 !CHECK: | SubroutineStmt

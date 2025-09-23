@@ -54,7 +54,7 @@ public:
     return IsValid() && !IsDerived();
   }
 
-  RT_API_ATTRS Fortran::common::optional<std::pair<TypeCategory, int>>
+  RT_API_ATTRS common::optional<std::pair<TypeCategory, int>>
   GetCategoryAndKind() const;
 
   RT_API_ATTRS bool operator==(TypeCode that) const {

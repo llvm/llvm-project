@@ -1,4 +1,4 @@
-//===--- SuspiciousMemsetUsageCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,7 @@ void SuspiciousMemsetUsageCheck::registerMatchers(MatchFinder *Finder) {
   // Match the standard memset:
   // void *memset(void *buffer, int fill_char, size_t byte_count);
   auto MemsetDecl =
-      functionDecl(hasName("::memset"),
-                   parameterCountIs(3),
+      functionDecl(hasName("::memset"), parameterCountIs(3),
                    hasParameter(0, hasType(pointerType(pointee(voidType())))),
                    hasParameter(1, hasType(isInteger())),
                    hasParameter(2, hasType(isInteger())));

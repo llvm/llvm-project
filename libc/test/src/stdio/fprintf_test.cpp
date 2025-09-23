@@ -32,7 +32,7 @@ using ::fread;
 } // namespace printf_test
 
 TEST(LlvmLibcFPrintfTest, WriteToFile) {
-  const char *FILENAME = "fprintf_output.test";
+  const char *FILENAME = APPEND_LIBC_TEST("fprintf_output.test");
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = printf_test::fopen(FILE_PATH, "w");

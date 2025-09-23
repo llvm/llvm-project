@@ -53,7 +53,7 @@ entry:
   %a = alloca i32, align 4
   store ptr %p, ptr %p.addr, align 8, !tbaa !15
   call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !33, metadata !DIExpression()), !dbg !35
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a) #4, !dbg !36
+  call void @llvm.lifetime.start.p0(ptr %a) #4, !dbg !36
   call void @llvm.dbg.declare(metadata ptr %a, metadata !34, metadata !DIExpression()), !dbg !37
   %0 = load ptr, ptr %p.addr, align 8, !dbg !38, !tbaa !15
   %arrayidx = getelementptr inbounds i32, ptr %0, i64 3, !dbg !38
@@ -68,7 +68,7 @@ entry:
   store i32 %call, ptr %a, align 4, !dbg !43, !tbaa !25
   %5 = load i32, ptr %a, align 4, !dbg !44, !tbaa !25
   %add2 = add nsw i32 %5, 1, !dbg !45
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a) #4, !dbg !46
+  call void @llvm.lifetime.end.p0(ptr %a) #4, !dbg !46
   ret i32 %add2, !dbg !47
 }
 
@@ -96,10 +96,10 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 declare void @baz(...) #3
 

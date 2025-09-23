@@ -80,8 +80,8 @@ void BlockExtractor::loadFile() {
     if (LineSplit.empty())
       continue;
     if (LineSplit.size()!=2)
-      report_fatal_error("Invalid line format, expecting lines like: 'funcname bb1[;bb2..]'",
-                         /*GenCrashDiag=*/false);
+      reportFatalUsageError(
+          "Invalid line format, expecting lines like: 'funcname bb1[;bb2..]'");
     SmallVector<StringRef, 4> BBNames;
     LineSplit[1].split(BBNames, ';', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
@@ -139,14 +139,13 @@ bool BlockExtractor::runOnModule(Module &M) {
   for (const auto &BInfo : BlocksByName) {
     Function *F = M.getFunction(BInfo.first);
     if (!F)
-      report_fatal_error("Invalid function name specified in the input file",
-                         /*GenCrashDiag=*/false);
+      reportFatalUsageError(
+          "Invalid function name specified in the input file");
     for (const auto &BBInfo : BInfo.second) {
       auto Res = llvm::find_if(
           *F, [&](const BasicBlock &BB) { return BB.getName() == BBInfo; });
       if (Res == F->end())
-        report_fatal_error("Invalid block name specified in the input file",
-                           /*GenCrashDiag=*/false);
+        reportFatalUsageError("Invalid block name specified in the input file");
       GroupsOfBlocks[NextGroupIdx].push_back(&*Res);
     }
     ++NextGroupIdx;
@@ -158,7 +157,7 @@ bool BlockExtractor::runOnModule(Module &M) {
     for (BasicBlock *BB : BBs) {
       // Check if the module contains BB.
       if (BB->getParent()->getParent() != &M)
-        report_fatal_error("Invalid basic block", /*GenCrashDiag=*/false);
+        reportFatalUsageError("Invalid basic block");
       LLVM_DEBUG(dbgs() << "BlockExtractor: Extracting "
                         << BB->getParent()->getName() << ":" << BB->getName()
                         << "\n");

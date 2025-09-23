@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -filetype=obj -o - %s \
 ; RUN:   | llvm-readobj --symbols - | FileCheck %s --check-prefix=CHECK-OBJ
 
+; Check we don't crash when using a Mach-O object format.
+; RUN: llc -mtriple=arm64-apple-macosx15.0.0 -mattr=+sve -filetype=obj -o /dev/null %s
+
 define i32 @base_pcs() {
 ; CHECK-ASM-LABEL: base_pcs:
 ; CHECK-ASM-NOT: .variant_pcs

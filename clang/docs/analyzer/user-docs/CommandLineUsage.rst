@@ -194,6 +194,8 @@ When compiling your application to run on the simulator, it is important that **
 
 If you aren't certain which compiler Xcode uses to build your project, try just running ``xcodebuild`` (without **scan-build**). You should see the full path to the compiler that Xcode is using, and use that as an argument to ``--use-cc``.
 
+.. _command-line-usage-CodeChecker:
+
 CodeChecker
 -----------
 

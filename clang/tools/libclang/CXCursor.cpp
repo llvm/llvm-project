@@ -598,7 +598,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SubstNonTypeTemplateParmPackExprClass:
   case Stmt::FunctionParmPackExprClass:
   case Stmt::UnresolvedLookupExprClass:
-  case Stmt::TypoExprClass: // A typo could actually be a DeclRef or a MemberRef
     K = CXCursor_DeclRefExpr;
     break;
 
@@ -1333,16 +1332,10 @@ CXCursor cxcursor::getTypeRefCursor(CXCursor cursor) {
   TypeLoc TL = Type->getTypeLoc();
   SourceLocation Loc = TL.getBeginLoc();
 
-  if (const ElaboratedType *ElabT = Ty->getAs<ElaboratedType>()) {
-    Ty = ElabT->getNamedType();
-    ElaboratedTypeLoc ElabTL = TL.castAs<ElaboratedTypeLoc>();
-    Loc = ElabTL.getNamedTypeLoc().getBeginLoc();
-  }
-
   if (const TypedefType *Typedef = Ty->getAs<TypedefType>())
     return MakeCursorTypeRef(Typedef->getDecl(), Loc, TU);
   if (const TagType *Tag = Ty->getAs<TagType>())
-    return MakeCursorTypeRef(Tag->getDecl(), Loc, TU);
+    return MakeCursorTypeRef(Tag->getOriginalDecl(), Loc, TU);
   if (const TemplateTypeParmType *TemplP = Ty->getAs<TemplateTypeParmType>())
     return MakeCursorTypeRef(TemplP->getDecl(), Loc, TU);
 
@@ -1638,7 +1631,7 @@ unsigned clang_CXCursorSet_contains(CXCursorSet set, CXCursor cursor) {
   CXCursorSet_Impl *setImpl = unpackCXCursorSet(set);
   if (!setImpl)
     return 0;
-  return setImpl->find(cursor) != setImpl->end();
+  return setImpl->contains(cursor);
 }
 
 unsigned clang_CXCursorSet_insert(CXCursorSet set, CXCursor cursor) {
