@@ -6,9 +6,9 @@
 ; was missing).
 
 ; CHECK-LABEL: f0:
-; CHECK-DAG:  r[[R0:[0-9]+]] = #66
+; CHECK-DAG:  r[[R0:[0-9]+]] = #-62
 ; CHECK-DAG:  r[[R1:[0-9]+]] = #40
-; CHECK-DAG:  r[[R2:[0-9]+]] = #85
+; CHECK-DAG:  r[[R2:[0-9]+]] = #-43
 ; CHECK:      v1:0 = vdeal(v{{[0-9]+}},v0,r[[R0]])
 ; CHECK:      v1:0 = vshuff(v1,v0,r[[R1]])
 ; CHECK:      v1:0 = vshuff(v1,v0,r[[R2]])

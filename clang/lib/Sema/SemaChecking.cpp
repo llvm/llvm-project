@@ -2268,7 +2268,7 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 }
 
 static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
-                                   unsigned Pos) {
+                                   unsigned Pos, bool Vector = true) {
   QualType MaskTy = MaskArg->getType();
   if (!MaskTy->isExtVectorBoolType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
@@ -2276,9 +2276,11 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
            << MaskTy;
 
   QualType PtrTy = PtrArg->getType();
-  if (!PtrTy->isPointerType() || !PtrTy->getPointeeType()->isVectorType())
+  if (!PtrTy->isPointerType() ||
+      (Vector && !PtrTy->getPointeeType()->isVectorType()) ||
+      (!Vector && PtrTy->getPointeeType()->isVectorType()))
     return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-           << Pos << "pointer to vector";
+           << Pos << (Vector ? "pointer to vector" : "scalar pointer");
   return false;
 }
 
@@ -2352,6 +2354,101 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
+                     << SourceRange(TheCall->getArg(1)->getBeginLoc(),
+                                    TheCall->getArg(1)->getEndLoc()));
+
+  TheCall->setType(S.Context.VoidTy);
+  return TheCall;
+}
+
+static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 3, 4))
+    return ExprError();
+
+  Expr *MaskArg = TheCall->getArg(0);
+  Expr *IdxArg = TheCall->getArg(1);
+  Expr *PtrArg = TheCall->getArg(2);
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+    return ExprError();
+
+  QualType IdxTy = IdxArg->getType();
+  const VectorType *IdxVecTy = IdxTy->getAs<VectorType>();
+  if (!IdxTy->isExtVectorType() || !IdxVecTy->getElementType()->isIntegerType())
+    return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+           << 1 << /* vector of */ 4 << /* integer */ 1 << /* no fp */ 0
+           << IdxTy;
+
+  QualType MaskTy = MaskArg->getType();
+  QualType PtrTy = PtrArg->getType();
+  QualType PointeeTy = PtrTy->getPointeeType();
+  const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
+  if (MaskVecTy->getNumElements() != IdxVecTy->getNumElements())
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << IdxTy);
+
+  QualType RetTy =
+      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
+  if (TheCall->getNumArgs() == 4) {
+    Expr *PassThruArg = TheCall->getArg(3);
+    QualType PassThruTy = PassThruArg->getType();
+    if (!S.Context.hasSameType(PassThruTy, RetTy))
+      return S.Diag(PassThruArg->getExprLoc(),
+                    diag::err_vec_masked_load_store_ptr)
+             << /* fourth argument */ 4 << RetTy;
+  }
+
+  TheCall->setType(RetTy);
+  return TheCall;
+}
+
+static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 4))
+    return ExprError();
+
+  Expr *MaskArg = TheCall->getArg(0);
+  Expr *IdxArg = TheCall->getArg(1);
+  Expr *ValArg = TheCall->getArg(2);
+  Expr *PtrArg = TheCall->getArg(3);
+
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+    return ExprError();
+
+  QualType IdxTy = IdxArg->getType();
+  const VectorType *IdxVecTy = IdxTy->getAs<VectorType>();
+  if (!IdxTy->isExtVectorType() || !IdxVecTy->getElementType()->isIntegerType())
+    return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+           << 2 << /* vector of */ 4 << /* integer */ 1 << /* no fp */ 0
+           << IdxTy;
+
+  QualType ValTy = ValArg->getType();
+  QualType MaskTy = MaskArg->getType();
+  QualType PtrTy = PtrArg->getType();
+  QualType PointeeTy = PtrTy->getPointeeType();
+
+  const VectorType *MaskVecTy = MaskTy->castAs<VectorType>();
+  const VectorType *ValVecTy = ValTy->castAs<VectorType>();
+  if (MaskVecTy->getNumElements() != IdxVecTy->getNumElements())
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << IdxTy);
+  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements())
+    return ExprError(
+        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
+        << S.getASTContext().BuiltinInfo.getQuotedName(
+               TheCall->getBuiltinCallee())
+        << MaskTy << ValTy);
+
+  QualType ArgTy =
+      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
+  if (!S.Context.hasSameType(ValTy, ArgTy))
+    return ExprError(S.Diag(TheCall->getBeginLoc(),
+                            diag::err_vec_builtin_incompatible_vector)
+                     << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ 2
                      << SourceRange(TheCall->getArg(1)->getBeginLoc(),
                                     TheCall->getArg(1)->getEndLoc()));
 
@@ -2617,6 +2714,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_masked_store:
   case Builtin::BI__builtin_masked_compress_store:
     return BuiltinMaskedStore(*this, TheCall);
+  case Builtin::BI__builtin_masked_gather:
+    return BuiltinMaskedGather(*this, TheCall);
+  case Builtin::BI__builtin_masked_scatter:
+    return BuiltinMaskedScatter(*this, TheCall);
   case Builtin::BI__builtin_invoke:
     return BuiltinInvoke(*this, TheCall);
   case Builtin::BI__builtin_prefetch:
@@ -3754,6 +3855,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // If the call requires a streaming-mode change and has scalable vector
     // arguments or return values, then warn the user that the streaming and
     // non-streaming vector lengths may be different.
+    // When both streaming and non-streaming vector lengths are defined and
+    // mismatched, produce an error.
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
     if (CallerFD && (!FD || !FD->getBuiltinID()) &&
         (IsScalableArg || IsScalableRet)) {
@@ -3766,12 +3869,30 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (!IsCalleeStreamingCompatible &&
           (CallerFnType == SemaARM::ArmStreamingCompatible ||
            ((CallerFnType == SemaARM::ArmStreaming) ^ IsCalleeStreaming))) {
+        const LangOptions &LO = getLangOpts();
+        unsigned VL = LO.VScaleMin * 128;
+        unsigned SVL = LO.VScaleStreamingMin * 128;
+        bool IsVLMismatch = VL && SVL && VL != SVL;
+
+        auto EmitDiag = [&](bool IsArg) {
+          if (IsVLMismatch) {
+            if (CallerFnType == SemaARM::ArmStreamingCompatible)
+              // Emit warning for streaming-compatible callers
+              Diag(Loc, diag::warn_sme_streaming_compatible_vl_mismatch)
+                  << IsArg << IsCalleeStreaming << SVL << VL;
+            else
+              // Emit error otherwise
+              Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
+                  << IsArg << SVL << VL;
+          } else
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+                << IsArg;
+        };
+
         if (IsScalableArg)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/true;
+          EmitDiag(true);
         if (IsScalableRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/false;
+          EmitDiag(false);
       }
     }
 

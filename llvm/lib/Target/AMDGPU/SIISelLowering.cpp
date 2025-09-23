@@ -5902,10 +5902,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 MachineBasicBlock *
 SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                               MachineBasicBlock *BB) const {
-
-  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   MachineFunction *MF = BB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
@@ -5953,8 +5954,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src1 = MI.getOperand(3);
 
     unsigned Opc = (MI.getOpcode() == AMDGPU::S_UADDO_PSEUDO)
-                       ? AMDGPU::S_ADD_I32
-                       : AMDGPU::S_SUB_I32;
+                       ? AMDGPU::S_ADD_U32
+                       : AMDGPU::S_SUB_U32;
     // clang-format off
     BuildMI(*BB, MI, DL, TII->get(Opc), Dest0.getReg())
         .add(Src0)
@@ -5975,8 +5976,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::V_ADD_U64_PSEUDO:
   case AMDGPU::V_SUB_U64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
     const DebugLoc &DL = MI.getDebugLoc();
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
@@ -6072,8 +6071,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // only from uniform add/subcarry node. All the VGPR operands
     // therefore assumed to be splat vectors.
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
     MachineBasicBlock::iterator MII = MI;
     const DebugLoc &DL = MI.getDebugLoc();
     MachineOperand &Dest = MI.getOperand(0);
@@ -6103,16 +6100,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-    const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
-    unsigned WaveSize = TRI->getRegSizeInBits(*Src2RC);
-    assert(WaveSize == 64 || WaveSize == 32);
-
-    if (WaveSize == 64) {
+    if (ST.isWave64()) {
       if (ST.hasScalarCompareEq64()) {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
             .addReg(Src2.getReg())
             .addImm(0);
       } else {
+        const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
         const TargetRegisterClass *SubRC =
             TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
         MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
@@ -6142,7 +6136,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // clang-format on
 
     unsigned SelOpc =
-        (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+        (ST.isWave64()) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
 
     BuildMI(*BB, MII, DL, TII->get(SelOpc), CarryDest.getReg())
         .addImm(-1)
@@ -6245,8 +6239,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return splitKillBlock(MI, BB);
   case AMDGPU::V_CNDMASK_B64_PSEUDO: {
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     Register Dst = MI.getOperand(0).getReg();
     const MachineOperand &Src0 = MI.getOperand(1);
@@ -6304,7 +6296,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_BR_UNDEF: {
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
     MachineInstr *Br = BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
                            .add(MI.getOperand(0));
@@ -6321,7 +6312,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
-    const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
 
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
@@ -6351,8 +6341,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
     if (TII->isVOP3(*I)) {
-      const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-      const SIRegisterInfo *TRI = ST.getRegisterInfo();
       I.addReg(TRI->getVCC(), RegState::Define);
     }
     I.add(MI.getOperand(1)).add(MI.getOperand(2));
@@ -15210,36 +15198,13 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return V;
   }
 
-  // EXTRACT_VECTOR_ELT (v2i32 bitcast (i64/f64:k), Idx)
-  //   =>
-  // i32:Lo(k) if Idx == 0, or
-  // i32:Hi(k) if Idx == 1
-  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (Vec.getOpcode() == ISD::BITCAST && VecVT == MVT::v2i32 && Idx) {
-    SDLoc SL(N);
-    SDValue PeekThrough = Vec.getOperand(0);
-    auto *KImm = dyn_cast<ConstantSDNode>(PeekThrough);
-    if (KImm && KImm->getValueType(0).getSizeInBits() == 64) {
-      uint64_t KImmValue = KImm->getZExtValue();
-      return DAG.getConstant(
-          (KImmValue >> (32 * Idx->getZExtValue())) & 0xffffffff, SL, MVT::i32);
-    }
-    auto *KFPImm = dyn_cast<ConstantFPSDNode>(PeekThrough);
-    if (KFPImm && KFPImm->getValueType(0).getSizeInBits() == 64) {
-      uint64_t KFPImmValue =
-          KFPImm->getValueAPF().bitcastToAPInt().getZExtValue();
-      return DAG.getConstant((KFPImmValue >> (32 * Idx->getZExtValue())) &
-                                 0xffffffff,
-                             SL, MVT::i32);
-    }
-  }
-
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
       VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
