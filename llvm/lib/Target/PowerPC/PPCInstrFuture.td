@@ -120,6 +120,74 @@ class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21...31} = xo;
 }
 
+class XX3Form_XTBp5_M2<bits<9> xo, dag OOL, dag IOL, string asmstr,
+                       list<dag> pattern>
+    : I<60, OOL, IOL, asmstr, NoItinerary> {
+
+  bits<5> XTp;
+  bits<5> XBp;
+  bits<2> M;
+
+  let Pattern = pattern;
+
+  let Inst{6...9} = XTp{3...0};
+  let Inst {10} = XTp{4};
+  let Inst{15} = M{0};
+  let Inst{16...19} = XBp{3...0};
+  let Inst{20} = M{1};
+  let Inst{21...29} = xo;
+  let Inst{30} = XBp{4};
+}
+
+class XX3Form_XTABp5_M2<bits<8> xo, dag OOL, dag IOL, string asmstr,
+                        list<dag> pattern>
+    : I<60, OOL, IOL, asmstr, NoItinerary> {
+
+  bits<5> XTp;
+  bits<5> XAp;
+  bits<5> XBp;
+  bits<2> M;
+
+  let Pattern = pattern;
+
+  let Inst{6...9} = XTp{3...0};
+  let Inst{10} = XTp{4};
+  let Inst{11...14} = XAp{3...0};
+  let Inst{15} = M{0};
+  let Inst{16...19} = XBp{3...0};
+  let Inst{20} = M{1};
+  let Inst{21...28} = xo;
+  let Inst{29} = XAp{4};
+  let Inst{30} = XBp{4};
+}
+
+class XX3Form_XTAB6_P1<bits<5> xo, dag OOL, dag IOL, string asmstr,
+                       list<dag> pattern>
+    : I<60, OOL, IOL, asmstr, NoItinerary> {
+
+  bits<6> XT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<1> P;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = XT{4...0};
+  let Inst{11...15} = XA{4...0};
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...22} = 3;
+  let Inst{23} = P;
+  let Inst{24...28} = xo;
+  let Inst{29} = XA{5};
+  let Inst{30} = XB{5};
+  let Inst{31} = XT{5};
+}
+
+//-------------------------- Instruction definitions -------------------------//
+// Predicate combinations available:
+// [IsISAFuture]
+// [HasVSX, IsISAFuture]
+
 let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
@@ -191,6 +259,53 @@ let Predicates = [HasVSX, IsISAFuture] in {
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
+
+  // AES Acceleration Instructions
+  def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
+                                    (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
+                                    "xxaesencp $XTp, $XAp, $XBp, $M", []>;
+  def XXAESDECP : XX3Form_XTABp5_M2<202, (outs vsrprc:$XTp),
+                                    (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
+                                    "xxaesdecp $XTp, $XAp, $XBp, $M", []>;
+  def XXAESGENLKP : XX3Form_XTBp5_M2<420, (outs vsrprc:$XTp),
+                                     (ins vsrprc:$XBp, u2imm:$M),
+                                     "xxaesgenlkp $XTp, $XBp, $M", []>;
+  def XXGFMUL128 : XX3Form_XTAB6_P1<26, (outs vsrc:$XT),
+                                    (ins vsrc:$XA, vsrc:$XB, u1imm:$P),
+                                    "xxgfmul128 $XT, $XA, $XB, $P", []>;
+}
+
+//---------------------------- Anonymous Patterns ----------------------------//
+// Predicate combinations available:
+
+
+//---------------------------- Instruction aliases ---------------------------//
+// Predicate combinations available:
+// [HasVSX, IsISAFuture]
+
+let Predicates = [HasVSX, IsISAFuture] in {
+  def : InstAlias<"xxaes128encp $XTp, $XAp, $XBp",
+                  (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
+  def : InstAlias<"xxaes192encp $XTp, $XAp, $XBp",
+                  (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 1)>;
+  def : InstAlias<"xxaes256encp $XTp, $XAp, $XBp",
+                  (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 2)>;
+  def : InstAlias<"xxaes128decp $XTp, $XAp, $XBp",
+                  (XXAESDECP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
+  def : InstAlias<"xxaes192decp $XTp, $XAp, $XBp",
+                  (XXAESDECP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 1)>;
+  def : InstAlias<"xxaes256decp $XTp, $XAp, $XBp",
+                  (XXAESDECP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 2)>;
+  def : InstAlias<"xxaes128genlkp $XTp, $XBp", (XXAESGENLKP vsrprc:$XTp,
+                                                   vsrprc:$XBp, 0)>;
+  def : InstAlias<"xxaes192genlkp $XTp, $XBp", (XXAESGENLKP vsrprc:$XTp,
+                                                   vsrprc:$XBp, 1)>;
+  def : InstAlias<"xxaes256genlkp $XTp, $XBp", (XXAESGENLKP vsrprc:$XTp,
+                                                   vsrprc:$XBp, 2)>;
+  def : InstAlias<"xxgfmul128gcm $XT, $XA, $XB", (XXGFMUL128 vsrc:$XT, vsrc:$XA,
+                                                     vsrc:$XB, 0)>;
+  def : InstAlias<"xxgfmul128xts $XT, $XA, $XB", (XXGFMUL128 vsrc:$XT, vsrc:$XA,
+                                                     vsrc:$XB, 1)>;
 }
 
 //---------------------------- Anonymous Patterns ----------------------------//
