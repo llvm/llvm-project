@@ -1770,12 +1770,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   rewriter.setInsertionPoint(packOp);
 
   Location loc = packOp.getLoc();
-  auto padValue = packOp.getPaddingValue();
-  if (!padValue) {
-    padValue = arith::ConstantOp::create(
-        rewriter, loc,
-        rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
-  }
+  std::optional<Value> padValue = packOp.getPaddingValue()
+                                      ? std::optional(packOp.getPaddingValue())
+                                      : std::nullopt;
 
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
@@ -1936,11 +1933,8 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   }
 
   // -- Generate the read operation --
-  auto padValue = arith::ConstantOp::create(
-      rewriter, loc,
-      rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
   Value readResult = vector::createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(), readVectorSizes, padValue,
+      rewriter, loc, unpackOp.getSource(), readVectorSizes, std::nullopt,
       useInBoundsInsteadOfMasking, readScalableVectorFlags);
 
   // -- Generate the transpose operation --
