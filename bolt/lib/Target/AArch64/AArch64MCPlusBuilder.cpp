@@ -416,7 +416,7 @@ public:
     if (!StepBack())
       return std::nullopt;
 
-    using namespace llvm::bolt::MCInstMatcher;
+    using namespace llvm::bolt::LowLevelInstMatcherDSL;
     Reg TestedReg;
     Reg ScratchReg;
 

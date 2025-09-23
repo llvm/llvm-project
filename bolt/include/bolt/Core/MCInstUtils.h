@@ -10,6 +10,7 @@
 #define BOLT_CORE_MCINSTUTILS_H
 
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/MCPlus.h"
 #include <map>
 #include <variant>
 
@@ -177,11 +178,44 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
 
 /// Instruction-matching helpers operating on a single instruction at a time.
 ///
+/// The idea is to make low-level instruction matching as readable as possible.
+/// The classes contained in this namespace are intended to be used as a
+/// domain-specific language to match MCInst with the particular opcode and
+/// operands.
+///
+/// The goals of this DSL include
+/// * matching a single instruction against a template consisting of the
+///   particular target-specific opcode and a pattern of operands
+/// * matching operands against the known values (such as 42, AArch64::X1 or
+///   "the value of --brk-operand=N command line argument")
+/// * capturing operands of an instruction ("whatever is the destination
+///   register of AArch64::ADDXri instruction, store it to Xd variable to be
+///   queried later")
+/// * expressing repeated operands of a single matched instruction (such as
+///   "ADDXri Xd, Xd, 42, 0" for an arbitrary register Xm) as well as across
+///   multiple calls to matchInst(), which is naturally achieved by combining
+///   capturing operands and matching against the known values
+/// * matching multi-instruction code patterns by sequentially calling
+///   matchInst() while passing around already matched operands
+///
+/// The non-goals (compared to MCPlusBuilder::MCInstMatcher) include
+/// * matching an arbitrary tree of instructions in a single matchInst() call
+/// * encapsulation of target-specific knowledge ("match an increment of Xm
+///   by 42")
+///
 /// Unlike MCPlusBuilder::MCInstMatcher, this matchInst() function focuses on
-/// the cases where a precise control over the instruction order is important:
+/// the cases where a precise control over the instruction order is important.
+/// For example, one has to match two particular instructions against the
+/// following pattern (for two different registers Xm and Xn)
+///
+///     ADDXrs Xm, Xn, Xm, #0
+///     BR     Xm
+///
+/// and return the register holding the branch target. Assuming the instructions
+/// are available as MaybeAdd and MaybeBr, the following code can be used:
 ///
 ///     // Bring the short names into the local scope:
-///     using namespace MCInstMatcher;
+///     using namespace LowLevelInstMatcherDSL;
 ///     // Declare the registers to capture:
 ///     Reg Xn, Xm;
 ///     // Capture the 0th and 1st operands, match the 2nd operand against the
@@ -191,9 +225,13 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
 ///     // Match the 0th operand against Xm:
 ///     if (!matchInst(MaybeBr, AArch64::BR, Xm))
 ///       return AArch64::NoRegister;
+///     // Manually check that Xm and Xn did not match the same register.
+///     if (Xm.get() == Xn.get())
+///       return AArch64::NoRegister;
 ///     // Return the matched register:
 ///     return Xm.get();
-namespace MCInstMatcher {
+///
+namespace LowLevelInstMatcherDSL {
 
 // The base class to match an operand of type T.
 //
@@ -282,7 +320,7 @@ template <class... OpMatchers>
 bool matchInst(const MCInst &Inst, unsigned Opcode, const OpMatchers &...Ops) {
   if (Inst.getOpcode() != Opcode)
     return false;
-  assert(sizeof...(Ops) <= Inst.getNumOperands() &&
+  assert(sizeof...(Ops) <= MCPlus::getNumPrimeOperands(Inst) &&
          "Too many operands are matched for the Opcode");
 
   // Ask each matcher to remember its current value in case of rollback.
@@ -301,7 +339,7 @@ bool matchInst(const MCInst &Inst, unsigned Opcode, const OpMatchers &...Ops) {
   return true;
 }
 
-} // namespace MCInstMatcher
+} // namespace LowLevelInstMatcherDSL
 
 } // namespace bolt
 } // namespace llvm
