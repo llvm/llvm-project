@@ -769,7 +769,8 @@ struct ForOpInterface
     // Construct a new scf.for op with memref instead of tensor values.
     auto newForOp = scf::ForOp::create(
         rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), castedInitArgs);
+        forOp.getStep(), castedInitArgs, /*bodyBuilder=*/nullptr,
+        forOp.getUnsignedCmp());
     newForOp->setAttrs(forOp->getAttrs());
     Block *loopBody = newForOp.getBody();
 

@@ -212,6 +212,14 @@ public:
     return Address(getPointer(), elementType, getAlignment());
   }
 
+  void setAddress(Address address) {
+    assert(isSimple());
+    v = address.getPointer();
+    elementType = address.getElementType();
+    alignment = address.getAlignment().getQuantity();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
+  }
+
   const clang::Qualifiers &getQuals() const { return quals; }
   clang::Qualifiers &getQuals() { return quals; }
 
@@ -370,6 +378,8 @@ public:
   bool isIgnored() const { return !addr.isValid(); }
 
   mlir::Value getPointer() const { return addr.getPointer(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 

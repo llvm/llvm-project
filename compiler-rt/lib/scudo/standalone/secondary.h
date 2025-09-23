@@ -19,6 +19,7 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
 #include "vector.h"
 
 namespace scudo {
@@ -118,7 +119,7 @@ public:
   bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
-  void releaseToOS() {}
+  void releaseToOS(ReleaseToOS) {}
   void disableMemoryTagging() {}
   void unmapTestOnly() {}
   bool setOption(Option O, UNUSED sptr Value) {
@@ -351,6 +352,9 @@ public:
       // same time will not actually release any extra elements. Therefore,
       // let any other thread continue, skipping the release.
       if (Mutex.tryLock()) {
+        SCUDO_SCOPED_TRACE(
+            GetSecondaryReleaseToOSTraceName(ReleaseToOS::Normal));
+
         // TODO: Add ReleaseToOS logic to LRU algorithm
         releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
         Mutex.unlock();
@@ -499,7 +503,9 @@ public:
     return true;
   }
 
-  void releaseToOS() EXCLUDES(Mutex) {
+  void releaseToOS([[maybe_unused]] ReleaseToOS ReleaseType) EXCLUDES(Mutex) {
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseToOSTraceName(ReleaseType));
+
     // Since this is a request to release everything, always wait for the
     // lock so that we guarantee all entries are released after this call.
     ScopedLock L(Mutex);
@@ -574,6 +580,8 @@ private:
   }
 
   void releaseOlderThan(u64 Time) REQUIRES(Mutex) {
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThanTraceName());
+
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
@@ -669,7 +677,7 @@ public:
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
-  void releaseToOS() { Cache.releaseToOS(); }
+  void releaseToOS(ReleaseToOS ReleaseType) { Cache.releaseToOS(ReleaseType); }
 
   void disableMemoryTagging() { Cache.disableMemoryTagging(); }
 

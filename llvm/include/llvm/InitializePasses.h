@@ -128,6 +128,7 @@ LLVM_ABI void initializeGCEmptyBasicBlocksPass(PassRegistry &);
 LLVM_ABI void initializeGCMachineCodeAnalysisPass(PassRegistry &);
 LLVM_ABI void initializeGCModuleInfoPass(PassRegistry &);
 LLVM_ABI void initializeGVNLegacyPassPass(PassRegistry &);
+LLVM_ABI void initializeGlobalDCELegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeGlobalMergeFuncPassWrapperPass(PassRegistry &);
 LLVM_ABI void initializeGlobalMergePass(PassRegistry &);
 LLVM_ABI void initializeGlobalsAAWrapperPassPass(PassRegistry &);
@@ -263,7 +264,7 @@ LLVM_ABI void initializePromoteLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeRABasicPass(PassRegistry &);
 LLVM_ABI void initializePseudoProbeInserterPass(PassRegistry &);
 LLVM_ABI void initializeRAGreedyLegacyPass(PassRegistry &);
-LLVM_ABI void initializeReachingDefAnalysisPass(PassRegistry &);
+LLVM_ABI void initializeReachingDefInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeReassociateLegacyPassPass(PassRegistry &);
 LLVM_ABI void
 initializeRegAllocEvictionAdvisorAnalysisLegacyPass(PassRegistry &);

@@ -196,16 +196,8 @@ constexpr bool isShiftedInt(int64_t x) {
 
 /// Checks if an unsigned integer fits into the given bit width.
 template <unsigned N> constexpr bool isUInt(uint64_t x) {
-  if constexpr (N == 0)
-    return 0 == x;
-  if constexpr (N == 8)
-    return static_cast<uint8_t>(x) == x;
-  if constexpr (N == 16)
-    return static_cast<uint16_t>(x) == x;
-  if constexpr (N == 32)
-    return static_cast<uint32_t>(x) == x;
   if constexpr (N < 64)
-    return x < (UINT64_C(1) << (N));
+    return (x >> N) == 0;
   (void)x; // MSVC v19.25 warns that x is unused.
   return true;
 }
@@ -331,12 +323,18 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 
 /// Compile time Log2.
 /// Valid only for positive powers of two.
-template <size_t kValue> constexpr size_t CTLog2() {
+template <size_t kValue> constexpr size_t ConstantLog2() {
   static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
-  return 1 + CTLog2<kValue / 2>();
+  return 1 + ConstantLog2<kValue / 2>();
 }
 
-template <> constexpr size_t CTLog2<1>() { return 0; }
+template <> constexpr size_t ConstantLog2<1>() { return 0; }
+
+template <size_t kValue>
+LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
+constexpr size_t CTLog2() {
+  return ConstantLog2<kValue>();
+}
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)

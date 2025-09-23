@@ -161,6 +161,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
+  CHECK_PARSE_BOOL(AllowBreakBeforeQtProperty);
   CHECK_PARSE_BOOL(AllowShortCaseExpressionOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
@@ -200,7 +201,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(RemoveSemicolon);
   CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
-  CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
@@ -687,6 +687,17 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptForEachMacros",
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+
+  Style.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
+  CHECK_PARSE("SpaceInEmptyBraces: Always", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Always);
+  CHECK_PARSE("SpaceInEmptyBraces: Block", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Block);
+  CHECK_PARSE("SpaceInEmptyBraces: Never", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Never);
+  // For backward compatibility:
+  CHECK_PARSE("SpaceInEmptyBlock: true", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Block);
 
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;

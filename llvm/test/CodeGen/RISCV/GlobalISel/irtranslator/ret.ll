@@ -111,7 +111,7 @@ define ptr @test_ret_ptr() {
   ; RV64I-NEXT:   $x10 = COPY [[DEF]](p0)
   ; RV64I-NEXT:   PseudoRET implicit $x10
 entry:
-  ret ptr undef
+  ret ptr poison
 }
 
 define [2 x i32] @test_ret_2xi32() {

@@ -9,8 +9,8 @@
 #include <clc/geometric/clc_fast_normalize.h>
 #include <clc/opencl/geometric/fast_normalize.h>
 
-#define FUNCTION fast_normalize
-#define __FLOAT_ONLY
+#define __CLC_FUNCTION fast_normalize
+#define __CLC_FLOAT_ONLY
 #define __CLC_GEOMETRIC_RET_GENTYPE
 #define __CLC_BODY <clc/geometric/unary_def.inc>
 

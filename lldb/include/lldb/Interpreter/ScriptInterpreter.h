@@ -26,6 +26,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -528,6 +529,10 @@ public:
   }
 
   virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() {
     return {};
   }
 

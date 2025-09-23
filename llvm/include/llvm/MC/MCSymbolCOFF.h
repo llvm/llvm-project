@@ -33,6 +33,9 @@ public:
   MCSymbolCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(Name, isTemporary) {}
 
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
+
   uint16_t getType() const {
     return Type;
   }

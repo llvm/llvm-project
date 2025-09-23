@@ -23,6 +23,13 @@ void test_ballot_wave64_target_attr(global ulong* out, int a, int b)
   *out = __builtin_amdgcn_ballot_w64(a == b);
 }
 
+// CHECK-LABEL: @test_inverse_ballot_wave64(
+// CHECK: call i1 @llvm.amdgcn.inverse.ballot.i64(i64 %{{.+}})
+void test_inverse_ballot_wave64(global bool* out, ulong a)
+{
+  *out = __builtin_amdgcn_inverse_ballot_w64(a);
+}
+
 // CHECK-LABEL: @test_read_exec(
 // CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)
 void test_read_exec(global ulong* out) {

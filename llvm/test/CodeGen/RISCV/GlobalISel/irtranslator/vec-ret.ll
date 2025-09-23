@@ -21,7 +21,7 @@ define <vscale x 1 x i8> @test_ret_nxv1i8() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x i8> undef
+  ret <vscale x 1 x i8> poison
 }
 
 define <vscale x 2 x i8> @test_ret_nxv2i8() {
@@ -37,7 +37,7 @@ define <vscale x 2 x i8> @test_ret_nxv2i8() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 2 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 2 x i8> undef
+  ret <vscale x 2 x i8> poison
 }
 
 define <vscale x 4 x i8> @test_ret_nxv4i8() {
@@ -53,7 +53,7 @@ define <vscale x 4 x i8> @test_ret_nxv4i8() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 4 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 4 x i8> undef
+  ret <vscale x 4 x i8> poison
 }
 
 define <vscale x 8 x i8> @test_ret_nxv8i8() {
@@ -69,7 +69,7 @@ define <vscale x 8 x i8> @test_ret_nxv8i8() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 8 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 8 x i8> undef
+  ret <vscale x 8 x i8> poison
 }
 
 define <vscale x 16 x i8> @test_ret_nxv16i8() {
@@ -85,7 +85,7 @@ define <vscale x 16 x i8> @test_ret_nxv16i8() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 16 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 16 x i8> undef
+  ret <vscale x 16 x i8> poison
 }
 
 define <vscale x 32 x i8> @test_ret_nxv32i8() {
@@ -101,7 +101,7 @@ define <vscale x 32 x i8> @test_ret_nxv32i8() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 32 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 32 x i8> undef
+  ret <vscale x 32 x i8> poison
 }
 
 define <vscale x 64 x i8> @test_ret_nxv64i8() {
@@ -117,7 +117,7 @@ define <vscale x 64 x i8> @test_ret_nxv64i8() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 64 x s8>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 64 x i8> undef
+  ret <vscale x 64 x i8> poison
 }
 
 define <vscale x 1 x i16> @test_ret_nxv1i16() {
@@ -133,7 +133,7 @@ define <vscale x 1 x i16> @test_ret_nxv1i16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x i16> undef
+  ret <vscale x 1 x i16> poison
 }
 
 define <vscale x 2 x i16> @test_ret_nxv2i16() {
@@ -149,7 +149,7 @@ define <vscale x 2 x i16> @test_ret_nxv2i16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 2 x i16> undef
+  ret <vscale x 2 x i16> poison
 }
 
 define <vscale x 4 x i16> @test_ret_nxv4i16() {
@@ -165,7 +165,7 @@ define <vscale x 4 x i16> @test_ret_nxv4i16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 4 x i16> undef
+  ret <vscale x 4 x i16> poison
 }
 
 define <vscale x 8 x i16> @test_ret_nxv8i16() {
@@ -181,7 +181,7 @@ define <vscale x 8 x i16> @test_ret_nxv8i16() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 8 x i16> undef
+  ret <vscale x 8 x i16> poison
 }
 
 define <vscale x 16 x i16> @test_ret_nxv16i16() {
@@ -197,7 +197,7 @@ define <vscale x 16 x i16> @test_ret_nxv16i16() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 16 x i16> undef
+  ret <vscale x 16 x i16> poison
 }
 
 define <vscale x 32 x i16> @test_ret_nxv32i16() {
@@ -213,7 +213,7 @@ define <vscale x 32 x i16> @test_ret_nxv32i16() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 32 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 32 x i16> undef
+  ret <vscale x 32 x i16> poison
 }
 
 define <vscale x 1 x i32> @test_ret_nxv1i32() {
@@ -229,7 +229,7 @@ define <vscale x 1 x i32> @test_ret_nxv1i32() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x i32> undef
+  ret <vscale x 1 x i32> poison
 }
 
 define <vscale x 2 x i32> @test_ret_nxv2i32() {
@@ -245,7 +245,7 @@ define <vscale x 2 x i32> @test_ret_nxv2i32() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 2 x i32> undef
+  ret <vscale x 2 x i32> poison
 }
 
 define <vscale x 4 x i32> @test_ret_nxv4i32() {
@@ -261,7 +261,7 @@ define <vscale x 4 x i32> @test_ret_nxv4i32() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 4 x i32> undef
+  ret <vscale x 4 x i32> poison
 }
 
 define <vscale x 8 x i32> @test_ret_nxv8i32() {
@@ -277,7 +277,7 @@ define <vscale x 8 x i32> @test_ret_nxv8i32() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 8 x i32> undef
+  ret <vscale x 8 x i32> poison
 }
 
 define <vscale x 16 x i32> @test_ret_nxv16i32() {
@@ -293,7 +293,7 @@ define <vscale x 16 x i32> @test_ret_nxv16i32() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 16 x i32> undef
+  ret <vscale x 16 x i32> poison
 }
 
 define <vscale x 1 x i64> @test_ret_nxv1i64() {
@@ -309,7 +309,7 @@ define <vscale x 1 x i64> @test_ret_nxv1i64() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x i64> undef
+  ret <vscale x 1 x i64> poison
 }
 
 define <vscale x 2 x i64> @test_ret_nxv2i64() {
@@ -325,7 +325,7 @@ define <vscale x 2 x i64> @test_ret_nxv2i64() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 2 x i64> undef
+  ret <vscale x 2 x i64> poison
 }
 
 define <vscale x 4 x i64> @test_ret_nxv4i64() {
@@ -341,7 +341,7 @@ define <vscale x 4 x i64> @test_ret_nxv4i64() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 4 x i64> undef
+  ret <vscale x 4 x i64> poison
 }
 
 define <vscale x 8 x i64> @test_ret_nxv8i64() {
@@ -357,7 +357,7 @@ define <vscale x 8 x i64> @test_ret_nxv8i64() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 8 x i64> undef
+  ret <vscale x 8 x i64> poison
 }
 
 define <vscale x 64 x i1> @test_ret_nxv64i1() {
@@ -373,7 +373,7 @@ define <vscale x 64 x i1> @test_ret_nxv64i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 64 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 64 x i1> undef
+  ret <vscale x 64 x i1> poison
 }
 
 define <vscale x 32 x i1> @test_ret_nxv32i1() {
@@ -389,7 +389,7 @@ define <vscale x 32 x i1> @test_ret_nxv32i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 32 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 32 x i1> undef
+  ret <vscale x 32 x i1> poison
 }
 
 define <vscale x 16 x i1> @test_ret_nxv16i1() {
@@ -405,7 +405,7 @@ define <vscale x 16 x i1> @test_ret_nxv16i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 16 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 16 x i1> undef
+  ret <vscale x 16 x i1> poison
 }
 
 define <vscale x 8 x i1> @test_ret_nxv8i1() {
@@ -421,7 +421,7 @@ define <vscale x 8 x i1> @test_ret_nxv8i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 8 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 8 x i1> undef
+  ret <vscale x 8 x i1> poison
 }
 
 define <vscale x 4 x i1> @test_ret_nxv4i1() {
@@ -437,7 +437,7 @@ define <vscale x 4 x i1> @test_ret_nxv4i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 4 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 4 x i1> undef
+  ret <vscale x 4 x i1> poison
 }
 
 define <vscale x 2 x i1> @test_ret_nxv2i1() {
@@ -453,7 +453,7 @@ define <vscale x 2 x i1> @test_ret_nxv2i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 2 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 2 x i1> undef
+  ret <vscale x 2 x i1> poison
 }
 
 define <vscale x 1 x i1> @test_ret_nxv1i1() {
@@ -469,7 +469,7 @@ define <vscale x 1 x i1> @test_ret_nxv1i1() {
   ; RV64-NEXT:   $v0 = COPY [[DEF]](<vscale x 1 x s1>)
   ; RV64-NEXT:   PseudoRET implicit $v0
 entry:
-  ret <vscale x 1 x i1> undef
+  ret <vscale x 1 x i1> poison
 }
 
 define <vscale x 1 x float> @test_ret_nxv1f32() {
@@ -485,7 +485,7 @@ define <vscale x 1 x float> @test_ret_nxv1f32() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x float> undef
+  ret <vscale x 1 x float> poison
 }
 
 define <vscale x 2 x float> @test_ret_nxv2f32() {
@@ -501,7 +501,7 @@ define <vscale x 2 x float> @test_ret_nxv2f32() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 2 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 2 x float> undef
+  ret <vscale x 2 x float> poison
 }
 
 define <vscale x 4 x float> @test_ret_nxv4f32() {
@@ -517,7 +517,7 @@ define <vscale x 4 x float> @test_ret_nxv4f32() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 4 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 4 x float> undef
+  ret <vscale x 4 x float> poison
 }
 
 define <vscale x 8 x float> @test_ret_nxv8f32() {
@@ -533,7 +533,7 @@ define <vscale x 8 x float> @test_ret_nxv8f32() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 8 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 8 x float> undef
+  ret <vscale x 8 x float> poison
 }
 
 define <vscale x 16 x float> @test_ret_nxv16f32() {
@@ -549,7 +549,7 @@ define <vscale x 16 x float> @test_ret_nxv16f32() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 16 x s32>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 16 x float> undef
+  ret <vscale x 16 x float> poison
 }
 
 define <vscale x 1 x double> @test_ret_nxv1f64() {
@@ -565,7 +565,7 @@ define <vscale x 1 x double> @test_ret_nxv1f64() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x double> undef
+  ret <vscale x 1 x double> poison
 }
 
 define <vscale x 2 x double> @test_ret_nxv2f64() {
@@ -581,7 +581,7 @@ define <vscale x 2 x double> @test_ret_nxv2f64() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 2 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 2 x double> undef
+  ret <vscale x 2 x double> poison
 }
 
 define <vscale x 4 x double> @test_ret_nxv4f64() {
@@ -597,7 +597,7 @@ define <vscale x 4 x double> @test_ret_nxv4f64() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 4 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 4 x double> undef
+  ret <vscale x 4 x double> poison
 }
 
 define <vscale x 8 x double> @test_ret_nxv8f64() {
@@ -613,7 +613,7 @@ define <vscale x 8 x double> @test_ret_nxv8f64() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 8 x s64>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 8 x double> undef
+  ret <vscale x 8 x double> poison
 }
 
 define <vscale x 1 x half> @test_ret_nxv1f16() {
@@ -629,7 +629,7 @@ define <vscale x 1 x half> @test_ret_nxv1f16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x half> undef
+  ret <vscale x 1 x half> poison
 }
 
 define <vscale x 2 x half> @test_ret_nxv2f16() {
@@ -645,7 +645,7 @@ define <vscale x 2 x half> @test_ret_nxv2f16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 2 x half> undef
+  ret <vscale x 2 x half> poison
 }
 
 define <vscale x 4 x half> @test_ret_nxv4f16() {
@@ -661,7 +661,7 @@ define <vscale x 4 x half> @test_ret_nxv4f16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 4 x half> undef
+  ret <vscale x 4 x half> poison
 }
 
 define <vscale x 8 x half> @test_ret_nxv8f16() {
@@ -677,7 +677,7 @@ define <vscale x 8 x half> @test_ret_nxv8f16() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 8 x half> undef
+  ret <vscale x 8 x half> poison
 }
 
 define <vscale x 16 x half> @test_ret_nxv16f16() {
@@ -693,7 +693,7 @@ define <vscale x 16 x half> @test_ret_nxv16f16() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 16 x half> undef
+  ret <vscale x 16 x half> poison
 }
 
 define <vscale x 32 x half> @test_ret_nxv32f16() {
@@ -709,7 +709,7 @@ define <vscale x 32 x half> @test_ret_nxv32f16() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 32 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 32 x half> undef
+  ret <vscale x 32 x half> poison
 }
 
 define <vscale x 1 x bfloat> @test_ret_nxv1b16() {
@@ -725,7 +725,7 @@ define <vscale x 1 x bfloat> @test_ret_nxv1b16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 1 x bfloat> undef
+  ret <vscale x 1 x bfloat> poison
 }
 
 define <vscale x 2 x bfloat> @test_ret_nxv2b16() {
@@ -741,7 +741,7 @@ define <vscale x 2 x bfloat> @test_ret_nxv2b16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 2 x bfloat> undef
+  ret <vscale x 2 x bfloat> poison
 }
 
 define <vscale x 4 x bfloat> @test_ret_nxv4b16() {
@@ -757,7 +757,7 @@ define <vscale x 4 x bfloat> @test_ret_nxv4b16() {
   ; RV64-NEXT:   $v8 = COPY [[DEF]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
 entry:
-  ret <vscale x 4 x bfloat> undef
+  ret <vscale x 4 x bfloat> poison
 }
 
 define <vscale x 8 x bfloat> @test_ret_nxv8b16() {
@@ -773,7 +773,7 @@ define <vscale x 8 x bfloat> @test_ret_nxv8b16() {
   ; RV64-NEXT:   $v8m2 = COPY [[DEF]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
 entry:
-  ret <vscale x 8 x bfloat> undef
+  ret <vscale x 8 x bfloat> poison
 }
 
 define <vscale x 16 x bfloat> @test_ret_nxv16b16() {
@@ -789,7 +789,7 @@ define <vscale x 16 x bfloat> @test_ret_nxv16b16() {
   ; RV64-NEXT:   $v8m4 = COPY [[DEF]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
 entry:
-  ret <vscale x 16 x bfloat> undef
+  ret <vscale x 16 x bfloat> poison
 }
 
 define <vscale x 32 x bfloat> @test_ret_nxv32b16() {
@@ -805,5 +805,5 @@ define <vscale x 32 x bfloat> @test_ret_nxv32b16() {
   ; RV64-NEXT:   $v8m8 = COPY [[DEF]](<vscale x 32 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8
 entry:
-  ret <vscale x 32 x bfloat> undef
+  ret <vscale x 32 x bfloat> poison
 }

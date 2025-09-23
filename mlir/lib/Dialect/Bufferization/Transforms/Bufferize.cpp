@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/Support/DebugLog.h"
 #include <optional>
 
 namespace mlir {
@@ -328,20 +329,16 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
               "blocks");
 
     // Bufferize the op.
-    LLVM_DEBUG(llvm::dbgs()
-               << "//===-------------------------------------------===//\n"
-               << "IR after bufferizing: " << nextOp->getName() << "\n");
+    LDBG(3) << "//===-------------------------------------------===//\n"
+            << "IR after bufferizing: " << nextOp->getName();
     rewriter.setInsertionPoint(nextOp);
     if (failed(
             bufferizableOp.bufferize(rewriter, options, bufferizationState))) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "failed to bufferize\n"
-                 << "//===-------------------------------------------===//\n");
+      LDBG(2) << "failed to bufferize\n"
+              << "//===-------------------------------------------===//";
       return nextOp->emitError("failed to bufferize op");
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << *op
-               << "\n//===-------------------------------------------===//\n");
+    LDBG(3) << *op << "\n//===-------------------------------------------===//";
   }
 
   // Return early if the top-level op is entirely gone.

@@ -9,8 +9,8 @@
 #include <clc/math/clc_native_log.h>
 #include <clc/opencl/math/native_log.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION native_log
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION native_log
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

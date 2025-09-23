@@ -21,3 +21,7 @@ def CSR_ILP32D_LP64D
 
 // Needed for implementation of LoongArchRegisterInfo::getNoPreservedMask()
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
+
+def CSR_MostRegs : CalleeSavedRegs<(add CSR_ILP32S_LP64S,
+                                        (sequence "R%u", 4, 11),
+                                        (sequence "R%u", 16, 19))>;

@@ -51,12 +51,12 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE MAPPER (t::v) MAP(v%x)
+!UNPARSE: !$OMP DECLARE_MAPPER(t::v) MAP(v%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpMapperSpecifier
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare mapper
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
 !PARSE-TREE: | | string = 't.omp.default.mapper'
 !PARSE-TREE: | | TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
@@ -66,6 +66,7 @@ end
 !PARSE-TREE: | | | DataRef -> Name = 'v'
 !PARSE-TREE: | | | Name = 'x'
 !PARSE-TREE: | | bool = 'true'
+!PARSE-TREE: | Flags = None
 
 subroutine f02
   type :: t
@@ -175,7 +176,7 @@ end
 !UNPARSE: !$OMP END TARGET_DATA
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Map -> OmpMapClause

@@ -59,7 +59,7 @@ public:
   void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
-  Frame *getCaller() const override;
+  Frame *getCaller() const override { return Caller; }
 
   /// Returns the location of the call to the frame.
   SourceRange getCallRange() const override;
@@ -129,7 +129,7 @@ public:
 
   bool isStdFunction() const;
 
-  bool isBottomFrame() const { return IsBottom; }
+  bool isBottomFrame() const { return !Caller; }
 
   void dump() const { dump(llvm::errs(), 0); }
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
@@ -179,7 +179,6 @@ private:
   const size_t FrameOffset;
   /// Mapping from arg offsets to their argument blocks.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
-  bool IsBottom = false;
 };
 
 } // namespace interp

@@ -9,8 +9,8 @@
 #include <clc/math/clc_half_divide.h>
 #include <clc/opencl/math/half_divide.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION half_divide
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION half_divide
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/math/gentype.inc>

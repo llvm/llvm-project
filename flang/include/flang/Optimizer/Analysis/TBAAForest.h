@@ -46,6 +46,12 @@ struct TBAATree {
 
     mlir::LLVM::TBAATypeDescriptorAttr getRoot() const { return parent; }
 
+    /// For the given name, get or create a subtree in the current
+    /// subtree. For example, this is used for creating subtrees
+    /// inside the "global data" subtree for the COMMON block variables
+    /// belonging to the same COMMON block.
+    SubtreeState &getOrCreateNamedSubtree(mlir::StringAttr name);
+
   private:
     SubtreeState(mlir::MLIRContext *ctx, std::string name,
                  mlir::LLVM::TBAANodeAttr grandParent)
@@ -57,6 +63,9 @@ struct TBAATree {
     const std::string parentId;
     mlir::MLIRContext *const context;
     mlir::LLVM::TBAATypeDescriptorAttr parent;
+    // A map of named sub-trees, e.g. sub-trees of the COMMON blocks
+    // placed under the "global data" root.
+    llvm::DenseMap<mlir::StringAttr, SubtreeState> namedSubtrees;
   };
 
   /// A subtree for POINTER/TARGET variables data.
@@ -131,8 +140,8 @@ public:
   // responsibility to provide unique name for the scope.
   // If the scope string is empty, returns the TBAA tree for the
   // "root" scope of the given function.
-  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
-                                              llvm::StringRef scope) {
+  inline TBAATree &getMutableFuncTreeWithScope(mlir::func::FuncOp func,
+                                               llvm::StringRef scope) {
     mlir::StringAttr name = func.getSymNameAttr();
     if (!scope.empty())
       name = mlir::StringAttr::get(name.getContext(),
@@ -140,13 +149,20 @@ public:
     return getFuncTree(name);
   }
 
+  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
+                                              llvm::StringRef scope) {
+    return getMutableFuncTreeWithScope(func, scope);
+  }
+
 private:
-  const TBAATree &getFuncTree(mlir::StringAttr symName) {
+  TBAATree &getFuncTree(mlir::StringAttr symName) {
     if (!separatePerFunction)
       symName = mlir::StringAttr::get(symName.getContext(), "");
     if (!trees.contains(symName))
       trees.insert({symName, TBAATree::buildTree(symName)});
-    return trees.at(symName);
+    auto it = trees.find(symName);
+    assert(it != trees.end());
+    return it->second;
   }
 
   // Should each function use a different tree?

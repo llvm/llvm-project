@@ -650,3 +650,16 @@ struct InitFromBindingDecl {
   }
 };
 } // namespace GH82970
+
+struct A {
+  int m;
+};
+
+struct B : A {
+  B() { m = 0; }
+};
+
+template <class T>
+struct C : A {
+  C() { m = 0; }
+};
