@@ -187,21 +187,21 @@ bool MCPlusBuilder::hasRestoreState(const MCInst &Inst) const {
 }
 
 void MCPlusBuilder::setRASigned(MCInst &Inst) const {
-  assert(!hasAnnotation(Inst, MCAnnotation::kSigned));
-  setAnnotationOpValue(Inst, MCAnnotation::kSigned, true);
+  assert(!hasAnnotation(Inst, MCAnnotation::kRASigned));
+  setAnnotationOpValue(Inst, MCAnnotation::kRASigned, true);
 }
 
 bool MCPlusBuilder::isRASigned(const MCInst &Inst) const {
-  return hasAnnotation(Inst, MCAnnotation::kSigned);
+  return hasAnnotation(Inst, MCAnnotation::kRASigned);
 }
 
 void MCPlusBuilder::setRAUnsigned(MCInst &Inst) const {
-  assert(!hasAnnotation(Inst, MCAnnotation::kUnsigned));
-  setAnnotationOpValue(Inst, MCAnnotation::kUnsigned, true);
+  assert(!hasAnnotation(Inst, MCAnnotation::kRAUnsigned));
+  setAnnotationOpValue(Inst, MCAnnotation::kRAUnsigned, true);
 }
 
 bool MCPlusBuilder::isRAUnsigned(const MCInst &Inst) const {
-  return hasAnnotation(Inst, MCAnnotation::kUnsigned);
+  return hasAnnotation(Inst, MCAnnotation::kRAUnsigned);
 }
 
 bool MCPlusBuilder::isRAStateUnknown(const MCInst &Inst) const {

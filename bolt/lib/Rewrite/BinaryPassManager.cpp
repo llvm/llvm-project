@@ -283,7 +283,7 @@ cl::opt<bool>
     UpdateBranchProtection("update-branch-protection",
                            cl::desc("Rewrites pac-ret DWARF CFI instructions "
                                     "(AArch64-only, on by default)"),
-                           cl::init(true), cl::cat(BoltOptCategory));
+                           cl::init(true), cl::Hidden, cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
