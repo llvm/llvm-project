@@ -6486,7 +6486,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       if (!VScaleMax)
         break;
       uint64_t MaxPossibleMaskElements =
-          ScalableTy->getMinNumElements() * (*VScaleMax);
+          (uint64_t)ScalableTy->getMinNumElements() * (*VScaleMax);
 
       const APInt *Op1Val;
       if (match(Op0, m_Zero()) && match(Op1, m_APInt(Op1Val)) &&
