@@ -17,233 +17,229 @@ using namespace llvm;
 using std::unordered_set;
 using std::vector;
 
-static inline MachineInstr &get_branch_with_dest(MachineBasicBlock &branching_MBB,
-                                                 MachineBasicBlock &dest_MBB) {
-  auto& TII = *branching_MBB.getParent()->getSubtarget<GCNSubtarget>().getInstrInfo();
-  for (MachineInstr &branch_MI : reverse(branching_MBB.instrs()))
-    if (branch_MI.isBranch() && TII.getBranchDestBlock(branch_MI) == &dest_MBB)
-      return branch_MI;
+static inline MachineInstr &getBranchWithDest(MachineBasicBlock &BranchingMBB,
+                                              MachineBasicBlock &DestMBB) {
+  auto &TII =
+      *BranchingMBB.getParent()->getSubtarget<GCNSubtarget>().getInstrInfo();
+  for (MachineInstr &BranchMI : reverse(BranchingMBB.instrs()))
+    if (BranchMI.isBranch() && TII.getBranchDestBlock(BranchMI) == &DestMBB)
+      return BranchMI;
 
   llvm_unreachable("Don't call this if there's no branch to the destination.");
 }
 
-static inline void move_ins_before_phis(MachineInstr &MI) {
-  MachineBasicBlock& MBB = *MI.getParent();
-  MachineFunction& MF = *MBB.getParent();
+static inline void moveInsBeforePhis(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
   auto &TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
-  auto& MRI = MF.getRegInfo();
+  auto &MRI = MF.getRegInfo();
 
-  bool phi_seen = false;
-  MachineBasicBlock::iterator first_phi;
-  for (first_phi = MBB.begin(); first_phi != MBB.end(); first_phi++)
-    if (first_phi->getOpcode() == AMDGPU::PHI) {
-      phi_seen = true;
+  bool PhiSeen = false;
+  MachineBasicBlock::iterator FirstPhi;
+  for (FirstPhi = MBB.begin(); FirstPhi != MBB.end(); FirstPhi++)
+    if (FirstPhi->getOpcode() == AMDGPU::PHI) {
+      PhiSeen = true;
       break;
     }
-  
-  if (!phi_seen) {
+
+  if (!PhiSeen) {
     MI.removeFromParent();
     MBB.insert(MBB.begin(), &MI);
   } else {
-    auto phi = BuildMI(MBB, first_phi, MI.getDebugLoc(), TII.get(AMDGPU::PHI),
-            MI.getOperand(0).getReg());
-    for (auto *pred_MBB : MBB.predecessors()) {
-      Register cloned_reg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
-      MachineInstr& branch_MI = get_branch_with_dest(*pred_MBB,MBB);
-      MachineInstr *cloned_MI = MF.CloneMachineInstr(&MI);
-      cloned_MI->getOperand(0).setReg(cloned_reg);
-      phi.addReg(cloned_reg).addMBB(pred_MBB);
-      pred_MBB->insertAfterBundle(branch_MI.getIterator(), cloned_MI);
-      cloned_MI->bundleWithPred();
+    auto Phi = BuildMI(MBB, FirstPhi, MI.getDebugLoc(), TII.get(AMDGPU::PHI),
+                       MI.getOperand(0).getReg());
+    for (auto *PredMBB : MBB.predecessors()) {
+      Register ClonedReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
+      MachineInstr &BranchMI = getBranchWithDest(*PredMBB, MBB);
+      MachineInstr *ClonedMI = MF.CloneMachineInstr(&MI);
+      ClonedMI->getOperand(0).setReg(ClonedReg);
+      Phi.addReg(ClonedReg).addMBB(PredMBB);
+      PredMBB->insertAfterBundle(BranchMI.getIterator(), ClonedMI);
+      ClonedMI->bundleWithPred();
     }
     MI.eraseFromParent();
   }
 }
 
-struct Epilog_Iterator {
-  MachineBasicBlock::instr_iterator internal_it;
-  Epilog_Iterator(MachineBasicBlock::instr_iterator i) : internal_it(i) {}
+struct EpilogIterator {
+  MachineBasicBlock::instr_iterator InternalIt;
+  EpilogIterator(MachineBasicBlock::instr_iterator I) : InternalIt(I) {}
 
-  bool operator==(const Epilog_Iterator &other) {
-    return internal_it == other.internal_it;
+  bool operator==(const EpilogIterator &Other) {
+    return InternalIt == Other.InternalIt;
   }
-  bool isEnd() { return internal_it.isEnd(); }
-  MachineInstr &operator*() { return *internal_it; }
-  MachineBasicBlock::instr_iterator operator->() { return internal_it; }
-  Epilog_Iterator &operator++() {
-    ++internal_it;
-    if (!internal_it.isEnd() && internal_it->isBranch())
-      internal_it = internal_it->getParent()->instr_end();
+  bool isEnd() { return InternalIt.isEnd(); }
+  MachineInstr &operator*() { return *InternalIt; }
+  MachineBasicBlock::instr_iterator operator->() { return InternalIt; }
+  EpilogIterator &operator++() {
+    ++InternalIt;
+    if (!InternalIt.isEnd() && InternalIt->isBranch())
+      InternalIt = InternalIt->getParent()->instr_end();
     return *this;
   }
-  Epilog_Iterator operator++(int ignored) {
-    Epilog_Iterator to_return = *this;
+  EpilogIterator operator++(int Ignored) {
+    EpilogIterator ToReturn = *this;
     ++*this;
-    return to_return;
+    return ToReturn;
   }
-  
 };
 
-static inline Epilog_Iterator
-get_epilog_for_successor(MachineBasicBlock& pred_MBB, MachineBasicBlock& succ_MBB) {
-  MachineFunction& MF = *pred_MBB.getParent();
-  auto& TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+static inline EpilogIterator getEpilogForSuccessor(MachineBasicBlock &PredMBB,
+                                                   MachineBasicBlock &SuccMBB) {
+  MachineFunction &MF = *PredMBB.getParent();
+  auto &TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
-  for (MachineInstr &branch_MI : reverse(pred_MBB.instrs()))
-    if (branch_MI.isBranch() && TII.getBranchDestBlock(branch_MI) == &succ_MBB)
-      return ++Epilog_Iterator(branch_MI.getIterator());
+  for (MachineInstr &BranchMI : reverse(PredMBB.instrs()))
+    if (BranchMI.isBranch() && TII.getBranchDestBlock(BranchMI) == &SuccMBB)
+      return ++EpilogIterator(BranchMI.getIterator());
 
   llvm_unreachable("There should always be a branch to succ_MBB.");
 }
 
-static inline bool epilogs_are_identical(const vector<MachineInstr *> left,
-                                         const vector<MachineInstr *> right,
-                                         const MachineBasicBlock &succ_MBB) {
-  if (left.size() != right.size())
+static inline bool epilogsAreIdentical(const vector<MachineInstr *> Left,
+                                       const vector<MachineInstr *> Right,
+                                       const MachineBasicBlock &SuccMBB) {
+  if (Left.size() != Right.size())
     return false;
-  
-  for (unsigned i = 0; i < left.size(); i++)
-    if (!left[i]->isIdenticalTo(*right[i]))
+
+  for (unsigned I = 0; I < Left.size(); I++)
+    if (!Left[I]->isIdenticalTo(*Right[I]))
       return false;
   return true;
 }
 
-static inline void move_body(vector<MachineInstr *> &body,
-                      MachineBasicBlock &dest_MBB) {
-  for (auto rev_it = body.rbegin(); rev_it != body.rend(); rev_it++) {
-    MachineInstr &body_ins = **rev_it;
-    body_ins.removeFromBundle();
-    dest_MBB.insert(dest_MBB.begin(), &body_ins);
+static inline void moveBody(vector<MachineInstr *> &Body,
+                            MachineBasicBlock &DestMBB) {
+  for (auto RevIt = Body.rbegin(); RevIt != Body.rend(); RevIt++) {
+    MachineInstr &BodyIns = **RevIt;
+    BodyIns.removeFromBundle();
+    DestMBB.insert(DestMBB.begin(), &BodyIns);
   }
 }
 
-static inline void normalize_ir_post_phi_elimination(MachineFunction &MF) {
-  auto& TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+static inline void normalizeIrPostPhiElimination(MachineFunction &MF) {
+  auto &TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
-  struct CFG_Rewrite_Entry {
-    unordered_set<MachineBasicBlock *> pred_MBBs;
-    MachineBasicBlock *succ_MBB;
-    vector<MachineInstr*> body;
+  struct CFGRewriteEntry {
+    unordered_set<MachineBasicBlock *> PredMBBs;
+    MachineBasicBlock *SuccMBB;
+    vector<MachineInstr *> Body;
   };
 
-  vector<CFG_Rewrite_Entry> cfg_rewrite_entries;
+  vector<CFGRewriteEntry> CfgRewriteEntries;
   for (MachineBasicBlock &MBB : MF) {
-    CFG_Rewrite_Entry to_insert = {{}, &MBB, {}};
-    for (MachineBasicBlock *pred_MBB : MBB.predecessors()) {
-      Epilog_Iterator ep_it =
-          get_epilog_for_successor(*pred_MBB, MBB);
+    CFGRewriteEntry ToInsert = {{}, &MBB, {}};
+    for (MachineBasicBlock *PredMBB : MBB.predecessors()) {
+      EpilogIterator EpIt = getEpilogForSuccessor(*PredMBB, MBB);
 
-      vector<MachineInstr *> epilog;
-      while (!ep_it.isEnd())
-        epilog.push_back(&*ep_it++);
+      vector<MachineInstr *> Epilog;
+      while (!EpIt.isEnd())
+        Epilog.push_back(&*EpIt++);
 
-      if (!epilogs_are_identical(to_insert.body, epilog, MBB)) {
-        if (to_insert.pred_MBBs.size() && to_insert.body.size()) {
+      if (!epilogsAreIdentical(ToInsert.Body, Epilog, MBB)) {
+        if (ToInsert.PredMBBs.size() && ToInsert.Body.size()) {
           // Potentially, we need to insert a new entry.  But first see if we
           // can find an existing entry with the same epilog.
-          bool existing_entry_found = false;
-          for (auto rev_it = cfg_rewrite_entries.rbegin();
-               rev_it != cfg_rewrite_entries.rend() && rev_it->succ_MBB == &MBB;
-               rev_it++)
-            if (epilogs_are_identical(rev_it->body, epilog, MBB)) {
-              rev_it->pred_MBBs.insert(pred_MBB);
-              existing_entry_found = true;
+          bool ExistingEntryFound = false;
+          for (auto RevIt = CfgRewriteEntries.rbegin();
+               RevIt != CfgRewriteEntries.rend() && RevIt->SuccMBB == &MBB;
+               RevIt++)
+            if (epilogsAreIdentical(RevIt->Body, Epilog, MBB)) {
+              RevIt->PredMBBs.insert(PredMBB);
+              ExistingEntryFound = true;
               break;
             }
 
-          if(!existing_entry_found)
-            cfg_rewrite_entries.push_back(to_insert);
+          if (!ExistingEntryFound)
+            CfgRewriteEntries.push_back(ToInsert);
         }
-        to_insert.pred_MBBs.clear();
-        to_insert.body = epilog;
+        ToInsert.PredMBBs.clear();
+        ToInsert.Body = Epilog;
       }
-      
-      to_insert.pred_MBBs.insert(pred_MBB);
+
+      ToInsert.PredMBBs.insert(PredMBB);
     }
 
     // Handle the last potential rewrite entry.  Lower instead of journaling a
     // rewrite entry if all predecessor MBBs are in this single entry.
-    if (to_insert.pred_MBBs.size() == MBB.pred_size()) {
-      move_body(to_insert.body, MBB);
-      for (MachineBasicBlock *pred_MBB : to_insert.pred_MBBs) {
+    if (ToInsert.PredMBBs.size() == MBB.pred_size()) {
+      moveBody(ToInsert.Body, MBB);
+      for (MachineBasicBlock *PredMBB : ToInsert.PredMBBs) {
         // Delete instructions that were lowered from epilog
-        MachineInstr &branch_ins =
-          get_branch_with_dest(*pred_MBB, *to_insert.succ_MBB);
-        auto epilog_it = ++Epilog_Iterator(branch_ins.getIterator());
-        while (!epilog_it.isEnd())
-          epilog_it++->eraseFromBundle();
+        MachineInstr &BranchIns =
+            getBranchWithDest(*PredMBB, *ToInsert.SuccMBB);
+        auto EpilogIt = ++EpilogIterator(BranchIns.getIterator());
+        while (!EpilogIt.isEnd())
+          EpilogIt++->eraseFromBundle();
       }
 
-    }
-    else if (to_insert.body.size())
-      cfg_rewrite_entries.push_back(to_insert);
+    } else if (ToInsert.Body.size())
+      CfgRewriteEntries.push_back(ToInsert);
   }
 
   // Perform the journaled rewrites.
-  for (auto &entry : cfg_rewrite_entries) {
-    MachineBasicBlock *mezzanine_MBB = MF.CreateMachineBasicBlock();
-    MF.insert(MF.end(),mezzanine_MBB);
+  for (auto &Entry : CfgRewriteEntries) {
+    MachineBasicBlock *MezzanineMBB = MF.CreateMachineBasicBlock();
+    MF.insert(MF.end(), MezzanineMBB);
 
     // Deal with mezzanine to successor succession.
-    BuildMI(mezzanine_MBB, DebugLoc(), TII.get(AMDGPU::S_BRANCH)).addMBB(entry.succ_MBB);
-    mezzanine_MBB->addSuccessor(entry.succ_MBB);
+    BuildMI(MezzanineMBB, DebugLoc(), TII.get(AMDGPU::S_BRANCH))
+        .addMBB(Entry.SuccMBB);
+    MezzanineMBB->addSuccessor(Entry.SuccMBB);
 
     // Move instructions to mezzanine block.
-    move_body(entry.body, *mezzanine_MBB);
+    moveBody(Entry.Body, *MezzanineMBB);
 
-    for (MachineBasicBlock *pred_MBB : entry.pred_MBBs) {
-      //Deal with predecessor to mezzanine succession.
-      MachineInstr &branch_ins =
-          get_branch_with_dest(*pred_MBB, *entry.succ_MBB);
-      assert(branch_ins.getOperand(0).isMBB() && "Branch instruction isn't.");
-      branch_ins.getOperand(0).setMBB(mezzanine_MBB);
-      pred_MBB->replaceSuccessor(entry.succ_MBB, mezzanine_MBB);
+    for (MachineBasicBlock *PredMBB : Entry.PredMBBs) {
+      // Deal with predecessor to mezzanine succession.
+      MachineInstr &BranchIns = getBranchWithDest(*PredMBB, *Entry.SuccMBB);
+      assert(BranchIns.getOperand(0).isMBB() && "Branch instruction isn't.");
+      BranchIns.getOperand(0).setMBB(MezzanineMBB);
+      PredMBB->replaceSuccessor(Entry.SuccMBB, MezzanineMBB);
 
       // Delete instructions that were lowered from epilog
-      auto epilog_it = ++Epilog_Iterator(branch_ins.getIterator());
-      while (!epilog_it.isEnd())
-        epilog_it++->eraseFromBundle();
+      auto EpilogIt = ++EpilogIterator(BranchIns.getIterator());
+      while (!EpilogIt.isEnd())
+        EpilogIt++->eraseFromBundle();
     }
   }
 }
 
 namespace std {
-  template <>
-  struct hash<Register>
-  {
-    std::size_t operator()(const Register& r) const
-    {
-         return hash<unsigned>()(r);
-    }
-  };
-}
+template <> struct hash<Register> {
+  std::size_t operator()(const Register &R) const {
+    return hash<unsigned>()(R);
+  }
+};
+} // namespace std
 
-static inline void hoist_unrelated_copies(MachineFunction &MF) {
+static inline void hoistUnrelatedCopies(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &branch_MI : MBB) {
-      if (!branch_MI.isBranch())
+    for (MachineInstr &BranchMI : MBB) {
+      if (!BranchMI.isBranch())
         continue;
 
-      unordered_set<Register> related_copy_sources;
-      Epilog_Iterator epilog_it = branch_MI.getIterator();
-      Epilog_Iterator copy_move_it = ++epilog_it;
-      while (!epilog_it.isEnd()) {
-        if (epilog_it->getOpcode() != AMDGPU::COPY)
-          related_copy_sources.insert(epilog_it->getOperand(0).getReg());
-        ++epilog_it;
+      unordered_set<Register> RelatedCopySources;
+      EpilogIterator EpilogIt = BranchMI.getIterator();
+      EpilogIterator CopyMoveIt = ++EpilogIt;
+      while (!EpilogIt.isEnd()) {
+        if (EpilogIt->getOpcode() != AMDGPU::COPY)
+          RelatedCopySources.insert(EpilogIt->getOperand(0).getReg());
+        ++EpilogIt;
       }
 
-      while (!copy_move_it.isEnd()) {
-        Epilog_Iterator next = copy_move_it; ++next;
-        if (copy_move_it->getOpcode() == AMDGPU::COPY &&
-            !related_copy_sources.count(copy_move_it->getOperand(1).getReg())
-            || copy_move_it->getOpcode() == AMDGPU::IMPLICIT_DEF) {
-          MachineInstr &MI_to_move = *copy_move_it;
-          MI_to_move.removeFromBundle();
-          MBB.insert(branch_MI.getIterator(),&MI_to_move);
+      while (!CopyMoveIt.isEnd()) {
+        EpilogIterator Next = CopyMoveIt;
+        ++Next;
+        if (CopyMoveIt->getOpcode() == AMDGPU::COPY &&
+                !RelatedCopySources.count(CopyMoveIt->getOperand(1).getReg()) ||
+            CopyMoveIt->getOpcode() == AMDGPU::IMPLICIT_DEF) {
+          MachineInstr &MIToMove = *CopyMoveIt;
+          MIToMove.removeFromBundle();
+          MBB.insert(BranchMI.getIterator(), &MIToMove);
         }
-        
-        copy_move_it = next;
+
+        CopyMoveIt = Next;
       }
     }
 }
