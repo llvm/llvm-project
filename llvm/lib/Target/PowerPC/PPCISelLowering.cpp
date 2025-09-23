@@ -2698,7 +2698,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)cast<ConstantSDNode>(N)->getSExtValue();
+  Imm = cast<ConstantSDNode>(N)->getSExtValue();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -9904,20 +9904,24 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SmallVector<SDValue, 16> Ops(16, C);
     SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
     unsigned IID;
+    EVT VT;
     switch (SplatSize) {
     default:
       llvm_unreachable("Unexpected type for vector constant.");
     case 2:
       IID = Intrinsic::ppc_altivec_vupklsb;
+      VT = MVT::v8i16;
       break;
     case 4:
       IID = Intrinsic::ppc_altivec_vextsb2w;
+      VT = MVT::v4i32;
       break;
     case 8:
       IID = Intrinsic::ppc_altivec_vextsb2d;
+      VT = MVT::v2i64;
       break;
     }
-    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl);
+    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl, VT);
     return DAG.getBitcast(Op->getValueType(0), Extend);
   }
   assert(!IsSplat64 && "Unhandled 64-bit splat pattern");
@@ -15407,6 +15411,12 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
     }
   }
 
+  // Convert PromOps to handles before doing any RAUW operations, as these
+  // may CSE with existing nodes, deleting the originals.
+  std::list<HandleSDNode> PromOpHandles;
+  for (auto &PromOp : PromOps)
+    PromOpHandles.emplace_back(PromOp);
+
   // Replace all inputs, either with the truncation operand, or a
   // truncation or extension to the final output type.
   for (unsigned i = 0, ie = Inputs.size(); i != ie; ++i) {
@@ -15429,10 +15439,6 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       DAG.ReplaceAllUsesOfValueWith(Inputs[i],
         DAG.getAnyExtOrTrunc(InSrc, dl, N->getValueType(0)));
   }
-
-  std::list<HandleSDNode> PromOpHandles;
-  for (auto &PromOp : PromOps)
-    PromOpHandles.emplace_back(PromOp);
 
   // Replace all operations (these are all the same, but have a different
   // (promoted) return type). DAG.getNode will validate that the types of

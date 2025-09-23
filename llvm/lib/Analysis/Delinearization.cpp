@@ -182,7 +182,7 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Strides:\n";
     for (const SCEV *S : Strides)
-      dbgs() << *S << "\n";
+      dbgs().indent(2) << *S << "\n";
   });
 
   for (const SCEV *S : Strides) {
@@ -193,7 +193,7 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Terms:\n";
     for (const SCEV *T : Terms)
-      dbgs() << *T << "\n";
+      dbgs().indent(2) << *T << "\n";
   });
 
   SCEVCollectAddRecMultiplies MulCollector(Terms, SE);
@@ -294,7 +294,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Terms:\n";
     for (const SCEV *T : Terms)
-      dbgs() << *T << "\n";
+      dbgs().indent(2) << *T << "\n";
   });
 
   // Remove duplicates.
@@ -325,7 +325,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Terms after sorting:\n";
     for (const SCEV *T : NewTerms)
-      dbgs() << *T << "\n";
+      dbgs().indent(2) << *T << "\n";
   });
 
   if (NewTerms.empty() || !findArrayDimensionsRec(SE, NewTerms, Sizes)) {
@@ -339,7 +339,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Sizes:\n";
     for (const SCEV *S : Sizes)
-      dbgs() << *S << "\n";
+      dbgs().indent(2) << *S << "\n";
   });
 }
 
@@ -354,18 +354,24 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     if (!AR->isAffine())
       return;
 
+  LLVM_DEBUG(dbgs() << "\ncomputeAccessFunctions\n"
+                    << "Memory Access Function: " << *Expr << "\n");
+
   const SCEV *Res = Expr;
   int Last = Sizes.size() - 1;
+
   for (int i = Last; i >= 0; i--) {
+    const SCEV *Size = Sizes[i];
     const SCEV *Q, *R;
-    SCEVDivision::divide(SE, Res, Sizes[i], &Q, &R);
+
+    SCEVDivision::divide(SE, Res, Size, &Q, &R);
 
     LLVM_DEBUG({
-      dbgs() << "Res: " << *Res << "\n";
-      dbgs() << "Sizes[i]: " << *Sizes[i] << "\n";
-      dbgs() << "Res divided by Sizes[i]:\n";
-      dbgs() << "Quotient: " << *Q << "\n";
-      dbgs() << "Remainder: " << *R << "\n";
+      dbgs() << "Computing 'MemAccFn / Sizes[" << i << "]':\n";
+      dbgs() << "  MemAccFn: " << *Res << "\n";
+      dbgs() << "  Sizes[" << i << "]: " << *Size << "\n";
+      dbgs() << "  Quotient (Leftover): " << *Q << "\n";
+      dbgs() << "  Remainder (Subscript Access Function): " << *R << "\n";
     });
 
     Res = Q;
@@ -397,7 +403,8 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Subscripts:\n";
     for (const SCEV *S : Subscripts)
-      dbgs() << *S << "\n";
+      dbgs().indent(2) << *S << "\n";
+    dbgs() << "\n";
   });
 }
 
@@ -469,21 +476,6 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
 
   // Third step: compute the access functions for each subscript.
   computeAccessFunctions(SE, Expr, Subscripts, Sizes);
-
-  if (Subscripts.empty())
-    return;
-
-  LLVM_DEBUG({
-    dbgs() << "succeeded to delinearize " << *Expr << "\n";
-    dbgs() << "ArrayDecl[UnknownSize]";
-    for (const SCEV *S : Sizes)
-      dbgs() << "[" << *S << "]";
-
-    dbgs() << "\nArrayRef";
-    for (const SCEV *S : Subscripts)
-      dbgs() << "[" << *S << "]";
-    dbgs() << "\n";
-  });
 }
 
 static std::optional<APInt> tryIntoAPInt(const SCEV *S) {
@@ -671,6 +663,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
+  LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
@@ -688,6 +681,8 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     auto *ArrayTy = dyn_cast<ArrayType>(Ty);
     if (!ArrayTy) {
+      LLVM_DEBUG(dbgs() << "GEP delinearize failed: " << *Ty
+                        << " is not an array type.\n");
       Subscripts.clear();
       Sizes.clear();
       return false;
@@ -699,6 +694,13 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Ty = ArrayTy->getElementType();
   }
+  LLVM_DEBUG({
+    dbgs() << "Subscripts:\n";
+    for (const SCEV *S : Subscripts)
+      dbgs() << *S << "\n";
+    dbgs() << "\n";
+  });
+
   return !Subscripts.empty();
 }
 
@@ -769,7 +771,6 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
 
     O << "\n";
     O << "Inst:" << Inst << "\n";
-    O << "In Loop with Header: " << L->getHeader()->getName() << "\n";
     O << "AccessFunction: " << *AccessFn << "\n";
 
     SmallVector<const SCEV *, 3> Subscripts, Sizes;

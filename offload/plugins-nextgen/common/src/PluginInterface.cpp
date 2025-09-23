@@ -214,15 +214,7 @@ public:
     raw_fd_ostream OS(ImageName, EC);
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
-    if (const auto *TgtImageBitcode = Image.getTgtImageBitcode()) {
-      size_t Size = utils::getPtrDiff(TgtImageBitcode->ImageEnd,
-                                      TgtImageBitcode->ImageStart);
-      MemoryBufferRef MBR = MemoryBufferRef(
-          StringRef((const char *)TgtImageBitcode->ImageStart, Size), "");
-      OS << MBR.getBuffer();
-    } else {
-      OS << Image.getMemoryBuffer().getBuffer();
-    }
+    OS << Image.getMemoryBuffer().getBuffer();
     OS.close();
   }
 
@@ -370,54 +362,6 @@ public:
   }
 };
 } // namespace llvm::omp::target::plugin
-
-// Extract the mapping of host function pointers to device function pointers
-// from the entry table. Functions marked as 'indirect' in OpenMP will have
-// offloading entries generated for them which map the host's function pointer
-// to a global containing the corresponding function pointer on the device.
-static Expected<std::pair<void *, uint64_t>>
-setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
-                       DeviceImageTy &Image) {
-  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-
-  llvm::ArrayRef<llvm::offloading::EntryTy> Entries(
-      Image.getTgtImage()->EntriesBegin, Image.getTgtImage()->EntriesEnd);
-  llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
-  for (const auto &Entry : Entries) {
-    if (Entry.Kind != object::OffloadKind::OFK_OpenMP || Entry.Size == 0 ||
-        !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
-      continue;
-
-    assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");
-    auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
-
-    GlobalTy DeviceGlobal(Entry.SymbolName, Entry.Size);
-    if (auto Err =
-            Handler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal))
-      return std::move(Err);
-
-    HstPtr = Entry.Address;
-    if (auto Err = Device.dataRetrieve(&DevPtr, DeviceGlobal.getPtr(),
-                                       Entry.Size, nullptr))
-      return std::move(Err);
-  }
-
-  // If we do not have any indirect globals we exit early.
-  if (IndirectCallTable.empty())
-    return std::pair{nullptr, 0};
-
-  // Sort the array to allow for more efficient lookup of device pointers.
-  llvm::sort(IndirectCallTable,
-             [](const auto &x, const auto &y) { return x.first < y.first; });
-
-  uint64_t TableSize =
-      IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
-  void *DevicePtr = Device.allocate(TableSize, nullptr, TARGET_ALLOC_DEVICE);
-  if (auto Err = Device.dataSubmit(DevicePtr, IndirectCallTable.data(),
-                                   TableSize, nullptr))
-    return std::move(Err);
-  return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
-}
 
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
@@ -861,9 +805,6 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
       return Err;
   }
 
-  if (Image->getTgtImageBitcode())
-    Plugin.getJIT().erase(*Image->getTgtImageBitcode(), Image->getDevice());
-
   return unloadBinaryImpl(Image);
 }
 
@@ -913,39 +854,32 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
-Expected<DeviceImageTy *>
-GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
-                            const __tgt_device_image *InputTgtImage) {
-  assert(InputTgtImage && "Expected non-null target image");
-  DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage->ImageStart));
+Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
+                                                      StringRef InputTgtImage) {
+  DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage.bytes_begin()));
 
-  auto PostJITImageOrErr = Plugin.getJIT().process(*InputTgtImage, *this);
-  if (!PostJITImageOrErr) {
-    auto Err = PostJITImageOrErr.takeError();
-    REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
-           DeviceId, toStringWithoutConsuming(Err).data());
-    return Plugin::error(ErrorCode::COMPILE_FAILURE, std::move(Err),
-                         "failure to jit IR image");
+  std::unique_ptr<MemoryBuffer> Buffer;
+  if (identify_magic(InputTgtImage) == file_magic::bitcode) {
+    auto CompiledImageOrErr = Plugin.getJIT().process(InputTgtImage, *this);
+    if (!CompiledImageOrErr) {
+      return Plugin::error(ErrorCode::COMPILE_FAILURE,
+                           CompiledImageOrErr.takeError(),
+                           "failure to jit IR image");
+    }
+    Buffer = std::move(*CompiledImageOrErr);
+  } else {
+    Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
   }
 
   // Load the binary and allocate the image object. Use the next available id
   // for the image id, which is the number of previously loaded images.
-  auto ImageOrErr =
-      loadBinaryImpl(PostJITImageOrErr.get(), LoadedImages.size());
+  auto ImageOrErr = loadBinaryImpl(std::move(Buffer), LoadedImages.size());
   if (!ImageOrErr)
     return ImageOrErr.takeError();
-
   DeviceImageTy *Image = *ImageOrErr;
-  assert(Image != nullptr && "Invalid image");
-  if (InputTgtImage != PostJITImageOrErr.get())
-    Image->setTgtImageBitcode(InputTgtImage);
 
   // Add the image to list.
   LoadedImages.push_back(Image);
-
-  // Setup the device environment if needed.
-  if (auto Err = setupDeviceEnvironment(Plugin, *Image))
-    return std::move(Err);
 
   // Setup the global device memory pool if needed.
   if (!Plugin.getRecordReplay().isReplaying() &&
@@ -964,12 +898,12 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
-    size_t Bytes =
-        utils::getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+    size_t Bytes = InputTgtImage.size();
     performOmptCallback(
         device_load, Plugin.getUserId(DeviceId),
         /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes, /*HostAddr=*/InputTgtImage->ImageStart,
+        /*ImgSize=*/Bytes,
+        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
         /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
   }
 #endif
@@ -980,43 +914,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   // Return the pointer to the table of entries.
   return Image;
-}
-
-Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
-                                              DeviceImageTy &Image) {
-  // There are some plugins that do not need this step.
-  if (!shouldSetupDeviceEnvironment())
-    return Plugin::success();
-
-  // Obtain a table mapping host function pointers to device function pointers.
-  auto CallTablePairOrErr = setupIndirectCallTable(Plugin, *this, Image);
-  if (!CallTablePairOrErr)
-    return CallTablePairOrErr.takeError();
-
-  DeviceEnvironmentTy DeviceEnvironment;
-  DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind;
-  DeviceEnvironment.NumDevices = Plugin.getNumDevices();
-  // TODO: The device ID used here is not the real device ID used by OpenMP.
-  DeviceEnvironment.DeviceNum = DeviceId;
-  DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
-  DeviceEnvironment.ClockFrequency = getClockFrequency();
-  DeviceEnvironment.IndirectCallTable =
-      reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
-  DeviceEnvironment.IndirectCallTableSize = CallTablePairOrErr->second;
-  DeviceEnvironment.HardwareParallelism = getHardwareParallelism();
-
-  // Create the metainfo of the device environment global.
-  GlobalTy DevEnvGlobal("__omp_rtl_device_environment",
-                        sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
-
-  // Write device environment values to the device.
-  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal)) {
-    DP("Missing symbol %s, continue execution anyway.\n",
-       DevEnvGlobal.getName().data());
-    consumeError(std::move(Err));
-  }
-  return Plugin::success();
 }
 
 Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
@@ -1398,7 +1295,6 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
       Alloc = MemoryManager->allocate(Size, HostPtr);
@@ -1489,7 +1385,6 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   int Res;
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
       Res = MemoryManager->free(TgtPtr);
@@ -1816,28 +1711,25 @@ Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
 
 int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 
-int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
-  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                   utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
-
+int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
     return false;
   };
-  switch (identify_magic(Buffer)) {
+  switch (identify_magic(Image)) {
   case file_magic::elf:
   case file_magic::elf_relocatable:
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core: {
-    auto MatchOrErr = checkELFImage(Buffer);
+    auto MatchOrErr = checkELFImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
   case file_magic::bitcode: {
-    auto MatchOrErr = checkBitcodeImage(Buffer);
+    auto MatchOrErr = checkBitcodeImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
@@ -1847,36 +1739,32 @@ int32_t GenericPluginTy::is_plugin_compatible(__tgt_device_image *Image) {
   }
 }
 
-int32_t GenericPluginTy::is_device_compatible(int32_t DeviceId,
-                                              __tgt_device_image *Image) {
-  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
-                   utils::getPtrDiff(Image->ImageEnd, Image->ImageStart));
-
+int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
     return false;
   };
-  switch (identify_magic(Buffer)) {
+  switch (identify_magic(Image)) {
   case file_magic::elf:
   case file_magic::elf_relocatable:
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core: {
-    auto MatchOrErr = checkELFImage(Buffer);
+    auto MatchOrErr = checkELFImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     if (!*MatchOrErr)
       return false;
 
     // Perform plugin-dependent checks for the specific architecture if needed.
-    auto CompatibleOrErr = isELFCompatible(DeviceId, Buffer);
+    auto CompatibleOrErr = isELFCompatible(DeviceId, Image);
     if (Error Err = CompatibleOrErr.takeError())
       return HandleError(std::move(Err));
     return *CompatibleOrErr;
   }
   case file_magic::bitcode: {
-    auto MatchOrErr = checkBitcodeImage(Buffer);
+    auto MatchOrErr = checkBitcodeImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
@@ -1937,7 +1825,9 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
                                      __tgt_device_binary *Binary) {
   GenericDeviceTy &Device = getDevice(DeviceId);
 
-  auto ImageOrErr = Device.loadBinary(*this, TgtImage);
+  StringRef Buffer(reinterpret_cast<const char *>(TgtImage->ImageStart),
+                   utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
+  auto ImageOrErr = Device.loadBinary(*this, Buffer);
   if (!ImageOrErr) {
     auto Err = ImageOrErr.takeError();
     REPORT("Failure to load binary image %p on device %d: %s\n", TgtImage,
@@ -2259,8 +2149,7 @@ int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
   GenericGlobalHandlerTy &GHandler = getGlobalHandler();
   if (auto Err =
           GHandler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal)) {
-    REPORT("Failure to look up global address: %s\n",
-           toString(std::move(Err)).data());
+    consumeError(std::move(Err));
     return OFFLOAD_FAIL;
   }
 

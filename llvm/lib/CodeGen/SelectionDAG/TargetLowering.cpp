@@ -638,8 +638,14 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
       // operands on the new node are also disjoint.
       SDNodeFlags Flags(Op->getFlags().hasDisjoint() ? SDNodeFlags::Disjoint
                                                      : SDNodeFlags::None);
+      unsigned Opcode = Op.getOpcode();
+      if (Opcode == ISD::PTRADD) {
+        // It isn't a ptradd anymore if it doesn't operate on the entire
+        // pointer.
+        Opcode = ISD::ADD;
+      }
       SDValue X = DAG.getNode(
-          Op.getOpcode(), dl, SmallVT,
+          Opcode, dl, SmallVT,
           DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(0)),
           DAG.getNode(ISD::TRUNCATE, dl, SmallVT, Op.getOperand(1)), Flags);
       assert(DemandedSize <= SmallVTBits && "Narrowed below demanded bits?");
@@ -1325,8 +1331,7 @@ bool TargetLowering::SimplifyDemandedBits(
                              Depth + 1))
       return true;
 
-    Known.Zero.setAllBits();
-    Known.One.setAllBits();
+    Known.setAllConflict();
     if (!!DemandedSubElts)
       Known = Known.intersectWith(KnownSub);
     if (!!DemandedSrcElts)
@@ -1379,8 +1384,7 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::CONCAT_VECTORS: {
     if (VT.isScalableVector())
       return false;
-    Known.Zero.setAllBits();
-    Known.One.setAllBits();
+    Known.setAllConflict();
     EVT SubVT = Op.getOperand(0).getValueType();
     unsigned NumSubVecs = Op.getNumOperands();
     unsigned NumSubElts = SubVT.getVectorNumElements();
@@ -1410,8 +1414,7 @@ bool TargetLowering::SimplifyDemandedBits(
       SDValue Op0 = Op.getOperand(0);
       SDValue Op1 = Op.getOperand(1);
 
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
+      Known.setAllConflict();
       if (!!DemandedLHS) {
         if (SimplifyDemandedBits(Op0, DemandedBits, DemandedLHS, Known2, TLO,
                                  Depth + 1))
@@ -2860,6 +2863,11 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(Op, And1);
     }
     [[fallthrough]];
+  case ISD::PTRADD:
+    if (Op.getOperand(0).getValueType() != Op.getOperand(1).getValueType())
+      break;
+    // PTRADD behaves like ADD if pointers are represented as integers.
+    [[fallthrough]];
   case ISD::ADD:
   case ISD::SUB: {
     // Add, Sub, and Mul don't demand any bits in positions beyond that
@@ -2969,9 +2977,9 @@ bool TargetLowering::SimplifyDemandedBits(
 
     if (Op.getOpcode() == ISD::MUL) {
       Known = KnownBits::mul(KnownOp0, KnownOp1);
-    } else { // Op.getOpcode() is either ISD::ADD or ISD::SUB.
+    } else { // Op.getOpcode() is either ISD::ADD, ISD::PTRADD, or ISD::SUB.
       Known = KnownBits::computeForAddSub(
-          Op.getOpcode() == ISD::ADD, Flags.hasNoSignedWrap(),
+          Op.getOpcode() != ISD::SUB, Flags.hasNoSignedWrap(),
           Flags.hasNoUnsignedWrap(), KnownOp0, KnownOp1);
     }
     break;
@@ -3227,27 +3235,6 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       KnownUndef.setAllBits();
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
     }
-    SDValue ScalarSrc = Op.getOperand(0);
-    if (ScalarSrc.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      SDValue Src = ScalarSrc.getOperand(0);
-      SDValue Idx = ScalarSrc.getOperand(1);
-      EVT SrcVT = Src.getValueType();
-
-      ElementCount SrcEltCnt = SrcVT.getVectorElementCount();
-
-      if (SrcEltCnt.isScalable())
-        return false;
-
-      unsigned NumSrcElts = SrcEltCnt.getFixedValue();
-      if (isNullConstant(Idx)) {
-        APInt SrcDemandedElts = APInt::getOneBitSet(NumSrcElts, 0);
-        APInt SrcUndef = KnownUndef.zextOrTrunc(NumSrcElts);
-        APInt SrcZero = KnownZero.zextOrTrunc(NumSrcElts);
-        if (SimplifyDemandedVectorElts(Src, SrcDemandedElts, SrcUndef, SrcZero,
-                                       TLO, Depth + 1))
-          return true;
-      }
-    }
     KnownUndef.setHighBits(NumElts - 1);
     break;
   }
@@ -3439,8 +3426,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::INSERT_SUBVECTOR: {
-    // Demand any elements from the subvector and the remainder from the src its
-    // inserted into.
+    // Demand any elements from the subvector and the remainder from the src it
+    // is inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
     uint64_t Idx = Op.getConstantOperandVal(2);
@@ -3448,6 +3435,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
     APInt DemandedSrcElts = DemandedElts;
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+
+    // If none of the sub operand elements are demanded, bypass the insert.
+    if (!DemandedSubElts)
+      return TLO.CombineTo(Op, Src);
 
     APInt SubUndef, SubZero;
     if (SimplifyDemandedVectorElts(Sub, DemandedSubElts, SubUndef, SubZero, TLO,
@@ -5696,7 +5687,7 @@ bool TargetLowering::isGAPlusOffset(SDNode *WN, const GlobalValue *&GA,
     return true;
   }
 
-  if (N->getOpcode() == ISD::ADD) {
+  if (N->isAnyAdd()) {
     SDValue N1 = N->getOperand(0);
     SDValue N2 = N->getOperand(1);
     if (isGAPlusOffset(N1.getNode(), GA, Offset)) {

@@ -1,4 +1,4 @@
-//===--- UppercaseLiteralSuffixCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +29,7 @@ struct IntegerLiteralCheck {
   // integer (wb), and can be a complex number ('i', 'j'). In MS compatibility
   // mode, suffixes like i32 are supported.
   static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("uUlLzZwWbBiIjJ");
+      llvm::StringLiteral("uUlLzZwWiIjJ");
 };
 
 struct FloatingLiteralCheck {
@@ -181,7 +181,7 @@ UppercaseLiteralSuffixCheck::UppercaseLiteralSuffixCheck(
     : ClangTidyCheck(Name, Context),
       NewSuffixes(
           utils::options::parseStringList(Options.get("NewSuffixes", ""))),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UppercaseLiteralSuffixCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

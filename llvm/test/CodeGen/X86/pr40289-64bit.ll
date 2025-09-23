@@ -6,5 +6,5 @@ define cc 92 < 9 x i64 > @clobber() {
   ret < 9 x i64 > undef
   ; CHECK-LABEL: clobber:
   ; CHECK-NOT: popq %rsp
-  ; CHECK: addq $8, %rsp
+  ; CHECK: popq %rax
 }

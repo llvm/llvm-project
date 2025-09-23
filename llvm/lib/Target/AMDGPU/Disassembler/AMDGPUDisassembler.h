@@ -185,6 +185,9 @@ public:
   bool hasKernargPreload() const;
 
   bool isMacDPP(MCInst &MI) const;
+
+  /// Check if the instruction is a buffer operation (MUBUF, MTBUF, or S_BUFFER)
+  bool isBufferInstruction(const MCInst &MI) const;
 };
 
 //===----------------------------------------------------------------------===//

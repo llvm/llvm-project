@@ -16,60 +16,6 @@
 #include <clc/math/clc_sinpi.h>
 #include <clc/math/math.h>
 
-#define _CLC_V_V_VP_VECTORIZE(DECLSPEC, RET_TYPE, __CLC_FUNCTION, ARG1_TYPE,   \
-                              ADDR_SPACE, ARG2_TYPE)                           \
-  DECLSPEC __CLC_XCONCAT(RET_TYPE, 2)                                          \
-      __CLC_FUNCTION(__CLC_XCONCAT(ARG1_TYPE, 2) x,                            \
-                     ADDR_SPACE __CLC_XCONCAT(ARG2_TYPE, 2) * y) {             \
-    ADDR_SPACE ARG2_TYPE *ptr = (ADDR_SPACE ARG2_TYPE *)y;                     \
-    return (__CLC_XCONCAT(RET_TYPE, 2))(__CLC_FUNCTION(x.s0, ptr),             \
-                                        __CLC_FUNCTION(x.s1, ptr + 1));        \
-  }                                                                            \
-                                                                               \
-  DECLSPEC __CLC_XCONCAT(RET_TYPE, 3)                                          \
-      __CLC_FUNCTION(__CLC_XCONCAT(ARG1_TYPE, 3) x,                            \
-                     ADDR_SPACE __CLC_XCONCAT(ARG2_TYPE, 3) * y) {             \
-    ADDR_SPACE ARG2_TYPE *ptr = (ADDR_SPACE ARG2_TYPE *)y;                     \
-    return (__CLC_XCONCAT(RET_TYPE, 3))(__CLC_FUNCTION(x.s0, ptr),             \
-                                        __CLC_FUNCTION(x.s1, ptr + 1),         \
-                                        __CLC_FUNCTION(x.s2, ptr + 2));        \
-  }                                                                            \
-                                                                               \
-  DECLSPEC __CLC_XCONCAT(RET_TYPE, 4)                                          \
-      __CLC_FUNCTION(__CLC_XCONCAT(ARG1_TYPE, 4) x,                            \
-                     ADDR_SPACE __CLC_XCONCAT(ARG2_TYPE, 4) * y) {             \
-    ADDR_SPACE ARG2_TYPE *ptr = (ADDR_SPACE ARG2_TYPE *)y;                     \
-    return (__CLC_XCONCAT(RET_TYPE, 4))(                                       \
-        __CLC_FUNCTION(x.s0, ptr), __CLC_FUNCTION(x.s1, ptr + 1),              \
-        __CLC_FUNCTION(x.s2, ptr + 2), __CLC_FUNCTION(x.s3, ptr + 3));         \
-  }                                                                            \
-                                                                               \
-  DECLSPEC __CLC_XCONCAT(RET_TYPE, 8)                                          \
-      __CLC_FUNCTION(__CLC_XCONCAT(ARG1_TYPE, 8) x,                            \
-                     ADDR_SPACE __CLC_XCONCAT(ARG2_TYPE, 8) * y) {             \
-    ADDR_SPACE ARG2_TYPE *ptr = (ADDR_SPACE ARG2_TYPE *)y;                     \
-    return (__CLC_XCONCAT(RET_TYPE, 8))(                                       \
-        __CLC_FUNCTION(x.s0, ptr), __CLC_FUNCTION(x.s1, ptr + 1),              \
-        __CLC_FUNCTION(x.s2, ptr + 2), __CLC_FUNCTION(x.s3, ptr + 3),          \
-        __CLC_FUNCTION(x.s4, ptr + 4), __CLC_FUNCTION(x.s5, ptr + 5),          \
-        __CLC_FUNCTION(x.s6, ptr + 6), __CLC_FUNCTION(x.s7, ptr + 7));         \
-  }                                                                            \
-                                                                               \
-  DECLSPEC __CLC_XCONCAT(RET_TYPE, 16)                                         \
-      __CLC_FUNCTION(__CLC_XCONCAT(ARG1_TYPE, 16) x,                           \
-                     ADDR_SPACE __CLC_XCONCAT(ARG2_TYPE, 16) * y) {            \
-    ADDR_SPACE ARG2_TYPE *ptr = (ADDR_SPACE ARG2_TYPE *)y;                     \
-    return (__CLC_XCONCAT(RET_TYPE, 16))(                                      \
-        __CLC_FUNCTION(x.s0, ptr), __CLC_FUNCTION(x.s1, ptr + 1),              \
-        __CLC_FUNCTION(x.s2, ptr + 2), __CLC_FUNCTION(x.s3, ptr + 3),          \
-        __CLC_FUNCTION(x.s4, ptr + 4), __CLC_FUNCTION(x.s5, ptr + 5),          \
-        __CLC_FUNCTION(x.s6, ptr + 6), __CLC_FUNCTION(x.s7, ptr + 7),          \
-        __CLC_FUNCTION(x.s8, ptr + 8), __CLC_FUNCTION(x.s9, ptr + 9),          \
-        __CLC_FUNCTION(x.sa, ptr + 10), __CLC_FUNCTION(x.sb, ptr + 11),        \
-        __CLC_FUNCTION(x.sc, ptr + 12), __CLC_FUNCTION(x.sd, ptr + 13),        \
-        __CLC_FUNCTION(x.se, ptr + 14), __CLC_FUNCTION(x.sf, ptr + 15));       \
-  }
-
 // ====================================================
 // Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
 //
@@ -332,9 +278,6 @@ _CLC_OVERLOAD _CLC_DEF float __clc_lgamma_r(float x, private int *signp) {
   *signp = s;
   return r;
 }
-
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_lgamma_r, float,
-                      private, int)
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -639,8 +582,6 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   return r;
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_lgamma_r, double,
-                      private, int)
 #endif
 
 #ifdef cl_khr_fp16
@@ -651,10 +592,16 @@ _CLC_OVERLOAD _CLC_DEF half __clc_lgamma_r(half x, private int *iptr) {
   return (half)__clc_lgamma_r((float)x, iptr);
 }
 
-_CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_lgamma_r, half,
-                      private, int);
-
 #endif
+
+#define __CLC_FUNCTION __clc_lgamma_r
+#define __CLC_ARG2_TYPE int
+#define __CLC_ADDRSPACE private
+#define __CLC_BODY <clc/shared/unary_def_with_ptr_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRSPACE
+#undef __CLC_ARG2_TYPE
+#undef __CLC_FUNCTION
 
 #define __CLC_ADDRSPACE global
 #define __CLC_BODY <clc_lgamma_r.inc>

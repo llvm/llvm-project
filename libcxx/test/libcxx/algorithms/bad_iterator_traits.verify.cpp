@@ -57,5 +57,5 @@ struct BadIter {
 // behavior when these iterators are passed to standard algorithms.
 void test() {
   std::sort(BadIter(), BadIter());
-  //expected-error-re@*:* {{static assertion failed {{.*}}It looks like your iterator's `iterator_traits<It>::reference` does not match the return type of dereferencing the iterator}}
+  //expected-error-re@*:* 2 {{static assertion failed {{.*}}It looks like your iterator's `iterator_traits<It>::reference` does not match the return type of dereferencing the iterator}}
 }

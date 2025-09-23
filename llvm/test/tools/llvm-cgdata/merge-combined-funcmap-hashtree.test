@@ -1,4 +1,4 @@
-# REQUIRES: shell, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 # UNSUPPORTED: system-windows
 
 # Test merge a single object file having both __llvm_outline and __llvm_merge into a cgdata.
@@ -8,15 +8,19 @@ RUN: split-file %s %t
 
 # Synthesize raw hashtree bytes without the header (32 byte) from the indexed cgdata.
 RUN: llvm-cgdata --convert --format binary %t/raw-hashtree.cgtext -o %t/raw-hashtree.cgdata
-RUN: od -t x1 -j 32 -An %t/raw-hashtree.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-hashtree-bytes.txt
+RUN: echo -n "s/<RAW_1_BYTES>/" > %t/raw-hashtree-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw-hashtree.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' >> %t/raw-hashtree-sed.txt
+RUN: echo "/g" >> %t/raw-hashtree-sed.txt
 
 # Synthesize raw funcmap bytes without the header (32 byte) from the indexed cgdata.
 RUN: llvm-cgdata --convert --format binary %t/raw-funcmap.cgtext -o %t/raw-funcmap.cgdata
-RUN: od -t x1 -j 32 -An %t/raw-funcmap.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-funcmap-bytes.txt
+RUN: echo -n "s/<RAW_2_BYTES>/" > %t/raw-funcmap-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw-funcmap.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' >> %t/raw-funcmap-sed.txt
+RUN: echo "/g" >> %t/raw-funcmap-sed.txt
 
 # Synthesize a bitcode file by creating two sections for the hash tree and the function map, respectively.
-RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-hashtree-bytes.txt)/g" %t/merge-both-template.ll > %t/merge-both-hashtree-template.ll
-RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-funcmap-bytes.txt)/g" %t/merge-both-hashtree-template.ll > %t/merge-both-hashtree-funcmap.ll
+RUN: sed -f %t/raw-hashtree-sed.txt %t/merge-both-template.ll > %t/merge-both-hashtree-template.ll
+RUN: sed -f %t/raw-funcmap-sed.txt %t/merge-both-hashtree-template.ll > %t/merge-both-hashtree-funcmap.ll
 
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-both-hashtree-funcmap.ll -o %t/merge-both-hashtree-funcmap.o
 

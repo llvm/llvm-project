@@ -773,7 +773,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
         else
           return MaybeFile.takeError();
       }
-      P.format(" setfile {0} 0x{1}", utohexstr(FileOffset));
+      P.format(" setfile {0} 0x{1}", Filename, utohexstr(FileOffset));
       break;
     }
 
