@@ -1541,8 +1541,6 @@ static Value getI32OutputZp(OpBuilder &builder, Type valueTy,
         return builder.create<arith::ExtSIOp>(loc, builder.getI32Type(),
                                               result);
       }
-    } else if (zpTy.getIntOrFloatBitWidth() > 32) {
-      return builder.create<arith::TruncIOp>(loc, builder.getI32Type(), result);
     }
   } else {
     return builder.create<arith::ConstantOp>(
