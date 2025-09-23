@@ -4403,9 +4403,8 @@ _mm512_store_epi64 (void *__P, __m512i __A)
 
 /* Mask ops */
 
-static __inline __mmask16 __DEFAULT_FN_ATTRS
-_mm512_knot(__mmask16 __M)
-{
+static __inline __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_knot(__mmask16 __M) {
   return __builtin_ia32_knothi(__M);
 }
 

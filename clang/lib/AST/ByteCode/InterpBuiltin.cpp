@@ -659,6 +659,16 @@ static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_knot(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const CallExpr *Call) {
+  APSInt Val =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
+  APInt Result = ~Val;
+  pushInteger(S, APSInt(std::move(Result), true), Call->getType());
+  return true;
+}
+
 static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
                                      const CallExpr *Call) {
@@ -3627,6 +3637,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi:
+    return interp__builtin_knot(S, OpPC, Frame, Call);
 
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,

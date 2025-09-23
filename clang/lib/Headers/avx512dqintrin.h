@@ -29,9 +29,8 @@
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
 #endif
 
-static __inline __mmask8 __DEFAULT_FN_ATTRS
-_knot_mask8(__mmask8 __M)
-{
+static __inline __mmask8 __DEFAULT_FN_ATTRS_CONSTEXPR
+_knot_mask8(__mmask8 __M) {
   return __builtin_ia32_knotqi(__M);
 }
 

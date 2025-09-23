@@ -19,6 +19,9 @@ __mmask8 test_knot_mask8(__mmask8 a) {
   return _knot_mask8(a);
 }
 
+TEST_CONSTEXPR(_knot_mask8(0) == 0xFF);
+TEST_CONSTEXPR(_knot_mask8(0x345) == 0xBA);
+
 __mmask8 test_kand_mask8(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kand_mask8
   // CHECK: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>

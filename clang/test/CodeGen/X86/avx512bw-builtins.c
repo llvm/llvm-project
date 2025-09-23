@@ -19,12 +19,18 @@ __mmask32 test_knot_mask32(__mmask32 a) {
   return _knot_mask32(a);
 }
 
+TEST_CONSTEXPR(_knot_mask32(0) == 0xFFFFFFFF);
+TEST_CONSTEXPR(_knot_mask32(0x123456789) == 0xDCBA9876);
+
 __mmask64 test_knot_mask64(__mmask64 a) {
   // CHECK-LABEL: test_knot_mask64
   // CHECK: [[IN:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK: [[NOT:%.*]] = xor <64 x i1> [[IN]], splat (i1 true)
   return _knot_mask64(a);
 }
+
+TEST_CONSTEXPR(_knot_mask64(0) == 0xFFFFFFFFFFFFFFFF);
+TEST_CONSTEXPR(_knot_mask64(0xABCDEF0123456789) == 0x543210FEDCBA9876);
 
 __mmask32 test_kand_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kand_mask32

@@ -32,13 +32,13 @@ typedef unsigned long long __mmask64;
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
 #endif
 
-static __inline __mmask32 __DEFAULT_FN_ATTRS
-_knot_mask32(__mmask32 __M)
-{
+static __inline __mmask32
+    __DEFAULT_FN_ATTRS_CONSTEXPR _knot_mask32(__mmask32 __M) {
   return __builtin_ia32_knotsi(__M);
 }
 
-static __inline __mmask64 __DEFAULT_FN_ATTRS _knot_mask64(__mmask64 __M) {
+static __inline __mmask64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_knot_mask64(__mmask64 __M) {
   return __builtin_ia32_knotdi(__M);
 }
 

@@ -470,6 +470,9 @@ __mmask16 test_mm512_knot(__mmask16 a)
   return _mm512_knot(a);
 }
 
+TEST_CONSTEXPR(_mm512_knot(0) == 0xFFFF);
+TEST_CONSTEXPR(_mm512_knot(0x12345) == 0xDCBA);
+
 __m512i test_mm512_alignr_epi32(__m512i a, __m512i b)
 {
   // CHECK-LABEL: test_mm512_alignr_epi32
@@ -8668,6 +8671,9 @@ __mmask16 test_knot_mask16(__mmask16 a) {
   // CHECK: bitcast <16 x i1> [[NOT]] to i16
   return _knot_mask16(a);
 }
+
+TEST_CONSTEXPR(_knot_mask16(0) == 0xFFFF);
+TEST_CONSTEXPR(_knot_mask16(0x12345) == 0xDCBA);
 
 __mmask16 test_kand_mask16(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: test_kand_mask16

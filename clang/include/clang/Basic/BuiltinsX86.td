@@ -1216,15 +1216,15 @@ let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def scatterdiv16si : X86Builtin<"void(void *, unsigned char, _Vector<8, long long int>, _Vector<8, int>, _Constant int)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def knotqi : X86Builtin<"unsigned char(unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr] in {
   def knothi : X86Builtin<"unsigned short(unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def knotsi : X86Builtin<"unsigned int(unsigned int)">;
   def knotdi : X86Builtin<"unsigned long long int(unsigned long long int)">;
 }

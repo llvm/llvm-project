@@ -14694,6 +14694,17 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return HandleMaskBinOp(
         [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
   }
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    APSInt Result = ~Val;
+    return Success(APValue(Result), E);
+  }
   }
 }
 
