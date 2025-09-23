@@ -3581,6 +3581,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
   // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
+  // TODO: Add an expression type for this variant with a negated mul
   if (!Sub && match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
                                               m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
