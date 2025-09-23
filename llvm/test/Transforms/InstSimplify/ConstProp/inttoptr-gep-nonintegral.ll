@@ -74,3 +74,72 @@ define ptr addrspace(3) @test_inttoptr_base_external() {
   %gep = getelementptr i8, ptr addrspace(3) %base, i8 1
   ret ptr addrspace(3) %gep
 }
+
+define <2 x ptr> @test_vec_null_base_normal() {
+; CHECK-LABEL: define <2 x ptr> @test_vec_null_base_normal() {
+; CHECK-NEXT:    ret <2 x ptr> getelementptr (i8, <2 x ptr> zeroinitializer, <2 x i16> <i16 -2, i16 -3>)
+;
+  %gep = getelementptr i8, <2 x ptr> <ptr null, ptr null>, <2 x i8> <i8 -2, i8 -3>
+  ret <2 x ptr> %gep
+}
+define <2 x ptr> @test_vec_inttoptr_base_normal() {
+; CHECK-LABEL: define <2 x ptr> @test_vec_inttoptr_base_normal() {
+; CHECK-NEXT:    ret <2 x ptr> getelementptr (i8, <2 x ptr> <ptr inttoptr (i16 -1 to ptr), ptr inttoptr (i16 -2 to ptr)>, <2 x i16> <i16 1, i16 2>)
+;
+  %base = inttoptr <2 x i16> <i16 -1, i16 -2> to <2 x ptr>
+  %gep = getelementptr i8, <2 x ptr> %base, <2 x i8> <i8 1, i8 2>
+  ret <2 x ptr> %gep
+}
+
+;; Transformation is fine for non-integral address space, but we can only change
+;; the index bits: (i8 -2 == i16 254)
+define <2 x ptr addrspace(1)> @test_vec_null_base_nonintegral() {
+; CHECK-LABEL: define <2 x ptr addrspace(1)> @test_vec_null_base_nonintegral() {
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> getelementptr (i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i8> <i8 -2, i8 -3>)
+;
+  %gep = getelementptr i8, <2 x ptr addrspace(1)> <ptr addrspace(1) null, ptr addrspace(1) null>, <2 x i8> <i8 -2, i8 -3>
+  ret <2 x ptr addrspace(1)> %gep
+}
+define <2 x ptr addrspace(1)> @test_vec_inttoptr_base_nonintegral() {
+; CHECK-LABEL: define <2 x ptr addrspace(1)> @test_vec_inttoptr_base_nonintegral() {
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> getelementptr (i8, <2 x ptr addrspace(1)> <ptr addrspace(1) inttoptr (i16 -1 to ptr addrspace(1)), ptr addrspace(1) inttoptr (i16 -2 to ptr addrspace(1))>, <2 x i8> <i8 1, i8 2>)
+;
+  %base = inttoptr <2 x i16> <i16 -1, i16 -2> to <2 x ptr addrspace(1)>
+  %gep = getelementptr i8, <2 x ptr addrspace(1)> %base, <2 x i8> <i8 1, i8 2>
+  ret <2 x ptr addrspace(1)> %gep
+}
+
+;; For unstable pointers we should avoid any introduction of inttoptr
+define <2 x ptr addrspace(2)> @test_vec_null_base_unstable() {
+; CHECK-LABEL: define <2 x ptr addrspace(2)> @test_vec_null_base_unstable() {
+; CHECK-NEXT:    ret <2 x ptr addrspace(2)> getelementptr (i8, <2 x ptr addrspace(2)> zeroinitializer, <2 x i8> <i8 -2, i8 -3>)
+;
+  %gep = getelementptr i8, <2 x ptr addrspace(2)> <ptr addrspace(2) null, ptr addrspace(2) null>, <2 x i8> <i8 -2, i8 -3>
+  ret <2 x ptr addrspace(2)> %gep
+}
+define <2 x ptr addrspace(2)> @test_vec_inttoptr_base_unstable() {
+; CHECK-LABEL: define <2 x ptr addrspace(2)> @test_vec_inttoptr_base_unstable() {
+; CHECK-NEXT:    ret <2 x ptr addrspace(2)> getelementptr (i8, <2 x ptr addrspace(2)> <ptr addrspace(2) inttoptr (i16 -1 to ptr addrspace(2)), ptr addrspace(2) inttoptr (i16 -2 to ptr addrspace(2))>, <2 x i8> <i8 1, i8 2>)
+;
+  %base = inttoptr <2 x i16> <i16 -1, i16 -2> to <2 x ptr addrspace(2)>
+  %gep = getelementptr i8, <2 x ptr addrspace(2)> %base, <2 x i8> <i8 1, i8 2>
+  ret <2 x ptr addrspace(2)> %gep
+}
+
+;; The same is true for pointers with external state: no new inttoptr
+define <2 x ptr addrspace(3)> @test_vec_null_base_external() {
+; CHECK-LABEL: define <2 x ptr addrspace(3)> @test_vec_null_base_external() {
+; CHECK-NEXT:    ret <2 x ptr addrspace(3)> getelementptr (i8, <2 x ptr addrspace(3)> zeroinitializer, <2 x i8> <i8 -2, i8 -3>)
+;
+  %gep = getelementptr i8, <2 x ptr addrspace(3)> <ptr addrspace(3) null, ptr addrspace(3) null>, <2 x i8> <i8 -2, i8 -3>
+  ret <2 x ptr addrspace(3)> %gep
+}
+
+define <2 x ptr addrspace(3)> @test_vec_inttoptr_base_external() {
+; CHECK-LABEL: define <2 x ptr addrspace(3)> @test_vec_inttoptr_base_external() {
+; CHECK-NEXT:    ret <2 x ptr addrspace(3)> getelementptr (i8, <2 x ptr addrspace(3)> <ptr addrspace(3) inttoptr (i16 -1 to ptr addrspace(3)), ptr addrspace(3) inttoptr (i16 -2 to ptr addrspace(3))>, <2 x i8> <i8 1, i8 2>)
+;
+  %base = inttoptr <2 x i16> <i16 -1, i16 -2> to <2 x ptr addrspace(3)>
+  %gep = getelementptr i8, <2 x ptr addrspace(3)> %base, <2 x i8> <i8 1, i8 2>
+  ret <2 x ptr addrspace(3)> %gep
+}

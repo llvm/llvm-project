@@ -960,7 +960,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   }
 
   if ((Ptr->isNullValue() || BaseIntVal != 0) &&
-      !DL.shouldAvoidIntToPtr(Ptr->getType())) {
+      !DL.mustNotIntroduceIntToPtr(Ptr->getType())) {
 
     // If the index size is smaller than the pointer size, add to the low
     // bits only.
