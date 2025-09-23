@@ -1223,8 +1223,9 @@ static void AddDotProductRequirements(const MachineInstr &MI,
 }
 
 void addInstrRequirements(const MachineInstr &MI,
-                          SPIRV::RequirementHandler &Reqs,
+                          SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
+  SPIRV::RequirementHandler &Reqs = MAI.Reqs;
   switch (MI.getOpcode()) {
   case SPIRV::OpMemoryModel: {
     int64_t Addr = MI.getOperand(0).getImm();
@@ -1758,22 +1759,25 @@ void addInstrRequirements(const MachineInstr &MI,
                          "SPV_INTEL_bindless_images",
                          false);
     SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-    SPIRV::AddressingModel::AddressingModel AddrModel;
-    unsigned PointerSize = ST.getPointerSize();
-    AddrModel = PointerSize == 32 ? SPIRV::AddressingModel::Physical32
-                                  : SPIRV::AddressingModel::Physical64;
+    SPIRV::AddressingModel::AddressingModel AddrModel = MAI.Addr;
     SPIRVType *TyDef = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
-    if (!(TyDef->getOpcode() == SPIRV::OpTypeImage &&
-          MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL) &&
-        !(TyDef->getOpcode() == SPIRV::OpTypeSampler &&
-          MI.getOpcode() == SPIRV::OpConvertHandleToSamplerINTEL) &&
-        !(TyDef->getOpcode() == SPIRV::OpTypeSampledImage &&
-          MI.getOpcode() == SPIRV::OpConvertHandleToSampledImageINTEL))
-      report_fatal_error("Incorrect return type of the instruction", false);
-    SPIRVType *SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
-    if (SpvTy->getOpcode() != SPIRV::OpTypeInt) {
-      SpvTy = GR->getSPIRVTypeForVReg(SpvTy->getOperand(1).getReg());
+    if (MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL &&
+        TyDef->getOpcode() != SPIRV::OpTypeImage) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToImageINTEL",
+                         false);
+    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSamplerINTEL &&
+               TyDef->getOpcode() != SPIRV::OpTypeSampler) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToSamplerINTEL",
+                         false);
+    } else if (MI.getOpcode() == SPIRV::OpConvertHandleToSampledImageINTEL &&
+               TyDef->getOpcode() != SPIRV::OpTypeSampledImage) {
+      report_fatal_error("Incorrect return type for the instruction "
+                         "OpConvertHandleToSampledImageINTEL",
+                         false);
     }
+    SPIRVType *SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
     unsigned Bitwidth = GR->getScalarOrVectorBitWidth(SpvTy);
     if (!(Bitwidth == 32 && AddrModel == SPIRV::AddressingModel::Physical32) &&
         !(Bitwidth == 64 && AddrModel == SPIRV::AddressingModel::Physical64)) {
@@ -1924,7 +1928,7 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       continue;
     for (const MachineBasicBlock &MBB : *MF)
       for (const MachineInstr &MI : MBB)
-        addInstrRequirements(MI, MAI.Reqs, ST);
+        addInstrRequirements(MI, MAI, ST);
   }
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
