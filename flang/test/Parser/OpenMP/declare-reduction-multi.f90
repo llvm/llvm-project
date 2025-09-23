@@ -76,10 +76,11 @@ program omp_examples
 !CHECK: !$OMP PARALLEL DO  REDUCTION(+: sum) 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'sum
+!PARSE-TREE: Flags = None
 !PARSE-TREE: DoConstruct
   do i = 1, n
      sum%r = sum%r + values(i)%r
@@ -90,10 +91,11 @@ program omp_examples
 !CHECK: !$OMP PARALLEL DO  REDUCTION(*: prod)
 !PARSE-TREE:  ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
 !PARSE-TREE: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'prod'
+!PARSE-TREE: Flags = None
 !PARSE-TREE: DoConstruct
   do i = 1, n
      prod%r = prod%r * (values(i)%r+0.6)
@@ -104,10 +106,11 @@ program omp_examples
 !CHECK:  $OMP PARALLEL DO  REDUCTION(max: big) 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'max'
 !PARSE-TREE: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'big'
+!PARSE-TREE: Flags = None
 !PARSE-TREE: DoConstruct
   do i = 1, n
      big = mymax(values(i), big)
@@ -118,10 +121,11 @@ program omp_examples
 !CHECK: !$OMP PARALLEL DO  REDUCTION(min: small)
 !CHECK-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !CHECK-TREE: OmpBeginLoopDirective
-!CHECK-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
+!CHECK-TREE: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !CHECK-TREE: OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !CHECK-TREE: Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'min'
 !CHECK-TREE: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'small'
+!PARSE-TREE: Flags = None
 !CHECK-TREE: DoConstruct
   do i = 1, n
      small%r = min(values(i)%r, small%r)

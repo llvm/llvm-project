@@ -662,7 +662,7 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   // in the output buffer, but relocateAlloc() still works because
   // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *s : sections)
-    ctx.target->relocateAlloc(*s, buf);
+    ctx.target->relocateEh(*s, buf);
 
   if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
     getPartition(ctx).ehFrameHdr->write();
