@@ -118,7 +118,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   .Case(#Name, static_cast<unsigned>(OMPC_DEFAULTMAP_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
                         .Default(OMPC_DEFAULTMAP_unknown);
-    if (LangOpts.OpenMP < 60 && Type == OMPC_DEFAULTMAP_MODIFIER_storage)
+    if (LangOpts.OpenMP < 60 && (Type == OMPC_DEFAULTMAP_MODIFIER_storage ||
+                                 Type == OMPC_DEFAULTMAP_MODIFIER_private))
       return OMPC_DEFAULTMAP_MODIFIER_unknown;
     return Type;
   }
@@ -220,6 +221,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   }
   case OMPC_unknown:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_if:
   case OMPC_final:
   case OMPC_safelen:
@@ -564,6 +566,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     llvm_unreachable("Invalid OpenMP 'num_threads' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_if:
   case OMPC_final:
   case OMPC_safelen:
