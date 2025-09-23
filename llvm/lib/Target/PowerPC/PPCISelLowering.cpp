@@ -15327,6 +15327,12 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
     }
   }
 
+  // Convert PromOps to handles before doing any RAUW operations, as these
+  // may CSE with existing nodes, deleting the originals.
+  std::list<HandleSDNode> PromOpHandles;
+  for (auto &PromOp : PromOps)
+    PromOpHandles.emplace_back(PromOp);
+
   // Replace all inputs, either with the truncation operand, or a
   // truncation or extension to the final output type.
   for (unsigned i = 0, ie = Inputs.size(); i != ie; ++i) {
@@ -15349,10 +15355,6 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       DAG.ReplaceAllUsesOfValueWith(Inputs[i],
         DAG.getAnyExtOrTrunc(InSrc, dl, N->getValueType(0)));
   }
-
-  std::list<HandleSDNode> PromOpHandles;
-  for (auto &PromOp : PromOps)
-    PromOpHandles.emplace_back(PromOp);
 
   // Replace all operations (these are all the same, but have a different
   // (promoted) return type). DAG.getNode will validate that the types of
