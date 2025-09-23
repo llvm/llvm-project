@@ -212,15 +212,10 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
 DenseMap<CachedHashStringRef, MemoryBufferRef> macho::cachedReads;
 // Open a given file path and return it as a memory-mapped file.
 std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
-  static std::mutex mutex;
-  mutex.lock();
   CachedHashStringRef key(path);
   auto entry = cachedReads.find(key);
-  if (entry != cachedReads.end()) {
-    mutex.unlock();
+  if (entry != cachedReads.end())
     return entry->second;
-  }
-  mutex.unlock();
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
       MemoryBuffer::getFile(path, false, /*RequiresNullTerminator=*/false);
@@ -229,23 +224,18 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
     return std::nullopt;
   }
 
-  mutex.lock();
   std::unique_ptr<MemoryBuffer> &mb = *mbOrErr;
   MemoryBufferRef mbref = mb->getMemBufferRef();
   make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take mb ownership
-  mutex.unlock();
 
   // If this is a regular non-fat file, return it.
   const char *buf = mbref.getBufferStart();
   const auto *hdr = reinterpret_cast<const fat_header *>(buf);
   if (mbref.getBufferSize() < sizeof(uint32_t) ||
       read32be(&hdr->magic) != FAT_MAGIC) {
-    mutex.lock();
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
-    cachedReads[key] = mbref;
-    mutex.unlock();
-    return mbref;
+    return cachedReads[key] = mbref;
   }
 
   llvm::BumpPtrAllocator &bAlloc = lld::bAlloc();
@@ -282,13 +272,10 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
     uint32_t size = read32be(&arch[i].size);
     if (offset + size > mbref.getBufferSize())
       error(path + ": slice extends beyond end of file");
-    mutex.lock();
     if (tar)
       tar->append(relativeToRoot(path), mbref.getBuffer());
-    mbref = MemoryBufferRef(StringRef(buf + offset, size), path.copy(bAlloc));
-    cachedReads[key] = mbref;
-    mutex.unlock();
-    return mbref;
+    return cachedReads[key] = MemoryBufferRef(StringRef(buf + offset, size),
+                                              path.copy(bAlloc));
   }
 
   auto targetArchName = getArchName(target->cpuType, target->cpuSubtype);
