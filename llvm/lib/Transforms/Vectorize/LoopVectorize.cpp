@@ -6901,11 +6901,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        if (none_of(FOR->users(), [](VPUser *U) {
-              auto *VPI = dyn_cast<VPInstruction>(U);
-              return VPI && VPI->getOpcode() ==
-                                VPInstruction::FirstOrderRecurrenceSplice;
-            }))
+        using namespace VPlanPatternMatch;
+        if (none_of(FOR->users(),
+                    match_fn(m_VPInstruction<
+                             VPInstruction::FirstOrderRecurrenceSplice>())))
           return true;
       }
       // The VPlan-based cost model is more accurate for partial reduction and

@@ -1149,11 +1149,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     CmpPredicate Pred;
     if (match(A, m_Cmp(Pred, m_VPValue(), m_VPValue()))) {
       auto *Cmp = cast<VPRecipeWithIRFlags>(A);
-      if (all_of(Cmp->users(), [&Cmp](VPUser *U) {
-            return match(U, m_CombineOr(m_Not(m_Specific(Cmp)),
-                                        m_Select(m_Specific(Cmp), m_VPValue(),
-                                                 m_VPValue())));
-          })) {
+      if (all_of(Cmp->users(),
+                 match_fn(m_CombineOr(
+                     m_Not(m_Specific(Cmp)),
+                     m_Select(m_Specific(Cmp), m_VPValue(), m_VPValue()))))) {
         Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
         for (VPUser *U : to_vector(Cmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);

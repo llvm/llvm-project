@@ -349,10 +349,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  if (UseBlockFrequencyInfo && F.hasProfileData())
-    PA.preserve<BlockFrequencyAnalysis>();
-  if (UseBranchProbabilityInfo && F.hasProfileData())
-    PA.preserve<BranchProbabilityAnalysis>();
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;

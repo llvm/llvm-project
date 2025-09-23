@@ -553,15 +553,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
   };
 
-  if (fir::isa_trivial(unwrappedTy)) {
-    auto declareOp = getDeclareOpForType(unwrappedTy);
-    if (initVal) {
-      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
-      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
-    }
-    retVal = declareOp.getBase();
-  } else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
       if (seqTy.hasDynamicExtents()) {
@@ -640,6 +632,23 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     if (initVal) {
       hlfir::AssignOp::create(builder, loc, initVal, retVal);
     }
+  } else if (llvm::isa<fir::BoxCharType, fir::CharacterType>(unwrappedTy)) {
+    TODO(loc, "Character type for OpenACC private-like recipe");
+  } else {
+    assert((fir::isa_trivial(unwrappedTy) ||
+            llvm::isa<fir::RecordType>(unwrappedTy)) &&
+           "expected numerical, logical, and derived type without length "
+           "parameters");
+    auto declareOp = getDeclareOpForType(unwrappedTy);
+    if (initVal && fir::isa_trivial(unwrappedTy)) {
+      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
+      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
+    } else if (initVal) {
+      // hlfir.assign with temporary LHS flag should just do it. Not implemented
+      // because not clear it is needed, so cannot be tested.
+      TODO(loc, "initial value for derived type in private-like recipe");
+    }
+    retVal = declareOp.getBase();
   }
   return retVal;
 }
