@@ -1,3 +1,8 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (c) 2025.
+
 from __future__ import annotations
 from pathlib import Path
 from datetime import datetime
@@ -33,6 +38,8 @@ def dynamic_metadata(
     cmake_version_path = llvm_src_root / "cmake/Modules/LLVMVersion.cmake"
     if not cmake_version_path.exists():
         cmake_version_path = llvm_src_root / "llvm/CMakeLists.txt"
+    if not cmake_version_path.exists():
+        return llvm_datetime
     cmake_txt = open(cmake_version_path).read()
     llvm_version = []
     for v in ["LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH"]:
