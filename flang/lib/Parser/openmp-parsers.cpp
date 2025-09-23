@@ -1716,9 +1716,9 @@ TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
-    verbatim("DECLARE REDUCTION"_tok) || verbatim("DECLARE_REDUCTION"_tok),
-    "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
-    maybe(Parser<OmpClauseList>{}))))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_reduction)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // declare-target with list
 TYPE_PARSER(sourced(construct<OmpDeclareTargetWithList>(
