@@ -22,10 +22,10 @@ namespace detail {
 LogicalResult verifyMemorySpaceCastOpInterface(Operation *op);
 
 /// Tries to bubble-down inplace a `MemorySpaceCastOpInterface` operation
-/// referenced by `operand`. On success, it returns `results` and true. It
+/// referenced by `operand`. On success, it returns `std::nullopt`. It
 /// returns failure if `operand` doesn't reference a
 /// `MemorySpaceCastOpInterface` op.
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 bubbleDownInPlaceMemorySpaceCastImpl(OpOperand &operand, ValueRange results);
 } // namespace detail
 } // namespace mlir

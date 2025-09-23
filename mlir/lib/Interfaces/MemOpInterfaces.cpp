@@ -55,7 +55,7 @@ LogicalResult mlir::detail::verifyMemorySpaceCastOpInterface(Operation *op) {
   return success();
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(OpOperand &operand,
                                                    ValueRange results) {
   MemorySpaceCastOpInterface castOp =
@@ -67,7 +67,7 @@ mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(OpOperand &operand,
 
   // Modify the op.
   operand.set(castOp.getSourcePtr());
-  return std::make_pair(llvm::to_vector_of<Value>(results), true);
+  return std::optional<SmallVector<Value>>();
 }
 
 #include "mlir/Interfaces/MemOpInterfaces.cpp.inc"

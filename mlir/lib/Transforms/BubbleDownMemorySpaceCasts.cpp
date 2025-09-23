@@ -32,15 +32,15 @@ struct BubbleDownCastsPattern
 
   LogicalResult matchAndRewrite(MemorySpaceCastConsumerOpInterface op,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<std::pair<SmallVector<Value>, bool>> results =
+    FailureOr<std::optional<SmallVector<Value>>> results =
         op.bubbleDownCasts(rewriter);
     if (failed(results))
       return failure();
-    if (results->second) {
+    if (!results->has_value()) {
       rewriter.modifyOpInPlace(op, []() {});
       return success();
     }
-    rewriter.replaceOp(op, results->first);
+    rewriter.replaceOp(op, **results);
     return success();
   }
 };

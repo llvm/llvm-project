@@ -26,8 +26,9 @@ def MemorySpaceCastConsumerOpInterface :
   let methods = [
     InterfaceMethod<[{
         Attempt to bubble-down the incoming cast-like operands. On success
-        returns any new results, and whether the operation was modified in
-        place, otherwise it returns failure.
+        returns a `std::optional<SmallVector<Value>>`, otherwise it returns
+        failure. If the optional is `std::nullopt` then the cast was performed
+        in place, otherwise the method returns a list of replacement values.
         If new results are produced, these must be compatible with the original
         operation results.
 
@@ -44,7 +45,7 @@ def MemorySpaceCastConsumerOpInterface :
         Finally, any implementations of this method have to guarantee that the
         IR remains valid at all times.
       }],
-      "::llvm::FailureOr<std::pair<::llvm::SmallVector<::mlir::Value>, bool>>",
+      "::llvm::FailureOr<std::optional<::llvm::SmallVector<::mlir::Value>>>",
       "bubbleDownCasts",
       (ins "::mlir::OpBuilder &":$builder)
     >,

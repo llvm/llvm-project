@@ -144,7 +144,7 @@ getMemorySpaceCastInfo(BaseMemRefType resultTy, Value src) {
 /// Implementation of `bubbleDownCasts` method for memref operations that
 /// return a single memref result.
 template <typename ConcreteOpTy>
-static FailureOr<std::pair<SmallVector<Value>, bool>>
+static FailureOr<std::optional<SmallVector<Value>>>
 bubbleDownCastsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
                                  OpOperand &src) {
   auto [castOp, tgtTy, resTy] = getMemorySpaceCastInfo(op.getType(), src.get());
@@ -166,7 +166,8 @@ bubbleDownCastsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
   MemorySpaceCastOpInterface result = castOp.cloneMemorySpaceCastOp(
       builder, tgtTy,
       cast<TypedValue<PtrLikeTypeInterface>>(newOp.getResult()));
-  return std::make_pair(SmallVector<Value>({result.getTargetPtr()}), false);
+  return std::optional<SmallVector<Value>>(
+      SmallVector<Value>({result.getTargetPtr()}));
 }
 
 //===----------------------------------------------------------------------===//
@@ -600,7 +601,7 @@ OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
   return getMemref();
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 AssumeAlignmentOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getMemrefMutable());
 }
@@ -773,7 +774,7 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 CastOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
 }
@@ -1669,7 +1670,7 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   return OpFoldResult();
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 LoadOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
                                                             getResult());
@@ -1740,8 +1741,8 @@ MemorySpaceCastOpInterface MemorySpaceCastOp::cloneMemorySpaceCastOp(
   return MemorySpaceCastOp::create(b, getLoc(), tgt, src);
 }
 
+/// The only cast we recognize as promotable is to the generic space.
 bool MemorySpaceCastOp::isSourcePromotable() {
-  // The only cast we recognize as promotable is to the generic space.
   return getDest().getType().getMemorySpace() == nullptr;
 }
 
@@ -2141,7 +2142,7 @@ void ReinterpretCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ReinterpretCastOpExtractStridedMetadataFolder>(context);
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 ReinterpretCastOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
 }
@@ -2453,7 +2454,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 ExpandShapeOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSrcMutable());
 }
@@ -2679,7 +2680,7 @@ OpFoldResult CollapseShapeOp::fold(FoldAdaptor adaptor) {
                                                        adaptor.getOperands());
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 CollapseShapeOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSrcMutable());
 }
@@ -2724,7 +2725,7 @@ LogicalResult ReshapeOp::verify() {
   return success();
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 ReshapeOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
 }
@@ -2746,7 +2747,7 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
   return foldMemRefCast(*this, getValueToStore());
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 StoreOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
                                                             ValueRange());
@@ -3408,7 +3409,7 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 SubViewOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
 }
@@ -3513,7 +3514,7 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
   return {};
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 TransposeOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getInMutable());
 }
@@ -3661,7 +3662,7 @@ void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 ViewOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
 }
@@ -3711,7 +3712,7 @@ OpFoldResult AtomicRMWOp::fold(FoldAdaptor adaptor) {
   return OpFoldResult();
 }
 
-FailureOr<std::pair<SmallVector<Value>, bool>>
+FailureOr<std::optional<SmallVector<Value>>>
 AtomicRMWOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getMemrefMutable(),
                                                             getResult());
