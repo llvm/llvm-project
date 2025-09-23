@@ -1596,6 +1596,10 @@ public:
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
 
+    // Outer loop is used as part of later cost calculations (e.g. to
+    // determine if runtime checks are loop-invariant and can be hoisted).
+    OuterLoop = L->getParentLoop();
+
     // Use SplitBlock to create blocks for SCEV & memory runtime checks to
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
     // may be used by SCEVExpander. The blocks will be un-linked from their
@@ -1639,6 +1643,11 @@ public:
       assert(MemRuntimeCheckCond &&
              "no RT checks generated although RtPtrChecking "
              "claimed checks are required");
+      // Compute SCEV while the block is reachable.
+      // After unlinking, SCEV returns unknown/poison (constant -> invariant),
+      // which makes getCost() wrongly discount hoisted checks.
+      if (OuterLoop)
+        PSE.getSE()->getSCEV(MemRuntimeCheckCond);
     }
 
     SCEVExp.eraseDeadInstructions(SCEVCheckCond);
@@ -1678,8 +1687,6 @@ public:
       LI->removeBlock(SCEVCheckBlock);
     }
 
-    // Outer loop is used as part of the later cost calculations.
-    OuterLoop = L->getParentLoop();
   }
 
   InstructionCost getCost() {
