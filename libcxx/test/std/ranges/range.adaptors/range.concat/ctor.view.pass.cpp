@@ -9,7 +9,9 @@
 // REQUIRES: std-at-least-c++26
 
 #include <cassert>
+#include <list>
 #include <ranges>
+#include <vector>
 
 #include "test_macros.h"
 #include "types.h"
@@ -62,6 +64,18 @@ constexpr bool test() {
     auto it = v.begin();
     assert(*it++ == 2); // one move from the local variable to parameter, one move from parameter to member
     assert(*it++ == 1);
+  }
+
+  // differnt types
+  {
+    std::vector<int> v1{1,2};
+    std::list<int> v2{3,4};
+    std::ranges::concat_view v{v1, v2};
+    auto it = v.begin();
+    assert(*it++ == 1);
+    assert(*it++ == 2);
+    assert(*it++ == 3);
+    assert(*it++ == 4);
   }
 
   return true;
