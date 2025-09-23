@@ -81,7 +81,7 @@ static cl::opt<unsigned>
                               "dependency analysis (default = 200)"));
 
 static cl::opt<unsigned> CacheGlobalLimit(
-    "cache-global-limit", cl::Hidden, cl::init(10000),
+    "memdep-cache-global-limit", cl::Hidden, cl::init(10000),
     cl::desc("The max number of entries allowed in a cache (default = 10000)"));
 
 // Limit on the number of memdep results to process.
@@ -1147,9 +1147,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   }
 
   // If the size of this cache has surpassed the global limit, stop here.
-  if (Cache->size() > CacheGlobalLimit) {
+  if (Cache->size() > CacheGlobalLimit)
     return false;
-  }
 
   // Otherwise, either this is a new block, a block with an invalid cache
   // pointer or one that we're about to invalidate by putting more info into
