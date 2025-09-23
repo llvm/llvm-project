@@ -254,7 +254,8 @@ using UnrollVectorOpFn =
     function_ref<Value(PatternRewriter &, Location, VectorType, int64_t)>;
 
 LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
-                             UnrollVectorOpFn unrollFn);
+                             UnrollVectorOpFn unrollFn,
+                             VectorType vectorTy = nullptr);
 
 /// Generic utility for unrolling values of type vector<NxAxBx...>
 /// to N values of type vector<AxBx...> using vector.extract. If the input
