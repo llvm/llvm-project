@@ -4567,18 +4567,18 @@ define void @test_call(bfloat %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    scratch_store_b32 off, v4, s33 ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store@gotpcrel+4
 ; GFX1250-NEXT:    v_writelane_b32 v4, s30, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1250-NEXT:    v_writelane_b32 v4, s31, 1
+; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store@gotpcrel+4
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    scratch_store_b16 v1, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
-; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -4826,18 +4826,18 @@ define void @test_call_v2bf16(<2 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    scratch_store_b32 off, v4, s33 ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX1250-NEXT:    v_writelane_b32 v4, s30, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1250-NEXT:    v_writelane_b32 v4, s31, 1
+; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    scratch_store_b32 v1, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v4, 1
-; GFX1250-NEXT:    v_readlane_b32 s30, v4, 0
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5101,21 +5101,21 @@ define void @test_call_v3bf16(<3 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250-NEXT:    v_writelane_b32 v5, s30, 0
+; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX1250-NEXT:    v_writelane_b32 v5, s31, 1
 ; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
-; GFX1250-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, v2
-; GFX1250-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    scratch_store_b16 v4, v1, off offset:4 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 v4, v0, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5391,19 +5391,19 @@ define void @test_call_v4bf16(<4 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
+; GFX1250-NEXT:    v_writelane_b32 v5, s30, 0
+; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
+; GFX1250-NEXT:    v_writelane_b32 v5, s31, 1
 ; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
-; GFX1250-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, v2
-; GFX1250-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    scratch_store_b64 v4, v[0:1], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -5732,18 +5732,18 @@ define void @test_call_v8bf16(<8 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    scratch_store_b32 off, v5, s33 ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX1250-NEXT:    v_writelane_b32 v5, s30, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1250-NEXT:    v_writelane_b32 v5, s31, 1
+; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    scratch_store_b128 v4, v[0:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v5, 1
-; GFX1250-NEXT:    v_readlane_b32 s30, v5, 0
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -6184,20 +6184,20 @@ define void @test_call_v16bf16(<16 x bfloat> %in, ptr addrspace(5) %out) {
 ; GFX1250-NEXT:    scratch_store_b32 off, v9, s33 ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
-; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
 ; GFX1250-NEXT:    v_writelane_b32 v9, s30, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_add_co_i32 s32, s32, 16
 ; GFX1250-NEXT:    v_writelane_b32 v9, s31, 1
+; GFX1250-NEXT:    s_get_pc_i64 s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_arg_store_v2bf16@gotpcrel+4
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
+; GFX1250-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX1250-NEXT:    scratch_store_b128 v8, v[4:7], off offset:16 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    scratch_store_b128 v8, v[0:3], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s31, v9, 1
-; GFX1250-NEXT:    v_readlane_b32 s30, v9, 0
 ; GFX1250-NEXT:    s_mov_b32 s32, s33
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_xor_saveexec_b32 s0, -1
@@ -34798,6 +34798,13 @@ define bfloat @v_copysign_bf16_bf16(bfloat %mag, bfloat %sign) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_bf16_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   ret bfloat %op
 }
@@ -34868,6 +34875,13 @@ define bfloat @v_copysign_bf16_s_bf16(bfloat %mag, bfloat inreg %sign) {
 ; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, v0, s0
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_bf16_s_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, v0, s0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   ret bfloat %op
 }
@@ -34938,6 +34952,13 @@ define bfloat @v_copysign_s_bf16_bf16(bfloat inreg %mag, bfloat %sign) {
 ; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_s_bf16_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   ret bfloat %op
 }
@@ -35012,6 +35033,15 @@ define bfloat @v_copysign_bf16_f32(bfloat %mag, float %sign.f32) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_bf16_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sign = fptrunc float %sign.f32 to bfloat
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   ret bfloat %op
@@ -35087,6 +35117,15 @@ define bfloat @v_copysign_bf16_f64(bfloat %mag, double %sign.f64) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_bf16_f64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sign = fptrunc double %sign.f64 to bfloat
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   ret bfloat %op
@@ -35147,6 +35186,13 @@ define bfloat @v_copysign_bf16_f16(bfloat %mag, half %sign.f16) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_bf16_f16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sign = bitcast half %sign.f16 to bfloat
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   ret bfloat %op
@@ -35232,6 +35278,16 @@ define amdgpu_ps i32 @s_copysign_bf16_bf16(bfloat inreg %mag, bfloat inreg %sign
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_bf16_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   %cast = bitcast bfloat %op to i16
   %zext = zext i16 %cast to i32
@@ -35318,6 +35374,16 @@ define amdgpu_ps i32 @s_copysign_bf16_f32(bfloat inreg %mag, float inreg %sign.f
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_bf16_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_lshrrev_b32_e64 v0, 16, s1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %sign = fptrunc float %sign.f32 to bfloat
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   %cast = bitcast bfloat %op to i16
@@ -35405,6 +35471,16 @@ define amdgpu_ps i32 @s_copysign_bf16_f64(bfloat inreg %mag, double inreg %sign.
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_bf16_f64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_lshrrev_b32_e64 v0, 16, s2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %sign = fptrunc double %sign.f64 to bfloat
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   %cast = bitcast bfloat %op to i16
@@ -35493,6 +35569,16 @@ define amdgpu_ps i32 @s_copysign_bf16_f16(bfloat inreg %mag, half inreg %sign.f1
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_bf16_f16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %sign = bitcast half %sign.f16 to bfloat
   %op = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %sign)
   %cast = bitcast bfloat %op to i16
@@ -35564,6 +35650,15 @@ define float @v_copysign_f32_bf16(float %mag, bfloat %sign.bf16) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v1
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_f32_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sign = fpext bfloat %sign.bf16 to float
   %op = call float @llvm.copysign.f32(float %mag, float %sign)
   ret float %op
@@ -35638,6 +35733,14 @@ define amdgpu_ps i32 @s_copysign_f32_bf16(float inreg %mag, bfloat inreg %sign.b
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fffffff, s0, v0
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_f32_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_lshlrev_b32_e64 v0, 16, s1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fffffff, s0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %sign = fpext bfloat %sign.bf16 to float
   %op = call float @llvm.copysign.f32(float %mag, float %sign)
   %cast = bitcast float %op to i32
@@ -35704,6 +35807,13 @@ define half @v_copysign_f16_bf16(half %mag, bfloat %sign.bf16) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_f16_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sign = bitcast bfloat %sign.bf16 to half
   %op = call half @llvm.copysign.f16(half %mag, half %sign)
   ret half %op
@@ -35795,6 +35905,16 @@ define amdgpu_ps i32 @s_copysign_f16_bf16(half inreg %mag, bfloat inreg %sign.bf
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_f16_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %sign = bitcast bfloat %sign.bf16 to half
   %op = call half @llvm.copysign.f16(half %mag, half %sign)
   %cast = bitcast half %op to i16
@@ -35866,6 +35986,15 @@ define double @v_copysign_f64_bf16(double %mag, bfloat %sign.bf16) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v2
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: v_copysign_f64_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v2
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %sign = fpext bfloat %sign.bf16 to double
   %op = call double @llvm.copysign.f64(double %mag, double %sign)
   ret double %op
@@ -35940,6 +36069,14 @@ define amdgpu_ps <2 x i32> @s_copysign_f64_bf16(double inreg %mag, bfloat inreg 
 ; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fffffff, s1, v0
 ; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX11FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: s_copysign_f64_bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_lshlrev_b32_e64 v0, 16, s2
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fffffff, s1, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX1250-NEXT:    ; return to shader part epilog
   %sign = fpext bfloat %sign.bf16 to double
   %op = call double @llvm.copysign.f64(double %mag, double %sign)
   %cast = bitcast double %op to <2 x i32>

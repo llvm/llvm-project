@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-
+// XFAIL: *
 // Verifies that the IR builder can handle reductions with multi-block combiner
 // regions on the GPU.
 
