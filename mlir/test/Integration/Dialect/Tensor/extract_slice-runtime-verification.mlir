@@ -8,6 +8,17 @@
 // RUN:     -shared-libs=%tlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
+// RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN:     -buffer-deallocation-pipeline=private-function-dynamic-ownership \
+// RUN:     -test-cf-assert \
+// RUN:     -convert-scf-to-cf \
+// RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:     -shared-libs=%tlir_runner_utils 2>&1 | \
+// RUN: FileCheck %s
+
 func.func @extract_slice(%tensor: tensor<1xf32>, %offset: index) {
     tensor.extract_slice %tensor[%offset] [1] [1] : tensor<1xf32> to tensor<1xf32>
     return

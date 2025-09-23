@@ -10,7 +10,7 @@
 #include <clc/math/math.h>
 #include <clc/opencl/math/fma.h>
 
-#define FUNCTION fma
+#define __CLC_FUNCTION fma
 #define __CLC_BODY <clc/shared/ternary_def.inc>
 
 #include <clc/math/gentype.inc>

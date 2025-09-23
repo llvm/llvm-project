@@ -144,17 +144,22 @@ Error MustacheHTMLGenerator::generateDocs(
     } else
       return JSONGenerator.takeError();
   }
+  SmallString<128> JSONPath;
+  sys::path::native(RootDir.str() + "/json", JSONPath);
 
   StringMap<json::Value> JSONFileMap;
   {
     llvm::TimeTraceScope TS("Iterate JSON files");
     std::error_code EC;
-    sys::fs::directory_iterator JSONIter(RootDir, EC);
+    sys::fs::directory_iterator JSONIter(JSONPath, EC);
     std::vector<json::Value> JSONFiles;
     JSONFiles.reserve(Infos.size());
     if (EC)
       return createStringError("Failed to create directory iterator.");
 
+    SmallString<128> HTMLDirPath(RootDir.str() + "/html/");
+    if (auto EC = sys::fs::create_directories(HTMLDirPath))
+      return createFileError(HTMLDirPath, EC);
     while (JSONIter != sys::fs::directory_iterator()) {
       if (EC)
         return createFileError("Failed to iterate: " + JSONIter->path(), EC);
@@ -177,14 +182,15 @@ Error MustacheHTMLGenerator::generateDocs(
         return Parsed.takeError();
 
       std::error_code FileErr;
-      SmallString<16> HTMLPath(Path.begin(), Path.end());
-      sys::path::replace_extension(HTMLPath, "html");
-      raw_fd_ostream InfoOS(HTMLPath, FileErr, sys::fs::OF_None);
+      SmallString<128> HTMLFilePath(HTMLDirPath);
+      sys::path::append(HTMLFilePath, sys::path::filename(Path));
+      sys::path::replace_extension(HTMLFilePath, "html");
+      raw_fd_ostream InfoOS(HTMLFilePath, FileErr, sys::fs::OF_None);
       if (FileErr)
         return createFileOpenError(Path, FileErr);
 
-      if (Error Err = generateDocForJSON(*Parsed, sys::path::stem(HTMLPath),
-                                         HTMLPath, InfoOS, CDCtx))
+      if (Error Err = generateDocForJSON(*Parsed, sys::path::stem(HTMLFilePath),
+                                         HTMLFilePath, InfoOS, CDCtx))
         return Err;
       JSONIter.increment(EC);
     }

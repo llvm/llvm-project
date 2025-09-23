@@ -37,6 +37,10 @@ enum NodeType : unsigned {
   // Select
   SELECT_CC,
 
+  // Branch
+  BR_CC,
+  BRCOND,
+
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
   SLL_W,
@@ -53,7 +57,10 @@ enum NodeType : unsigned {
   MOD_WU,
 
   // FPR<->GPR transfer operations
+  MOVGR2FR_W,
   MOVGR2FR_W_LA64,
+  MOVGR2FR_D,
+  MOVGR2FR_D_LO_HI,
   MOVFR2GR_S_LA64,
   MOVFCSR2GR,
   MOVGR2FCSR,
@@ -141,6 +148,9 @@ enum NodeType : unsigned {
   VREPLVEI,
   VREPLGR2VR,
   XVPERMI,
+  XVPERM,
+  XVREPLVE0,
+  XVREPLVE0Q,
 
   // Extended vector element extraction
   VPICK_SEXT_ELT,
@@ -176,6 +186,9 @@ enum NodeType : unsigned {
   XVMSKGEZ,
   XVMSKEQZ,
   XVMSKNEZ,
+
+  // Vector Horizontal Addition with Widening‌
+  VHADDW
 
   // Intrinsic operations end =============================================
 };
@@ -330,7 +343,7 @@ private:
                                    unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
                                    ISD::ArgFlagsTy ArgFlags, CCState &State,
-                                   bool IsFixed, bool IsRet, Type *OrigTy);
+                                   bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -382,10 +395,14 @@ private:
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

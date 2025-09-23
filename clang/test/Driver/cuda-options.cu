@@ -243,10 +243,10 @@
 
 // INCLUDES-DEVICE:fatbinary
 // INCLUDES-DEVICE-DAG: "--create" "[[FATBINARY:[^"]*]]"
-// INCLUDES-DEVICE-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE]]"
-// INCLUDES-DEVICE-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE]]"
-// INCLUDES-DEVICE2-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE2]]"
-// INCLUDES-DEVICE2-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE2]]"
+// INCLUDES-DEVICE-DAG: "--image3=kind=elf,sm={{[0-9]+}},file=[[CUBINFILE]]"
+// INCLUDES-DEVICE-DAG: "--image3=kind=ptx,sm={{[0-9]+}},file=[[PTXFILE]]"
+// INCLUDES-DEVICE2-DAG: "--image3=kind=elf,sm={{[0-9]+}},file=[[CUBINFILE2]]"
+// INCLUDES-DEVICE2-DAG: "--image3=kind=ptx,sm={{[0-9]+}},file=[[PTXFILE2]]"
 
 // Match host-side preprocessor job with -save-temps.
 // HOST-SAVE: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -288,9 +288,9 @@
 
 // FATBIN-COMMON:fatbinary
 // FATBIN-COMMON: "--create" "[[FATBINARY:[^"]*]]"
-// FATBIN-COMMON: "--image=profile=sm_52,file=
-// PTX-SM52: "--image=profile=compute_52,file=
-// NOPTX-SM52-NOT: "--image=profile=compute_52,file=
-// FATBIN-COMMON: "--image=profile=sm_60,file=
-// PTX-SM60: "--image=profile=compute_60,file=
-// NOPTX-SM60-NOT: "--image=profile=compute_60,file=
+// FATBIN-COMMON: "--image3=kind=elf,sm=52,file=
+// PTX-SM52: "--image3=kind=ptx,sm=52,file=
+// NOPTX-SM52-NOT: "--image3=kind=ptx,sm=52,file=
+// FATBIN-COMMON: "--image3=kind=elf,sm=60,file=
+// PTX-SM60: "--image3=kind=ptx,sm=60,file=
+// NOPTX-SM60-NOT: "--image3=kind=ptx,sm=60,file=

@@ -142,14 +142,12 @@ for.cond.cleanup:
 }
 
 
-; TODO: Combine the sbfx(cset) into a csetm
 define i32 @issue_121372(<4 x i32> %v) {
 ; CHECK-LABEL: issue_121372:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx w8, w8, #0, #1
+; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    csetm w0, lt
 ; CHECK-NEXT:    ret

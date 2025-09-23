@@ -553,16 +553,14 @@ TEST(DIBuilder, FixedPointType) {
   EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 }
 
-TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
+TEST(DbgAssignRecordTest, replaceVariableLocationOp) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define dso_local void @fun(i32 %v1, ptr %p1, ptr %p2) !dbg !7 {
     entry:
-      call void @llvm.dbg.assign(metadata i32 %v1, metadata !14, metadata !DIExpression(), metadata !17, metadata ptr %p1, metadata !DIExpression()), !dbg !16
+        #dbg_assign(i32 %v1, !14, !DIExpression(), !17, ptr %p1, !DIExpression(), !16)
       ret void
     }
-
-    declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
     !llvm.dbg.cu = !{!0}
     !llvm.module.flags = !{!3}
@@ -629,27 +627,27 @@ TEST(AssignmentTrackingTest, Utils) {
   std::unique_ptr<Module> M = parseIR(C, R"(
     define dso_local void @fun1() !dbg !7 {
     entry:
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !10, metadata !DIExpression(), metadata !12, metadata i32 undef, metadata !DIExpression()), !dbg !13
+        #dbg_assign(i32 undef, !10, !DIExpression(), !12, i32 undef, !DIExpression(), !13)
       %local = alloca i32, align 4, !DIAssignID !12
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !16, metadata !DIExpression(), metadata !12, metadata i32 undef, metadata !DIExpression()), !dbg !15
+        #dbg_assign(i32 undef, !16, !DIExpression(), !12, i32 undef, !DIExpression(), !15)
+        #dbg_assign(i32 undef, !16, !DIExpression(), !25, i32 undef, !DIExpression(), !15)
+        #dbg_assign(i32 undef, !16, !DIExpression(), !25, i32 undef, !DIExpression(), !15)
       ret void, !dbg !15
     }
 
     define dso_local void @fun2() !dbg !17 {
     entry:
       %local = alloca i32, align 4, !DIAssignID !20
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !18, metadata !DIExpression(), metadata !20, metadata i32 undef, metadata !DIExpression()), !dbg !19
+        #dbg_assign(i32 undef, !18, !DIExpression(), !20, i32 undef, !DIExpression(), !19)
       ret void, !dbg !19
     }
 
     define dso_local void @fun3() !dbg !21 {
     entry:
       %local = alloca i32, align 4, !DIAssignID !24
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !22, metadata !DIExpression(), metadata !24, metadata i32* undef, metadata !DIExpression()), !dbg !23
+        #dbg_assign(i32 undef, !22, !DIExpression(), !24, i32* undef, !DIExpression(), !23)
       ret void
     }
-
-    declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
     !llvm.dbg.cu = !{!0}
     !llvm.module.flags = !{!3, !4, !5}
@@ -680,6 +678,7 @@ TEST(AssignmentTrackingTest, Utils) {
     !22 = !DILocalVariable(name: "local4", scope: !21, file: !1, line: 2, type: !11)
     !23 = !DILocation(line: 4, column: 1, scope: !21)
     !24 = distinct !DIAssignID()
+    !25 = distinct !DIAssignID()
     )");
 
   // Check the test IR isn't malformed.

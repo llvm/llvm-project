@@ -9,7 +9,7 @@
 #include <clc/geometric/clc_normalize.h>
 #include <clc/opencl/geometric/normalize.h>
 
-#define FUNCTION normalize
+#define __CLC_FUNCTION normalize
 #define __CLC_GEOMETRIC_RET_GENTYPE
 #define __CLC_BODY <clc/geometric/unary_def.inc>
 

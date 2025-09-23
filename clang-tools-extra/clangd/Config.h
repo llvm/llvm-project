@@ -174,6 +174,9 @@ struct Config {
   struct {
     /// Whether hover show a.k.a type.
     bool ShowAKA = true;
+    /// Limit the number of characters returned when hovering a macro;
+    /// 0 is no limit.
+    uint32_t MacroContentsLimit = 2048;
   } Hover;
 
   struct {

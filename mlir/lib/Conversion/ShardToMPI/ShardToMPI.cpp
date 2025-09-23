@@ -36,7 +36,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #define DEBUG_TYPE "shard-to-mpi"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTSHARDTOMPIPASS
@@ -302,7 +301,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Create mpi::CommRankOp
     Location loc = op.getLoc();
-    auto ctx = op.getContext();
+    auto *ctx = op.getContext();
     Value commWorld =
         mpi::CommWorldOp::create(rewriter, loc, mpi::CommType::get(ctx));
     auto rank = mpi::CommRankOp::create(
@@ -521,7 +520,7 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
 };
 
 static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
-  auto ctx = kind.getContext();
+  auto *ctx = kind.getContext();
   auto getReductionOp = [ctx](mpi::MPI_ReductionOpEnum redOp) {
     return mpi::MPI_ReductionOpEnumAttr::get(ctx, redOp);
   };

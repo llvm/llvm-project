@@ -171,10 +171,10 @@ define void @tests.lifetime.start.end() {
   ; CHECK-LABEL: @tests.lifetime.start.end(
   %a = alloca i8
   call void @llvm.lifetime.start(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.start.p0(ptr %a)
   store i8 0, ptr %a
   call void @llvm.lifetime.end(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -185,10 +185,10 @@ define void @tests.lifetime.start.end.unnamed() {
   ; CHECK-LABEL: @tests.lifetime.start.end.unnamed(
   %a = alloca ptr
   call void @llvm.lifetime.start.unnamed(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.start.p0(ptr %a)
   store ptr null, ptr %a
   call void @llvm.lifetime.end.unnamed(i64 1, ptr %a)
-  ; CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %a)
+  ; CHECK: call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -220,5 +220,5 @@ define void @test.prefetch.unnamed(ptr %ptr) {
 ; emitted at the end.
 ; CHECK: declare i32 @llvm.objectsize.i32.p0
 
-; CHECK: declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none))
-; CHECK: declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none))
+; CHECK: declare void @llvm.lifetime.start.p0(ptr captures(none))
+; CHECK: declare void @llvm.lifetime.end.p0(ptr captures(none))

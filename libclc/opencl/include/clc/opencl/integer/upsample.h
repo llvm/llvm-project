@@ -12,7 +12,7 @@
 #include <clc/opencl/opencl-base.h>
 
 #define __CLC_UPSAMPLE_DECL(BGENTYPE, GENTYPE, UGENTYPE)                       \
-  _CLC_OVERLOAD _CLC_DECL BGENTYPE upsample(GENTYPE hi, UGENTYPE lo);
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL BGENTYPE upsample(GENTYPE hi, UGENTYPE lo);
 
 #define __CLC_UPSAMPLE_VEC(BGENTYPE, GENTYPE, UGENTYPE)                        \
   __CLC_UPSAMPLE_DECL(BGENTYPE, GENTYPE, UGENTYPE)                             \

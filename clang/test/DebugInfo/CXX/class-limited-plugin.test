@@ -1,0 +1,2 @@
+RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -o - -load %llvmshlibdir/PrintFunctionNames%pluginext -add-plugin print-fns %S/Inputs/class-limited.cpp 2>&1 | FileCheck %S/Inputs/class-limited.cpp
+REQUIRES: plugins, examples

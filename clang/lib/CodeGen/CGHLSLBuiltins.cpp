@@ -335,33 +335,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *RangeOp = EmitScalarExpr(E->getArg(3));
     Value *IndexOp = EmitScalarExpr(E->getArg(4));
     Value *Name = EmitScalarExpr(E->getArg(5));
-    // FIXME: NonUniformResourceIndex bit is not yet implemented
-    // (llvm/llvm-project#135452)
-    Value *NonUniform =
-        llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
-
     llvm::Intrinsic::ID IntrinsicID =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    SmallVector<Value *> Args{SpaceOp, RegisterOp, RangeOp,
-                              IndexOp, NonUniform, Name};
+    SmallVector<Value *> Args{SpaceOp, RegisterOp, RangeOp, IndexOp, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
-    Value *SpaceOp = EmitScalarExpr(E->getArg(1));
-    Value *RangeOp = EmitScalarExpr(E->getArg(2));
-    Value *IndexOp = EmitScalarExpr(E->getArg(3));
-    Value *OrderID = EmitScalarExpr(E->getArg(4));
+    Value *OrderID = EmitScalarExpr(E->getArg(1));
+    Value *SpaceOp = EmitScalarExpr(E->getArg(2));
+    Value *RangeOp = EmitScalarExpr(E->getArg(3));
+    Value *IndexOp = EmitScalarExpr(E->getArg(4));
     Value *Name = EmitScalarExpr(E->getArg(5));
-    // FIXME: NonUniformResourceIndex bit is not yet implemented
-    // (llvm/llvm-project#135452)
-    Value *NonUniform =
-        llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
-
     llvm::Intrinsic::ID IntrinsicID =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    SmallVector<Value *> Args{OrderID, SpaceOp,    RangeOp,
-                              IndexOp, NonUniform, Name};
+    SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_all: {
@@ -548,8 +536,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isinf operand must have a float representation");
-    return Builder.CreateIntrinsic(retType, Intrinsic::dx_isinf,
-                                   ArrayRef<Value *>{Op0}, nullptr, "dx.isinf");
+    return Builder.CreateIntrinsic(
+        retType, CGM.getHLSLRuntime().getIsInfIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.isinf");
   }
   case Builtin::BI__builtin_hlsl_mad: {
     Value *M = EmitScalarExpr(E->getArg(0));
@@ -615,12 +604,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *OpTrue =
         RValTrue.isScalar()
             ? RValTrue.getScalarVal()
-            : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
+            : Builder.CreateLoad(RValTrue.getAggregateAddress(), "true_val");
     RValue RValFalse = EmitAnyExpr(E->getArg(2));
     Value *OpFalse =
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
-            : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+            : Builder.CreateLoad(RValFalse.getAggregateAddress(), "false_val");
     if (auto *VTy = E->getType()->getAs<VectorType>()) {
       if (!OpTrue->getType()->isVectorTy())
         OpTrue =

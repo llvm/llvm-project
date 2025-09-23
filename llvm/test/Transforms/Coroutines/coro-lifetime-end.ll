@@ -31,7 +31,7 @@ entry:
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
-  call void @llvm.lifetime.start.p0(i64 100, ptr %testval)
+  call void @llvm.lifetime.start.p0(ptr %testval)
   call void @consume.i8.array(ptr %testval)
 
   %save = call token @llvm.coro.save(ptr null)
@@ -68,7 +68,7 @@ entry:
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
-  call void @llvm.lifetime.start.p0(i64 100, ptr %testval)
+  call void @llvm.lifetime.start.p0(ptr %testval)
   call void @consume.i8.array(ptr %testval)
 
   %save = call token @llvm.coro.save(ptr null)
@@ -81,7 +81,7 @@ await.ready:
   br label %exit
 exit:
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
-  call void @llvm.lifetime.end.p0(i64 100, ptr  %testval)
+  call void @llvm.lifetime.end.p0(ptr  %testval)
   ret void
 }
 
@@ -107,7 +107,7 @@ entry:
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
-  call void @llvm.lifetime.start.p0(i64 100, ptr %testval)
+  call void @llvm.lifetime.start.p0(ptr %testval)
   call void @consume.i8.array(ptr %testval)
 
   %0 = load i8, ptr @testbool, align 1
@@ -115,7 +115,7 @@ entry:
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:
-  call void @llvm.lifetime.end.p0(i64 100, ptr  %testval)
+  call void @llvm.lifetime.end.p0(ptr  %testval)
   br label %if.end
 
 if.end:
@@ -138,5 +138,5 @@ declare ptr @llvm.coro.begin(token, ptr writeonly) #3
 declare ptr @llvm.coro.frame() #5
 declare i8 @llvm.coro.suspend(token, i1) #3
 declare i1 @llvm.coro.end(ptr, i1, token) #3
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #4
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
+declare void @llvm.lifetime.start.p0(ptr nocapture) #4
+declare void @llvm.lifetime.end.p0(ptr nocapture) #4

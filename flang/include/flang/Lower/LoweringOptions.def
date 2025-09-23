@@ -74,5 +74,10 @@ ENUM_LOWERINGOPT(SkipExternalRttiDefinition, unsigned, 1, 0)
 /// If false, lower to the complex dialect of MLIR.
 /// On by default.
 ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
+
+/// When true, it registers MLIRDiagnosticsHandler for the duration
+/// of the lowering pipeline.
+ENUM_LOWERINGOPT(RegisterMLIRDiagnosticsHandler, unsigned, 1, 1)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

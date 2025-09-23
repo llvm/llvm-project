@@ -174,8 +174,7 @@ public:
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
@@ -486,7 +485,16 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!CanPadInst)
     return;
 
-  if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
+  if (PendingBA) {
+    auto *NextFragment = PendingBA->getNext();
+    assert(NextFragment && "NextFragment should not be null");
+    if (NextFragment == OS.getCurrentFragment())
+      return;
+    // We eagerly create an empty fragment when inserting a fragment
+    // with a variable-size tail.
+    if (NextFragment->getNext() == OS.getCurrentFragment())
+      return;
+
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
@@ -512,9 +520,8 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                           isFirstMacroFusibleInst(Inst, *MCII))) {
     // If we meet a unfused branch or the first instuction in a fusiable pair,
     // insert a BoundaryAlign fragment.
-    PendingBA = OS.getContext().allocFragment<MCBoundaryAlignFragment>(
-        AlignBoundary, STI);
-    OS.insert(PendingBA);
+    PendingBA =
+        OS.newSpecialFragment<MCBoundaryAlignFragment>(AlignBoundary, STI);
   }
 }
 
@@ -552,7 +559,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
 std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
-    if (STI.getTargetTriple().getArch() == Triple::x86_64) {
+    if (STI.getTargetTriple().isX86_64()) {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
@@ -676,9 +683,8 @@ std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
 }
 
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   // Force relocation when there is a specifier. This might be too conservative
   // - GAS doesn't emit a relocation for call local@plt; local:.
   if (Target.getSpecifier())
@@ -690,7 +696,7 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return;
   unsigned Size = getFixupKindSize(Kind);
 
-  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
   if (IsResolved && Fixup.isPCRel()) {
@@ -710,7 +716,7 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 
   for (unsigned i = 0; i != Size; ++i)
-    Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
+    Data[i] = uint8_t(Value >> (i * 8));
 }
 
 bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,
@@ -1280,7 +1286,7 @@ public:
   DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
                       const MCSubtargetInfo &STI)
       : X86AsmBackend(T, STI), MRI(MRI), TT(STI.getTargetTriple()),
-        Is64Bit(TT.isArch64Bit()) {
+        Is64Bit(TT.isX86_64()) {
     memset(SavedRegs, 0, sizeof(SavedRegs));
     OffsetSize = Is64Bit ? 8 : 4;
     MoveInstrSize = Is64Bit ? 3 : 2;

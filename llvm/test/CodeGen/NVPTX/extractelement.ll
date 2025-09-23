@@ -31,16 +31,16 @@ define i1  @test_v2i8_load(ptr %a) {
 ; CHECK-LABEL: test_v2i8_load(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_v2i8_load_param_0];
 ; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd1];
-; CHECK-NEXT:    or.b16 %rs5, %rs1, %rs2;
-; CHECK-NEXT:    and.b16 %rs6, %rs5, 255;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs6, 0;
+; CHECK-NEXT:    or.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; CHECK-NEXT:    selp.b32 %r1, -1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

@@ -1106,6 +1106,8 @@ inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
 /// useful to act as a "stream modifier" to customize printing an operation
 /// with a stream using the operator<< overload, e.g.:
 ///   llvm::dbgs() << OpWithFlags(op, OpPrintingFlags().skipRegions());
+/// This always prints the operation with the local scope, to avoid introducing
+/// spurious newlines in the stream.
 class OpWithFlags {
 public:
   OpWithFlags(Operation *op, OpPrintingFlags flags = {})
@@ -1116,12 +1118,32 @@ public:
 private:
   Operation *op;
   OpPrintingFlags theFlags;
-  friend raw_ostream &operator<<(raw_ostream &os, const OpWithFlags &op);
+  friend raw_ostream &operator<<(raw_ostream &os, OpWithFlags op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os, OpWithFlags opWithFlags) {
+  opWithFlags.flags().useLocalScope();
+  opWithFlags.op->print(os, opWithFlags.flags());
+  return os;
+}
+
+/// A wrapper class that allows for printing an operation with a custom
+/// AsmState, useful to act as a "stream modifier" to customize printing an
+/// operation with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithState(op, OpPrintingFlags().skipRegions());
+class OpWithState {
+public:
+  OpWithState(Operation *op, AsmState &state) : op(op), theState(state) {}
+
+private:
+  Operation *op;
+  AsmState &theState;
+  friend raw_ostream &operator<<(raw_ostream &os, const OpWithState &op);
 };
 
 inline raw_ostream &operator<<(raw_ostream &os,
-                               const OpWithFlags &opWithFlags) {
-  opWithFlags.op->print(os, opWithFlags.flags());
+                               const OpWithState &opWithState) {
+  opWithState.op->print(os, const_cast<OpWithState &>(opWithState).theState);
   return os;
 }
 

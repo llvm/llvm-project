@@ -176,7 +176,7 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
-        name="add-latomic-workaround",  # https://github.com/llvm/llvm-project/issues/73361
+        name="add-latomic-workaround",  # https://llvm.org/PR73361
         when=lambda cfg: sourceBuilds(
             cfg, "int main(int, char**) { return 0; }", ["-latomic"]
         ),

@@ -1228,29 +1228,50 @@ template <KnownKind T> struct KnownType {
 
 }
 
-namespace GH115838 {
+namespace CWG2369_Regression_2 {
 
-template<typename T> concept has_x = requires(T t) {{ t.x };};
+template <typename T>
+concept HasFastPropertyForAttribute =
+    requires(T element, int name) { element.propertyForAttribute(name); };
 
-class Publ { public:    int x = 0; };
-class Priv { private:   int x = 0; };
-class Prot { protected: int x = 0; };
-class Same { protected: int x = 0; };
+template <typename OwnerType>
+struct SVGPropertyOwnerRegistry {
+  static int fastAnimatedPropertyLookup() {
+    static_assert (HasFastPropertyForAttribute<OwnerType>);
+    return 1;
+  }
+};
 
-template<typename T> class D;
-template<typename T> requires ( has_x<T>) class D<T>: public T { public: static constexpr bool has = 1; };
-template<typename T> requires (!has_x<T>) class D<T>: public T { public: static constexpr bool has = 0; };
+class SVGCircleElement {
+  friend SVGPropertyOwnerRegistry<SVGCircleElement>;
+  void propertyForAttribute(int);
+};
 
-// "Same" is identical to "Prot" but queried before used.
-static_assert(!has_x<Same>,  "Protected should be invisible.");
-static_assert(!D<Same>::has, "Protected should be invisible.");
-
-static_assert( D<Publ>::has, "Public should be visible.");
-static_assert(!D<Priv>::has, "Private should be invisible.");
-static_assert(!D<Prot>::has, "Protected should be invisible.");
+int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
 
 }
 
+namespace GH61824 {
+
+template<typename T, typename U = typename T::type> // #T_Type
+concept C = true;
+
+constexpr bool f(C auto) { // #GH61824_f
+  return true;
+}
+
+C auto x = 0;
+// expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
+// expected-note@-1 {{in instantiation of default argument}}
+
+// This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
+// Which makes us behave like GCC.
+static_assert(f(0));
+// expected-error@-1 {{no matching function for call}} \
+// expected-note@#GH61824_f {{constraints not satisfied}} \
+// expected-note@#T_Type {{type 'int' cannot be used prior to '::'}}
+
+}
 
 namespace GH149986 {
 template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}

@@ -189,11 +189,7 @@ TEST(BasicBlockDbgInfoTest, DropSourceAtomOnSplit) {
     ASSERT_TRUE(After);
     const DebugLoc &OrigTerminatorDL = After->getTerminator()->getDebugLoc();
     ASSERT_TRUE(OrigTerminatorDL);
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
     EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 1u);
-#else
-    EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 0u);
-#endif
   }
 
   // Test splitBasicBlock.
@@ -204,11 +200,7 @@ TEST(BasicBlockDbgInfoTest, DropSourceAtomOnSplit) {
 
     const DebugLoc &OrigTerminatorDL = After->getTerminator()->getDebugLoc();
     ASSERT_TRUE(OrigTerminatorDL);
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
     EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 1u);
-#else
-    EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 0u);
-#endif
 
     BasicBlock *Before = After->getSinglePredecessor();
     ASSERT_TRUE(Before);

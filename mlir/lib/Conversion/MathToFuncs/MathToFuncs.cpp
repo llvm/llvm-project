@@ -22,7 +22,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOFUNCS
@@ -32,7 +32,6 @@ namespace mlir {
 using namespace mlir;
 
 #define DEBUG_TYPE "math-to-funcs"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace {
 // Pattern to convert vector operations to scalar operations.
@@ -653,10 +652,8 @@ FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
 /// }
 static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   if (!isa<IntegerType>(elementType)) {
-    LLVM_DEBUG({
-      DBGS() << "non-integer element type for CtlzFunc; type was: ";
-      elementType.print(llvm::dbgs());
-    });
+    LDBG() << "non-integer element type for CtlzFunc; type was: "
+           << elementType;
     llvm_unreachable("non-integer element type");
   }
   int64_t bitWidth = elementType.getIntOrFloatBitWidth();

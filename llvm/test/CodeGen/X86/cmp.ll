@@ -956,3 +956,185 @@ define i1 @fold_test_and_with_chain(ptr %x, ptr %y, i32 %z) {
   store i32 %z, ptr %y
   ret i1 %c
 }
+
+define i1 @sext_mask(i32 %a) {
+; CHECK-LABEL: sext_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $-523, %edi # encoding: [0x81,0xff,0xf5,0xfd,0xff,0xff]
+; CHECK-NEXT:    # imm = 0xFDF5
+; CHECK-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i32 %a to i64
+  %v1 = icmp slt i64 %a64, -523
+  ret i1 %v1
+}
+
+define i1 @sext_i9_mask(i9 %a) {
+; NO-NDD-LABEL: sext_i9_mask:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    # kill: def $edi killed $edi def $rdi
+; NO-NDD-NEXT:    shlq $55, %rdi # encoding: [0x48,0xc1,0xe7,0x37]
+; NO-NDD-NEXT:    sarq $55, %rdi # encoding: [0x48,0xc1,0xff,0x37]
+; NO-NDD-NEXT:    cmpl $-522, %edi # encoding: [0x81,0xff,0xf6,0xfd,0xff,0xff]
+; NO-NDD-NEXT:    # imm = 0xFDF6
+; NO-NDD-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: sext_i9_mask:
+; NDD:       # %bb.0:
+; NDD-NEXT:    # kill: def $edi killed $edi def $rdi
+; NDD-NEXT:    shlq $55, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x37]
+; NDD-NEXT:    sarq $55, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xff,0x37]
+; NDD-NEXT:    cmpl $-522, %edi # encoding: [0x81,0xff,0xf6,0xfd,0xff,0xff]
+; NDD-NEXT:    # imm = 0xFDF6
+; NDD-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i9 %a to i64
+  %v1 = icmp slt i64 %a64, -522
+  ret i1 %v1
+}
+
+define i1 @sext_i32_mask(i32 %a) {
+; CHECK-LABEL: sext_i32_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $-522, %edi # encoding: [0x81,0xff,0xf6,0xfd,0xff,0xff]
+; CHECK-NEXT:    # imm = 0xFDF6
+; CHECK-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i32 %a to i64
+  %v1 = icmp slt i64 %a64, -522
+  ret i1 %v1
+}
+
+define i1 @i40(i40 %a) {
+; NO-NDD-LABEL: i40:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    shlq $24, %rdi # encoding: [0x48,0xc1,0xe7,0x18]
+; NO-NDD-NEXT:    sarq $24, %rdi # encoding: [0x48,0xc1,0xff,0x18]
+; NO-NDD-NEXT:    cmpq $-521, %rdi # encoding: [0x48,0x81,0xff,0xf7,0xfd,0xff,0xff]
+; NO-NDD-NEXT:    # imm = 0xFDF7
+; NO-NDD-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: i40:
+; NDD:       # %bb.0:
+; NDD-NEXT:    shlq $24, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x18]
+; NDD-NEXT:    sarq $24, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xff,0x18]
+; NDD-NEXT:    cmpq $-521, %rdi # encoding: [0x48,0x81,0xff,0xf7,0xfd,0xff,0xff]
+; NDD-NEXT:    # imm = 0xFDF7
+; NDD-NEXT:    setl %al # encoding: [0x0f,0x9c,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i40 %a to i64
+  %v1 = icmp slt i64 %a64, -521
+  ret i1 %v1
+}
+
+define i1 @sext_i9_mask_sgt(i9 %a) {
+; NO-NDD-LABEL: sext_i9_mask_sgt:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    # kill: def $edi killed $edi def $rdi
+; NO-NDD-NEXT:    shlq $55, %rdi # encoding: [0x48,0xc1,0xe7,0x37]
+; NO-NDD-NEXT:    sarq $55, %rdi # encoding: [0x48,0xc1,0xff,0x37]
+; NO-NDD-NEXT:    cmpl $-520, %edi # encoding: [0x81,0xff,0xf8,0xfd,0xff,0xff]
+; NO-NDD-NEXT:    # imm = 0xFDF8
+; NO-NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: sext_i9_mask_sgt:
+; NDD:       # %bb.0:
+; NDD-NEXT:    # kill: def $edi killed $edi def $rdi
+; NDD-NEXT:    shlq $55, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x37]
+; NDD-NEXT:    sarq $55, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xff,0x37]
+; NDD-NEXT:    cmpl $-520, %edi # encoding: [0x81,0xff,0xf8,0xfd,0xff,0xff]
+; NDD-NEXT:    # imm = 0xFDF8
+; NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i9 %a to i64
+  %v1 = icmp sgt i64 %a64, -521
+  ret i1 %v1
+}
+
+define i1 @sext_i32_mask_sgt(i32 %a) {
+; CHECK-LABEL: sext_i32_mask_sgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $-521, %edi # encoding: [0x81,0xff,0xf7,0xfd,0xff,0xff]
+; CHECK-NEXT:    # imm = 0xFDF7
+; CHECK-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i32 %a to i64
+  %v1 = icmp sgt i64 %a64, -522
+  ret i1 %v1
+}
+
+define i1 @i40_sge(i40 %a) {
+; NO-NDD-LABEL: i40_sge:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    shlq $24, %rdi # encoding: [0x48,0xc1,0xe7,0x18]
+; NO-NDD-NEXT:    sarq $24, %rdi # encoding: [0x48,0xc1,0xff,0x18]
+; NO-NDD-NEXT:    cmpq $-521, %rdi # encoding: [0x48,0x81,0xff,0xf7,0xfd,0xff,0xff]
+; NO-NDD-NEXT:    # imm = 0xFDF7
+; NO-NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: i40_sge:
+; NDD:       # %bb.0:
+; NDD-NEXT:    shlq $24, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x18]
+; NDD-NEXT:    sarq $24, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xff,0x18]
+; NDD-NEXT:    cmpq $-521, %rdi # encoding: [0x48,0x81,0xff,0xf7,0xfd,0xff,0xff]
+; NDD-NEXT:    # imm = 0xFDF7
+; NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i40 %a to i64
+  %v1 = icmp sge i64 %a64, -521
+  ret i1 %v1
+}
+
+define i1 @i40_eq(i40 %a) {
+; NO-NDD-LABEL: i40_eq:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    movabsq $1099511627775, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0xff,0x00,0x00,0x00]
+; NO-NDD-NEXT:    # imm = 0xFFFFFFFFFF
+; NO-NDD-NEXT:    andq %rdi, %rax # encoding: [0x48,0x21,0xf8]
+; NO-NDD-NEXT:    movabsq $1099511627255, %rcx # encoding: [0x48,0xb9,0xf7,0xfd,0xff,0xff,0xff,0x00,0x00,0x00]
+; NO-NDD-NEXT:    # imm = 0xFFFFFFFDF7
+; NO-NDD-NEXT:    cmpq %rcx, %rax # encoding: [0x48,0x39,0xc8]
+; NO-NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: i40_eq:
+; NDD:       # %bb.0:
+; NDD-NEXT:    movabsq $1099511627775, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0xff,0x00,0x00,0x00]
+; NDD-NEXT:    # imm = 0xFFFFFFFFFF
+; NDD-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; NDD-NEXT:    movabsq $1099511627255, %rcx # encoding: [0x48,0xb9,0xf7,0xfd,0xff,0xff,0xff,0x00,0x00,0x00]
+; NDD-NEXT:    # imm = 0xFFFFFFFDF7
+; NDD-NEXT:    cmpq %rcx, %rax # encoding: [0x48,0x39,0xc8]
+; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i40 %a to i64
+  %v1 = icmp eq i64 %a64, -521
+  ret i1 %v1
+}
+
+define i1 @i40_ult(i40 %a) {
+; NO-NDD-LABEL: i40_ult:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    shlq $24, %rdi # encoding: [0x48,0xc1,0xe7,0x18]
+; NO-NDD-NEXT:    sarq $24, %rdi # encoding: [0x48,0xc1,0xff,0x18]
+; NO-NDD-NEXT:    cmpq $-521, %rdi # encoding: [0x48,0x81,0xff,0xf7,0xfd,0xff,0xff]
+; NO-NDD-NEXT:    # imm = 0xFDF7
+; NO-NDD-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: i40_ult:
+; NDD:       # %bb.0:
+; NDD-NEXT:    shlq $24, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x18]
+; NDD-NEXT:    sarq $24, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xff,0x18]
+; NDD-NEXT:    cmpq $-521, %rdi # encoding: [0x48,0x81,0xff,0xf7,0xfd,0xff,0xff]
+; NDD-NEXT:    # imm = 0xFDF7
+; NDD-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+  %a64 = sext i40 %a to i64
+  %v1 = icmp ult i64 %a64, -521
+  ret i1 %v1
+}

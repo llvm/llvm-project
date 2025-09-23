@@ -11,7 +11,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`llvm-ifs` is a tool that jointly produces human readable text-based
+:program:`llvm-ifs` is a tool that jointly produces human-readable text-based
 stubs (.ifs files) for shared objects and linkable shared object stubs
 (.so files) from either ELF shared objects or text-based stubs. The text-based
 stubs is useful for monitoring ABI changes of the shared object. The linkable

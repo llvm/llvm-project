@@ -13,13 +13,13 @@ define void @cmps() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cv16i8 = icmp slt <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cv8i16 = icmp ult <8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cv4i32 = icmp sge <4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf16 = fcmp oge half undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf32 = fcmp ogt float undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cf64 = fcmp ogt double undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cbf64 = fcmp ogt bfloat undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %cf16 = fcmp oge half undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %cf32 = fcmp ogt float undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %cf64 = fcmp ogt double undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %cbf64 = fcmp ogt bfloat undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %cfv816 = fcmp olt <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cfv432 = fcmp oge <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cfv264 = fcmp oge <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %cfv432 = fcmp oge <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %cfv264 = fcmp oge <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %cbfv816 = fcmp olt <8 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

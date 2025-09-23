@@ -685,10 +685,10 @@ func.func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: vector<2 x f
 // CHECK-LABEL: @lifetime
 // CHECK-SAME: %[[P:.*]]: !llvm.ptr
 llvm.func @lifetime(%p: !llvm.ptr) {
-  // CHECK: llvm.intr.lifetime.start 16, %[[P]]
-  llvm.intr.lifetime.start 16, %p : !llvm.ptr
-  // CHECK: llvm.intr.lifetime.end 16, %[[P]]
-  llvm.intr.lifetime.end 16, %p : !llvm.ptr
+  // CHECK: llvm.intr.lifetime.start %[[P]]
+  llvm.intr.lifetime.start %p : !llvm.ptr
+  // CHECK: llvm.intr.lifetime.end %[[P]]
+  llvm.intr.lifetime.end %p : !llvm.ptr
   llvm.return
 }
 

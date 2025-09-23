@@ -280,7 +280,7 @@ elements are:
    This represents ``f5`` in the source.
 
 The LLVM ``obj2yaml`` tool can parse this data out of the PSV and present it in
-human readable YAML. For the example above it produces the output:
+human-readable YAML. For the example above it produces the output:
 
 .. code-block:: YAML
 

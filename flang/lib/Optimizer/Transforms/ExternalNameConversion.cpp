@@ -76,12 +76,49 @@ void ExternalNameConversionPass::runOnOperation() {
   auto *context = &getContext();
 
   llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> remappings;
+  mlir::SymbolTable symbolTable(op);
 
   auto processFctOrGlobal = [&](mlir::Operation &funcOrGlobal) {
     auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
         mlir::SymbolTable::getSymbolAttrName());
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
+      // Check if this is a private function that would conflict with a common
+      // block and get its mangled name.
+      if (auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(funcOrGlobal)) {
+        if (funcOp.isPrivate()) {
+          std::string mangledName =
+              mangleExternalName(deconstructedName, appendUnderscoreOpt);
+          auto mod = funcOp->getParentOfType<mlir::ModuleOp>();
+          bool hasConflictingCommonBlock = false;
+
+          // Check if any existing global has the same mangled name.
+          if (symbolTable.lookup<fir::GlobalOp>(mangledName))
+            hasConflictingCommonBlock = true;
+
+          // Skip externalization if the function has a conflicting common block
+          // and is not directly called (i.e. procedure pointers or type
+          // specifications)
+          if (hasConflictingCommonBlock) {
+            bool isDirectlyCalled = false;
+            std::optional<SymbolTable::UseRange> uses =
+                funcOp.getSymbolUses(mod);
+            if (uses.has_value()) {
+              for (auto use : *uses) {
+                mlir::Operation *user = use.getUser();
+                if (mlir::isa<fir::CallOp>(user) ||
+                    mlir::isa<mlir::func::CallOp>(user)) {
+                  isDirectlyCalled = true;
+                  break;
+                }
+              }
+            }
+            if (!isDirectlyCalled)
+              return;
+          }
+        }
+      }
+
       auto newName = mangleExternalName(deconstructedName, appendUnderscoreOpt);
       auto newAttr = mlir::StringAttr::get(context, newName);
       mlir::SymbolTable::setSymbolName(&funcOrGlobal, newAttr);

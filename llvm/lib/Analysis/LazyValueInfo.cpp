@@ -927,8 +927,13 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
   // more definitions.
-  return ValueLatticeElement::getRange(LHSRange.castOp(CI->getOpcode(),
-                                                       ResultBitWidth));
+  ConstantRange Res = ConstantRange::getEmpty(ResultBitWidth);
+  if (auto *Trunc = dyn_cast<TruncInst>(CI))
+    Res = LHSRange.truncate(ResultBitWidth, Trunc->getNoWrapKind());
+  else
+    Res = LHSRange.castOp(CI->getOpcode(), ResultBitWidth);
+
+  return ValueLatticeElement::getRange(Res);
 }
 
 std::optional<ValueLatticeElement>
@@ -1488,6 +1493,24 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   br %Condition, label %then, label %else
             APInt ConditionVal(1, isTrueDest ? 1 : 0);
             Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
+          } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
+            ValueLatticeElement OpLatticeVal =
+                *getValueFromCondition(Usr->getOperand(0), Condition,
+                                       isTrueDest, /*UseBlockValue*/ false);
+
+            if (!OpLatticeVal.isConstantRange())
+              return OpLatticeVal;
+
+            const unsigned ResultBitWidth =
+                Usr->getType()->getScalarSizeInBits();
+            if (auto *Trunc = dyn_cast<TruncInst>(Usr))
+              return ValueLatticeElement::getRange(
+                  OpLatticeVal.getConstantRange().truncate(
+                      ResultBitWidth, Trunc->getNoWrapKind()));
+
+            return ValueLatticeElement::getRange(
+                OpLatticeVal.getConstantRange().castOp(
+                    cast<CastInst>(Usr)->getOpcode(), ResultBitWidth));
           } else {
             // If one of Val's operand has an inferred value, we may be able to
             // infer the value of Val.

@@ -594,7 +594,8 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
     auto clonedForOp = scf::ForOp::create(
         rewriter, loc, bvm.lookupOrDefault(forOp.getLowerBound()),
         bvm.lookupOrDefault(forOp.getUpperBound()),
-        bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor);
+        bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor,
+        /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
 
     // Map the induction var, region args and results to the `clonedForOp`.
     bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());

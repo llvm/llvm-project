@@ -168,13 +168,13 @@ public:
 private:
   MCContext &getContext() const { return OWriter.getContext(); }
   COFFSymbol *createSymbol(StringRef Name);
-  COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
+  COFFSymbol *getOrCreateCOFFSymbol(const MCSymbol &Sym);
   COFFSection *createSection(StringRef Name);
 
   void defineSection(MCSectionCOFF const &Sec);
 
   COFFSymbol *getLinkedSymbol(const MCSymbol &Symbol);
-  void defineSymbol(const MCSymbol &Symbol);
+  void defineSymbol(const MCSymbolCOFF &Symbol);
 
   void SetSymbolName(COFFSymbol &S);
   void SetSectionName(COFFSection &S);
@@ -244,10 +244,10 @@ COFFSymbol *WinCOFFWriter::createSymbol(StringRef Name) {
   return Symbols.back().get();
 }
 
-COFFSymbol *WinCOFFWriter::GetOrCreateCOFFSymbol(const MCSymbol *Symbol) {
-  COFFSymbol *&Ret = SymbolMap[Symbol];
+COFFSymbol *WinCOFFWriter::getOrCreateCOFFSymbol(const MCSymbol &Sym) {
+  COFFSymbol *&Ret = SymbolMap[&Sym];
   if (!Ret)
-    Ret = createSymbol(Symbol->getName());
+    Ret = createSymbol(Sym.getName());
   return Ret;
 }
 
@@ -303,7 +303,7 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec) {
   // Create a COMDAT symbol if needed.
   if (MCSec.getSelection() != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
     if (const MCSymbol *S = MCSec.getCOMDATSymbol()) {
-      COFFSymbol *COMDATSymbol = GetOrCreateCOFFSymbol(S);
+      COFFSymbol *COMDATSymbol = getOrCreateCOFFSymbol(*S);
       if (COMDATSymbol->Section)
         report_fatal_error("two sections have the same comdat");
       COMDATSymbol->Section = Section;
@@ -339,7 +339,8 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec) {
   }
 }
 
-static uint64_t getSymbolValue(const MCSymbol &Symbol, const MCAssembler &Asm) {
+static uint64_t getSymbolValue(const MCSymbolCOFF &Symbol,
+                               const MCAssembler &Asm) {
   if (Symbol.isCommon() && Symbol.isExternal())
     return Symbol.getCommonSize();
 
@@ -354,21 +355,20 @@ COFFSymbol *WinCOFFWriter::getLinkedSymbol(const MCSymbol &Symbol) {
   if (!Symbol.isVariable())
     return nullptr;
 
-  const MCSymbolRefExpr *SymRef =
-      dyn_cast<MCSymbolRefExpr>(Symbol.getVariableValue());
+  const auto *SymRef = dyn_cast<MCSymbolRefExpr>(Symbol.getVariableValue());
   if (!SymRef)
     return nullptr;
 
-  const MCSymbol &Aliasee = SymRef->getSymbol();
+  auto &Aliasee = static_cast<const MCSymbolCOFF &>(SymRef->getSymbol());
   if (Aliasee.isUndefined() || Aliasee.isExternal())
-    return GetOrCreateCOFFSymbol(&Aliasee);
+    return getOrCreateCOFFSymbol(Aliasee);
   else
     return nullptr;
 }
 
 /// This function takes a symbol data object from the assembler
 /// and creates the associated COFF symbol staging object.
-void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
+void WinCOFFWriter::defineSymbol(const MCSymbolCOFF &MCSym) {
   const MCSymbol *Base = Asm->getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
   MCSectionCOFF *MCSec = nullptr;
@@ -380,9 +380,10 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
   if (Mode == NonDwoOnly && MCSec && isDwoSection(*MCSec))
     return;
 
-  COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
+  COFFSymbol *Sym = getOrCreateCOFFSymbol(MCSym);
   COFFSymbol *Local = nullptr;
-  if (cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics()) {
+  if (static_cast<const MCSymbolCOFF &>(MCSym)
+          .getWeakExternalCharacteristics()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
     Sym->Section = nullptr;
 
@@ -406,7 +407,8 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
     Sym->Aux[0].AuxType = ATWeakExternal;
     Sym->Aux[0].Aux.WeakExternal.TagIndex = 0; // Filled in later
     Sym->Aux[0].Aux.WeakExternal.Characteristics =
-        cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics();
+        static_cast<const MCSymbolCOFF &>(MCSym)
+            .getWeakExternalCharacteristics();
   } else {
     if (!Base)
       Sym->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
@@ -418,7 +420,7 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
   if (Local) {
     Local->Data.Value = getSymbolValue(MCSym, *Asm);
 
-    const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(MCSym);
+    auto &SymbolCOFF = static_cast<const MCSymbolCOFF &>(MCSym);
     Local->Data.Type = SymbolCOFF.getType();
     Local->Data.StorageClass = SymbolCOFF.getClass();
 
@@ -817,12 +819,14 @@ void WinCOFFWriter::executePostLayoutBinding() {
     defineSection(static_cast<const MCSectionCOFF &>(Section));
   }
 
-  if (Mode != DwoOnly)
-    for (const MCSymbol &Symbol : Asm->symbols())
+  if (Mode != DwoOnly) {
+    for (const MCSymbol &Symbol : Asm->symbols()) {
+      auto &Sym = static_cast<const MCSymbolCOFF &>(Symbol);
       // Define non-temporary or temporary static (private-linkage) symbols
-      if (!Symbol.isTemporary() ||
-          cast<MCSymbolCOFF>(Symbol).getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
-        defineSymbol(Symbol);
+      if (!Sym.isTemporary() || Sym.getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
+        defineSymbol(Sym);
+    }
+  }
 
   UseBigObj = Sections.size() > COFF::MaxNumberOfSections16;
   Header.NumberOfSections = Sections.size();
@@ -1188,7 +1192,7 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
   // to approximate the set of all address taken functions. LLD's implementation
   // of /GUARD:CF also relies on the existance of these relocations.
-  uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
+  uint16_t Type = static_cast<const MCSymbolCOFF &>(SymA).getType();
   if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
     return false;
   return &SymA.getSection() == FB.getParent();

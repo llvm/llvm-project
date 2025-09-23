@@ -10,13 +10,22 @@
 export namespace std {
   // [optional.optional], class template optional
   using std::optional;
-
+#if _LIBCPP_STD_VER >= 26
+  // [optional.iterators], iterator support
+  namespace ranges {
+    using std::ranges::enable_view;
+  }
+#endif
   // [optional.nullopt], no-value state indicator
   using std::nullopt;
   using std::nullopt_t;
 
   // [optional.bad.access], class bad_optional_access
   using std::bad_optional_access;
+
+#if _LIBCPP_STD_VER >= 26
+  using std::format_kind;
+#endif
 
   // [optional.relops], relational operators
   using std::operator==;
