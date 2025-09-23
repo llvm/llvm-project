@@ -63,10 +63,16 @@ if ("-fvisibility=hidden" IN_LIST LIBFUZZER_CFLAGS)
   list(APPEND LIBFUZZER_UNITTEST_CFLAGS "-fvisibility=hidden")
 endif()
 
-if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
-  # libFuzzer unit tests are only run on the host machine.
-  set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})
+if(COMPILER_RT_CAN_EXECUTE_TESTS)
+  set(FUZZER_TEST_ARCH ${FUZZER_SUPPORTED_ARCH})
+  if (APPLE)
+    darwin_filter_host_archs(FUZZER_SUPPORTED_ARCH FUZZER_TEST_ARCH)
+  else()
+    # libFuzzer unit tests are only run on the host machine.
+    set(FUZZER_TEST_ARCH ${COMPILER_RT_DEFAULT_TARGET_ARCH})
+  endif()
 
+  foreach(arch ${FUZZER_TEST_ARCH})
   set(LIBFUZZER_TEST_RUNTIME RTFuzzerTest.${arch})
   if(APPLE)
     set(LIBFUZZER_TEST_RUNTIME_OBJECTS
@@ -110,4 +116,5 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzedDataProviderUnitTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  endforeach()
 endif()
