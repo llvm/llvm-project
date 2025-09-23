@@ -574,17 +574,22 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
     Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
-  Info.add("Number of total EUs", getNumEUs());
+  Info.add("Number of total EUs", getNumEUs(), "", DeviceInfo::MAX_COMPUTE_UNITS);
   Info.add("Number of threads per EU", getNumThreadsPerEU());
   Info.add("EU SIMD width", getSIMDWidth());
   Info.add("Number of EUs per subslice", getNumEUsPerSubslice());
   Info.add("Number of subslices per slice", getNumSubslicesPerSlice());
   Info.add("Number of slices", getNumSlices());
+  Info.add("Max Group size", getMaxGroupSize(), "",
+           DeviceInfo::MAX_GROUP_WORK_SIZE);
   Info.add("Local memory size (bytes)", getMaxSharedLocalMemory());
-  Info.add("Global memory size (bytes)", getGlobalMemorySize(), "", DeviceInfo::GLOBAL_MEM_SIZE);
+  Info.add("Global memory size (bytes)", getGlobalMemorySize(), "",
+           DeviceInfo::GLOBAL_MEM_SIZE);
   Info.add("Cache size (bytes)", getCacheSize());
-  Info.add("Max Memory Allocation Size (bytes)", getMaxMemAllocSize(), "", DeviceInfo::MAX_MEM_ALLOC_SIZE);
-  Info.add("Max clock frequency (MHz)", getClockRate(), "" , DeviceInfo::MAX_CLOCK_FREQUENCY);
+  Info.add("Max Memory Allocation Size (bytes)", getMaxMemAllocSize(), "",
+           DeviceInfo::MAX_MEM_ALLOC_SIZE);
+  Info.add("Max clock frequency (MHz)", getClockRate(), "",
+           DeviceInfo::MAX_CLOCK_FREQUENCY);
   return Info;
 }
 

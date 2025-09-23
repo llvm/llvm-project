@@ -176,9 +176,7 @@ GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
   return new L0GlobalHandlerTy();
 }
 
-uint16_t LevelZeroPluginTy::getMagicElfBits() const {
-  return ELF::EM_INTELGT;
-}
+uint16_t LevelZeroPluginTy::getMagicElfBits() const { return ELF::EM_INTELGT; }
 
 Triple::ArchType LevelZeroPluginTy::getTripleArch() const {
   return Triple::spirv64;
