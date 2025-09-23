@@ -679,6 +679,7 @@ void pr18905(void) {
 
 void __attribute__((format(strfmon,1,2))) monformat(const char *fmt, ...);
 void __attribute__((format(strftime,1,0))) dateformat(const char *fmt);
+void __attribute__((format(gnu_strftime,1,0))) gnu_dateformat(const char *fmt);
 
 // Other formats
 void test_other_formats(void) {
@@ -687,6 +688,8 @@ void test_other_formats(void) {
   monformat(str); // expected-warning{{format string is not a string literal (potentially insecure)}}
   dateformat(""); // expected-warning{{format string is empty}}
   dateformat(str); // no-warning (using strftime non-literal is not unsafe)
+  gnu_dateformat(""); // expected-warning{{format string is empty}}
+  gnu_dateformat(str); // no-warning (using strftime non-literal is not unsafe)
 }
 
 // Do not warn about unused arguments coming from system headers.
