@@ -50,6 +50,16 @@ struct Unnamed {
   int : 8;
 };
 
+struct Empty {
+};
+
+struct UnnamedOnly {
+  int : 8;
+};
+
+// CHECK-DAG: [[ConstE:@.*]] = private unnamed_addr constant %struct.Empty undef, align 1
+// CHECK-DAG: [[ConstUO:@.*]] = private unnamed_addr constant %struct.UnnamedOnly undef, align 1
+
 // Case 1: Extraneous braces get ignored in literal instantiation.
 // CHECK-LABEL: define hidden void @_Z5case1v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -984,4 +994,36 @@ void case18() {
 // CHECK-NEXT: store i32 1, ptr [[W]], align 1
 void case19(Unnamed U) {
   TwoInts TI = {U, 1};
+}
+
+// InitList with Empty Struct on LHS
+// CHECK-LABEL: case20
+// CHECK: [[E:%.*]] = alloca %struct.Empty, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[E]], ptr align 1 [[ConstE]], i32 1, i1 false)
+void case20() {
+  Empty E = {};
+}
+
+// InitList with Empty Struct on RHS
+// CHECK-LABEL: case21
+// CHECK: [[TI:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %TI, ptr align 1 {{.*}}, i32 8, i1 false)
+void case21(Empty E) {
+  TwoInts TI = {E, 1, 2};
+}
+
+// InitList with Struct with only unnamed bitfield on LHS
+// CHECK-LABEL: case22
+// CHECK: [[UO:%.*]] = alloca %struct.UnnamedOnly, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[UO]], ptr align 1 [[ConstUO]], i32 1, i1 false)
+void case22() {
+ UnnamedOnly UO = {}; 
+}
+
+// InitList with Struct with only unnamed bitfield on RHS
+// CHECK-LABEL: case23
+// CHECK: [[TI:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TI]], ptr align 1 {{.*}}, i32 8, i1 false)
+void case23(UnnamedOnly UO) {
+  TwoInts TI = {UO, 1, 2};
 }
