@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// behavior or logical errors.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/chained-comparison.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/chained-comparison.html
 class ChainedComparisonCheck : public ClangTidyCheck {
 public:
   ChainedComparisonCheck(StringRef Name, ClangTidyContext *Context)

@@ -824,9 +824,9 @@ TYPE_PARSER(construct<OmpFailClause>(
     "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
     "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
 
-TYPE_PARSER(construct<OmpGraphIdClause>(expr))
+TYPE_PARSER(construct<OmpGraphIdClause>(scalarIntExpr))
 
-TYPE_PARSER(construct<OmpGraphResetClause>(expr))
+TYPE_PARSER(construct<OmpGraphResetClause>(scalarLogicalExpr))
 
 // 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(
@@ -1716,9 +1716,9 @@ TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
-    verbatim("DECLARE REDUCTION"_tok) || verbatim("DECLARE_REDUCTION"_tok),
-    "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
-    maybe(Parser<OmpClauseList>{}))))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_reduction)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 // declare-target with list
 TYPE_PARSER(sourced(construct<OmpDeclareTargetWithList>(
@@ -1764,8 +1764,9 @@ TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
-    verbatim("DECLARE MAPPER"_tok) || verbatim("DECLARE_MAPPER"_tok),
-    parenthesized(Parser<OmpMapperSpecifier>{}), Parser<OmpClauseList>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_mapper)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
