@@ -1,2 +1,3 @@
 set(LIBCXX_HARDENING_MODE "extensive" CACHE STRING "")
-set(LIBCXX_TEST_PARAMS "assertion_semantic=observe" CACHE STRING "")
+set(LIBCXX_TEST_PARAMS "assertion_semantic=observe;enable_modules=clang" CACHE STRING "")
+set(LIBCXXABI_TEST_PARAMS "${LIBCXX_TEST_PARAMS}" CACHE STRING "")
