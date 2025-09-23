@@ -445,8 +445,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
 
   if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
       s.getNRVOCandidate()->isNRVOVariable()) {
-    getCIRGenModule().errorNYI(s.getSourceRange(),
-                               "named return value optimization");
+    assert(!cir::MissingFeatures::openMP());
+    assert(!cir::MissingFeatures::nrvo());
   } else if (!rv) {
     // No return expression. Do nothing.
   } else if (rv->getType()->isVoidType()) {
@@ -471,9 +471,16 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
         builder.CIRBaseBuilderTy::createStore(loc, value, *fnRetAlloca);
       }
       break;
-    default:
+    case cir::TEK_Complex:
       getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "non-scalar function return type");
+                                 "complex function return type");
+      break;
+    case cir::TEK_Aggregate:
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
+                                            AggValueSlot::IsDestructed,
+                                            AggValueSlot::IsNotAliased,
+                                            getOverlapForReturnValue()));
       break;
     }
   }
@@ -481,8 +488,11 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
   // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  assert(!cir::MissingFeatures::emitBranchThroughCleanup());
   if (ehStack.stable_begin() != currentCleanupStackDepth)
     cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
+
+  // Insert the new block to continue codegen after branch to ret block.
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
@@ -1033,4 +1043,22 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   terminateBody(builder, swop.getBody(), swop.getLoc());
 
   return res;
+}
+
+void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
+                                        QualType ty) {
+  if (rv.isScalar()) {
+    builder.createStore(loc, rv.getValue(), returnValue);
+  } else if (rv.isAggregate()) {
+    LValue dest = makeAddrLValue(returnValue, ty);
+    LValue src = makeAddrLValue(rv.getAggregateAddress(), ty);
+    emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
+  } else {
+    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
+  }
+  mlir::Block *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  assert(!cir::MissingFeatures::emitBranchThroughCleanup());
+  builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.stable_begin() != currentCleanupStackDepth)
+    cgm.errorNYI(loc, "return with cleanup stack");
 }

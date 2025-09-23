@@ -2127,15 +2127,15 @@ define i32 @test_udot_v48i8(ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-DOT-LABEL: test_udot_v48i8:
 ; CHECK-GI-DOT:       // %bb.0: // %entry
-; CHECK-GI-DOT-NEXT:    fmov s0, wzr
+; CHECK-GI-DOT-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    ldr q7, [x0, #32]
 ; CHECK-GI-DOT-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    ldr q17, [x1, #32]
 ; CHECK-GI-DOT-NEXT:    ldp q4, q5, [x0]
-; CHECK-GI-DOT-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-DOT-NEXT:    ldp q6, q16, [x1]
+; CHECK-GI-DOT-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-DOT-NEXT:    udot v2.4s, v17.16b, v7.16b
 ; CHECK-GI-DOT-NEXT:    udot v1.4s, v6.16b, v4.16b
 ; CHECK-GI-DOT-NEXT:    udot v3.4s, v16.16b, v5.16b
@@ -2395,15 +2395,15 @@ define i32 @test_sdot_v48i8(ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-DOT-LABEL: test_sdot_v48i8:
 ; CHECK-GI-DOT:       // %bb.0: // %entry
-; CHECK-GI-DOT-NEXT:    fmov s0, wzr
+; CHECK-GI-DOT-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    ldr q7, [x0, #32]
 ; CHECK-GI-DOT-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    ldr q17, [x1, #32]
 ; CHECK-GI-DOT-NEXT:    ldp q4, q5, [x0]
-; CHECK-GI-DOT-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-DOT-NEXT:    ldp q6, q16, [x1]
+; CHECK-GI-DOT-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-DOT-NEXT:    sdot v2.4s, v17.16b, v7.16b
 ; CHECK-GI-DOT-NEXT:    sdot v1.4s, v6.16b, v4.16b
 ; CHECK-GI-DOT-NEXT:    sdot v3.4s, v16.16b, v5.16b

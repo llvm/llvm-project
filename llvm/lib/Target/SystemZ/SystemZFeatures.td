@@ -196,7 +196,7 @@ def FeatureVector : SystemZFeature<
 >;
 def FeatureNoVector : SystemZMissingFeature<"Vector">;
 
-def NoVecHwMode : HwMode<"-vector", [FeatureNoVector]>;
+def NoVecHwMode : HwMode<[FeatureNoVector]>;
 
 def Arch11NewFeatures : SystemZFeatureList<[
     FeatureLoadAndZeroRightmostByte,
@@ -426,4 +426,3 @@ def Arch9UnsupportedFeatures
   : SystemZFeatureAdd<Arch10UnsupportedFeatures.List, Arch10NewFeatures.List>;
 def Arch8UnsupportedFeatures
   : SystemZFeatureAdd<Arch9UnsupportedFeatures.List,  Arch9NewFeatures.List>;
-
