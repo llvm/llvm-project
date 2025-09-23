@@ -88,7 +88,13 @@ int lld_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!inTestVerbosity()) {
     int r =
         lld::unsafeLldMain(args, llvm::outs(), llvm::errs(), LLD_ALL_DRIVERS,
-                           /*exitEarly=*/true);
+    /*exitEarly=*/
+#ifdef LLVM_BUILD_INSTRUMENTED
+                           false
+#else
+                           true
+#endif
+        );
     return r;
   }
 
