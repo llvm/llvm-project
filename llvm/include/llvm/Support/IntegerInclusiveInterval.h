@@ -85,8 +85,7 @@ using IntervalList = SmallVector<IntegerInclusiveInterval, 8>;
 /// \param Separator The separator character to use (',' or ':').
 /// \returns Expected<RangeList> containing the parsed ranges on success,
 ///          or an Error on failure.
-Expected<IntervalList> parseIntervals(StringRef RangeStr,
-                                      char Separator = ',');
+Expected<IntervalList> parseIntervals(StringRef RangeStr, char Separator = ',');
 
 /// Check if a value is contained in any of the ranges.
 bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
@@ -94,13 +93,16 @@ bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
 /// Print ranges to output stream.
 /// \param OS The output stream to print to.
 /// \param Ranges The ranges to print.
-/// \param Separator The separator character to use between ranges (i.e. ',' or ':').
-void printIntervals(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals,
+/// \param Separator The separator character to use between ranges (i.e. ',' or
+/// ':').
+void printIntervals(raw_ostream &OS,
+                    ArrayRef<IntegerInclusiveInterval> Intervals,
                     char Separator = ',');
 
 /// Merge adjacent/consecutive ranges into single ranges.
 /// Example: [1-3, 4-6, 8-10] -> [1-6, 8-10].
-IntervalList mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals);
+IntervalList
+mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals);
 
 } // end namespace IntegerIntervalUtils
 
