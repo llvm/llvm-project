@@ -175,7 +175,7 @@ llvm.func @nvvm_match_sync_any(%val32: i32, %thread_mask: i32) {
 // -----
 
 llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_e4m3(%a : f32, %b : f32) {
-  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to f8E4M3FNx2 or f8E5M2x2 types}}
+  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<satfinite>} : i16 (f8E4M3FN)
   llvm.return
 }
@@ -183,7 +183,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_e4m3(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_e5m2(%a : f32, %b : f32) {
-  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to f8E4M3FNx2 or f8E5M2x2 types}}
+  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<satfinite>} : i16 (f8E5M2)
   llvm.return
 }
@@ -191,7 +191,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_e5m2(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_ue8m0(%a : f32, %b : f32) {
-  // expected-error @below {{Only RZ or RP rounding modes are supported for conversions from f32x2 to f8E8M0FNUx2 type}}
+  // expected-error @below {{Only RZ and RP rounding modes are supported for conversions from f32x2 to 'f8E8M0FNU' type}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : i16 (f8E8M0FNU)
   llvm.return
 }
@@ -199,7 +199,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_ue8m0(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_float_to_f8x2_invalid_saturation_e4m3(%a : f32, %b : f32) {
-  // expected-error @below {{Only SATFINITE saturation mode is supported for conversions from f32x2 to f8E4M3FNx2 or f8E5M2x2 types}}
+  // expected-error @below {{Only SATFINITE saturation mode is supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<none>} : i16 (f8E4M3FN)
   llvm.return
 }
@@ -207,7 +207,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_invalid_saturation_e4m3(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_float_to_f8x2_invalid_saturation_e5m2(%a : f32, %b : f32) {
-  // expected-error @below {{Only SATFINITE saturation mode is supported for conversions from f32x2 to f8E4M3FNx2 or f8E5M2x2 types}}
+  // expected-error @below {{Only SATFINITE saturation mode is supported for conversions from f32x2 to 'f8E4M3FN' and 'f8E5M2' types}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<none>} : i16 (f8E5M2)
   llvm.return
 }
@@ -215,7 +215,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_invalid_saturation_e5m2(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_float_to_f8x2_relu_not_supported_ue8m0(%a : f32, %b : f32) {
-  // expected-error @below {{relu not supported for conversions to f8E8M0FNUx2 type}}
+  // expected-error @below {{relu not supported for conversions to 'f8E8M0FNU' type}}
   %res = nvvm.convert.f32x2.to.f8x2 %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, relu = true} : i16 (f8E8M0FNU)
   llvm.return
 }
@@ -223,7 +223,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_relu_not_supported_ue8m0(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f16x2_to_f8x2_invalid_type(%src : vector<2xf16>) {
-  // expected-error @below {{Only f8E4M3FN or f8E5M2 types are supported for conversions from f16x2 to f8x2.}}
+  // expected-error @below {{Only 'f8E4M3FN' and 'f8E5M2' types are supported for conversions from f16x2 to f8x2.}}
   %res = nvvm.convert.f16x2.to.f8x2 %src : vector<2xf16> -> i16 (f8E8M0FNU)
   llvm.return
 }
@@ -231,7 +231,7 @@ llvm.func @nvvm_cvt_f16x2_to_f8x2_invalid_type(%src : vector<2xf16>) {
 // -----
 
 llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_type(%src : vector<2xbf16>) {
-  // expected-error @below {{Only f8E8M0FNU type is supported for conversions from bf16x2 to f8x2.}}
+  // expected-error @below {{Only 'f8E8M0FNU' type is supported for conversions from bf16x2 to f8x2.}}
   %res = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16> -> i16 (f8E4M3FN)
   llvm.return
 }
@@ -241,6 +241,14 @@ llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_type(%src : vector<2xbf16>) {
 llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_rounding(%src : vector<2xbf16>) {
   // expected-error @below {{Only RZ and RP rounding modes are supported for conversions from bf16x2 to f8x2.}}
   %res = nvvm.convert.bf16x2.to.f8x2 %src {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16> -> i16 (f8E8M0FNU)
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f32x2_to_f6x2_invalid_type(%a : f32, %b : f32) {
+  // expected-error @below {{Only 'f6E2M3FN' and 'f6E3M2FN' types are supported for conversions from f32x2 to f6x2.}}
+  %res = nvvm.convert.f32x2.to.f6x2 %a, %b : i16 (f8E8M0FNU)
   llvm.return
 }
 

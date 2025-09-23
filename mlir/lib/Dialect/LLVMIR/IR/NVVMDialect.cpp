@@ -191,8 +191,10 @@ LogicalResult ConvertFloatToTF32Op::verify() {
 
 LogicalResult ConvertF32x2ToF6x2Op::verify() {
   if (!llvm::isa<mlir::Float6E2M3FNType, mlir::Float6E3M2FNType>(getDstTy())) {
-    return emitError("Only f6E2M3FN and f6E3M2FN types are supported for "
-                     "ConvertF32x2ToF6x2Op.");
+    return emitOpError("Only ")
+           << mlir::Float6E2M3FNType::get(getContext()) << " and "
+           << mlir::Float6E3M2FNType::get(getContext())
+           << " types are supported for conversions from f32x2 to f6x2.";
   }
   return success();
 }
@@ -212,38 +214,48 @@ LogicalResult ConvertF32x2ToF8x2Op::verify() {
       .Case<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(
           [&](mlir::Type) -> LogicalResult {
             if (!isRoundingModeRN) {
-              return emitOpError(
-                  "Only RN rounding mode is supported for conversions from "
-                  "f32x2 to f8E4M3FNx2 or f8E5M2x2 types");
+              return emitOpError("Only RN rounding mode is supported for "
+                                 "conversions from f32x2 to ")
+                     << mlir::Float8E4M3FNType::get(getContext()) << " and "
+                     << mlir::Float8E5M2Type::get(getContext()) << " types";
             }
             if (!isSatFinite) {
-              return emitOpError(
-                  "Only SATFINITE saturation mode is supported for conversions "
-                  "from f32x2 to f8E4M3FNx2 or f8E5M2x2 types");
+              return emitOpError("Only SATFINITE saturation mode is supported "
+                                 "for conversions "
+                                 "from f32x2 to ")
+                     << mlir::Float8E4M3FNType::get(getContext()) << " and "
+                     << mlir::Float8E5M2Type::get(getContext()) << " types";
             }
             return success();
           })
       .Case<mlir::Float8E8M0FNUType>([&](mlir::Type) -> LogicalResult {
         if (!(isRoundingModeRZ || isRoundingModeRP)) {
-          return emitOpError("Only RZ or RP rounding modes are supported for "
-                             "conversions from f32x2 to f8E8M0FNUx2 type");
+          return emitOpError("Only RZ and RP rounding modes are supported for "
+                             "conversions from f32x2 to ")
+                 << mlir::Float8E8M0FNUType::get(getContext()) << " type";
         }
         if (hasRelu) {
-          return emitOpError(
-              "relu not supported for conversions to f8E8M0FNUx2 type");
+          return emitOpError("relu not supported for conversions to ")
+                 << mlir::Float8E8M0FNUType::get(getContext()) << " type";
         }
         return success();
       })
       .Default([this](mlir::Type) {
-        return emitOpError("Only f8e4m3fn, f8e5m2, and f8e8m0fnu types are "
-                           "supported for conversions from f32x2 to f8x2");
+        return emitOpError("Only ")
+               << mlir::Float8E4M3FNType::get(getContext()) << ", "
+               << mlir::Float8E5M2Type::get(getContext()) << ", and "
+               << mlir::Float8E8M0FNUType::get(getContext())
+               << " types are "
+                  "supported for conversions from f32x2 to f8x2";
       });
 }
 
 LogicalResult ConvertF16x2ToF8x2Op::verify() {
   if (!llvm::isa<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(getDstTy())) {
-    return emitOpError("Only f8E4M3FN or f8E5M2 types are supported for "
-                       "conversions from f16x2 to f8x2.");
+    return emitOpError("Only ")
+           << mlir::Float8E4M3FNType::get(getContext()) << " and "
+           << mlir::Float8E5M2Type::get(getContext())
+           << " types are supported for conversions from f16x2 to f8x2.";
   }
   return success();
 }
@@ -252,8 +264,9 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
 
   if (!llvm::isa<mlir::Float8E8M0FNUType>(getDstTy()))
-    return emitOpError("Only f8E8M0FNU type is supported for conversions from "
-                       "bf16x2 to f8x2.");
+    return emitOpError("Only ") << mlir::Float8E8M0FNUType::get(getContext())
+                                << " type is supported for conversions from "
+                                   "bf16x2 to f8x2.";
 
   auto rnd = getRnd();
   if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
