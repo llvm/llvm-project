@@ -25,12 +25,13 @@ target_include_directories(omptarget.rtl.level_zero PRIVATE
 
 target_include_directories(omptarget.rtl.level_zero PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS}
+  ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR}
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_OMP_HEADER_DIR}
 )
 
-if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES} AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+cmake_path(GET LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY FILENAME LEVEL_ZERO_LIBRARY_NAME)
+if (EXISTS ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY} AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building Level Zero NG plugin linked against level_zero library")
  if(UNIX)
     target_link_libraries(omptarget.rtl.level_zero PRIVATE

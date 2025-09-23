@@ -574,7 +574,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
     Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
-  Info.add("Number of total EUs", getNumEUs(), "", DeviceInfo::NUM_COMPUTE_UNITS);
+  Info.add("Number of total EUs", getNumEUs(), "",
+           DeviceInfo::NUM_COMPUTE_UNITS);
   Info.add("Number of threads per EU", getNumThreadsPerEU());
   Info.add("EU SIMD width", getSIMDWidth());
   Info.add("Number of EUs per subslice", getNumEUsPerSubslice());
