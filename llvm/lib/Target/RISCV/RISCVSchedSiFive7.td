@@ -929,16 +929,16 @@ multiclass SiFive7WriteResBase<int VLEN,
   }
 
   // 15. Vector Mask Instructions
+  // Simple mask logical
   foreach mx = SchedMxList in {
     defvar Cycles = SiFive7GetCyclesVMask<mx>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
     let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVMALUV", [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVMPopV", [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVMFFSV", [VCQ, VA1], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVMSFSV", [VCQ, VA1], mx, IsWorstCase>;
     }
   }
+  // Simple mask logical used in series
   foreach mx = SchedMxList in {
     defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
     defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
@@ -947,13 +947,23 @@ multiclass SiFive7WriteResBase<int VLEN,
       defm : LMULWriteResMX<"WriteVIdxV", [VCQ, VA1], mx, IsWorstCase>;
     }
   }
+  // Mask reduction
+  foreach mx = SchedMxList in {
+    defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
+    let Latency = 11, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 3)] in {
+      defm "" : LMULWriteResMX<"WriteVMFFSV", [VCQ, VA1], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVMPopV", [VCQ, VA1], mx, IsWorstCase>;
+    }
+  }
 
   // 16. Vector Permutation Instructions
+  let Latency = 11, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 3)] in {
+    def : WriteRes<WriteVMovXS, [VCQ, VA1]>;
+    def : WriteRes<WriteVMovFS, [VCQ, VA1]>;
+  }
   let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, 1)] in {
     def : WriteRes<WriteVMovSX, [VCQ, VA1OrVA2]>;
-    def : WriteRes<WriteVMovXS, [VCQ, VA1]>;
     def : WriteRes<WriteVMovSF, [VCQ, VA1OrVA2]>;
-    def : WriteRes<WriteVMovFS, [VCQ, VA1]>;
   }
   foreach mx = SchedMxList in {
     defvar Cycles = SiFive7GetCyclesDefault<mx>.c;

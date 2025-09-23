@@ -35,9 +35,7 @@ using namespace lldb_private;
 
 Statusline::Statusline(Debugger &debugger)
     : m_debugger(debugger), m_terminal_width(m_debugger.GetTerminalWidth()),
-      m_terminal_height(m_debugger.GetTerminalHeight()) {
-  Enable();
-}
+      m_terminal_height(m_debugger.GetTerminalHeight()) {}
 
 Statusline::~Statusline() { Disable(); }
 
@@ -47,16 +45,16 @@ void Statusline::TerminalSizeChanged() {
 
   UpdateScrollWindow(ResizeStatusline);
 
-  // Draw the old statusline.
-  Redraw(/*update=*/false);
+  // Redraw the old statusline.
+  Redraw(std::nullopt);
 }
 
-void Statusline::Enable() {
+void Statusline::Enable(std::optional<ExecutionContextRef> exe_ctx_ref) {
   // Reduce the scroll window to make space for the status bar below.
   UpdateScrollWindow(EnableStatusline);
 
   // Draw the statusline.
-  Redraw(/*update=*/true);
+  Redraw(exe_ctx_ref);
 }
 
 void Statusline::Disable() {
@@ -68,8 +66,6 @@ void Statusline::Draw(std::string str) {
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
     return;
-
-  m_last_str = str;
 
   str = ansi::TrimAndPad(str, m_terminal_width);
 
@@ -127,33 +123,32 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
   m_debugger.RefreshIOHandler();
 }
 
-void Statusline::Redraw(bool update) {
-  if (!update) {
-    Draw(m_last_str);
-    return;
-  }
+void Statusline::Redraw(std::optional<ExecutionContextRef> exe_ctx_ref) {
+  // Update the cached execution context.
+  if (exe_ctx_ref)
+    m_exe_ctx_ref = *exe_ctx_ref;
 
-  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
+  // Lock the execution context.
+  ExecutionContext exe_ctx =
+      m_exe_ctx_ref.Lock(/*thread_and_frame_only_if_stopped=*/false);
 
-  // For colors and progress events, the format entity needs access to the
-  // debugger, which requires a target in the execution context.
-  if (!exe_ctx.HasTargetScope())
-    exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
-
-  SymbolContext symbol_ctx;
-  if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
-    // Check if the process is stopped, and if it is, make sure it remains
-    // stopped until we've computed the symbol context.
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      if (auto frame_sp = exe_ctx.GetFrameSP())
-        symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
-    }
+  // Compute the symbol context if we're stopped.
+  SymbolContext sym_ctx;
+  llvm::Expected<StoppedExecutionContext> stopped_exe_ctx =
+      GetStoppedExecutionContext(&m_exe_ctx_ref);
+  if (stopped_exe_ctx) {
+    // The StoppedExecutionContext only ensures that we hold the run lock.
+    // The process could be in an exited or unloaded state and have no frame.
+    if (auto frame_sp = stopped_exe_ctx->GetFrameSP())
+      sym_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
+  } else {
+    // We can draw the statusline without being stopped.
+    llvm::consumeError(stopped_exe_ctx.takeError());
   }
 
   StreamString stream;
   FormatEntity::Entry format = m_debugger.GetStatuslineFormat();
-  FormatEntity::Format(format, stream, &symbol_ctx, &exe_ctx, nullptr, nullptr,
+  FormatEntity::Format(format, stream, &sym_ctx, &exe_ctx, nullptr, nullptr,
                        false, false);
 
   Draw(stream.GetString().str());

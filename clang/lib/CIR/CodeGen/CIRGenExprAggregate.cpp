@@ -500,7 +500,7 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
+    cgf.emitComplexExprIntoLValue(e, lv, /*isInit*/ true);
     break;
   case cir::TEK_Aggregate:
     cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,

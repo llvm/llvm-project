@@ -2907,15 +2907,12 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
 
   InstructionCost SafeDivisorCost = 0;
   auto *VecTy = toVectorTy(I->getType(), VF);
-  auto *DivisorI = dyn_cast<Instruction>(I->getOperand(1));
-  if (DivisorI && !Legal->isInvariant(DivisorI)) {
-    // The cost of the select guard to ensure all lanes are well defined
-    // after we speculate above any internal control flow.
-    SafeDivisorCost +=
-        TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
-                               toVectorTy(Type::getInt1Ty(I->getContext()), VF),
-                               CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  }
+  // The cost of the select guard to ensure all lanes are well defined
+  // after we speculate above any internal control flow.
+  SafeDivisorCost +=
+      TTI.getCmpSelInstrCost(Instruction::Select, VecTy,
+                             toVectorTy(Type::getInt1Ty(I->getContext()), VF),
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
   SmallVector<const Value *, 4> Operands(I->operand_values());
   SafeDivisorCost += TTI.getArithmeticInstrCost(
@@ -6907,6 +6904,28 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       return &WidenMem->getIngredient();
     return nullptr;
   };
+
+  // Check if a select for a safe divisor was hoisted to the pre-header. If so,
+  // the select doesn't need to be considered for the vector loop cost; go with
+  // the more accurate VPlan-based cost model.
+  for (VPRecipeBase &R : *Plan.getVectorPreheader()) {
+    auto *VPI = dyn_cast<VPInstruction>(&R);
+    if (!VPI || VPI->getOpcode() != Instruction::Select ||
+        VPI->getNumUsers() != 1)
+      continue;
+
+    if (auto *WR = dyn_cast<VPWidenRecipe>(*VPI->user_begin())) {
+      switch (WR->getOpcode()) {
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+        return true;
+      default:
+        break;
+      }
+    }
+  }
 
   DenseSet<Instruction *> SeenInstrs;
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());

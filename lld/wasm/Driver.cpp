@@ -542,22 +542,19 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   if (args.hasArg(OPT_import_memory_with_name)) {
-    ctx.arg.memoryImport =
-        args.getLastArgValue(OPT_import_memory_with_name).split(",");
+    auto argValue = args.getLastArgValue(OPT_import_memory_with_name);
+    if (argValue.contains(','))
+      ctx.arg.memoryImport = argValue.split(",");
+    else
+      ctx.arg.memoryImport = {defaultModule, argValue};
   } else if (args.hasArg(OPT_import_memory)) {
-    ctx.arg.memoryImport =
-        std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
-  } else {
-    ctx.arg.memoryImport =
-        std::optional<std::pair<llvm::StringRef, llvm::StringRef>>();
+    ctx.arg.memoryImport = {defaultModule, memoryName};
   }
 
   if (args.hasArg(OPT_export_memory_with_name)) {
     ctx.arg.memoryExport = args.getLastArgValue(OPT_export_memory_with_name);
   } else if (args.hasArg(OPT_export_memory)) {
     ctx.arg.memoryExport = memoryName;
-  } else {
-    ctx.arg.memoryExport = std::optional<llvm::StringRef>();
   }
 
   ctx.arg.sharedMemory = args.hasArg(OPT_shared_memory);
@@ -748,8 +745,7 @@ static void setConfigs() {
       error("--export-memory is incompatible with --shared");
     }
     if (!ctx.arg.memoryImport.has_value()) {
-      ctx.arg.memoryImport = std::pair<llvm::StringRef, llvm::StringRef>(
-          defaultModule, memoryName);
+      ctx.arg.memoryImport = {defaultModule, memoryName};
     }
   }
 
