@@ -221,10 +221,21 @@ static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
 ///    inner_dims_pos = [0]
 ///    inner_tiles = [8]
 ///    into %init : tensor<?xf32> -> tensor<?x8xf32>
-static FailureOr<std::tuple<Value, AffineMap>>
-getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
-                               GenericOp genericOp, OpOperand *opOperand,
-                               bool poisonPaddingOk) {
+
+struct PackedOperandDetails {
+  SmallVector<OpFoldResult> innerTileSizes;
+  SmallVector<int64_t> innerDimsPos;
+  SmallVector<int64_t> outerDimsPerm;
+  AffineMap indexingMap;
+};
+
+/// Helper function for getOrCreatePackedViewOfOperand that populates
+/// the details of the packedOperand that needs to be formed and also
+// returns if the packing would require padding.
+static bool getPackedOperandDetails(
+    OpBuilder &b, PackInfo packInfo, GenericOp genericOp, OpOperand *opOperand,
+    DenseMap<OpOperand *, PackedOperandDetails> &packedOperandMap) {
+  PackedOperandDetails currOperandDetails;
   int64_t numOrigLoops = genericOp.getNumLoops();
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
   int64_t numLoops = numOrigLoops + numInnerLoops;
@@ -233,9 +244,12 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   SmallVector<AffineExpr> exprs(origIndexingMap.getResults());
 
   // If the OpOperand is a scalar or a zero-rank tensor, no need to pack.
-  if (genericOp.isScalar(opOperand) || exprs.empty())
-    return std::make_tuple(opOperand->get(),
-                           AffineMap::get(numLoops, 0, exprs, b.getContext()));
+  if (genericOp.isScalar(opOperand) || exprs.empty()) {
+    currOperandDetails.indexingMap =
+        AffineMap::get(numLoops, 0, exprs, b.getContext());
+    packedOperandMap[opOperand] = currOperandDetails;
+    return false;
+  }
 
   // Step 1. Construct the information of packing data dimensions; append inner
   // dimensions to the indexing maps for the operand.
@@ -283,24 +297,49 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
       exprs = auxVec;
     }
   }
-  auto indexingMap = AffineMap::get(numLoops, 0, exprs, b.getContext());
+  currOperandDetails.indexingMap =
+      AffineMap::get(numLoops, 0, exprs, b.getContext());
 
   // The operand does not have dimensions that relates to pack op.
-  if (innerDimsPos.empty() && outerDimsPerm.empty())
-    return std::make_tuple(opOperand->get(), indexingMap);
-  auto inputType = cast<RankedTensorType>(opOperand->get().getType());
-  auto maybeIntInnerTileSizes = getConstantIntValues(innerTileSizes);
-  if (!maybeIntInnerTileSizes.has_value()) {
-    return failure();
+  if (innerDimsPos.empty() && outerDimsPerm.empty()) {
+    packedOperandMap[opOperand] = currOperandDetails;
+    return false;
   }
-  if (!poisonPaddingOk &&
-      linalg::PackOp::requirePaddingValueStrict(
-          inputType.getShape(), innerDimsPos,
-          linalg::PackOp::inferPackedType(inputType, *maybeIntInnerTileSizes,
-                                          innerDimsPos, outerDimsPerm)
-              .getShape(),
-          outerDimsPerm, innerTileSizes))
-    return failure();
+  auto inputType = cast<RankedTensorType>(opOperand->get().getType());
+
+  auto maybeIntInnerTileSizes =
+      llvm::map_to_vector(innerTileSizes, [](OpFoldResult ofr) -> int64_t {
+        std::optional<int64_t> maybeCst = getConstantIntValue(ofr);
+        return maybeCst.value_or(ShapedType::kDynamic);
+      });
+  bool requirePadding = linalg::PackOp::requirePaddingValueStrict(
+      inputType.getShape(), innerDimsPos,
+      linalg::PackOp::inferPackedType(inputType, maybeIntInnerTileSizes,
+                                      innerDimsPos, outerDimsPerm)
+          .getShape(),
+      outerDimsPerm, innerTileSizes);
+  currOperandDetails.innerDimsPos = innerDimsPos;
+  currOperandDetails.innerTileSizes = innerTileSizes;
+  currOperandDetails.outerDimsPerm = outerDimsPerm;
+  packedOperandMap[opOperand] = currOperandDetails;
+
+  if (requirePadding)
+    return true;
+  return false;
+}
+
+static std::tuple<Value, AffineMap> getOrCreatePackedViewOfOperand(
+    OpBuilder &b, Location loc, OpOperand *opOperand,
+    DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap) {
+  assert(packedOperandMap.contains(opOperand) &&
+         "packed operand details expected to be populated");
+  auto currOperandDetails = packedOperandMap[opOperand];
+  auto innerDimsPos = currOperandDetails.innerDimsPos;
+  auto outerDimsPerm = currOperandDetails.outerDimsPerm;
+  auto innerTileSizes = currOperandDetails.innerTileSizes;
+  if (innerDimsPos.empty() && outerDimsPerm.empty()) {
+    return std::make_tuple(opOperand->get(), currOperandDetails.indexingMap);
+  }
   auto empty = linalg::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
   auto poison = ub::PoisonOp::create(
@@ -308,7 +347,7 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   Value packedOperand =
       linalg::PackOp::create(b, loc, opOperand->get(), empty, innerDimsPos,
                              innerTileSizes, poison, outerDimsPerm);
-  return std::make_tuple(packedOperand, indexingMap);
+  return std::make_tuple(packedOperand, currOperandDetails.indexingMap);
 }
 
 /// This function is a helper subroutine to pack a genericOp and return it. It
@@ -330,14 +369,18 @@ packGenericOp(RewriterBase &rewriter, GenericOp genericOp, Value dest,
            packOp.getInnerDimsPos() == unPackOp.getInnerDimsPos() &&
            llvm::equal(packOp.getMixedTiles(), unPackOp.getMixedTiles());
   };
+  DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap;
+  bool requiresPadding = false;
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
-    auto mayBepackedOperandAndIndexing = getOrCreatePackedViewOfOperand(
-        rewriter, loc, packInfo, genericOp, inputOperand, poisonPaddingOk);
-    if (failed(mayBepackedOperandAndIndexing)) {
-      return failure();
-    }
-    auto packedOperand = std::get<0>(*mayBepackedOperandAndIndexing);
-    auto packedIndexingMap = std::get<1>(*mayBepackedOperandAndIndexing);
+    requiresPadding |= getPackedOperandDetails(rewriter, packInfo, genericOp,
+                                               inputOperand, packedOperandMap);
+  }
+  if (requiresPadding && !poisonPaddingOk) {
+    return failure();
+  }
+  for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
+    auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
+        rewriter, loc, inputOperand, packedOperandMap);
     auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>();
     auto packOp = packedOperand.getDefiningOp<linalg::PackOp>();
     if (packOp && unpackOp && hasEquivalentTiles(packOp, unpackOp)) {
@@ -492,15 +535,15 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   }
 
   // Rebuild the indexing map for the corresponding init operand.
-  auto mayBepackedOperandAndIndexing =
-      getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
-                                     genericOp, opOperand, poisonPaddingOk);
-  if (failed(mayBepackedOperandAndIndexing)) {
+  DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap;
+  bool requiresPadding = getPackedOperandDetails(rewriter, *packInfo, genericOp,
+                                                 opOperand, packedOperandMap);
+  if (requiresPadding && !poisonPaddingOk) {
     return failure();
   }
-  auto packedOutOperand = std::get<0>(*mayBepackedOperandAndIndexing);
-  auto packedOutIndexingMap = std::get<1>(*mayBepackedOperandAndIndexing);
-
+  auto [packedOutOperand, packedOutIndexingMap] =
+      getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), opOperand,
+                                     packedOperandMap);
   // Forward the new tensor.empty as a destination if it is one of the following
   // situations:
   // 1) The dps init operand is a tensor.empty.
@@ -1139,14 +1182,17 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
     return failure();
 
   // Rebuild the indexing map for the corresponding init operand.
-  auto mayBepackedOperandAndIndexing = getOrCreatePackedViewOfOperand(
-      rewriter, genericOp.getLoc(), *packInfo, genericOp,
-      genericOp.getDpsInitOperand(0), poisonPaddingOk);
-  if (failed(mayBepackedOperandAndIndexing)) {
+  DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap;
+  bool requiresPadding =
+      getPackedOperandDetails(rewriter, *packInfo, genericOp,
+                              genericOp.getDpsInitOperand(0), packedOperandMap);
+  if (requiresPadding && !poisonPaddingOk) {
     return failure();
   }
-  auto packedOutOperand = std::get<0>(*mayBepackedOperandAndIndexing);
-  auto packedOutIndexingMap = std::get<1>(*mayBepackedOperandAndIndexing);
+  auto [packedOutOperand, packedOutIndexingMap] =
+      getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(),
+                                     genericOp.getDpsInitOperand(0),
+                                     packedOperandMap);
   auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
 
   // Forward the new tensor.empty as a destination if it is one of the following

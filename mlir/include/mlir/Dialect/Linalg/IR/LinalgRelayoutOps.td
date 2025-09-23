@@ -242,10 +242,10 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     // Same as above function but here dynamic dimensions are assumed
     // to require padding.
     static bool requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
-                                    ArrayRef<int64_t> innerDimsPos,
-                                    ArrayRef<int64_t> outputShape,
-                                    ArrayRef<int64_t> outerDimsPerm,
-                                    ArrayRef<OpFoldResult> innerTiles);
+                                          ArrayRef<int64_t> innerDimsPos,
+                                          ArrayRef<int64_t> outputShape,
+                                          ArrayRef<int64_t> outerDimsPerm,
+                                          ArrayRef<OpFoldResult> innerTiles);
 
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
