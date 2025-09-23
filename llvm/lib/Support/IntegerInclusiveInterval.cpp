@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Range.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
@@ -15,14 +15,16 @@
 
 using namespace llvm;
 
-Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
-                                                        char Separator) {
-  RangeList Ranges;
+namespace llvm {
+namespace IntegerIntervalUtils {
+
+Expected<IntervalList> parseIntervals(StringRef Str, char Separator) {
+  IntervalList Intervals;
 
   if (Str.empty())
-    return std::move(Ranges);
+    return std::move(Intervals);
 
-  // Regex to match either single number or range "num1-num2".
+  // Regex to match either single number or interval "num1-num2".
   const Regex RangeRegex("^([0-9]+)(-([0-9]+))?$");
 
   for (StringRef Part : llvm::split(Str, Separator)) {
@@ -55,62 +57,65 @@ Expected<RangeUtils::RangeList> RangeUtils::parseRanges(StringRef Str,
       // Single number.
       End = Begin;
 
-    // Check ordering constraint (ranges must be in increasing order).
-    if (!Ranges.empty() && Begin <= Ranges.back().getEnd())
+    // Check ordering constraint (intervals must be in increasing order).
+    if (!Intervals.empty() && Begin <= Intervals.back().getEnd())
       return createStringError(
           std::errc::invalid_argument,
-          "Expected ranges to be in increasing order: %lld <= %lld", Begin,
-          Ranges.back().getEnd());
+          "Expected intervals to be in increasing order: %lld <= %lld", Begin,
+          Intervals.back().getEnd());
 
-    Ranges.push_back(Range(Begin, End));
+    Intervals.push_back(IntegerInclusiveInterval(Begin, End));
   }
 
-  return Ranges;
+  return Intervals;
 }
 
-bool RangeUtils::contains(ArrayRef<Range> Ranges, int64_t Value) {
-  for (const Range &R : Ranges) {
-    if (R.contains(Value))
+bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value) {
+  for (const IntegerInclusiveInterval &It : Intervals) {
+    if (It.contains(Value))
       return true;
   }
   return false;
 }
 
-void RangeUtils::printRanges(raw_ostream &OS, ArrayRef<Range> Ranges,
-                             char Separator) {
-  if (Ranges.empty()) {
+void printIntervals(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals,
+                    char Separator) {
+  if (Intervals.empty()) {
     OS << "empty";
     return;
   }
 
   std::string Sep(1, Separator);
   ListSeparator LS(Sep);
-  for (const Range &R : Ranges) {
+  for (const IntegerInclusiveInterval &It : Intervals) {
     OS << LS;
-    R.print(OS);
+    It.print(OS);
   }
 }
 
-RangeUtils::RangeList RangeUtils::mergeAdjacentRanges(ArrayRef<Range> Ranges) {
-  if (Ranges.empty())
+IntervalList mergeAdjacentIntervals(
+    ArrayRef<IntegerInclusiveInterval> Intervals) {
+  if (Intervals.empty())
     return {};
 
-  RangeList Result;
-  Result.push_back(Ranges[0]);
+  IntervalList Result;
+  Result.push_back(Intervals[0]);
 
-  for (size_t I = 1; I < Ranges.size(); ++I) {
-    const Range &Current = Ranges[I];
-    Range &Last = Result.back();
-
-    // Check if current range is adjacent to the last merged range.
+  for (const IntegerInclusiveInterval &Current : Intervals.drop_front()) {
+    IntegerInclusiveInterval &Last = Result.back();
+    // Check if current interval is adjacent to the last merged interval.
     if (Current.getBegin() == Last.getEnd() + 1) {
-      // Merge by extending the end of the last range.
+      // Merge by extending the end of the last interval.
       Last.setEnd(Current.getEnd());
     } else {
-      // Not adjacent, add as separate range.
+      // Not adjacent, add as separate interval.
       Result.push_back(Current);
     }
   }
 
   return Result;
 }
+
+} // end namespace IntegerIntervalUtils
+
+} // end namespace llvm

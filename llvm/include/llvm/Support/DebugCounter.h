@@ -48,7 +48,7 @@
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Range.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 #include <string>
 
 namespace llvm {
@@ -57,7 +57,8 @@ class raw_ostream;
 
 class DebugCounter {
 public:
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Range> Ranges);
+  LLVM_ABI static void printChunks(raw_ostream &OS,
+                                   ArrayRef<IntegerInclusiveInterval> Ranges);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
@@ -166,7 +167,7 @@ protected:
     uint64_t CurrChunkIdx = 0;
     bool IsSet = false;
     std::string Desc;
-    RangeUtils::RangeList Chunks;
+    IntegerIntervalUtils::IntervalList Chunks;
   };
 
   DenseMap<unsigned, CounterInfo> Counters;

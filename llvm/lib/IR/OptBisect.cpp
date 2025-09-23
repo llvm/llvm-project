@@ -16,7 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Range.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
@@ -62,7 +62,7 @@ static cl::opt<std::string> OptBisectRanges(
         return;
       }
 
-      auto Ranges = RangeUtils::parseRanges(RangeStr);
+      auto Ranges = IntegerIntervalUtils::parseIntervals(RangeStr);
       if (!Ranges) {
         handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
           errs() << "Error: Invalid range specification for -opt-bisect: "
@@ -108,7 +108,7 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   int CurBisectNum = ++LastBisectNum;
 
   // Check if current pass number falls within any of the specified ranges.
-  bool ShouldRun = RangeUtils::contains(BisectRanges, CurBisectNum);
+  bool ShouldRun = IntegerIntervalUtils::contains(BisectRanges, CurBisectNum);
 
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
