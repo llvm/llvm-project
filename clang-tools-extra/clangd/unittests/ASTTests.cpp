@@ -244,7 +244,8 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
     for (Position Pos : File.points()) {
       auto Location = sourceLocationInMainFile(SM.get(), Pos);
       ASSERT_TRUE(!!Location) << llvm::toString(Location.takeError());
-      auto DeducedType = getDeducedType(AST.getASTContext(), *Location);
+      auto DeducedType = getDeducedType(AST.getASTContext(),
+                                        AST.getHeuristicResolver(), *Location);
       if (T.DeducedType == nullptr) {
         EXPECT_FALSE(DeducedType);
       } else {

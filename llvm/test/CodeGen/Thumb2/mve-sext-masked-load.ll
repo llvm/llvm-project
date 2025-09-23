@@ -51,36 +51,41 @@ entry:
 define arm_aapcs_vfpcc <4 x double> @foo_v4i32(ptr nocapture readonly %pSrc, i32 %blockSize, <4 x i32> %a) {
 ; CHECK-LABEL: foo_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpt.s32 lt, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q5, [r0]
-; CHECK-NEXT:    vmov r4, r0, d10
+; CHECK-NEXT:    vmov.f32 s2, s23
+; CHECK-NEXT:    vmov.f32 s16, s22
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    asrs r1, r0, #31
 ; CHECK-NEXT:    bl __aeabi_l2d
-; CHECK-NEXT:    asrs r2, r4, #31
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vmov d9, r0, r1
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    bl __aeabi_l2d
-; CHECK-NEXT:    vmov r4, r2, d11
-; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    asrs r3, r2, #31
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_l2d
-; CHECK-NEXT:    asrs r2, r4, #31
+; CHECK-NEXT:    vmov.f32 s2, s21
+; CHECK-NEXT:    vmov d8, r0, r1
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    asrs r3, r2, #31
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl __aeabi_l2d
+; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vmov d11, r0, r1
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    asrs r3, r2, #31
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    bl __aeabi_l2d
 ; CHECK-NEXT:    vmov d10, r0, r1
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vmov q1, q5
+; CHECK-NEXT:    vmov q1, q4
+; CHECK-NEXT:    vmov q0, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %active.lane.mask = icmp slt <4 x i32> %a, zeroinitializer
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %pSrc, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
