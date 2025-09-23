@@ -2642,7 +2642,7 @@ static bool OptimizeNonTrivialIFuncs(
         if (CallerIsFMV) {
           // Discard feature bits that are known to be available
           // in the current iteration.
-          for (APInt &Version: KnownBits)
+          for (APInt &Version : KnownBits)
             if (CallerBits.isSubsetOf(Version))
               Version &= ~CallerBits;
           // Keep advancing the candidate index as long as the unavailable
