@@ -6961,12 +6961,10 @@ static bool planContainsDifferentCompares(VPlan &Plan, VPCostContext &CostCtx,
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &R : *VPBB) {
-      if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-        if (VPI->getOpcode() == VPInstruction::BranchOnCount ||
-            VPI->getOpcode() == Instruction::ICmp ||
-            VPI->getOpcode() == Instruction::FCmp)
-          NumVPlanCompares += 1;
-      }
+      using namespace VPlanPatternMatch;
+      if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+          match(&R, m_Cmp(m_VPValue(), m_VPValue())))
+        NumVPlanCompares += 1;
     }
   }
 
