@@ -731,7 +731,8 @@ public:
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;
-          return PyAttribute(self.getContext(), encoding).maybeDownCast();
+          return nb::cast<nb::typed<nb::object, PyAttribute>>(
+              PyAttribute(self.getContext(), encoding).maybeDownCast());
         });
   }
 };
@@ -793,9 +794,9 @@ public:
         .def_prop_ro(
             "layout",
             [](PyMemRefType &self) -> nb::typed<nb::object, PyAttribute> {
-              return PyAttribute(self.getContext(),
-                                 mlirMemRefTypeGetLayout(self))
-                  .maybeDownCast();
+              return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                  PyAttribute(self.getContext(), mlirMemRefTypeGetLayout(self))
+                      .maybeDownCast());
             },
             "The layout of the MemRef type.")
         .def(
@@ -824,7 +825,8 @@ public:
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return PyAttribute(self.getContext(), a).maybeDownCast();
+              return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                  PyAttribute(self.getContext(), a).maybeDownCast());
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -865,7 +867,8 @@ public:
               MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return PyAttribute(self.getContext(), a).maybeDownCast();
+              return nb::cast<nb::typed<nb::object, PyAttribute>>(
+                  PyAttribute(self.getContext(), a).maybeDownCast());
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -894,6 +897,18 @@ public:
           return PyTupleType(context->getRef(), t);
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
+        "Create a tuple type");
+    c.def_static(
+        "get_tuple",
+        [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
+          MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
+                                        elements.data());
+          return PyTupleType(context->getRef(), t);
+        },
+        nb::arg("elements"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get_tuple(elements: Sequence[Type], context: mlir.ir.Context | None = None) -> TupleType"),
+        // clang-format on
         "Create a tuple type");
     c.def(
         "get_type",
@@ -940,6 +955,20 @@ public:
           return PyFunctionType(context->getRef(), t);
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        "Gets a FunctionType from a list of input and result types");
+    c.def_static(
+        "get",
+        [](std::vector<MlirType> inputs, std::vector<MlirType> results,
+           DefaultingPyMlirContext context) {
+          MlirType t =
+              mlirFunctionTypeGet(context->get(), inputs.size(), inputs.data(),
+                                  results.size(), results.data());
+          return PyFunctionType(context->getRef(), t);
+        },
+        nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: mlir.ir.Context | None = None) -> FunctionType"),
+        // clang-format on
         "Gets a FunctionType from a list of input and result types");
     c.def_prop_ro(
         "inputs",

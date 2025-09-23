@@ -3417,10 +3417,12 @@ func.func @negative_from_elements_poison_constant_mix() -> vector<2xf32> {
 
 // -----
 
-// CHECK-LABEL: func @vector_insert_const_regression(
+// Not a DenseElementsAttr, don't fold.
+
+// CHECK-LABEL: func @negative_insert_llvm_undef(
 //       CHECK:   llvm.mlir.undef
 //       CHECK:   vector.insert
-func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
+func.func @negative_insert_llvm_undef(%arg0: i8) -> vector<4xi8> {
   %0 = llvm.mlir.undef : vector<4xi8>
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
