@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_USELISTORDER_H
 #define LLVM_IR_USELISTORDER_H
 
+#include "llvm/Support/CommandLine.h"
 #include <cstddef>
 #include <vector>
 
@@ -37,6 +38,27 @@ struct UseListOrder {
 };
 
 using UseListOrderStack = std::vector<UseListOrder>;
+
+class PreserveUseListOrderOptionParser
+    : public cl::parser<std::optional<bool>> {
+public:
+  PreserveUseListOrderOptionParser(cl::Option &O)
+      : cl::parser<std::optional<bool>>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg,
+             std::optional<bool> &V) {
+    if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
+        Arg == "1") {
+      V = true;
+      return false;
+    }
+    if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
+      V = false;
+      return false;
+    }
+    return O.error("Invalid argument '" + Arg + "',  Try 0 or 1");
+  }
+};
 
 } // end namespace llvm
 

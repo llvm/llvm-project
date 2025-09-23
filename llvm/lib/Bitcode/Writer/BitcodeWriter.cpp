@@ -118,10 +118,12 @@ static cl::opt<bool>
 #endif
                                 cl::desc(""));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(false), cl::Hidden);
+static cl::opt<std::optional<bool>, /*ExternalStorage=*/false,
+               PreserveUseListOrderOptionParser>
+    PreserveBitcodeUseListOrder(
+        "preserve-bc-uselistorder",
+        cl::desc("Preserve use-list order when writing LLVM bitcode."),
+        cl::init(std::nullopt), cl::Hidden, cl::ValueOptional);
 
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
@@ -222,7 +224,7 @@ public:
                           bool ShouldPreserveUseListOrder,
                           const ModuleSummaryIndex *Index)
       : BitcodeWriterBase(Stream, StrtabBuilder), M(M),
-        VE(M, ShouldPreserveUseListOrder || PreserveBitcodeUseListOrder),
+        VE(M, PreserveBitcodeUseListOrder.value_or(ShouldPreserveUseListOrder)),
         Index(Index) {
     // Assign ValueIds to any callee values in the index that came from
     // indirect call profiles and were recorded as a GUID not a Value*
