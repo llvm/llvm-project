@@ -2435,8 +2435,8 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   // Handle integer-to-integer widening and narrowing.
   // FIXME: Use DW_OP_convert when it's available everywhere.
   if (FromTy->isIntegerTy() && ToTy->isIntegerTy()) {
-    uint64_t FromBits = FromTy->getPrimitiveSizeInBits();
-    uint64_t ToBits = ToTy->getPrimitiveSizeInBits();
+    uint64_t FromBits = FromTy->getIntegerBitWidth();
+    uint64_t ToBits = ToTy->getIntegerBitWidth();
     assert(FromBits != ToBits && "Unexpected no-op conversion");
 
     // When the width of the result grows, assume that a debugger will only

@@ -10,7 +10,7 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-LABEL: define void @avoid_sinking_store_across_load(
 ; CHECK-SAME: ptr [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -40,14 +40,12 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 49, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 52, [[MIDDLE_BLOCK]] ], [ 4, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 49, [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ 52, [[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i64 [[IV_1]], 3
 ; CHECK-NEXT:    [[IV_1_PLUS_4:%.*]] = add nuw nsw i64 [[IV_1]], 4
 ; CHECK-NEXT:    [[GEP_IV_1_PLUS_4:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IV_1_PLUS_4]]

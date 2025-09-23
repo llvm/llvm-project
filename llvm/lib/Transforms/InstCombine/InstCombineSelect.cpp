@@ -3257,7 +3257,7 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
 
   // Profitability check - avoid increasing instruction count.
   if (none_of(ArrayRef<Value *>({OuterSelVal.getCondition(), InnerSelVal}),
-              [](Value *V) { return V->hasOneUse(); }))
+              match_fn(m_OneUse(m_Value()))))
     return nullptr;
 
   // The appropriate hand of the outermost `select` must be a select itself.
