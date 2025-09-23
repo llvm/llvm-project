@@ -12,7 +12,8 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v1     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n2     | FileCheck %s
-; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v2     | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v2     | FileCheck %s --check-prefix FUSE-LITERALS
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=olympus         | FileCheck %s --check-prefix FUSE-LITERALS
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=apple-a16 -mattr=-fuse-literals | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=apple-a17 -mattr=-fuse-literals | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1  -mattr=-fuse-literals | FileCheck %s
@@ -38,6 +39,12 @@ define double @litf() {
 ; CHECK-LABEL: litf:
 ; CHECK:      adrp [[ADDR:x[0-9]+]], [[CSTLABEL:.LCP.*]]
 ; CHECK-NEXT: ldr  {{d[0-9]+}}, {{[[]}}[[ADDR]], :lo12:[[CSTLABEL]]{{[]]}}
+;
+; FUSE-LITERALS: mov     [[R:x[0-9]+]], #11544
+; FUSE-LITERALS: movk    [[R]], #21572, lsl #16
+; FUSE-LITERALS: movk    [[R]], #8699, lsl #32
+; FUSE-LITERALS: movk    [[R]], #16393, lsl #48
+; FUSE-LITERALS: fmov    {{d[0-9]+}}, [[R]]
 entry:
   ret double 0x400921FB54442D18
 }
