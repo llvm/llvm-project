@@ -520,15 +520,13 @@ _mm512_castsi512_si256(__m512i __A) {
   return (__m256i)__builtin_shufflevector(__A, __A , 0, 1, 2, 3);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_int2mask(int __a)
-{
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_int2mask(int __a) {
   return (__mmask16)__a;
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm512_mask2int(__mmask16 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_mask2int(__mmask16 __a) {
   return (int)__a;
 }
 
@@ -4394,9 +4392,8 @@ _mm512_store_epi64 (void *__P, __m512i __A)
 
 /* Mask ops */
 
-static __inline __mmask16 __DEFAULT_FN_ATTRS
-_mm512_knot(__mmask16 __M)
-{
+static __inline __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_knot(__mmask16 __M) {
   return __builtin_ia32_knothi(__M);
 }
 
@@ -8085,21 +8082,18 @@ _mm512_mask_permutexvar_epi32 (__m512i __W, __mmask16 __M, __m512i __X,
 
 #define _mm512_mask_permutevar_epi32 _mm512_mask_permutexvar_epi32
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kand (__mmask16 __A, __mmask16 __B)
-{
+static __inline__ __mmask16
+    __DEFAULT_FN_ATTRS_CONSTEXPR _mm512_kand(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_kandhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kandn (__mmask16 __A, __mmask16 __B)
-{
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_kandn(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_kandnhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kor (__mmask16 __A, __mmask16 __B)
-{
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_kor(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_korhi ((__mmask16) __A, (__mmask16) __B);
 }
 
@@ -8139,15 +8133,13 @@ _mm512_kunpackb (__mmask16 __A, __mmask16 __B)
   return (__mmask16) __builtin_ia32_kunpckhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kxnor (__mmask16 __A, __mmask16 __B)
-{
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_kxnor(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_kxnorhi ((__mmask16) __A, (__mmask16) __B);
 }
 
-static __inline__ __mmask16 __DEFAULT_FN_ATTRS
-_mm512_kxor (__mmask16 __A, __mmask16 __B)
-{
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm512_kxor(__mmask16 __A, __mmask16 __B) {
   return (__mmask16) __builtin_ia32_kxorhi ((__mmask16) __A, (__mmask16) __B);
 }
 
