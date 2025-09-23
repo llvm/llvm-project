@@ -1,4 +1,4 @@
-//===--- SuspiciousMemsetUsageCheck.h - clang-tidy---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Finds memset calls with potential mistakes in their arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-memset-usage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-memset-usage.html
 class SuspiciousMemsetUsageCheck : public ClangTidyCheck {
 public:
   SuspiciousMemsetUsageCheck(StringRef Name, ClangTidyContext *Context)

@@ -2177,24 +2177,47 @@ static bool isFunctionLocalClass(const CXXRecordDecl *RD) {
   return false;
 }
 
+llvm::StringRef
+CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
+  assert(Method);
+
+  const bool IsCtorOrDtor =
+      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+
+  if (IsCtorOrDtor && !CGM.getCodeGenOpts().DebugStructorDeclLinkageNames)
+    return {};
+
+  // In some ABIs (particularly Itanium) a single ctor/dtor
+  // corresponds to multiple functions. Attach a "unified"
+  // linkage name for those (which is the convention GCC uses).
+  // Otherwise, attach no linkage name.
+  if (IsCtorOrDtor && !CGM.getTarget().getCXXABI().hasConstructorVariants())
+    return {};
+
+  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Ctor, CXXCtorType::Ctor_Unified));
+
+  if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Dtor, CXXDtorType::Dtor_Unified));
+
+  return CGM.getMangledName(Method);
+}
+
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
-  bool IsCtorOrDtor =
-      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+  assert(Method);
 
   StringRef MethodName = getFunctionName(Method);
   llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit);
 
-  // Since a single ctor/dtor corresponds to multiple functions, it doesn't
-  // make sense to give a single ctor/dtor a linkage name.
   StringRef MethodLinkageName;
   // FIXME: 'isFunctionLocalClass' seems like an arbitrary/unintentional
   // property to use here. It may've been intended to model "is non-external
   // type" but misses cases of non-function-local but non-external classes such
   // as those in anonymous namespaces as well as the reverse - external types
   // that are function local, such as those in (non-local) inline functions.
-  if (!IsCtorOrDtor && !isFunctionLocalClass(Method->getParent()))
-    MethodLinkageName = CGM.getMangledName(Method);
+  if (!isFunctionLocalClass(Method->getParent()))
+    MethodLinkageName = GetMethodLinkageName(Method);
 
   // Get the location for the method.
   llvm::DIFile *MethodDefUnit = nullptr;
@@ -2634,10 +2657,20 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 // existing information in the DWARF. The type is assumed to be 'void *'.
 void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
-  if (!CGM.getTarget().getCXXABI().isItaniumFamily() ||
-      CGM.getTarget().getTriple().isOSBinFormatCOFF())
+  if (!CGM.getTarget().getCXXABI().isItaniumFamily())
     return;
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  // On COFF platform, we shouldn't emit a reference to an external entity (i.e.
+  // VTable) into debug info, which is constructed within a discardable section.
+  // If that entity ends up implicitly dllimported from another DLL, the linker
+  // may produce a runtime pseudo-relocation for it (BFD-ld only. LLD prohibits
+  // to emit such relocation). If the debug section is stripped, the runtime
+  // pseudo-relocation points to memory space outside of the module, causing an
+  // access violation.
+  if (CGM.getTarget().getTriple().isOSBinFormatCOFF() &&
+      VTable->isDeclarationForLinker())
     return;
 
   ASTContext &Context = CGM.getContext();
