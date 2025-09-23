@@ -120,7 +120,7 @@ TEST_F(HostTest, GetProcessInfoSetsPriority) {
   ASSERT_TRUE(Info.IsZombie().has_value());
   ASSERT_FALSE(Info.IsZombie().value());
 
-  // CoreDumping was added in kernel version 4.15 
+  // CoreDumping was added in kernel version 4.15.
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
   ASSERT_TRUE(Info.IsCoreDumping().has_value());
   ASSERT_FALSE(Info.IsCoreDumping().value());
