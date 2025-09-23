@@ -1001,3 +1001,29 @@ void foo36() {
 // OGCG: %[[A_IMAG_F32:.*]] = fpext half %[[A_IMAG]] to float
 // OGCG: %[[A_IMAG_F16:.*]] = fptrunc float %[[A_IMAG_F32]] to half
 // OGCG: store half %[[A_IMAG_F16]], ptr %[[IMAG_ADDR]], align 2
+
+void foo37() {
+  _Complex float a;
+  _Complex float b = __extension__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: store { float, float } %[[TMP_A]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG: store float %[[A_REAL]], ptr %[[B_REAL_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 4
