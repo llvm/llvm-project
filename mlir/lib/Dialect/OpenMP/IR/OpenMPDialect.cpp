@@ -33,6 +33,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -76,6 +77,177 @@ struct LLVMPointerPointerLikeModel
   Type getElementType(Type pointer) const { return Type(); }
 };
 } // namespace
+
+/// Generate a name of a canonical loop nest of the format
+/// `<prefix>(_s<num>_r<num>)*` that describes its nesting inside parent
+/// operations (`_r<num>`) and that operation's region (`_s<num>`). The region
+/// number is omitted if the parent operation has just one region. If a loop
+/// nest just consists of canonical loops nested inside each other, also uses
+/// `d<num>` where <num> is the nesting depth of the loop.
+static std::string generateLoopNestingName(StringRef prefix,
+                                           CanonicalLoopOp op) {
+  struct Component {
+    // An region argument of an operation
+    Operation *parentOp;
+    size_t regionInOpIdx;
+    bool isOnlyRegionInOp;
+    bool skipRegion;
+
+    // An operation somewhere in a parent region
+    Operation *thisOp;
+    Region *parentRegion;
+    size_t opInRegionIdx;
+    bool isOnlyOpInRegion;
+    bool skipOp;
+    int depth = -1;
+  };
+  SmallVector<Component> components;
+
+  // Gather a list of parent regions and operations, and the position within
+  // their parent
+  Operation *o = op.getOperation();
+  while (o) {
+    if (o->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
+      break;
+
+    // Operation within a region
+    Region *r = o->getParentRegion();
+    if (!r)
+      break;
+
+    llvm::ReversePostOrderTraversal<Block *> traversal(&r->getBlocks().front());
+    size_t idx = 0;
+    bool found = false;
+    size_t sequentialIdx = -1;
+    bool isOnlyLoop = true;
+    for (Block *b : traversal) {
+      for (Operation &op : *b) {
+        if (&op == o && !found) {
+          sequentialIdx = idx;
+          found = true;
+        }
+        if (op.getNumRegions()) {
+          idx += 1;
+          if (idx > 1)
+            isOnlyLoop = false;
+        }
+        if (found && !isOnlyLoop)
+          break;
+      }
+    }
+
+    Component &comp = components.emplace_back();
+    comp.thisOp = o;
+    comp.parentRegion = r;
+    comp.opInRegionIdx = sequentialIdx;
+    comp.isOnlyOpInRegion = isOnlyLoop;
+
+    // Region argument of an operation
+    Operation *parent = r->getParentOp();
+
+    comp.parentOp = parent;
+    comp.regionInOpIdx = 0;
+    comp.isOnlyRegionInOp = true;
+    if (parent && parent->getRegions().size() > 1) {
+      auto getRegionIndex = [](Operation *o, Region *r) {
+        for (auto [idx, region] : llvm::enumerate(o->getRegions())) {
+          if (&region == r)
+            return idx;
+        }
+        llvm_unreachable("Region not child of its parent operation");
+      };
+      comp.regionInOpIdx = getRegionIndex(parent, r);
+      comp.isOnlyRegionInOp = false;
+    }
+
+    if (!parent)
+      break;
+
+    // next parent
+    o = parent;
+  }
+
+  // Reorder components from outermost to innermost
+  std::reverse(components.begin(), components.end());
+
+  // Determine whether a component is not needed
+  for (Component &c : components) {
+    c.skipRegion = c.isOnlyRegionInOp;
+    c.skipOp = c.isOnlyOpInRegion && !isa<CanonicalLoopOp>(c.thisOp);
+  }
+
+  // Find runs of perfect nests and merge them into a single component
+  size_t curNestRoot = 0;
+  size_t curNestDepth = 1;
+  auto mergeLoopNest = [&](size_t innermost) {
+    size_t outermost = curNestRoot;
+
+    // Don't do enything if it does not consist of at least 2 loops
+    if (outermost < innermost) {
+      for (auto i : llvm::seq<int>(outermost + 1, innermost))
+        components[i].skipOp = true;
+      components[innermost].depth = curNestDepth;
+    }
+
+    // Start new root
+    curNestRoot = innermost + 1;
+    curNestDepth = 1;
+  };
+  for (auto &&[i, c] : llvm::enumerate(components)) {
+    if (i <= curNestRoot)
+      continue;
+
+    // Check whether this region can be included
+    if (!c.skipRegion) {
+      mergeLoopNest(i);
+      continue;
+    }
+
+    if (c.skipOp)
+      continue;
+
+    if (!c.isOnlyOpInRegion) {
+      mergeLoopNest(i);
+      continue;
+    }
+
+    curNestDepth += 1;
+  }
+
+  // Finalize innermost loop nest
+  mergeLoopNest(components.size() - 1);
+
+  // Outermost loop does not need a suffix if it has no sibling
+  for (auto &c : components) {
+    if (c.skipOp)
+      continue;
+    if (c.isOnlyOpInRegion)
+      c.skipOp = true;
+    break;
+  }
+
+  // Compile name
+  SmallString<64> Name{prefix};
+  for (auto &c : components) {
+    auto addComponent = [&Name](char letter, int64_t idx) {
+      Name += '_';
+      Name += letter;
+      Name += idx;
+    };
+
+    if (!c.skipRegion)
+      addComponent('r', c.regionInOpIdx);
+
+    if (!c.skipOp) {
+      if (c.depth >= 0)
+        addComponent('d', c.depth - 1);
+      else
+        addComponent('s', c.opInRegionIdx);
+    }
+  }
+
+  return Name.str().str();
+}
 
 void OpenMPDialect::initialize() {
   addOperations<
@@ -3141,70 +3313,28 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
     cliName =
         TypeSwitch<Operation *, std::string>(gen->getOwner())
             .Case([&](CanonicalLoopOp op) {
-              // Find the canonical loop nesting: For each ancestor add a
-              // "+_r<idx>" suffix (in reverse order)
-              SmallVector<std::string> components;
-              Operation *o = op.getOperation();
-              while (o) {
-                if (o->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
-                  break;
-
-                Region *r = o->getParentRegion();
-                if (!r)
-                  break;
-
-                auto getSequentialIndex = [](Region *r, Operation *o) {
-                  llvm::ReversePostOrderTraversal<Block *> traversal(
-                      &r->getBlocks().front());
-                  size_t idx = 0;
-                  for (Block *b : traversal) {
-                    for (Operation &op : *b) {
-                      if (&op == o)
-                        return idx;
-                      // Only consider operations that are containers as
-                      // possible children
-                      if (!op.getRegions().empty())
-                        idx += 1;
-                    }
-                  }
-                  llvm_unreachable("Operation not part of the region");
-                };
-                size_t sequentialIdx = getSequentialIndex(r, o);
-                components.push_back(("s" + Twine(sequentialIdx)).str());
-
-                Operation *parent = r->getParentOp();
-                if (!parent)
-                  break;
-
-                // If the operation has more than one region, also count in
-                // which of the regions
-                if (parent->getRegions().size() > 1) {
-                  auto getRegionIndex = [](Operation *o, Region *r) {
-                    for (auto [idx, region] :
-                         llvm::enumerate(o->getRegions())) {
-                      if (&region == r)
-                        return idx;
-                    }
-                    llvm_unreachable("Region not child its parent operation");
-                  };
-                  size_t regionIdx = getRegionIndex(parent, r);
-                  components.push_back(("r" + Twine(regionIdx)).str());
-                }
-
-                // next parent
-                o = parent;
-              }
-
-              SmallString<64> Name("canonloop");
-              for (const std::string &s : reverse(components)) {
-                Name += '_';
-                Name += s;
-              }
-
-              return Name;
+              return generateLoopNestingName("canonloop", op);
             })
             .Case([&](UnrollHeuristicOp op) -> std::string {
               llvm_unreachable("heuristic unrolling does not generate a loop");
+            })
+            .Case([&](TileOp op) -> std::string {
+              auto [generateesFirst, generateesCount] =
+                  op.getGenerateesODSOperandIndexAndLength();
+              unsigned firstGrid = generateesFirst;
+              unsigned firstIntratile = generateesFirst + generateesCount / 2;
+              unsigned end = generateesFirst + generateesCount;
+              unsigned opnum = gen->getOperandNumber();
+              // In the OpenMP apply and looprange clauses, indices are 1-based
+              if (firstGrid <= opnum && opnum < firstIntratile) {
+                unsigned gridnum = opnum - firstGrid + 1;
+                return ("grid" + Twine(gridnum)).str();
+              }
+              if (firstIntratile <= opnum && opnum < end) {
+                unsigned intratilenum = opnum - firstIntratile + 1;
+                return ("intratile" + Twine(intratilenum)).str();
+              }
+              llvm_unreachable("Unexpected generatee argument");
             })
             .Default([&](Operation *op) {
               assert(false && "TODO: Custom name for this operation");
@@ -3292,7 +3422,8 @@ void CanonicalLoopOp::getAsmBlockNames(OpAsmSetBlockNameFn setNameFn) {
 
 void CanonicalLoopOp::getAsmBlockArgumentNames(Region &region,
                                                OpAsmSetValueNameFn setNameFn) {
-  setNameFn(region.getArgument(0), "iv");
+  std::string ivName = generateLoopNestingName("iv", *this);
+  setNameFn(region.getArgument(0), ivName);
 }
 
 void CanonicalLoopOp::print(OpAsmPrinter &p) {
@@ -3431,6 +3562,138 @@ UnrollHeuristicOp ::getApplyeesODSOperandIndexAndLength() {
 std::pair<unsigned, unsigned>
 UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
   return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
+// TileOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, TileOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+static ParseResult parseLoopTransformClis(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &generateesOperands,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &applyeesOperands) {
+  if (parser.parseOptionalLess()) {
+    // Syntax 1: generatees present
+
+    if (parser.parseOperandList(generateesOperands,
+                                mlir::OpAsmParser::Delimiter::Paren))
+      return failure();
+
+    if (parser.parseLess())
+      return failure();
+  } else {
+    // Syntax 2: generatees omitted
+  }
+
+  // Parse `<-` (`<` has already been parsed)
+  if (parser.parseMinus())
+    return failure();
+
+  if (parser.parseOperandList(applyeesOperands,
+                              mlir::OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  return success();
+}
+
+LogicalResult TileOp::verify() {
+  if (getApplyees().empty())
+    return emitOpError() << "must apply to at least one loop";
+
+  if (getSizes().size() != getApplyees().size())
+    return emitOpError() << "there must be one tile size for each applyee";
+
+  if (!getGeneratees().empty() &&
+      2 * getSizes().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting two times the number of generatees than applyees";
+
+  DenseSet<Value> parentIVs;
+
+  Value parent = getApplyees().front();
+  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
+    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!parentGen)
+      return emitOpError() << "applyee CLI has no generator";
+
+    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
+    if (!parentGen)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    parentIVs.insert(parentLoop.getInductionVar());
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    // Canonical loop must be perfectly nested, i.e. the body of the parent must
+    // only contain the omp.canonical_loop of the nested loops, and
+    // omp.terminator
+    bool isPerfectlyNested = [&]() {
+      auto &parentBody = parentLoop.getRegion();
+      if (!parentBody.hasOneBlock())
+        return false;
+      auto &parentBlock = parentBody.getBlocks().front();
+
+      auto nestedLoopIt = parentBlock.begin();
+      if (nestedLoopIt == parentBlock.end() ||
+          (&*nestedLoopIt != loop.getOperation()))
+        return false;
+
+      auto termIt = std::next(nestedLoopIt);
+      if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
+        return false;
+
+      if (std::next(termIt) != parentBlock.end())
+        return false;
+
+      return true;
+    }();
+    if (!isPerfectlyNested)
+      return emitOpError() << "tiled loop nest must be perfectly nested";
+
+    if (parentIVs.contains(loop.getTripCount()))
+      return emitOpError() << "tiled loop nest must be rectangular";
+
+    parent = applyee;
+  }
+
+  // TODO: The tile sizes must be computed before the loop, but checking this
+  // requires dominance analysis. For instance:
+  //
+  //      %canonloop = omp.new_cli
+  //      omp.canonical_loop(%canonloop) %iv : i32 in range(%tc) {
+  //        // write to %x
+  //        omp.terminator
+  //      }
+  //      %ts = llvm.load %x
+  //      omp.tile <- (%canonloop) sizes(%ts : i32)
+
+  return success();
+}
+
+std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> TileOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 
 //===----------------------------------------------------------------------===//
