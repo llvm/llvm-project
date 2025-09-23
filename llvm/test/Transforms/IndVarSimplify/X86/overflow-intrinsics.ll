@@ -102,12 +102,9 @@ for.cond.cleanup:                                 ; preds = %cont
   ret void
 
 for.body:                                         ; preds = %entry, %cont
-  %i.04 = phi i32 [ 15, %entry ], [ %2, %cont ]
-  %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  %indvars.iv = phi i64 [ %indvars.iv.next, %cont ], [ 15, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
   store i8 0, ptr %arrayidx, align 1
-  %0 = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %i.04, i32 1)
-  %1 = extractvalue { i32, i1 } %0, 1
 
 ; CHECK: for.body:
 ; CHECK-NOT: @llvm.usub.with.overflow.i32
@@ -144,18 +141,18 @@ for.body:                                         ; preds = %entry, %cont
 ; represent non-unsigned-wrapping subtraction operations.
 
 ; CHECK: for.body:
-; CHECK:  [[COND:%[^ ]+]] = extractvalue { i32, i1 } %1, 1
+; CHECK:  [[COND:%[^ ]+]] = icmp eq i64 %indvars.iv, 0
 ; CHECK-NEXT:  br i1 [[COND]], label %trap, label %cont, !nosanitize !0
-  br i1 %1, label %trap, label %cont, !nosanitize !{}
+  %exitcond = icmp eq i64 %indvars.iv, 0
+  br i1 %exitcond, label %trap, label %cont, !nosanitize !{}
 
 trap:                                             ; preds = %for.body
   tail call void @llvm.trap(), !nosanitize !{}
   unreachable, !nosanitize !{}
 
 cont:                                             ; preds = %for.body
-  %2 = extractvalue { i32, i1 } %0, 0
-  %cmp = icmp sgt i32 %2, -1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  br i1 true, label %for.body, label %for.cond.cleanup
 }
 
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone

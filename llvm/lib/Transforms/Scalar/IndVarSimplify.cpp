@@ -797,7 +797,7 @@ static bool hasConcreteDef(Value *V) {
 
 /// Return true if the given phi is a "counter" in L.  A counter is an
 /// add recurance (of integer or pointer type) with an arbitrary start, and a
-/// step of 1.  Note that L must have exactly one latch.
+/// step of 1/-1.  Note that L must have exactly one latch.
 static bool isLoopCounter(PHINode* Phi, Loop *L,
                           ScalarEvolution *SE) {
   assert(Phi->getParent() == L->getHeader());
@@ -807,7 +807,13 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
     return false;
 
   const SCEV *S = SE->getSCEV(Phi);
-  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L))))
+  const SCEVConstant *Step;
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Step),
+                                    m_SpecificLoop(L))))
+    return false;
+  int64_t StepVal = Step->getValue()->getSExtValue();
+  // Require that the loop counter stride can only be 1 or -1
+  if (StepVal != 1 && StepVal != -1)
     return false;
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
@@ -909,7 +915,8 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
   assert(isLoopCounter(IndVar, L, SE));
   assert(ExitCount->getType()->isIntegerTy() && "exit count must be integer");
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
-  assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
+  const SCEV *StepAbs = SE->getAbsExpr(AR->getStepRecurrence(*SE), true);
+  assert(StepAbs->isOne() && "only handles unit stride");
 
   // For integer IVs, truncate the IV before computing the limit unless we
   // know apriori that the limit must be a constant when evaluated in the
