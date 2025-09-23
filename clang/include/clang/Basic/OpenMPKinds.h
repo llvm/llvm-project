@@ -107,6 +107,13 @@ enum OpenMPDistScheduleClauseKind {
   OMPC_DIST_SCHEDULE_unknown
 };
 
+/// OpenMP variable-category for 'default' clause.
+enum OpenMPDefaultClauseVariableCategory {
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name) OMPC_DEFAULT_VC_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEFAULT_VC_unknown
+};
+
 /// OpenMP attributes for 'defaultmap' clause.
 enum OpenMPDefaultmapClauseKind {
 #define OPENMP_DEFAULTMAP_KIND(Name) \
@@ -256,6 +263,10 @@ struct OMPInteropInfo final {
   bool IsTargetSync;
   llvm::SmallVector<Expr *, 4> PreferTypes;
 };
+
+OpenMPDefaultClauseVariableCategory
+getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts);
+const char *getOpenMPDefaultVariableCategoryName(unsigned VC);
 
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);

@@ -1709,6 +1709,27 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   return Changed;
 }
 
+static bool crashingBBWithoutEffect(const BasicBlock &BB) {
+  return llvm::all_of(BB, [](const Instruction &I) {
+    // TODO: for now this is overly restrictive, to make sure nothing in this
+    // BB can depend on the loop body.
+    // It's not enough to check for !I.mayHaveSideEffects(), because e.g. a
+    // load does not have a side effect, but we could have
+    // %a = load ptr, ptr %ptr
+    // %b = load i32, ptr %a
+    // Now if the loop stored a non-nullptr to %a, we could cause a nullptr
+    // dereference by skipping over loop iterations.
+    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      if (CB->onlyAccessesInaccessibleMemory() &&
+          llvm::all_of(CB->args(), [](const llvm::Use &U) {
+            return isa<Constant>(U.get());
+          }))
+        return true;
+    }
+    return isa<UnreachableInst>(I);
+  });
+}
+
 bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -1821,26 +1842,19 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // suggestions on how to improve this?  I can obviously bail out for outer
   // loops, but that seems less than ideal.  MemorySSA can find memory writes,
   // is that enough for *all* side effects?
-  bool HasLocalSideEffects = false;
+  bool HasThreadLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
       if (I.mayHaveSideEffects()) {
         if (!LoopPredicationTraps)
           return false;
-        HasLocalSideEffects = true;
+        HasThreadLocalSideEffects = true;
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-          // The local could have leaked out of the function, so we need to
-          // consider atomic operations as effects.
-          // Because we need to preserve the relative order of volatile
-          // accesses, turn off this optimization if we see any of them.
-          // TODO:
-          // We could be smarter about volatile, and check whether the
-          // reordering is valid.
-          // We also could be smarter about atomic, and check whether the
-          // local has leaked.
-          if (!SI->isSimple() ||
-              findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
+          // Simple stores cannot be observed by other threads.
+          // If HasThreadLocalSideEffects is set, we check crashingBBWithoutEffect
+          // to make sure that the crashing BB cannot observe them either.
+          if (!SI->isSimple())
             return false;
         } else {
           return false;
@@ -1865,10 +1879,10 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
     auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-    if (HasLocalSideEffects) {
-      BasicBlock *Unreachable = nullptr;
-      BasicBlock *InLoop = nullptr;
-      for (BasicBlock *Succ : BI->successors()) {
+    if (HasThreadLocalSideEffects) {
+      const BasicBlock *Unreachable = nullptr;
+      const BasicBlock *InLoop = nullptr;
+      for (const BasicBlock *Succ : BI->successors()) {
         if (isa<UnreachableInst>(Succ->getTerminator()))
           Unreachable = Succ;
         else if (L->contains(Succ))
@@ -1878,22 +1892,9 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // a trap can still be optimized, because local side effects cannot
       // be observed in the exit case (the trap). We could be smarter about
       // this, but for now lets pattern match common cases that directly trap.
-      if (Unreachable == nullptr || InLoop == nullptr)
+      if (Unreachable == nullptr || InLoop == nullptr ||
+          !crashingBBWithoutEffect(*Unreachable))
         return Changed;
-      if (llvm::any_of(*Unreachable, [](Instruction &I) {
-            if (!I.mayHaveSideEffects())
-              return false;
-            if (auto *CB = dyn_cast<CallBase>(&I)) {
-              if (CB->onlyAccessesInaccessibleMemory() &&
-                  llvm::all_of(CB->args(), [](const llvm::Use &U) {
-                    return isa<Constant>(U.get());
-                  }))
-                return false;
-            }
-            return true;
-          })) {
-        return Changed;
-      }
     }
     Value *NewCond;
     if (ExitCount == ExactBTC) {

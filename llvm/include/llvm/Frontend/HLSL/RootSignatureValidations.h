@@ -34,12 +34,8 @@ LLVM_ABI bool verifyDescriptorRangeFlag(uint32_t Version,
                                         dxil::ResourceClass Type,
                                         dxbc::DescriptorRangeFlags FlagsVal);
 LLVM_ABI bool verifyNumDescriptors(uint32_t NumDescriptors);
-LLVM_ABI bool verifySamplerFilter(uint32_t Value);
-LLVM_ABI bool verifyAddress(uint32_t Address);
 LLVM_ABI bool verifyMipLODBias(float MipLODBias);
 LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
-LLVM_ABI bool verifyComparisonFunc(uint32_t ComparisonFunc);
-LLVM_ABI bool verifyBorderColor(uint32_t BorderColor);
 LLVM_ABI bool verifyLOD(float LOD);
 
 LLVM_ABI bool verifyBoundOffset(uint32_t Offset);

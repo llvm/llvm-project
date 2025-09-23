@@ -1,4 +1,4 @@
-//===--- RedundantMemberInitCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// constructor would be called if they were not present.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-member-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-member-init.html
 class RedundantMemberInitCheck : public ClangTidyCheck {
 public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)

@@ -1,4 +1,4 @@
-//===--- ThrownExceptionTypeCheck.h - clang-tidy-----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::cert {
 /// Checks whether a thrown object is nothrow copy constructible.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/err60-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert/err60-cpp.html
 class ThrownExceptionTypeCheck : public ClangTidyCheck {
 public:
   ThrownExceptionTypeCheck(StringRef Name, ClangTidyContext *Context)

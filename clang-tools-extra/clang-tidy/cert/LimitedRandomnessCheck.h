@@ -1,4 +1,4 @@
-//===--- LimitedRandomnessCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::cert {
 /// This check warns for the usage of std::rand() function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/msc50-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert/msc50-cpp.html
 class LimitedRandomnessCheck : public ClangTidyCheck {
 public:
   LimitedRandomnessCheck(StringRef Name, ClangTidyContext *Context)
