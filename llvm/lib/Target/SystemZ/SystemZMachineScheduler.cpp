@@ -415,16 +415,20 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
     for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
       const SUnit *SU = &DAG->SUnits[Idx];
       bool InDataSequence = true;
+      // One Data pred to MI just above, or no preds.
       unsigned NumPreds = 0;
       for (const SDep &Pred : SU->Preds)
         if (++NumPreds != 1 || Pred.getKind() != SDep::Data ||
             Pred.getSUnit()->NodeNum != Idx - 1)
           InDataSequence = false;
+      // One Data succ or no succs (ignoring ExitSU).
       unsigned NumSuccs = 0;
       for (const SDep &Succ : SU->Succs)
         if (Succ.getSUnit() != &DAG->ExitSU &&
             (++NumSuccs != 1 || Succ.getKind() != SDep::Data))
           InDataSequence = false;
+      // Another type of node or one that does not have a single data pred
+      // ends any previous sequence.
       if (!InDataSequence || !NumPreds)
         countSequence();
       if (InDataSequence)
