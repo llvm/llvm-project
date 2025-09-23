@@ -147,6 +147,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         });
   }
 
+  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX}).lower();
+
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalFor({s8, s16, s32})
@@ -426,8 +428,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(UseX87, {s80})
       .legalFor(UseX87 && !Is64Bit, {s64})
       .lower();
-
-  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX}).lower();
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
