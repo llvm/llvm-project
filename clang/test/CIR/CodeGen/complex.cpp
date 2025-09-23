@@ -1027,3 +1027,69 @@ void foo37() {
 // OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[B_ADDR]], i32 0, i32 1
 // OGCG: store float %[[A_REAL]], ptr %[[B_REAL_PTR]], align 4
 // OGCG: store float %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 4
+
+void real_on_non_glvalue() {
+  float _Complex a;
+  float b = __real__(+a);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: %[[A_REAL_PLUS:.*]] = cir.unary(plus, %[[A_REAL]]) : !cir.float, !cir.float
+// CIR: %[[A_IMAG_PLUS:.*]] = cir.unary(plus, %[[A_IMAG]]) : !cir.float, !cir.float
+// CIR: %[[RESULT:.*]] = cir.complex.create %[[A_REAL_PLUS]], %[[A_IMAG_PLUS]] : !cir.float -> !cir.complex<!cir.float>
+// CIR: %[[RESULT_REAL:.*]] = cir.complex.real %[[RESULT]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: cir.store{{.*}} %[[RESULT_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[A_REAL]], 0
+// LLVM: %[[RESULT:.*]] = insertvalue { float, float } %[[TMP_RESULT]], float %[[A_IMAG]], 1
+// LLVM: store float %[[A_REAL]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca float, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: store float %[[A_REAL]], ptr %[[B_ADDR]], align 4
+
+void imag_on_non_glvalue() {
+  float _Complex a;
+  float b = __imag__(+a);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: %[[A_REAL_PLUS:.*]] = cir.unary(plus, %[[A_REAL]]) : !cir.float, !cir.float
+// CIR: %[[A_IMAG_PLUS:.*]] = cir.unary(plus, %[[A_IMAG]]) : !cir.float, !cir.float
+// CIR: %[[RESULT:.*]] = cir.complex.create %[[A_REAL_PLUS]], %[[A_IMAG_PLUS]] : !cir.float -> !cir.complex<!cir.float>
+// CIR: %[[RESULT_IMAG:.*]] = cir.complex.imag %[[RESULT]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: cir.store{{.*}} %[[RESULT_IMAG]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
+// LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
+// LLVM: %[[TMP_RESULT:.*]] = insertvalue { float, float } {{.*}}, float %[[A_REAL]], 0
+// LLVM: %[[RESULT:.*]] = insertvalue { float, float } %[[TMP_RESULT]], float %[[A_IMAG]], 1
+// LLVM: store float %[[A_IMAG]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca float, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[B_ADDR]], align 4
