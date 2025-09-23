@@ -39,6 +39,7 @@ constexpr void tests() {
     std::ranges::concat_view v(SimpleCommon{buffer}, SimpleCommon{buffer});
     static_assert(std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
+    assert(*v.begin() == buffer[0]);
 
     using View = decltype(v);
     static_assert(HasOnlyConstBegin<View>);
@@ -52,6 +53,7 @@ constexpr void tests() {
     std::ranges::concat_view v(SimpleCommon{buffer}, NonSimpleNonCommon{buffer});
     static_assert(!std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
     assert(v.begin() == std::as_const(v).begin());
+    assert(*v.begin() == buffer[0]);
 
     using View = decltype(v);
     static_assert(!HasOnlyConstBegin<View>);
