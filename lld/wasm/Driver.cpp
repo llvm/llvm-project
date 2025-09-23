@@ -556,8 +556,6 @@ static void readConfigs(opt::InputArgList &args) {
     ctx.arg.memoryExport = args.getLastArgValue(OPT_export_memory_with_name);
   } else if (args.hasArg(OPT_export_memory)) {
     ctx.arg.memoryExport = memoryName;
-  } else {
-    ctx.arg.memoryExport = std::optional<llvm::StringRef>();
   }
 
   ctx.arg.sharedMemory = args.hasArg(OPT_shared_memory);
