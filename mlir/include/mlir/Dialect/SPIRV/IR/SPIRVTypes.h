@@ -88,8 +88,6 @@ public:
   static bool isValid(FloatType);
   /// Returns true if the given float type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
-
-  std::optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V composite type: VectorType, SPIR-V ArrayType, SPIR-V
@@ -112,8 +110,6 @@ public:
   /// Return true if the number of elements is known at compile time and is not
   /// implementation dependent.
   bool hasCompileTimeKnownNumElements() const;
-
-  std::optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V array type
@@ -137,10 +133,6 @@ public:
   /// Returns the array stride in bytes. 0 means no stride decorated on this
   /// type.
   unsigned getArrayStride() const;
-
-  /// Returns the array size in bytes. Since array type may have an explicit
-  /// stride declaration (in bytes), we also include it in the calculation.
-  std::optional<int64_t> getSizeInBytes();
 };
 
 // SPIR-V image type
