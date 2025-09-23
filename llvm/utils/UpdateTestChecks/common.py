@@ -946,8 +946,8 @@ class FunctionTestBuilder:
                 # Check if this RUN line can print any checks for this
                 # function. It can't if all of its prefixes have conflicting
                 # (None) output.
-                can_print_for_this_run = not all(self.has_conflicting_output(p, func) for p in prefixes)
-                if not can_print_for_this_run:
+                cannot_print_for_this_run = all(self.has_conflicting_output(p, func) for p in prefixes)
+                if cannot_print_for_this_run:
                     warnings_to_print[func].append((i, prefixes))
 
         for func, warning_info in warnings_to_print.items():
