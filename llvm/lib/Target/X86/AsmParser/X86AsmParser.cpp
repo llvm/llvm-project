@@ -15,10 +15,12 @@
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
+#include "X86RegisterInfo.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
@@ -29,6 +31,7 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
@@ -40,6 +43,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 
 using namespace llvm;
@@ -1172,7 +1176,7 @@ private:
 
   X86::CondCode ParseConditionCode(StringRef CCode);
 
-  bool ParseIntelMemoryOperandSize(unsigned &Size);
+  bool ParseIntelMemoryOperandSize(unsigned &Size, StringRef *SizeStr);
   bool CreateMemForMSInlineAsm(MCRegister SegReg, const MCExpr *Disp,
                                MCRegister BaseReg, MCRegister IndexReg,
                                unsigned Scale, bool NonAbsMem, SMLoc Start,
@@ -2574,7 +2578,8 @@ bool X86AsmParser::ParseMasmOperator(unsigned OpKind, int64_t &Val) {
   return false;
 }
 
-bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
+bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size,
+                                               StringRef *SizeStr) {
   Size = StringSwitch<unsigned>(getTok().getString())
     .Cases("BYTE", "byte", 8)
     .Cases("WORD", "word", 16)
@@ -2592,12 +2597,27 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
     .Cases("ZMMWORD", "zmmword", 512)
     .Default(0);
   if (Size) {
+    if (SizeStr)
+      *SizeStr = getTok().getString();
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
     if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
   return false;
+}
+
+uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
+  if (X86MCRegisterClasses[X86::GR8RegClassID].contains(RegNo))
+    return 8;
+  if (X86MCRegisterClasses[X86::GR16RegClassID].contains(RegNo))
+    return 16;
+  if (X86MCRegisterClasses[X86::GR32RegClassID].contains(RegNo))
+    return 32;
+  if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
+    return 64;
+  // Unknown register size
+  return 0;
 }
 
 bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
@@ -2607,7 +2627,8 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
 
   // Parse optional Size directive.
   unsigned Size;
-  if (ParseIntelMemoryOperandSize(Size))
+  StringRef SizeStr;
+  if (ParseIntelMemoryOperandSize(Size, &SizeStr))
     return true;
   bool PtrInOperand = bool(Size);
 
@@ -2624,9 +2645,29 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
       return Error(Start, "rip can only be used as a base register");
     // A Register followed by ':' is considered a segment override
     if (Tok.isNot(AsmToken::Colon)) {
-      if (PtrInOperand)
-        return Error(Start, "expected memory operand after 'ptr', "
-                            "found register operand instead");
+      if (PtrInOperand) {
+        if (!Parser.isParsingMasm())
+          return Error(Start, "expected memory operand after 'ptr', "
+                              "found register operand instead");
+
+        // If we are parsing MASM, we are allowed to cast registers to their own
+        // sizes, but not to other types.
+        uint16_t RegSize =
+            RegSizeInBits(*getContext().getRegisterInfo(), RegNo);
+        if (RegSize == 0)
+          return Error(
+              Start,
+              "cannot cast register '" +
+                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
+                  "'; its size is not easily defined.");
+        if (RegSize != Size)
+          return Error(
+              Start,
+              std::to_string(RegSize) + "-bit register '" +
+                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
+                  "' cannot be used as a " + std::to_string(Size) + "-bit " +
+                  SizeStr.upper());
+      }
       Operands.push_back(X86Operand::CreateReg(RegNo, Start, End));
       return false;
     }

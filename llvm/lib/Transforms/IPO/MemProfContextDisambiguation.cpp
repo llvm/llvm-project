@@ -316,6 +316,9 @@ public:
 
   /// Node in the Callsite Context Graph
   struct ContextNode {
+    // Assigned to nodes as they are created, useful for debugging.
+    unsigned NodeId = 0;
+
     // Keep this for now since in the IR case where we have an Instruction* it
     // is not as immediately discoverable. Used for printing richer information
     // when dumping graph.
@@ -760,6 +763,7 @@ private:
     auto *NewNode = NodeOwner.back().get();
     if (F)
       NodeToCallingFunc[NewNode] = F;
+    NewNode->NodeId = NodeOwner.size();
     return NewNode;
   }
 
@@ -2977,6 +2981,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
       OS << "\n";
     }
   }
+  OS << "\tNodeId: " << NodeId << "\n";
   OS << "\tAllocTypes: " << getAllocTypeString(AllocTypes) << "\n";
   OS << "\tContextIds:";
   // Make a copy of the computed context ids that we can sort for stability.
@@ -2988,14 +2993,24 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   OS << "\n";
   OS << "\tCalleeEdges:\n";
   for (auto &Edge : CalleeEdges)
-    OS << "\t\t" << *Edge << "\n";
+    OS << "\t\t" << *Edge << " (Callee NodeId: " << Edge->Callee->NodeId
+       << ")\n";
   OS << "\tCallerEdges:\n";
   for (auto &Edge : CallerEdges)
-    OS << "\t\t" << *Edge << "\n";
+    OS << "\t\t" << *Edge << " (Caller NodeId: " << Edge->Caller->NodeId
+       << ")\n";
   if (!Clones.empty()) {
-    OS << "\tClones: " << llvm::interleaved(Clones) << "\n";
+    OS << "\tClones: ";
+    bool First = true;
+    for (auto *C : Clones) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << C << " NodeId: " << C->NodeId;
+    }
+    OS << "\n";
   } else if (CloneOf) {
-    OS << "\tClone of " << CloneOf << "\n";
+    OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
   }
 }
 
@@ -3149,7 +3164,7 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
   static std::string getNodeLabel(NodeRef Node, GraphType G) {
     std::string LabelString =
         (Twine("OrigId: ") + (Node->IsAllocation ? "Alloc" : "") +
-         Twine(Node->OrigStackOrAllocId))
+         Twine(Node->OrigStackOrAllocId) + " NodeId: " + Twine(Node->NodeId))
             .str();
     LabelString += "\n";
     if (Node->hasCall()) {
@@ -3965,6 +3980,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
+  removeAnyExistingAmbiguousAttribute(cast<CallBase>(Call.call()));
   auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
                                 "memprof", AllocTypeString);
   cast<CallBase>(Call.call())->addFnAttr(A);
@@ -4586,6 +4602,25 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         }
       };
 
+      // Invokes moveEdgeToNewCalleeClone which creates a new clone, and then
+      // performs the necessary fixups (removing none type edges, and
+      // importantly, propagating any function call assignment of the original
+      // node to the new clone).
+      auto MoveEdgeToNewCalleeCloneAndSetUp =
+          [&](const std::shared_ptr<ContextEdge> &Edge) {
+            ContextNode *OrigCallee = Edge->Callee;
+            ContextNode *NewClone = moveEdgeToNewCalleeClone(Edge);
+            removeNoneTypeCalleeEdges(NewClone);
+            assert(NewClone->AllocTypes != (uint8_t)AllocationType::None);
+            // If the original Callee was already assigned to call a specific
+            // function version, make sure its new clone is assigned to call
+            // that same function clone.
+            if (CallsiteToCalleeFuncCloneMap.count(OrigCallee))
+              RecordCalleeFuncOfCallsite(
+                  NewClone, CallsiteToCalleeFuncCloneMap[OrigCallee]);
+            return NewClone;
+          };
+
       // Keep track of the clones of callsite Node that need to be assigned to
       // function clones. This list may be expanded in the loop body below if we
       // find additional cloning is required.
@@ -4742,18 +4777,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // we tried.
               if (Callee == CalleeEdge->Caller)
                 continue;
-              ContextNode *NewClone = moveEdgeToNewCalleeClone(CalleeEdge);
-              removeNoneTypeCalleeEdges(NewClone);
+              ContextNode *NewClone =
+                  MoveEdgeToNewCalleeCloneAndSetUp(CalleeEdge);
               // Moving the edge may have resulted in some none type
               // callee edges on the original Callee.
               removeNoneTypeCalleeEdges(Callee);
-              assert(NewClone->AllocTypes != (uint8_t)AllocationType::None);
-              // If the Callee node was already assigned to call a specific
-              // function version, make sure its new clone is assigned to call
-              // that same function clone.
-              if (CallsiteToCalleeFuncCloneMap.count(Callee))
-                RecordCalleeFuncOfCallsite(
-                    NewClone, CallsiteToCalleeFuncCloneMap[Callee]);
               // Update NewClone with the new Call clone of this callsite's Call
               // created for the new function clone created earlier.
               // Recall that we have already ensured when building the graph
@@ -4877,13 +4905,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
                 removeNoneTypeCalleeEdges(NewClone);
               } else {
                 // Create a new callsite clone.
-                ContextNode *NewClone = moveEdgeToNewCalleeClone(Edge);
-                removeNoneTypeCalleeEdges(NewClone);
+                ContextNode *NewClone = MoveEdgeToNewCalleeCloneAndSetUp(Edge);
                 FuncCloneToNewCallsiteCloneMap[FuncCloneCalledByCaller] =
                     NewClone;
                 // Add to list of clones and process later.
                 ClonesWorklist.push_back(NewClone);
-                assert(NewClone->AllocTypes != (uint8_t)AllocationType::None);
               }
               // Moving the caller edge may have resulted in some none type
               // callee edges.
@@ -5501,6 +5527,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
               // clone J-1 (J==0 is the original clone and does not have a VMaps
               // entry).
               CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            removeAnyExistingAmbiguousAttribute(CBClone);
             CBClone->addFnAttr(A);
             ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
                      << ore::NV("AllocationCall", CBClone) << " in clone "

@@ -149,58 +149,6 @@ LLVMInitializePowerPCTarget() {
   initializePPCAIXAsmPrinterPass(PR);
 }
 
-static bool isLittleEndianTriple(const Triple &T) {
-  return T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle;
-}
-
-/// Return the datalayout string of a subtarget.
-static std::string getDataLayoutString(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
-  std::string Ret;
-
-  // Most PPC* platforms are big endian, PPC(64)LE is little endian.
-  if (isLittleEndianTriple(T))
-    Ret = "e";
-  else
-    Ret = "E";
-
-  Ret += DataLayout::getManglingComponent(T);
-
-  // PPC32 has 32 bit pointers. The PS3 (OS Lv2) is a PPC64 machine with 32 bit
-  // pointers.
-  if (!is64Bit || T.getOS() == Triple::Lv2)
-    Ret += "-p:32:32";
-
-  // If the target ABI uses function descriptors, then the alignment of function
-  // pointers depends on the alignment used to emit the descriptor. Otherwise,
-  // function pointers are aligned to 32 bits because the instructions must be.
-  if ((T.getArch() == Triple::ppc64 && !T.isPPC64ELFv2ABI())) {
-    Ret += "-Fi64";
-  } else if (T.isOSAIX()) {
-    Ret += is64Bit ? "-Fi64" : "-Fi32";
-  } else {
-    Ret += "-Fn32";
-  }
-
-  // Note, the alignment values for f64 and i64 on ppc64 in Darwin
-  // documentation are wrong; these are correct (i.e. "what gcc does").
-  Ret += "-i64:64";
-
-  // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
-  if (is64Bit)
-    Ret += "-i128:128-n32:64";
-  else
-    Ret += "-n32";
-
-  // Specify the vector alignment explicitly. For v256i1 and v512i1, the
-  // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
-  // which is 256 and 512 bytes - way over aligned.
-  if (is64Bit && (T.isOSAIX() || T.isOSLinux()))
-    Ret += "-S128-v256:256:256-v512:512:512";
-
-  return Ret;
-}
-
 static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
                                       const Triple &TT) {
   std::string FullFS = std::string(FS);
@@ -348,13 +296,13 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, getDataLayoutString(TT), TT, CPU,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU,
                                computeFSAdditions(FS, OL, TT), Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       TargetABI(computeTargetABI(TT, Options)),
-      Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
+      Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
   initAsmInfo();
 }
 

@@ -1151,7 +1151,7 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
   std::optional<DiagnosedSilenceableFailure> maybeFailure;
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      LDBG(1, DEBUG_TYPE_MATCHER)
+      LDBG(DEBUG_TYPE_MATCHER, 1)
           << "matching "
           << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
           << " @" << op;
@@ -1166,7 +1166,7 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
       if (diag.isDefiniteFailure())
         return WalkResult::interrupt();
       if (diag.isSilenceableFailure()) {
-        LDBG(1, DEBUG_TYPE_MATCHER) << "matcher " << matcher.getName()
+        LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
                                     << " failed: " << diag.getMessage();
         return WalkResult::advance();
       }
@@ -1298,7 +1298,7 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
       if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
-      LDBG(1, DEBUG_TYPE_MATCHER)
+      LDBG(DEBUG_TYPE_MATCHER, 1)
           << "matching "
           << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
           << " @" << op;
@@ -1314,7 +1314,7 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
-          LDBG(1, DEBUG_TYPE_MATCHER) << "matcher " << matcher.getName()
+          LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
                                       << " failed: " << diag.getMessage();
           continue;
         }
@@ -1634,13 +1634,13 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   // smallest payload in the targets.
   if (withZipShortest) {
     numIterations =
-        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &A,
-                                        const SmallVector<MappedValue> &B) {
-          return A.size() < B.size();
+        llvm::min_element(payloads, [&](const SmallVector<MappedValue> &a,
+                                        const SmallVector<MappedValue> &b) {
+          return a.size() < b.size();
         })->size();
 
-    for (size_t argIdx = 0; argIdx < payloads.size(); argIdx++)
-      payloads[argIdx].resize(numIterations);
+    for (auto &payload : payloads)
+      payload.resize(numIterations);
   }
 
   // As we will be "zipping" over them, check all payloads have the same size.
@@ -2165,10 +2165,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    LDBG(1, DEBUG_TYPE_MATCHER) << "MatchOperationEmptyOp success";
+    LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp success";
     return DiagnosedSilenceableFailure::success();
   }
-  LDBG(1, DEBUG_TYPE_MATCHER) << "MatchOperationEmptyOp failure";
+  LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp failure";
   return emitSilenceableError() << "operation is not empty";
 }
 

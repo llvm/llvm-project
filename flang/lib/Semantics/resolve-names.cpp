@@ -646,12 +646,18 @@ public:
     }
     if (symbol->CanReplaceDetails(details)) {
       // update the existing symbol
-      CheckDuplicatedAttrs(name, *symbol, attrs);
-      SetExplicitAttrs(*symbol, attrs);
       if constexpr (std::is_same_v<SubprogramDetails, D>) {
         // Dummy argument defined by explicit interface?
         details.set_isDummy(IsDummy(*symbol));
+        if (symbol->has<ProcEntityDetails>()) {
+          // Bare "EXTERNAL" dummy replaced with explicit INTERFACE
+          context().Warn(common::LanguageFeature::RedundantAttribute, name,
+              "Dummy argument '%s' was declared earlier as EXTERNAL"_warn_en_US,
+              name);
+        }
       }
+      CheckDuplicatedAttrs(name, *symbol, attrs);
+      SetExplicitAttrs(*symbol, attrs);
       symbol->set_details(std::move(details));
       return *symbol;
     } else if constexpr (std::is_same_v<UnknownDetails, D>) {
@@ -1473,16 +1479,6 @@ public:
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OmpMetadirectiveDirective &x) { //
-    metaDirective_ = &x;
-    ++metaLevel_;
-    return true;
-  }
-  void Post(const parser::OmpMetadirectiveDirective &) { //
-    metaDirective_ = nullptr;
-    --metaLevel_;
-  }
-
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1575,9 +1571,11 @@ public:
 
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
+    parser::OmpClauseList empty(std::list<parser::OmpClause>{});
+    auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        std::get<std::optional<parser::OmpClauseList>>(x.t), x);
+        maybeClauses ? *maybeClauses : empty, declaratives_.back());
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1619,25 +1617,33 @@ public:
   void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
   bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
     const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-    auto populateDeclareTargetNames{
-        [this](const parser::OmpObjectList &objectList) {
-          for (const auto &ompObject : objectList.v) {
-            common::visit(
-                common::visitors{
-                    [&](const parser::Designator &designator) {
-                      if (const auto *name{
-                              semantics::getDesignatorNameIfDataRef(
-                                  designator)}) {
-                        specPartState_.declareTargetNames.insert(name->source);
-                      }
-                    },
-                    [&](const parser::Name &name) {
-                      specPartState_.declareTargetNames.insert(name.source);
-                    },
+    auto populateDeclareTargetNames{[this](const parser::OmpObjectList
+                                            &objectList) {
+      for (const auto &ompObject : objectList.v) {
+        common::visit(
+            common::visitors{
+                [&](const parser::Designator &designator) {
+                  if (const auto *name{
+                          semantics::getDesignatorNameIfDataRef(designator)}) {
+                    specPartState_.declareTargetNames.insert(name->source);
+                  }
                 },
-                ompObject.u);
-          }
-        }};
+                [&](const parser::Name &name) {
+                  specPartState_.declareTargetNames.insert(name.source);
+                },
+                [&](const parser::OmpObject::Invalid &invalid) {
+                  switch (invalid.v) {
+                    SWITCH_COVERS_ALL_CASES
+                  case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
+                    context().Say(invalid.source,
+                        "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
+                    break;
+                  }
+                },
+            },
+            ompObject.u);
+      }
+    }};
 
     if (const auto *objectList{parser::Unwrap<parser::OmpObjectList>(spec.u)}) {
       populateDeclareTargetNames(*objectList);
@@ -1678,9 +1684,11 @@ public:
     // can implicitly declare variables instead of only using the
     // ones already declared in the Fortran sources.
     SkipImplicitTyping(true);
+    declaratives_.push_back(&x);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeConstruct &) {
+    declaratives_.pop_back();
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1722,15 +1730,13 @@ public:
 private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
-  template <typename T>
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const std::optional<parser::OmpClauseList> &clauses,
-      const T &wholeConstruct);
+      const parser::OmpClauseList &clauses,
+      const parser::OpenMPDeclarativeConstruct *wholeConstruct);
 
   void ResolveCriticalName(const parser::OmpArgument &arg);
 
-  int metaLevel_{0};
-  const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
+  std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
 };
 
 bool OmpVisitor::NeedsScope(const parser::OmpBlockConstruct &x) {
@@ -1855,11 +1861,10 @@ std::string MangleDefinedOperator(const parser::CharBlock &name) {
   return "op" + name.ToString();
 }
 
-template <typename T>
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const std::optional<parser::OmpClauseList> &clauses,
-    const T &wholeOmpConstruct) {
+    const parser::OmpClauseList &clauses,
+    const parser::OpenMPDeclarativeConstruct *construct) {
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -1946,7 +1951,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     PopScope();
   }
 
-  reductionDetails->AddDecl(&wholeOmpConstruct);
+  reductionDetails->AddDecl(construct);
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -1986,40 +1991,31 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
   AddOmpSourceRange(x.source);
-  if (metaLevel_ == 0) {
-    // Not in METADIRECTIVE.
-    return true;
-  }
 
-  // If OmpDirectiveSpecification (which contains clauses) is a part of
-  // METADIRECTIVE, some semantic checks may not be applicable.
-  // Disable the semantic analysis for it in such cases to allow the compiler
-  // to parse METADIRECTIVE without flagging errors.
-  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
-  auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
+  const parser::OmpArgumentList &args{x.Arguments()};
+  const parser::OmpClauseList &clauses{x.Clauses()};
 
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
-    if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->v.front()};
+    if (!args.v.empty()) {
+      const parser::OmpArgument &first{args.v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
-        ProcessMapperSpecifier(*spec, *maybeClauses);
+        ProcessMapperSpecifier(*spec, clauses);
       }
     }
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
-    if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->v.front()};
+    if (!args.v.empty()) {
+      const parser::OmpArgument &first{args.v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        CHECK(metaDirective_);
-        ProcessReductionSpecifier(*spec, maybeClauses, *metaDirective_);
+        ProcessReductionSpecifier(*spec, clauses, declaratives_.back());
       }
     }
     break;
   default:
     // Default processing.
-    Walk(maybeArgs);
-    Walk(maybeClauses);
+    Walk(args);
+    Walk(clauses);
     break;
   }
   return false;
@@ -2988,12 +2984,20 @@ Symbol *ScopeHandler::FindSymbol(const Scope &scope, const parser::Name &name) {
       }
     }
     return FindSymbol(scope.parent(), name);
-  } else {
+  } else if (scope.kind() == Scope::Kind::ImpliedDos) {
+    if (Symbol * symbol{FindInScope(scope, name)}) {
+      return Resolve(name, symbol);
+    } else {
+      // Don't use scope.FindSymbol() as below, since implied DO scopes
+      // can be parts of initializers in derived type components.
+      return FindSymbol(scope.parent(), name);
+    }
+  } else if (inEquivalenceStmt_) {
     // In EQUIVALENCE statements only resolve names in the local scope, see
     // 19.5.1.4, paragraph 2, item (10)
-    return Resolve(name,
-        inEquivalenceStmt_ ? FindInScope(scope, name)
-                           : scope.FindSymbol(name.source));
+    return Resolve(name, FindInScope(scope, name));
+  } else {
+    return Resolve(name, scope.FindSymbol(name.source));
   }
 }
 
@@ -8716,7 +8720,6 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       return &name;
     }
   }
-
   if (CheckForHostAssociatedImplicit(name)) {
     NotePossibleBadForwardRef(name);
     return &name;
@@ -9105,6 +9108,9 @@ void DeclarationVisitor::NonPointerInitialization(
         if (details->init()) {
           SayWithDecl(name, *name.symbol,
               "'%s' has already been initialized"_err_en_US);
+        } else if (details->isCDefined()) {
+          context().Warn(common::UsageWarning::CdefinedInit, name.source,
+              "CDEFINED variable should not have an initializer"_warn_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
         } else if (ultimate.owner().IsParameterizedDerivedType()) {

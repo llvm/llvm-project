@@ -150,8 +150,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       if (shift > 0 || !shiftIsConstant) {
         Value shiftConst;
         if (shiftIsConstant)
-          shiftConst =
-              rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
+          shiftConst = arith::ConstantIntOp::create(rewriter, loc, shift,
+                                                    /*bitwidth=*/8);
 
         if (!a.getType().isInteger(32))
           a = arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(), a);
@@ -186,56 +186,63 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::NegateOp>(op)) {
     auto negate = cast<tosa::NegateOp>(op);
 
+    int64_t inZp = 0, outZp = 0;
     FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
-    if (failed(maybeInZp)) {
-      (void)rewriter.notifyMatchFailure(
-          op, "input1 zero point cannot be statically determined");
-      return nullptr;
-    }
-
     FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
-    if (failed(maybeOutZp)) {
-      (void)rewriter.notifyMatchFailure(
-          op, "output zero point cannot be statically determined");
-      return nullptr;
-    }
-
-    int64_t inZp = *maybeInZp;
-    int64_t outZp = *maybeOutZp;
+    bool hasInZp = !failed(maybeInZp);
+    bool hasOutZp = !failed(maybeOutZp);
+    if (hasInZp)
+      inZp = *maybeInZp;
+    if (hasOutZp)
+      outZp = *maybeOutZp;
 
     if (isa<FloatType>(elementTy))
       return arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      if (!inZp && !outZp) {
+      if (hasInZp && hasOutZp && !inZp && !outZp) {
         auto constant = arith::ConstantOp::create(
             rewriter, loc, IntegerAttr::get(elementTy, 0));
         return arith::SubIOp::create(rewriter, loc, resultTypes, constant,
                                      args[0]);
       }
 
+      Value zpAddValue;
+      Type intermediateType;
       // Compute the maximum value that can occur in the intermediate buffer.
       const int32_t inputBitWidth = elementTy.getIntOrFloatBitWidth();
-      const int64_t zpAdd = inZp + outZp;
-      const int64_t maxValue =
-          APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
-          std::abs(zpAdd) + 1;
-
-      // Convert that maximum value into the maximum bitwidth needed to
-      // represent it. We assume 48-bit numbers may be supported further in
-      // the pipeline.
       int intermediateBitWidth = 64;
-      if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
-        intermediateBitWidth = 16;
-      } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
-        intermediateBitWidth = 32;
-      } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
-        intermediateBitWidth = 48;
-      }
 
-      Type intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-      Value zpAddValue = arith::ConstantOp::create(
-          rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+      if (hasInZp && hasOutZp) {
+        // Compute the maximum value that can occur in the intermediate buffer.
+        const int64_t zpAdd = inZp + outZp;
+        const int64_t maxValue =
+            APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
+            std::abs(zpAdd) + 1;
+
+        // Convert that maximum value into the maximum bitwidth needed to
+        // represent it. We assume 48-bit numbers may be supported further in
+        // the pipeline.
+        if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
+          intermediateBitWidth = 16;
+        } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
+          intermediateBitWidth = 32;
+        } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
+          intermediateBitWidth = 48;
+        }
+
+        intermediateType = rewriter.getIntegerType(intermediateBitWidth);
+        zpAddValue = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+      } else {
+        intermediateType = rewriter.getIntegerType(intermediateBitWidth);
+        auto arg1 =
+            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[1]);
+        auto arg2 =
+            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[2]);
+        zpAddValue =
+            rewriter.create<arith::AddIOp>(loc, intermediateType, arg1, arg2);
+      }
 
       // The negation can be applied by doing:
       //  outputValue = inZp + outZp - inputValue
@@ -298,6 +305,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                          IntegerAttr::get(elementTy, 1));
     auto zero = arith::ConstantOp::create(rewriter, loc,
                                           IntegerAttr::get(elementTy, 0));
+    auto i1zero =
+        arith::ConstantOp::create(rewriter, loc, IntegerAttr::get(i1Ty, 0));
     auto i1one =
         arith::ConstantOp::create(rewriter, loc, IntegerAttr::get(i1Ty, 1));
 
@@ -315,9 +324,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                              ArrayRef<NamedAttribute>());
     auto isInputOdd =
         arith::AndIOp::create(rewriter, loc, i1Ty, truncated, i1one);
-
-    auto shouldRound = arith::AndIOp::create(
-        rewriter, loc, i1Ty, shiftValueGreaterThanZero, isInputOdd);
+    // shifted, truncated, isInputOdd can be poison when input2 is 0.
+    auto shouldRound = arith::SelectOp::create(
+        rewriter, loc, i1Ty, shiftValueGreaterThanZero, isInputOdd, i1zero);
     auto extended =
         arith::ExtUIOp::create(rewriter, loc, resultTypes, shouldRound);
     return arith::AddIOp::create(rewriter, loc, resultTypes, result, extended);
@@ -1013,9 +1022,14 @@ static ValueRange getBroadcastableOperands(Operation *operation,
     else
       return operands.take_front(3);
   }
-  // Input1_zp and output_zp cannot broadcast
-  if (isa<tosa::NegateOp>(operation))
+  if (auto negate = dyn_cast<tosa::NegateOp>(operation)) {
+    FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
+    FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
+    if (failed(maybeOutZp) && failed(maybeInZp))
+      return operands;
+    // Input1_zp and output_zp cannot broadcast when they are constants.
     return operands.take_front(1);
+  }
   return operands;
 }
 
@@ -1160,6 +1174,12 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   auto elementTy = resultTy.getElementType();
   Value input = op->getOperand(0);
 
+  // Figure out the accType if needed
+  bool widenAccTy = std::is_same_v<OpTy, tosa::ReduceSumOp> &&
+                    isa<FloatType>(elementTy) &&
+                    cast<FloatType>(elementTy).isBF16();
+  Type accTy = widenAccTy ? rewriter.getF32Type() : elementTy;
+
   SmallVector<int64_t> reduceShape;
   SmallVector<Value> dynDims;
   for (unsigned i = 0; i < inputTy.getRank(); i++) {
@@ -1174,11 +1194,11 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   inputs.push_back(input);
 
   // First fill the output buffer with the init value.
-  auto emptyTensor = tensor::EmptyOp::create(rewriter, loc, reduceShape,
-                                             resultTy.getElementType(), dynDims)
-                         .getResult();
+  auto emptyTensor =
+      tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
+          .getResult();
 
-  auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
+  auto fillValueAttr = createInitialValueForReduceOp(op, accTy, rewriter);
   if (!fillValueAttr)
     return rewriter.notifyMatchFailure(
         op, "No initial value found for reduction operation");
@@ -1231,8 +1251,14 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
         std::array<Value, 2> binaryArgs{
             blockArgs[0], isNanIgnoreMode ? blockArgs[2] : blockArgs[1]};
-        auto result = createLinalgBodyCalculationForReduceOp(
-            op, binaryArgs, elementTy, rewriter);
+
+        // If reduction type differs then extend (applicable to reduce_sum)
+        if (binaryArgs[0].getType() != accTy)
+          binaryArgs[0] = arith::ExtFOp::create(nestedBuilder, nestedLoc, accTy,
+                                                binaryArgs[0]);
+
+        auto result = createLinalgBodyCalculationForReduceOp(op, binaryArgs,
+                                                             accTy, rewriter);
         if (result)
           didEncounterError = true;
 
@@ -1273,12 +1299,11 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
 
     // Create a tensor full of NaNs.
     auto nanValueAttr = rewriter.getFloatAttr(
-        elementTy,
+        accTy,
         APFloat::getNaN(cast<FloatType>(elementTy).getFloatSemantics(), false));
     auto nanValue = arith::ConstantOp::create(rewriter, loc, nanValueAttr);
     auto emptyNanTensor =
-        tensor::EmptyOp::create(rewriter, loc, reduceShape,
-                                resultTy.getElementType(), dynDims)
+        tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
             .getResult();
     auto nanFilledTensor =
         linalg::FillOp::create(rewriter, loc, ValueRange{nanValue},
@@ -1288,8 +1313,7 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
     // Create an empty tensor, non need to fill this since it will be
     // overwritten by the select.
     auto finalEmptyTensor =
-        tensor::EmptyOp::create(rewriter, loc, reduceShape,
-                                resultTy.getElementType(), dynDims)
+        tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
             .getResult();
 
     // Do a selection between the tensors akin to:
@@ -1304,9 +1328,32 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
     linalgOp = linalgSelect;
   }
 
+  // Truncate back to resultTy if needed
+  Value reducedRes = linalgOp->getResult(0);
+  if (widenAccTy) {
+    auto resEmptyOp =
+        tensor::EmptyOp::create(rewriter, loc, reduceShape, elementTy, dynDims)
+            .getResult();
+
+    const unsigned reducedRank =
+        cast<ShapedType>(reducedRes.getType()).getRank();
+    auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
+    reducedRes =
+        linalg::GenericOp::create(
+            rewriter, loc, resEmptyOp.getType(), ValueRange{reducedRes},
+            ValueRange{resEmptyOp},
+            ArrayRef<AffineMap>{identityMap, identityMap},
+            getNParallelLoopsAttrs(reducedRank),
+            [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+              Value truncf = arith::TruncFOp::create(nestedBuilder, nestedLoc,
+                                                     elementTy, args[0]);
+              linalg::YieldOp::create(nestedBuilder, nestedLoc, truncf);
+            })
+            .getResults()[0];
+  }
+
   SmallVector<ReassociationExprs, 4> reassociationMap;
-  uint64_t expandInputRank =
-      cast<ShapedType>(linalgOp->getResults()[0].getType()).getRank();
+  uint64_t expandInputRank = cast<ShapedType>(reducedRes.getType()).getRank();
   reassociationMap.resize(expandInputRank);
 
   for (uint64_t i = 0; i < expandInputRank; i++) {
@@ -1324,8 +1371,8 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   // since here we know which dimension to expand, and `tosa::ReshapeOp` would
   // not have access to such information. This matters when handling dynamically
   // sized tensors.
-  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-      op, resultTy, linalgOp->getResults()[0], reassociationMap);
+  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(op, resultTy, reducedRes,
+                                                     reassociationMap);
   return success();
 }
 
@@ -1794,8 +1841,8 @@ public:
     auto resultTy = cast<ShapedType>(op.getType());
     auto resultETy = resultTy.getElementType();
 
-    bool floatingPointMode = resultETy.isF16() || resultETy.isF32();
-    auto floatTy = resultETy.isF16() ? b.getF16Type() : b.getF32Type();
+    bool floatingPointMode = isa<FloatType>(resultETy);
+    auto floatTy = resultETy;
 
     auto imageH = inputTy.getShape()[1];
     auto imageW = inputTy.getShape()[2];

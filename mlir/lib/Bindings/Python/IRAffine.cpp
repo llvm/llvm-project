@@ -142,7 +142,7 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineConstantExpr::get, nb::arg("value"),
-                 nb::arg("context").none() = nb::none());
+                 nb::arg("context") = nb::none());
     c.def_prop_ro("value", [](PyAffineConstantExpr &self) {
       return mlirAffineConstantExprGetValue(self);
     });
@@ -162,7 +162,7 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineDimExpr::get, nb::arg("position"),
-                 nb::arg("context").none() = nb::none());
+                 nb::arg("context") = nb::none());
     c.def_prop_ro("position", [](PyAffineDimExpr &self) {
       return mlirAffineDimExprGetPosition(self);
     });
@@ -182,7 +182,7 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def_static("get", &PyAffineSymbolExpr::get, nb::arg("position"),
-                 nb::arg("context").none() = nb::none());
+                 nb::arg("context") = nb::none());
     c.def_prop_ro("position", [](PyAffineSymbolExpr &self) {
       return mlirAffineSymbolExprGetPosition(self);
     });
@@ -588,7 +588,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 self.getContext(),
                 mlirAffineExprShiftDims(self, numDims, shift, offset));
           },
-          nb::arg("num_dims"), nb::arg("shift"), nb::arg("offset").none() = 0)
+          nb::arg("num_dims"), nb::arg("shift"), nb::arg("offset") = 0)
       .def(
           "shift_symbols",
           [](PyAffineExpr &self, uint32_t numSymbols, uint32_t shift,
@@ -597,8 +597,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 self.getContext(),
                 mlirAffineExprShiftSymbols(self, numSymbols, shift, offset));
           },
-          nb::arg("num_symbols"), nb::arg("shift"),
-          nb::arg("offset").none() = 0)
+          nb::arg("num_symbols"), nb::arg("shift"), nb::arg("offset") = 0)
       .def_static(
           "simplify_affine_expr",
           [](PyAffineExpr &self, uint32_t numDims, uint32_t numSymbols) {
@@ -655,15 +654,15 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                   "Gets an affine expression containing the rounded-up result "
                   "of dividing an expression by a constant.")
       .def_static("get_constant", &PyAffineConstantExpr::get, nb::arg("value"),
-                  nb::arg("context").none() = nb::none(),
+                  nb::arg("context") = nb::none(),
                   "Gets a constant affine expression with the given value.")
       .def_static(
           "get_dim", &PyAffineDimExpr::get, nb::arg("position"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets an affine expression of a dimension at the given position.")
       .def_static(
           "get_symbol", &PyAffineSymbolExpr::get, nb::arg("position"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets an affine expression of a symbol at the given position.")
       .def(
           "dump", [](PyAffineExpr &self) { mlirAffineExprDump(self); },
@@ -746,7 +745,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyAffineMap(context->getRef(), map);
           },
           nb::arg("dim_count"), nb::arg("symbol_count"), nb::arg("exprs"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets a map with the given expressions as results.")
       .def_static(
           "get_constant",
@@ -755,7 +754,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 mlirAffineMapConstantGet(context->get(), value);
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("value"), nb::arg("context").none() = nb::none(),
+          nb::arg("value"), nb::arg("context") = nb::none(),
           "Gets an affine map with a single constant result")
       .def_static(
           "get_empty",
@@ -763,7 +762,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             MlirAffineMap affineMap = mlirAffineMapEmptyGet(context->get());
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("context").none() = nb::none(), "Gets an empty affine map.")
+          nb::arg("context") = nb::none(), "Gets an empty affine map.")
       .def_static(
           "get_identity",
           [](intptr_t nDims, DefaultingPyMlirContext context) {
@@ -771,7 +770,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 mlirAffineMapMultiDimIdentityGet(context->get(), nDims);
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("n_dims"), nb::arg("context").none() = nb::none(),
+          nb::arg("n_dims"), nb::arg("context") = nb::none(),
           "Gets an identity map with the given number of dimensions.")
       .def_static(
           "get_minor_identity",
@@ -782,7 +781,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyAffineMap(context->getRef(), affineMap);
           },
           nb::arg("n_dims"), nb::arg("n_results"),
-          nb::arg("context").none() = nb::none(),
+          nb::arg("context") = nb::none(),
           "Gets a minor identity map with the given number of dimensions and "
           "results.")
       .def_static(
@@ -796,7 +795,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                 context->get(), permutation.size(), permutation.data());
             return PyAffineMap(context->getRef(), affineMap);
           },
-          nb::arg("permutation"), nb::arg("context").none() = nb::none(),
+          nb::arg("permutation"), nb::arg("context") = nb::none(),
           "Gets an affine map that permutes its inputs.")
       .def(
           "get_submap",
@@ -923,7 +922,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"), nb::arg("exprs"),
-          nb::arg("eq_flags"), nb::arg("context").none() = nb::none())
+          nb::arg("eq_flags"), nb::arg("context") = nb::none())
       .def_static(
           "get_empty",
           [](intptr_t numDims, intptr_t numSymbols,
@@ -933,7 +932,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"),
-          nb::arg("context").none() = nb::none())
+          nb::arg("context") = nb::none())
       .def(
           "get_replaced",
           [](PyIntegerSet &self, const nb::list &dimExprs,

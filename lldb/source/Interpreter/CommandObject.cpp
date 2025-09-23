@@ -217,7 +217,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     if (process == nullptr) {
       // A process that is not running is considered paused.
       if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
-        result.AppendError("Process must exist.");
+        result.AppendError("process must exist");
         return false;
       }
     } else {
@@ -236,7 +236,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       case eStateExited:
       case eStateUnloaded:
         if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
-          result.AppendError("Process must be launched.");
+          result.AppendError("process must be launched");
           return false;
         }
         break;
@@ -255,7 +255,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   if (GetFlags().Test(eCommandProcessMustBeTraced)) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target && !target->GetTrace()) {
-      result.AppendError("Process is not being traced.");
+      result.AppendError("process is not being traced");
       return false;
     }
   }

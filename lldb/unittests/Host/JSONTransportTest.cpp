@@ -413,7 +413,7 @@ TEST_F(JSONRPCTransportTest, ReadAcrossMultipleChunks) {
   // Use a string longer than the chunk size to ensure we split the message
   // across the chunk boundary.
   std::string long_str =
-      std::string(JSONTransport<Req, Resp, Evt>::kReadBufferSize * 2, 'x');
+      std::string(IOTransport<Req, Resp, Evt>::kReadBufferSize * 2, 'x');
   Write(Req{long_str});
   EXPECT_CALL(message_handler, Received(Req{long_str}));
   ASSERT_THAT_ERROR(Run(), Succeeded());

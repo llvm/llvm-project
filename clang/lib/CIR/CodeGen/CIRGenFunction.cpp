@@ -206,8 +206,10 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
-                             /*insertIntoFnEntryBlock=*/false);
+    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
+                                  /*insertIntoFnEntryBlock=*/false);
+    fnRetAlloca = addr;
+    returnValue = Address(addr, alignment);
   }
 }
 
@@ -403,6 +405,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+  curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
 
@@ -455,7 +458,36 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     const auto *md = cast<CXXMethodDecl>(d);
     if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
-      cgm.errorNYI(loc, "lambda call operator");
+      // We're in a lambda.
+      curFn.setLambda(true);
+
+      // Figure out the captures.
+      md->getParent()->getCaptureFields(lambdaCaptureFields,
+                                        lambdaThisCaptureField);
+      if (lambdaThisCaptureField) {
+        // If the lambda captures the object referred to by '*this' - either by
+        // value or by reference, make sure CXXThisValue points to the correct
+        // object.
+
+        // Get the lvalue for the field (which is a copy of the enclosing object
+        // or contains the address of the enclosing object).
+        LValue thisFieldLValue =
+            emitLValueForLambdaField(lambdaThisCaptureField);
+        if (!lambdaThisCaptureField->getType()->isPointerType()) {
+          // If the enclosing object was captured by value, just use its
+          // address. Sign this pointer.
+          cxxThisValue = thisFieldLValue.getPointer();
+        } else {
+          // Load the lvalue pointed to by the field, since '*this' was captured
+          // by reference.
+          cxxThisValue =
+              emitLoadOfLValue(thisFieldLValue, SourceLocation()).getValue();
+        }
+      }
+      for (auto *fd : md->getParent()->fields()) {
+        if (fd->hasCapturedVLAType())
+          cgm.errorNYI(loc, "lambda captured VLA type");
+      }
     } else {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
@@ -655,6 +687,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // we'd introduce *two* handler blocks.  In the Microsoft ABI, we
   // always delegate because we might not have a definition in this TU.
   switch (dtorType) {
+  case Dtor_Unified:
+    llvm_unreachable("not expecting a unified dtor");
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:

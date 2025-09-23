@@ -323,12 +323,18 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
 
 /// Compile time Log2.
 /// Valid only for positive powers of two.
-template <size_t kValue> constexpr size_t CTLog2() {
+template <size_t kValue> constexpr size_t ConstantLog2() {
   static_assert(llvm::isPowerOf2_64(kValue), "Value is not a valid power of 2");
-  return 1 + CTLog2<kValue / 2>();
+  return 1 + ConstantLog2<kValue / 2>();
 }
 
-template <> constexpr size_t CTLog2<1>() { return 0; }
+template <> constexpr size_t ConstantLog2<1>() { return 0; }
+
+template <size_t kValue>
+LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
+constexpr size_t CTLog2() {
+  return ConstantLog2<kValue>();
+}
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)

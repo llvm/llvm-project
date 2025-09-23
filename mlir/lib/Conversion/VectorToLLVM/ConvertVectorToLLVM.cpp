@@ -1131,7 +1131,7 @@ public:
       positionVec.push_back(rewriter.getZeroAttr(idxType));
     }
 
-    Value extracted = adaptor.getVector();
+    Value extracted = adaptor.getSource();
     if (extractsAggregate) {
       ArrayRef<OpFoldResult> position(positionVec);
       if (extractsScalar) {
@@ -1853,7 +1853,7 @@ struct VectorDeinterleaveOpLowering
                                          "DeinterleaveOp not rank 1");
 
     if (resultType.isScalable()) {
-      auto llvmTypeConverter = this->getTypeConverter();
+      const auto *llvmTypeConverter = this->getTypeConverter();
       auto deinterleaveResults = deinterleaveOp.getResultTypes();
       auto packedOpResults =
           llvmTypeConverter->packOperationResults(deinterleaveResults);

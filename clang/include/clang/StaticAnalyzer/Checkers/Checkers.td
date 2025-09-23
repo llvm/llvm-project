@@ -64,8 +64,6 @@ def Cplusplus : Package<"cplusplus">;
 def CplusplusAlpha : Package<"cplusplus">, ParentPackage<Alpha>;
 def CplusplusOptIn : Package<"cplusplus">, ParentPackage<OptIn>;
 
-def Valist : Package<"valist">;
-
 def DeadCode : Package<"deadcode">;
 def DeadCodeAlpha : Package<"deadcode">, ParentPackage<Alpha>;
 
@@ -143,68 +141,49 @@ def BitwiseShiftChecker : Checker<"BitwiseShift">,
   ]>,
   Documentation<HasDocumentation>;
 
-def CallAndMessageModeling : Checker<"CallAndMessageModeling">,
-  HelpText<"Responsible for essential modeling and assumptions after a "
-           "function/method call. For instance, if we can't reason about the "
-           "nullability of the implicit this parameter after a method call, "
-           "this checker conservatively assumes it to be non-null">,
-  Documentation<HasDocumentation>,
-  Hidden;
-
-def CallAndMessageChecker : Checker<"CallAndMessage">,
-  HelpText<"Check for logical errors for function calls and Objective-C "
-           "message expressions (e.g., uninitialized arguments, null function "
-           "pointers)">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "FunctionPointer",
-                  "Check whether a called function pointer is null or "
-                  "undefined",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "ParameterCount",
-                  "Check whether a function was called with the appropriate "
-                  "number of arguments",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "CXXThisMethodCall",
-                  "Check whether the implicit this parameter is null or "
-                  "undefined upon a method call",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "CXXDeallocationArg",
-                  "Check whether the argument of operator delete is undefined",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "ArgInitializedness",
-                  "Check whether any of the pass-by-value parameters is "
-                  "undefined",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "ArgPointeeInitializedness",
-                  "Check whether the pointee of a pass-by-reference or "
-                  "pass-by-pointer is undefined",
-                  "false",
-                  InAlpha>,
-    CmdLineOption<Boolean,
-                  "NilReceiver",
-                  "Check whether the reciever in the message expression is nil",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "UndefReceiver",
-                  "Check whether the reciever in the message expression is "
-                  "undefined",
-                  "true",
-                  Released>,
-  ]>,
-  Documentation<HasDocumentation>,
-  Dependencies<[CallAndMessageModeling]>;
+def CallAndMessageChecker
+    : Checker<"CallAndMessage">,
+      HelpText<
+          "Check for logical errors for function calls and Objective-C "
+          "message expressions (e.g., uninitialized arguments, null function "
+          "pointers)">,
+      CheckerOptions<
+          [CmdLineOption<Boolean, "FunctionPointer",
+                         "Check whether a called function pointer is null or "
+                         "undefined",
+                         "true", Released>,
+           CmdLineOption<
+               Boolean, "ParameterCount",
+               "Check whether a function was called with the appropriate "
+               "number of arguments",
+               "true", Released>,
+           CmdLineOption<Boolean, "CXXThisMethodCall",
+                         "Check whether the implicit this parameter is null or "
+                         "undefined upon a method call",
+                         "true", Released>,
+           CmdLineOption<
+               Boolean, "CXXDeallocationArg",
+               "Check whether the argument of operator delete is undefined",
+               "true", Released>,
+           CmdLineOption<Boolean, "ArgInitializedness",
+                         "Check whether any of the pass-by-value parameters is "
+                         "undefined",
+                         "true", Released>,
+           CmdLineOption<Boolean, "ArgPointeeInitializedness",
+                         "Check whether the pointee of a pass-by-reference or "
+                         "pass-by-pointer is undefined",
+                         "false", InAlpha>,
+           CmdLineOption<
+               Boolean, "NilReceiver",
+               "Check whether the reciever in the message expression is nil",
+               "true", Released>,
+           CmdLineOption<
+               Boolean, "UndefReceiver",
+               "Check whether the reciever in the message expression is "
+               "undefined",
+               "true", Released>,
+]>,
+      Documentation<HasDocumentation>;
 
 def FixedAddressDereferenceChecker
     : Checker<"FixedAddressDereference">,
@@ -798,35 +777,6 @@ def SmartPtrChecker: Checker<"SmartPtr">,
 
 } // end: "alpha.cplusplus"
 
-
-//===----------------------------------------------------------------------===//
-// Valist checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = Valist in {
-
-def ValistBase : Checker<"ValistBase">,
-  HelpText<"Gathers information about va_lists.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def UninitializedChecker : Checker<"Uninitialized">,
-  HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-def UnterminatedChecker : Checker<"Unterminated">,
-  HelpText<"Check for va_lists which are not released by a va_end call.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-def CopyToSelfChecker : Checker<"CopyToSelf">,
-  HelpText<"Check for va_lists which are copied onto itself.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-} // end : "valist"
-
 //===----------------------------------------------------------------------===//
 // Deadcode checkers.
 //===----------------------------------------------------------------------===//
@@ -1000,6 +950,10 @@ let ParentPackage = Security in {
         HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
                  "'setuid(getuid())' (CERT: POS36-C)">,
         Documentation<HasDocumentation>;
+
+  def VAListChecker : Checker<"VAList">,
+                      HelpText<"Warn on misuse of va_list objects">,
+                      Documentation<HasDocumentation>;
 
 } // end "security"
 
@@ -1772,7 +1726,7 @@ def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
-  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
+  HelpText<"Check for correct use of RetainPtr/OSObjectPtr constructor, adoptNS, adoptCF, and adoptOSObject">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

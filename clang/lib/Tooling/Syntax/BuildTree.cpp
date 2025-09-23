@@ -974,13 +974,6 @@ public:
           BeginLoc = TST.getTemplateNameLoc();
         return buildSimpleTemplateName({BeginLoc, TST.getEndLoc()});
       }
-      case TypeLoc::DependentTemplateSpecialization: {
-        auto DT = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-        SourceLocation BeginLoc = DT.getTemplateKeywordLoc();
-        if (BeginLoc.isInvalid())
-          BeginLoc = DT.getTemplateNameLoc();
-        return buildSimpleTemplateName({BeginLoc, DT.getEndLoc()});
-      }
       case TypeLoc::Decltype: {
         const auto DTL = TL.castAs<DecltypeTypeLoc>();
         if (!RecursiveASTVisitor::TraverseDecltypeTypeLoc(

@@ -91,11 +91,15 @@ public:
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
                                        Expr *arrayFiller);
-
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope Scope(cgf, die);
+    Visit(die->getExpr());
+  }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
     assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
     Visit(e->getSubExpr());
   }
+  void VisitLambdaExpr(LambdaExpr *e);
 
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
@@ -232,16 +236,9 @@ public:
     cgf.cgm.errorNYI(dae->getSourceRange(),
                      "AggExprEmitter: VisitCXXDefaultArgExpr");
   }
-  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
-    cgf.cgm.errorNYI(die->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultInitExpr");
-  }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
-  }
-  void VisitLambdaExpr(LambdaExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitLambdaExpr");
   }
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -496,8 +493,10 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   if (isa<NoInitExpr>(e))
     return;
 
-  if (type->isReferenceType())
-    cgf.cgm.errorNYI("emitInitializationToLValue ReferenceType");
+  if (type->isReferenceType()) {
+    RValue rv = cgf.emitReferenceBindingToExpr(e);
+    return cgf.emitStoreThroughLValue(rv, lv);
+  }
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
@@ -549,6 +548,47 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
   // memsets; that would be easy for arrays, but relatively
   // difficult for structures with the current code.
   cgf.emitNullInitialization(loc, lv.getAddress(), lv.getType());
+}
+
+void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
+  CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  [[maybe_unused]] LValue slotLV =
+      cgf.makeAddrLValue(slot.getAddress(), e->getType());
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception or contains branch out of the expressions.
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+
+  for (auto [curField, capture, captureInit] : llvm::zip(
+           e->getLambdaClass()->fields(), e->captures(), e->capture_inits())) {
+    // Pick a name for the field.
+    llvm::StringRef fieldName = curField->getName();
+    if (capture.capturesVariable()) {
+      assert(!curField->isBitField() && "lambdas don't have bitfield members!");
+      ValueDecl *v = capture.getCapturedVar();
+      fieldName = v->getName();
+      cgf.cgm.lambdaFieldToName[curField] = fieldName;
+    } else if (capture.capturesThis()) {
+      cgf.cgm.lambdaFieldToName[curField] = "this";
+    } else {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unhandled capture kind");
+      cgf.cgm.lambdaFieldToName[curField] = "unhandled-capture-kind";
+    }
+
+    // Emit initialization
+    LValue lv =
+        cgf.emitLValueForFieldInitialization(slotLV, curField, fieldName);
+    if (curField->hasCapturedVLAType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda captured VLA type");
+
+    emitInitializationToLValue(captureInit, lv);
+
+    // Push a destructor if necessary.
+    if ([[maybe_unused]] QualType::DestructionKind DtorKind =
+            curField->getType().isDestructedType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
+  }
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
@@ -792,6 +832,26 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
       builder.createCopy(destPtr.getPointer(), srcPtr.getPointer());
 
   assert(!cir::MissingFeatures::opTBAA());
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t
+CIRGenFunction::getOverlapForFieldInit(const FieldDecl *fd) {
+  if (!fd->hasAttr<NoUniqueAddressAttr>() || !fd->getType()->isRecordType())
+    return AggValueSlot::DoesNotOverlap;
+
+  // If the field lies entirely within the enclosing class's nvsize, its tail
+  // padding cannot overlap any already-initialized object. (The only subobjects
+  // with greater addresses that might already be initialized are vbases.)
+  const RecordDecl *classRD = fd->getParent();
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(classRD);
+  if (layout.getFieldOffset(fd->getFieldIndex()) +
+          getContext().getTypeSize(fd->getType()) <=
+      (uint64_t)getContext().toBits(layout.getNonVirtualSize()))
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {

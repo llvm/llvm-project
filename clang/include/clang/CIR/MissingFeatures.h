@@ -62,7 +62,6 @@ struct MissingFeatures {
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
-  static bool opAllocaDynAllocSize() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
@@ -133,6 +132,7 @@ struct MissingFeatures {
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool recordZeroInit() { return false; }
+  static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
@@ -146,7 +146,6 @@ struct MissingFeatures {
   static bool cxxabiUseARMMethodPtrABI() { return false; }
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
-  static bool isDiscreteBitFieldABI() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
@@ -189,6 +188,7 @@ struct MissingFeatures {
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
   static bool builtinCheckKind() { return false; }
+  static bool cgCapturedStmtInfo() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
@@ -235,7 +235,6 @@ struct MissingFeatures {
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool lambdaCaptures() { return false; }
-  static bool lambdaFieldToName() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
@@ -245,6 +244,7 @@ struct MissingFeatures {
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
@@ -289,15 +289,12 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool complexType() { return false; }
   static bool fixedPointType() { return false; }
   static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool complexImagOp() { return false; }
-  static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
   static bool invokeOp() { return false; }
   static bool labelOp() { return false; }

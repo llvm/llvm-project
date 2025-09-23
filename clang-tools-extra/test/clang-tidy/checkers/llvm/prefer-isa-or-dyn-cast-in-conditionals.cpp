@@ -9,20 +9,46 @@ struct Z {
   bool baz(Y*);
 };
 
+namespace llvm {
 template <class X, class Y>
 bool isa(Y *);
 template <class X, class Y>
 X *cast(Y *);
 template <class X, class Y>
+X *cast_or_null(Y *);
+template <class X, class Y>
 X *dyn_cast(Y *);
 template <class X, class Y>
 X *dyn_cast_or_null(Y *);
+} // namespace llvm
+
+using namespace llvm;
 
 bool foo(Y *y, Z *z) {
   if (auto x = cast<X>(y))
     return true;
   // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: cast<> in conditional will assert rather than return a null pointer [llvm-prefer-isa-or-dyn-cast-in-conditionals]
   // CHECK-FIXES: if (auto x = dyn_cast<X>(y))
+
+  if (auto x = ::cast<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: cast<> in conditional will assert rather than return a null pointer [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (auto x = ::dyn_cast<X>(y))
+
+  if (auto x = llvm::cast<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: cast<> in conditional will assert rather than return a null pointer [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (auto x = llvm::dyn_cast<X>(y))
+
+  if (auto x = ::llvm::cast<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:24: warning: cast<> in conditional will assert rather than return a null pointer [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (auto x = ::llvm::dyn_cast<X>(y))
+
+  for (; auto x = cast<X>(y); )
+    break;
+  // CHECK-MESSAGES: :[[@LINE-2]]:19: warning: cast<> in conditional
+  // CHECK-FIXES: for (; auto x = dyn_cast<X>(y); )
 
   while (auto x = cast<X>(y))
     break;
@@ -33,6 +59,16 @@ bool foo(Y *y, Z *z) {
     return true;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: cast<> in conditional
   // CHECK-FIXES: if (isa<X>(y))
+
+  if (auto x = cast<X>(y); cast<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: cast<> in conditional will assert rather than return a null pointer [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (auto x = cast<X>(y); isa<X>(y))
+
+  for (; cast<X>(y); )
+    break;
+  // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: cast<> in conditional
+  // CHECK-FIXES: for (; isa<X>(y); )
 
   while (cast<X>(y))
     break;
@@ -50,6 +86,11 @@ bool foo(Y *y, Z *z) {
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: return value from dyn_cast<> not used [llvm-prefer-isa-or-dyn-cast-in-conditionals]
   // CHECK-FIXES: if (isa<X>(y))
 
+  for (; dyn_cast<X>(y); )
+    break;
+  // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: return value from dyn_cast<> not used
+  // CHECK-FIXES: for (; isa<X>(y); )
+
   while (dyn_cast<X>(y))
     break;
   // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: return value from dyn_cast<> not used
@@ -66,12 +107,32 @@ bool foo(Y *y, Z *z) {
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred over an explicit test for null followed by calling isa<> [llvm-prefer-isa-or-dyn-cast-in-conditionals]
   // CHECK-FIXES: if (isa_and_nonnull<X>(y))
 
+  if (y && ::isa<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred over an explicit test for null followed by calling isa<> [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (::isa_and_nonnull<X>(y))
+
+  if (y && llvm::isa<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred over an explicit test for null followed by calling isa<> [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (llvm::isa_and_nonnull<X>(y))
+
+  if (y && ::llvm::isa<X>(y))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred over an explicit test for null followed by calling isa<> [llvm-prefer-isa-or-dyn-cast-in-conditionals]
+  // CHECK-FIXES: if (::llvm::isa_and_nonnull<X>(y))
+
   if (z->bar() && isa<Y>(z->bar()))
     return true;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning:  isa_and_nonnull<> is preferred
   // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
 
   if (z->bar() && cast<Y>(z->bar()))
+    return true;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
+  // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))
+
+  if (z->bar() && cast_or_null<Y>(z->bar()))
     return true;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: isa_and_nonnull<> is preferred
   // CHECK-FIXES: if (isa_and_nonnull<Y>(z->bar()))

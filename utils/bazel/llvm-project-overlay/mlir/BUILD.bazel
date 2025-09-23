@@ -29,6 +29,7 @@ exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
     "utils/lldb-scripts/mlirDataFormatters.py",
+    "utils/pygments/mlir_lexer.py",
     "utils/textmate/mlir.json",
 ])
 
@@ -1211,6 +1212,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "_mlirDialectsIRDL.so",
+    srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    deps = [
+        ":CAPIIR",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
+    ],
+)
+
+cc_binary(
     name = "_mlirDialectsLinalg.so",
     srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
     copts = PYBIND11_COPTS,
@@ -1370,13 +1385,6 @@ td_library(
 td_library(
     name = "BytecodeOpInterfaceTdFiles",
     srcs = ["include/mlir/Bytecode/BytecodeOpInterface.td"],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
-)
-
-td_library(
-    name = "CopyOpInterfaceTdFiles",
-    srcs = ["include/mlir/Interfaces/CopyOpInterface.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
 )
@@ -1652,6 +1660,7 @@ cc_library(
         ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -3726,6 +3735,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":Support",
         ":TransformUtils",
@@ -3892,6 +3902,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -3979,6 +3990,7 @@ cc_library(
         ":CallOpInterfaces",
         ":DialectUtils",
         ":IR",
+        ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -4404,17 +4416,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "CopyOpInterface",
-    srcs = ["lib/Interfaces/CopyOpInterface.cpp"],
-    hdrs = ["include/mlir/Interfaces/CopyOpInterface.h"],
-    includes = ["include"],
-    deps = [
-        ":CopyOpInterfaceIncGen",
-        ":IR",
-    ],
-)
-
 td_library(
     name = "ShapeOpsTdFiles",
     srcs = [
@@ -4738,6 +4739,7 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -4903,6 +4905,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
+        ":MemRefTransforms",
         ":MemRefUtils",
         ":Pass",
         ":Rewrite",
@@ -6090,6 +6093,7 @@ cc_library(
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
+        ":PtrDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -7679,17 +7683,6 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "CopyOpInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/Interfaces/CopyOpInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Interfaces/CopyOpInterface.cpp.inc": ["-gen-op-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Interfaces/CopyOpInterface.td",
-    deps = [":CopyOpInterfaceTdFiles"],
-)
-
-gentbl_cc_library(
     name = "TransformsPassIncGen",
     tbl_outs = {
         "include/mlir/Transforms/Passes.h.inc": [
@@ -9003,7 +8996,6 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":TargetLLVMIRTransformsIncGen",
-        "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:MC",
         "//llvm:Support",
@@ -9110,7 +9102,9 @@ cc_library(
         ":Parser",
         ":Pass",
         ":PluginsLib",
+        ":RemarkStreamer",
         ":Support",
+        "//llvm:Remarks",
         "//llvm:Support",
     ],
 )
@@ -9326,6 +9320,7 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformSMTExtension",
         ":TransformTuneExtension",
         ":UBToLLVM",
         ":VectorToLLVM",
@@ -9348,6 +9343,7 @@ cc_binary(
         ":MlirLspServerSupportLib",
         ":RegisterAllDialects",
         ":RegisterAllExtensions",
+        "//llvm:Support",
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
         "//mlir/test:TestArith",
@@ -10559,7 +10555,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":CopyOpInterfaceTdFiles",
         ":DestinationStyleOpInterface",
         ":LinalgOpsTdFiles",
         ":OpBaseTdFiles",
@@ -10782,7 +10777,6 @@ cc_library(
         ":BytecodeOpInterface",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
-        ":CopyOpInterface",
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FunctionInterfaces",
@@ -10846,6 +10840,7 @@ cc_library(
         ":LinalgTransformOpsIncGen",
         ":LinalgTransforms",
         ":LinalgUtils",
+        ":ParallelCombiningOpInterface",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",
@@ -11883,6 +11878,49 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "TransformSMTExtensionOpsTdFiles",
+    srcs = ["include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td"],
+    includes = ["include"],
+    deps = [
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+        ":TransformInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformSMTExtensionOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.h.inc": [
+            "-gen-op-decls",
+        ],
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.cpp.inc": [
+            "-gen-op-defs",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td",
+    deps = [
+        ":TransformSMTExtensionOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "TransformSMTExtension",
+    srcs = glob(["lib/Dialect/Transform/SMTExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/SMTExtension/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":IR",
+        ":SMTDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformSMTExtensionOpsIncGen",
+    ],
+)
+
 gentbl_cc_library(
     name = "TransformIRDLExtensionOpsIncGen",
     tbl_outs = {
@@ -12197,6 +12235,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
@@ -12545,6 +12584,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ComplexDialect",
         ":DialectUtils",
         ":IR",
         ":MathDialect",
@@ -12593,7 +12633,6 @@ td_library(
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
-        ":CopyOpInterfaceTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":ShapedOpInterfacesTdFiles",
@@ -12655,7 +12694,6 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
-        ":CopyOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferIntRangeCommon",
@@ -13061,7 +13099,6 @@ td_library(
         ":BufferViewFlowOpInterfaceTdFiles",
         ":BufferizableOpInterfaceTdFiles",
         ":BufferizationTypeInterfacesTdFiles",
-        ":CopyOpInterfaceTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -13250,7 +13287,6 @@ cc_library(
         ":BufferizationTypeInterfacesIncGen",
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
-        ":CopyOpInterface",
         ":DestinationStyleOpInterface",
         ":FuncDialect",
         ":FunctionInterfaces",

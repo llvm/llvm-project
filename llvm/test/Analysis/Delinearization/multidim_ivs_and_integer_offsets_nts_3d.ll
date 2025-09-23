@@ -12,7 +12,6 @@
 define void @foo(i64 %n, i64 %m, i64 %o, i64 %p, ptr nocapture %A) nounwind uwtable {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store double 1.000000e+00, ptr %arrayidx10.us.us, align 8
-; CHECK-NEXT:  In Loop with Header: for.body6.us.us
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}(56 + (8 * (-4 + (3 * %m)) * (%o + %p))),+,(8 * (%o + %p) * %m)}<%for.cond4.preheader.lr.ph.us>,+,(8 * (%o + %p))}<%for.body6.lr.ph.us.us>,+,8}<%for.body6.us.us>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m][(%o + %p)] with elements of 8 bytes.
