@@ -1017,11 +1017,13 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
         if (C.Tok->is(TT_FunctionDeclarationName))
           return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->IsInClassScope && !Style.AlignConsecutiveDeclarations
-                                          .AlignMemberVariableDeclarations)
+                                          .AlignMemberVariableDeclarations) {
           return false;
+        }
         if (!C.Tok->IsInClassScope &&
-            !Style.AlignConsecutiveDeclarations.AlignFreeVariableDeclarations)
+            !Style.AlignConsecutiveDeclarations.AlignFreeVariableDeclarations) {
           return false;
+        }
         if (C.Tok->isNot(TT_StartOfName))
           return false;
         if (C.Tok->Previous &&
