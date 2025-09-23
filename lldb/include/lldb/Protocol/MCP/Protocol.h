@@ -329,11 +329,4 @@ MakeRequest(int64_t id, llvm::StringRef method,
 
 } // namespace lldb_protocol::mcp
 
-// namespace llvm::json {
-// inline Value toJSON(const lldb_protocol::mcp::Void &) { return Object(); }
-// inline bool fromJSON(const Value &, lldb_protocol::mcp::Void &, Path) {
-//   return true;
-// }
-// } // namespace llvm::json
-
 #endif

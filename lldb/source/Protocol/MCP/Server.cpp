@@ -127,20 +127,20 @@ void Server::AddResourceProvider(
 }
 
 MCPBinderUP Server::Bind(MCPTransport &transport) {
-  MCPBinderUP binder = std::make_unique<MCPBinder>(transport);
-  binder->Bind<InitializeResult, InitializeParams>(
+  MCPBinderUP binder_up = std::make_unique<MCPBinder>(transport);
+  binder_up->Bind<InitializeResult, InitializeParams>(
       "initialize", &Server::InitializeHandler, this);
-  binder->Bind<ListToolsResult, void>("tools/list", &Server::ToolsListHandler,
-                                      this);
-  binder->Bind<CallToolResult, CallToolParams>("tools/call",
-                                               &Server::ToolsCallHandler, this);
-  binder->Bind<ListResourcesResult, void>("resources/list",
-                                          &Server::ResourcesListHandler, this);
-  binder->Bind<ReadResourceResult, ReadResourceParams>(
+  binder_up->Bind<ListToolsResult, void>("tools/list",
+                                         &Server::ToolsListHandler, this);
+  binder_up->Bind<CallToolResult, CallToolParams>(
+      "tools/call", &Server::ToolsCallHandler, this);
+  binder_up->Bind<ListResourcesResult, void>(
+      "resources/list", &Server::ResourcesListHandler, this);
+  binder_up->Bind<ReadResourceResult, ReadResourceParams>(
       "resources/read", &Server::ResourcesReadHandler, this);
-  binder->Bind<void>("notifications/initialized",
-                     [this]() { Log("MCP initialization complete"); });
-  return binder;
+  binder_up->Bind<void>("notifications/initialized",
+                        [this]() { Log("MCP initialization complete"); });
+  return binder_up;
 }
 
 llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {

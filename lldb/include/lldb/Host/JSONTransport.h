@@ -95,14 +95,19 @@ private:
   std::string m_method;
 };
 
-// FIXME: Once we upgrade to c++20, use this concept for JSONTransport.
-// template <typename T>
-// concept ProtocolDescriptor = requires {
-//   typename T::Id;
-//   typename T::Req;
-//   typename T::Resp;
-//   typename T::Evt;
-// };
+/*
+FIXME: Once we upgrade to c++20, use this concept for JSONTransport.
+
+/// A ProtocolDescriptor details the types used in a JSONTransport for handling
+/// transport communication.
+template <typename T>
+concept ProtocolDescriptor = requires {
+  typename T::Id;
+  typename T::Req;
+  typename T::Resp;
+  typename T::Evt;
+};
+*/
 
 /// A transport is responsible for maintaining the connection to a client
 /// application, and reading/writing structured messages to it.
@@ -111,16 +116,13 @@ private:
 ///  - Messages will not be sent concurrently.
 ///  - Messages MAY be sent while Run() is reading, or its callback is active.
 ///
-/// FIXME: Once we upgrade to c++20, use template <ProtocolDescriptor Proto>
+/// FIXME: Once we upgrade to c++20, use `template <ProtocolDescriptor Proto>`
 template <typename Proto> class JSONTransport {
 public:
   using Req = typename Proto::Req;
   using Resp = typename Proto::Resp;
   using Evt = typename Proto::Evt;
   using Message = std::variant<Req, Resp, Evt>;
-
-  // class Binder;
-  // using BinderUP = std::unique_ptr<Binder>;
 
   virtual ~JSONTransport() = default;
 
@@ -382,51 +384,56 @@ using OutgoingRequest = typename detail::request_t<R, P>::type;
 /// A function to send an outgoing event.
 template <typename P> using OutgoingEvent = typename detail::event_t<P>::type;
 
-// FIXME: With c++20, we should use this concept:
-// template <typename T>
-// concept BindingBuilder =
-//     ProtocolDescriptor<T> &&
-//     requires(T::Id id, T::Req req, T::Resp resp, T::Evt evt,
-//              llvm::StringRef method, std::optional<llvm::json::Value> params,
-//              std::optional<llvm::json::Value> result, llvm::Error err) {
-//       // For initializing the unique sequence identifier;
-//       { T::InitialId() } -> std::same_as<typename T::Id>;
-//       // Incrementing the sequence identifier.
-//       { id++ } -> std::same_as<typename T::Id>;
-//
-//       // Constructing protocol types
-//       // @{
-//       // Construct a new request.
-//       { T::Make(id, method, params) } -> std::same_as<typename T::Req>;
-//       // Construct a new error response.
-//       { T::Make(req, std::move(err)) } -> std::same_as<typename T::Resp>;
-//       // Construct a new success response.
-//       { T::Make(req, result) } -> std::same_as<typename T::Resp>;
-//       // Construct a new event.
-//       { T::Make(method, params) } -> std::same_as<typename T::Evt>;
-//       // @}
-//
-//       // Keys for associated types.
-//       // @{
-//       // Looking up in flight responses.
-//       { T::KeyFor(resp) } -> std::same_as<typename T::Id>;
-//       // Extract method from request.
-//       { T::KeyFor(req) } -> std::same_as<llvm::StringRef>;
-//       // Extract method from event.
-//       { T::KeyFor(evt) } -> std::same_as<llvm::StringRef>;
-//       // @}
-//
-//       // Extracting information from associated types.
-//       // @{
-//       // Extract parameters from a request.
-//       { T::Extract(req) } -> std::same_as<std::optional<llvm::json::Value>>;
-//       // Extract result from a response.
-//       { T::Extract(resp) } ->
-//       std::same_as<llvm::Expected<llvm::json::Value>>;
-//       // Extract parameters from an event.
-//       { T::Extract(evt) } -> std::same_as<std::optional<llvm::json::Value>>;
-//       // @}
-//     };
+/*
+FIXME: With c++20, we should use this concept:
+
+/// This represents a protocol description that includes additional helpers
+/// for constructing requests, responses and events to work with `Binder`.
+template <typename T>
+concept BindingBuilder =
+    ProtocolDescriptor<T> &&
+    requires(T::Id id, T::Req req, T::Resp resp, T::Evt evt,
+             llvm::StringRef method, std::optional<llvm::json::Value> params,
+             std::optional<llvm::json::Value> result, llvm::Error err) {
+      /// For initializing the unique sequence identifier;
+      { T::InitialId() } -> std::same_as<typename T::Id>;
+      /// Incrementing the sequence identifier.
+      { id++ } -> std::same_as<typename T::Id>;
+
+      /// Constructing protocol types
+      /// @{
+      /// Construct a new request.
+      { T::Make(id, method, params) } -> std::same_as<typename T::Req>;
+      /// Construct a new error response.
+      { T::Make(req, std::move(err)) } -> std::same_as<typename T::Resp>;
+      /// Construct a new success response.
+      { T::Make(req, result) } -> std::same_as<typename T::Resp>;
+      /// Construct a new event.
+      { T::Make(method, params) } -> std::same_as<typename T::Evt>;
+      /// @}
+
+      /// Keys for associated types.
+      /// @{
+      /// Looking up in flight responses.
+      { T::KeyFor(resp) } -> std::same_as<typename T::Id>;
+      /// Extract method from request.
+      { T::KeyFor(req) } -> std::same_as<llvm::StringRef>;
+      /// Extract method from event.
+      { T::KeyFor(evt) } -> std::same_as<llvm::StringRef>;
+      /// @}
+
+      /// Extracting information from associated types.
+      /// @{
+      /// Extract parameters from a request.
+      { T::Extract(req) } -> std::same_as<std::optional<llvm::json::Value>>;
+      /// Extract result from a response.
+      { T::Extract(resp) } ->
+      std::same_as<llvm::Expected<llvm::json::Value>>;
+      /// Extract parameters from an event.
+      { T::Extract(evt) } -> std::same_as<std::optional<llvm::json::Value>>;
+      /// @}
+    };
+*/
 
 /// Binder collects a table of functions that handle calls.
 ///
@@ -435,25 +442,26 @@ template <typename P> using OutgoingEvent = typename detail::event_t<P>::type;
 /// This allows a JSONTransport to handle incoming and outgoing requests and
 /// events.
 ///
-/// A simple example could be to a method to a lambda like:
-///
+/// A bind of an incoming request to a lambda.
 /// \code{cpp}
 /// Binder binder{transport};
-/// // Binds an incoming request handler.
 /// binder.bind<int, vector<int>>("adder", [](const vector<int> &params) {
 ///   int sum = 0;
 ///   for (int v : params)
 ///     sum += v;
 ///   return sum;
 /// });
-/// // Binds an outgoing request handler.
+/// \endcode
+///
+/// A bind of an outgoing request.
+/// \code{cpp}
 /// OutgoingRequest<int, vector<int>> call_add =
 ///     binder.bind<int, vector<int>>("add");
 /// call_add({1,2,3}, [](Expected<int> result) {
 ///   cout << *result << "\n";
 /// });
 /// \endcode
-// FIXME: In c++20 use: template <BindingBuilder Proto>
+/// FIXME: In c++20 use `template <BindingBuilder Proto>`.
 template <typename Proto>
 class Binder : public JSONTransport<Proto>::MessageHandler {
   using Req = Proto::Req;
