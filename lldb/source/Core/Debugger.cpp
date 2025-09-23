@@ -2081,6 +2081,11 @@ bool Debugger::StatuslineSupported() {
   return false;
 }
 
+static bool RequiresFollowChildWorkaround(const Process &process) {
+  // FIXME: https://github.com/llvm/llvm-project/issues/160216
+  return process.GetFollowForkMode() == eFollowChild;
+}
+
 lldb::thread_result_t Debugger::DefaultEventHandler() {
   ListenerSP listener_sp(GetListener());
   ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
@@ -2140,8 +2145,9 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
             if (ProcessSP process_sp = HandleProcessEvent(event_sp))
-              exe_ctx_ref = ExecutionContextRef(process_sp.get(),
-                                                /*adopt_selected=*/true);
+              if (!RequiresFollowChildWorkaround(*process_sp))
+                exe_ctx_ref = ExecutionContextRef(process_sp.get(),
+                                                  /*adopt_selected=*/true);
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2149,8 +2155,9 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
             }
           } else if (broadcaster_class == broadcaster_class_thread) {
             if (ThreadSP thread_sp = HandleThreadEvent(event_sp))
-              exe_ctx_ref =
-                  ExecutionContextRef(thread_sp.get(), /*adopt_selected=*/true);
+              if (!RequiresFollowChildWorkaround(*thread_sp->GetProcess()))
+                exe_ctx_ref = ExecutionContextRef(thread_sp.get(),
+                                                  /*adopt_selected=*/true);
           } else if (broadcaster == m_command_interpreter_up.get()) {
             if (event_type &
                 CommandInterpreter::eBroadcastBitQuitCommandReceived) {
