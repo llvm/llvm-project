@@ -70,31 +70,18 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
   return CI;
 }
 
-Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
-                                           const CallExpr *E) {
-  // Do not emit the builtin arguments in the arguments of a function call,
-  // because the evaluation order of function arguments is not specified in C++.
-  // This is important when testing to ensure the arguments are emitted in the
-  // same order every time. Eg:
-  // Instead of:
-  //   return Builder.CreateFDiv(EmitScalarExpr(E->getArg(0)),
-  //                             EmitScalarExpr(E->getArg(1)), "swdiv");
-  // Use:
-  //   Value *Op0 = EmitScalarExpr(E->getArg(0));
-  //   Value *Op1 = EmitScalarExpr(E->getArg(1));
-  //   return Builder.CreateFDiv(Op0, Op1, "swdiv")
-
-  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+Value *CodeGenFunction::EmitPPCBuiltinCpu(
+    unsigned BuiltinID, llvm::Type *ReturnType, StringRef CPUStr) {
 
 #include "llvm/TargetParser/PPCTargetParser.def"
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
                                      unsigned Mask, CmpInst::Predicate CompOp,
                                      unsigned OpValue) -> Value * {
     if (SupportMethod == BUILTIN_PPC_FALSE)
-      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+      return llvm::ConstantInt::getFalse(ReturnType);
 
     if (SupportMethod == BUILTIN_PPC_TRUE)
-      return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
+      return llvm::ConstantInt::getTrue(ReturnType);
 
     assert(SupportMethod <= SYS_CALL && "Invalid value for SupportMethod.");
 
@@ -137,12 +124,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         ConstantInt::get(IsValueType64Bit ? Int64Ty : Int32Ty, OpValue));
   };
 
-  switch (BuiltinID) {
-  default: return nullptr;
-
-  case Builtin::BI__builtin_cpu_is: {
-    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  if (BuiltinID == Builtin::BI__builtin_cpu_is) {
     llvm::Triple Triple = getTarget().getTriple();
 
     typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUInfo;
@@ -170,7 +152,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
            "Invalid CPU name. Missed by SemaChecking?");
 
     if (LinuxSupportMethod == BUILTIN_PPC_FALSE)
-      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+      return llvm::ConstantInt::getFalse(ReturnType);
 
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
@@ -178,10 +160,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateICmpEQ(TheCall,
                                 llvm::ConstantInt::get(Int32Ty, LinuxIDValue));
   }
-  case Builtin::BI__builtin_cpu_supports: {
+  else if (BuiltinID == Builtin::BI__builtin_cpu_supports) {
     llvm::Triple Triple = getTarget().getTriple();
-    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     if (Triple.isOSAIX()) {
       typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
                          unsigned>
@@ -218,7 +198,35 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 #undef PPC_FAWORD_HWCAP2
 #undef PPC_FAWORD_CPUID
   }
+  else
+    assert(0 && "unexpected builtin");
+}
 
+Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
+                                           const CallExpr *E) {
+  // Do not emit the builtin arguments in the arguments of a function call,
+  // because the evaluation order of function arguments is not specified in C++.
+  // This is important when testing to ensure the arguments are emitted in the
+  // same order every time. Eg:
+  // Instead of:
+  //   return Builder.CreateFDiv(EmitScalarExpr(E->getArg(0)),
+  //                             EmitScalarExpr(E->getArg(1)), "swdiv");
+  // Use:
+  //   Value *Op0 = EmitScalarExpr(E->getArg(0));
+  //   Value *Op1 = EmitScalarExpr(E->getArg(1));
+  //   return Builder.CreateFDiv(Op0, Op1, "swdiv")
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+  switch (BuiltinID) {
+  default: return nullptr;
+
+  case Builtin::BI__builtin_cpu_is:
+  case Builtin::BI__builtin_cpu_supports: {
+    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
+    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    return EmitPPCBuiltinCpu(BuiltinID, ConvertType(E->getType()), CPUStr);
+  }
   // __builtin_ppc_get_timebase is GCC 4.8+'s PowerPC-specific name for what we
   // call __builtin_readcyclecounter.
   case PPC::BI__builtin_ppc_get_timebase:
