@@ -576,7 +576,7 @@ void func12() {
 
 // OGCG: %[[ARR:.*]] = alloca [4 x %struct.Point], align 16
 
-void foo13() {
+void array_with_complex_elements() {
   _Complex float arr[2] = {{1.1f, 2.2f}, {3.3f, 4.4f}};
 }
 
@@ -596,4 +596,4 @@ void foo13() {
 // LLVM: store { float, float } { float 0x400A666660000000, float 0x40119999A0000000 }, ptr %[[ARR_1]], align 8
 
 // OGCG: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
-// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @__const._Z5foo13v.arr, i64 16, i1 false)
+// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @__const._Z27array_with_complex_elementsv.arr, i64 16, i1 false)
