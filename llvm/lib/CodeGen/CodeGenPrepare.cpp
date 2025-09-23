@@ -1695,19 +1695,23 @@ bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
   return true;
 }
 
-bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
-                                               ModifyDT &ModifiedDT) {
-  // We are not expecting non-canonical/degenerate code. Just bail out.
+static bool matchUSubWithOverflowConstantEdgeCases(CmpInst *Cmp,
+                                                   BinaryOperator *&Sub) {
+  // A - B, A u> B --> usubo(A, B)
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+
+  // We are not expecting non-canonical/degenerate code. Just bail out.
   if (isa<Constant>(A) && isa<Constant>(B))
     return false;
 
-  // Convert (A u> B) to (A u< B) to simplify pattern matching.
   ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  // Normalize: convert (A u> B) -> (B u< A)
   if (Pred == ICmpInst::ICMP_UGT) {
     std::swap(A, B);
     Pred = ICmpInst::ICMP_ULT;
   }
+
   // Convert special-case: (A == 0) is the same as (A u< 1).
   if (Pred == ICmpInst::ICMP_EQ && match(B, m_ZeroInt())) {
     B = ConstantInt::get(B->getType(), 1);
@@ -1718,19 +1722,22 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
     std::swap(A, B);
     Pred = ICmpInst::ICMP_ULT;
   }
+
   if (Pred != ICmpInst::ICMP_ULT)
     return false;
 
-  // Walk the users of a variable operand of a compare looking for a subtract or
-  // add with that same operand. Also match the 2nd operand of the compare to
-  // the add/sub, but that may be a negated constant operand of an add.
+  // Walk the users of the variable operand of the compare looking for a
+  // subtract or add with that same operand. Also match the 2nd operand of the
+  // compare to the add/sub, but that may be a negated constant operand of an
+  // add.
   Value *CmpVariableOperand = isa<Constant>(A) ? B : A;
-  BinaryOperator *Sub = nullptr;
+  Sub = nullptr;
+
   for (User *U : CmpVariableOperand->users()) {
     // A - B, A u< B --> usubo(A, B)
     if (match(U, m_Sub(m_Specific(A), m_Specific(B)))) {
       Sub = cast<BinaryOperator>(U);
-      break;
+      return true;
     }
 
     // A + (-C), A u< C (canonicalized form of (sub A, C))
@@ -1738,19 +1745,42 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
     if (match(U, m_Add(m_Specific(A), m_APInt(AddC))) &&
         match(B, m_APInt(CmpC)) && *AddC == -(*CmpC)) {
       Sub = cast<BinaryOperator>(U);
-      break;
+      return true;
     }
   }
-  if (!Sub)
-    return false;
 
+  return false;
+}
+
+bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
+                                               ModifyDT &ModifiedDT) {
+  bool EdgeCase = false;
+  Value *A = nullptr, *B = nullptr;
+  BinaryOperator *Sub = nullptr;
+
+  // If the compare already matches the (sub, icmp) pattern use it directly.
+  if (!match(Cmp, m_USubWithOverflow(m_Value(A), m_Value(B), m_BinOp(Sub)))) {
+    // Otherwise try to recognize constant-edge-case forms like
+    //   icmp ne (sub 0, B), 0      or
+    //   icmp eq (sub A, 1), 0
+    if (!matchUSubWithOverflowConstantEdgeCases(Cmp, Sub))
+      return false;
+    // Set A/B from the discovered Sub and record that this was an edge-case
+    // match.
+    A = Sub->getOperand(0);
+    B = Sub->getOperand(1);
+    EdgeCase = true;
+  }
+
+  // Check target wants the overflow intrinsic formed. When matching an
+  // edge-case we allow forming the intrinsic with fewer uses.
   if (!TLI->shouldFormOverflowOp(ISD::USUBO,
                                  TLI->getValueType(*DL, Sub->getType()),
-                                 Sub->hasNUsesOrMore(1)))
+                                 Sub->hasNUsesOrMore(EdgeCase ? 1 : 2)))
     return false;
 
-  if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
-                                   Cmp, Intrinsic::usub_with_overflow))
+  if (!replaceMathCmpWithIntrinsic(Sub, A, B, Cmp,
+                                   Intrinsic::usub_with_overflow))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.

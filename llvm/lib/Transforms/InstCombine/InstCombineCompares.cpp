@@ -7829,6 +7829,23 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       }
     }
 
+    Instruction *SubI = nullptr;
+    if (match(&I, m_USubWithOverflow(m_Value(X), m_Value(Y),
+                                     m_Instruction(SubI))) &&
+        isa<IntegerType>(X->getType())) {
+      Value *Result;
+      Constant *Overflow;
+      // m_UAddWithOverflow can match patterns that do not include  an explicit
+      // "add" instruction, so check the opcode of the matched op.
+      if (SubI->getOpcode() == Instruction::Sub &&
+          OptimizeOverflowCheck(Instruction::Sub, /*Signed*/ false, X, Y, *SubI,
+                                Result, Overflow)) {
+        replaceInstUsesWith(*SubI, Result);
+        eraseInstFromFunction(*SubI);
+        return replaceInstUsesWith(I, Overflow);
+      }
+    }
+
     // (zext X) * (zext Y)  --> llvm.umul.with.overflow.
     if (match(Op0, m_NUWMul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
         match(Op1, m_APInt(C))) {
