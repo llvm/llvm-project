@@ -108,7 +108,7 @@ void d2(const char *a, int c) __attribute__((format(syslog, 1, 2)));  // expecte
 void e2(char *str, int c, ...) __attribute__((format(syslog, 2, 3))); // expected-error {{format argument not a string type}}
 
 // gnu_printf
-// same as format(pritf(...))...
+// same as format(printf(...))...
 void a2(const char *a, ...) __attribute__((format(gnu_printf, 1, 2)));    // no-error
 void b2(const char *a, ...) __attribute__((format(gnu_printf, 1, 1)));    // expected-error {{'format' attribute parameter 3 is out of bounds}}
 void c2(const char *a, ...) __attribute__((format(gnu_printf, 0, 2)));    // expected-error {{'format' attribute parameter 2 is out of bounds}}
