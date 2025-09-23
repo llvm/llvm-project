@@ -13,13 +13,6 @@
 
 C *c;
 
-struct S {
-  int a[4];
-};
-
-struct S s;
-_Complex float cf;
-
 @class NSString;
 extern __attribute__((visibility("default"))) NSString *GenString(void);
 void os_log_pack_send(void *);
@@ -129,20 +122,4 @@ void test_builtin_os_log4(void *buf) {
 void test_builtin_os_log5(void *buf) {
   __builtin_os_log_format(buf, "capabilities: %@", (0, GenString()));
   os_log_pack_send(buf);
-}
-
-// CHECK-LABEL: define void @test_builtin_os_log6(
-// CHECK: call void @__os_log_helper_1_0_0(
-
-void test_builtin_os_log6(void *buf) {
-  __builtin_os_log_format(buf, "%.*s %.*P %*.*f", s, s, s, s, s, s, s);
-}
-
-// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_0(
-
-// CHECK-LABEL: define void @test_builtin_os_log7(
-// CHECK: call void @__os_log_helper_1_0_0(
-
-void test_builtin_os_log7(void *buf) {
-  __builtin_os_log_format(buf, "%.*s %.*P %*.*f", cf, cf, cf, cf, cf, cf, cf);
 }
