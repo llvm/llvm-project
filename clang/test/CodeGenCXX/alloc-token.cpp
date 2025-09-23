@@ -65,41 +65,41 @@ void test_malloc_like_cast() {
 
 // CHECK-LABEL: @_Z17test_operator_newv(
 void test_operator_new() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = __builtin_operator_new(sizeof(int));
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = ::operator new(sizeof(int));
 }
 
 // CHECK-LABEL: @_Z25test_operator_new_nothrowv(
 void test_operator_new_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = __builtin_operator_new(sizeof(int), std::nothrow);
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   sink = ::operator new(sizeof(int), std::nothrow);
 }
 
 // CHECK-LABEL: @_Z8test_newv(
 int *test_new() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__Znwm(i64 noundef 4, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new int;
 }
 
 // CHECK-LABEL: @_Z14test_new_arrayv(
 int *test_new_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 40, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__Znam(i64 noundef 40, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new int[10];
 }
 
 // CHECK-LABEL: @_Z16test_new_nothrowv(
 int *test_new_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__ZnwmRKSt9nothrow_t(i64 noundef 4, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new (std::nothrow) int;
 }
 
 // CHECK-LABEL: @_Z22test_new_array_nothrowv(
 int *test_new_array_nothrow() {
-  // CHECK: call {{.*}} ptr @__alloc_token_ZnamRKSt9nothrow_t(i64 noundef 40, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__ZnamRKSt9nothrow_t(i64 noundef 40, ptr {{.*}} @_ZSt7nothrow, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   return new (std::nothrow) int[10];
 }
 
@@ -112,10 +112,10 @@ __attribute__((no_sanitize("alloc-token"))) int *no_sanitize_new() {
 // CHECK-LABEL: @_Z23test_size_returning_newv(
 void test_size_returning_new() {
   // FIXME: This should not be token ID 0!
-  // CHECK: call { ptr, i64 } @__alloc_token_size_returning_new(i64 noundef 8, i64 0)
-  // CHECK: call { ptr, i64 } @__alloc_token_size_returning_new_hot_cold(i64 noundef 8, i8 noundef zeroext 1, i64 0)
-  // CHECK: call { ptr, i64 } @__alloc_token_size_returning_new_aligned(i64 noundef 8, i64 noundef 32, i64 0)
-  // CHECK: call { ptr, i64 } @__alloc_token_size_returning_new_aligned_hot_cold(i64 noundef 8, i64 noundef 32, i8 noundef zeroext 1, i64 0)
+  // CHECK: call { ptr, i64 } @__alloc_token___size_returning_new(i64 noundef 8, i64 0)
+  // CHECK: call { ptr, i64 } @__alloc_token___size_returning_new_hot_cold(i64 noundef 8, i8 noundef zeroext 1, i64 0)
+  // CHECK: call { ptr, i64 } @__alloc_token___size_returning_new_aligned(i64 noundef 8, i64 noundef 32, i64 0)
+  // CHECK: call { ptr, i64 } @__alloc_token___size_returning_new_aligned_hot_cold(i64 noundef 8, i64 noundef 32, i8 noundef zeroext 1, i64 0)
   sink = __size_returning_new(sizeof(long)).p;
   sink = __size_returning_new_hot_cold(sizeof(long), __hot_cold_t{1}).p;
   sink = __size_returning_new_aligned(sizeof(long), std::align_val_t{32}).p;
@@ -134,7 +134,7 @@ void may_throw();
 // CHECK-LABEL: @_Z27test_exception_handling_newv(
 TestClass *test_exception_handling_new() {
   try {
-    // CHECK: invoke {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}})
+    // CHECK: invoke {{.*}} ptr @__alloc_token__Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}})
     // CHECK-NEXT: !alloc_token
     TestClass *obj = new TestClass();
     may_throw();
@@ -146,7 +146,7 @@ TestClass *test_exception_handling_new() {
 
 // CHECK-LABEL: @_Z14test_new_classv(
 TestClass *test_new_class() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__Znwm(i64 noundef 72, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   TestClass *obj = new TestClass();
   obj->data[0] = 42;
   return obj;
@@ -154,7 +154,7 @@ TestClass *test_new_class() {
 
 // CHECK-LABEL: @_Z20test_new_class_arrayv(
 TestClass *test_new_class_array() {
-  // CHECK: call {{.*}} ptr @__alloc_token_Znam(i64 noundef 728, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
+  // CHECK: call {{.*}} ptr @__alloc_token__Znam(i64 noundef 728, i64 {{[1-9][0-9]*}}){{.*}} !alloc_token
   TestClass* arr = new TestClass[10];
   arr[0].data[0] = 123;
   return arr;

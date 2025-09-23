@@ -23,7 +23,7 @@ define ptr @test_cpp_operators() sanitize_alloc_token {
 ; CHECK-LABEL: define ptr @test_cpp_operators(
 ; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token_Znwm(i32 32, i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token__Znwm(i32 32, i32 1)
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:

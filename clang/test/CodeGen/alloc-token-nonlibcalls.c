@@ -13,6 +13,6 @@ void *sink;
 void test_nonlibcall_alloc() {
   // CHECK: call{{.*}} ptr @__alloc_token_custom_malloc(i64 noundef 4, i64 {{[1-9][0-9]*}})
   sink = custom_malloc(sizeof(int));
-  // CHECK: call{{.*}} ptr @__alloc_token_kmalloc(i64 noundef 4, i64 noundef 0, i64 {{[1-9][0-9]*}})
+  // CHECK: call{{.*}} ptr @__alloc_token___kmalloc(i64 noundef 4, i64 noundef 0, i64 {{[1-9][0-9]*}})
   sink = __kmalloc(sizeof(int), 0);
 }
