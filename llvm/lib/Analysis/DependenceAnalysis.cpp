@@ -964,6 +964,9 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
                                         SmallBitVector &Loops) const {
   while (LoopNest) {
     unsigned Level = LoopNest->getLoopDepth();
+    LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+    LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+    assert(Level <= MaxLevels && "Level larger than MaxLevels.");
     if (Level <= CommonLevels && !SE->isLoopInvariant(Expression, LoopNest))
       Loops.set(Level);
     LoopNest = LoopNest->getParentLoop();
@@ -1050,6 +1053,10 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!AddRec)
     return isLoopInvariant(Expr, LoopNest);
 
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  if (!isLoopInvariant(Step, LoopNest))
+    return false;
+
   // The AddRec must depend on one of the containing loops. Otherwise,
   // mapSrcLoop and mapDstLoop return indices outside the intended range. This
   // can happen when a subscript in one loop references an IV from a sibling
@@ -1061,14 +1068,16 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
   if (!L)
     return false;
 
+  unsigned Level = IsSrc ? mapSrcLoop(L) : mapDstLoop(L);
+  // Check that the mapped loop index is within bounds for the SmallBitVector.
+  // This can happen when loop depths exceed MaxLevels due to the mapping
+  // algorithm.
+
+  LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+  LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+  assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+  Loops.set(Level);
   const SCEV *Start = AddRec->getStart();
-  const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  if (!isLoopInvariant(Step, LoopNest))
-    return false;
-  if (IsSrc)
-    Loops.set(mapSrcLoop(AddRec->getLoop()));
-  else
-    Loops.set(mapDstLoop(AddRec->getLoop()));
   return checkSubscript(Start, LoopNest, Loops, IsSrc);
 }
 
@@ -3988,6 +3997,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   // test separable subscripts
   for (unsigned SI : Separable.set_bits()) {
     LLVM_DEBUG(dbgs() << "testing subscript " << SI);
+
+    // For SIV subscripts, reclassify to handle cases where expressions
+    // may have become non-AddRec.
+    if (Pair[SI].Classification == Subscript::SIV) {
+      Pair[SI].Classification = classifyPair(
+          Pair[SI].Src, LI->getLoopFor(Src->getParent()), Pair[SI].Dst,
+          LI->getLoopFor(Dst->getParent()), Pair[SI].Loops);
+    }
+
     switch (Pair[SI].Classification) {
     case Subscript::ZIV:
       LLVM_DEBUG(dbgs() << ", ZIV\n");
@@ -3996,7 +4014,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       break;
     case Subscript::SIV: {
       LLVM_DEBUG(dbgs() << ", SIV\n");
-      unsigned Level;
+      unsigned Level = 0;
       const SCEV *SplitIter = nullptr;
       if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
                   SplitIter))
@@ -4046,13 +4064,52 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         bool Changed = false;
         for (unsigned SJ : Sivs.set_bits()) {
           LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
-          // SJ is an SIV subscript that's part of the current coupled group
-          unsigned Level;
+          // SJ is an SIV subscript that's part of the current coupled group.
+
+          // Reclassify to handle cases where expressions may have become
+          // non-AddRec.
+          Pair[SJ].Classification = classifyPair(
+              Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
+              LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
+
+          unsigned Level = 0;
           const SCEV *SplitIter = nullptr;
-          LLVM_DEBUG(dbgs() << "SIV\n");
-          if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
-                      SplitIter))
-            return nullptr;
+
+          switch (Pair[SJ].Classification) {
+          case Subscript::ZIV:
+            LLVM_DEBUG(dbgs() << " -> reclassified as ZIV\n");
+            if (testZIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
+              return nullptr;
+            Sivs.reset(SJ);
+            continue;
+          case Subscript::SIV:
+            LLVM_DEBUG(dbgs() << "SIV\n");
+            if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result,
+                        NewConstraint, SplitIter))
+              return nullptr;
+            break;
+          case Subscript::RDIV:
+            LLVM_DEBUG(dbgs() << " -> reclassified as RDIV\n");
+            if (testRDIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
+              return nullptr;
+            Sivs.reset(SJ);
+            continue;
+          case Subscript::MIV:
+            LLVM_DEBUG(dbgs() << " -> reclassified as MIV\n");
+            Mivs.set(SJ);
+            Sivs.reset(SJ);
+            continue;
+          case Subscript::NonLinear:
+            LLVM_DEBUG(dbgs() << " -> reclassified as NonLinear\n");
+            Result.Consistent = false;
+            Sivs.reset(SJ);
+            continue;
+          }
+
+          LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+          LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+          assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+
           ConstrainedLevels.set(Level);
           if (intersectConstraints(&Constraints[Level], &NewConstraint)) {
             if (Constraints[Level].isEmpty()) {
@@ -4092,8 +4149,11 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
               case Subscript::RDIV:
               case Subscript::MIV:
                 break;
-              default:
-                llvm_unreachable("bad subscript classification");
+              case Subscript::NonLinear:
+                LLVM_DEBUG(dbgs() << "NonLinear\n");
+                Result.Consistent = false;
+                Mivs.reset(SJ);
+                break;
               }
             }
           }
@@ -4353,14 +4413,22 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   for (unsigned SI : Separable.set_bits()) {
     switch (Pair[SI].Classification) {
     case Subscript::SIV: {
-      unsigned Level;
-      const SCEV *SplitIter = nullptr;
-      (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
-                    SplitIter);
-      if (Level == SplitLevel) {
-        assert(SplitIter != nullptr);
-        return SplitIter;
+      // Reclassify to handle cases where expressions may have become non-AddRec.
+      Pair[SI].Classification = classifyPair(
+          Pair[SI].Src, LI->getLoopFor(Src->getParent()), Pair[SI].Dst,
+          LI->getLoopFor(Dst->getParent()), Pair[SI].Loops);
+      if (Pair[SI].Classification == Subscript::SIV) {
+        unsigned Level = 0;
+        const SCEV *SplitIter = nullptr;
+        (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
+                      SplitIter);
+        if (Level == SplitLevel) {
+          assert(SplitIter != nullptr);
+          return SplitIter;
+        }
       }
+      // If reclassified as non-SIV, we can't get a split iteration from this
+      // subscript.
       break;
     }
     case Subscript::ZIV:
@@ -4392,13 +4460,33 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
     while (Sivs.any()) {
       bool Changed = false;
       for (unsigned SJ : Sivs.set_bits()) {
-        // SJ is an SIV subscript that's part of the current coupled group
-        unsigned Level;
+        // SJ is an SIV subscript that's part of the current coupled group.
+
+        // Reclassify to handle cases where expressions may have become
+        // non-AddRec.
+        Pair[SJ].Classification = classifyPair(
+            Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
+            LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
+
+        unsigned Level = 0;
         const SCEV *SplitIter = nullptr;
-        (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
-                      SplitIter);
-        if (Level == SplitLevel && SplitIter)
-          return SplitIter;
+
+        if (Pair[SJ].Classification == Subscript::SIV) {
+          (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result,
+                        NewConstraint, SplitIter);
+          if (Level == SplitLevel && SplitIter)
+            return SplitIter;
+        } else {
+          // If reclassified as non-SIV, we can't get a split iteration from
+          // this subscript.
+          Sivs.reset(SJ);
+          continue;
+        }
+
+        LLVM_DEBUG(dbgs() << "MaxLevels = " << MaxLevels << "\n");
+        LLVM_DEBUG(dbgs() << "Level = " << Level << "\n");
+        assert(Level <= MaxLevels && "Level larger than MaxLevels.");
+
         ConstrainedLevels.set(Level);
         if (intersectConstraints(&Constraints[Level], &NewConstraint))
           Changed = true;
@@ -4426,8 +4514,10 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
         case Subscript::RDIV:
         case Subscript::MIV:
           break;
-        default:
-          llvm_unreachable("bad subscript classification");
+        case Subscript::NonLinear:
+          Result.Consistent = false;
+          Mivs.reset(SJ);
+          break;
         }
       }
     }
