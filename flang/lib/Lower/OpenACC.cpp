@@ -67,7 +67,6 @@ static unsigned routineCounter = 0;
 static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
 static constexpr llvm::StringRef accPrivateInitName = "acc.private.init";
 static constexpr llvm::StringRef accReductionInitName = "acc.reduction.init";
-static constexpr llvm::StringRef accFirDescriptorPostfix = "_desc";
 
 static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
