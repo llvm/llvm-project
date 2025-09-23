@@ -732,6 +732,12 @@ struct FormatStyle {
   /// \version 18
   BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
 
+  /// Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  /// if they were preceded by a comma (``,``). This allows them to be formatted
+  /// according to ``BinPackParameters``.
+  /// \version 22
+  bool AllowBreakBeforeQtProperty;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -5458,6 +5464,7 @@ struct FormatStyle {
                R.AllowAllParametersOfDeclarationOnNextLine &&
            AllowBreakBeforeNoexceptSpecifier ==
                R.AllowBreakBeforeNoexceptSpecifier &&
+           AllowBreakBeforeQtProperty == R.AllowBreakBeforeQtProperty &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseExpressionOnASingleLine ==
                R.AllowShortCaseExpressionOnASingleLine &&
