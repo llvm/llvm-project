@@ -712,6 +712,36 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+
+/// rotateleft(value, amount)
+static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const CallExpr *Call, bool Right) {
+  APSInt Amount = popToAPSInt(S, Call->getArg(1));
+  APSInt Value = popToAPSInt(S, Call->getArg(0));
+
+  APSInt Result;
+  if (Right)
+    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+  else // Left.
+    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame,
+                                const CallExpr *Call) {
+  APSInt Value = popToAPSInt(S, Call->getArg(0));
+
+  uint64_t N = Value.countr_zero();
+  pushInteger(S, N == Value.getBitWidth() ? 0 : N + 1, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
@@ -2819,6 +2849,127 @@ static bool interp__builtin_elementwise_triop(
   return true;
 }
 
+//_builtin_extract
+static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 2);
+
+  // srcimm
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Index = ImmAPS.getZExtValue();
+
+  // srcvec
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  // destination (return value)
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  if (!Dst.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned SrcElems = Src.getNumElems();
+  unsigned DstElems = Dst.getNumElems();
+
+  if (SrcElems == 0 || DstElems == 0 || (SrcElems % DstElems) != 0)
+    return false;
+
+  unsigned NumLanes = SrcElems / DstElems;
+  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+  unsigned ExtractPos = Lane * DstElems;
+
+  // element type 
+  PrimType ElemPT = Src.getFieldDesc()->getPrimType();
+  if (ElemPT != Dst.getFieldDesc()->getPrimType())
+    return false;
+
+  TYPE_SWITCH(ElemPT, {
+    for (unsigned I = 0; I != DstElems; ++I) {
+      Dst.elem<T>(I) = Src.elem<T>(ExtractPos + I);
+    }
+  });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+// __builtin_extract_masked
+static bool interp__builtin_x86_extract_vector_masked(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 4);
+
+  // kmask
+  APSInt KmaskAPS = popToAPSInt(S, Call->getArg(3));
+  uint64_t Kmask = KmaskAPS.getZExtValue();
+
+  // merge
+  const Pointer &Merge = S.Stk.pop<Pointer>();
+  bool HasMergeVec = Merge.isLive() && Merge.getFieldDesc() &&
+                     Merge.getFieldDesc()->isPrimitiveArray(); 
+  
+  // srcimm
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Index = ImmAPS.getZExtValue();
+
+  // srcvec
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  // dst (return)
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  if (!Dst.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned SrcElems = Src.getNumElems();
+  unsigned DstElems = Dst.getNumElems();
+  if (SrcElems == 0 || DstElems == 0 || (SrcElems % DstElems) != 0)
+    return false;
+
+  unsigned NumLanes = SrcElems / DstElems;
+  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+  unsigned ExtractPos = Lane * DstElems;
+
+  PrimType ElemPT = Src.getFieldDesc()->getPrimType();
+  if (ElemPT != Dst.getFieldDesc()->getPrimType())
+    return false;
+
+  // Merge vector type/len check(if)
+  if (HasMergeVec) {
+    if (Merge.getFieldDesc()->getPrimType() != ElemPT ||
+        Merge.getNumElems() != DstElems)
+      return false;
+  }
+
+  // generate 0 value
+  auto storeZeroAt = [&](unsigned I) {
+    TYPE_SWITCH(ElemPT, {
+      Dst.elem<T>(I) = T{}; 
+    });
+  };
+
+  TYPE_SWITCH(ElemPT, {
+    for (unsigned I = 0; I != DstElems; ++I) {
+      bool Take = ((Kmask >> I) & 1) != 0;
+      if (Take) {
+        Dst.elem<T>(I) = Src.elem<T>(ExtractPos + I);
+      } else {
+        if (HasMergeVec) {
+          Dst.elem<T>(I) = Merge.elem<T>(I);
+        } else {
+          storeZeroAt(I);
+        }
+      }
+    }
+  });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+
 static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
                                                  const CallExpr *Call,
                                                  unsigned ID) {
@@ -3451,6 +3602,28 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+
+  case X86::BI__builtin_ia32_extract128i256:       // _mm256_extracti128
+  case X86::BI__builtin_ia32_vextractf128_pd256:   // _mm256_extractf128_ps
+  case X86::BI__builtin_ia32_vextractf128_ps256:   // _mm256_extractf128_pd
+  case X86::BI__builtin_ia32_vextractf128_si256:   // _mm256_extracti128_si256
+    return interp__builtin_x86_extract_vector(S, OpPC, Call, BuiltinID);
+
+  // AVX-512 / AVX-512VL / AVX-512DQ 
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extractf32x4_mask:
+  case X86::BI__builtin_ia32_extractf32x8_mask:
+  case X86::BI__builtin_ia32_extractf64x2_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extractf64x4_mask:
+  case X86::BI__builtin_ia32_extracti32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:
+  case X86::BI__builtin_ia32_extracti32x8_mask:
+  case X86::BI__builtin_ia32_extracti64x2_256_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+    return interp__builtin_x86_extract_vector_masked(S, OpPC, Call, BuiltinID);
+
 
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
