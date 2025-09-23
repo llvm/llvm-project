@@ -6986,7 +6986,6 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     case FormatStringType::Kprintf:
     case FormatStringType::FreeBSDKPrintf:
     case FormatStringType::Printf:
-    case FormatStringType::Syslog:
       Diag(FormatLoc, diag::note_format_security_fixit)
         << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
       break;
@@ -9103,8 +9102,7 @@ static void CheckFormatString(
   if (Type == FormatStringType::Printf || Type == FormatStringType::NSString ||
       Type == FormatStringType::Kprintf ||
       Type == FormatStringType::FreeBSDKPrintf ||
-      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace ||
-      Type == FormatStringType::Syslog) {
+      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace) {
     bool IsObjC =
         Type == FormatStringType::NSString || Type == FormatStringType::OSTrace;
     if (ReferenceFormatString == nullptr) {
@@ -9140,8 +9138,7 @@ bool Sema::CheckFormatStringsCompatible(
   if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
       Type != FormatStringType::Kprintf &&
       Type != FormatStringType::FreeBSDKPrintf &&
-      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
-      Type != FormatStringType::Syslog)
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace)
     return true;
 
   bool IsObjC =
@@ -9175,8 +9172,7 @@ bool Sema::ValidateFormatString(FormatStringType Type,
   if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
       Type != FormatStringType::Kprintf &&
       Type != FormatStringType::FreeBSDKPrintf &&
-      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
-      Type != FormatStringType::Syslog)
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace)
     return true;
 
   FormatStringLiteral RefLit = Str;
