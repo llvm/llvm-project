@@ -16268,7 +16268,7 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
 
   // Pre-promote (i32 (xor (shl -1, X), ~0)) on RV64 with Zbs so we can use
-  // (ADDI (BSET X0, X), -1). If we wait until/ type legalization, we'll create
+  // (ADDI (BSET X0, X), -1). If we wait until type legalization, we'll create
   // RISCVISD:::SLLW and we can't recover it to use a BSET instruction.
   if (Subtarget.is64Bit() && Subtarget.hasStdExtZbs() &&
       N->getValueType(0) == MVT::i32 && isAllOnesConstant(N1) &&
@@ -16796,7 +16796,7 @@ static SDValue performSETCCCombine(SDNode *N,
     // addi or xori after shifting.
     uint64_t N1Int = cast<ConstantSDNode>(N1)->getZExtValue();
     uint64_t AndRHSInt = AndRHSC.getZExtValue();
-    if (OpVT == MVT::i64 && AndRHSInt <= 0xffffffff &&
+    if (OpVT == MVT::i64 && isUInt<32>(AndRHSInt) &&
         isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
       unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
       int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;

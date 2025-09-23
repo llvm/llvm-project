@@ -878,10 +878,9 @@ public:
     }
 
     if (ty.UseExcessPrecision(cgf.getContext())) {
-      if (ty->getAs<VectorType>()) {
-        assert(!cir::MissingFeatures::vectorType());
-        cgf.cgm.errorNYI("getPromotionType: promotion to vector type");
-        return QualType();
+      if (auto *vt = ty->getAs<VectorType>()) {
+        unsigned numElements = vt->getNumElements();
+        return ctx.getVectorType(ctx.FloatTy, numElements, vt->getVectorKind());
       }
       return cgf.getContext().FloatTy;
     }
