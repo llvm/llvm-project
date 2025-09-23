@@ -1469,8 +1469,17 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::UDiv);
 
-  case Intrinsic::aarch64_sve_addqv:
   case Intrinsic::aarch64_sve_and_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::And);
+  case Intrinsic::aarch64_sve_orr_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::Or);
+  case Intrinsic::aarch64_sve_eor_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::Xor);
+
+  case Intrinsic::aarch64_sve_addqv:
   case Intrinsic::aarch64_sve_bic_z:
   case Intrinsic::aarch64_sve_brka_z:
   case Intrinsic::aarch64_sve_brkb_z:
@@ -1479,13 +1488,11 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_brkpb_z:
   case Intrinsic::aarch64_sve_cntp:
   case Intrinsic::aarch64_sve_compact:
-  case Intrinsic::aarch64_sve_eor_z:
   case Intrinsic::aarch64_sve_eorv:
   case Intrinsic::aarch64_sve_eorqv:
   case Intrinsic::aarch64_sve_nand_z:
   case Intrinsic::aarch64_sve_nor_z:
   case Intrinsic::aarch64_sve_orn_z:
-  case Intrinsic::aarch64_sve_orr_z:
   case Intrinsic::aarch64_sve_orv:
   case Intrinsic::aarch64_sve_orqv:
   case Intrinsic::aarch64_sve_pnext:
@@ -1659,6 +1666,30 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
     return &II;
   }
 
+  // If both operands are convert.to.svbool from the same narrower type, try to
+  // simplify the operation at that narrower type first.
+  if (isAllActivePredicate(Pg)) {
+    auto *ConvIntr1 = dyn_cast<IntrinsicInst>(Op1);
+    auto *ConvIntr2 = dyn_cast<IntrinsicInst>(Op2);
+    if (ConvIntr1 && ConvIntr2 &&
+        ConvIntr1->getIntrinsicID() ==
+            Intrinsic::aarch64_sve_convert_to_svbool &&
+        ConvIntr2->getIntrinsicID() ==
+            Intrinsic::aarch64_sve_convert_to_svbool) {
+      Value *NarrowOp1 = ConvIntr1->getArgOperand(0);
+      Value *NarrowOp2 = ConvIntr2->getArgOperand(0);
+      if (NarrowOp1->getType() == NarrowOp2->getType()) {
+        if (Value *SimplifiedNarrow =
+                simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL)) {
+          Value *NewConv = IC.Builder.CreateIntrinsic(
+              Intrinsic::aarch64_sve_convert_to_svbool,
+              {SimplifiedNarrow->getType()}, {SimplifiedNarrow});
+          return IC.replaceInstUsesWith(II, NewConv);
+        }
+      }
+    }
+  }
+
   // Only active lanes matter when simplifying the operation.
   Op1 = stripInactiveLanes(Op1, Pg);
   Op2 = stripInactiveLanes(Op2, Pg);
@@ -1678,6 +1709,9 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
 
   if (IInfo.inactiveLanesAreNotDefined())
     return IC.replaceInstUsesWith(II, SimpleII);
+
+  if (!IInfo.inactiveLanesTakenFromOperand())
+    return std::nullopt;
 
   Value *Inactive = II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
 
