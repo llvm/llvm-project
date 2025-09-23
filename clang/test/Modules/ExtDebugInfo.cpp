@@ -8,7 +8,7 @@
 // RUN:     -fmodule-format=obj -fimplicit-module-maps -DMODULES \
 // RUN:     -triple %itanium_abi_triple \
 // RUN:     -fmodules-cache-path=%t %s -I %S/Inputs -I %t -emit-llvm -o %t-mod.ll
-// RUN: cat %t-mod.ll |  FileCheck %s --check-prefix=CHECK %if target={{.*-(win|mingw|cyg).*}} %{--check-prefix=CHECKCOFF%} %else %{--check-prefix=CHECKELF%}
+// RUN: cat %t-mod.ll |  FileCheck %s
 
 // PCH:
 // RUN: %clang_cc1 -x c++ -std=c++11 -fmodule-format=obj -emit-pch -I%S/Inputs \
@@ -18,7 +18,7 @@
 // RUN:     -dwarf-ext-refs -fmodule-format=obj \
 // RUN:     -triple %itanium_abi_triple \
 // RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll
-// RUN: cat %t-pch.ll |  FileCheck %s --check-prefix=CHECK %if target={{.*-(win|mingw|cyg).*}} %{--check-prefix=CHECKCOFF%} %else %{--check-prefix=CHECKELF%}
+// RUN: cat %t-pch.ll |  FileCheck %s
 // RUN: cat %t-pch.ll |  FileCheck %s --check-prefix=CHECK-PCH
 
 #ifdef MODULES
@@ -208,9 +208,9 @@ void foo() {
 // CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
 
 // There is a full definition of the type available in the module.
-// CHECKELF: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",
-// CHECKELF-SAME:             DIFlagFwdDecl
-// CHECKELF-SAME:             identifier: "_ZTS7Virtual")
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",
+// CHECK-SAME:             DIFlagFwdDecl
+// CHECK-SAME:             identifier: "_ZTS7Virtual")
 
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !{{[0-9]+}}, entity: ![[STRUCT]], file: ![[CPP]], line: 50)
 
@@ -222,8 +222,3 @@ void foo() {
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A",
 // CHECK-SAME:             DIFlagFwdDecl
-
-// There is a full definition of the type available in the module.
-// CHECKCOFF: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",
-// CHECKCOFF-SAME:             DIFlagFwdDecl
-// CHECKCOFF-SAME:             identifier: "_ZTS7Virtual")

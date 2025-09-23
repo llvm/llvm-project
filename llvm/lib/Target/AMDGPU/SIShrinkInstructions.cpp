@@ -712,10 +712,13 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   bool KilledT = false;
   for (auto Iter = std::next(MovT.getIterator()),
             E = MovT.getParent()->instr_end();
-       Iter != E && Count < SearchLimit && !KilledT; ++Iter, ++Count) {
+       Iter != E && Count < SearchLimit && !KilledT; ++Iter) {
 
     MachineInstr *MovY = &*Iter;
     KilledT = MovY->killsRegister(T, TRI);
+    if (MovY->isDebugInstr())
+      continue;
+    ++Count;
 
     if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
          MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
@@ -733,6 +736,8 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     MachineInstr *MovX = nullptr;
     for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
          I != IY; ++I) {
+      if (I->isDebugInstr())
+        continue;
       if (instReadsReg(&*I, X, Xsub) || instModifiesReg(&*I, Y, Ysub) ||
           instModifiesReg(&*I, T, Tsub) ||
           (MovX && instModifiesReg(&*I, X, Xsub))) {
