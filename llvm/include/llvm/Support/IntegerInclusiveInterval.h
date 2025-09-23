@@ -1,5 +1,5 @@
 //===- llvm/Support/IntegerInclusiveInterval.h - Integer inclusive interval
-//parsing utility -----------*- C++ -*-===//
+// parsing utility -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
