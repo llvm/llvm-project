@@ -58,10 +58,10 @@ template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
   if (BF.hasCFG()) {
     for (BinaryBasicBlock &BB : BF)
       for (int64_t I = 0, E = BB.size(); I < E; ++I)
-        Fn(MCInstReference(&BB, I));
+        Fn(MCInstReference(BB, I));
   } else {
     for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I)
-      Fn(MCInstReference(&BF, I));
+      Fn(MCInstReference(BF, I));
   }
 }
 
@@ -532,7 +532,7 @@ public:
 
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg)) {
-      MCInstReference Ref = MCInstReference::get(Inst, BF);
+      MCInstReference Ref = MCInstReference::get(*Inst, BF);
       assert(!Ref.empty() && "Expected Inst to be found");
       Result.push_back(Ref);
     }
@@ -1104,7 +1104,7 @@ public:
 
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : firstLeakingInsts(S, LeakedReg)) {
-      MCInstReference Ref = MCInstReference::get(Inst, BF);
+      MCInstReference Ref = MCInstReference::get(*Inst, BF);
       assert(!Ref.empty() && "Expected Inst to be found");
       Result.push_back(Ref);
     }
@@ -1507,7 +1507,7 @@ void FunctionAnalysisContext::findUnsafeUses(
       // This is printed as "[message] in function [name], basic block ...,
       // at address ..." when the issue is reported to the user.
       Reports.push_back(make_generic_report(
-          MCInstReference(&BB, FirstInst),
+          MCInstReference(BB, *FirstInst),
           "Warning: possibly imprecise CFG, the analysis quality may be "
           "degraded in this function. According to BOLT, unreachable code is "
           "found" /* in function [name]... */));
@@ -1671,11 +1671,11 @@ void Analysis::runOnFunction(BinaryFunction &BF,
   }
 }
 
-static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
+static void printBB(const BinaryContext &BC, const BinaryBasicBlock &BB,
                     size_t StartIndex = 0, size_t EndIndex = -1) {
   if (EndIndex == (size_t)-1)
-    EndIndex = BB->size() - 1;
-  const BinaryFunction *BF = BB->getFunction();
+    EndIndex = BB.size() - 1;
+  const BinaryFunction *BF = BB.getFunction();
   for (unsigned I = StartIndex; I <= EndIndex; ++I) {
     MCInstReference Inst(BB, I);
     if (BC.MIB->isCFI(Inst))
@@ -1692,7 +1692,7 @@ static void reportFoundGadgetInSingleBBSingleRelatedInst(
   assert(Location.hasCFG());
   if (BB == RelatedInst.getBasicBlock()) {
     OS << "  This happens in the following basic block:\n";
-    printBB(BC, BB);
+    printBB(BC, *BB);
   }
 }
 

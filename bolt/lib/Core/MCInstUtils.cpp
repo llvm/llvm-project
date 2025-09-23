@@ -36,19 +36,19 @@ public:
 };
 } // anonymous namespace
 
-MCInstReference MCInstReference::get(const MCInst *Inst,
+MCInstReference MCInstReference::get(const MCInst &Inst,
                                      const BinaryFunction &BF) {
   if (BF.hasCFG()) {
     for (BinaryBasicBlock &BB : BF)
       for (MCInst &MI : BB)
-        if (&MI == Inst)
-          return MCInstReference(&BB, Inst);
+        if (&MI == &Inst)
+          return MCInstReference(BB, Inst);
     return {};
   }
 
   for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I) {
-    if (&I->second == Inst)
-      return MCInstReference(&BF, I);
+    if (&I->second == &Inst)
+      return MCInstReference(BF, I);
   }
   return {};
 }

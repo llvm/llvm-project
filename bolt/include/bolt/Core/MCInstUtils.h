@@ -34,23 +34,21 @@ public:
 
   /// Constructs an empty reference.
   MCInstReference() : Reference(RefInBB(nullptr, /*Index=*/0)) {}
+
   /// Constructs a reference to the instruction inside the basic block.
-  MCInstReference(const BinaryBasicBlock *BB, const MCInst *Inst)
-      : Reference(RefInBB(BB, getInstIndexInBB(BB, Inst))) {}
+  MCInstReference(const BinaryBasicBlock &BB, const MCInst &Inst)
+      : Reference(RefInBB(&BB, getInstIndexInBB(BB, Inst))) {}
   /// Constructs a reference to the instruction inside the basic block.
-  MCInstReference(const BinaryBasicBlock *BB, unsigned Index)
-      : Reference(RefInBB(BB, Index)) {
-    assert(BB && "Basic block should not be nullptr");
-  }
+  MCInstReference(const BinaryBasicBlock &BB, unsigned Index)
+      : Reference(RefInBB(&BB, Index)) {}
+
   /// Constructs a reference to the instruction inside the function without
   /// CFG information.
-  MCInstReference(const BinaryFunction *BF, nocfg_const_iterator It)
-      : Reference(RefInBF(BF, It)) {
-    assert(BF && "Function should not be nullptr");
-  }
+  MCInstReference(const BinaryFunction &BF, nocfg_const_iterator It)
+      : Reference(RefInBF(&BF, It)) {}
 
   /// Locates an instruction inside a function and returns a reference.
-  static MCInstReference get(const MCInst *Inst, const BinaryFunction &BF);
+  static MCInstReference get(const MCInst &Inst, const BinaryFunction &BF);
 
   bool operator==(const MCInstReference &Other) const {
     return Reference == Other.Reference;
@@ -105,13 +103,12 @@ public:
   raw_ostream &print(raw_ostream &OS) const;
 
 private:
-  static unsigned getInstIndexInBB(const BinaryBasicBlock *BB,
-                                   const MCInst *Inst) {
-    assert(BB && Inst && "Neither BB nor Inst should be nullptr");
+  static unsigned getInstIndexInBB(const BinaryBasicBlock &BB,
+                                   const MCInst &Inst) {
     // Usage of pointer arithmetic assumes the instructions are stored in a
     // vector, see BasicBlockStorageIsVector in MCInstUtils.cpp.
-    const MCInst *FirstInstInBB = &*BB->begin();
-    return Inst - FirstInstInBB;
+    const MCInst *FirstInstInBB = &*BB.begin();
+    return &Inst - FirstInstInBB;
   }
 
   // Two cases are possible:
