@@ -1056,19 +1056,8 @@ void ModFileWriter::PutUserReduction(
   // The module content for a OpenMP Declare Reduction is the OpenMP
   // declaration. There may be multiple declarations.
   // Decls are pointers, so do not use a reference.
-  for (const auto decl : details.GetDeclList()) {
-    common::visit( //
-        common::visitors{//
-            [&](const parser::OpenMPDeclareReductionConstruct *d) {
-              Unparse(os, *d, context_.langOptions());
-            },
-            [&](const parser::OmpMetadirectiveDirective *m) {
-              Unparse(os, *m, context_.langOptions());
-            },
-            [&](const auto &) {
-              DIE("Unknown OpenMP DECLARE REDUCTION content");
-            }},
-        decl);
+  for (const auto *decl : details.GetDeclList()) {
+    Unparse(os, *decl, context_.langOptions());
   }
 }
 

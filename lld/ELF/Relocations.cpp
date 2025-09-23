@@ -1549,7 +1549,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
       sec->file->ppc64SmallCodeModelTocRelocs = true;
 
     // Record the TOC entry (.toc + addend) as not relaxable. See the comment in
-    // InputSectionBase::relocateAlloc().
+    // PPC64::relocateAlloc().
     if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
         cast<Defined>(sym).section->name == ".toc")
       ctx.ppc64noTocRelax.insert({&sym, addend});

@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// of a temporary object that has just been constructed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/reference-to-constructed-temporary.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/reference-to-constructed-temporary.html
 class ReferenceToConstructedTemporaryCheck : public ClangTidyCheck {
 public:
   ReferenceToConstructedTemporaryCheck(StringRef Name,

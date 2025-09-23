@@ -528,8 +528,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   if (!CGO.MSSecureHotPatchFunctionsFile.empty() ||
       !CGO.MSSecureHotPatchFunctionsList.empty()) {
     if (!CGO.MSSecureHotPatchFunctionsFile.empty()) {
-      auto BufOrErr =
-          llvm::MemoryBuffer::getFile(CGO.MSSecureHotPatchFunctionsFile);
+      auto BufOrErr = FS->getBufferForFile(CGO.MSSecureHotPatchFunctionsFile);
       if (BufOrErr) {
         const llvm::MemoryBuffer &FileBuffer = **BufOrErr;
         for (llvm::line_iterator I(FileBuffer.getMemBufferRef(), true), E;

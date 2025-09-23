@@ -1084,6 +1084,13 @@ def dyld_env : Separate<["-"], "dyld_env">,
 def ignore_auto_link : Flag<["-"], "ignore_auto_link">,
     HelpText<"Ignore LC_LINKER_OPTIONs">,
     Group<grp_rare>;
+defm separate_cstring_literal_sections
+    : BB<"separate-cstring-literal-sections",
+         "Emit all cstring literals into their respective sections defined by "
+         "their section names.",
+         "Emit all cstring literals into the __cstring section. As a special "
+         "case, the __objc_methname section will still be emitted. (default)">,
+      Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 

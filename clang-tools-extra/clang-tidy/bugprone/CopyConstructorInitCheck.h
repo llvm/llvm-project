@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// the base class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/copy-constructor-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/copy-constructor-init.html
 class CopyConstructorInitCheck : public ClangTidyCheck {
 public:
   CopyConstructorInitCheck(StringRef Name, ClangTidyContext *Context)

@@ -23,23 +23,23 @@
 using namespace llvm;
 
 static void check(remarks::Format SerializerFormat,
-                  remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
-                  StringRef ExpectedR, std::optional<StringRef> ExpectedMeta,
+                  ArrayRef<remarks::Remark> Rs, StringRef ExpectedR,
+                  std::optional<StringRef> ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
   std::string Buf;
   raw_string_ostream OS(Buf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
     if (StrTab)
-      return createRemarkSerializer(SerializerFormat, Mode, OS,
-                                    std::move(*StrTab));
+      return createRemarkSerializer(SerializerFormat, OS, std::move(*StrTab));
     else
-      return createRemarkSerializer(SerializerFormat, Mode, OS);
+      return createRemarkSerializer(SerializerFormat, OS);
   }();
   EXPECT_FALSE(errorToBool(MaybeS.takeError()));
   std::unique_ptr<remarks::RemarkSerializer> S = std::move(*MaybeS);
 
   for (const remarks::Remark &R : Rs)
     S->emit(R);
+  S->finalize();
   EXPECT_EQ(OS.str(), ExpectedR);
 
   if (ExpectedMeta) {
@@ -54,8 +54,7 @@ static void check(remarks::Format SerializerFormat,
 static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
                   StringRef ExpectedR, StringRef ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(SerializerFormat, remarks::SerializerMode::Separate,
-               ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
+  return check(SerializerFormat, ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
@@ -63,8 +62,7 @@ static void
 checkStandalone(remarks::Format SerializerFormat, const remarks::Remark &R,
                 StringRef ExpectedR,
                 std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(SerializerFormat, remarks::SerializerMode::Standalone,
-               ArrayRef(&R, &R + 1), ExpectedR,
+  return check(SerializerFormat, ArrayRef(&R, &R + 1), ExpectedR,
                /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }
 

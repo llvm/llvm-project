@@ -18,7 +18,7 @@ namespace clang::tidy::google::objc {
 /// style guide.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-nsobject-new.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-nsobject-new.html
 class AvoidNSObjectNewCheck : public ClangTidyCheck {
 public:
   AvoidNSObjectNewCheck(StringRef Name, ClangTidyContext *Context)

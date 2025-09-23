@@ -291,6 +291,7 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
 
     Error E = RL.link(*ErrorOrObj);
+    // FIXME: Remark parsing errors are not propagated to the user.
     if (Error NewE = handleErrors(
             std::move(E), [&](std::unique_ptr<FileError> EC) -> Error {
               return remarksErrorHandler(Obj, *this, std::move(EC));

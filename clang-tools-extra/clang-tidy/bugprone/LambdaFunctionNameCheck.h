@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// (i.e., `operator()`).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/lambda-function-name.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/lambda-function-name.html
 class LambdaFunctionNameCheck : public ClangTidyCheck {
 public:
   struct SourceRangeLessThan {

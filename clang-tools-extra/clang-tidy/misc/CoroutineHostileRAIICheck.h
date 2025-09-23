@@ -22,7 +22,7 @@ namespace clang::tidy::misc {
 /// types and types belonging to a configurable denylist.
 ///
 ///  For the user-facing documentation see:
-///  http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
+///  https://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
 class CoroutineHostileRAIICheck : public ClangTidyCheck {
 public:
   CoroutineHostileRAIICheck(llvm::StringRef Name, ClangTidyContext *Context);

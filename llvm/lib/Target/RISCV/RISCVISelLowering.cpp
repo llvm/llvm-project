@@ -16796,7 +16796,7 @@ static SDValue performSETCCCombine(SDNode *N,
     // addi or xori after shifting.
     uint64_t N1Int = cast<ConstantSDNode>(N1)->getZExtValue();
     uint64_t AndRHSInt = AndRHSC.getZExtValue();
-    if (OpVT == MVT::i64 && AndRHSInt <= 0xffffffff &&
+    if (OpVT == MVT::i64 && isUInt<32>(AndRHSInt) &&
         isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
       unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
       int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;

@@ -262,10 +262,6 @@ public:
     return {*this, sym, offset};
   }
 
-  // Each section knows how to relocate itself. These functions apply
-  // relocations, assuming that Buf points to this section's copy in
-  // the mmap'ed output buffer.
-  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
   uint64_t getRelocTargetVA(Ctx &, const Relocation &r, uint64_t p) const;
 
   // The native ELF reloc data type is not very convenient to handle.
@@ -443,8 +439,12 @@ public:
 
   InputSectionBase *getRelocatedSection() const;
 
+  // Each section knows how to relocate itself. These functions apply
+  // relocations, assuming that `buf` points to this section's copy in
+  // the mmap'ed output buffer.
   template <class ELFT, class RelTy>
   void relocateNonAlloc(Ctx &, uint8_t *buf, Relocs<RelTy> rels);
+  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.

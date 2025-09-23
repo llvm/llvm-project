@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// an ostream.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unintended-char-ostream-output.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unintended-char-ostream-output.html
 class UnintendedCharOstreamOutputCheck : public ClangTidyCheck {
 public:
   UnintendedCharOstreamOutputCheck(StringRef Name, ClangTidyContext *Context);

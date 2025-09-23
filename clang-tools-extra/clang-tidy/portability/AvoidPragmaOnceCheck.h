@@ -18,7 +18,7 @@ namespace clang::tidy::portability {
 /// portability.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-pragma-once.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-pragma-once.html
 class AvoidPragmaOnceCheck : public ClangTidyCheck {
 public:
   AvoidPragmaOnceCheck(StringRef Name, ClangTidyContext *Context)

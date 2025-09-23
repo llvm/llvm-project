@@ -21,7 +21,7 @@ namespace tidy::cppcoreguidelines {
 /// constructs exist for the task.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/macro-usage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/macro-usage.html
 class MacroUsageCheck : public ClangTidyCheck {
 public:
   MacroUsageCheck(StringRef Name, ClangTidyContext *Context)

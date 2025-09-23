@@ -19,7 +19,7 @@ namespace clang::tidy::modernize {
 /// C++20 ``std::cmp_*`` alternative, if available.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-integer-sign-comparison.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-integer-sign-comparison.html
 class UseIntegerSignComparisonCheck : public ClangTidyCheck {
 public:
   UseIntegerSignComparisonCheck(StringRef Name, ClangTidyContext *Context);

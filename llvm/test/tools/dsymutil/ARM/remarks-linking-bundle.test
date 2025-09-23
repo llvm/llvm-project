@@ -1,0 +1,81 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t/private/tmp/remarks
+RUN: cat %p/../Inputs/remarks/basic.macho.remarks.arm64> %t/basic.macho.remarks.arm64
+RUN: llvm-remarkutil yaml2bitstream %p/../Inputs/private/tmp/remarks/basic1.macho.remarks.arm64.opt.yaml -o %t/private/tmp/remarks/basic1.macho.remarks.arm64.opt.bitstream
+RUN: llvm-remarkutil yaml2bitstream %p/../Inputs/private/tmp/remarks/basic2.macho.remarks.arm64.opt.yaml -o %t/private/tmp/remarks/basic2.macho.remarks.arm64.opt.bitstream
+RUN: llvm-remarkutil yaml2bitstream %p/../Inputs/private/tmp/remarks/basic3.macho.remarks.arm64.opt.yaml -o %t/private/tmp/remarks/basic3.macho.remarks.arm64.opt.bitstream
+
+RUN: dsymutil -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%t %t/basic.macho.remarks.arm64
+
+Check that the remark file in the bundle exists and is sane:
+RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.arm64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.arm64 | FileCheck %s
+
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%t %t/basic.macho.remarks.arm64
+
+Check that the remark file in the bundle exists and is sane:
+RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.arm64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.arm64 | FileCheck %s
+
+Now emit it in a different format: YAML.
+RUN: dsymutil -remarks-output-format=yaml -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%t %t/basic.macho.remarks.arm64
+RUN: cat %t/basic.macho.remarks.arm64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.arm64 | FileCheck %s --check-prefix=CHECK-YAML
+
+RUN: dsymutil --linker parallel -remarks-output-format=yaml -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%t %t/basic.macho.remarks.arm64
+RUN: cat %t/basic.macho.remarks.arm64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.arm64 | FileCheck %s --check-prefix=CHECK-YAML
+
+CHECK: <Meta
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK-NOT: <Remark Num
+CHECK: <Meta
+
+CHECK-YAML:--- !Passed
+CHECK-YAML:--- !Passed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Missed
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-YAML:--- !Analysis
+CHECK-NOT: --- !

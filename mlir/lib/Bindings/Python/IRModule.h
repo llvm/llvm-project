@@ -76,7 +76,7 @@ public:
   /// Releases the object held by this instance, returning it.
   /// This is the proper thing to return from a function that wants to return
   /// the reference. Note that this does not work from initializers.
-  nanobind::typed<nanobind::object, T> releaseObject() {
+  nanobind::object releaseObject() {
     assert(referrent && object);
     referrent = nullptr;
     auto stolen = std::move(object);
@@ -88,11 +88,13 @@ public:
     assert(referrent && object);
     return referrent;
   }
-  nanobind::typed<nanobind::object, T> getObject() {
+  nanobind::object getObject() {
     assert(referrent && object);
     return object;
   }
   operator bool() const { return referrent && object; }
+
+  using NBTypedT = nanobind::typed<nanobind::object, T>;
 
 private:
   T *referrent;
@@ -680,7 +682,7 @@ public:
          PyLocation &location, const nanobind::object &ip, bool inferType);
 
   /// Creates an OpView suitable for this operation.
-  nanobind::typed<nanobind::object, PyOpView> createOpView();
+  nanobind::object createOpView();
 
   /// Erases the underlying MlirOperation, removes its pointer from the
   /// parent context's live operations map, and sets the valid bit false.
@@ -690,7 +692,7 @@ public:
   void setInvalid() { valid = false; }
 
   /// Clones this operation.
-  nanobind::typed<nanobind::object, PyOpView> clone(const nanobind::object &ip);
+  nanobind::object clone(const nanobind::object &ip);
 
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
 
@@ -890,7 +892,7 @@ public:
   /// is taken by calling this function.
   static PyType createFromCapsule(nanobind::object capsule);
 
-  nanobind::typed<nanobind::object, PyType> maybeDownCast();
+  nanobind::object maybeDownCast();
 
 private:
   MlirType type;
@@ -1020,7 +1022,7 @@ public:
   /// is taken by calling this function.
   static PyAttribute createFromCapsule(nanobind::object capsule);
 
-  nanobind::typed<nanobind::object, PyAttribute> maybeDownCast();
+  nanobind::object maybeDownCast();
 
 private:
   MlirAttribute attr;
@@ -1178,7 +1180,7 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
+  nanobind::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
@@ -1269,8 +1271,7 @@ public:
 
   /// Returns the symbol (opview) with the given name, throws if there is no
   /// such symbol in the table.
-  nanobind::typed<nanobind::object, PyOpView>
-  dunderGetItem(const std::string &name);
+  nanobind::object dunderGetItem(const std::string &name);
 
   /// Removes the given operation from the symbol table and erases it.
   void erase(PyOperationBase &symbol);

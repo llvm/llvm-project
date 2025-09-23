@@ -109,7 +109,7 @@ namespace clang::tidy::%(namespace)s {
 %(description)s
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/%(module)s/%(check_name)s.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/%(module)s/%(check_name)s.html
 class %(check_name_camel)s : public ClangTidyCheck {
 public:
   %(check_name_camel)s(StringRef Name, ClangTidyContext *Context)

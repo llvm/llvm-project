@@ -16,6 +16,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -42,6 +44,7 @@ class OpLowerer {
   DXILResourceTypeMap &DRTM;
   const ModuleMetadataInfo &MMDI;
   SmallVector<CallInst *> CleanupCasts;
+  Function *CleanupNURI = nullptr;
 
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM,
@@ -195,6 +198,21 @@ public:
     CleanupCasts.clear();
   }
 
+  void cleanupNonUniformResourceIndexCalls() {
+    // Replace all NonUniformResourceIndex calls with their argument.
+    if (!CleanupNURI)
+      return;
+    for (User *U : make_early_inc_range(CleanupNURI->users())) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
+      CI->replaceAllUsesWith(CI->getArgOperand(0));
+      CI->eraseFromParent();
+    }
+    CleanupNURI->eraseFromParent();
+    CleanupNURI = nullptr;
+  }
+
   // Remove the resource global associated with the handleFromBinding call
   // instruction and their uses as they aren't needed anymore.
   // TODO: We should verify that all the globals get removed.
@@ -229,6 +247,31 @@ public:
       NameGlobal->removeFromParent();
   }
 
+  bool hasNonUniformIndex(Value *IndexOp) {
+    if (isa<llvm::Constant>(IndexOp))
+      return false;
+
+    SmallVector<Value *> WorkList;
+    WorkList.push_back(IndexOp);
+
+    while (!WorkList.empty()) {
+      Value *V = WorkList.pop_back_val();
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        if (CI->getCalledFunction()->getIntrinsicID() ==
+            Intrinsic::dx_resource_nonuniformindex)
+          return true;
+      }
+      if (auto *U = llvm::dyn_cast<llvm::User>(V)) {
+        for (llvm::Value *Op : U->operands()) {
+          if (isa<llvm::Constant>(Op))
+            continue;
+          WorkList.push_back(Op);
+        }
+      }
+    }
+    return false;
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -250,13 +293,12 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
-      // FIXME: The last argument is a NonUniform flag which needs to be set
-      // based on resource analysis.
-      // https://github.com/llvm/llvm-project/issues/155701
+      bool HasNonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
-          ConstantInt::get(Int1Ty, false)};
+          ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
@@ -300,11 +342,10 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
-      // FIXME: The last argument is a NonUniform flag which needs to be set
-      // based on resource analysis.
-      // https://github.com/llvm/llvm-project/issues/155701
-      Constant *NonUniform = ConstantInt::get(Int1Ty, false);
-      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniform};
+      bool NonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
+      Constant *NonUniformOp = ConstantInt::get(Int1Ty, NonUniformIndex);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniformOp};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -868,6 +909,11 @@ public:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
+      case Intrinsic::dx_resource_nonuniformindex:
+        assert(!CleanupNURI &&
+               "overloaded llvm.dx.resource.nonuniformindex intrinsics?");
+        CleanupNURI = &F;
+        break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
@@ -908,8 +954,10 @@ public:
       }
       Updated = true;
     }
-    if (Updated && !HasErrors)
+    if (Updated && !HasErrors) {
       cleanupHandleCasts();
+      cleanupNonUniformResourceIndexCalls();
+    }
 
     return Updated;
   }

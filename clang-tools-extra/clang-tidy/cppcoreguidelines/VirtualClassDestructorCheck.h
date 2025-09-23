@@ -18,7 +18,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// nor protected and non-virtual.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/virtual-class-destructor.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/virtual-class-destructor.html
 class VirtualClassDestructorCheck : public ClangTidyCheck {
 public:
   VirtualClassDestructorCheck(StringRef Name, ClangTidyContext *Context)

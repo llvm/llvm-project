@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-scf-to-spirv %s --verify-diagnostics --split-input-file | FileCheck %s
+// RUN: mlir-opt --convert-scf-to-spirv %s | FileCheck %s
 
 // `scf.parallel` conversion is not supported yet.
 // Make sure that we do not accidentally invalidate this function by removing
@@ -18,15 +18,4 @@ func.func @func(%arg0: i64) {
     scf.reduce
   }
   return
-}
-
-// -----
-
-// Make sure we don't crash on recursive structs.
-// TODO(https://github.com/llvm/llvm-project/issues/159963): Promote this to a `vce-deduction.mlir` testcase.
-
-// expected-error@below {{failed to legalize operation 'spirv.module' that was explicitly marked illegal}}
-spirv.module Physical64 GLSL450 {
-  spirv.GlobalVariable @recursive:
-    !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
 }

@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// the true and false expressions are Type I clones of each other.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html
 class BranchCloneCheck : public ClangTidyCheck {
 public:
   BranchCloneCheck(StringRef Name, ClangTidyContext *Context)

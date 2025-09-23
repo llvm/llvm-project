@@ -121,6 +121,12 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  /// Keep a map between lambda fields and names, this needs to be per module
+  /// since lambdas might get generated later as part of defered work, and since
+  /// the pointers are supposed to be uniqued, should be fine. Revisit this if
+  /// it ends up taking too much memory.
+  llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
+
   /// Tell the consumer that this variable has been instantiated.
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 

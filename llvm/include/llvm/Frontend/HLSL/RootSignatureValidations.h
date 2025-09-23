@@ -38,9 +38,8 @@ LLVM_ABI bool verifyMipLODBias(float MipLODBias);
 LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
 LLVM_ABI bool verifyLOD(float LOD);
 
-LLVM_ABI bool verifyBoundOffset(uint32_t Offset);
 LLVM_ABI bool verifyNoOverflowedOffset(uint64_t Offset);
-LLVM_ABI uint64_t computeRangeBound(uint32_t Offset, uint32_t Size);
+LLVM_ABI uint64_t computeRangeBound(uint64_t Offset, uint32_t Size);
 
 } // namespace rootsig
 } // namespace hlsl

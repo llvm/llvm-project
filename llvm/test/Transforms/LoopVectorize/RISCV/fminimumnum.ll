@@ -635,7 +635,7 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    store half [[OUT]], ptr [[ARRAYIDX4]], align 2
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -690,7 +690,7 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    store half [[OUT]], ptr [[ARRAYIDX4]], align 2
 ; ZVFHMIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ZVFHMIN-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 4096
-; ZVFHMIN-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; ZVFHMIN-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; ZVFHMIN:       [[EXIT]]:
 ; ZVFHMIN-NEXT:    ret void
 ;
@@ -752,7 +752,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP20]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -768,7 +768,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    store half [[OUT]], ptr [[ARRAYIDX4]], align 2
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -807,7 +807,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP16]], [[INDEX]]
 ; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
 ; ZVFHMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; ZVFHMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; ZVFHMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; ZVFHMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFHMIN:       [[SCALAR_PH]]:
@@ -823,7 +823,7 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    store half [[OUT]], ptr [[ARRAYIDX4]], align 2
 ; ZVFHMIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ZVFHMIN-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 4096
-; ZVFHMIN-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; ZVFHMIN-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; ZVFHMIN:       [[EXIT]]:
 ; ZVFHMIN-NEXT:    ret void
 ;
@@ -859,11 +859,10 @@ declare half @llvm.maximumnum.f16(half, half)
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META11:![0-9]+]], [[META2]]}
-; CHECK: [[META11]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]]}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META11]], [[META2]]}
-; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
 ;.
 ; ZVFHMIN: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; ZVFHMIN: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -875,9 +874,8 @@ declare half @llvm.maximumnum.f16(half, half)
 ; ZVFHMIN: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
 ; ZVFHMIN: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; ZVFHMIN: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
-; ZVFHMIN: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META11:![0-9]+]], [[META2]]}
-; ZVFHMIN: [[META11]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
-; ZVFHMIN: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]]}
-; ZVFHMIN: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META11]], [[META2]]}
-; ZVFHMIN: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]]}
+; ZVFHMIN: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; ZVFHMIN: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; ZVFHMIN: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; ZVFHMIN: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
 ;.

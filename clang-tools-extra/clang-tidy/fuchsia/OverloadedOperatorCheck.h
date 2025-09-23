@@ -16,7 +16,7 @@ namespace clang::tidy::fuchsia {
 /// Overloading operators is disallowed by the Fuchsia coding standard.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/overloaded-operator.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/overloaded-operator.html
 class OverloadedOperatorCheck : public ClangTidyCheck {
 public:
   OverloadedOperatorCheck(StringRef Name, ClangTidyContext *Context)

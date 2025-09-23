@@ -168,3 +168,26 @@ namespace PR10147 {
   template<template<typename...> class A> void f(A<int>*) { A<> a; } // expected-warning 0-1{{extension}}
   void g() { f((A<>*)0); }
 }
+
+#if __cplusplus >= 201703L
+namespace multiple_conversions {
+  constexpr int g = 1;
+  struct Z {
+      constexpr operator const int&() const { return g; }
+      constexpr operator int() { return 2; }
+  } z;
+
+  template<template<const int&> class TT> struct A {
+    static constexpr int value = TT<z>::value;
+  };
+
+  template<int I> struct B {
+    static constexpr int value = I;
+  };
+  // FIXME: This should probably convert z to (const int &) first, then
+  // convert that to int.
+  static_assert(A<B>::value == 1);
+  // cxx17-error@-1 {{static assertion failed}}
+  // cxx17-note@-2 {{expression evaluates to '2 == 1'}}
+} // namespace multiple_conversions
+#endif

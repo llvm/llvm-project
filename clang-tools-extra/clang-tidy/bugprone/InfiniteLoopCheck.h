@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// not changed at all).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/infinite-loop.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/infinite-loop.html
 class InfiniteLoopCheck : public ClangTidyCheck {
 public:
   InfiniteLoopCheck(StringRef Name, ClangTidyContext *Context)

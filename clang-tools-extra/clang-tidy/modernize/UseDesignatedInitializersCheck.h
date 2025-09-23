@@ -17,7 +17,7 @@ namespace clang::tidy::modernize {
 /// written as designated initializers instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-designated-initializers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-designated-initializers.html
 class UseDesignatedInitializersCheck : public ClangTidyCheck {
 public:
   UseDesignatedInitializersCheck(StringRef Name, ClangTidyContext *Context);

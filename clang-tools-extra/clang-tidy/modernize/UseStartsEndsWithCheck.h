@@ -19,7 +19,7 @@ namespace clang::tidy::modernize {
 /// ``std::string_view``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-starts-ends-with.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-starts-ends-with.html
 class UseStartsEndsWithCheck : public ClangTidyCheck {
 public:
   UseStartsEndsWithCheck(StringRef Name, ClangTidyContext *Context);

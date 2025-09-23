@@ -30,7 +30,7 @@ ConfusableIdentifierCheck::ConfusableIdentifierCheck(StringRef Name,
 ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 
 // Build a skeleton out of the Original identifier, inspired by the algorithm
-// described in http://www.unicode.org/reports/tr39/#def-skeleton
+// described in https://www.unicode.org/reports/tr39/#def-skeleton
 //
 // FIXME: TR39 mandates:
 //

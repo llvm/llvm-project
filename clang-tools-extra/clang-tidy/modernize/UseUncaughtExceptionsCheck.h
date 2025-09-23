@@ -19,7 +19,7 @@ namespace clang::tidy::modernize {
 /// without fixits.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-uncaught-exceptions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-uncaught-exceptions.html
 class UseUncaughtExceptionsCheck : public ClangTidyCheck {
 public:
   UseUncaughtExceptionsCheck(StringRef Name, ClangTidyContext *Context)

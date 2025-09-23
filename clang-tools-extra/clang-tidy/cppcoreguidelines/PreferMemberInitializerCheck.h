@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// into the initialization list instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/prefer-member-initializer.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/prefer-member-initializer.html
 class PreferMemberInitializerCheck : public ClangTidyCheck {
 public:
   PreferMemberInitializerCheck(StringRef Name, ClangTidyContext *Context);

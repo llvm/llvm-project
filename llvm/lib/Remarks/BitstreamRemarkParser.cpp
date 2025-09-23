@@ -197,13 +197,8 @@ Error BitstreamRemarkParserHelper::parseNext() {
   Loc.reset();
   Args.clear();
 
-  if (Error E = expectBlock())
-    return E;
   return parseBlock();
 }
-
-BitstreamParserHelper::BitstreamParserHelper(StringRef Buffer)
-    : Stream(Buffer) {}
 
 Error BitstreamParserHelper::expectMagic() {
   std::array<char, 4> Result;
@@ -244,12 +239,55 @@ Error BitstreamParserHelper::parseBlockInfoBlock() {
   return Error::success();
 }
 
-Error BitstreamParserHelper::advanceToMetaBlock() {
+Error BitstreamParserHelper::parseMeta() {
   if (Error E = expectMagic())
     return E;
   if (Error E = parseBlockInfoBlock())
     return E;
+
+  // Parse early meta block.
+  if (Error E = MetaHelper.expectBlock())
+    return E;
+  if (Error E = MetaHelper.parseBlock())
+    return E;
+
+  // Skip all Remarks blocks.
+  while (!Stream.AtEndOfStream()) {
+    auto MaybeBlockID = expectSubBlock(Stream);
+    if (!MaybeBlockID)
+      return MaybeBlockID.takeError();
+    if (*MaybeBlockID == META_BLOCK_ID)
+      break;
+    if (*MaybeBlockID != REMARK_BLOCK_ID)
+      return error("Unexpected block between meta blocks.");
+    // Remember first remark block.
+    if (!RemarkStartBitPos)
+      RemarkStartBitPos = Stream.GetCurrentBitNo();
+    if (Error E = Stream.SkipBlock())
+      return E;
+  }
+
+  // Late meta block is optional if there are no remarks.
+  if (Stream.AtEndOfStream())
+    return Error::success();
+
+  // Parse late meta block.
+  if (Error E = MetaHelper.parseBlock())
+    return E;
   return Error::success();
+}
+
+Error BitstreamParserHelper::parseRemark() {
+  if (RemarkStartBitPos) {
+    RemarkStartBitPos.reset();
+  } else {
+    auto MaybeBlockID = expectSubBlock(Stream);
+    if (!MaybeBlockID)
+      return MaybeBlockID.takeError();
+    if (*MaybeBlockID != REMARK_BLOCK_ID)
+      return make_error<EndOfFileError>();
+  }
+  return RemarksHelper->parseNext();
 }
 
 Expected<std::unique_ptr<BitstreamRemarkParser>>
@@ -263,45 +301,52 @@ remarks::createBitstreamParserFromMeta(
   return std::move(Parser);
 }
 
-Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
-  if (ParserHelper.atEndOfStream())
-    return make_error<EndOfFileError>();
+BitstreamRemarkParser::BitstreamRemarkParser(StringRef Buf)
+    : RemarkParser(Format::Bitstream), ParserHelper(Buf) {}
 
-  if (!ReadyToParseRemarks) {
+Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
+  if (!IsMetaReady) {
+    // Container is completely empty.
+    if (ParserHelper->Stream.AtEndOfStream())
+      return make_error<EndOfFileError>();
+
     if (Error E = parseMeta())
       return std::move(E);
-    ReadyToParseRemarks = true;
+    IsMetaReady = true;
+
+    // Container has meta, but no remarks blocks.
+    if (!ParserHelper->RemarkStartBitPos)
+      return error(
+          "Container is non-empty, but does not contain any remarks blocks.");
+
+    if (Error E =
+            ParserHelper->Stream.JumpToBit(*ParserHelper->RemarkStartBitPos))
+      return std::move(E);
+    ParserHelper->RemarksHelper.emplace(ParserHelper->Stream);
   }
 
-  return parseRemark();
+  if (Error E = ParserHelper->parseRemark())
+    return std::move(E);
+  return processRemark();
 }
 
 Error BitstreamRemarkParser::parseMeta() {
-  if (Error E = ParserHelper.advanceToMetaBlock())
+  if (Error E = ParserHelper->parseMeta())
     return E;
-
-  BitstreamMetaParserHelper MetaHelper(ParserHelper.Stream);
-  if (Error E = MetaHelper.expectBlock())
-    return E;
-  if (Error E = MetaHelper.parseBlock())
-    return E;
-
-  if (Error E = processCommonMeta(MetaHelper))
+  if (Error E = processCommonMeta())
     return E;
 
   switch (ContainerType) {
-  case BitstreamRemarkContainerType::Standalone:
-    return processStandaloneMeta(MetaHelper);
-  case BitstreamRemarkContainerType::SeparateRemarksFile:
-    return processSeparateRemarksFileMeta(MetaHelper);
-  case BitstreamRemarkContainerType::SeparateRemarksMeta:
-    return processSeparateRemarksMetaMeta(MetaHelper);
+  case BitstreamRemarkContainerType::RemarksFileExternal:
+    return processExternalFilePath();
+  case BitstreamRemarkContainerType::RemarksFile:
+    return processFileContainerMeta();
   }
   llvm_unreachable("Unknown BitstreamRemarkContainerType enum");
 }
 
-Error BitstreamRemarkParser::processCommonMeta(
-    BitstreamMetaParserHelper &Helper) {
+Error BitstreamRemarkParser::processCommonMeta() {
+  auto &Helper = ParserHelper->MetaHelper;
   if (!Helper.Container)
     return Helper.error("Missing container info.");
   auto &Container = *Helper.Container;
@@ -313,7 +358,16 @@ Error BitstreamRemarkParser::processCommonMeta(
   return Error::success();
 }
 
-Error BitstreamRemarkParser::processStrTab(BitstreamMetaParserHelper &Helper) {
+Error BitstreamRemarkParser::processFileContainerMeta() {
+  if (Error E = processRemarkVersion())
+    return E;
+  if (Error E = processStrTab())
+    return E;
+  return Error::success();
+}
+
+Error BitstreamRemarkParser::processStrTab() {
+  auto &Helper = ParserHelper->MetaHelper;
   if (!Helper.StrTabBuf)
     return Helper.error("Missing string table.");
   // Parse and assign the string table.
@@ -321,26 +375,25 @@ Error BitstreamRemarkParser::processStrTab(BitstreamMetaParserHelper &Helper) {
   return Error::success();
 }
 
-Error BitstreamRemarkParser::processRemarkVersion(
-    BitstreamMetaParserHelper &Helper) {
+Error BitstreamRemarkParser::processRemarkVersion() {
+  auto &Helper = ParserHelper->MetaHelper;
   if (!Helper.RemarkVersion)
     return Helper.error("Missing remark version.");
   RemarkVersion = *Helper.RemarkVersion;
   return Error::success();
 }
 
-Error BitstreamRemarkParser::processExternalFilePath(
-    BitstreamMetaParserHelper &Helper) {
+Error BitstreamRemarkParser::processExternalFilePath() {
+  auto &Helper = ParserHelper->MetaHelper;
   if (!Helper.ExternalFilePath)
     return Helper.error("Missing external file path.");
-  StringRef ExternalFilePath = *Helper.ExternalFilePath;
 
   SmallString<80> FullPath(ExternalFilePrependPath);
-  sys::path::append(FullPath, ExternalFilePath);
+  sys::path::append(FullPath, *Helper.ExternalFilePath);
 
   // External file: open the external file, parse it, check if its metadata
-  // matches the one from the separate metadata, then replace the current parser
-  // with the one parsing the remarks.
+  // matches the one from the separate metadata, then replace the current
+  // parser with the one parsing the remarks.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(FullPath);
   if (std::error_code EC = BufferOrErr.getError())
@@ -353,58 +406,19 @@ Error BitstreamRemarkParser::processExternalFilePath(
     return make_error<EndOfFileError>();
 
   // Create a separate parser used for parsing the separate file.
-  ParserHelper = BitstreamParserHelper(TmpRemarkBuffer->getBuffer());
-  // Advance and check until we can parse the meta block.
-  if (Error E = ParserHelper.advanceToMetaBlock())
-    return E;
-  // Parse the meta from the separate file.
-  // Note: here we overwrite the BlockInfo with the one from the file. This will
-  // be used to parse the rest of the file.
-  BitstreamMetaParserHelper SeparateMetaHelper(ParserHelper.Stream);
-  if (Error E = SeparateMetaHelper.expectBlock())
-    return E;
-  if (Error E = SeparateMetaHelper.parseBlock())
+  ParserHelper.emplace(TmpRemarkBuffer->getBuffer());
+  if (Error E = parseMeta())
     return E;
 
-  if (Error E = processCommonMeta(SeparateMetaHelper))
-    return E;
+  if (ContainerType != BitstreamRemarkContainerType::RemarksFile)
+    return ParserHelper->MetaHelper.error(
+        "Wrong container type in external file.");
 
-  if (ContainerType != BitstreamRemarkContainerType::SeparateRemarksFile)
-    return SeparateMetaHelper.error("Wrong container type in external file.");
-
-  // Process the meta from the separate file.
-  return processSeparateRemarksFileMeta(SeparateMetaHelper);
+  return Error::success();
 }
 
-Error BitstreamRemarkParser::processStandaloneMeta(
-    BitstreamMetaParserHelper &Helper) {
-  if (Error E = processStrTab(Helper))
-    return E;
-  return processRemarkVersion(Helper);
-}
-
-Error BitstreamRemarkParser::processSeparateRemarksFileMeta(
-    BitstreamMetaParserHelper &Helper) {
-  return processRemarkVersion(Helper);
-}
-
-Error BitstreamRemarkParser::processSeparateRemarksMetaMeta(
-    BitstreamMetaParserHelper &Helper) {
-  if (Error E = processStrTab(Helper))
-    return E;
-  return processExternalFilePath(Helper);
-}
-
-Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::parseRemark() {
-  BitstreamRemarkParserHelper RemarkHelper(ParserHelper.Stream);
-  if (Error E = RemarkHelper.parseNext())
-    return std::move(E);
-
-  return processRemark(RemarkHelper);
-}
-
-Expected<std::unique_ptr<Remark>>
-BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
+Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::processRemark() {
+  auto &Helper = *ParserHelper->RemarksHelper;
   std::unique_ptr<Remark> Result = std::make_unique<Remark>();
   Remark &R = *Result;
 
@@ -491,5 +505,3 @@ BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
 
   return std::move(Result);
 }
-llvm::remarks::BitstreamRemarkParser::BitstreamRemarkParser(StringRef Buf)
-    : RemarkParser(Format::Bitstream), ParserHelper(Buf) {}

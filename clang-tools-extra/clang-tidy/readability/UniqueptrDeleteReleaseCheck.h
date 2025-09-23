@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// replaces them with: ``<unique_ptr expr> = nullptr;``
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/uniqueptr-delete-release.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/uniqueptr-delete-release.html
 class UniqueptrDeleteReleaseCheck : public ClangTidyCheck {
 public:
   UniqueptrDeleteReleaseCheck(StringRef Name, ClangTidyContext *Context);

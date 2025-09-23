@@ -1546,11 +1546,14 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
 
+  mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
 
+  if (::mlir::succeeded(parser.parseOptionalKeyword(lambdaNameAttr.strref())))
+    state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
@@ -1658,6 +1661,9 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getLambda())
+    p << " lambda";
+
   if (getNoProto())
     p << " no_proto";
 

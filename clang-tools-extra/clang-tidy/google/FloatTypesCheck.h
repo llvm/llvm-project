@@ -17,7 +17,7 @@ namespace clang::tidy::google::runtime {
 /// of portability.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/runtime-float.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/runtime-float.html
 class RuntimeFloatCheck : public ClangTidyCheck {
 public:
   RuntimeFloatCheck(StringRef Name, ClangTidyContext *Context)
