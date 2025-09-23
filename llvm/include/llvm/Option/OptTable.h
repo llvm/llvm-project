@@ -494,36 +494,36 @@ protected:
 #define LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                       \
     ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, COMMANDIDS_OFFSET)                                        \
+    METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                                     \
   ID_PREFIX##ID
 
 #define LLVM_MAKE_OPT_ID(PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND,      \
                          GROUP, ALIAS, ALIASARGS, FLAGS, VISIBILITY, PARAM,    \
                          HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES,      \
-                         COMMANDIDS_OFFSET)                                    \
+                         SUBCOMMANDIDS_OFFSET)                                 \
   LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                             \
       OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
       ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-      METAVAR, VALUES, COMMANDIDS_OFFSET)
+      METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)
 
 #define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
     ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, COMMANDIDS_OFFSET)                                        \
+    METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                                     \
   llvm::opt::OptTable::Info {                                                  \
     PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, HELPTEXT, HELPTEXTSFORVARIANTS,     \
         METAVAR, ID_PREFIX##ID, llvm::opt::Option::KIND##Class, PARAM, FLAGS,  \
         VISIBILITY, ID_PREFIX##GROUP, ID_PREFIX##ALIAS, ALIASARGS, VALUES,     \
-        COMMANDIDS_OFFSET                                                      \
+        SUBCOMMANDIDS_OFFSET                                                   \
   }
 
 #define LLVM_CONSTRUCT_OPT_INFO(                                               \
     PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS,  \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
-    COMMANDIDS_OFFSET)                                                         \
+    SUBCOMMANDIDS_OFFSET)                                                      \
   LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                      \
       OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
       ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-      METAVAR, VALUES, COMMANDIDS_OFFSET)
+      METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)
 
 #endif // LLVM_OPTION_OPTTABLE_H

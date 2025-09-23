@@ -14,7 +14,7 @@ enum ID {
   OPT_INVALID = 0,
 #define OPTION(PREFIXES, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,       \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES, COMMANDIDS_OFFSET)                                      \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   OPT_##ID,
 #include "Opts.inc"
 #undef OPTION

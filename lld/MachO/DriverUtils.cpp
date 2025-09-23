@@ -45,7 +45,7 @@ using namespace lld::macho;
 static constexpr OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES, COMMANDIDS_OFFSET)                                      \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
@@ -60,7 +60,7 @@ static constexpr OptTable::Info optInfo[] = {
    OPT_##ALIAS,                                                                \
    ALIASARGS,                                                                  \
    VALUES,                                                                     \
-   COMMANDIDS_OFFSET},
+   SUBCOMMANDIDS_OFFSET},
 #include "Options.inc"
 #undef OPTION
 };
