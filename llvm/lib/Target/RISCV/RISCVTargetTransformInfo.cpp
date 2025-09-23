@@ -166,10 +166,11 @@ static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
   return false;
 }
 
-// If this is a 64-bit AND with a mask of the form -(1 << C) in the lower 32
-// bits and the only user is an equality comparison, we might be able to use a
-// sraiw instead. This avoids the need to materialize the AND constant.
-static bool canUseSRAIWCmp(Instruction *Inst, const APInt &Imm) {
+// If this is i64 AND is part of (X & -(1 << C1) & 0xffffffff) == C2 << C1),
+// DAGCombiner can convert this to (sraiw X, C1) == sext(C2) for RV64. On RV32,
+// the type will be split so only the lower 32 bits need to be compared using
+// (srai/srli X, C) == C2.
+static bool canUseShiftCmp(Instruction *Inst, const APInt &Imm) {
   if (!Inst->hasOneUse())
     return false;
 
