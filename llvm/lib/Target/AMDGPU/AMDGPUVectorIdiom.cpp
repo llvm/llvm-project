@@ -65,6 +65,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <atomic>
+#include <cstdlib>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -77,6 +79,42 @@ static cl::opt<bool>
     AMDGPUVectorIdiomEnable("amdgpu-vector-idiom-enable",
                             cl::desc("Enable pass AMDGPUVectorIdiom"),
                             cl::init(true));
+
+// Static counter to track transformations performed across all instances
+static std::atomic<unsigned> TransformationCounter{0};
+
+// Get maximum transformations from environment variable
+static unsigned getMaxTransformationsFromEnv() {
+  const char *envVar = std::getenv("AMDGPU_VECTOR_IDIOM_MAX_TRANSFORMATIONS");
+  if (!envVar)
+    return 0; // Default: unlimited
+  
+  char *endPtr;
+  unsigned long value = std::strtoul(envVar, &endPtr, 10);
+  
+  // Check for conversion errors
+  if (endPtr == envVar || *endPtr != '\0') {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Invalid AMDGPU_VECTOR_IDIOM_MAX_TRANSFORMATIONS value: " 
+                      << envVar << ", using unlimited\n");
+    return 0;
+  }
+  
+  return static_cast<unsigned>(value);
+}
+
+// Helper function to check if transformations should be performed
+static bool shouldPerformTransformation() {
+  unsigned maxTransformations = getMaxTransformationsFromEnv();
+  if (maxTransformations == 0)
+    return true; // Unlimited transformations
+  
+  return TransformationCounter.load() < maxTransformations;
+}
+
+// Helper function to increment transformation counter
+static void incrementTransformationCounter() {
+  TransformationCounter.fetch_add(1);
+}
 
 // Selects an integer or integer-vector element type matching NBytes, using the
 // minimum proven alignment to decide the widest safe element width.
@@ -181,6 +219,15 @@ struct AMDGPUVectorIdiomImpl {
                                    AssumptionCache *AC) {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Considering memcpy(select-src): "
                       << MT << '\n');
+    
+    if (!shouldPerformTransformation()) {
+      unsigned maxTransformations = getMaxTransformationsFromEnv();
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: transformation limit reached ("
+                        << TransformationCounter.load() << "/" 
+                        << maxTransformations << ")\n");
+      return false;
+    }
+    
     IRBuilder<> B(&MT);
     Value *Dst = MT.getRawDest();
     Value *A = Sel.getTrueValue();
@@ -202,6 +249,7 @@ struct AMDGPUVectorIdiomImpl {
         (isa<ConstantPointerNull>(ICmp->getOperand(0)) ||
          isa<ConstantPointerNull>(ICmp->getOperand(1)))) {
       splitCFGForMemcpy(MT, Sel.getCondition(), A, Bv, true);
+      incrementTransformationCounter();
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Null check pattern - "
                            "using CFG split\n");
       return true;
@@ -266,6 +314,7 @@ struct AMDGPUVectorIdiomImpl {
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewrote memcpy(select-src) to "
                            "value-select loads/stores: "
                         << MT << '\n');
+      incrementTransformationCounter();
       MT.eraseFromParent();
       return true;
     }
@@ -273,6 +322,7 @@ struct AMDGPUVectorIdiomImpl {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Falling back to CFG split for "
                       << "memcpy(select-src); speculation unsafe\n");
     splitCFGForMemcpy(MT, Sel.getCondition(), A, Bv, true);
+    incrementTransformationCounter();
     LLVM_DEBUG(
         dbgs()
         << "[AMDGPUVectorIdiom] Rewrote memcpy(select-src) by CFG split\n");
@@ -283,6 +333,14 @@ struct AMDGPUVectorIdiomImpl {
   // speculative stores, always splits the CFG and emits a memcpy per branch.
   // Assumptions mirror the source case.
   bool transformSelectMemcpyDest(MemCpyInst &MT, SelectInst &Sel) {
+    if (!shouldPerformTransformation()) {
+      unsigned maxTransformations = getMaxTransformationsFromEnv();
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: transformation limit reached ("
+                        << TransformationCounter.load() << "/" 
+                        << maxTransformations << ")\n");
+      return false;
+    }
+    
     Value *DA = Sel.getTrueValue();
     Value *DB = Sel.getFalseValue();
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-dst) via "
@@ -290,6 +348,7 @@ struct AMDGPUVectorIdiomImpl {
                       << '\n');
 
     splitCFGForMemcpy(MT, Sel.getCondition(), DA, DB, false);
+    incrementTransformationCounter();
     LLVM_DEBUG(
         dbgs()
         << "[AMDGPUVectorIdiom] Rewrote memcpy(select-dst) by CFG split\n");
@@ -359,6 +418,19 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   if (!AMDGPUVectorIdiomEnable)
     return PreservedAnalyses::all();
+
+  LLVM_DEBUG({
+    unsigned currentCount = TransformationCounter.load();
+    unsigned maxTransformations = getMaxTransformationsFromEnv();
+    if (maxTransformations > 0) {
+      dbgs() << "[AMDGPUVectorIdiom] Starting pass on function " << F.getName() 
+             << " (transformations: " << currentCount << "/" 
+             << maxTransformations << ")\n";
+    } else {
+      dbgs() << "[AMDGPUVectorIdiom] Starting pass on function " << F.getName() 
+             << " (transformations: " << currentCount << "/unlimited)\n";
+    }
+  });
 
   SmallVector<MemCpyInst *, 8> Worklist;
   for (Instruction &I : instructions(F)) {
