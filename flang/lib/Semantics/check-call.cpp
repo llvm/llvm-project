@@ -56,9 +56,64 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
-    if (const Symbol * base{GetFirstSymbol(*expr)};
-        base && IsFunctionResult(*base)) {
-      context.NoteDefinedSymbol(*base);
+    if (const Symbol * base{GetFirstSymbol(*expr)}) {
+      if (IsFunctionResult(*base)) {
+        context.NoteDefinedSymbol(*base);
+      } else {
+        // passing global variables
+        // here, arrays with subscripts are processing
+        bool warn{false};
+        std::string ownerName{""};
+        std::string ownerType{""};
+        if (base->flags().test(Symbol::Flag::InCommonBlock)) {
+          const Symbol *common{FindCommonBlockContaining(*base)};
+          ownerType = "COMMON";
+          ownerName = common->name().ToString();
+          if (!(base->Rank() == 1 && base->offset() == 0)) {
+            warn |= true;
+          } else if (base->Rank() == 1) {
+            if (const ArraySpec *dims{base->GetShape()};
+                dims && dims->IsExplicitShape()) {
+              if (!((*dims)[0].lbound().GetExplicit() == (*dims)[0].ubound().GetExplicit())) {
+                warn |= true;
+              }
+            }
+            if (common->get<CommonBlockDetails>().objects().size() > 1) {
+              warn |= true;
+            }
+          }
+        } else if (const auto &owner{base->GetUltimate().owner()};
+                   owner.IsModule() || owner.IsSubmodule()) {
+          const Scope *module{FindModuleContaining(owner)};
+          ownerType = "MODULE";
+          ownerName = module->GetName()->ToString();
+          if (base->attrs().test(Attr::PARAMETER)) {
+            warn |= false;
+          } else if (base->Rank() != 1) {
+            warn |= true;
+          } else if (!base->attrs().test(Attr::ALLOCATABLE) &&
+                     !base->attrs().test(Attr::POINTER) &&
+                     !base->attrs().test(Attr::VOLATILE)) {
+            // by some reason, dims is not constructed here. For common blocks' variables, it works
+            // it leads to three skipped tests
+            /*
+            if (const ArraySpec *dims{base->GetShape()};
+                dims && dims->IsExplicitShape()) {
+              if (!((*dims)[0].lbound().GetExplicit() == (*dims)[0].ubound().GetExplicit())) {
+                  warn |= true;
+              }
+            }
+            */
+            // just give some warnings in code where modules and implicit interfaces are mixed
+            warn |= true;
+          }
+        }
+        if (warn) {
+          context.Warn(common::UsageWarning::PassGlobalVariable, messages.at(),
+            "Passing global variable '%s' from %s '%s' as function argument"_warn_en_US,
+            base->name(), ownerType, ownerName);
+        }
+      }
     }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument requires an explicit interface"_err_en_US);
@@ -78,6 +133,36 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Say(
             "VOLATILE argument requires an explicit interface"_err_en_US);
+      }
+      // passing global variables
+      // here, scalars and arrays without subscripts are processing
+      bool warn{false};
+      std::string ownerName{""};
+      std::string ownerType{""};
+      if (symbol.flags().test(Symbol::Flag::InCommonBlock)) {
+        const Symbol *common{FindCommonBlockContaining(symbol)};
+        ownerType = "COMMON";
+        ownerName = common->name().ToString();
+        warn |= true;
+      } else if (const auto& owner{symbol.GetUltimate().owner()};
+                 owner.IsModule() || owner.IsSubmodule()) {
+        const Scope *module{FindModuleContaining(owner)};
+        ownerType = "MODULE";
+        ownerName = module->GetName()->ToString();
+        if (symbol.attrs().test(Attr::PARAMETER)) {
+          warn |= false;
+        } else if (symbol.Rank() != 1) {
+          warn |= true;
+        } else if (!symbol.attrs().test(Attr::ALLOCATABLE) &&
+                   !symbol.attrs().test(Attr::POINTER) &&
+                   !symbol.attrs().test(Attr::VOLATILE)) {
+          warn |= true;
+        }
+      }
+      if (warn) {
+        context.Warn(common::UsageWarning::PassGlobalVariable, messages.at(),
+          "Passing global variable '%s' from %s '%s' as function argument"_warn_en_US,
+          symbol.name(), ownerType, ownerName);
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
                    "actual argument", *expr, context.foldingContext(),
