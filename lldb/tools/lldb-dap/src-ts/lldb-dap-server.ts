@@ -90,8 +90,6 @@ export class LLDBDapServer implements vscode.Disposable {
       this.serverProcess = process;
       this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
       this.serverFileChanged = false;
-      // Cannot do `createFileSystemWatcher(dapPath)` for a single file. Have to use `RelativePattern`.
-      // See https://github.com/microsoft/vscode/issues/141011#issuecomment-1016772527
       this.serverFileWatcher = chokidarWatch(dapPath);
       this.serverFileWatcher
         .on('change', () => this.serverFileChanged = true)
