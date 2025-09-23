@@ -874,7 +874,7 @@ public:
     assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
     assert(AntiHintVReg.isVirtual() && "Anti-hint target must be virtual");
     AntiHintRegs.grow(Register::index2VirtReg(getNumVirtRegs()));
-    auto &AntiHints = AntiHintRegs[VReg];
+    SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
     // Avoid duplicates
     if (llvm::find(AntiHints, AntiHintVReg) == AntiHints.end())
       AntiHints.push_back(AntiHintVReg);
@@ -907,7 +907,7 @@ public:
     assert(VReg.isVirtual() && AntiHintVReg.isVirtual());
     if (!AntiHintRegs.inBounds(VReg))
       return false;
-    const auto &AntiHints = AntiHintRegs[VReg];
+    const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
     return llvm::find(AntiHints, AntiHintVReg) != AntiHints.end();
   }
 
