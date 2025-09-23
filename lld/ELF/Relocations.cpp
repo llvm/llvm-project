@@ -1524,7 +1524,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     return;
 
   RelExpr expr;
-  if (rv_vendor.empty()) {
+  if (LLVM_LIKELY(rv_vendor.empty())) {
     expr = ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
   } else {
     expr = ctx.target->getVendorRelExpr(

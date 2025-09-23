@@ -35,6 +35,7 @@ public:
                              const uint8_t *loc) const = 0;
   virtual RelExpr getVendorRelExpr(RelType type, const Symbol &s,
                                    const uint8_t *loc, StringRef vendor) const {
+    Err(ctx) << "target doesn't support vendor-specific relocations";
     return R_NONE;
   };
   virtual RelType getDynRel(RelType type) const { return 0; }
