@@ -79,13 +79,13 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE REDUCTION (+:t: omp_out%x=omp_out%x+omp_in%x
+!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x=omp_out%x+omp_in%x
 !UNPARSE: )
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpReductionSpecifier
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
@@ -105,6 +105,7 @@ end
 !PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_in'
 !PARSE-TREE: | | | | | | | Name = 'x'
 !PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f03
   !$omp declare_simd
