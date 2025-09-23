@@ -1406,120 +1406,81 @@ static Value collapse1xNTensorToN(PatternRewriter &rewriter, Value input,
                                                   reassociation);
 }
 
-// The multiplier may be either constant or non-constant, depending on
-// whether dynamic extension is enabled.
-// - If the multiplier is non-constant, add it as an input to linalg::GenericOp
-// by:
-//     1. Pushing it into 'genericInputs'.
-//     2. Appending a corresponding affine map to 'indexingMaps'.
-// - If the multiplier is constant, set 'multiplierConstant' instead.
-static void setupLinalgGenericOpInputAndIndexingMapForMultiplier(
-    PatternRewriter &rewriter, llvm::SmallVector<int32_t> &multiplierValues,
-    SmallVector<Value, 4> &genericInputs, SmallVector<AffineMap> &indexingMaps,
-    bool isConstant, tosa::RescaleOp op, Value &multiplierConstant,
-    int64_t &multiplierArg) {
+static llvm::SmallVector<int8_t>
+convertToI8(const llvm::SmallVector<int32_t> &input) {
+  llvm::SmallVector<int8_t> output;
+  output.reserve(input.size());
 
-  auto loc = op.getLoc();
-  auto inputTy = cast<ShapedType>(op.getInput().getType());
-  unsigned rank = inputTy.getRank();
-  SmallVector<AffineExpr, 2> multiplierExprs{
-      rewriter.getAffineDimExpr(rank - 1)};
-
-  if (isConstant) {
-    // If we are rescaling per-channel then we need to store the multiplier
-    // values in a buffer.
-    if (multiplierValues.size() == 1) {
-      multiplierConstant = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(multiplierValues.front()));
-    } else {
-      auto multiplierType =
-          RankedTensorType::get({static_cast<int64_t>(multiplierValues.size())},
-                                rewriter.getI32Type());
-      genericInputs.push_back(arith::ConstantOp::create(
-          rewriter, loc,
-          DenseIntElementsAttr::get(multiplierType, multiplierValues)));
-
-      indexingMaps.push_back(AffineMap::get(/*dimCount=*/rank,
-                                            /*symbolCount=*/0, multiplierExprs,
-                                            rewriter.getContext()));
-    }
-  } else {
-    // If we are not rescaling per-channel then we need to collapse 1xN to N
-    // and push broadcastMap.
-    auto tensorType = dyn_cast<RankedTensorType>(op.getMultiplier().getType());
-    if (tensorType && tensorType.hasStaticShape() &&
-        tensorType.getShape()[0] == 1) {
-      // broadcastMap = affine_map<(d0, d1) -> ()>
-      // It would affect as broadcast for scalar values in linalg::GenericOp.
-      AffineMap broadcastMap =
-          AffineMap::get(rank, 0, {}, rewriter.getContext());
-      genericInputs.push_back(
-          collapse1xNTensorToN(rewriter, op.getMultiplier(), loc));
-      indexingMaps.push_back(broadcastMap);
-    } else {
-      genericInputs.push_back(op.getMultiplier());
-      indexingMaps.push_back(AffineMap::get(/*dimCount=*/rank,
-                                            /*symbolCount=*/0, multiplierExprs,
-                                            rewriter.getContext()));
-    }
+  for (auto v : llvm::map_range(
+           input, [](int32_t val) { return static_cast<int8_t>(val); })) {
+    output.push_back(v);
   }
-  multiplierArg = indexingMaps.size() - 1;
+  return output;
 }
 
-// The shift may be either constant or non-constant, depending on
+// The shift or multiplier may be either constant or non-constant, depending on
 // whether dynamic extension is enabled.
-// - If the shift is non-constant, add it as an input to linalg::GenericOp by:
+// - If the shift or multiplier is non-constant, add it as an input to
+// linalg::GenericOp by:
 //     1. Pushing it into 'genericInputs'.
 //     2. Appending a corresponding affine map to 'indexingMaps'.
-// - If the shift is constant, set 'shiftConstant' instead.
-static void setupLinalgGenericOpInputAndIndexingMapForShift(
-    PatternRewriter &rewriter, llvm::SmallVector<int8_t> &shiftValues,
+// - If the shift or multiplier is constant, set 'constant' instead.
+static void setupLinalgGenericOpInputAndIndexingMap(
+    PatternRewriter &rewriter, llvm::SmallVector<int32_t> &values,
     SmallVector<Value, 4> &genericInputs, SmallVector<AffineMap> &indexingMaps,
-    bool isConstant, tosa::RescaleOp op, Value &shiftConstant,
-    int64_t &shiftArg) {
+    bool isConstant, tosa::RescaleOp op, Value &constant, int64_t &arg,
+    bool isShift = false) {
 
   auto loc = op.getLoc();
   auto inputTy = cast<ShapedType>(op.getInput().getType());
   unsigned rank = inputTy.getRank();
-  SmallVector<AffineExpr, 2> shiftExprs = {rewriter.getAffineDimExpr(rank - 1)};
+  SmallVector<AffineExpr, 2> exprs = {rewriter.getAffineDimExpr(rank - 1)};
 
   if (isConstant) {
-    // If we are rescaling per-channel then we need to store the shift
+    // If we are rescaling per-channel then we need to store the
     // values in a buffer.
-    if (shiftValues.size() == 1) {
-      shiftConstant = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI8IntegerAttr(shiftValues.front()));
+    if (values.size() == 1) {
+      IntegerAttr intAttr = isShift
+                                ? rewriter.getI8IntegerAttr(values.front())
+                                : rewriter.getI32IntegerAttr(values.front());
+      constant = rewriter.create<arith::ConstantOp>(loc, intAttr);
     } else {
-      auto shiftType =
-          RankedTensorType::get({static_cast<int64_t>(shiftValues.size())},
-                                rewriter.getIntegerType(8));
-      genericInputs.push_back(arith::ConstantOp::create(
-          rewriter, loc, DenseIntElementsAttr::get(shiftType, shiftValues)));
+      auto elementType =
+          isShift ? rewriter.getIntegerType(8) : rewriter.getI32Type();
+      auto tensorType = RankedTensorType::get(
+          {static_cast<int64_t>(values.size())}, elementType);
+      DenseIntElementsAttr EltAttr;
+      if (isShift)
+        EltAttr = DenseIntElementsAttr::get(tensorType, convertToI8(values));
+      else
+        EltAttr = DenseIntElementsAttr::get(tensorType, values);
+      genericInputs.push_back(
+          arith::ConstantOp::create(rewriter, loc, EltAttr));
       indexingMaps.push_back(AffineMap::get(/*dimCount=*/rank,
-                                            /*symbolCount=*/0, shiftExprs,
+                                            /*symbolCount=*/0, exprs,
                                             rewriter.getContext()));
     }
   } else {
     // If we are not rescaling per-channel then we need to collapse 1xN to N
     // and push broadcastMap.
-    auto tensorType = dyn_cast<RankedTensorType>(op.getShift().getType());
+    auto operand = isShift ? op.getShift() : op.getMultiplier();
+    auto tensorType = dyn_cast<RankedTensorType>(operand.getType());
     if (tensorType && tensorType.hasStaticShape() &&
         tensorType.getShape()[0] == 1) {
       // broadcastMap = affine_map<(d0, d1) -> ()>
       // It would affect as broadcast for scalar values in linalg::GenericOp.
       AffineMap broadcastMap =
           AffineMap::get(rank, 0, {}, rewriter.getContext());
-      genericInputs.push_back(
-          collapse1xNTensorToN(rewriter, op.getShift(), loc));
+      genericInputs.push_back(collapse1xNTensorToN(rewriter, operand, loc));
       indexingMaps.push_back(broadcastMap);
     } else {
-      genericInputs.push_back(op.getShift());
+      genericInputs.push_back(operand);
       indexingMaps.push_back(AffineMap::get(/*dimCount=*/rank,
-                                            /*symbolCount=*/0, shiftExprs,
+                                            /*symbolCount=*/0, exprs,
                                             rewriter.getContext()));
     }
   }
-  shiftArg = indexingMaps.size() - 1;
+  arg = indexingMaps.size() - 1;
 }
 
 // Return the extended Zp to be used in subsequent arithmetic operations.
@@ -1626,13 +1587,16 @@ public:
     if (matchPattern(op.getMultiplier(), m_Constant(&multiplierElems)))
       isMultiplierConstant = true;
 
-    llvm::SmallVector<int8_t> shiftValues;
+    llvm::SmallVector<int32_t> shiftValues;
     llvm::SmallVector<int32_t> multiplierValues;
     bool doubleRound;
 
     if (isMultiplierConstant && isShiftConstant) {
-      shiftValues = llvm::to_vector(shiftElems.getValues<int8_t>());
       // explicit cast is required here
+      shiftValues = llvm::to_vector(llvm::map_range(
+          shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
+            return static_cast<int32_t>(attr.getInt());
+          }));
       multiplierValues = llvm::to_vector(
           llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
                           [](IntegerAttr attr) -> int32_t {
@@ -1664,7 +1628,7 @@ public:
     // values in a buffer.
     Value multiplierConstant;
     int64_t multiplierArg = 0;
-    setupLinalgGenericOpInputAndIndexingMapForMultiplier(
+    setupLinalgGenericOpInputAndIndexingMap(
         rewriter, multiplierValues, genericInputs, indexingMaps,
         isMultiplierConstant, op, multiplierConstant, multiplierArg);
 
@@ -1672,9 +1636,9 @@ public:
     // values in a buffer.
     Value shiftConstant;
     int64_t shiftArg = 0;
-    setupLinalgGenericOpInputAndIndexingMapForShift(
+    setupLinalgGenericOpInputAndIndexingMap(
         rewriter, shiftValues, genericInputs, indexingMaps, isShiftConstant, op,
-        shiftConstant, shiftArg);
+        shiftConstant, shiftArg, true);
 
     // broadcastMap = affine_map<(d0, d1) -> ()>
     // It would affect as broadcast for scalar values in linalg::GenericOp.
