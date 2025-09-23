@@ -77,14 +77,14 @@ BasicBlockSectionsProfileReader::getClonePathsForFunction(
 }
 
 uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
-    StringRef FuncName, const UniqueBBID &SrcBBID, const UniqueBBID &SinkBBID) {
+    StringRef FuncName, const UniqueBBID &SrcBBID, const UniqueBBID &SinkBBID) const {
   auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
   if (It == ProgramPathAndClusterInfo.end())
     return 0;
   auto NodeIt = It->second.EdgeCounts.find(SrcBBID);
   if (NodeIt == It->second.EdgeCounts.end())
     return 0;
-  auto EdgeIt = NodeIt->second.find(DestBBID);
+  auto EdgeIt = NodeIt->second.find(SinkBBID);
   if (EdgeIt == NodeIt->second.end())
     return 0;
   return EdgeIt->second;

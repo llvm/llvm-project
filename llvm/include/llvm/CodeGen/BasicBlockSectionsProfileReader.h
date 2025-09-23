@@ -84,7 +84,7 @@ public:
   // Returns the profile count for the edge from `SrcBBID` to `SinkBBID` in
   // function `FuncName` or zero if it does not exist.
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
-                        const UniqueBBID &SinkBBID);
+                        const UniqueBBID &SinkBBID) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
