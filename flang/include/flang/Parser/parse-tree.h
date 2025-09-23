@@ -4834,9 +4834,8 @@ struct OmpBlockConstruct {
 };
 
 struct OmpMetadirectiveDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<Verbatim, OmpClauseList> t;
-  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpMetadirectiveDirective, OmpDirectiveSpecification);
 };
 
 // Ref: [5.1:89-90], [5.2:216]
@@ -4844,17 +4843,13 @@ struct OmpMetadirectiveDirective {
 // nothing-directive ->
 //    NOTHING                                     // since 5.1
 struct OmpNothingDirective {
-  using EmptyTrait = std::true_type;
-  COPY_AND_ASSIGN_BOILERPLATE(OmpNothingDirective);
-  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(OmpNothingDirective, OmpDirectiveSpecification);
 };
 
 // Ref: OpenMP [5.2:216-218]
 // ERROR AT(compilation|execution) SEVERITY(fatal|warning) MESSAGE("msg-str)
 struct OmpErrorDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpErrorDirective);
-  CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
+  WRAPPER_CLASS_BOILERPLATE(OmpErrorDirective, OmpDirectiveSpecification);
 };
 
 struct OpenMPUtilityConstruct {
