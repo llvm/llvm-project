@@ -6863,7 +6863,8 @@ StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
 FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
       .Cases("gnu_scanf", "scanf", FormatStringType::Scanf)
-      .Cases("gnu_printf", "printf", "printf0", "syslog", FormatStringType::Printf)
+      .Cases("gnu_printf", "printf", "printf0", "syslog",
+             FormatStringType::Printf)
       .Cases("NSString", "CFString", FormatStringType::NSString)
       .Cases("gnu_strftime", "strftime", FormatStringType::Strftime)
       .Cases("gnu_strfmon", "strfmon", FormatStringType::Strfmon)
