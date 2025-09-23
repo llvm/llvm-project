@@ -471,24 +471,10 @@ bool Scalar::ShiftRightLogical(const Scalar &rhs) {
 }
 
 Scalar &Scalar::operator>>=(const Scalar &rhs) {
-  switch (m_type) {
-  case e_void:
-  case e_float:
+  if (m_type == e_int && rhs.m_type == e_int)
+    m_integer >>= rhs.m_integer.getZExtValue();
+  else
     m_type = e_void;
-    break;
-
-  case e_int:
-    switch (rhs.m_type) {
-    case e_void:
-    case e_float:
-      m_type = e_void;
-      break;
-    case e_int:
-      m_integer = m_integer.ashr(rhs.m_integer);
-      break;
-    }
-    break;
-  }
   return *this;
 }
 
