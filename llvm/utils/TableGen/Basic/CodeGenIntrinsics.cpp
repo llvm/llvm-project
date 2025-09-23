@@ -469,10 +469,10 @@ CodeGenIntrinsic::getLocationTypeAsInt(const Record *R,
                                        StringRef FieldName) const {
   const Record *LocRec = R->getValueAsDef(FieldName);
   StringRef Name = LocRec->getName();
-  if (Name == "AArch64_FPMR")
+  if (Name == "TargetMem0")
     return static_cast<IRMemLocation>(
         llvm::InaccessibleTargetMemLocation::TargetMem0);
-  else if (Name == "AArch64_ZA")
+  else if (Name == "TargetMem1")
     return static_cast<IRMemLocation>(
         llvm::InaccessibleTargetMemLocation::TargetMem1);
   else if (Name == "InaccessibleMem")

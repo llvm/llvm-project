@@ -53,9 +53,8 @@ def IntrInaccessibleMemOnly : IntrinsicProperty;
 
 class IntrinsicMemoryLocation;
 // This should be added in the Target, but once in IntrinsicsAArch64.td
-// It complains error: "Variable not defined: 'AArch64_FPMR'"
-def AArch64_FPMR : IntrinsicMemoryLocation;
-def AArch64_ZA:   IntrinsicMemoryLocation;
+def TargetMem0 : IntrinsicMemoryLocation;
+def TargetMem1 : IntrinsicMemoryLocation;
 // IntrInaccessible{Read|Write}MemOnly needs to set Location
 class IntrInaccessibleReadMemOnly<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}
 class IntrInaccessibleWriteMemOnly<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}

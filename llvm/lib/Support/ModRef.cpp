@@ -49,15 +49,14 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::Other:
       OS << "Other: ";
       break;
-    default: {
-      InaccessibleTargetMemLocation TargetLoc =
-          static_cast<InaccessibleTargetMemLocation>(Loc);
-      if (TargetLoc == InaccessibleTargetMemLocation::TargetMem0)
-        OS << "TargetMem0: ";
-      if (TargetLoc == InaccessibleTargetMemLocation::TargetMem1)
-        OS << "TargetMem1: ";
+    case static_cast<IRMemLocation>(
+        static_cast<int>(InaccessibleTargetMemLocation::TargetMem0)):
+      OS << "TargetMem0: ";
       break;
-    }
+    case static_cast<IRMemLocation>(
+        static_cast<int>(InaccessibleTargetMemLocation::TargetMem1)):
+      OS << "TargetMem1: ";
+      break;
     }
     OS << ME.getModRef(Loc);
   });
