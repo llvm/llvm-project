@@ -309,14 +309,55 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
       return failure();
   }
 
-  // delinearize Ids
-  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
-  if (failed(maybeIds))
-    return failure();
-  SmallVector<Value> sgIds = *maybeIds;
+  // Get the order attribute, default to row-major if not present
+  SmallVector<int64_t> order;
+  if (getOrder()) {
+    order = llvm::map_to_vector(getOrder().asArrayRef(), [](int v) { return static_cast<int64_t>(v); });
+  } else {
+    auto range = llvm::reverse(llvm::seq<int64_t>(0, sgLayout.size()));
+    order = llvm::to_vector(range);
+  }
 
-  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
-                                  shape);
+  // Check if order is default row-major (reverse identity)
+  bool isRowMajor = true;
+  for (size_t i = 0, n = order.size(); i < n; ++i)
+    if (order[i] != static_cast<int64_t>(n) - 1 - static_cast<int64_t>(i))
+      isRowMajor = false;
+
+  SmallVector<Value> sgIds;
+  if (isRowMajor) {
+    // Use original delinearization for row-major
+    auto maybeIds = affine::delinearizeIndex(
+        builder, loc, linearId,
+        llvm::map_to_vector(sgLayout, [&](int64_t d) -> Value {
+          return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
+        }));
+    if (failed(maybeIds))
+      return failure();
+    sgIds = maybeIds.value();
+  } else {
+    // Permute sgLayout according to order for delinearization
+    SmallVector<int64_t> permutedLayout(order.size());
+    for (size_t i = 0; i < order.size(); ++i)
+      permutedLayout[i] = sgLayout[order[i]];
+
+    // Delinearize the linear subgroup id in the requested order
+    auto maybePermutedSgId = affine::delinearizeIndex(
+        builder, loc, linearId,
+        llvm::map_to_vector(permutedLayout, [&](int64_t d) -> Value {
+          return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
+        }));
+    if (failed(maybePermutedSgId))
+      return failure();
+    SmallVector<Value> permutedSgId = maybePermutedSgId.value();
+
+    // Compute the inverse permutation to map back to physical order
+    sgIds.resize(order.size());
+    for (size_t i = 0; i < order.size(); ++i)
+      sgIds[order[i]] = permutedSgId[i];
+  }
+
+  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape, shape);
 }
 
 //===----------------------------------------------------------------------===//
