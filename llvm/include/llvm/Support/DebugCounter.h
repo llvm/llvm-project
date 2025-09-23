@@ -17,7 +17,7 @@
 /// debug.  That is where debug counting steps in.  You can instrument the pass
 /// with a debug counter before it does a certain thing, and depending on the
 /// counts, it will either execute that thing or not.  The debug counter itself
-/// consists of a list of chunks (inclusive numeric ranges). `shouldExecute`
+/// consists of a list of chunks (inclusive numeric intervals). `shouldExecute`
 /// returns true iff the list is empty or the current count is in one of the
 /// chunks.
 ///
@@ -58,7 +58,7 @@ class raw_ostream;
 class DebugCounter {
 public:
   LLVM_ABI static void printChunks(raw_ostream &OS,
-                                   ArrayRef<IntegerInclusiveInterval> Ranges);
+                                   ArrayRef<IntegerInclusiveInterval> Intervals);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();

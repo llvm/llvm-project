@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
       if (CurrChunks.size() == 1)
         break;
 
-      Range Testing = CurrChunks[Idx];
+      IntegerInclusiveInterval Testing = CurrChunks[Idx];
       errs() << "Trying to remove : ";
       Testing.print(errs());
       errs() << "\n";
