@@ -681,7 +681,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       Ty = ED->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
-      
+
       if (XLen == 64 && EIT->getNumBits() == 32)
         return extendType(Ty, CGT.ConvertType(Ty));
 
