@@ -1,4 +1,4 @@
-; REQUIRES: aarch64
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: %lld -dylib --separate-cstring-literal-sections %t.o -o - | llvm-objdump --macho --section-headers - | FileCheck %s

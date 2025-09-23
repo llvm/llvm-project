@@ -3855,6 +3855,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // If the call requires a streaming-mode change and has scalable vector
     // arguments or return values, then warn the user that the streaming and
     // non-streaming vector lengths may be different.
+    // When both streaming and non-streaming vector lengths are defined and
+    // mismatched, produce an error.
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
     if (CallerFD && (!FD || !FD->getBuiltinID()) &&
         (IsScalableArg || IsScalableRet)) {
@@ -3867,12 +3869,30 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (!IsCalleeStreamingCompatible &&
           (CallerFnType == SemaARM::ArmStreamingCompatible ||
            ((CallerFnType == SemaARM::ArmStreaming) ^ IsCalleeStreaming))) {
+        const LangOptions &LO = getLangOpts();
+        unsigned VL = LO.VScaleMin * 128;
+        unsigned SVL = LO.VScaleStreamingMin * 128;
+        bool IsVLMismatch = VL && SVL && VL != SVL;
+
+        auto EmitDiag = [&](bool IsArg) {
+          if (IsVLMismatch) {
+            if (CallerFnType == SemaARM::ArmStreamingCompatible)
+              // Emit warning for streaming-compatible callers
+              Diag(Loc, diag::warn_sme_streaming_compatible_vl_mismatch)
+                  << IsArg << IsCalleeStreaming << SVL << VL;
+            else
+              // Emit error otherwise
+              Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
+                  << IsArg << SVL << VL;
+          } else
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+                << IsArg;
+        };
+
         if (IsScalableArg)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/true;
+          EmitDiag(true);
         if (IsScalableRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/false;
+          EmitDiag(false);
       }
     }
 
