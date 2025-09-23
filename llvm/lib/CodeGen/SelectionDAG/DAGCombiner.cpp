@@ -16703,7 +16703,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
         }
       }
       SDValue Load =
-          DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
+          DAG.getLoad(VT, SDLoc(LN0), LN0->getChain(), LN0->getBasePtr(),
                       LN0->getMemOperand());
       DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
       return Load;
