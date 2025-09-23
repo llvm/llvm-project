@@ -1764,8 +1764,9 @@ TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
-    verbatim("DECLARE MAPPER"_tok) || verbatim("DECLARE_MAPPER"_tok),
-    parenthesized(Parser<OmpMapperSpecifier>{}), Parser<OmpClauseList>{})))
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_declare_mapper)) >=
+    Parser<OmpDirectiveSpecification>{})))
 
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
