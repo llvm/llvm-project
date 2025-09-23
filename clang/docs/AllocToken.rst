@@ -97,9 +97,9 @@ take a final ``size_t token_id`` argument.
 
     // C++ operators (mangled names)
     // operator new(size_t, size_t)
-    void *__alloc_token_Znwm(size_t size, size_t token_id);
+    void *__alloc_token__Znwm(size_t size, size_t token_id);
     // operator new[](size_t, size_t)
-    void *__alloc_token_Znam(size_t size, size_t token_id);
+    void *__alloc_token__Znam(size_t size, size_t token_id);
     // ... other variants like nothrow, etc., are also instrumented.
 
 Fast ABI

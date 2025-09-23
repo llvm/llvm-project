@@ -12,7 +12,7 @@ define ptr @test_extra_libfuncs() sanitize_alloc_token {
 ; CHECK-LABEL: define ptr @test_extra_libfuncs(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call { ptr, i64 } @__alloc_token_size_returning_new(i64 10, i64 6985720287680550851), !alloc_token [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call { ptr, i64 } @__alloc_token___size_returning_new(i64 10, i64 6985720287680550851), !alloc_token [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractvalue { ptr, i64 } [[TMP0]], 0
 ; CHECK-NEXT:    ret ptr [[PTR1]]
 ;
@@ -29,8 +29,8 @@ define ptr @test_replaceable_new() sanitize_alloc_token {
 ; CHECK-LABEL: define ptr @test_replaceable_new(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token_Znwm(i64 32, i64 6985720287680550851), !alloc_token [[META0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__alloc_token_Znam(i64 64, i64 6985720287680550851), !alloc_token [[META0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token__Znwm(i64 32, i64 6985720287680550851), !alloc_token [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__alloc_token__Znam(i64 64, i64 6985720287680550851), !alloc_token [[META0]]
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
