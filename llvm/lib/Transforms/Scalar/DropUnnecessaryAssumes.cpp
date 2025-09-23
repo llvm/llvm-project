@@ -16,6 +16,17 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+static bool
+affectedValuesAreEphemeral(const SmallPtrSetImpl<Value *> &Affected) {
+  // If all the affected uses have only one use (part of the assume), then
+  // the assume does not provide useful information. Note that additional
+  // users may appear as a result of inlining and CSE, so we should only
+  // make this assumption late in the optimization pipeline.
+  // TODO: Handle dead cyclic usages.
+  // TODO: Handle multiple dead assumes on the same value.
+  return all_of(Affected, match_fn(m_OneUse(m_Value())));
+}
+
 PreservedAnalyses
 DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
@@ -26,8 +37,41 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (!Assume)
       continue;
 
-    // TODO: Handle assumes with operand bundles.
-    if (Assume->hasOperandBundles())
+    SmallVector<WeakTrackingVH> DeadBundleArgs;
+    SmallVector<OperandBundleDef> KeptBundles;
+    unsigned NumBundles = Assume->getNumOperandBundles();
+    for (unsigned I = 0; I != NumBundles; ++I) {
+      // Handle operand bundle assumptions.
+      OperandBundleUse Bundle = Assume->getOperandBundleAt(I);
+      SmallPtrSet<Value *, 8> Affected;
+      AssumptionCache::findValuesAffectedByOperandBundle(
+          Bundle, [&](Value *A) { Affected.insert(A); });
+
+      if (affectedValuesAreEphemeral(Affected))
+        append_range(DeadBundleArgs, Bundle.Inputs);
+      else
+        KeptBundles.emplace_back(Bundle);
+    }
+
+    if (KeptBundles.size() != NumBundles) {
+      if (KeptBundles.size() == 0) {
+        // All operand bundles are dead, remove the whole assume.
+        Assume->eraseFromParent();
+      } else {
+        // Otherwise only drop the dead operand bundles.
+        CallBase *NewAssume =
+            CallBase::Create(Assume, KeptBundles, Assume->getIterator());
+        AC.registerAssumption(cast<AssumeInst>(NewAssume));
+        Assume->eraseFromParent();
+      }
+
+      RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadBundleArgs);
+      Changed = true;
+      continue;
+    }
+
+    // Ignore condition on assumes with operand bundles.
+    if (NumBundles != 0)
       continue;
 
     Value *Cond = Assume->getArgOperand(0);
@@ -39,13 +83,7 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     findValuesAffectedByCondition(Cond, /*IsAssume=*/true,
                                   [&](Value *A) { Affected.insert(A); });
 
-    // If all the affected uses have only one use (part of the assume), then
-    // the assume does not provide useful information. Note that additional
-    // users may appear as a result of inlining and CSE, so we should only
-    // make this assumption late in the optimization pipeline.
-    // TODO: Handle dead cyclic usages.
-    // TODO: Handle multiple dead assumes on the same value.
-    if (!all_of(Affected, match_fn(m_OneUse(m_Value()))))
+    if (!affectedValuesAreEphemeral(Affected))
       continue;
 
     Assume->eraseFromParent();
