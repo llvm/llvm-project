@@ -303,8 +303,6 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  LLVM_ABI static const char *getManglingComponent(const Triple &T);
-
   /// Returns true if the specified type fits in a native integer type
   /// supported by the CPU.
   ///

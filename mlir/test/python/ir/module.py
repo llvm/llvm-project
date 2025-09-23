@@ -121,6 +121,7 @@ def testRoundtripBinary():
 def testModuleOperation():
     ctx = Context()
     module = Module.parse(r"""module @successfulParse {}""", ctx)
+    assert ctx._get_live_module_count() == 1
     op1 = module.operation
     # CHECK: module @successfulParse
     print(op1)
@@ -145,6 +146,7 @@ def testModuleOperation():
     op1 = None
     op2 = None
     gc.collect()
+    assert ctx._get_live_module_count() == 0
 
 
 # CHECK-LABEL: TEST: testModuleCapsule
@@ -152,17 +154,17 @@ def testModuleOperation():
 def testModuleCapsule():
     ctx = Context()
     module = Module.parse(r"""module @successfulParse {}""", ctx)
+    assert ctx._get_live_module_count() == 1
     # CHECK: "mlir.ir.Module._CAPIPtr"
     module_capsule = module._CAPIPtr
     print(module_capsule)
     module_dup = Module._CAPICreate(module_capsule)
-    assert module is not module_dup
+    assert module is module_dup
     assert module == module_dup
-    module._clear_mlir_module()
-    assert module != module_dup
     assert module_dup.context is ctx
     # Gc and verify destructed.
     module = None
     module_capsule = None
     module_dup = None
     gc.collect()
+    assert ctx._get_live_module_count() == 0

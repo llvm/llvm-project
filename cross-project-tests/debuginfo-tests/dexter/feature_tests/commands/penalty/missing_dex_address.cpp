@@ -6,7 +6,7 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck --dump-input-context=999999999 %s
+// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: missing_dex_address.cpp
 
 int main() {

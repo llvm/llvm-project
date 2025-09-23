@@ -1,5 +1,5 @@
 // Due to ln -sf:
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 // RUN: mkdir -p %t.real
 // RUN: cd %t.real
 // RUN: ln -sf %clang test-clang

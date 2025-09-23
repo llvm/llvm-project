@@ -142,3 +142,56 @@ TEST(LoopUtils, IsKnownNonPositiveInLoopTest) {
         EXPECT_EQ(isKnownNonPositiveInLoop(ArgSCEV, L, SE), true);
       });
 }
+
+// The inner and outer loop here share a latch.  Because any loop metadata must
+// be attached to that latch, loop metadata cannot distinguish between the two
+// loops.  Until that problem is solved (by moving loop metadata to loops'
+// header blocks instead), getLoopEstimatedTripCount and
+// setLoopEstimatedTripCount must refuse to operate on at least one of the two
+// loops.  They choose to reject the outer loop here because the latch does not
+// exit it.
+TEST(LoopUtils, nestedLoopSharedLatchEstimatedTripCount) {
+  LLVMContext C;
+  std::unique_ptr<Module> M =
+      parseIR(C, "declare i1 @f()\n"
+                 "declare i1 @g()\n"
+                 "define void @foo() {\n"
+                 "entry:\n"
+                 "  br label %outer\n"
+                 "outer:\n"
+                 "  %c0 = call i1 @f()"
+                 "  br i1 %c0, label %inner, label %exit, !prof !0\n"
+                 "inner:\n"
+                 "  %c1 = call i1 @g()"
+                 "  br i1 %c1, label %inner, label %outer, !prof !1\n"
+                 "exit:\n"
+                 "  ret void\n"
+                 "}\n"
+                 "!0 = !{!\"branch_weights\", i32 100, i32 1}\n"
+                 "!1 = !{!\"branch_weights\", i32 4, i32 1}\n"
+                 "\n");
+
+  run(*M, "foo",
+      [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
+        assert(LI.end() - LI.begin() == 1 && "Expected one outer loop");
+        Loop *Outer = *LI.begin();
+        assert(Outer->end() - Outer->begin() == 1 && "Expected one inner loop");
+        Loop *Inner = *Outer->begin();
+
+        // Even before llvm.loop.estimated_trip_count is added to either loop,
+        // getLoopEstimatedTripCount rejects the outer loop.
+        EXPECT_EQ(getLoopEstimatedTripCount(Inner), 5);
+        EXPECT_EQ(getLoopEstimatedTripCount(Outer), std::nullopt);
+
+        // setLoopEstimatedTripCount for the inner loop does not affect
+        // getLoopEstimatedTripCount for the outer loop.
+        EXPECT_EQ(setLoopEstimatedTripCount(Inner, 100), true);
+        EXPECT_EQ(getLoopEstimatedTripCount(Inner), 100);
+        EXPECT_EQ(getLoopEstimatedTripCount(Outer), std::nullopt);
+
+        // setLoopEstimatedTripCount rejects the outer loop.
+        EXPECT_EQ(setLoopEstimatedTripCount(Outer, 999), false);
+        EXPECT_EQ(getLoopEstimatedTripCount(Inner), 100);
+        EXPECT_EQ(getLoopEstimatedTripCount(Outer), std::nullopt);
+      });
+}

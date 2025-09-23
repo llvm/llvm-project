@@ -2,15 +2,27 @@ REQUIRES: system-windows, msvc
 RUN: mkdir -p %t.dir
 RUN: %build --compiler=clang-cl --mode=compile --arch=64 --nodefaultlib --output=%t.dir/VariablesTest.cpp.obj %S/Inputs/VariablesTest.cpp
 RUN: %build --compiler=msvc --mode=link --arch=64 --nodefaultlib --output=%t.dir/VariablesTest.cpp.exe %t.dir/VariablesTest.cpp.obj
-RUN: lldb-test symbols %t.dir/VariablesTest.cpp.exe > %t.dir/VariablesTest.out
-RUN: FileCheck --check-prefix=GLOBALS --input-file=%t.dir/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-F --input-file=%t.dir/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-MAIN --input-file=%t.dir/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%t.dir/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%t.dir/VariablesTest.out %s
+# Note: The native plugin creates a location list for variables that's only valid for the function.
+#       The DIA plugin creates a location expression that's always valid. This causes DIA to output
+#       one line per variable where the native plugin would output two (the second would contain the
+#       location information). This removes the second line from the output of the native plugin.
+#       It's done in both cases, because LLDB might not be compiled with the DIA SDK in which case
+#       the native plugin is always used.
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols %t.dir/VariablesTest.cpp.exe | sed '/^ \+\[0x/d' > %t.dir/VariablesTest.DIA.out
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols %t.dir/VariablesTest.cpp.exe | sed '/^ \+\[0x/d' > %t.dir/VariablesTest.Native.out
+RUN: FileCheck --check-prefix=GLOBALS --input-file=%t.dir/VariablesTest.DIA.out %s
+RUN: FileCheck --check-prefix=GLOBALS --input-file=%t.dir/VariablesTest.Native.out %s
+RUN: FileCheck --check-prefix=FUNC-F --input-file=%t.dir/VariablesTest.DIA.out %s
+RUN: FileCheck --check-prefix=FUNC-F --input-file=%t.dir/VariablesTest.Native.out %s
+RUN: FileCheck --check-prefix=FUNC-MAIN --input-file=%t.dir/VariablesTest.DIA.out %s
+RUN: FileCheck --check-prefix=FUNC-MAIN --input-file=%t.dir/VariablesTest.Native.out %s
+RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%t.dir/VariablesTest.DIA.out %s
+RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%t.dir/VariablesTest.Native.out %s
+RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%t.dir/VariablesTest.DIA.out %s
+RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%t.dir/VariablesTest.Native.out %s
 
 GLOBALS: Module [[MOD:.*]]
-GLOBALS: SymbolFile pdb ([[MOD]])
+GLOBALS: SymbolFile {{(native-)?}}pdb ([[MOD]])
 GLOBALS:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
 GLOBALS-DAG:   Variable{{.*}}, name = "g_IntVar"
 GLOBALS-SAME:  scope = global, location = {{.*}}, external
@@ -30,7 +42,7 @@ GLOBALS-DAG:   Variable{{.*}}, name = "g_Const"
 GLOBALS-SAME:  scope = ??? (2)
 GLOBALS:     Function
 
-FUNC-F:      Function{{.*}}, mangled = ?f@@YAHHH@Z
+FUNC-F:      Function{{.*}}, {{mangled = \?f@@YAHHH@Z|demangled = f}}
 FUNC-F-NEXT:   Block
 FUNC-F-NEXT:     Variable{{.*}}, name = "var_arg1"
 FUNC-F-SAME:                     scope = parameter
@@ -39,7 +51,7 @@ FUNC-F-SAME:                     scope = parameter
 FUNC-F-NEXT:     Variable{{.*}}, name = "same_name_var"
 FUNC-F-SAME:                     scope = local
 
-FUNC-MAIN:      Function{{.*}}, mangled = main
+FUNC-MAIN:      Function{{.*}}, {{(de)?}}mangled = main
 FUNC-MAIN-NEXT:   Block
 FUNC-MAIN-NEXT:     Variable{{.*}}, name = "same_name_var"
 FUNC-MAIN-SAME:                     scope = local
@@ -52,11 +64,10 @@ FUNC-MAIN-SAME:                     scope = local
 FUNC-MAIN-NEXT:     Variable{{.*}}, name = "a"
 FUNC-MAIN-SAME:                     scope = local
 
-FUNC-CONSTRUCTOR:      Function{{.*}}, {{(de)?}}mangled = {{.*}}{{(Class::)?}}Class{{.*}}
+FUNC-CONSTRUCTOR:      Function{{.*}}, {{(de)?}}mangled = {{.*}}Class::Class{{.*}}
 FUNC-CONSTRUCTOR-NEXT:   Block
 FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "this"
 FUNC-CONSTRUCTOR-SAME:                     scope = parameter
-FUNC-CONSTRUCTOR-SAME:                     artificial
 FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "a"
 FUNC-CONSTRUCTOR-SAME:                     scope = parameter
 
@@ -64,4 +75,3 @@ FUNC-MEMBER:      Function{{.*}}, {{(de)?}}mangled = {{.*}}{{(Class::)?}}Func{{.
 FUNC-MEMBER-NEXT:   Block
 FUNC-MEMBER-NEXT:     Variable{{.*}}, name = "this"
 FUNC-MEMBER-SAME:                     scope = parameter
-FUNC-MEMBER-SAME:                     artificial

@@ -74,7 +74,7 @@ define dso_local void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
-; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 48 registers
+; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 47 registers
 ; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item
 entry:
   %cmp100 = icmp sgt i32 %n, 0

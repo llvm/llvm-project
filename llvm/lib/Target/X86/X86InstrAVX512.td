@@ -12404,14 +12404,14 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                     X86FoldableSchedWrite sched, X86VectorVTInfo VTI,
                     bit IsCommutable> {
   let ExeDomain = VTI.ExeDomain in {
-  defm r  :   AVX512_maskable_3src<Op, MRMSrcReg, VTI, (outs VTI.RC:$dst),
+  defm rr  :  AVX512_maskable_3src<Op, MRMSrcReg, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.RC:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1,
                                             VTI.RC:$src2, VTI.RC:$src3)),
                                    IsCommutable, IsCommutable>,
                                    EVEX, VVVV, T8, Sched<[sched]>;
-  defm m  :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
+  defm rm  :  AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
@@ -12419,7 +12419,7 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, T8,
                                    Sched<[sched.Folded, sched.ReadAfterFold,
                                           sched.ReadAfterFold]>;
-  defm mb :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
+  defm rmb :  AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3),
                                    OpStr, "${src3}"#VTI.BroadcastStr#", $src2",
                                    "$src2, ${src3}"#VTI.BroadcastStr,
@@ -12459,24 +12459,24 @@ defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul
 let Predicates = [HasVNNI] in {
   def : Pat<(v16i32 (add VR512:$src1,
                          (X86vpmaddwd_su VR512:$src2, VR512:$src3))),
-            (VPDPWSSDZr VR512:$src1, VR512:$src2, VR512:$src3)>;
+            (VPDPWSSDZrr VR512:$src1, VR512:$src2, VR512:$src3)>;
   def : Pat<(v16i32 (add VR512:$src1,
                          (X86vpmaddwd_su VR512:$src2, (load addr:$src3)))),
-            (VPDPWSSDZm VR512:$src1, VR512:$src2, addr:$src3)>;
+            (VPDPWSSDZrm VR512:$src1, VR512:$src2, addr:$src3)>;
 }
 let Predicates = [HasVNNI,HasVLX] in {
   def : Pat<(v8i32 (add VR256X:$src1,
                         (X86vpmaddwd_su VR256X:$src2, VR256X:$src3))),
-            (VPDPWSSDZ256r VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
+            (VPDPWSSDZ256rr VR256X:$src1, VR256X:$src2, VR256X:$src3)>;
   def : Pat<(v8i32 (add VR256X:$src1,
                         (X86vpmaddwd_su VR256X:$src2, (load addr:$src3)))),
-            (VPDPWSSDZ256m VR256X:$src1, VR256X:$src2, addr:$src3)>;
+            (VPDPWSSDZ256rm VR256X:$src1, VR256X:$src2, addr:$src3)>;
   def : Pat<(v4i32 (add VR128X:$src1,
                         (X86vpmaddwd_su VR128X:$src2, VR128X:$src3))),
-            (VPDPWSSDZ128r VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
+            (VPDPWSSDZ128rr VR128X:$src1, VR128X:$src2, VR128X:$src3)>;
   def : Pat<(v4i32 (add VR128X:$src1,
                         (X86vpmaddwd_su VR128X:$src2, (load addr:$src3)))),
-            (VPDPWSSDZ128m VR128X:$src1, VR128X:$src2, addr:$src3)>;
+            (VPDPWSSDZ128rm VR128X:$src1, VR128X:$src2, addr:$src3)>;
 }
 
 //===----------------------------------------------------------------------===//

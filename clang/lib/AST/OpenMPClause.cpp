@@ -124,6 +124,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -222,6 +223,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -1911,8 +1913,13 @@ void OMPClausePrinter::VisitOMPDetachClause(OMPDetachClause *Node) {
 void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   OS << "default("
      << getOpenMPSimpleClauseTypeName(OMPC_default,
-                                      unsigned(Node->getDefaultKind()))
-     << ")";
+                                      unsigned(Node->getDefaultKind()));
+  if (Version >= 60 && Node->getDefaultVC() != OMPC_DEFAULT_VC_all) {
+    OS << ":"
+       << getOpenMPDefaultVariableCategoryName(unsigned(Node->getDefaultVC()));
+  }
+
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {

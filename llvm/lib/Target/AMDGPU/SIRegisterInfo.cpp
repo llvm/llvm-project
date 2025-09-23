@@ -1108,8 +1108,8 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                 SIInstrFlags::FlatScratch);
 }
 
-const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(
-  const MachineFunction &MF, unsigned Kind) const {
+const TargetRegisterClass *
+SIRegisterInfo::getPointerRegClass(unsigned Kind) const {
   // This is inaccurate. It depends on the instruction and address space. The
   // only place where we should hit this is for dealing with frame indexes /
   // private accesses, so this is correct in that case.

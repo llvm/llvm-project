@@ -58,9 +58,10 @@ const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
 const parser::ArrayElement *GetArrayElementFromObj(
     const parser::OmpObject &object);
 const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
 std::optional<parser::CharBlock> GetObjectSource(
     const parser::OmpObject &object);
+const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
+const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
@@ -74,6 +75,8 @@ std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
 std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
 
+std::optional<bool> GetLogicalValue(const SomeExpr &expr);
+
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
@@ -83,6 +86,7 @@ const SomeExpr *HasStorageOverlap(
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 const parser::Block &GetInnermostExecPart(const parser::Block &block);
+bool IsStrictlyStructuredBlock(const parser::Block &block);
 } // namespace omp
 } // namespace Fortran::semantics
 

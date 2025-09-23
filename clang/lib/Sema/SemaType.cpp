@@ -2270,7 +2270,10 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
               : ConstVal.getActiveBits();
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
         Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10) << ArraySize->getSourceRange();
+            << toString(ConstVal, 10, ConstVal.isSigned(),
+                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                        /*InsertSeparators=*/true)
+            << ArraySize->getSourceRange();
         return QualType();
       }
 
@@ -6035,15 +6038,6 @@ namespace {
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       assert(TInfo);
       TL.copy(TInfo->getTypeLoc().castAs<DependentNameTypeLoc>());
-    }
-    void VisitDependentTemplateSpecializationTypeLoc(
-                                 DependentTemplateSpecializationTypeLoc TL) {
-      assert(DS.getTypeSpecType() == TST_typename);
-      TypeSourceInfo *TInfo = nullptr;
-      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-      assert(TInfo);
-      TL.copy(
-          TInfo->getTypeLoc().castAs<DependentTemplateSpecializationTypeLoc>());
     }
     void VisitAutoTypeLoc(AutoTypeLoc TL) {
       assert(DS.getTypeSpecType() == TST_auto ||
