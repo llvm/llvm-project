@@ -33,14 +33,17 @@ config_setting(
 expand_template(
     name = "config",
     out = "clang-tidy-config.h",
-    substitutions = select({
-        ":static_analyzer_enabled": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
-        },
-    }),
+    substitutions =
+        {
+            "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 0",
+        } | select({
+            ":static_analyzer_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
+            },
+        }),
     template = "clang-tidy-config.h.cmake",
     visibility = ["//visibility:private"],
 )
@@ -307,6 +310,7 @@ clang_tidy_library(
         ":google",
         ":lib",
         ":misc",
+        ":modernize",
         ":performance",
         ":readability",
         ":utils",

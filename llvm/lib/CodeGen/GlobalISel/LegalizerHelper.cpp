@@ -4457,6 +4457,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerSADDO_SSUBO(MI);
   case TargetOpcode::G_SADDE:
     return lowerSADDE(MI);
+  case TargetOpcode::G_SSUBE:
+    return lowerSSUBE(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -9323,6 +9325,27 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
   auto BX = MIRBuilder.buildXor(Ty, Sum, RHS);
   auto T = MIRBuilder.buildAnd(Ty, AX, BX);
 
+  auto Zero = MIRBuilder.buildConstant(Ty, 0);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSSUBE(MachineInstr &MI) {
+  auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
+  const LLT Ty = MRI.getType(Res);
+
+  // Diff = LHS - (RHS + zext(CarryIn))
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto RHSPlusCI = MIRBuilder.buildAdd(Ty, RHS, CarryZ);
+  auto Diff = MIRBuilder.buildSub(Ty, LHS, RHSPlusCI);
+  MIRBuilder.buildCopy(Res, Diff);
+
+  // ov = msb((LHS ^ RHS) & (LHS ^ Diff))
+  auto X1 = MIRBuilder.buildXor(Ty, LHS, RHS);
+  auto X2 = MIRBuilder.buildXor(Ty, LHS, Diff);
+  auto T = MIRBuilder.buildAnd(Ty, X1, X2);
   auto Zero = MIRBuilder.buildConstant(Ty, 0);
   MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
 

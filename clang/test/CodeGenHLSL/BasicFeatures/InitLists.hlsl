@@ -45,6 +45,11 @@ struct SlicyBits {
   int W : 8;
 };
 
+struct Unnamed {
+  int A;
+  int : 8;
+};
+
 // Case 1: Extraneous braces get ignored in literal instantiation.
 // CHECK-LABEL: define hidden void @_Z5case1v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -958,4 +963,25 @@ int case17Helper(int x) {
 // CHECK-NEXT: ret void
 void case17() {
   int2 X = {case17Helper(0), case17Helper(1)};
+}
+
+// InitList with Struct with unnamed bitfield on LHS
+// CHECK-LABEL: case18
+// CHECK: [[U:%.*]] = alloca %struct.Unnamed, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[U]], ptr align 1 {{.*}}, i32 5, i1 false)
+void case18() {
+  Unnamed U = {1};
+}
+
+// InitList with Struct with unnamed bitfield on RHS
+// CHECK-LABEL: case19
+// CHECK: [[TI:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: [[Z:%.*]] = getelementptr inbounds nuw %struct.TwoInts, ptr [[TI]], i32 0, i32 0
+// CHECK-NEXT: [[A:%.*]] = getelementptr inbounds nuw %struct.Unnamed, ptr %U, i32 0, i32 0
+// CHECK-NEXT: [[L:%.*]] = load i32, ptr [[A]], align 1
+// CHECK-NEXT: store i32 [[L]], ptr [[Z]], align 1
+// CHECK-NEXT: [[W:%.*]] = getelementptr inbounds nuw %struct.TwoInts, ptr [[TI]], i32 0, i32 1
+// CHECK-NEXT: store i32 1, ptr [[W]], align 1
+void case19(Unnamed U) {
+  TwoInts TI = {U, 1};
 }

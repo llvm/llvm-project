@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// CRTP can be constructed outside itself and the derived class.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/crtp-constructor-accessibility.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/crtp-constructor-accessibility.html
 class CrtpConstructorAccessibilityCheck : public ClangTidyCheck {
 public:
   CrtpConstructorAccessibilityCheck(StringRef Name, ClangTidyContext *Context)

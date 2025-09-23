@@ -11,7 +11,7 @@ entry:
   %a.wide = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   %b.wide = zext <vscale x 8 x i16> %b to <vscale x 8 x i32>
   %mult = mul nuw nsw <vscale x 8 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %mult)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %mult)
   ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -24,7 +24,7 @@ entry:
   %a.wide = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   %b.wide = sext <vscale x 8 x i16> %b to <vscale x 8 x i32>
   %mult = mul nuw nsw <vscale x 8 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %mult)
+  %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %mult)
   ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -44,7 +44,7 @@ entry:
   %a.wide = zext <16 x i16> %a to <16 x i32>
   %b.wide = zext <16 x i16> %b to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
   store <8 x i32> %partial.reduce, ptr %accptr
   ret void
 }
@@ -65,7 +65,7 @@ entry:
   %a.wide = sext <16 x i16> %a to <16 x i32>
   %b.wide = sext <16 x i16> %b to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
   store <8 x i32> %partial.reduce, ptr %accptr
   ret void
 }
@@ -83,7 +83,7 @@ entry:
   %a.wide = zext <8 x i16> %a to <8 x i32>
   %b.wide = zext <8 x i16> %b to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <8 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -100,6 +100,6 @@ entry:
   %a.wide = sext <8 x i16> %a to <8 x i32>
   %b.wide = sext <8 x i16> %b to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <8 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
