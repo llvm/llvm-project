@@ -87,7 +87,7 @@ public:
     unsigned short AliasID;
     const char *AliasArgs;
     const char *Values;
-    unsigned CommandIDsOffset;
+    unsigned SubCommandIDsOffset;
 
     bool hasNoPrefix() const { return PrefixesOffset == 0; }
 
@@ -103,17 +103,17 @@ public:
                                                  getNumPrefixes(PrefixesTable));
     }
 
-    bool hasCommands() const { return CommandIDsOffset != 0; }
+    bool hasCommands() const { return SubCommandIDsOffset != 0; }
 
     unsigned getNumCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
-      // We embed the number of command IDs in the value of the first offset.
-      return SubCommandIDsTable[CommandIDsOffset];
+      // We embed the number of subcommand IDs in the value of the first offset.
+      return SubCommandIDsTable[SubCommandIDsOffset];
     }
 
     ArrayRef<unsigned>
     getCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
       return hasCommands() ? SubCommandIDsTable.slice(
-                                 CommandIDsOffset + 1,
+                                 SubCommandIDsOffset + 1,
                                  getNumCommandIDs(SubCommandIDsTable))
                            : ArrayRef<unsigned>();
     }
@@ -159,10 +159,10 @@ private:
 
   bool IgnoreCase;
 
-  /// The command information table.
+  /// The subcommand information table.
   ArrayRef<SubCommand> SubCommands;
 
-  /// The command IDs table.
+  /// The subcommand IDs table.
   ArrayRef<unsigned> SubCommandIDsTable;
 
   bool GroupedShortOptions = false;
@@ -466,7 +466,7 @@ protected:
   LLVM_ABI GenericOptTable(const StringTable &StrTable,
                            ArrayRef<StringTable::Offset> PrefixesTable,
                            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
-                           ArrayRef<SubCommand> Commands = {},
+                           ArrayRef<SubCommand> SubCommands = {},
                            ArrayRef<unsigned> SubCommandIDsTable = {});
 };
 

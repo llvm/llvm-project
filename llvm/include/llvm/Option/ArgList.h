@@ -283,7 +283,7 @@ public:
 
   /// getSubcommand - Find subcommand from the arguments if the usage is valid.
   ///
-  /// \param Commands - A list of all valid subcommands.
+  /// \param AllSubCommands - A list of all valid subcommands.
   /// \param HandleMultipleSubcommands - A callback for the case where multiple
   /// subcommands are present in the arguments. It gets a list of all found
   /// subcommands.

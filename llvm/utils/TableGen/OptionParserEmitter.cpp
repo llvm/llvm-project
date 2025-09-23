@@ -285,10 +285,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     if (R.getValue("SubCommands") != nullptr) {
       std::vector<const Record *> SubCommands =
           R.getValueAsListOfDefs("SubCommands");
-      SubCommandKeyT CommandKey;
+      SubCommandKeyT SubCommandKey;
       for (const auto &SubCommand : SubCommands)
-        CommandKey.push_back(SubCommand->getName());
-      OS << SubCommandIDs[CommandKey];
+        SubCommandKey.push_back(SubCommand->getName());
+      OS << SubCommandIDs[SubCommandKey];
     } else {
       // The option SubCommandIDsOffset (for default top level toolname is 0).
       OS << " 0";
@@ -299,10 +299,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<const Record *> RSubCommands =
         R.getValueAsListOfDefs("SubCommands");
-    SubCommandKeyT CommandKey;
+    SubCommandKeyT SubCommandKey;
     for (const auto &SubCommand : RSubCommands)
-      CommandKey.push_back(SubCommand->getName());
-    SubCommandIDs.try_emplace(CommandKey, 0);
+      SubCommandKey.push_back(SubCommand->getName());
+    SubCommandIDs.try_emplace(SubCommandKey, 0);
   }
 
   DenseSet<StringRef> PrefixesUnionSet;
@@ -357,34 +357,35 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n};\n";
   OS << "#endif // OPTTABLE_PREFIXES_TABLE_CODE\n\n";
 
-  // Dump command IDs.
+  // Dump subcommand IDs.
   OS << "/////////";
-  OS << "// Command IDs\n\n";
+  OS << "// SubCommand IDs\n\n";
   OS << "#ifdef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE\n";
   OS << "static constexpr unsigned OptionSubCommandIDsTable[] = {\n";
   {
-    // Ensure the first command set is always empty.
+    // Ensure the first subcommand set is always empty.
     assert(!SubCommandIDs.empty() &&
-           "We should always emit an empty set of commands");
+           "We should always emit an empty set of subcommands");
     assert(SubCommandIDs.begin()->first.empty() &&
-           "First command set should always be empty");
+           "First subcommand set should always be empty");
     llvm::ListSeparator Sep(",\n");
     unsigned CurIndex = 0;
-    for (auto &[Command, CommandIndex] : SubCommandIDs) {
-      // First emit the number of command strings in this list of commands.
-      OS << Sep << "  " << Command.size() << " /* commands */";
-      CommandIndex = CurIndex;
-      assert((CurIndex == 0 || !Command.empty()) &&
-             "Only first command set should be empty!");
-      for (const auto &CommandKey : Command) {
+    for (auto &[SubCommand, SubCommandIndex] : SubCommandIDs) {
+      // First emit the number of subcommand strings in this list of
+      // subcommands.
+      OS << Sep << "  " << SubCommand.size() << " /* subcommands */";
+      SubCommandIndex = CurIndex;
+      assert((CurIndex == 0 || !SubCommand.empty()) &&
+             "Only first subcommand set should be empty!");
+      for (const auto &SubCommandKey : SubCommand) {
         auto It = std::find_if(
             SubCommands.begin(), SubCommands.end(),
-            [&](const Record *R) { return R->getName() == CommandKey; });
-        assert(It != SubCommands.end() && "Command not found");
+            [&](const Record *R) { return R->getName() == SubCommandKey; });
+        assert(It != SubCommands.end() && "SubCommand not found");
         OS << ", " << std::distance(SubCommands.begin(), It) << " /* '"
-           << CommandKey << "' */";
+           << SubCommandKey << "' */";
       }
-      CurIndex += Command.size() + 1;
+      CurIndex += SubCommand.size() + 1;
     }
   }
   OS << "\n};\n";

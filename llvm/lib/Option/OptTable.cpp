@@ -776,12 +776,11 @@ void OptTable::internalPrintHelp(
   }
 
   auto DoesOptionBelongToSubcommand = [&](const Info &CandidateInfo) {
-    // llvm::outs() << CandidateInfo.
-    ArrayRef<unsigned> CommandIDs =
+    ArrayRef<unsigned> SubCommandIDs =
         CandidateInfo.getCommandIDs(SubCommandIDsTable);
 
-    // Options with no commands are global.
-    if (CommandIDs.empty()) {
+    // Options with no subcommands are global.
+    if (SubCommandIDs.empty()) {
       // if Subcommand is not empty then don't print global options.
       return Subcommand.empty();
     }
@@ -790,12 +789,12 @@ void OptTable::internalPrintHelp(
     if (Subcommand.empty())
       return false;
 
-    // The command ID is its index in the Commands table.
-    unsigned ActiveCommandID = ActiveSubCommand - &SubCommands[0];
+    // The subcommand ID is its index in the SubCommands table.
+    unsigned ActiveSubCommandID = ActiveSubCommand - &SubCommands[0];
 
     // Check if the option belongs to the active subcommand.
-    for (unsigned ID : CommandIDs) {
-      if (ID == ActiveCommandID) {
+    for (unsigned ID : SubCommandIDs) {
+      if (ID == ActiveSubCommandID) {
         return true;
       }
     }
@@ -846,9 +845,9 @@ void OptTable::internalPrintHelp(
 GenericOptTable::GenericOptTable(const StringTable &StrTable,
                                  ArrayRef<StringTable::Offset> PrefixesTable,
                                  ArrayRef<Info> OptionInfos, bool IgnoreCase,
-                                 ArrayRef<SubCommand> Commands,
+                                 ArrayRef<SubCommand> SubCommands,
                                  ArrayRef<unsigned> SubCommandIDsTable)
-    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, Commands,
+    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
                SubCommandIDsTable) {
 
   std::set<StringRef> TmpPrefixesUnion;
