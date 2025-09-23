@@ -115,6 +115,46 @@ entry:
   ret void
 }
 
+
+define ptx_kernel void @prefetch_grid_const_tensormap(ptr byval([64 x i8]) align 64 "nvvm.grid_constant" %const_ptr) {
+; INFER-LABEL: @prefetch_grid_const_tensormap(
+; INFER-SAME:  ptr byval([64 x i8]) align 64 "nvvm.grid_constant" [[CONST_PTR:%.*]])
+; INFER:       [[CWRAP:%.*]] = call align 64 ptr addrspace(4) @llvm.nvvm.internal.addrspace.wrap.p4.p0(ptr [[CONST_PTR]])
+; INFER:       call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) [[CWRAP]])
+; INFER:       ret void
+
+; PTX-LABEL: .visible .entry prefetch_grid_const_tensormap(
+; PTX:       mov.b64 %rd{{[0-9]+}}, prefetch_grid_const_tensormap_param_0;
+; PTX:       cvta.param.u64 %rd{{[0-9]+}}, %rd{{[0-9]+}};
+; PTX:       prefetch.const.tensormap [%rd{{[0-9]+}}];
+; PTX:       ret;
+
+entry:
+  %cwrap = call align 64 ptr addrspace(4) @llvm.nvvm.internal.addrspace.wrap.p4.p0(ptr %const_ptr)
+  call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %cwrap)
+  ret void
+}
+
+define ptx_kernel void @prefetch_grid_param_tensormap(ptr byval([64 x i8]) align 64 "nvvm.grid_constant" %param_ptr) {
+; INFER-LABEL: @prefetch_grid_param_tensormap(
+; INFER-SAME:  ptr byval([64 x i8]) align 64 "nvvm.grid_constant" [[PARAM_PTR:%.*]])
+; INFER:       [[CWRAP:%.*]] = call align 64 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[PARAM_PTR]])
+; INFER:       call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) [[CWRAP]])
+; INFER:       ret void
+
+; PTX-LABEL: .visible .entry prefetch_grid_param_tensormap(
+; PTX:       mov.b64 %rd{{[0-9]+}}, prefetch_grid_param_tensormap_param_0;
+; PTX:       cvta.param.u64 %rd{{[0-9]+}}, %rd{{[0-9]+}};
+; PTX:       prefetch.param.tensormap [%rd{{[0-9]+}}];
+; PTX:       ret;
+
+entry:
+  %cwrap = call align 64 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr %param_ptr)
+  call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %cwrap)
+  ret void
+}
+
+
 declare void @llvm.nvvm.prefetch.tensormap.p0(ptr)
 declare void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4))
 declare void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101))
