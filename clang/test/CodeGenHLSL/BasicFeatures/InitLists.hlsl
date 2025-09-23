@@ -57,8 +57,14 @@ struct UnnamedOnly {
   int : 8;
 };
 
+struct EmptyDerived : Empty {};
+
+struct UnnamedDerived : UnnamedOnly {};
+
 // CHECK-DAG: [[ConstE:@.*]] = private unnamed_addr constant %struct.Empty undef, align 1
 // CHECK-DAG: [[ConstUO:@.*]] = private unnamed_addr constant %struct.UnnamedOnly undef, align 1
+// CHECK-DAG: [[ConstED:@.*]] = private unnamed_addr constant %struct.EmptyDerived undef, align 1
+// CHECK-DAG: [[ConstUD:@.*]] = private unnamed_addr constant %struct.UnnamedDerived undef, align 1
 
 // Case 1: Extraneous braces get ignored in literal instantiation.
 // CHECK-LABEL: define hidden void @_Z5case1v(
@@ -1026,4 +1032,26 @@ void case22() {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TI]], ptr align 1 {{.*}}, i32 8, i1 false)
 void case23(UnnamedOnly UO) {
   TwoInts TI = {UO, 1, 2};
+}
+
+// InitList with Derived empty struct on LHS
+// InitList with Derived unnamed bitfield on LHS
+// CHECK-LABEL: case24
+// CHECK: [[ED:%.*]] = alloca %struct.EmptyDerived, align 1
+// CHECK-NEXT: [[UD:%.*]] = alloca %struct.UnnamedDerived, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %ED, ptr align 1 [[ConstED]], i32 1, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %UD, ptr align 1 [[ConstUD]], i32 1, i1 false)
+void case24() {
+ EmptyDerived ED = {};
+ UnnamedDerived UD = {};
+}
+
+// CHECK-LABEL: case25
+// CHECK: [[TI1:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: [[TI2:%.*]] = alloca %struct.TwoInts, align 1
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %TI1, ptr align 1 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 %TI2, ptr align 1 {{.*}}, i32 8, i1 false)
+void case25(EmptyDerived ED, UnnamedDerived UD) {
+ TwoInts TI1 = {ED, 1, 2};
+ TwoInts TI2 = {UD, 1, 2};
 }

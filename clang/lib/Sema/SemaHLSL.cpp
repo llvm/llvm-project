@@ -4286,6 +4286,7 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   size_t ActualSize = ILT.ArgExprs.size();
   if (ExpectedSize == 0 && ActualSize == 0)
     return true;
+
   // For incomplete arrays it is completely arbitrary to choose whether we think
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to
