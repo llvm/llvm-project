@@ -142,6 +142,14 @@ static Type *getIntOrVecTypeForSize(uint64_t NBytes, LLVMContext &Ctx,
 
 static Align minAlign(Align A, Align B) { return A < B ? A : B; }
 
+// Checks if the underlying object of a memcpy operand is an alloca.
+// This helps focus on scratch memory optimizations by filtering out
+// memcpy operations that don't involve stack-allocated memory.
+static bool hasAllocaUnderlyingObject(Value *V) {
+  Value *Underlying = getUnderlyingObject(V);
+  return isa<AllocaInst>(Underlying);
+}
+
 // Checks if both pointer operands can be speculatively loaded for N bytes and
 // computes the minimum alignment to use.
 // Notes:
@@ -493,6 +501,10 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
              << "  - srcIsSelect=" << (isa<SelectInst>(SrcV) ? "true" : "false")
              << '\n'
              << "  - dstIsSelect=" << (isa<SelectInst>(DstV) ? "true" : "false")
+             << '\n'
+             << "  - srcIsAlloca=" << (hasAllocaUnderlyingObject(SrcV) ? "true" : "false")
+             << '\n'
+             << "  - dstIsAlloca=" << (hasAllocaUnderlyingObject(DstV) ? "true" : "false")
              << '\n';
 
       dumpSelect("src", SrcV);
@@ -523,6 +535,15 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (DstAS != SrcAS) {
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: address space mismatch "
                         << "(dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n");
+      continue;
+    }
+
+    // Focus on alloca-based memcpy operations to reduce scratch usage
+    bool DstIsAlloca = hasAllocaUnderlyingObject(Dst);
+    bool SrcIsAlloca = hasAllocaUnderlyingObject(Src);
+    if (!DstIsAlloca && !SrcIsAlloca) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: neither source nor "
+                        << "destination underlying object is alloca\n");
       continue;
     }
 

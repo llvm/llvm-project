@@ -9,35 +9,38 @@
 @G0 = addrspace(1) global [4 x i32] zeroinitializer, align 16
 @G1 = addrspace(1) global [4 x i32] zeroinitializer, align 16
 
-declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg)
 
 ; -----------------------------------------------------------------------------
 ; Source is a select. Expect value-level select of two <4 x i32> loads
 ; and a single store, with no remaining memcpy.
 ;
-define amdgpu_kernel void @value_select_src(ptr addrspace(1) %dst, i1 %cond) {
+define amdgpu_kernel void @value_select_src(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @value_select_src(
-; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(1) @G0, i64 0, i64 0
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(1) @G1, i64 0, i64 0
-; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) [[A]], ptr addrspace(1) [[B]]
-; CHECK-NEXT:    [[LA:%.*]] = load <4 x i32>, ptr addrspace(1) [[A]], align 16
-; CHECK-NEXT:    [[LB:%.*]] = load <4 x i32>, ptr addrspace(1) [[B]], align 16
+; CHECK-NEXT:    [[PA:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; CHECK-NEXT:    [[PB:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; CHECK-NEXT:    [[DST:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(5) [[PA]], ptr addrspace(5) [[PB]]
+; CHECK-NEXT:    [[LA:%.*]] = load <4 x i32>, ptr addrspace(5) [[PA]], align 16
+; CHECK-NEXT:    [[LB:%.*]] = load <4 x i32>, ptr addrspace(5) [[PB]], align 16
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], <4 x i32> [[LA]], <4 x i32> [[LB]]
-; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr addrspace(1) [[DST]], align 16
+; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr addrspace(5) [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  ; Pointers to two 16-byte aligned buffers in the same addrspace(1).
-  %pa = getelementptr inbounds [4 x i32], ptr addrspace(1) @G0, i64 0, i64 0
-  %pb = getelementptr inbounds [4 x i32], ptr addrspace(1) @G1, i64 0, i64 0
-  %src = select i1 %cond, ptr addrspace(1) %pa, ptr addrspace(1) %pb
+  ; Pointers to two 16-byte aligned buffers using alloca.
+  %pa = alloca [4 x i32], align 16, addrspace(5)
+  %pb = alloca [4 x i32], align 16, addrspace(5)
+  %dst = alloca [4 x i32], align 16, addrspace(5)
+  %src = select i1 %cond, ptr addrspace(5) %pa, ptr addrspace(5) %pb
 
   ; Provide explicit operand alignments so the pass can emit an aligned store.
-  call void @llvm.memcpy.p1.p1.i64(
-  ptr addrspace(1) align 16 %dst,
-  ptr addrspace(1) align 16 %src,
+  call void @llvm.memcpy.p5.p5.i64(
+  ptr addrspace(5) align 16 %dst,
+  ptr addrspace(5) align 16 %src,
   i64 16, i1 false)
 
   ret void
@@ -47,25 +50,30 @@ entry:
 ; Destination is a select. Expect CFG split with two memcpys guarded
 ; by a branch (we do not speculate stores in this pass).
 ;
-define amdgpu_kernel void @dest_select_cfg_split(ptr addrspace(1) %da, ptr addrspace(1) %db,
+define amdgpu_kernel void @dest_select_cfg_split(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @dest_select_cfg_split(
-; CHECK-SAME: ptr addrspace(1) [[DA:%.*]], ptr addrspace(1) [[DB:%.*]], ptr addrspace(1) [[SRC:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DST:%.*]] = select i1 [[COND]], ptr addrspace(1) [[DA]], ptr addrspace(1) [[DB]]
+; CHECK-NEXT:    [[DA:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; CHECK-NEXT:    [[DB:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [4 x i32], align 16, addrspace(5)
+; CHECK-NEXT:    [[DST:%.*]] = select i1 [[COND]], ptr addrspace(5) [[DA]], ptr addrspace(5) [[DB]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
 ; CHECK:       [[MEMCPY_JOIN:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DA]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) [[DA]], ptr addrspace(5) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DB]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) [[DB]], ptr addrspace(5) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
-  ptr addrspace(1) %src, i1 %cond) {
 entry:
-  %dst = select i1 %cond, ptr addrspace(1) %da, ptr addrspace(1) %db
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 16, i1 false)
+  %da = alloca [4 x i32], align 16, addrspace(5)
+  %db = alloca [4 x i32], align 16, addrspace(5)
+  %src = alloca [4 x i32], align 16, addrspace(5)
+  %dst = select i1 %cond, ptr addrspace(5) %da, ptr addrspace(5) %db
+  call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) %dst, ptr addrspace(5) %src, i64 16, i1 false)
   ret void
 }
 
@@ -75,27 +83,29 @@ entry:
 ;
 @G2 = addrspace(1) global [4 x double] zeroinitializer, align 32
 @G3 = addrspace(1) global [4 x double] zeroinitializer, align 32
-define amdgpu_kernel void @value_select_src_4xd(ptr addrspace(1) %dst, i1 %cond) {
+define amdgpu_kernel void @value_select_src_4xd(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @value_select_src_4xd(
-; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds [4 x double], ptr addrspace(1) @G2, i64 0, i64 0
-; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds [4 x double], ptr addrspace(1) @G3, i64 0, i64 0
-; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) [[PA]], ptr addrspace(1) [[PB]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr addrspace(1) [[PA]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr addrspace(1) [[PB]], align 32
+; CHECK-NEXT:    [[PA:%.*]] = alloca [4 x double], align 32, addrspace(5)
+; CHECK-NEXT:    [[PB:%.*]] = alloca [4 x double], align 32, addrspace(5)
+; CHECK-NEXT:    [[DST:%.*]] = alloca [4 x double], align 32, addrspace(5)
+; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(5) [[PA]], ptr addrspace(5) [[PB]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr addrspace(5) [[PA]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr addrspace(5) [[PB]], align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND]], <4 x i64> [[TMP0]], <4 x i64> [[TMP1]]
-; CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr addrspace(1) [[DST]], align 32
+; CHECK-NEXT:    store <4 x i64> [[TMP2]], ptr addrspace(5) [[DST]], align 32
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %pa = getelementptr inbounds [4 x double], ptr addrspace(1) @G2, i64 0, i64 0
-  %pb = getelementptr inbounds [4 x double], ptr addrspace(1) @G3, i64 0, i64 0
-  %src = select i1 %cond, ptr addrspace(1) %pa, ptr addrspace(1) %pb
+  %pa = alloca [4 x double], align 32, addrspace(5)
+  %pb = alloca [4 x double], align 32, addrspace(5)
+  %dst = alloca [4 x double], align 32, addrspace(5)
+  %src = select i1 %cond, ptr addrspace(5) %pa, ptr addrspace(5) %pb
 
-  call void @llvm.memcpy.p1.p1.i64(
-  ptr addrspace(1) align 32 %dst,
-  ptr addrspace(1) align 32 %src,
+  call void @llvm.memcpy.p5.p5.i64(
+  ptr addrspace(5) align 32 %dst,
+  ptr addrspace(5) align 32 %src,
   i64 32, i1 false)
 
   ret void
@@ -107,27 +117,29 @@ entry:
 ;
 @G4 = addrspace(1) global [3 x i8] zeroinitializer, align 1
 @G5 = addrspace(1) global [3 x i8] zeroinitializer, align 1
-define amdgpu_kernel void @value_select_src_3xc(ptr addrspace(1) %dst, i1 %cond) {
+define amdgpu_kernel void @value_select_src_3xc(i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @value_select_src_3xc(
-; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds [3 x i8], ptr addrspace(1) @G4, i64 0, i64 0
-; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds [3 x i8], ptr addrspace(1) @G5, i64 0, i64 0
-; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) [[PA]], ptr addrspace(1) [[PB]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i8>, ptr addrspace(1) [[PA]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr addrspace(1) [[PB]], align 1
+; CHECK-NEXT:    [[PA:%.*]] = alloca [3 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    [[PB:%.*]] = alloca [3 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    [[DST:%.*]] = alloca [3 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(5) [[PA]], ptr addrspace(5) [[PB]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i8>, ptr addrspace(5) [[PA]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr addrspace(5) [[PB]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND]], <3 x i8> [[TMP0]], <3 x i8> [[TMP1]]
-; CHECK-NEXT:    store <3 x i8> [[TMP2]], ptr addrspace(1) [[DST]], align 1
+; CHECK-NEXT:    store <3 x i8> [[TMP2]], ptr addrspace(5) [[DST]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %pa = getelementptr inbounds [3 x i8], ptr addrspace(1) @G4, i64 0, i64 0
-  %pb = getelementptr inbounds [3 x i8], ptr addrspace(1) @G5, i64 0, i64 0
-  %src = select i1 %cond, ptr addrspace(1) %pa, ptr addrspace(1) %pb
+  %pa = alloca [3 x i8], align 1, addrspace(5)
+  %pb = alloca [3 x i8], align 1, addrspace(5)
+  %dst = alloca [3 x i8], align 1, addrspace(5)
+  %src = select i1 %cond, ptr addrspace(5) %pa, ptr addrspace(5) %pb
 
-  call void @llvm.memcpy.p1.p1.i64(
-  ptr addrspace(1) align 1 %dst,
-  ptr addrspace(1) align 1 %src,
+  call void @llvm.memcpy.p5.p5.i64(
+  ptr addrspace(5) align 1 %dst,
+  ptr addrspace(5) align 1 %src,
   i64 3, i1 false)
 
   ret void
@@ -144,10 +156,7 @@ define amdgpu_kernel void @value_select_src_constexpr_gep(ptr addrspace(1) %dst,
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) @GEPA, ptr addrspace(1) @GEPB
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(1) @GEPA, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) @GEPB, align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND]], <4 x i32> [[TMP0]], <4 x i32> [[TMP1]]
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr addrspace(1) [[DST]], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 16 [[DST]], ptr addrspace(1) align 16 [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -172,15 +181,8 @@ define amdgpu_kernel void @dest_select_constexpr_gep(ptr addrspace(1) %src, i1 %
 ; CHECK-SAME: ptr addrspace(1) [[SRC:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DST:%.*]] = select i1 [[COND]], ptr addrspace(1) @GEPA, ptr addrspace(1) @GEPB
-; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
-; CHECK:       [[MEMCPY_JOIN:.*]]:
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) @GEPA, ptr addrspace(1) [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
-; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) @GEPB, ptr addrspace(1) [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
 entry:
   %dst = select i1 %cond,
@@ -201,15 +203,8 @@ define amdgpu_kernel void @src_select_null_arm(ptr addrspace(1) %dst, i1 %cond) 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[NONNULL:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(1) @GN, i64 0, i64 0
 ; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) [[NONNULL]], ptr addrspace(1) null
-; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
-; CHECK:       [[MEMCPY_JOIN:.*]]:
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[NONNULL]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
-; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) null, i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
 entry:
   %nonnull = getelementptr inbounds [4 x i32], ptr addrspace(1) @GN, i64 0, i64 0
@@ -228,15 +223,8 @@ define amdgpu_kernel void @dst_select_null_arm(ptr addrspace(1) %src, i1 %cond) 
 ; CHECK-SAME: ptr addrspace(1) [[SRC:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DST:%.*]] = select i1 [[COND]], ptr addrspace(1) null, ptr addrspace(1) @GN
-; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
-; CHECK:       [[MEMCPY_JOIN:.*]]:
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) null, ptr addrspace(1) [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
-; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) @GN, ptr addrspace(1) [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
 entry:
   %dst = select i1 %cond, ptr addrspace(1) null,
@@ -256,15 +244,8 @@ define amdgpu_kernel void @src_select_poison_arm(ptr addrspace(1) %dst, i1 %cond
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[NONNULL:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(1) @GP, i64 0, i64 0
 ; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) [[NONNULL]], ptr addrspace(1) poison
-; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
-; CHECK:       [[MEMCPY_JOIN:.*]]:
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[NONNULL]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
-; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) poison, i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
 entry:
   %nonnull = getelementptr inbounds [4 x i32], ptr addrspace(1) @GP, i64 0, i64 0
@@ -283,15 +264,8 @@ define amdgpu_kernel void @dst_select_poison_arm(ptr addrspace(1) %src, i1 %cond
 ; CHECK-SAME: ptr addrspace(1) [[SRC:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DST:%.*]] = select i1 [[COND]], ptr addrspace(1) poison, ptr addrspace(1) @GP
-; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
-; CHECK:       [[MEMCPY_JOIN:.*]]:
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) poison, ptr addrspace(1) [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
-; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) @GP, ptr addrspace(1) [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
 entry:
   %dst = select i1 %cond, ptr addrspace(1) poison,
@@ -354,15 +328,8 @@ define amdgpu_kernel void @memcpy_src_select_arg_arms_cfg_split(ptr addrspace(1)
 ; CHECK-SAME: ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[PA:%.*]], ptr addrspace(1) [[PB:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SRC:%.*]] = select i1 [[COND]], ptr addrspace(1) [[PA]], ptr addrspace(1) [[PB]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[MEMCPY_THEN:.*]], label %[[MEMCPY_ELSE:.*]]
-; CHECK:       [[MEMCPY_JOIN:.*]]:
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[MEMCPY_THEN]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[PA]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
-; CHECK:       [[MEMCPY_ELSE]]:
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[PB]], i64 16, i1 false)
-; CHECK-NEXT:    br label %[[MEMCPY_JOIN]]
 ;
   ptr addrspace(1) %pa,
   ptr addrspace(1) %pb,
