@@ -531,11 +531,8 @@ public:
     const SrcState &S = getStateBefore(Inst);
 
     std::vector<MCInstReference> Result;
-    for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg)) {
-      MCInstReference Ref = MCInstReference::get(*Inst, BF);
-      assert(!Ref.empty() && "Expected Inst to be found");
-      Result.push_back(Ref);
-    }
+    for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg))
+      Result.push_back(MCInstReference::get(*Inst, BF));
     return Result;
   }
 };
@@ -1103,11 +1100,8 @@ public:
     const DstState &S = getStateAfter(Inst);
 
     std::vector<MCInstReference> Result;
-    for (const MCInst *Inst : firstLeakingInsts(S, LeakedReg)) {
-      MCInstReference Ref = MCInstReference::get(*Inst, BF);
-      assert(!Ref.empty() && "Expected Inst to be found");
-      Result.push_back(Ref);
-    }
+    for (const MCInst *Inst : firstLeakingInsts(S, LeakedReg))
+      Result.push_back(MCInstReference::get(*Inst, BF));
     return Result;
   }
 };
