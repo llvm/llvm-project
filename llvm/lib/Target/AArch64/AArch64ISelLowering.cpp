@@ -20470,8 +20470,7 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // Given an extract(load) or extract(extend(load)), produce a scalar load
   // instead to avoid the cross-register-bank copies.
   if (DCI.isAfterLegalizeDAG() && Subtarget->isLittleEndian() &&
-      VT.isInteger() && isa<ConstantSDNode>(N1) &&
-      !N0.getValueType().isScalableVector()) {
+      VT.isInteger() && isa<ConstantSDNode>(N1)) {
     SDValue LoadN0 = N0;
     // Look through sext/zext and extract_subvector / insert_subvector if
     // required.
@@ -20481,8 +20480,7 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         N0.getOperand(0).hasOneUse())
       LoadN0 = N0.getOperand(0);
     unsigned OffsetElts = 0;
-    if (LoadN0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        !LoadN0.getOperand(0).getValueType().isScalableVector()) {
+    if (LoadN0.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
       OffsetElts = LoadN0.getConstantOperandVal(1);
       LoadN0 = LoadN0.getOperand(0);
     }
@@ -20510,9 +20508,6 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         })) {
 
       SDLoc DL(Load);
-      EVT ScalarVT = Load->getValueType(0).getScalarType();
-      if (ScalarVT.getSizeInBits() < 32)
-        ScalarVT = MVT::i32;
 
       // Generate a new scalar load.
       unsigned Offset = (OffsetElts + N->getConstantOperandVal(1)) *
@@ -20525,20 +20520,12 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
               : (N0.getOpcode() == ISD::SIGN_EXTEND ? ISD::SEXTLOAD
                                                     : ISD::EXTLOAD);
       SDValue ScalarLoad =
-          DAG.getExtLoad(ExtType, DL, ScalarVT, Load->getChain(), BasePtr,
+          DAG.getExtLoad(ExtType, DL, VT, Load->getChain(), BasePtr,
                          Load->getPointerInfo().getWithOffset(Offset),
                          Load->getValueType(0).getScalarType(),
                          commonAlignment(Load->getAlign(), Offset),
                          Load->getMemOperand()->getFlags(), Load->getAAInfo());
       DAG.makeEquivalentMemoryOrdering(Load, ScalarLoad);
-
-      // Extend back to the original type if we looked through an extend above.
-      if ((N0.getOpcode() == ISD::ZERO_EXTEND ||
-           N0.getOpcode() == ISD::SIGN_EXTEND ||
-           N0.getOpcode() == ISD::ANY_EXTEND) &&
-          ScalarVT.getScalarSizeInBits() < VT.getScalarSizeInBits())
-        ScalarLoad = DAG.getNode(N0.getOpcode(), DL, VT, ScalarLoad);
-
       return ScalarLoad;
     }
   }
