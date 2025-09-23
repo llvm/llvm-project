@@ -8,7 +8,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast(bitcast, %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>>), !cir.ptr<!cir.array<!rec_NoOps x 125>>
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<125> : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[BITCAST]] : !cir.ptr<!cir.array<!rec_NoOps x 125>>), !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_NoOps>, %[[ARR_SIZE]] : !u64i), !cir.ptr<!rec_NoOps>
+// CHECK-NEXT: %[[ONE_PAST_LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_NoOps>, %[[ARR_SIZE]] : !u64i), !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_NoOps>, !cir.ptr<!cir.ptr<!rec_NoOps>>, ["__array_idx"] {alignment = 1 : i64}
 // CHECK-NEXT: cir.store %[[DECAY]], %[[ARR_IDX]] : !cir.ptr<!rec_NoOps>, !cir.ptr<!cir.ptr<!rec_NoOps>>
 // CHECK-NEXT: cir.do {
@@ -20,7 +20,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
@@ -44,7 +44,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast(bitcast, %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!cir.array<!rec_NoOps x 5> x 5>>), !cir.ptr<!cir.array<!rec_NoOps x 25>>
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<25> : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[BITCAST]] : !cir.ptr<!cir.array<!rec_NoOps x 25>>), !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_NoOps>, %[[ARR_SIZE]] : !u64i), !cir.ptr<!rec_NoOps>
+// CHECK-NEXT: %[[ONE_PAST_LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_NoOps>, %[[ARR_SIZE]] : !u64i), !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_NoOps>, !cir.ptr<!cir.ptr<!rec_NoOps>>, ["__array_idx"] {alignment = 1 : i64}
 // CHECK-NEXT: cir.store %[[DECAY]], %[[ARR_IDX]] : !cir.ptr<!rec_NoOps>, !cir.ptr<!cir.ptr<!rec_NoOps>>
 // CHECK-NEXT: cir.do {
@@ -56,7 +56,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
@@ -73,7 +73,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!rec_NoOps x 5>, !cir.ptr<!cir.array<!rec_NoOps x 5>>, ["openacc.private.init", init] {alignment = 16 : i64}
 // CHECK-NEXT: %[[ARR_SIZE:.*]] = cir.const #cir.int<5> : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[TL_ALLOCA]] : !cir.ptr<!cir.array<!rec_NoOps x 5>>), !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_NoOps>, %[[ARR_SIZE]] : !u64i), !cir.ptr<!rec_NoOps>
+// CHECK-NEXT: %[[ONE_PAST_LAST_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_NoOps>, %[[ARR_SIZE]] : !u64i), !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_NoOps>, !cir.ptr<!cir.ptr<!rec_NoOps>>, ["__array_idx"] {alignment = 1 : i64}
 // CHECK-NEXT: cir.store %[[DECAY]], %[[ARR_IDX]] : !cir.ptr<!rec_NoOps>, !cir.ptr<!cir.ptr<!rec_NoOps>>
 // CHECK-NEXT: cir.do {
@@ -85,7 +85,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
