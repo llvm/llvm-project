@@ -476,10 +476,12 @@ struct DistinctObjectsOpLowering
   matchAndRewrite(memref::DistinctObjectsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ValueRange operands = adaptor.getOperands();
-    if (operands.empty()) {
-      rewriter.eraseOp(op);
+    if (operands.size() <= 1) {
+      // Fast path.
+      rewriter.replaceOp(op, operands);
       return success();
     }
+
     Location loc = op.getLoc();
     SmallVector<Value> ptrs;
     for (auto [origOperand, newOperand] :

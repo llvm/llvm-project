@@ -549,6 +549,10 @@ OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
 LogicalResult DistinctObjectsOp::verify() {
   if (getOperandTypes() != getResultTypes())
     return emitOpError("operand types and result types must match");
+
+  if (getOperandTypes().empty())
+    return emitOpError("expected at least one operand");
+
   return success();
 }
 

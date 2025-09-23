@@ -187,16 +187,16 @@ def DistinctObjectsOp : MemRef_Op<"distinct_objects", [
     ]> {
   let summary = "assumption that acesses to specific memrefs will never alias";
   let description = [{
-      The `distinct_objects` operation takes a list of memrefs and returns a list of
-      memrefs of the same types, with the additional assumption that accesses to
-      these memrefs will never alias with each other. This means that loads and
-      stores to different memrefs in the list can be safely reordered.
+      The `distinct_objects` operation takes a list of memrefs and returns the same
+      memrefs, with the additional assumption that accesses to them will never
+      alias with each other. This means that loads and stores to different
+      memrefs in the list can be safely reordered.
 
-      If the memrefs do alias, the behavior is undefined. This operation doesn't
-      affect the semantics of a program where the non-aliasing assumption holds
-      true. It is intended for optimization purposes, allowing the compiler to
-      generate more efficient code based on the non-aliasing assumption. The
-      optimization is best-effort.
+      If the memrefs do alias, the load/store behavior is undefined. This
+      operation doesn't affect the semantics of a valid program. It is
+      intended for optimization purposes, allowing the compiler to generate more
+      efficient code based on the non-aliasing assumption. The optimization is
+      best-effort.
 
       Example:
 

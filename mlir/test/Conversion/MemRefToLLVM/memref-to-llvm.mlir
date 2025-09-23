@@ -214,6 +214,17 @@ func.func @distinct_objects(%arg0: memref<?xf16>, %arg1: memref<?xf32>, %arg2: m
 
 // -----
 
+// ALL-LABEL: func @distinct_objects_noop
+//  ALL-SAME:   (%[[ARG0:.*]]: memref<?xf16>)
+func.func @distinct_objects_noop(%arg0: memref<?xf16>) -> memref<?xf16> {
+// 1-operand version is noop
+//  ALL-NEXT:   return %[[ARG0]]
+  %1 = memref.distinct_objects %arg0 : memref<?xf16>
+  return %1 : memref<?xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @assume_alignment_w_offset
 // CHECK-INTERFACE-LABEL: func @assume_alignment_w_offset
 func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset: ?>>) {
