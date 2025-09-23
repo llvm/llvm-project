@@ -1497,18 +1497,18 @@ static Value getExtendInputZp(OpBuilder &builder, Type valueTy,
     auto zpTy = result.getType();
     if (zpTy.getIntOrFloatBitWidth() < 32) {
       if (zpTy.isUnsignedInteger()) {
-        result =
-            builder.create<arith::ExtUIOp>(loc, builder.getI32Type(), result);
+        return builder.create<arith::ExtUIOp>(loc, builder.getI32Type(),
+                                              result);
       } else {
-        result =
-            builder.create<arith::ExtSIOp>(loc, builder.getI32Type(), result);
+        return builder.create<arith::ExtSIOp>(loc, builder.getI32Type(),
+                                              result);
       }
     }
   } else {
     const int32_t bitwidth = valueTy.getIntOrFloatBitWidth();
     // Extend zeropoint for sub-32bits widths.
     const int32_t attrBitwidth = bitwidth > 32 ? bitwidth : 32;
-    result = builder.create<arith::ConstantOp>(
+    return builder.create<arith::ConstantOp>(
         loc, IntegerAttr::get(builder.getIntegerType(attrBitwidth), *maybeZp));
   }
   return result;
@@ -1528,20 +1528,18 @@ static Value getI32OutputZp(OpBuilder &builder, Type valueTy,
     auto zpTy = result.getType();
     if (zpTy.getIntOrFloatBitWidth() < 32) {
       if (zpTy.isUnsignedInteger()) {
-        result =
-            builder.create<arith::ExtUIOp>(loc, builder.getI32Type(), result);
+        return builder.create<arith::ExtUIOp>(loc, builder.getI32Type(),
+                                              result);
       } else {
-        result =
-            builder.create<arith::ExtSIOp>(loc, builder.getI32Type(), result);
+        return builder.create<arith::ExtSIOp>(loc, builder.getI32Type(),
+                                              result);
       }
     } else if (zpTy.getIntOrFloatBitWidth() > 32) {
-      result =
-          builder.create<arith::TruncIOp>(loc, builder.getI32Type(), result);
+      return builder.create<arith::TruncIOp>(loc, builder.getI32Type(), result);
     }
   } else {
-    const int32_t attrBitwidth = 32;
-    result = builder.create<arith::ConstantOp>(
-        loc, IntegerAttr::get(builder.getIntegerType(attrBitwidth), *maybeZp));
+    return builder.create<arith::ConstantOp>(
+        loc, IntegerAttr::get(builder.getIntegerType(32), *maybeZp));
   }
   return result;
 }
