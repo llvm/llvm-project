@@ -50,13 +50,6 @@ void InlinedFunction::dump(raw_ostream &OS) const {
 void InlinedFunction::printElementLine(raw_ostream &OS,
                                        object::SectionedAddress Addr,
                                        bool IsEnd) const {
-  bool LiveIn = !IsEnd && Range.LowPC == Addr.Address;
-  bool LiveOut = IsEnd && Range.HighPC == Addr.Address;
-  // This check is technically redundant as the function is only called when
-  // either a start or end address matches, but it serves as a small safeguard.
-  if (!(LiveIn || LiveOut))
-    return;
-
   uint32_t CallFile, CallLine, CallColumn, CallDiscriminator;
   InlinedFuncDie.getCallerFrame(CallFile, CallLine, CallColumn,
                                 CallDiscriminator);
