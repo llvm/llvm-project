@@ -847,6 +847,7 @@ struct AddressSanitizer {
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
+  void markCatchParametersAsUninteresting(Function &F);
 
 private:
   friend struct FunctionStackPoisoner;
@@ -1397,16 +1398,6 @@ void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI,
   MI->eraseFromParent();
 }
 
-// Check if an alloca is a catch block parameter
-static bool isCatchParameter(const AllocaInst &AI) {
-  for (const Use &U : AI.uses()) {
-    if (isa<CatchPadInst>(U.getUser())) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Check if we want (and can) handle this alloca.
 bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   auto [It, Inserted] = ProcessedAllocas.try_emplace(&AI);
@@ -1427,11 +1418,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        // swifterror allocas are register promoted by ISel
        !AI.isSwiftError() &&
        // safe allocas are not interesting
-       !(SSGI && SSGI->isSafe(AI)) &&
-       // Mitigation for https://github.com/google/sanitizers/issues/749
-       // We don't instrument Windows catch-block parameters to avoid
-       // interfering with exception handling assumptions.
-       !(TargetTriple.isOSWindows() && isCatchParameter(AI)));
+       !(SSGI && SSGI->isSafe(AI)));
 
   It->second = IsInteresting;
   return IsInteresting;
@@ -2989,6 +2976,24 @@ void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
     }
   }
 }
+// Mitigation for https://github.com/google/sanitizers/issues/749
+// We don't instrument Windows catch-block parameters to avoid
+// interfering with exception handling assumptions.
+void AddressSanitizer::markCatchParametersAsUninteresting(Function &F) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (auto *CatchPad = dyn_cast<CatchPadInst>(&I)) {
+        // Mark the parameters to a catch-block as uninteresting to avoid
+        // instrumenting them
+        for (Value *Operand : CatchPad->arg_operands()) {
+          if (auto *AI = dyn_cast<AllocaInst>(Operand)) {
+            ProcessedAllocas[AI] = false;
+          }
+        }
+      }
+    }
+  }
+}
 
 bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
   bool ShouldInstrument =
@@ -3031,6 +3036,9 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   // We can't instrument allocas used with llvm.localescape. Only static allocas
   // can be passed to that intrinsic.
   markEscapedLocalAllocas(F);
+
+  if (TargetTriple.isOSWindows())
+    markCatchParametersAsUninteresting(F);
 
   // We want to instrument every address only once per basic block (unless there
   // are calls between uses).
