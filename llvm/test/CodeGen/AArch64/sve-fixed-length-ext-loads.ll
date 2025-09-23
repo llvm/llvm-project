@@ -19,14 +19,12 @@ define <4 x i32> @load_zext_v4i16i32(ptr %ap) vscale_range(2,0) #0 {
 define <2 x i256> @load_zext_v2i64i256(ptr %ap) #0 {
 ; CHECK-LABEL: load_zext_v2i64i256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldp x0, x4, [x0]
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    mov x3, xzr
 ; CHECK-NEXT:    mov x5, xzr
 ; CHECK-NEXT:    mov x6, xzr
-; CHECK-NEXT:    mov x4, v0.d[1]
-; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    mov x7, xzr
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %ap

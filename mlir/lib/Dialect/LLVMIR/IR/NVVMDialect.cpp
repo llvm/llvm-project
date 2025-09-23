@@ -45,12 +45,14 @@ using namespace NVVM;
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
 
+static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
+
 //===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
 
 // This verifier is shared among the following Ops:
-// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
+// CpAsyncBulkTensorSharedCTAToGlobalOp (TMA Store)
 // CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
 static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
                                                      bool isIm2Col,
@@ -72,13 +74,6 @@ static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
           loc, "im2col offsets must be 2 less than number of coordinates");
   }
   return success();
-}
-
-LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -154,6 +149,38 @@ static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
 }
 
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
+  return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
+                             getMode(), getLoc());
+}
+
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  TMALoadMode mode = getMode();
+  bool isCTAOnly = getIsCTAOnly();
+  if (getPredicate()) { // Inline-asm based lowering
+    if (isCTAOnly)
+      return emitError("Predicate is supported only for shared::cluster mode.");
+    if (mode != TMALoadMode::TILE && mode != TMALoadMode::IM2COL)
+      return emitError(
+          "Predicate is supported only for Tile and Im2col modes.");
+  } else { // Intrinsics-based lowering
+    NVVMMemorySpace expectedAS =
+        isCTAOnly ? NVVMMemorySpace::Shared : NVVMMemorySpace::SharedCluster;
+    unsigned AS = llvm::cast<LLVM::LLVMPointerType>(getDstMem().getType())
+                      .getAddressSpace();
+    if (AS != expectedAS)
+      return emitError()
+             << (isCTAOnly
+                     ? "Shared::cta destination requires address-space 3."
+                     : "Shared::cluster destination requires address-space 7.");
+    // Checks specific to shared::cta mode
+    if (isCTAOnly) {
+      if (getMulticastMask())
+        return emitError("Multicast is not supported with shared::cta mode.");
+      if (getGroup())
+        return emitError("CTAGroup is not supported with shared::cta mode.");
+    }
+  }
+
   return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
                              getMode(), getLoc());
 }
@@ -1549,6 +1576,130 @@ mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
     args.push_back(mt.lookupValue(byteMask));
     id = llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global_bytemask;
   }
+
+  return {id, std::move(args)};
+}
+
+bool CpAsyncBulkTensorGlobalToSharedClusterOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  // Add all the operands but not the attrs to the asmValues list.
+  // The attrs here are used to generate the right variants for
+  // intrinsics-lowering. So, we ignore them while generating inline-PTX.
+  for (auto val : getOperands())
+    asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+
+  return false;
+}
+
+mlir::NVVM::IDArgPair
+CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(op);
+  const bool isCTAOnly = thisOp.getIsCTAOnly();
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getMbar()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  // Coordinates and im2col-offsets
+  for (mlir::Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+  for (mlir::Value v : thisOp.getIm2colOffsets())
+    args.push_back(mt.lookupValue(v));
+
+  // MulticastMask, if available
+  mlir::Value mcMask = thisOp.getMulticastMask();
+  const bool hasMC = static_cast<bool>(mcMask);
+  llvm::Value *i16Zero =
+      llvm::ConstantInt::get(llvm::Type::getInt16Ty(mt.getLLVMContext()), 0);
+
+  // CacheHint, if available
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Zero =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+
+  // Flag argument CTAGroup
+  // CTA_1/2 is mapped to values 1 and 2 for the intrinsics.
+  // Hence, the +1 to getGroup().
+  const int32_t val =
+      thisOp.getGroup() ? (static_cast<int32_t>(*thisOp.getGroup()) + 1) : 0;
+  llvm::Value *cg =
+      llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
+
+  if (!isCTAOnly) {
+    // For shared::cluster, all the arguments that we build are applicable.
+    args.push_back(hasMC ? mt.lookupValue(mcMask) : i16Zero);
+    args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
+    args.push_back(builder.getInt1(hasMC));
+    args.push_back(builder.getInt1(hasCacheHint));
+    args.push_back(cg);
+  } else {
+    // For shared::cta, only cache-hint is applicable.
+    args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
+    args.push_back(builder.getInt1(hasCacheHint));
+  }
+
+  constexpr size_t numDims = 5;  // 1D to 5D
+  constexpr size_t numModes = 5; // Tile, Im2col, w, w_128, gather4
+  using rowTy = std::array<llvm::Intrinsic::ID, numDims + 1>;
+  using TableTy = std::array<rowTy, numModes>;
+  static constexpr TableTy IDTable{
+      {{notIntrinsic, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_128_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_128_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_128_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d}}};
+
+  static constexpr TableTy IDTableCTA{
+      {{notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_1d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_2d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_128_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_128_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_128_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d}}};
+
+  static_assert(
+      (getMaxEnumValForTMALoadMode() == std::size(IDTable) - 1) &&
+          (getMaxEnumValForTMALoadMode() == std::size(IDTableCTA) - 1),
+      "TMALoadModes must match number of rows in IDTable and IDTableCTA");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  auto id = isCTAOnly ? IDTableCTA[mode][dim] : IDTable[mode][dim];
+  assert(id != notIntrinsic &&
+         "Invalid intrinsic for CpAsyncBulkTensorGlobalToSharedClusterOp.");
 
   return {id, std::move(args)};
 }
