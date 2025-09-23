@@ -7463,6 +7463,7 @@ void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
 
 struct ContainerOfPtr {
   Foo *foo_ptr;
+  ContainerOfPtr *next;
 };
 
 void testIndirectAccess(ContainerOfPtr *fc) {
@@ -7470,6 +7471,23 @@ void testIndirectAccess(ContainerOfPtr *fc) {
   ptr->mu.Lock();
   fc->foo_ptr->data = 42; // access via original
   ptr->mu.Unlock();
+}
+
+void testAliasChainUnrelatedReassignment1(ContainerOfPtr *list) {
+  Foo *eb = list->foo_ptr;
+  eb->mu.Lock();
+  list = list->next;
+  eb->data = 42;
+  eb->mu.Unlock();
+}
+
+void testAliasChainUnrelatedReassignment2(ContainerOfPtr *list) {
+  ContainerOfPtr *busyp = list;
+  Foo *eb = busyp->foo_ptr;
+  eb->mu.Lock();
+  busyp = busyp->next;
+  eb->data = 42;
+  eb->mu.Unlock();
 }
 
 void testControlFlowDoWhile(Foo *f, int x) {

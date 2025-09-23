@@ -39,7 +39,6 @@ struct ConstructId {
   }
 
 MAKE_CONSTR_ID(OmpDeclareVariantDirective, D::OMPD_declare_variant);
-MAKE_CONSTR_ID(OmpErrorDirective, D::OMPD_error);
 MAKE_CONSTR_ID(OpenMPDeclarativeAllocate, D::OMPD_allocate);
 MAKE_CONSTR_ID(OpenMPDeclarativeAssumes, D::OMPD_assumes);
 MAKE_CONSTR_ID(OpenMPDeclareMapperConstruct, D::OMPD_declare_mapper);
@@ -58,10 +57,6 @@ struct DirectiveNameScope {
     name.source = source;
     name.v = id;
     return name;
-  }
-
-  static OmpDirectiveName GetOmpDirectiveName(const OmpNothingDirective &x) {
-    return MakeName(x.source, llvm::omp::Directive::OMPD_nothing);
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
@@ -99,7 +94,6 @@ struct DirectiveNameScope {
       if constexpr (std::is_base_of_v<OmpBlockConstruct, T>) {
         return std::get<OmpBeginDirective>(x.t).DirName();
       } else if constexpr (std::is_same_v<T, OmpDeclareVariantDirective> ||
-          std::is_same_v<T, OmpErrorDirective> ||
           std::is_same_v<T, OpenMPDeclarativeAllocate> ||
           std::is_same_v<T, OpenMPDeclarativeAssumes> ||
           std::is_same_v<T, OpenMPDeclareMapperConstruct> ||

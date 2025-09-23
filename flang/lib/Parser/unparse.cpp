@@ -2621,13 +2621,18 @@ public:
     return false;
   }
   void Unparse(const OmpErrorDirective &x) {
-    Word("!$OMP ERROR ");
-    Walk(x.t);
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OmpNothingDirective &x) {
-    Word("!$OMP NOTHING");
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OpenMPSectionConstruct &x) {
     if (auto &&dirSpec{
@@ -3093,11 +3098,7 @@ template void Unparse<Expr>(llvm::raw_ostream &, const Expr &,
     const common::LangOptions &, Encoding, bool, bool, preStatementType *,
     AnalyzedObjectsAsFortran *);
 
-template void Unparse<parser::OpenMPDeclareReductionConstruct>(
-    llvm::raw_ostream &, const parser::OpenMPDeclareReductionConstruct &,
-    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
-    AnalyzedObjectsAsFortran *);
-template void Unparse<parser::OmpMetadirectiveDirective>(llvm::raw_ostream &,
-    const parser::OmpMetadirectiveDirective &, const common::LangOptions &,
+template void Unparse<parser::OpenMPDeclarativeConstruct>(llvm::raw_ostream &,
+    const parser::OpenMPDeclarativeConstruct &, const common::LangOptions &,
     Encoding, bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser

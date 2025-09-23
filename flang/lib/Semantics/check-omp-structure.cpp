@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/visit.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
@@ -611,14 +612,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
     return false;
   }
-  bool Pre(const parser::OmpErrorDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_error);
-    return false;
-  }
-  bool Pre(const parser::OmpNothingDirective &x) {
-    checker_(x.source, Directive::OMPD_nothing);
-    return false;
-  }
   bool Pre(const parser::OpenMPExecutableAllocate &x) {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
@@ -1054,7 +1047,10 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Leave(const parser::OmpBlockConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpBlockConstruct &x) {
+  if (GetContext().directive == llvm::omp::Directive::OMPD_taskgraph) {
+    CheckTaskgraph(x);
+  }
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
   }
@@ -1761,8 +1757,17 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpNothingDirective &x) {
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpNothingDirective &x) {
+  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
@@ -2033,6 +2038,193 @@ void OmpStructureChecker::CheckTargetUpdate() {
       }
     }
   }
+}
+
+namespace {
+struct TaskgraphVisitor {
+  TaskgraphVisitor(SemanticsContext &context) : context_(context) {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::OpenMPConstruct &x) {
+    parser::OmpDirectiveName name{GetOmpDirectiveName(x)};
+    llvm::ArrayRef<llvm::omp::Directive> leafs{getLeafConstructsOrSelf(name.v)};
+
+    if (!IsTaskGenerating(leafs)) {
+      context_.Say(name.source,
+          "Only task-generating constructs are allowed inside TASKGRAPH region"_err_en_US);
+      // Only visit top-level constructs.
+      return false;
+    }
+
+    const parser::OmpDirectiveSpecification &dirSpec{GetDirSpec(x)};
+
+    // Most restrictions apply to replayable constructs. All constructs are
+    // replayable unless REPLAYABLE(false) is present.
+    bool isReplayable{IsReplayable(dirSpec)};
+    const parser::OmpClause *nogroup{nullptr};
+
+    for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+      switch (clause.Id()) {
+      case llvm::omp::Clause::OMPC_transparent:
+        if (isReplayable) {
+          CheckTransparent(clause);
+        }
+        break;
+      case llvm::omp::Clause::OMPC_detach:
+        if (isReplayable) {
+          context_.Say(clause.source,
+              "Detachable replayable tasks are not allowed in a TASKGRAPH region"_err_en_US);
+        }
+        break;
+      case llvm::omp::Clause::OMPC_if:
+        if (isReplayable) {
+          CheckIf(clause, leafs);
+        }
+        break;
+      case llvm::omp::Clause::OMPC_nogroup:
+        nogroup = &clause;
+        break;
+      default:
+        break;
+      }
+    }
+
+    unsigned version{context_.langOptions().OpenMPVersion};
+    bool allowsNogroup{llvm::omp::isAllowedClauseForDirective(
+        leafs[0], llvm::omp::Clause::OMPC_nogroup, version)};
+
+    if (allowsNogroup) {
+      if (!nogroup) {
+        context_.Say(dirSpec.source,
+            "The NOGROUP clause must be specified on every construct in a TASKGRAPH region that could be enclosed in an implicit TASKGROUP"_err_en_US);
+      }
+    }
+
+    // Only visit top-level constructs.
+    return false;
+  }
+
+private:
+  const parser::OmpDirectiveSpecification &GetDirSpec(
+      const parser::OpenMPConstruct &x) const {
+    return common::visit(
+        common::visitors{
+            [&](const parser::OmpBlockConstruct &y)
+                -> const parser::OmpDirectiveSpecification & {
+              return y.BeginDir();
+            },
+            [&](const parser::OpenMPLoopConstruct &y)
+                -> const parser::OmpDirectiveSpecification & {
+              return y.BeginDir();
+            },
+            [&](const parser::OpenMPStandaloneConstruct &y)
+                -> const parser::OmpDirectiveSpecification & {
+              return std::get<parser::OpenMPSimpleStandaloneConstruct>(y.u).v;
+            },
+            [&](const auto &) -> const parser::OmpDirectiveSpecification & {
+              llvm_unreachable("Invalid construct");
+            },
+        },
+        x.u);
+  }
+
+  bool IsTaskGenerating(llvm::ArrayRef<llvm::omp::Directive> leafs) const {
+    const static llvm::omp::Directive taskGen[] = {
+        llvm::omp::Directive::OMPD_target,
+        llvm::omp::Directive::OMPD_target_data,
+        llvm::omp::Directive::OMPD_target_enter_data,
+        llvm::omp::Directive::OMPD_target_exit_data,
+        llvm::omp::Directive::OMPD_target_update,
+        llvm::omp::Directive::OMPD_task,
+        llvm::omp::Directive::OMPD_taskloop,
+    };
+    return llvm::all_of(leafs,
+        [](llvm::omp::Directive d) { return llvm::is_contained(taskGen, d); });
+  }
+
+  bool IsReplayable(const parser::OmpDirectiveSpecification &dirSpec) const {
+    for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+      if (clause.Id() != llvm::omp::Clause::OMPC_replayable) {
+        continue;
+      }
+      if (auto &repl{std::get<parser::OmpClause::Replayable>(clause.u).v}) {
+        // Scalar<Logical<Constant<indirection<Expr>>>>
+        const parser::Expr &parserExpr{repl->v.thing.thing.thing.value()};
+        if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
+          return GetLogicalValue(*expr).value_or(true);
+        }
+      }
+      break;
+    }
+    return true;
+  }
+
+  void CheckTransparent(const parser::OmpClause &clause) const {
+    bool isTransparent{true};
+    if (auto &transp{std::get<parser::OmpClause::Transparent>(clause.u).v}) {
+      // Scalar<Integer<indirection<Expr>>>
+      const parser::Expr &parserExpr{transp->v.thing.thing.value()};
+      if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
+        // If the argument is omp_not_impex (defined as 0), then
+        // the task is not transparent, otherwise it is.
+        const int64_t omp_not_impex{0};
+        if (auto &&val{evaluate::ToInt64(*expr)}) {
+          isTransparent = *val != omp_not_impex;
+        }
+      }
+    }
+    if (isTransparent) {
+      context_.Say(clause.source,
+          "Transparent replayable tasks are not allowed in a TASKGRAPH region"_err_en_US);
+    }
+  }
+
+  void CheckIf(const parser::OmpClause &clause,
+      llvm::ArrayRef<llvm::omp::Directive> leafs) const {
+    // The only constructs that can generate undeferred tasks (via IF clause)
+    // are TASK and TASKLOOP.
+    if (leafs[0] != llvm::omp::Directive::OMPD_task &&
+        leafs[0] != llvm::omp::Directive::OMPD_taskloop) {
+      return;
+    }
+
+    auto &&ifc{std::get<parser::OmpClause::If>(clause.u)};
+    // Check if there is a directive-name-modifier first.
+    auto &modifiers{OmpGetModifiers(ifc.v)};
+    if (auto *dnm{OmpGetUniqueModifier<parser::OmpDirectiveNameModifier>(
+            modifiers)}) {
+      llvm::omp::Directive sub{dnm->v};
+      auto subLeafs{llvm::omp::getLeafConstructsOrSelf(sub)};
+      // Only interested in the outermost constructs. The body of the created
+      // task is not a part of the TASKGRAPH region.
+      if (subLeafs[0] != leafs[0]) {
+        return;
+      }
+    }
+    // Scalar<Logical<indirection<Expr>>>
+    auto &parserExpr{
+        std::get<parser::ScalarLogicalExpr>(ifc.v.t).thing.thing.value()};
+    if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
+      // If the value is known to be false, an undeferred task will be
+      // generated.
+      if (!GetLogicalValue(*expr).value_or(true)) {
+        context_.Say(clause.source,
+            "Undeferred replayable tasks are not allowed in a TASKGRAPH region"_err_en_US);
+      }
+    }
+  }
+
+  SemanticsContext &context_;
+};
+} // namespace
+
+void OmpStructureChecker::CheckTaskgraph(const parser::OmpBlockConstruct &x) {
+  const parser::Block &block{std::get<parser::Block>(x.t)};
+
+  TaskgraphVisitor visitor{context_};
+  parser::Walk(block, visitor);
 }
 
 void OmpStructureChecker::CheckTaskDependenceType(

@@ -125,20 +125,16 @@ bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
-bool verifyBoundOffset(uint32_t Offset) {
-  return Offset != NumDescriptorsUnbounded;
-}
-
 bool verifyNoOverflowedOffset(uint64_t Offset) {
   return Offset <= std::numeric_limits<uint32_t>::max();
 }
 
-uint64_t computeRangeBound(uint32_t Offset, uint32_t Size) {
+uint64_t computeRangeBound(uint64_t Offset, uint32_t Size) {
   assert(0 < Size && "Must be a non-empty range");
   if (Size == NumDescriptorsUnbounded)
     return NumDescriptorsUnbounded;
 
-  return uint64_t(Offset) + uint64_t(Size) - 1;
+  return Offset + uint64_t(Size) - 1;
 }
 
 } // namespace rootsig
