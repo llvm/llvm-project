@@ -1528,6 +1528,13 @@ static Value getI32OutputZp(OpBuilder &builder, Type valueTy,
     auto zpTy = result.getType();
     if (zpTy.getIntOrFloatBitWidth() < 32) {
       if (zpTy.isUnsignedInteger()) {
+        result =
+            UnrealizedConversionCastOp::create(
+                builder, loc,
+                builder.getIntegerType(zpTy.getIntOrFloatBitWidth()), result)
+                .getResult(0);
+      }
+      if (zpTy.isUnsignedInteger()) {
         return builder.create<arith::ExtUIOp>(loc, builder.getI32Type(),
                                               result);
       } else {
