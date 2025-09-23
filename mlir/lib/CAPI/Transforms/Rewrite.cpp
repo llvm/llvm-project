@@ -399,9 +399,9 @@ void mlirPDLResultListPushBackAttribute(MlirPDLResultList results,
 }
 
 void mlirPDLPatternModuleRegisterRewriteFunction(
-    MlirPDLPatternModule module, MlirStringRef name,
+    MlirPDLPatternModule pdlModule, MlirStringRef name,
     MlirPDLRewriteFunction rewriteFn, void *userData) {
-  unwrap(module)->registerRewriteFunction(
+  unwrap(pdlModule)->registerRewriteFunction(
       unwrap(name),
       [userData, rewriteFn](PatternRewriter &rewriter, PDLResultList &results,
                             ArrayRef<PDLValue> values) -> LogicalResult {
