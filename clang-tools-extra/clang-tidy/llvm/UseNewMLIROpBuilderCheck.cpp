@@ -128,8 +128,8 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
       on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
              .bind("builder")),
       callee(expr().bind("call")),
-      callee(cxxMethodDecl(hasTemplateArgument(0, templateArgument()))),
-      callee(cxxMethodDecl(hasName("create"))));
+      callee(cxxMethodDecl(hasTemplateArgument(0, templateArgument()),
+                           hasName("create"))));
   return applyFirst(
       //  Attempt rewrite given an lvalue builder, else just warn.
       {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), base),
