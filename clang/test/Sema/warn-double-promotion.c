@@ -49,6 +49,15 @@ void Assignment(float f, double d, long double ld) {
   d = ld;
 }
 
+void AssignmentWithExtraParens(float f, double d, long double ld) {
+  d = (f);  //expected-warning{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+  ld = (f); //expected-warning{{implicit conversion increases floating-point precision: 'float' to 'long double'}}
+  ld = (d); //expected-warning{{implicit conversion increases floating-point precision: 'double' to 'long double'}}
+  d = (double)(f);
+  ld = (long double)(f);
+  ld = (long double)(d);
+}
+
 extern void DoubleParameter(double);
 extern void LongDoubleParameter(long double);
 

@@ -96,6 +96,18 @@ void Assignment(float f, double d, long double ld) {
   ld = LongDouble(d);
 }
 
+void AssignmentWithExtraParens(float f, double d, long double ld) {
+  d = static_cast<double>((f));
+  ld = static_cast<long double>((f));
+  ld = static_cast<long double>((d));
+  d = double{(f)};
+  ld = LongDouble{(f)};
+  ld = LongDouble{(d)};
+  d = double((f));
+  ld = LongDouble((f));
+  ld = LongDouble((d));
+}
+
 extern void DoubleParameter(double);
 extern void LongDoubleParameter(long double);
 
