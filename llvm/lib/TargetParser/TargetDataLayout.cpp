@@ -379,7 +379,7 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 }
 
 static std::string computeX86DataLayout(const Triple &TT) {
-  bool Is64Bit = TT.getArch() == Triple::x86_64;
+  bool Is64Bit = TT.isX86_64();
 
   // X86 is little endian
   std::string Ret = "e";

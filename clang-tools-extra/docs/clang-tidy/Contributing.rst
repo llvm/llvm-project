@@ -33,6 +33,9 @@ If CMake is configured with ``CLANG_TIDY_ENABLE_STATIC_ANALYZER=NO``,
 :program:`clang-tidy` will not be built with support for the
 ``clang-analyzer-*`` checks or the ``mpi-*`` checks.
 
+If CMake is configured with ``CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS=NO``,
+:program:`clang-tidy` will not be built with support for query based checks. 
+
 
 .. _AST Matchers: https://clang.llvm.org/docs/LibASTMatchers.html
 .. _PPCallbacks: https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html
