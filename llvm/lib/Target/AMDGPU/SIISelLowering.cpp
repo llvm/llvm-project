@@ -7548,13 +7548,9 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
     break;
   }
   case ISD::XOR: {
-    // Similar to SETCC, if we have (xor c, -1) or (xor -1, c), we will be fine.
+    // Similar to SETCC, if we have (xor c, -1), we will be fine.
     SDValue LHS = Intr->getOperand(0);
     SDValue RHS = Intr->getOperand(1);
-    if (auto *C = dyn_cast<ConstantSDNode>(LHS); C && C->getZExtValue()) {
-      Intr = RHS.getNode();
-      break;
-    }
     if (auto *C = dyn_cast<ConstantSDNode>(RHS); C && C->getZExtValue()) {
       Intr = LHS.getNode();
       break;
