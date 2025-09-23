@@ -331,7 +331,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
 
-  move_ins_before_phis(*OrSaveExec);
+  moveInsBeforePhis(*OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 

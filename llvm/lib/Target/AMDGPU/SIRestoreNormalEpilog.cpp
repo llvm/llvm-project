@@ -22,8 +22,8 @@ public:
   SIRestoreNormalEpilogLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    hoist_unrelated_copies(MF);
-    normalize_ir_post_phi_elimination(MF);
+    hoistUnrelatedCopies(MF);
+    normalizeIrPostPhiElimination(MF);
     return true;
   }
 
