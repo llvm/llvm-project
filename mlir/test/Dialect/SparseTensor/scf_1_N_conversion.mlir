@@ -103,6 +103,7 @@ func.func @while(%arg0: tensor<1024xf32, #SparseVector>, %c: i1) -> tensor<1024x
 // CHECK-SAME:                            %[[VAL_C_4:.*12]]: !sparse_tensor.storage_specifier
 
 // CHECK:           %[[RES:.*]]:4 = scf.index_switch %[[PRED]]
+// CHECK-SAME:          -> memref<?xindex>, memref<?xindex>, memref<?xf32>, !sparse_tensor.storage_specifier
 // CHECK:           case 1 {
 // CHECK:             scf.yield %[[VAL_A_1]], %[[VAL_A_2]], %[[VAL_A_3]], %[[VAL_A_4]]
 // CHECK:           case 2 {

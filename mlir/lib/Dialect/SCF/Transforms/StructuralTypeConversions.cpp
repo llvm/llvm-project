@@ -196,12 +196,11 @@ public:
   convertSourceOp(IndexSwitchOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter,
                   TypeRange dstTypes) const {
-    auto newOp = rewriter.create<IndexSwitchOp>(
-        op.getLoc(), dstTypes, op.getArg(), op.getCases(), op.getNumCases());
+    auto newOp =
+        IndexSwitchOp::create(rewriter, op.getLoc(), dstTypes, op.getArg(),
+                              op.getCases(), op.getNumCases());
 
     for (unsigned i = 0u; i < op.getNumRegions(); i++) {
-      if (failed(rewriter.convertRegionTypes(&op.getRegion(i), *typeConverter)))
-        return std::nullopt;
       auto &dstRegion = newOp.getRegion(i);
       rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
     }
