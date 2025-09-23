@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
+
 // Verifies that the IR builder can handle reductions with multi-block combiner
 // regions on the GPU.
 
@@ -52,7 +52,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 }
 
 // CHECK:      call void @__kmpc_parallel_51({{.*}}, i32 1, i32 -1, i32 -1,
-// CHECK-SAME:   ptr @[[PAR_OUTLINED:.*]], ptr null, ptr %2, i64 1)
+// CHECK-SAME:   ptr @[[PAR_OUTLINED:.*]], ptr null, ptr %{{.*}}, i64 1)
 
 // CHECK: define internal void @[[PAR_OUTLINED]]{{.*}} {
 // CHECK:   .omp.reduction.then:
