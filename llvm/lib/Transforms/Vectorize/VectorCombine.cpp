@@ -2488,9 +2488,9 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
     return false;
 
   // Check whether this is a unary shuffle.
-  // TODO: should this be extended to match undef or unused values.
+  // TODO: check if this can be extended to match undef or unused values,
+  // perhaps using ShuffleVectorInst::isSingleSource.
   bool IsBinaryShuffle = !isa<PoisonValue>(V1);
-  LLVM_DEBUG(dbgs() << "Is binary shuffle: " << IsBinaryShuffle << "\n");
 
   auto *C0 = dyn_cast<CastInst>(V0);
   auto *C1 = dyn_cast<CastInst>(V1);

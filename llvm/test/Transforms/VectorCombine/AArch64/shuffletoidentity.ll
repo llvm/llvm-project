@@ -205,8 +205,8 @@ define <8 x i8> @abs_different(<8 x i8> %a) {
 define <4 x i32> @poison_intrinsic(<2 x i16> %l256) {
 ; CHECK-LABEL: @poison_intrinsic(
 ; CHECK-NEXT:    [[L266:%.*]] = call <2 x i16> @llvm.abs.v2i16(<2 x i16> [[L256:%.*]], i1 false)
-; CHECK-NEXT:    [[L267:%.*]] = zext <2 x i16> [[L266]] to <2 x i32>
-; CHECK-NEXT:    [[L271:%.*]] = shufflevector <2 x i32> [[L267]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[L267:%.*]] = shufflevector <2 x i16> [[L266]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[L271:%.*]] = zext <4 x i16> [[L267]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[L271]]
 ;
   %l266 = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %l256, i1 false)
@@ -534,9 +534,9 @@ define <4 x i64> @single_zext(<4 x i32> %x) {
 
 define <4 x i64> @not_zext(<4 x i32> %x) {
 ; CHECK-LABEL: @not_zext(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i64> [[ZEXT]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    ret <4 x i64> [[REVSHUF]]
+; CHECK-NEXT:    [[REVSHUF:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[REVSHUF:%.*]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %zext = zext <4 x i32> %x to <4 x i64>
   %revshuf = shufflevector <4 x i64> %zext, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -922,10 +922,9 @@ define <4 x i8> @singleop(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 ; CHECK-LABEL: @cast_mismatched_types(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[SHUF]] to <2 x i64>
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x i64> [[ZEXT]], <2 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    ret <4 x i64> [[EXTSHUF]]
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[ZEXT]]
 ;
   %shuf = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
   %zext = zext <2 x i32> %shuf to <2 x i64>
