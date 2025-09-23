@@ -1998,6 +1998,10 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               ProcessReductionSpecifier(spec, clauses);
               visitClauses = false;
             },
+            [&](const parser::OmpBaseVariantNames &names) {
+              Walk(std::get<0>(names.t));
+              Walk(std::get<1>(names.t));
+            },
             [&](const parser::OmpLocator &locator) {
               // Manually resolve names in CRITICAL directives. This is because
               // these names do not denote Fortran objects, and the CRITICAL
