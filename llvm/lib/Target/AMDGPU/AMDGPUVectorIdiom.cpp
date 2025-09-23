@@ -486,6 +486,8 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
           Value *Fv = SI->getFalseValue();
           dumpPtrForms("true", T);
           dumpPtrForms("false", Fv);
+          dbgs() << "      trueIsAlloca=" << (hasAllocaUnderlyingObject(T) ? "true" : "false") << '\n';
+          dbgs() << "      falseIsAlloca=" << (hasAllocaUnderlyingObject(Fv) ? "true" : "false") << '\n';
         }
       };
 
@@ -538,21 +540,30 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
       continue;
     }
 
-    // Focus on alloca-based memcpy operations to reduce scratch usage
-    bool DstIsAlloca = hasAllocaUnderlyingObject(Dst);
-    bool SrcIsAlloca = hasAllocaUnderlyingObject(Src);
-    if (!DstIsAlloca && !SrcIsAlloca) {
-      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: neither source nor "
-                        << "destination underlying object is alloca\n");
-      continue;
-    }
-
+    // Check if we have select instructions and if their operands are alloca-based
+    bool ShouldTransform = false;
     if (auto *Sel = dyn_cast<SelectInst>(Src)) {
-      Changed |= Impl.transformSelectMemcpySource(*MT, *Sel, DL, &DT, &AC);
+      bool TrueIsAlloca = hasAllocaUnderlyingObject(Sel->getTrueValue());
+      bool FalseIsAlloca = hasAllocaUnderlyingObject(Sel->getFalseValue());
+      if (TrueIsAlloca || FalseIsAlloca) {
+        ShouldTransform = true;
+        Changed |= Impl.transformSelectMemcpySource(*MT, *Sel, DL, &DT, &AC);
+      } else {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: select source operands "
+                          << "are not alloca-based\n");
+      }
       continue;
     }
     if (auto *Sel = dyn_cast<SelectInst>(Dst)) {
-      Changed |= Impl.transformSelectMemcpyDest(*MT, *Sel);
+      bool TrueIsAlloca = hasAllocaUnderlyingObject(Sel->getTrueValue());
+      bool FalseIsAlloca = hasAllocaUnderlyingObject(Sel->getFalseValue());
+      if (TrueIsAlloca || FalseIsAlloca) {
+        ShouldTransform = true;
+        Changed |= Impl.transformSelectMemcpyDest(*MT, *Sel);
+      } else {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: select destination operands "
+                          << "are not alloca-based\n");
+      }
       continue;
     }
 
