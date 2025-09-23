@@ -620,7 +620,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
 
 StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   assert(getEMachine() == ELF::EM_CUDA);
-  unsigned SM = getPlatformFlags() & ELF::EF_CUDA_SM;
+  unsigned SM = getEIdentABIVersion() == ELF::ELFABIVERSION_CUDA_V1
+                    ? getPlatformFlags() & ELF::EF_CUDA_SM
+                    : (getPlatformFlags() & ELF::EF_CUDA_SM_MASK) >>
+                          ELF::EF_CUDA_SM_OFFSET;
 
   switch (SM) {
   // Fermi architecture.
@@ -672,6 +675,8 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
     return "sm_86";
   case ELF::EF_CUDA_SM87:
     return "sm_87";
+  case ELF::EF_CUDA_SM88:
+    return "sm_88";
 
   // Ada architecture.
   case ELF::EF_CUDA_SM89:
@@ -679,7 +684,30 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
 
   // Hopper architecture.
   case ELF::EF_CUDA_SM90:
-    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_90a" : "sm_90";
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS_V1 ? "sm_90a"
+                                                             : "sm_90";
+
+  // Blackwell architecture.
+  case ELF::EF_CUDA_SM100:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_100a"
+                                                          : "sm_100";
+  case ELF::EF_CUDA_SM101:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_101a"
+                                                          : "sm_101";
+  case ELF::EF_CUDA_SM103:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_103a"
+                                                          : "sm_103";
+  case ELF::EF_CUDA_SM110:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_110a"
+                                                          : "sm_110";
+
+  // Blackwell architecture.
+  case ELF::EF_CUDA_SM120:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_120a"
+                                                          : "sm_120";
+  case ELF::EF_CUDA_SM121:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_121a"
+                                                          : "sm_121";
   default:
     llvm_unreachable("Unknown EF_CUDA_SM value");
   }
