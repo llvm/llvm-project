@@ -117,7 +117,8 @@ struct RDVFinalCleanupList {
 
 /// Return true iff at least one value in `values` is live, given the liveness
 /// information in `la`.
-static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet, const DenseSet<Value> &liveSet,
+static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
+                    const DenseSet<Value> &liveSet,
 
                     RunLivenessAnalysis &la) {
   for (Value value : values) {
@@ -265,9 +266,9 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 ///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
-                            DenseSet<Value> &liveSet,
-                            RDVFinalCleanupList &cl) {
-  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, liveSet, la)) {
+                            DenseSet<Value> &liveSet, RDVFinalCleanupList &cl) {
+  if (!isMemoryEffectFree(op) ||
+      hasLive(op->getResults(), nonLiveSet, liveSet, la)) {
     LDBG() << "Simple op is not memory effect free or has live results, "
               "preserving it: "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
@@ -387,20 +388,20 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
 }
 
 static void processCallOp(CallOpInterface callOp, Operation *module,
-                          RunLivenessAnalysis &la,
-                          DenseSet<Value> &liveSet) {
+                          RunLivenessAnalysis &la, DenseSet<Value> &liveSet) {
   auto callable = callOp.getCallableForCallee();
 
   if (auto symbolRef = callable.dyn_cast<SymbolRefAttr>()) {
     Operation *calleeOp = SymbolTable::lookupSymbolIn(module, symbolRef);
 
-    if (auto funcOp = llvm::dyn_cast_or_null<mlir::FunctionOpInterface>(calleeOp)) {
+    if (auto funcOp =
+            llvm::dyn_cast_or_null<mlir::FunctionOpInterface>(calleeOp)) {
       // Ensure the outgoing arguments of PUBLIC functions are live
       // because processFuncOp can not process them.
       //
       // Liveness treats the external function as a blackbox.
       if (funcOp.isPublic()) {
-        for (Value arg:  callOp.getArgOperands()) {
+        for (Value arg : callOp.getArgOperands()) {
           const Liveness *liveness = la.getLiveness(arg);
           if (liveness && !liveness->isLive) {
             liveSet.insert(arg);
@@ -920,7 +921,8 @@ void RemoveDeadValues::runOnOperation() {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      processRegionBranchOp(regionBranchOp, la, deadVals, liveVals, finalCleanupList);
+      processRegionBranchOp(regionBranchOp, la, deadVals, liveVals,
+                            finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
       processBranchOp(branchOp, la, deadVals, finalCleanupList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
@@ -930,9 +932,9 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
       //
-      // The only exception is public callee. By default, Liveness analysis is inter-procedural.
-      // Unused arguments of a public function nonLive and are propagated to the caller.
-      // processCallOp puts them to liveVals.
+      // The only exception is public callee. By default, Liveness analysis is
+      // inter-procedural. Unused arguments of a public function nonLive and are
+      // propagated to the caller. processCallOp puts them to liveVals.
       processCallOp(cast<CallOpInterface>(op), module, la, liveVals);
     } else {
       processSimpleOp(op, la, deadVals, liveVals, finalCleanupList);
