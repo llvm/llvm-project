@@ -113,7 +113,7 @@ typedef int I, &LVal, &&RVal, *Ptr, *const ConstPtr, Vec3[3], Fn(), (*FnPtr)();
 // CHECK-FIXES-NEXT: using Ptr = I *;
 // CHECK-FIXES-NEXT: using ConstPtr = I *const;
 // CHECK-FIXES-NEXT: using Vec3 = I[3];
-// CHECK-FIXES-NEXT: using Fn = I ();
+// CHECK-FIXES-NEXT: using Fn = I();
 // CHECK-FIXES-NEXT: using FnPtr = I (*)();
 
 #define CODE typedef int INT
@@ -413,7 +413,13 @@ typedef int* IntPtr, *AlsoIntPtr;
 // CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using IntPtr = int*;
 // CHECK-FIXES-NEXT: using AlsoIntPtr = IntPtr *;
-// FIXME: the second fixit is wrong. This is issue #150276.
+// FIXME: the second fix-it is wrong. This is issue #150276.
+
+typedef int (FnWithRedundantParens)();
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using FnWithRedundantParens = int ()();
+// FIXME: that fix-it makes the code ill-formed. The redundant parentheses need to be removed,
+// i.e., it should be 'using FnWithRedundantParens = int ()'. It's not a pressing issue though.
 
 #ifndef SpecialMode
 #define SomeMacro(x) x
