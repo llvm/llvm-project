@@ -108,13 +108,8 @@ class Subcommand<string name, string helpText, string usage = "">
   string Usage = usage;
 }
 
-// Compile time representation for top level command (aka toolname).
-// Offers backward compatibility with existing Option class definitions before
-// introduction of commandGroup in Option class to support subcommands.
-def TopLevelCommand : Command<"TopLevelCommand">;
-
 class Option<list<string> prefixes, string name, OptionKind kind,
-             list<Command> commandGroup = [TopLevelCommand]> {
+             list<Command> commandGroup = []> {
   string EnumName = ?; // Uses the def name if undefined.
   list<string> Prefixes = prefixes;
   string Name = name;
@@ -150,28 +145,27 @@ class Option<list<string> prefixes, string name, OptionKind kind,
 
 // Helpers for defining options.
 
-class Flag<list<string> prefixes, string name,
-           list<Command> commandGroup = [TopLevelCommand]>
+class Flag<list<string> prefixes, string name, list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_FLAG, commandGroup>;
 class Joined<list<string> prefixes, string name,
-             list<Command> commandGroup = [TopLevelCommand]>
+             list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_JOINED, commandGroup>;
 class Separate<list<string> prefixes, string name,
-               list<Command> commandGroup = [TopLevelCommand]>
+               list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_SEPARATE, commandGroup>;
 class CommaJoined<list<string> prefixes, string name,
-                  list<Command> commandGroup = [TopLevelCommand]>
+                  list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_COMMAJOINED, commandGroup>;
 class MultiArg<list<string> prefixes, string name, int numargs,
-               list<Command> commandGroup = [TopLevelCommand]>
+               list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_MULTIARG, commandGroup> {
   int NumArgs = numargs;
 }
 class JoinedOrSeparate<list<string> prefixes, string name,
-                       list<Command> commandGroup = [TopLevelCommand]>
+                       list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_JOINED_OR_SEPARATE, commandGroup>;
 class JoinedAndSeparate<list<string> prefixes, string name,
-                        list<Command> commandGroup = [TopLevelCommand]>
+                        list<Command> commandGroup = []>
     : Option<prefixes, name, KIND_JOINED_AND_SEPARATE, commandGroup>;
 
 // Mix-ins for adding optional attributes.
@@ -295,7 +289,7 @@ class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
 // FIXME: Have generator validate that these appear in correct position (and
 // aren't duplicated).
-def INPUT : Option<[], "<input>", KIND_INPUT, [TopLevelCommand]>;
-def UNKNOWN : Option<[], "<unknown>", KIND_UNKNOWN, [TopLevelCommand]>;
+def INPUT : Option<[], "<input>", KIND_INPUT>;
+def UNKNOWN : Option<[], "<unknown>", KIND_UNKNOWN>;
 
 #endif // LLVM_OPTION_OPTPARSER_TD

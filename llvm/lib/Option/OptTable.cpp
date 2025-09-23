@@ -789,7 +789,8 @@ void OptTable::internalPrintHelp(
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
 
   const Command *ActiveCommand = getActiveCommand(Commands, Subcommand);
-  if (ActiveCommand) {
+  if (!Subcommand.empty()) {
+    assert(ActiveCommand != nullptr && "Not a valid registered subcommand.");
     OS << ActiveCommand->HelpText << "\n\n";
     if (!StringRef(ActiveCommand->Usage).empty())
       OS << "USAGE: " << ActiveCommand->Usage << "\n\n";
@@ -797,30 +798,38 @@ void OptTable::internalPrintHelp(
     OS << "USAGE: " << Usage << "\n\n";
     if (Commands.size() > 1) {
       OS << "SUBCOMMANDS:\n\n";
-      // This loop prints subcommands list and sets ActiveCommand to
-      // TopLevelCommand while iterating over all commands.
-      for (const auto &C : Commands) {
-        if (StringRef(C.Name) == opt::TopLevelCommandName) {
-          ActiveCommand = &C;
-          continue;
-        }
+      for (const auto &C : Commands)
         OS << C.Name << " - " << C.HelpText << "\n";
-      }
       OS << "\n";
     }
   }
 
-  auto DoesOptionBelongToActiveCommand =
-      [this, &ActiveCommand](const Info &CandidateInfo) {
-        // ActiveCommand won't be set for tools that did not create command
-        // group info table.
-        if (!ActiveCommand)
-          return true;
-        ArrayRef<unsigned> CommandIDs =
-            CandidateInfo.getCommandIDs(CommandIDsTable);
-        unsigned ActiveCommandID = ActiveCommand - Commands.data();
-        return is_contained(CommandIDs, ActiveCommandID);
-      };
+  auto DoesOptionBelongToSubcommand = [&](const Info &CandidateInfo) {
+    // llvm::outs() << CandidateInfo.
+    ArrayRef<unsigned> CommandIDs =
+        CandidateInfo.getCommandIDs(CommandIDsTable);
+
+    // Options with no commands are global.
+    if (CommandIDs.empty()) {
+      // if Subcommand is not empty then don't print global options.
+      return Subcommand.empty();
+    }
+
+    // If we are not in a subcommand, don't show subcommand-specific options.
+    if (Subcommand.empty())
+      return false;
+
+    // The command ID is its index in the Commands table.
+    unsigned ActiveCommandID = ActiveCommand - &Commands[0];
+
+    // Check if the option belongs to the active subcommand.
+    for (unsigned ID : CommandIDs) {
+      if (ID == ActiveCommandID) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
     // FIXME: Split out option groups.
@@ -828,13 +837,14 @@ void OptTable::internalPrintHelp(
       continue;
 
     const Info &CandidateInfo = getInfo(Id);
+
     if (!ShowHidden && (CandidateInfo.Flags & opt::HelpHidden))
       continue;
 
     if (ExcludeOption(CandidateInfo))
       continue;
 
-    if (!DoesOptionBelongToActiveCommand(CandidateInfo))
+    if (!DoesOptionBelongToSubcommand(CandidateInfo))
       continue;
 
     // If an alias doesn't have a help text, show a help text for the aliased

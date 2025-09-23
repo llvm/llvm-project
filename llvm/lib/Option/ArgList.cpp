@@ -218,8 +218,8 @@ StringRef ArgList::getSubcommand(
 
     size_t OldSize = SubCommands.size();
     for (const OptTable::Command &CMD : Commands) {
-      if (StringRef(CMD.Name) == opt::TopLevelCommandName)
-        continue;
+      // if (StringRef(CMD.Name) == opt::TopLevelCommandName)
+      //   continue;
       if (StringRef(CMD.Name) == A->getValue())
         SubCommands.push_back(A->getValue());
     }

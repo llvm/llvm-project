@@ -82,6 +82,7 @@ int main(int argc, char **argv) {
       T.getCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
   // Handle help. When help options is found, ignore all other options and exit
   // after printing help.
+
   if (Args.hasArg(OPT_help)) {
     T.printHelp(llvm::outs(), "llvm-hello-sub [subcommand] [options]",
                 "LLVM Hello Subcommand Example", false, false, Visibility(),

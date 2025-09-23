@@ -262,10 +262,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<const Record *> Commands =
       Records.getAllDerivedDefinitions("Command");
-  // TopLevelCommand should come first.
-  std::stable_partition(Commands.begin(), Commands.end(), [](const Record *R) {
-    return R->getName() == opt::TopLevelCommandName;
-  });
+  // // TopLevelCommand should come first.
+  // std::stable_partition(Commands.begin(), Commands.end(), [](const Record *R)
+  // {
+  //   return R->getName() == opt::TopLevelCommandName;
+  // });
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
