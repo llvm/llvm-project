@@ -1,8 +1,13 @@
 // RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip \
 // RUN:  --split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires
-  #spirv.vce<v1.5, [Shader, Int8, Int16, Int64, Linkage, CooperativeMatrixKHR],
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical Vulkan requires
+  #spirv.vce<v1.5, [Shader, Int8, Int16, Int64, Linkage, CooperativeMatrixKHR, VulkanMemoryModel],
                    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_cooperative_matrix]> {
 
   // CHECK-LABEL: @cooperative_matrix_length

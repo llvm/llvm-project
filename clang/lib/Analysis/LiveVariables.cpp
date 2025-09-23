@@ -18,6 +18,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -35,7 +36,7 @@ public:
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksEndToLiveness;
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksBeginToLiveness;
   llvm::DenseMap<const Stmt *, LiveVariables::LivenessValues> stmtsToLiveness;
-  llvm::DenseMap<const DeclRefExpr *, unsigned> inAssignment;
+  llvm::DenseSet<const DeclRefExpr *> inAssignment;
   const bool killAtAssign;
 
   LiveVariables::LivenessValues
@@ -71,15 +72,17 @@ bool LiveVariables::LivenessValues::isLive(const Expr *E) const {
 
 bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
   if (const auto *DD = dyn_cast<DecompositionDecl>(D)) {
-    bool alive = false;
-    for (const BindingDecl *BD : DD->bindings())
-      alive |= liveBindings.contains(BD);
-
     // Note: the only known case this condition is necessary, is when a bindig
     // to a tuple-like structure is created. The HoldingVar initializers have a
     // DeclRefExpr to the DecompositionDecl.
-    alive |= liveDecls.contains(DD);
-    return alive;
+    if (liveDecls.contains(DD))
+      return true;
+
+    for (const BindingDecl *BD : DD->bindings()) {
+      if (liveBindings.contains(BD))
+        return true;
+    }
+    return false;
   }
   return liveDecls.contains(D);
 }
@@ -370,7 +373,7 @@ static bool writeShouldKill(const VarDecl *VD) {
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
   if (LV.killAtAssign && B->getOpcode() == BO_Assign) {
     if (const auto *DR = dyn_cast<DeclRefExpr>(B->getLHS()->IgnoreParens())) {
-      LV.inAssignment[DR] = 1;
+      LV.inAssignment.insert(DR);
     }
   }
   if (B->isAssignmentOp()) {
@@ -412,7 +415,7 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
 
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   const Decl* D = DR->getDecl();
-  bool InAssignment = LV.inAssignment[DR];
+  bool InAssignment = LV.inAssignment.contains(DR);
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     if (!InAssignment) {
       if (const auto *HV = BD->getHoldingVar())

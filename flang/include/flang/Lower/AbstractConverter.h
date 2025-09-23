@@ -271,6 +271,9 @@ public:
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
 
+  /// Check support of Multi-image features if -fcoarray is provided
+  virtual void checkCoarrayEnabled() = 0;
+
   //===--------------------------------------------------------------------===//
   // Types
   //===--------------------------------------------------------------------===//

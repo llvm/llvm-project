@@ -1177,12 +1177,25 @@ void DoForallChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
   }
 }
 
-void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
-  const auto &control{std::get<parser::IoImpliedDoControl>(outputImpliedDo.t)};
-  const parser::Name &name{control.name.thing.thing};
+static void CheckIoImpliedDoIndex(
+    SemanticsContext &context, const parser::Name &name) {
   if (name.symbol) {
-    context_.CheckIndexVarRedefine(name.source, *name.symbol);
+    context.CheckIndexVarRedefine(name.source, *name.symbol);
+    if (auto why{WhyNotDefinable(name.source, name.symbol->owner(),
+            DefinabilityFlags{}, *name.symbol)}) {
+      context.Say(std::move(*why));
+    }
   }
+}
+
+void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
+  CheckIoImpliedDoIndex(context_,
+      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).name.thing.thing);
+}
+
+void DoForallChecker::Leave(const parser::InputImpliedDo &inputImpliedDo) {
+  CheckIoImpliedDoIndex(context_,
+      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).name.thing.thing);
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {

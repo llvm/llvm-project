@@ -408,26 +408,15 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     const parser::OmpClauseList *beginClauseList = nullptr;
     const parser::OmpClauseList *endClauseList = nullptr;
     common::visit(
-        common::visitors{
-            [&](const parser::OmpBlockConstruct &ompConstruct) {
-              beginClauseList = &ompConstruct.BeginDir().Clauses();
-              if (auto &endSpec = ompConstruct.EndDir())
-                endClauseList = &endSpec->Clauses();
-            },
-            [&](const parser::OpenMPLoopConstruct &ompConstruct) {
-              const auto &beginDirective =
-                  std::get<parser::OmpBeginLoopDirective>(ompConstruct.t);
-              beginClauseList =
-                  &std::get<parser::OmpClauseList>(beginDirective.t);
-
-              if (auto &endDirective =
-                      std::get<std::optional<parser::OmpEndLoopDirective>>(
-                          ompConstruct.t)) {
-                endClauseList =
-                    &std::get<parser::OmpClauseList>(endDirective->t);
-              }
-            },
-            [&](const auto &) {}},
+        [&](const auto &construct) {
+          using Type = llvm::remove_cvref_t<decltype(construct)>;
+          if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
+                        std::is_same_v<Type, parser::OpenMPLoopConstruct>) {
+            beginClauseList = &construct.BeginDir().Clauses();
+            if (auto &endSpec = construct.EndDir())
+              endClauseList = &endSpec->Clauses();
+          }
+        },
         ompEval->u);
 
     assert(beginClauseList && "expected begin directive");
@@ -503,7 +492,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_distribute:
     case OMPD_distribute_simd:
-      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
+      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->ops, hostInfo->iv);
       break;
 
     case OMPD_teams:
@@ -522,7 +511,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       [[fallthrough]];
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
-      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
+      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->ops, hostInfo->iv);
       cp.processNumTeams(stmtCtx, hostInfo->ops);
       break;
 
@@ -533,7 +522,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       cp.processNumTeams(stmtCtx, hostInfo->ops);
       [[fallthrough]];
     case OMPD_loop:
-      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->iv);
+      cp.processCollapse(loc, eval, hostInfo->ops, hostInfo->ops, hostInfo->iv);
       break;
 
     case OMPD_teams_workdistribute:
@@ -1569,9 +1558,10 @@ genLoopNestClauses(lower::AbstractConverter &converter,
 
   HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
   if (!hostEvalInfo || !hostEvalInfo->apply(clauseOps, iv))
-    cp.processCollapse(loc, eval, clauseOps, iv);
+    cp.processCollapse(loc, eval, clauseOps, clauseOps, iv);
 
   clauseOps.loopInclusive = converter.getFirOpBuilder().getUnitAttr();
+  cp.processTileSizes(eval, clauseOps);
 }
 
 static void genLoopClauses(
@@ -1948,9 +1938,9 @@ static mlir::omp::LoopNestOp genLoopNestOp(
     return llvm::SmallVector<const semantics::Symbol *>(iv);
   };
 
-  auto *nestedEval =
-      getCollapsedLoopEval(eval, getCollapseValue(item->clauses));
-
+  uint64_t nestValue = getCollapseValue(item->clauses);
+  nestValue = nestValue < iv.size() ? iv.size() : nestValue;
+  auto *nestedEval = getCollapsedLoopEval(eval, nestValue);
   return genOpWithBody<mlir::omp::LoopNestOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, *nestedEval,
                         directive)
@@ -3819,19 +3809,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPLoopConstruct &loopConstruct) {
-  const auto &beginLoopDirective =
-      std::get<parser::OmpBeginLoopDirective>(loopConstruct.t);
-  List<Clause> clauses = makeClauses(
-      std::get<parser::OmpClauseList>(beginLoopDirective.t), semaCtx);
-  if (auto &endLoopDirective =
-          std::get<std::optional<parser::OmpEndLoopDirective>>(
-              loopConstruct.t)) {
-    clauses.append(makeClauses(
-        std::get<parser::OmpClauseList>(endLoopDirective->t), semaCtx));
-  }
+  const parser::OmpDirectiveSpecification &beginSpec = loopConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  if (auto &endSpec = loopConstruct.EndDir())
+    clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
 
-  mlir::Location currentLocation =
-      converter.genLocation(beginLoopDirective.source);
+  mlir::Location currentLocation = converter.genLocation(beginSpec.source);
 
   auto &optLoopCons =
       std::get<std::optional<parser::NestedConstruct>>(loopConstruct.t);
@@ -3843,8 +3826,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
           parser::omp::GetOmpDirectiveName(*ompNestedLoopCons).v;
       switch (nestedDirective) {
       case llvm::omp::Directive::OMPD_tile:
-        // Emit the omp.loop_nest with annotation for tiling
-        genOMP(converter, symTable, semaCtx, eval, ompNestedLoopCons->value());
+        // Skip OMPD_tile since the tile sizes will be retrieved when
+        // generating the omp.loop_nest op.
         break;
       default: {
         unsigned version = semaCtx.langOptions().OpenMPVersion;
@@ -3857,13 +3840,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     }
   }
 
-  llvm::omp::Directive directive =
-      parser::omp::GetOmpDirectiveName(beginLoopDirective).v;
-  const parser::CharBlock &source =
-      std::get<parser::OmpLoopDirective>(beginLoopDirective.t).source;
+  const parser::OmpDirectiveName &beginName = beginSpec.DirName();
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, source, directive, clauses)};
+                          eval, beginName.source, beginName.v, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -3878,30 +3858,22 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPSectionsConstruct &sectionsConstruct) {
-  const auto &beginSectionsDirective =
-      std::get<parser::OmpBeginSectionsDirective>(sectionsConstruct.t);
-  List<Clause> clauses = makeClauses(
-      std::get<parser::OmpClauseList>(beginSectionsDirective.t), semaCtx);
-  const auto &endSectionsDirective =
-      std::get<std::optional<parser::OmpEndSectionsDirective>>(
-          sectionsConstruct.t);
-  assert(endSectionsDirective &&
+                   const parser::OpenMPSectionsConstruct &construct) {
+  const parser::OmpDirectiveSpecification &beginSpec{construct.BeginDir()};
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  const auto &endSpec{construct.EndDir()};
+  assert(endSpec &&
          "Missing end section directive should have been handled in semantics");
-  clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endSectionsDirective->t), semaCtx));
+  clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  llvm::omp::Directive directive =
-      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).v;
-  const parser::CharBlock &source =
-      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).source;
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, source, directive, clauses)};
+                          eval, beginName.source, beginName.v, clauses)};
 
   mlir::SaveStateStack<SectionsConstructStackFrame> saveStateStack{
-      converter.getStateStack(), sectionsConstruct};
+      converter.getStateStack(), construct};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -3955,18 +3927,6 @@ void Fortran::lower::genOpenMPSymbolProperties(
 
   if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
     lower::genDeclareTargetIntGlobal(converter, var);
-}
-
-int64_t
-Fortran::lower::getCollapseValue(const parser::OmpClauseList &clauseList) {
-  for (const parser::OmpClause &clause : clauseList.v) {
-    if (const auto &collapseClause =
-            std::get_if<parser::OmpClause::Collapse>(&clause.u)) {
-      const auto *expr = semantics::GetExpr(collapseClause->v);
-      return evaluate::ToInt64(*expr).value();
-    }
-  }
-  return 1;
 }
 
 void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
@@ -4058,8 +4018,7 @@ bool Fortran::lower::isOpenMPTargetConstruct(
     dir = block->BeginDir().DirId();
   } else if (const auto *loop =
                  std::get_if<parser::OpenMPLoopConstruct>(&omp.u)) {
-    const auto &begin = std::get<parser::OmpBeginLoopDirective>(loop->t);
-    dir = std::get<parser::OmpLoopDirective>(begin.t).v;
+    dir = loop->BeginDir().DirId();
   }
   return llvm::omp::allTargetSet.test(dir);
 }

@@ -27,9 +27,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _LHS, class _RHS, class = void>
 struct __default_three_way_comparator;
 
-template <class _Tp>
-struct __default_three_way_comparator<_Tp, _Tp, __enable_if_t<is_arithmetic<_Tp>::value> > {
-  _LIBCPP_HIDE_FROM_ABI static int operator()(_Tp __lhs, _Tp __rhs) {
+template <class _LHS, class _RHS>
+struct __default_three_way_comparator<_LHS,
+                                      _RHS,
+                                      __enable_if_t<is_arithmetic<_LHS>::value && is_arithmetic<_RHS>::value> > {
+  _LIBCPP_HIDE_FROM_ABI static int operator()(_LHS __lhs, _RHS __rhs) {
     if (__lhs < __rhs)
       return -1;
     if (__lhs > __rhs)
@@ -38,12 +40,30 @@ struct __default_three_way_comparator<_Tp, _Tp, __enable_if_t<is_arithmetic<_Tp>
   }
 };
 
+#if _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_lt_synthesises_from_spaceship)
+template <class _LHS, class _RHS>
+struct __default_three_way_comparator<
+    _LHS,
+    _RHS,
+    __enable_if_t<!(is_arithmetic<_LHS>::value && is_arithmetic<_RHS>::value) &&
+                  __builtin_lt_synthesises_from_spaceship(const _LHS&, const _RHS&)>> {
+  _LIBCPP_HIDE_FROM_ABI static int operator()(const _LHS& __lhs, const _RHS& __rhs) {
+    auto __res = __lhs <=> __rhs;
+    if (__res < 0)
+      return -1;
+    if (__res > 0)
+      return 1;
+    return 0;
+  }
+};
+#endif
+
 template <class _LHS, class _RHS, bool = true>
-inline const bool __has_default_three_way_comparator_v = false;
+struct __has_default_three_way_comparator : false_type {};
 
 template <class _LHS, class _RHS>
-inline const bool
-    __has_default_three_way_comparator_v< _LHS, _RHS, sizeof(__default_three_way_comparator<_LHS, _RHS>) >= 0> = true;
+struct __has_default_three_way_comparator<_LHS, _RHS, sizeof(__default_three_way_comparator<_LHS, _RHS>) >= 0>
+    : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -17,6 +17,8 @@ add_flang_library(FortranUtils
   LINK_LIBS
   FIRDialect
   FIRBuilder
+  FortranEvaluate
+  FortranSupport
   HLFIRDialect
  
   MLIR_LIBS

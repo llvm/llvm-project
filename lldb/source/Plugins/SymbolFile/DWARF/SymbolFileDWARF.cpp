@@ -2502,6 +2502,7 @@ static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   case clang::CXXCtorType::Ctor_Comdat:
     llvm_unreachable("Unexpected constructor kind.");
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
@@ -2517,6 +2518,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Comdat:
     llvm_unreachable("Unexpected destructor kind.");
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 static llvm::StringRef
@@ -4325,7 +4327,8 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   m_index->Dump(s);
 }
 
-void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                   bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -4333,7 +4336,7 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->Dump(s.AsRawOstream(), filter);
+  clang->Dump(s.AsRawOstream(), filter, show_color);
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
@@ -4623,9 +4626,8 @@ void SymbolFileDWARF::GetCompileOptions(
   }
 }
 
-std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
-  uint32_t total_dwo_count = 0;
-  uint32_t loaded_dwo_count = 0;
+DWOStats SymbolFileDWARF::GetDwoStats() {
+  DWOStats stats;
 
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4638,16 +4640,21 @@ std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
     if (!dwarf_cu->GetDWOId().has_value())
       continue;
 
-    total_dwo_count++;
+    stats.dwo_file_count++;
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
     SymbolFile *dwo_symfile =
         dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
     if (dwo_symfile) {
-      loaded_dwo_count++;
+      stats.loaded_dwo_file_count++;
     }
+
+    // Check if this unit has a DWO load error, false by default.
+    const Status &dwo_error = dwarf_cu->GetDwoError();
+    if (dwo_error.Fail())
+      stats.dwo_error_count++;
   }
 
-  return {loaded_dwo_count, total_dwo_count};
+  return stats;
 }

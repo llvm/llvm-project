@@ -841,10 +841,14 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::LOAD,
-                       ISD::STORE, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND});
+  setTargetDAGCombine(
+      {ISD::ADD,          ISD::AND,           ISD::EXTRACT_VECTOR_ELT,
+       ISD::FADD,         ISD::FMAXNUM,       ISD::FMINNUM,
+       ISD::FMAXIMUM,     ISD::FMINIMUM,      ISD::FMAXIMUMNUM,
+       ISD::FMINIMUMNUM,  ISD::MUL,           ISD::SHL,
+       ISD::SREM,         ISD::UREM,          ISD::VSELECT,
+       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::LOAD,
+       ISD::STORE,        ISD::ZERO_EXTEND,   ISD::SIGN_EXTEND});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5316,6 +5320,56 @@ static SDValue PerformFADDCombine(SDNode *N,
   return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
+/// Get 3-input version of a 2-input min/max opcode
+static NVPTXISD::NodeType getMinMax3Opcode(unsigned MinMax2Opcode) {
+  switch (MinMax2Opcode) {
+  case ISD::FMAXNUM:
+  case ISD::FMAXIMUMNUM:
+    return NVPTXISD::FMAXNUM3;
+  case ISD::FMINNUM:
+  case ISD::FMINIMUMNUM:
+    return NVPTXISD::FMINNUM3;
+  case ISD::FMAXIMUM:
+    return NVPTXISD::FMAXIMUM3;
+  case ISD::FMINIMUM:
+    return NVPTXISD::FMINIMUM3;
+  default:
+    llvm_unreachable("Invalid 2-input min/max opcode");
+  }
+}
+
+/// PerformFMinMaxCombine - Combine (fmaxnum (fmaxnum a, b), c) into
+/// (fmaxnum3 a, b, c). Also covers other llvm min/max intrinsics.
+static SDValue PerformFMinMaxCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     unsigned PTXVersion, unsigned SmVersion) {
+
+  // 3-input min/max requires PTX 8.8+ and SM_100+, and only supports f32s
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::f32 || PTXVersion < 88 || SmVersion < 100)
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  unsigned MinMaxOp2 = N->getOpcode();
+  NVPTXISD::NodeType MinMaxOp3 = getMinMax3Opcode(MinMaxOp2);
+
+  if (Op0.getOpcode() == MinMaxOp2 && Op0.hasOneUse()) {
+    // (maxnum (maxnum a, b), c) -> (maxnum3 a, b, c)
+    SDValue A = Op0.getOperand(0);
+    SDValue B = Op0.getOperand(1);
+    SDValue C = Op1;
+    return DCI.DAG.getNode(MinMaxOp3, SDLoc(N), VT, A, B, C, N->getFlags());
+  } else if (Op1.getOpcode() == MinMaxOp2 && Op1.hasOneUse()) {
+    // (maxnum a, (maxnum b, c)) -> (maxnum3 a, b, c)
+    SDValue A = Op0;
+    SDValue B = Op1.getOperand(0);
+    SDValue C = Op1.getOperand(1);
+    return DCI.DAG.getNode(MinMaxOp3, SDLoc(N), VT, A, B, C, N->getFlags());
+  }
+  return SDValue();
+}
+
 static SDValue PerformREMCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
@@ -5996,6 +6050,14 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
     return PerformFADDCombine(N, DCI, OptLevel);
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
+    return PerformFMinMaxCombine(N, DCI, STI.getPTXVersion(),
+                                 STI.getSmVersion());
   case ISD::LOAD:
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4:
