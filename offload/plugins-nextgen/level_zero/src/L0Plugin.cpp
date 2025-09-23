@@ -177,8 +177,7 @@ GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
 }
 
 uint16_t LevelZeroPluginTy::getMagicElfBits() const {
-  // TODO: We need to register a real ELF machine type
-  return 0x8086;
+  return ELF::EM_INTELGT;
 }
 
 Triple::ArchType LevelZeroPluginTy::getTripleArch() const {
