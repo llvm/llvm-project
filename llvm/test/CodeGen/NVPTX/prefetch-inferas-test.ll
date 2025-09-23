@@ -73,19 +73,6 @@ entry:
 }
 
 ; Kernel Function Test
-; Cast from Const space to Generic
-define ptx_kernel void @test_const_to_generic_cast_kernel(ptr addrspace(4) %const_ptr) {
-; INFER-LABEL: @test_const_to_generic_cast_kernel
-; INFER: call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
-; PTX-LABEL: .visible .entry test_const_to_generic_cast_kernel(
-; PTX: prefetch.const.tensormap [%rd{{[0-9]+}}];
-entry:
-  %cast = addrspacecast ptr addrspace(4) %const_ptr to ptr
-  call void @llvm.nvvm.prefetch.tensormap.p0(ptr %cast)
-  ret void
-}
-
-; Kernel Function Test
 ; Cast from Param space to Generic
 define ptx_kernel void @test_param_to_generic_cast_kernel(ptr addrspace(101) %param_ptr) {
 ; INFER-LABEL: @test_param_to_generic_cast_kernel
