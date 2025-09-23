@@ -88,7 +88,7 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "unexpected end of file");
     }
-    const bool hasArgs = Arg->getKind() != clang::tok::r_paren;
+    const bool HasArgs = Arg->getKind() != clang::tok::r_paren;
 
     Expected<CharSourceRange> BuilderRange = Builder(Result);
     if (!BuilderRange)
@@ -113,7 +113,7 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
     const StringRef OpType = GetText(CharSourceRange::getTokenRange(
         LessToken->getEndLoc(), EndToken->getLastLoc()));
     Replace.Replacement = llvm::formatv("{}::create({}{}", OpType, BuilderText,
-                                        hasArgs ? ", " : "");
+                                        HasArgs ? ", " : "");
 
     return SmallVector<Edit, 1>({Replace});
   };
@@ -124,7 +124,7 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
                         "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
   auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
-  ast_matchers::internal::Matcher<Stmt> base = cxxMemberCallExpr(
+  ast_matchers::internal::Matcher<Stmt> Base = cxxMemberCallExpr(
       on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
              .bind("builder")),
       callee(expr().bind("call")),
@@ -132,9 +132,9 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
                            hasName("create"))));
   return applyFirst(
       //  Attempt rewrite given an lvalue builder, else just warn.
-      {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), base),
+      {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), Base),
                 rewrite(node("call"), node("builder")), message),
-       makeRule(base, noopEdit(node("call")), message)});
+       makeRule(Base, noopEdit(node("call")), message)});
 }
 } // namespace
 
