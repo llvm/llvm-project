@@ -65,7 +65,6 @@ class CompilerInstanceWithContext {
   PrebuiltModulesAttrsMap PrebuiltModuleVFSMap;
 
   // Compiler Instance
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
   std::unique_ptr<CompilerInstance> CIPtr;
 
   //   // Source location offset.

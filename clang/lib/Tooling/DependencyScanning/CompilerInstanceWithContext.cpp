@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/CompilerInstanceWithContext.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
@@ -85,8 +86,16 @@ llvm::Error CompilerInstanceWithContext::initialize() {
         "Incorrect compilation command, missing cc1",
         llvm::inconvertibleErrorCode());
   Invocation = std::make_unique<CompilerInvocation>();
-  CompilerInvocation::CreateFromArgs(*Invocation, Command.getArguments(),
-                                     *Diags, Command.getExecutable());
+
+  if (!CompilerInvocation::CreateFromArgs(*Invocation, Command.getArguments(),
+                                          *Diags, Command.getExecutable())) {
+    Diags->Report(diag::err_fe_expected_compiler_job)
+        << llvm::join(CommandLine, " ");
+    return llvm::make_error<llvm::StringError>(
+        "Cannot create CompilerInvocation from Args",
+        llvm::inconvertibleErrorCode());
+  }
+
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getCodeGenOpts().DisableFree = false;
 
@@ -94,7 +103,8 @@ llvm::Error CompilerInstanceWithContext::initialize() {
     canonicalizeDefines(Invocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
-  ModCache = makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
+  IntrusiveRefCntPtr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
   CIPtr = std::make_unique<CompilerInstance>(
       std::make_shared<CompilerInvocation>(*Invocation), Worker.PCHContainerOps,
       ModCache.get());
@@ -125,8 +135,6 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   if (CI.getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
     CI.getHeaderSearchOpts().BuildSessionTimestamp =
         Worker.Service.getBuildSessionTimestamp();
-
-  CI.setDiagnostics(Diags.get());
 
   auto *FileMgr = CI.createFileManager();
 
@@ -232,6 +240,7 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   }
 
   MDC->applyDiscoveredDependencies(Inv);
+  Consumer.handleBuildCommand({CommandLine[0], Inv.getCC1CommandLine()});
 
   // TODO: enable CAS
   //   std::string ID = Inv.getFileSystemOpts().CASFileSystemRootID;
