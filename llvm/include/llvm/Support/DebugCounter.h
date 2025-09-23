@@ -80,7 +80,7 @@ public:
     }
   };
 
-  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Ranges);
+  LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals);
 
   /// Return true on parsing error and print the error message on the
   /// llvm::errs()

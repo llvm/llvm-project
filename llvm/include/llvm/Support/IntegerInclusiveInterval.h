@@ -1,4 +1,5 @@
-//===- llvm/Support/IntegerInclusiveInterval.h - Integer inclusive interval parsing utility -----------*- C++ -*-===//
+//===- llvm/Support/IntegerInclusiveInterval.h - Integer inclusive interval
+//parsing utility -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -86,7 +87,8 @@ using IntervalList = SmallVector<IntegerInclusiveInterval, 8>;
 /// \param Separator The separator character to use (',' or ':').
 /// \returns Expected<IntervalList> containing the parsed intervals on success,
 ///          or an Error on failure.
-Expected<IntervalList> parseIntervals(StringRef IntervalStr, char Separator = ',');
+Expected<IntervalList> parseIntervals(StringRef IntervalStr,
+                                      char Separator = ',');
 
 /// Check if a value is contained in any of the intervals.
 bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
@@ -94,7 +96,8 @@ bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
 /// Print intervals to output stream.
 /// \param OS The output stream to print to.
 /// \param Intervals The intervals to print.
-/// \param Separator The separator character to use between intervals (i.e. ',' or
+/// \param Separator The separator character to use between intervals (i.e. ','
+/// or
 /// ':').
 void printIntervals(raw_ostream &OS,
                     ArrayRef<IntegerInclusiveInterval> Intervals,
