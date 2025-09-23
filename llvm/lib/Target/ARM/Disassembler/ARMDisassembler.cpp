@@ -119,6 +119,8 @@ private:
 class ARMDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<const MCInstrInfo> MCII;
+  mutable ITStatus ITBlock;
+  mutable VPTStatus VPTBlock;
 
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                   const MCInstrInfo *MCII)
@@ -146,10 +148,6 @@ private:
                                    ArrayRef<uint8_t> Bytes, uint64_t Address,
                                    raw_ostream &CStream) const;
 
-  mutable ITStatus ITBlock;
-  mutable VPTStatus VPTBlock;
-
-  void AddThumb1SBit(MCInst &MI, bool InITBlock) const;
   bool isVectorPredicable(const MCInst &MI) const;
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbPredicate(DecodeStatus &S, MCInst &MI) const;
@@ -633,6 +631,17 @@ static DecodeStatus DecodeCCOutOperand(MCInst &Inst, unsigned Val,
     Inst.addOperand(MCOperand::createReg(ARM::CPSR));
   else
     Inst.addOperand(MCOperand::createReg(ARM::NoRegister));
+  return MCDisassembler::Success;
+}
+
+// This overload is called when decoding `s_cc_out` operand, which is not
+// encoded into instruction. It is only used in Thumb1 instructions.
+static DecodeStatus DecodeCCOutOperand(MCInst &Inst,
+                                       const MCDisassembler *Decoder) {
+  const auto *D = static_cast<const ARMDisassembler *>(Decoder);
+  // Thumb1 instructions define CPSR unless they are inside an IT block.
+  MCRegister CCR = D->ITBlock.instrInITBlock() ? ARM::NoRegister : ARM::CPSR;
+  Inst.addOperand(MCOperand::createReg(CCR));
   return MCDisassembler::Success;
 }
 
@@ -6130,26 +6139,6 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Fail;
 }
 
-// Thumb1 instructions don't have explicit S bits.  Rather, they
-// implicitly set CPSR.  Since it's not represented in the encoding, the
-// auto-generated decoder won't inject the CPSR operand.  We need to fix
-// that as a post-pass.
-void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
-  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  MCInst::iterator I = MI.begin();
-  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++I) {
-    if (I == MI.end()) break;
-    if (MCID.operands()[i].isOptionalDef() &&
-        MCID.operands()[i].RegClass == ARM::CCRRegClassID) {
-      if (i > 0 && MCID.operands()[i - 1].isPredicate())
-        continue;
-      MI.insert(I,
-                MCOperand::createReg(InITBlock ? ARM::NoRegister : ARM::CPSR));
-      return;
-    }
-  }
-}
-
 bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
   const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
   for (unsigned i = 0; i < MCID.NumOperands; ++i) {
@@ -6343,9 +6332,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                              STI);
   if (Result) {
     Size = 2;
-    bool InITBlock = ITBlock.instrInITBlock();
     Check(Result, AddThumbPredicate(MI));
-    AddThumb1SBit(MI, InITBlock);
     return Result;
   }
 
@@ -6411,9 +6398,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
       decodeInstruction(DecoderTableThumb32, MI, Insn32, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
     Size = 4;
-    bool InITBlock = ITBlock.instrInITBlock();
     Check(Result, AddThumbPredicate(MI));
-    AddThumb1SBit(MI, InITBlock);
     return Result;
   }
 

@@ -224,6 +224,8 @@ public:
             // foo(123)
             return true;
           }
+          if (isa<CXXBoolLiteralExpr>(ArgOrigin))
+            return true;
           if (isa<ObjCStringLiteral>(ArgOrigin))
             return true;
           if (isASafeCallArg(ArgOrigin))

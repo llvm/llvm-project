@@ -213,10 +213,12 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
   if (!MFI.getSavePoints().empty()) {
     assert(MFI.getSavePoints().size() == 1 &&
            "Multiple save points not yet supported!");
-    SaveBlocks.push_back(MFI.getSavePoints().front());
+    const auto &SavePoint = *MFI.getSavePoints().begin();
+    SaveBlocks.push_back(SavePoint.first);
     assert(MFI.getRestorePoints().size() == 1 &&
            "Multiple restore points not yet supported!");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
+    const auto &RestorePoint = *MFI.getRestorePoints().begin();
+    MachineBasicBlock *RestoreBlock = RestorePoint.first;
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
