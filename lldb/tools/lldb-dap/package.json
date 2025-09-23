@@ -27,6 +27,9 @@
   "categories": [
     "Debuggers"
   ],
+  "dependencies": {
+    "chokidar": "^4.0.3"
+  },
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
