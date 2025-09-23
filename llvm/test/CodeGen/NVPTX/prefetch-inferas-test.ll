@@ -118,5 +118,3 @@ entry:
 declare void @llvm.nvvm.prefetch.tensormap.p0(ptr)
 declare void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4))
 declare void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101))
-
-

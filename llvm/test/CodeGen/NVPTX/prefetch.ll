@@ -163,14 +163,13 @@ define ptx_kernel void @prefetch_param_tensormap_kernel(ptr addrspace(101) %para
 }
 
 define ptx_kernel void @prefetch_grid_const_tensormap(ptr byval([64 x i8]) align 64 "nvvm.grid_constant" %ptr) {
-; CHECK-PTX64-LABEL: .visible .entry prefetch_grid_const_tensormap(
-; CHECK-PTX64:       mov.b64 %rd{{[0-9]+}}, prefetch_grid_const_tensormap_param_0;
-; CHECK-PTX64:  cvta.param.u64 %rd{{[0-9]+}}, %rd{{[0-9]+}};
-; CHECK-PTX64:  prefetch.tensormap [%rd{{[0-9]+}}];
-; CHECK-PTX64:  ret;
+; CHECK-PTX64-LABEL:   .visible .entry prefetch_grid_const_tensormap(
+; CHECK-PTX64:         mov.b64 %rd{{[0-9]+}}, prefetch_grid_const_tensormap_param_0;
+; CHECK-PTX64:         cvta.param.u64 %rd{{[0-9]+}}, %rd{{[0-9]+}};
+; CHECK-PTX64:         prefetch.tensormap [%rd{{[0-9]+}}];
+; CHECK-PTX64:         ret;
 
 entry:
   call void @llvm.nvvm.prefetch.tensormap.p0(ptr addrspace(0) %ptr)
   ret void
 }
-
