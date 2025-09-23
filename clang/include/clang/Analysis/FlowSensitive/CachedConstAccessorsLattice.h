@@ -121,6 +121,7 @@ joinConstMethodMap(
                               llvm::SmallDenseMap<const FunctionDecl *, T *>>
         &Map2,
     LatticeEffect &Effect) {
+  // Intersect the two maps, and note if change was made.
   llvm::SmallDenseMap<const RecordStorageLocation *,
                       llvm::SmallDenseMap<const FunctionDecl *, T *>>
       Result;
