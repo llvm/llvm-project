@@ -1486,34 +1486,16 @@ public:
   bool Pre(const parser::OmpBlockConstruct &);
   void Post(const parser::OmpBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
-    AddOmpSourceRange(x.source);
-    // Manually resolve names in CRITICAL directives. This is because these
-    // names do not denote Fortran objects, and the CRITICAL directive causes
-    // them to be "auto-declared", i.e. inserted into the global scope.
-    // More specifically, they are not expected to have explicit declarations,
-    // and if they do the behavior is unspeficied.
-    if (x.DirName().v == llvm::omp::Directive::OMPD_critical) {
-      for (const parser::OmpArgument &arg : x.Arguments().v) {
-        ResolveCriticalName(arg);
-      }
-    }
-    return true;
+    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpBeginDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
+  void Post(const parser::OmpBeginDirective &x) {
+    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
   bool Pre(const parser::OmpEndDirective &x) {
-    AddOmpSourceRange(x.source);
-    // Manually resolve names in CRITICAL directives.
-    if (x.DirName().v == llvm::omp::Directive::OMPD_critical) {
-      for (const parser::OmpArgument &arg : x.Arguments().v) {
-        ResolveCriticalName(arg);
-      }
-    }
-    return true;
+    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpEndDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
+  void Post(const parser::OmpEndDirective &x) {
+    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
   bool Pre(const parser::OpenMPLoopConstruct &) {
@@ -1522,8 +1504,16 @@ public:
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
   bool Pre(const parser::OmpBeginLoopDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
+    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
+  }
+  void Post(const parser::OmpBeginLoopDirective &x) {
+    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
+  }
+  bool Pre(const parser::OmpEndLoopDirective &x) {
+    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
+  }
+  void Post(const parser::OmpEndLoopDirective &x) {
+    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
@@ -1580,35 +1570,22 @@ public:
   }
   bool Pre(const parser::OmpMapClause &);
 
-  void Post(const parser::OmpBeginLoopDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OmpEndLoopDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OmpEndLoopDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-
   bool Pre(const parser::OpenMPSectionsConstruct &) {
     PushScope(Scope::Kind::OtherConstruct, nullptr);
     return true;
   }
   void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
   bool Pre(const parser::OmpBeginSectionsDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
+    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpBeginSectionsDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
+  void Post(const parser::OmpBeginSectionsDirective &x) {
+    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
   bool Pre(const parser::OmpEndSectionsDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
+    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpEndSectionsDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
+  void Post(const parser::OmpEndSectionsDirective &x) {
+    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
   bool Pre(const parser::OpenMPThreadprivate &) {
     SkipImplicitTyping(true);
@@ -1718,6 +1695,9 @@ public:
     }
   }
   bool Pre(const parser::OmpDirectiveSpecification &x);
+  void Post(const parser::OmpDirectiveSpecification &) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
 
   bool Pre(const parser::OmpTypeSpecifier &x) {
     BeginDeclTypeSpec();
@@ -1725,6 +1705,16 @@ public:
   }
   void Post(const parser::OmpTypeSpecifier &x) { //
     EndDeclTypeSpec();
+  }
+
+  bool Pre(const parser::OpenMPConstruct &x) {
+    // Indicate that the current directive is not a declarative one.
+    declaratives_.push_back(nullptr);
+    return true;
+  }
+  void Post(const parser::OpenMPConstruct &) {
+    // Pop the null pointer.
+    declaratives_.pop_back();
   }
 
 private:
@@ -1994,30 +1984,40 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
 
   const parser::OmpArgumentList &args{x.Arguments()};
   const parser::OmpClauseList &clauses{x.Clauses()};
+  bool visitClauses{true};
 
-  switch (x.DirId()) {
-  case llvm::omp::Directive::OMPD_declare_mapper:
-    if (!args.v.empty()) {
-      const parser::OmpArgument &first{args.v.front()};
-      if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
-        ProcessMapperSpecifier(*spec, clauses);
-      }
-    }
-    break;
-  case llvm::omp::Directive::OMPD_declare_reduction:
-    if (!args.v.empty()) {
-      const parser::OmpArgument &first{args.v.front()};
-      if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, clauses, declaratives_.back());
-      }
-    }
-    break;
-  default:
-    // Default processing.
-    Walk(args);
-    Walk(clauses);
-    break;
+  for (const parser::OmpArgument &arg : args.v) {
+    common::visit( //
+        common::visitors{
+            [&](const parser::OmpMapperSpecifier &spec) {
+              ProcessMapperSpecifier(spec, clauses);
+              visitClauses = false;
+            },
+            [&](const parser::OmpReductionSpecifier &spec) {
+              ProcessReductionSpecifier(spec, clauses, declaratives_.back());
+              visitClauses = false;
+            },
+            [&](const parser::OmpLocator &locator) {
+              // Manually resolve names in CRITICAL directives. This is because
+              // these names do not denote Fortran objects, and the CRITICAL
+              // directive causes them to be "auto-declared", i.e. inserted into
+              // the global scope. More specifically, they are not expected to
+              // have explicit declarations, and if they do the behavior is
+              // unspeficied.
+              if (x.DirId() == llvm::omp::Directive::OMPD_critical) {
+                ResolveCriticalName(arg);
+              } else {
+                Walk(locator);
+              }
+            },
+        },
+        arg.u);
   }
+
+  if (visitClauses) {
+    Walk(clauses);
+  }
+
   return false;
 }
 
