@@ -485,7 +485,7 @@ private:
 
   /// Whether the MI is trivially rematerializable and does not have any virtual
   /// register use.
-  bool isTriviallyReMaterializable(const MachineInstr &MI);
+  bool isReMaterializable(const MachineInstr &MI);
 
   /// Rematerializes all instructions in PreRARematStage::Rematerializations
   /// and stores the achieved occupancy after remat in

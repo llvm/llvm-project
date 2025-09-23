@@ -80,10 +80,7 @@ llvm::calculateRegAllocScore(const MachineFunction &MF,
       },
       [&](const MachineInstr &MI) {
         auto *TTI = MF.getSubtarget().getInstrInfo();
-        return TTI->isTriviallyReMaterializable(MI) &&
-               llvm::all_of(MI.all_uses(), [](const MachineOperand &MO) {
-                 return MO.getReg().isVirtual();
-               });
+        return TTI->isTriviallyReMaterializable(MI);
       });
 }
 
