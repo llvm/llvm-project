@@ -4442,7 +4442,7 @@ struct OmpGrainsizeClause {
 // graph_id-clause ->
 //    GRAPH_ID(graph-id-value)                      // since 6.0
 struct OmpGraphIdClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpGraphIdClause, common::Indirection<Expr>);
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphIdClause, ScalarIntExpr);
 };
 
 // Ref: [6.0:438-439]
@@ -4450,7 +4450,7 @@ struct OmpGraphIdClause {
 // graph_reset-clause ->
 //    GRAPH_RESET[(graph-reset-expression)]         // since 6.0
 struct OmpGraphResetClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, common::Indirection<Expr>);
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, ScalarLogicalExpr);
 };
 
 // Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
@@ -4834,9 +4834,8 @@ struct OmpBlockConstruct {
 };
 
 struct OmpMetadirectiveDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<Verbatim, OmpClauseList> t;
-  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpMetadirectiveDirective, OmpDirectiveSpecification);
 };
 
 // Ref: [5.1:89-90], [5.2:216]
@@ -4844,17 +4843,13 @@ struct OmpMetadirectiveDirective {
 // nothing-directive ->
 //    NOTHING                                     // since 5.1
 struct OmpNothingDirective {
-  using EmptyTrait = std::true_type;
-  COPY_AND_ASSIGN_BOILERPLATE(OmpNothingDirective);
-  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(OmpNothingDirective, OmpDirectiveSpecification);
 };
 
 // Ref: OpenMP [5.2:216-218]
 // ERROR AT(compilation|execution) SEVERITY(fatal|warning) MESSAGE("msg-str)
 struct OmpErrorDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpErrorDirective);
-  CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
+  WRAPPER_CLASS_BOILERPLATE(OmpErrorDirective, OmpDirectiveSpecification);
 };
 
 struct OpenMPUtilityConstruct {
@@ -5000,9 +4995,8 @@ struct OpenMPRequiresConstruct {
 
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
 struct OpenMPThreadprivate {
-  TUPLE_CLASS_BOILERPLATE(OpenMPThreadprivate);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPThreadprivate, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpObjectList> t;
 };
 
 // 2.11.3 allocate -> ALLOCATE (variable-name-list) [clause]
