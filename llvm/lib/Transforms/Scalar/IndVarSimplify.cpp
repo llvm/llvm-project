@@ -1852,8 +1852,9 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
         HasThreadLocalSideEffects = true;
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
           // Simple stores cannot be observed by other threads.
-          // If HasThreadLocalSideEffects is set, we check crashingBBWithoutEffect
-          // to make sure that the crashing BB cannot observe them either.
+          // If HasThreadLocalSideEffects is set, we check
+          // crashingBBWithoutEffect to make sure that the crashing BB cannot
+          // observe them either.
           if (!SI->isSimple())
             return false;
         } else {
