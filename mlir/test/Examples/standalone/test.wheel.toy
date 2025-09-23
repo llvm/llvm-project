@@ -1,0 +1,14 @@
+# RUN: export LLVM_NATIVE_TOOL_DIR="%mlir_tools_dir"
+# RUN: export MLIR_DIR="%mlir_cmake_dir"
+# RUN: %python -m pip wheel "%mlir_src_root/examples/standalone/python" -v | tee %t
+# RUN: %python -m pip install standalone_python_bindings-*.whl -v | tee -a %t
+# RUN: %python "%mlir_src_root/examples/standalone/test/python/smoketest.py" nanobind  | tee -a %t
+
+# RUN: FileCheck --input-file=%t %s
+
+# CHECK: Successfully built standalone-python-bindings
+
+# CHECK: module {
+# CHECK:   %[[C2:.*]] = arith.constant 2 : i32
+# CHECK:   %[[V0:.*]] = standalone.foo %[[C2]] : i32
+# CHECK: }

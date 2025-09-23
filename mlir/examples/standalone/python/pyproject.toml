@@ -1,0 +1,65 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (c) 2025.
+
+[project]
+name = "standalone-python-bindings"
+dynamic = ["version"]
+requires-python = ">=3.8,<=3.13"
+dependencies = [
+    "numpy>=1.19.5, <=2.1.2",
+    "PyYAML>=5.4.0, <=6.0.2",
+    # required but no package for it...
+    # "ml_dtypes>=0.5.0, <=0.6.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/llvm/llvm-project"
+Discussions = "https://discourse.llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20label%3Amlir%3Apython%20"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/mlir/python"
+
+[build-system]
+requires = [
+    "scikit-build-core==0.10.7",
+    # nanobind requires it for stubgen but we don't use stubgen?
+    "typing_extensions==4.12.2",
+    "nanobind>=2.9, <3.0",
+    "pybind11>=2.10.0, <=2.13.6",
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+experimental = true
+metadata.version.provider = "version"
+metadata.version.provider-path = "."
+
+minimum-version = "0.10"
+# Uncomment to specify the build directory for the wheel (otherwise will be a temporary directory).
+# build-dir = "build"
+cmake.source-dir = "../"
+wheel.exclude = ["bin", "include", "lib", "src", "share"]
+# for installing/distributing only the python stuff
+build.targets = ["StandalonePythonModules"]
+install.components = ["StandalonePythonModules"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_C_COMPILER_LAUNCHER = { env = "CMAKE_C_COMPILER_LAUNCHER", default = "" }
+CMAKE_CXX_COMPILER_LAUNCHER = { env = "CMAKE_CXX_COMPILER_LAUNCHER", default = "" }
+CMAKE_VISIBILITY_INLINES_HIDDEN = "ON"
+CMAKE_C_VISIBILITY_PRESET = "hidden"
+CMAKE_CXX_VISIBILITY_PRESET = "hidden"
+CMAKE_VERBOSE_MAKEFILE = "ON"
+
+# for installing/distributing only the python stuff
+LLVM_DISTRIBUTIONS = "StandalonePython"
+LLVM_StandalonePython_DISTRIBUTION_COMPONENTS = "StandalonePythonModules"
+LLVM_ENABLE_PROJECTS = "mlir"
+
+MLIR_PYTHON_PACKAGE_PREFIX = "mlir_standalone"
+MLIR_BINDINGS_PYTHON_INSTALL_PREFIX = "mlir_standalone"
+MLIR_ENABLE_BINDINGS_PYTHON = "ON"
+MLIR_DIR = { env = "MLIR_DIR", default = "" }
+
+LLVM_NATIVE_TOOL_DIR = { env = "LLVM_NATIVE_TOOL_DIR", default = "" }
