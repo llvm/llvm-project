@@ -4285,6 +4285,33 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kValueReplaceAllUsesWithDocstring)
       .def(
           "replace_all_uses_except",
+          [](MlirValue self, MlirValue with, PyOperation &exception) {
+            MlirOperation exceptedUser = exception.get();
+            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
+          },
+          nb::arg("with_"), nb::arg("exceptions"),
+          nb::sig("def replace_all_uses_except(self, with_: Value, exceptions: "
+                  "Operation) -> None"),
+          kValueReplaceAllUsesExceptDocstring)
+      .def(
+          "replace_all_uses_except",
+          [](MlirValue self, MlirValue with, nb::list exceptions) {
+            // Convert Python list to a SmallVector of MlirOperations
+            llvm::SmallVector<MlirOperation> exceptionOps;
+            for (nb::handle exception : exceptions) {
+              exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
+            }
+
+            mlirValueReplaceAllUsesExcept(
+                self, with, static_cast<intptr_t>(exceptionOps.size()),
+                exceptionOps.data());
+          },
+          nb::arg("with_"), nb::arg("exceptions"),
+          nb::sig("def replace_all_uses_except(self, with_: Value, exceptions: "
+                  "Sequence[Operation]) -> None"),
+          kValueReplaceAllUsesExceptDocstring)
+      .def(
+          "replace_all_uses_except",
           [](PyValue &self, PyValue &with, PyOperation &exception) {
             MlirOperation exceptedUser = exception.get();
             mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
