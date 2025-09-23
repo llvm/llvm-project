@@ -1024,3 +1024,6 @@ def testVariadicAndNormalRegionOp():
                 is RegionSequence
             )
             assert type(region_op.variadic) is RegionSequence
+
+            assert isinstance(region_op.opview, OpView)
+            assert isinstance(region_op.operation.opview, OpView)
