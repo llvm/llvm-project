@@ -506,6 +506,11 @@ public:
   /// Shared thread pool. Use only with ThreadPoolTaskGroup.
   static llvm::ThreadPoolInterface &GetThreadPool();
 
+  /// Dedicated symbol thread pool to prevent deadlock with module loading.
+  /// Use this for symbol indexing operations that might need to access
+  /// the shared module list while holding module mutexes.
+  static llvm::ThreadPoolInterface &GetSymbolThreadPool();
+
   /// Report warning events.
   ///
   /// Warning events will be delivered to any debuggers that have listeners

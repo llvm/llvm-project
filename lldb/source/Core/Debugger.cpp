@@ -110,6 +110,7 @@ static std::recursive_mutex *g_debugger_list_mutex_ptr =
 static Debugger::DebuggerList *g_debugger_list_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
 static llvm::DefaultThreadPool *g_thread_pool = nullptr;
+static llvm::DefaultThreadPool *g_symbol_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
@@ -715,6 +716,8 @@ void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
   g_thread_pool = new llvm::DefaultThreadPool(llvm::optimal_concurrency());
+  g_symbol_thread_pool =
+      new llvm::DefaultThreadPool(llvm::optimal_concurrency());
   g_load_plugin_callback = load_plugin_callback;
 }
 
@@ -731,6 +734,13 @@ void Debugger::Terminate() {
   if (g_thread_pool) {
     // The destructor will wait for all the threads to complete.
     delete g_thread_pool;
+    g_thread_pool = nullptr;
+  }
+
+  if (g_symbol_thread_pool) {
+    // The destructor will wait for all the threads to complete.
+    delete g_symbol_thread_pool;
+    g_symbol_thread_pool = nullptr;
   }
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
@@ -2382,4 +2392,10 @@ llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
+}
+
+llvm::ThreadPoolInterface &Debugger::GetSymbolThreadPool() {
+  assert(g_symbol_thread_pool &&
+         "Debugger::GetSymbolThreadPool called before Debugger::Initialize");
+  return *g_symbol_thread_pool;
 }
