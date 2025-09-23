@@ -160,14 +160,13 @@ _ktest_mask64_u8(__mmask64 __A, __mmask64 __B, unsigned char *__C) {
   return (unsigned char)__builtin_ia32_ktestzdi(__A, __B);
 }
 
-static __inline__ __mmask32 __DEFAULT_FN_ATTRS
-_kadd_mask32(__mmask32 __A, __mmask32 __B)
-{
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS_CONSTEXPR
+_kadd_mask32(__mmask32 __A, __mmask32 __B) {
   return (__mmask32)__builtin_ia32_kaddsi((__mmask32)__A, (__mmask32)__B);
 }
 
-static __inline__ __mmask64 __DEFAULT_FN_ATTRS _kadd_mask64(__mmask64 __A,
-                                                            __mmask64 __B) {
+static __inline__ __mmask64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_kadd_mask64(__mmask64 __A, __mmask64 __B) {
   return (__mmask64)__builtin_ia32_kadddi((__mmask64)__A, (__mmask64)__B);
 }
 

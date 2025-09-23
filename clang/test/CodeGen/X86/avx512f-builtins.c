@@ -11106,7 +11106,7 @@ int test_mm512_mask2int(__mmask16 __a)
   return _mm512_mask2int(__a);
 }
 
-TEST_CONSTEXPR(_mm512_mask2int(0x8000) == 0x00008000); // Zero-extended
+TEST_CONSTEXPR(_mm512_mask2int(0x8000) == 0x00008000);
 
 __m128 test_mm_mask_move_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
 {

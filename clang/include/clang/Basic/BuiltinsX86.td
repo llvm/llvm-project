@@ -3073,12 +3073,12 @@ let Features = "avx512dq", Attributes = [NoThrow, Const, RequiredVectorWidth<128
   def fpclassss_mask : X86Builtin<"unsigned char(_Vector<4, float>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr] in {
   def kaddqi : X86Builtin<"unsigned char(unsigned char, unsigned char)">;
   def kaddhi : X86Builtin<"unsigned short(unsigned short, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const] in {
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def kaddsi : X86Builtin<"unsigned int(unsigned int, unsigned int)">;
   def kadddi : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
