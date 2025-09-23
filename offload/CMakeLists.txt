@@ -185,8 +185,8 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64)$" AND
   endif()
 endif()
 if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD AND
-		NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
+   NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
+  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
 endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")

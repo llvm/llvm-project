@@ -403,6 +403,7 @@ public:
   auto getMaxGroupSize() const { return ComputeProperties.maxTotalGroupSize; }
   auto getGlobalMemorySize() const { return MemoryProperties.totalSize; }
   auto getCacheSize() const { return CacheProperties.cacheSize; }
+  auto getMaxMemAllocSize() const { return DeviceProperties.maxMemAllocSize; }
 
   int32_t getAllocKind() const { return AllocKind; }
   DeviceArchTy getDeviceArch() const { return DeviceArch; }

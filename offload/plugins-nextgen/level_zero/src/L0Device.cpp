@@ -553,10 +553,25 @@ Error L0DeviceTy::initDeviceInfoImpl(__tgt_device_info *Info) {
   return Plugin::success();
 }
 
+static const char *DriverVersionToStrTable[] = {
+    "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
+    "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"};
+constexpr size_t DriverVersionToStrTableSize =
+    sizeof(DriverVersionToStrTable) / sizeof(DriverVersionToStrTable[0]);
+
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
-  Info.add("Device Name", getNameCStr());
+  Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
+  Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
+  Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
+  Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
+  auto DriverVersion = getDriverAPIVersion();
+  if (DriverVersion < DriverVersionToStrTableSize)
+    Info.add("Driver Version", DriverVersionToStrTable[DriverVersion], "",
+             DeviceInfo::DRIVER_VERSION);
+  else
+    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
   Info.add("Number of total EUs", getNumEUs());
@@ -566,9 +581,10 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Number of subslices per slice", getNumSubslicesPerSlice());
   Info.add("Number of slices", getNumSlices());
   Info.add("Local memory size (bytes)", getMaxSharedLocalMemory());
-  Info.add("Global memory size (bytes)", getGlobalMemorySize());
+  Info.add("Global memory size (bytes)", getGlobalMemorySize(), "", DeviceInfo::GLOBAL_MEM_SIZE);
   Info.add("Cache size (bytes)", getCacheSize());
-  Info.add("Max clock frequency (MHz)", getClockRate());
+  Info.add("Max Memory Allocation Size (bytes)", getMaxMemAllocSize(), "", DeviceInfo::MAX_MEM_ALLOC_SIZE);
+  Info.add("Max clock frequency (MHz)", getClockRate(), "" , DeviceInfo::MAX_CLOCK_FREQUENCY);
   return Info;
 }
 

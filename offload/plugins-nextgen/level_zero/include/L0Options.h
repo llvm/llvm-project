@@ -27,28 +27,26 @@ enum class CommandModeTy { Sync = 0, Async, AsyncOrdered };
 class SpecConstantsTy {
   std::vector<uint32_t> ConstantIds;
   std::vector<const void *> ConstantValues;
+  BumpPtrAllocator &Allocator;
 
 public:
-  SpecConstantsTy() = default;
+  SpecConstantsTy(BumpPtrAllocator &Allocator) : Allocator(Allocator) {}
   SpecConstantsTy(const SpecConstantsTy &) = delete;
   SpecConstantsTy(SpecConstantsTy &&) = delete;
   SpecConstantsTy &operator=(const SpecConstantsTy &) = delete;
   SpecConstantsTy &operator=(const SpecConstantsTy &&) = delete;
   SpecConstantsTy(const SpecConstantsTy &&Other)
       : ConstantIds(std::move(Other.ConstantIds)),
-        ConstantValues(std::move(Other.ConstantValues)) {}
+        ConstantValues(std::move(Other.ConstantValues)),
+        Allocator(Other.Allocator) {}
 
   ~SpecConstantsTy() {
-    for (auto I : ConstantValues) {
-      const char *ValuePtr = reinterpret_cast<const char *>(I);
-      delete[] ValuePtr;
-    }
   }
 
   template <typename T> void addConstant(uint32_t Id, T Val) {
-    const size_t ValSize = sizeof(Val);
-    char *ValuePtr = new char[ValSize];
-    *reinterpret_cast<T *>(ValuePtr) = Val;
+    T *ValuePtr =
+        reinterpret_cast<T *>(Allocator.Allocate(sizeof(T), alignof(T)));
+    *ValuePtr = Val;
 
     ConstantIds.push_back(Id);
     ConstantValues.push_back(reinterpret_cast<void *>(ValuePtr));
@@ -134,7 +132,10 @@ struct L0OptionsTy {
 
   bool Init = false; // have the options already been processed
 
-  L0OptionsTy() {}
+  // Allocator for long-lived allocations (e.g. spec constants)
+  BumpPtrAllocator Allocator;
+
+  L0OptionsTy() : CommonSpecConstants(Allocator) {}
 
   /// Read environment variables
   void processEnvironmentVars();
