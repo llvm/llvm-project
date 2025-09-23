@@ -2528,7 +2528,8 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_elementwise_int_unaryop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &)> Fn) {
-  assert(Call->getType()->isIntegerType() && Call->getNumArgs() == 1);
+  assert(Call->getNumArgs() == 1);
+  assert(Call->getType()->isIntegerType());
 
   // Single integer case.
   if (!Call->getArg(0)->getType()->isVectorType()) {
