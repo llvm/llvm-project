@@ -12028,6 +12028,39 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  // vector extract
+  case X86::BI__builtin_ia32_extract128i256: 
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256: {
+    APValue SourceVec, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceImm))
+      return false;
+    
+    if (!SourceVec.isVector())
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    if (!RetVT) return false;
+
+    unsigned RetLen = RetVT->getNumElements();
+    unsigned SrcLen = SourceVec.getVectorLength();
+    if (SrcLen != RetLen * 2) 
+      return false;
+
+    unsigned idx = SourceImm.getInt().getZExtValue() & 1;
+    
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+
+    for (unsigned i = 0; i < RetLen; i++)
+      ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
+    
+    return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  // masked extract (ex: mm512_mask_extract32x4_epi32 / 512 -> 128)
   case X86::BI__builtin_ia32_extracti32x4_256_mask:  // _mm256_extracti32x4_epi32
   case X86::BI__builtin_ia32_extracti32x4_mask:      // _mm512_extracti32x4_epi32
   case X86::BI__builtin_ia32_extracti32x8_mask:      // _mm512_extracti32x8_epi32
@@ -12127,36 +12160,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
       } else {
         const APValue &MergeElt = 
-            SourceMerge.isVector() ? SourceMerge.getVectorElt(i) : makeZeroInt();
+            SourceMerge.isVector() ? SourceMerge.getVectorElt(i) : makeZeroFP();
         ResultElements.push_back(MergeElt);
       }
     }
-    return Success(APValue(ResultElements.data(), RetLen), E);
-  }
-
-  // vector extract
-  case X86::BI__builtin_ia32_extract128i256: // avx2
-  case X86::BI__builtin_ia32_vextractf128_pd256:
-  case X86::BI__builtin_ia32_vextractf128_ps256:
-  case X86::BI__builtin_ia32_vextractf128_si256: {
-    APValue SourceVec, SourceImm;
-    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
-        !EvaluateAsRValue(Info, E->getArg(1), SourceImm))
-      return false;
-    
-    unsigned idx = SourceImm.getInt().getZExtValue() & 1;
-    const auto *RetVT = E->getType()->castAs<VectorType>();
-    unsigned RetLen = RetVT->getNumElements();
-    unsigned SrcLen = SourceVec.getVectorLength();
-    if (SrcLen != RetLen * 2) 
-      return false;
-    
-    SmallVector<APValue, 32> ResultElements;
-    ResultElements.reserve(RetLen);
-
-    for (unsigned i = 0; i < RetLen; i++)
-      ResultElements.push_back(SourceVec.getVectorElt(idx * RetLen + i));
-    
     return Success(APValue(ResultElements.data(), RetLen), E);
   }
 
