@@ -2492,12 +2492,34 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   // The builtin's shift arg may have a different type than the source arg and
   // result, but the LLVM intrinsic uses the same type for all values.
   llvm::Type *Ty = Src->getType();
+
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+
+  if (E->getArg(1)->getType()->isSignedIntegerType()) {
+    // converting BitWidth to the type of ShiftAmt
+    llvm::Type *ShiftTy = ShiftAmt->getType();
+    llvm::Value *BitWidthInShiftTy = ConstantInt::get(ShiftTy, BitWidth);
+
+    // if ShiftAmt is negative, normalize ShiftAmt to [0, BitWidth - 1]
+    llvm::Value *RemResult = Builder.CreateSRem(ShiftAmt, BitWidthInShiftTy);
+    llvm::Value *PositiveShift =
+        Builder.CreateAdd(RemResult, BitWidthInShiftTy);
+
+    llvm::Value *Zero = ConstantInt::get(ShiftTy, 0);
+    llvm::Value *IsRemNegative = Builder.CreateICmpSLT(RemResult, Zero);
+
+    ShiftAmt = Builder.CreateSelect(IsRemNegative, PositiveShift, RemResult);
+  }
+
+  llvm::Type *ShiftTy = ShiftAmt->getType();
+  llvm::Value *BitWidthInShiftTy = ConstantInt::get(ShiftTy, BitWidth);
+  ShiftAmt = Builder.CreateURem(ShiftAmt, BitWidthInShiftTy);
   ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
 
   // Rotate is a special case of LLVM funnel shift - 1st 2 args are the same.
   unsigned IID = IsRotateRight ? Intrinsic::fshr : Intrinsic::fshl;
   Function *F = CGM.getIntrinsic(IID, Ty);
-  return RValue::get(Builder.CreateCall(F, { Src, Src, ShiftAmt }));
+  return RValue::get(Builder.CreateCall(F, {Src, Src, ShiftAmt}));
 }
 
 // Map math builtins for long-double to f128 version.
@@ -3642,6 +3664,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -3653,6 +3676,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_right:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
