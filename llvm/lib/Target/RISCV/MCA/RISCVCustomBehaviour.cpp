@@ -314,20 +314,20 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   // Not a RVV instr
   if (!VPOpcode) {
     LDBG() << "RVCB: Could not find PseudoInstruction for Opcode "
-           << MCII.getName(Opcode) << ", LMUL=" << (LI ? LI->getData() : "Unspecified")
-               << ", SEW=" << (SI ? SI->getData() :
-                                    "Unspecified")
-               << ". Ignoring instrumentation and using original SchedClassID="
-               << SchedClassID << '\n';
+           << MCII.getName(Opcode)
+           << ", LMUL=" << (LI ? LI->getData() : "Unspecified")
+           << ", SEW=" << (SI ? SI->getData() : "Unspecified")
+           << ". Ignoring instrumentation and using original SchedClassID="
+           << SchedClassID << '\n';
     return SchedClassID;
   }
 
   // Override using pseudo
   LDBG() << "RVCB: Found Pseudo Instruction for Opcode " << MCII.getName(Opcode)
-         << ", LMUL=" << LI->getData() << ", SEW=" << (SI ? SI->getData() :
-                                                            "Unspecified")
-                    << ". Overriding original SchedClassID=" << SchedClassID
-                    << " with " << MCII.getName(*VPOpcode) << '\n';
+         << ", LMUL=" << LI->getData()
+         << ", SEW=" << (SI ? SI->getData() : "Unspecified")
+         << ". Overriding original SchedClassID=" << SchedClassID << " with "
+         << MCII.getName(*VPOpcode) << '\n';
   return MCII.get(*VPOpcode).getSchedClass();
 }
 
