@@ -3418,20 +3418,7 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
 static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
   // Query if the given function is local to the load module.
   auto IsLocalFunc = [](const Function *F) {
-    // Static functions are local
-    if (F->getLinkage() == GlobalValue::InternalLinkage)
-      return true;
-    // We treat declarations as non-local because the visibility attribute
-    // on a declaration might not match the definition, and AIX linker
-    // ignores the visibility on a reference.
-    if (F->isDeclarationForLinker())
-      return false;
-    // hidden or protected visibility definitions cannot be preempted.
-    if (F->getVisibility() == GlobalValue::HiddenVisibility ||
-        F->getVisibility() == GlobalValue::ProtectedVisibility)
-      return true;
-
-    return false;
+    return F->isStrongDefinitionForLinker() && F->isDSOLocal();
   };
   // Recursive walker that checks if all possible runtime values of the given
   // llvm::Value are addresses of local functions.
