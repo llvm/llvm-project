@@ -7012,15 +7012,18 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
 // MOD
 static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value a, mlir::Value p) {
-  mlir::Value divResult = mlir::arith::DivFOp::create(builder, loc, a, p);
+  auto fastmathFlags = mlir::arith::FastMathFlags::contract;
+  auto fastmathAttr =
+      mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
+  mlir::Value divResult = mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
   mlir::Type intType = builder.getIntegerType(
       a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
   mlir::Value intResult = builder.createConvert(loc, intType, divResult);
   mlir::Value cnvResult = builder.createConvert(loc, a.getType(), intResult);
   mlir::Value mulResult =
-      mlir::arith::MulFOp::create(builder, loc, cnvResult, p);
+      mlir::arith::MulFOp::create(builder, loc, cnvResult, p, fastmathAttr);
   mlir::Value subResult =
-      mlir::arith::SubFOp::create(builder, loc, a, mulResult);
+      mlir::arith::SubFOp::create(builder, loc, a, mulResult, fastmathAttr);
   return subResult;
 }
 
