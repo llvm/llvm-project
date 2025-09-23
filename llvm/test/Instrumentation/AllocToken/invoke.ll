@@ -32,7 +32,7 @@ define ptr @test_invoke_operator_new() sanitize_alloc_token personality ptr @__g
 ; CHECK-LABEL: define ptr @test_invoke_operator_new(
 ; CHECK-SAME: ) #[[ATTR0]] personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = invoke ptr @__alloc_token_Znwm(i64 32, i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = invoke ptr @__alloc_token__Znwm(i64 32, i64 1)
 ; CHECK-NEXT:            to label %[[NORMAL:.*]] unwind label %[[CLEANUP:.*]]
 ; CHECK:       [[NORMAL]]:
 ; CHECK-NEXT:    ret ptr [[TMP0]]
@@ -60,7 +60,7 @@ define ptr @test_complex_invoke_flow() sanitize_alloc_token personality ptr @__g
 ; CHECK-NEXT:    [[TMP0:%.*]] = invoke ptr @__alloc_token_malloc(i64 16, i64 2)
 ; CHECK-NEXT:            to label %[[FIRST_OK:.*]] unwind label %[[CLEANUP1:.*]]
 ; CHECK:       [[FIRST_OK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = invoke ptr @__alloc_token_Znwm(i64 32, i64 3)
+; CHECK-NEXT:    [[TMP1:%.*]] = invoke ptr @__alloc_token__Znwm(i64 32, i64 3)
 ; CHECK-NEXT:            to label %[[SECOND_OK:.*]] unwind label %[[CLEANUP2:.*]]
 ; CHECK:       [[SECOND_OK]]:
 ; CHECK-NEXT:    ret ptr [[TMP0]]
