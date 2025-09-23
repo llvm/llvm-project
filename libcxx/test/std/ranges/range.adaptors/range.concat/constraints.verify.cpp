@@ -13,6 +13,9 @@
 #include <vector>
 #include "test_macros.h"
 
+// This tests https://cplusplus.github.io/LWG/issue4082
+// views::concat(r) is well-formed when r is an output_range
+
 int main(int, char**) {
   std::vector<int> v{1, 2, 3};
   auto r = std::views::counted(std::back_inserter(v), 3);
