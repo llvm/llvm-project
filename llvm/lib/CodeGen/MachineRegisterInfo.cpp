@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -683,7 +685,7 @@ void MachineRegisterInfo::getPhysRegAntiHints(
   if (!AntiHintRegs.inBounds(VReg) || !VRM)
     return;
 
-  const auto &AntiHints = AntiHintRegs[VReg];
+  const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
 
   for (Register AntiHintVReg : AntiHints) {
