@@ -98,7 +98,7 @@ typedef int bla1, bla2, bla3;
 // CHECK-FIXES-NEXT: using bla2 = bla1;
 // CHECK-FIXES-NEXT: using bla3 = bla1;
 
-typedef int I, &LVal, &&RVal, *Ptr, *const ConstPtr, Vec3[3], (*Fn)();
+typedef int I, &LVal, &&RVal, *Ptr, *const ConstPtr, Vec3[3], (Fn)(), (*FnPtr)();
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:14: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-3]]:21: warning: use 'using' instead of 'typedef'
@@ -106,13 +106,15 @@ typedef int I, &LVal, &&RVal, *Ptr, *const ConstPtr, Vec3[3], (*Fn)();
 // CHECK-MESSAGES: :[[@LINE-5]]:35: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-6]]:52: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-7]]:61: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-7]]:69: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using I = int;
 // CHECK-FIXES-NEXT: using LVal = I &;
 // CHECK-FIXES-NEXT: using RVal = I &&;
 // CHECK-FIXES-NEXT: using Ptr = I *;
 // CHECK-FIXES-NEXT: using ConstPtr = I *const;
 // CHECK-FIXES-NEXT: using Vec3 = I[3];
-// CHECK-FIXES-NEXT: using Fn = I (*)();
+// CHECK-FIXES-NEXT: using Fn = I ()();
+// CHECK-FIXES-NEXT: using FnPtr = I (*)();
 
 #define CODE typedef int INT
 
@@ -405,6 +407,13 @@ namespace ISSUE_72179
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-FIXES: const auto foo4 = [](int a){using d = int;};
 }
+
+typedef int* IntPtr, *AlsoIntPtr;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-MESSAGES: :[[@LINE-2]]:20: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using IntPtr = int*;
+// CHECK-FIXES-NEXT: using AlsoIntPtr = IntPtr *;
+// FIXME: the second fixit is wrong. This is issue #150276.
 
 #ifndef SpecialMode
 #define SomeMacro(x) x
