@@ -110,7 +110,7 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-  types::for_each(types::character_types(), []<class CharT> { test<CharT>(); });
+  types::for_each(types::character_types(), []<typename CharT> { test<CharT>(); });
 
   return true;
 }
