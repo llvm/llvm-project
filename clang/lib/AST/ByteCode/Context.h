@@ -67,7 +67,7 @@ public:
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
 
-  /// Evaluate \param E and if it can be evaluated to a sirint literal,
+  /// Evaluate \param E and if it can be evaluated to a null-terminated string,
   /// copy the result into \param Result.
   bool evaluateString(State &Parent, const Expr *E, std::string &Result);
 

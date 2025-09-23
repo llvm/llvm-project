@@ -251,9 +251,13 @@ bool Context::evaluateString(State &Parent, const Expr *E,
       return false;
 
     unsigned N = Ptr.getNumElems();
+
     if (Ptr.elemSize() == 1 /* bytes */) {
       const char *Chars = reinterpret_cast<const char *>(Ptr.getRawAddress());
       unsigned Length = strnlen(Chars, N);
+      // Wasn't null terminated.
+      if (N == Length)
+        return false;
       Result.assign(Chars, Length);
       return true;
     }
