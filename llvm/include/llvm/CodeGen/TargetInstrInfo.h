@@ -171,7 +171,7 @@ public:
     return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
             MI.getNumOperands() == 1) ||
            (MI.getDesc().isRematerializable() &&
-            isReallyTriviallyReMaterializable(MI));
+            isReMaterializableImpl(MI));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -198,7 +198,7 @@ protected:
   /// predicate must return false if the instruction has any side effects other
   /// than producing a value, or if it requres any address registers that are
   /// not always available.
-  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const;
+  virtual bool isReMaterializableImpl(const MachineInstr &MI) const;
 
   /// This method commutes the operands of the given machine instruction MI.
   /// The operands to be commuted are specified by their indices OpIdx1 and
