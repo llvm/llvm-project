@@ -4,10 +4,9 @@
 ; CHECK:        .loc    1 8 16 prologue_end             ; test.py:8:16
 ; CHECK-NEXT:   s_load_dword
 
-define void @test(ptr addrspace(1) inreg readonly captures(none) %0, ptr addrspace(1) inreg writeonly captures(none) %1) local_unnamed_addr !dbg !4 {
-  %3 = load <1 x float>, ptr addrspace(1) %0, align 4, !dbg !8, !amdgpu.noclobber !6
-  store <1 x float> %3, ptr addrspace(1) %1, align 4, !dbg !7
-
+define void @test(ptr addrspace(1) inreg readonly captures(none) %arg0, ptr addrspace(1) inreg writeonly captures(none) %arg1) local_unnamed_addr !dbg !4 {
+  %ld = load <1 x float>, ptr addrspace(1) %arg0, align 4, !dbg !8, !amdgpu.noclobber !6
+  store <1 x float> %ld, ptr addrspace(1) %arg1, align 4, !dbg !7
   ret void, !dbg !9
 }
 
