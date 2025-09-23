@@ -15,16 +15,9 @@
 using namespace llvm;
 using namespace llvm::hlsl;
 
-static bool isPadding(Type *Ty) {
-  // TODO: We should use an explicit padding type rather than array of i8
-  if (const auto *ATy = dyn_cast<ArrayType>(Ty))
-    if (const auto *ITy = dyn_cast<IntegerType>(ATy->getElementType()))
-      return ITy->getBitWidth() == 8;
-  return false;
-}
-
-static SmallVector<size_t> getMemberOffsets(const DataLayout &DL,
-                                            GlobalVariable *Handle) {
+static SmallVector<size_t>
+getMemberOffsets(const DataLayout &DL, GlobalVariable *Handle,
+                 llvm::function_ref<bool(Type *)> IsPadding) {
   SmallVector<size_t> Offsets;
 
   auto *HandleTy = cast<TargetExtType>(Handle->getValueType());
@@ -36,13 +29,14 @@ static SmallVector<size_t> getMemberOffsets(const DataLayout &DL,
 
   const StructLayout *SL = DL.getStructLayout(LayoutTy);
   for (int I = 0, E = LayoutTy->getNumElements(); I < E; ++I)
-    if (!isPadding(LayoutTy->getElementType(I)))
+    if (!IsPadding(LayoutTy->getElementType(I)))
       Offsets.push_back(SL->getElementOffset(I));
 
   return Offsets;
 }
 
-std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
+std::optional<CBufferMetadata>
+CBufferMetadata::get(Module &M, llvm::function_ref<bool(Type *)> IsPadding) {
   NamedMDNode *CBufMD = M.getNamedMetadata("hlsl.cbs");
   if (!CBufMD)
     return std::nullopt;
@@ -57,7 +51,7 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
     CBufferMapping &Mapping = Result->Mappings.emplace_back(Handle);
 
     SmallVector<size_t> MemberOffsets =
-        getMemberOffsets(M.getDataLayout(), Handle);
+        getMemberOffsets(M.getDataLayout(), Handle, IsPadding);
 
     for (int I = 1, E = MD->getNumOperands(); I < E; ++I) {
       Metadata *OpMD = MD->getOperand(I);

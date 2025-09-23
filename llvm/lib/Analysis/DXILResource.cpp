@@ -289,14 +289,6 @@ static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
   return StructType::create(ElemType, Name);
 }
 
-static bool isPadding(Type *Ty) {
-  // TODO: we need an explicit padding type here...
-  if (auto *AT = dyn_cast<ArrayType>(Ty))
-    if (AT->getElementType() == Type::getInt8Ty(Ty->getContext()))
-      return true;
-  return false;
-}
-
 static Type *getTypeWithoutPadding(Type *Ty) {
   // Recursively remove padding from structures.
   if (auto *ST = dyn_cast<StructType>(Ty)) {
@@ -304,7 +296,7 @@ static Type *getTypeWithoutPadding(Type *Ty) {
     SmallVector<Type *> ElementTypes;
     ElementTypes.reserve(ST->getNumElements());
     for (Type *ElTy : ST->elements()) {
-      if (isPadding(ElTy))
+      if (isa<PaddingExtType>(ElTy))
         continue;
       ElementTypes.push_back(getTypeWithoutPadding(ElTy));
     }

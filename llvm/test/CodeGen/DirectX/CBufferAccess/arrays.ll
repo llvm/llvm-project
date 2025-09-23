@@ -11,27 +11,27 @@
 ;   bool a8[4];         // offset  656, size  4 (+12) * 4
 ; }
 %__cblayout_CB = type <{
-  <{ [2 x <{ float, [12 x i8] }>], float }>, [12 x i8],
-  <{ [1 x <{ <3 x double>, [8 x i8] }>], <3 x double> }>, [8 x i8],
-  <{ [3 x <{ half, [14 x i8] }>], half }>, [14 x i8],
-  <{ [2 x <{ i64, [8 x i8] }>], i64 }>, [8 x i8],
+  <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>, target("dx.Padding", 12),
+  <{ [1 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, target("dx.Padding", 8),
+  <{ [3 x <{ half, target("dx.Padding", 14) }>], half }>, target("dx.Padding", 14),
+  <{ [2 x <{ i64, target("dx.Padding", 8) }>], i64 }>, target("dx.Padding", 8),
   [24 x <4 x i32>],
-  [1 x i16], [14 x i8],
-  <{ [1 x <{ i64, [8 x i8] }>], i64 }>, [8 x i8],
-  <{ [3 x <{ i32, [12 x i8] }>], i32 }>
+  [1 x i16], target("dx.Padding", 14),
+  <{ [1 x <{ i64, target("dx.Padding", 8) }>], i64 }>, target("dx.Padding", 8),
+  <{ [3 x <{ i32, target("dx.Padding", 12) }>], i32 }>
 }>
 
 @CB.cb = local_unnamed_addr global target("dx.CBuffer", %__cblayout_CB) poison
 ; CHECK: @CB.cb =
 ; CHECK-NOT: external {{.*}} addrspace(2) global
-@a1 = external local_unnamed_addr addrspace(2) global <{ [2 x <{ float, [12 x i8] }>], float }>, align 4
-@a2 = external local_unnamed_addr addrspace(2) global <{ [1 x <{ <3 x double>, [8 x i8] }>], <3 x double> }>, align 32
-@a3 = external local_unnamed_addr addrspace(2) global <{ [3 x <{ half, [14 x i8] }>], half }>, align 2
-@a4 = external local_unnamed_addr addrspace(2) global <{ [2 x <{ i64, [8 x i8] }>], i64 }>, align 8
+@a1 = external local_unnamed_addr addrspace(2) global <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>, align 4
+@a2 = external local_unnamed_addr addrspace(2) global <{ [1 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, align 32
+@a3 = external local_unnamed_addr addrspace(2) global <{ [3 x <{ half, target("dx.Padding", 14) }>], half }>, align 2
+@a4 = external local_unnamed_addr addrspace(2) global <{ [2 x <{ i64, target("dx.Padding", 8) }>], i64 }>, align 8
 @a5 = external local_unnamed_addr addrspace(2) global [24 x <4 x i32>], align 16
 @a6 = external local_unnamed_addr addrspace(2) global [1 x i16], align 2
-@a7 = external local_unnamed_addr addrspace(2) global <{ [1 x <{ i64, [8 x i8] }>], i64 }>, align 8
-@a8 = external local_unnamed_addr addrspace(2) global <{ [3 x <{ i32, [12 x i8] }>], i32 }>, align 4
+@a7 = external local_unnamed_addr addrspace(2) global <{ [1 x <{ i64, target("dx.Padding", 8) }>], i64 }>, align 8
+@a8 = external local_unnamed_addr addrspace(2) global <{ [3 x <{ i32, target("dx.Padding", 12) }>], i32 }>, align 4
 
 ; CHECK: define void @f
 define void @f(ptr %dst) {

@@ -8,7 +8,7 @@
 ;   int4 a5;       // offset  80, size 16
 ;   uint16_t3 a6;  // offset  96, size  6 (+10)
 ; };
-%__cblayout_CB = type <{ <3 x float>, [4 x i8], <3 x double>, <2 x half>, [4 x i8], <3 x i64>, [8 x i8], <4 x i32>, <3 x i16> }>
+%__cblayout_CB = type <{ <3 x float>, target("dx.Padding", 4), <3 x double>, <2 x half>, target("dx.Padding", 4), <3 x i64>, target("dx.Padding", 8), <4 x i32>, <3 x i16> }>
 
 @CB.cb = local_unnamed_addr global target("dx.CBuffer", %__cblayout_CB) poison
 ; CHECK: @CB.cb =

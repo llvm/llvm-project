@@ -1,78 +1,78 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // CHECK: %__cblayout_CBScalars = type <{
-// CHECK-SAME:   float, [4 x i8], double,
-// CHECK-SAME:   half, [6 x i8], i64,
-// CHECK-SAME:   i32, i16, [2 x i8], i32, [4 x i8],
+// CHECK-SAME:   float, target("dx.Padding", 4), double,
+// CHECK-SAME:   half, target("dx.Padding", 6), i64,
+// CHECK-SAME:   i32, i16, target("dx.Padding", 2), i32, target("dx.Padding", 4),
 // CHECK-SAME:   i64
 // CHECK-SAME: }>
 
 // CHECK: %__cblayout_CBVectors = type <{
-// CHECK-SAME:   <3 x float>, [4 x i8],
-// CHECK-SAME:   <3 x double>, <2 x half>, [4 x i8],
-// CHECK-SAME:   <3 x i64>, [8 x i8],
+// CHECK-SAME:   <3 x float>, target("dx.Padding", 4),
+// CHECK-SAME:   <3 x double>, <2 x half>, target("dx.Padding", 4),
+// CHECK-SAME:   <3 x i64>, target("dx.Padding", 8),
 // CHECK-SAME:   <4 x i32>,
-// CHECK-SAME:   <3 x i16>, [10 x i8],
+// CHECK-SAME:   <3 x i16>, target("dx.Padding", 10),
 // CHECK-SAME:   <3 x i64>
 // CHECK-SAME: }>
 
 // CHECK: %__cblayout_CBArrays = type <{
-// CHECK-SAME: <{ [2 x <{ float, [12 x i8] }>], float }>, [12 x i8],
-// CHECK-SAME: <{ [1 x <{ <3 x double>, [8 x i8] }>], <3 x double> }>, [8 x i8],
+// CHECK-SAME: <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>, target("dx.Padding", 12),
+// CHECK-SAME: <{ [1 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, target("dx.Padding", 8),
 // CHECK-SAME: <{ [1 x <{
-// CHECK-SAME:   <{ [1 x <{ half, [14 x i8] }>], half }>, [14 x i8] }>],
-// CHECK-SAME:   <{ [1 x <{ half, [14 x i8] }>], half }>
-// CHECK-SAME: }>, [14 x i8],
-// CHECK-SAME: <{ [2 x <{ i64, [8 x i8] }>], i64 }>, [8 x i8],
+// CHECK-SAME:   <{ [1 x <{ half, target("dx.Padding", 14) }>], half }>, target("dx.Padding", 14) }>],
+// CHECK-SAME:   <{ [1 x <{ half, target("dx.Padding", 14) }>], half }>
+// CHECK-SAME: }>, target("dx.Padding", 14),
+// CHECK-SAME: <{ [2 x <{ i64, target("dx.Padding", 8) }>], i64 }>, target("dx.Padding", 8),
 // CHECK-SAME: [2 x [3 x [4 x <4 x i32>]]]
-// CHECK-SAME: [1 x i16], [14 x i8],
-// CHECK-SAME: <{ [1 x <{ i64, [8 x i8] }>], i64 }>, [8 x i8],
-// CHECK-SAME: <{ [3 x <{ i32, [12 x i8] }>], i32 }>
+// CHECK-SAME: [1 x i16], target("dx.Padding", 14),
+// CHECK-SAME: <{ [1 x <{ i64, target("dx.Padding", 8) }>], i64 }>, target("dx.Padding", 8),
+// CHECK-SAME: <{ [3 x <{ i32, target("dx.Padding", 12) }>], i32 }>
 // CHECK-SAME: }>
 
 // CHECK: %__cblayout_CBStructs = type <{
-// CHECK-SAME:   %A, [8 x i8],
+// CHECK-SAME:   %A, target("dx.Padding", 8),
 
-// TODO: We should have [2 x i8] padding after %B, but we don't correctly handle
+// TODO: We should have target("dx.Padding", 2) padding after %B, but we don't correctly handle
 // 2- and 3-element vectors inside structs yet because of DataLayout rules.
 // CHECK-SAME: %B,
 
-// CHECK-SAME:   %C, [8 x i8],
-// CHECK-SAME:   <{ [4 x <{ %A, [8 x i8] }>], %A }>, [8 x i8],
+// CHECK-SAME:   %C, target("dx.Padding", 8),
+// CHECK-SAME:   <{ [4 x <{ %A, target("dx.Padding", 8) }>], %A }>, target("dx.Padding", 8),
 // CHECK-SAME:   %__cblayout_D, half,
 // CHECK-SAME:   <3 x i16>
 // CHECK-SAME: }>
 
 // CHECK: %A = type <{ <2 x float> }>
 // CHECK: %B = type <{ <2 x float>, <3 x i16> }>
-// CHECK: %C = type <{ i32, [12 x i8], %A }>
+// CHECK: %C = type <{ i32, target("dx.Padding", 12), %A }>
 
 // CHECK: %__cblayout_D = type <{
 // CHECK-SAME:   <{ [1 x <{
-// CHECK-SAME:     <{ [2 x <{ %B, [2 x i8] }>], %B }>, [2 x i8]
+// CHECK-SAME:     <{ [2 x <{ %B, target("dx.Padding", 2) }>], %B }>, target("dx.Padding", 2)
 // CHECK-SAME:   }>],
-// CHECK-SAME:   <{ [2 x <{ %B, [2 x i8] }>], %B }> }>
+// CHECK-SAME:   <{ [2 x <{ %B, target("dx.Padding", 2) }>], %B }> }>
 // CHECK-SAME: }>
 
 // CHECK: %__cblayout_CBClasses = type <{
-// CHECK-SAME:   %K, [12 x i8],
-// CHECK-SAME:   %L, [8 x i8],
-// CHECK-SAME:   %M, [12 x i8],
-// CHECK-SAME:   <{ [9 x <{ %K, [12 x i8] }>], %K }>
+// CHECK-SAME:   %K, target("dx.Padding", 12),
+// CHECK-SAME:   %L, target("dx.Padding", 8),
+// CHECK-SAME:   %M, target("dx.Padding", 12),
+// CHECK-SAME:   <{ [9 x <{ %K, target("dx.Padding", 12) }>], %K }>
 // CHECK-SAME: }>
 
 // CHECK: %K = type <{ float }>
 // CHECK: %L = type <{ float, float }>
-// CHECK: %M = type <{ <{ [4 x <{ %K, [12 x i8] }>], %K }> }>
+// CHECK: %M = type <{ <{ [4 x <{ %K, target("dx.Padding", 12) }>], %K }> }>
 
 // CHECK: %__cblayout_CBMix = type <{
-// CHECK-SAME:   <{ [1 x <{ %Test, [8 x i8] }>], %Test }>, float, [4 x i8]
+// CHECK-SAME:   <{ [1 x <{ %Test, target("dx.Padding", 8) }>], %Test }>, float, target("dx.Padding", 4)
 // CHECK-SAME:   <{ [2 x <{
-// CHECK-SAME:     <{ [1 x <{ <2 x float>, [8 x i8] }>], <2 x float> }>, [8 x i8] }>],
-// CHECK-SAME:     <{ [1 x <{ <2 x float>, [8 x i8] }>], <2 x float> }>
-// CHECK-SAME:   }>, float, [4 x i8],
-// CHECK-SAME:   %anon, [4 x i8], double,
-// CHECK-SAME:   %anon.0, float, [4 x i8],
+// CHECK-SAME:     <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, target("dx.Padding", 8) }>],
+// CHECK-SAME:     <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>
+// CHECK-SAME:   }>, float, target("dx.Padding", 4),
+// CHECK-SAME:   %anon, target("dx.Padding", 4), double,
+// CHECK-SAME:   %anon.0, float, target("dx.Padding", 4),
 // CHECK-SAME:   <1 x double>, i16
 // CHECK-SAME: }>
 
@@ -81,41 +81,41 @@
 // CHECK: %anon.0 = type <{ <2 x i32> }>
 
 // CHECK: %__cblayout_CB_A = type <{
-// CHECK-SAME:   <{ [1 x <{ double, [8 x i8] }>], double }>, [8 x i8],
-// CHECK-SAME:   <{ [2 x <{ <3 x float>, [4 x i8] }>], <3 x float> }>, float,
-// CHECK-SAME:   <{ [2 x <{ double, [8 x i8] }>], double }>, half, [6 x i8],
+// CHECK-SAME:   <{ [1 x <{ double, target("dx.Padding", 8) }>], double }>, target("dx.Padding", 8),
+// CHECK-SAME:   <{ [2 x <{ <3 x float>, target("dx.Padding", 4) }>], <3 x float> }>, float,
+// CHECK-SAME:   <{ [2 x <{ double, target("dx.Padding", 8) }>], double }>, half, target("dx.Padding", 6),
 // CHECK-SAME:   [1 x <2 x double>],
-// CHECK-SAME:   float, [12 x i8],
-// CHECK-SAME:   <{ [1 x <{ <3 x half>, [10 x i8] }>], <3 x half> }>, <3 x half>
+// CHECK-SAME:   float, target("dx.Padding", 12),
+// CHECK-SAME:   <{ [1 x <{ <3 x half>, target("dx.Padding", 10) }>], <3 x half> }>, <3 x half>
 // CHECK-SAME: }>
 
 // CHECK: %__cblayout_CB_B = type <{
-// CHECK-SAME: <{ [2 x <{ <3 x double>, [8 x i8] }>], <3 x double> }>, <3 x half>
+// CHECK-SAME: <{ [2 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, <3 x half>
 // CHECK-SAME: }>
 
 // CHECK: %__cblayout_CB_C = type <{
-// CHECK-SAME:   i32, [12 x i8],
+// CHECK-SAME:   i32, target("dx.Padding", 12),
 // CHECK-SAME:   %F,
-// CHECK-SAME:   half, [14 x i8],
-// CHECK-SAME:   %G, [6 x i8], double
+// CHECK-SAME:   half, target("dx.Padding", 14),
+// CHECK-SAME:   %G, target("dx.Padding", 6), double
 // CHECK-SAME: }>
 
 // CHECK: %F = type <{
-// CHECK-SAME:   double, [8 x i8],
+// CHECK-SAME:   double, target("dx.Padding", 8),
 // CHECK-SAME:   <3 x float>, float,
-// CHECK-SAME:   <3 x double>, half, [6 x i8],
+// CHECK-SAME:   <3 x double>, half, target("dx.Padding", 6),
 // CHECK-SAME:   <2 x double>,
 // CHECK-SAME:   float, <3 x half>, <3 x half>
 // CHECK-SAME: }>
 
 // CHECK: %G = type <{
-// CHECK-SAME:   %E, [12 x i8],
-// CHECK-SAME:   [1 x float], [12 x i8],
+// CHECK-SAME:   %E, target("dx.Padding", 12),
+// CHECK-SAME:   [1 x float], target("dx.Padding", 12),
 // CHECK-SAME:   [2 x %F],
 // CHECK-SAME:   half
 // CHECK-SAME: }>
 
-// CHECK: %E = type <{ float, [4 x i8], double, float, half, i16, i64, i32 }>
+// CHECK: %E = type <{ float, target("dx.Padding", 4), double, float, half, i16, i64, i32 }>
 
 cbuffer CBScalars : register(b1, space5) {
   float a1;
@@ -172,14 +172,14 @@ cbuffer CBArrays : register(b2) {
 }
 
 // CHECK: @CBArrays.cb = global target("dx.CBuffer", %__cblayout_CBArrays)
-// CHECK: @c1 = external hidden addrspace(2) global <{ [2 x <{ float, [12 x i8] }>], float }>, align 4
-// CHECK: @c2 = external hidden addrspace(2) global <{ [1 x <{ <3 x double>, [8 x i8] }>], <3 x double> }>, align 32
-// CHECK: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ half, [14 x i8] }>], half }>, [14 x i8] }>], <{ [1 x <{ half, [14 x i8] }>], half }> }>, align 2
-// CHECK: @c4 = external hidden addrspace(2) global <{ [2 x <{ i64, [8 x i8] }>], i64 }>, align 8
+// CHECK: @c1 = external hidden addrspace(2) global <{ [2 x <{ float, target("dx.Padding", 12) }>], float }>, align 4
+// CHECK: @c2 = external hidden addrspace(2) global <{ [1 x <{ <3 x double>, target("dx.Padding", 8) }>], <3 x double> }>, align 32
+// CHECK: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ half, target("dx.Padding", 14) }>], half }>, target("dx.Padding", 14) }>], <{ [1 x <{ half, target("dx.Padding", 14) }>], half }> }>, align 2
+// CHECK: @c4 = external hidden addrspace(2) global <{ [2 x <{ i64, target("dx.Padding", 8) }>], i64 }>, align 8
 // CHECK: @c5 = external hidden addrspace(2) global [2 x [3 x [4 x <4 x i32>]]], align 16
 // CHECK: @c6 = external hidden addrspace(2) global [1 x i16], align 2
-// CHECK: @c7 = external hidden addrspace(2) global <{ [1 x <{ i64, [8 x i8] }>], i64 }>, align 8
-// CHECK: @c8 = external hidden addrspace(2) global <{ [3 x <{ i32, [12 x i8] }>], i32 }>, align 4
+// CHECK: @c7 = external hidden addrspace(2) global <{ [1 x <{ i64, target("dx.Padding", 8) }>], i64 }>, align 8
+// CHECK: @c8 = external hidden addrspace(2) global <{ [3 x <{ i32, target("dx.Padding", 12) }>], i32 }>, align 4
 // CHECK: @CBArrays.str = private unnamed_addr constant [9 x i8] c"CBArrays\00", align 1
 
 typedef uint32_t4 uint32_t8[2];
@@ -219,7 +219,7 @@ struct D {
 // CHECK: @a = external hidden addrspace(2) global %A, align 1
 // CHECK: @b = external hidden addrspace(2) global %B, align 1
 // CHECK: @c = external hidden addrspace(2) global %C, align 1
-// CHECK: @array_of_A = external hidden addrspace(2) global <{ [4 x <{ %A, [8 x i8] }>], %A }>, align 1
+// CHECK: @array_of_A = external hidden addrspace(2) global <{ [4 x <{ %A, target("dx.Padding", 8) }>], %A }>, align 1
 // CHECK: @d = external hidden addrspace(2) global %__cblayout_D, align 1
 // CHECK: @e = external hidden addrspace(2) global half, align 2
 // CHECK: @f = external hidden addrspace(2) global <3 x i16>, align 8
@@ -259,7 +259,7 @@ cbuffer CBClasses {
 // CHECK: @k = external hidden addrspace(2) global %K, align 1
 // CHECK: @l = external hidden addrspace(2) global %L, align 1
 // CHECK: @m = external hidden addrspace(2) global %M, align 1
-// CHECK: @ka = external hidden addrspace(2) global <{ [9 x <{ %K, [12 x i8] }>], %K }>, align 1
+// CHECK: @ka = external hidden addrspace(2) global <{ [9 x <{ %K, target("dx.Padding", 12) }>], %K }>, align 1
 // CHECK: @CBClasses.str = private unnamed_addr constant [10 x i8] c"CBClasses\00", align 1
 
 struct Test {
@@ -267,9 +267,9 @@ struct Test {
 };
 
 // CHECK: @CBMix.cb = global target("dx.CBuffer", %__cblayout_CBMix)
-// CHECK: @test = external hidden addrspace(2) global <{ [1 x <{ %Test, [8 x i8] }>], %Test }>, align 1
+// CHECK: @test = external hidden addrspace(2) global <{ [1 x <{ %Test, target("dx.Padding", 8) }>], %Test }>, align 1
 // CHECK: @f1 = external hidden addrspace(2) global float, align 4
-// CHECK: @f2 = external hidden addrspace(2) global <{ [2 x <{ <{ [1 x <{ <2 x float>, [8 x i8] }>], <2 x float> }>, [8 x i8] }>], <{ [1 x <{ <2 x float>, [8 x i8] }>], <2 x float> }> }>, align 8
+// CHECK: @f2 = external hidden addrspace(2) global <{ [2 x <{ <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, target("dx.Padding", 8) }>], <{ [1 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }> }>, align 8
 // CHECK: @f3 = external hidden addrspace(2) global float, align 4
 // CHECK: @f4 = external hidden addrspace(2) global %anon, align 1
 // CHECK: @f5 = external hidden addrspace(2) global double, align 8

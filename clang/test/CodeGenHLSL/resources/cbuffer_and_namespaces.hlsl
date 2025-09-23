@@ -4,7 +4,7 @@
 
 // CHECK: %"n0::n1::__cblayout_A" = type <{ float }>
 // CHECK: %"n0::__cblayout_B" = type <{ float }>
-// CHECK: %"n0::n2::__cblayout_C" = type <{ float, [12 x i8], %"n0::Foo" }>
+// CHECK: %"n0::n2::__cblayout_C" = type <{ float, target("dx.Padding", 12), %"n0::Foo" }>
 // CHECK: %"n0::Foo" = type <{ float }>
 
 // CHECK: @A.cb = global target("dx.CBuffer", %"n0::n1::__cblayout_A")

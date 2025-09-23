@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,DXIL
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV
 
-// CHECK: %"__cblayout_$Globals" = type <{ float, float, [8 x i8], %__cblayout_S }>
+// CHECK: %"__cblayout_$Globals" = type <{ float, float, target("{{.*}}.Padding", 8), %__cblayout_S }>
 // CHECK: %__cblayout_S = type <{ float }>
 
 // DXIL-DAG: @"$Globals.cb" = global target("dx.CBuffer", %"__cblayout_$Globals")

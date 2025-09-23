@@ -8,6 +8,7 @@
 
 #include "DXILCBufferAccess.h"
 #include "DirectX.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
@@ -217,7 +218,8 @@ static void replaceAccessesWithHandle(CBufferResource &CBR) {
 }
 
 static bool replaceCBufferAccesses(Module &M) {
-  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(M);
+  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(
+      M, [](Type *Ty) { return isa<llvm::dxil::PaddingExtType>(Ty); });
   if (!CBufMD)
     return false;
 

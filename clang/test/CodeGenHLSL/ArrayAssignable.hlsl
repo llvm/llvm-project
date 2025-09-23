@@ -5,13 +5,13 @@ struct S {
   float f;
 };
 
-// CHECK: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, [12 x i8] }>], float }>, [12 x i8], [2 x <4 x i32>], <{ [1 x <{ <{ [1 x <{ i32, [12 x i8] }>], i32 }>, [12 x i8] }>], <{ [1 x <{ i32, [12 x i8] }>], i32 }> }>, [12 x i8], <{ [1 x <{ %S, [8 x i8] }>], %S }> }>
+// CHECK: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, target("dx.Padding", 12) }>], float }>, target("dx.Padding", 12), [2 x <4 x i32>], <{ [1 x <{ <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12) }>], <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>, target("dx.Padding", 12), <{ [1 x <{ %S, target("dx.Padding", 8) }>], %S }> }>
 
 // CHECK: @CBArrays.cb = global target("dx.CBuffer", [[CBLayout]])
-// CHECK: @c1 = external hidden addrspace(2) global <{ [1 x <{ float, [12 x i8] }>], float }>, align 4
+// CHECK: @c1 = external hidden addrspace(2) global <{ [1 x <{ float, target("dx.Padding", 12) }>], float }>, align 4
 // CHECK: @c2 = external hidden addrspace(2) global [2 x <4 x i32>], align 16
-// CHECK: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ i32, [12 x i8] }>], i32 }>, [12 x i8] }>], <{ [1 x <{ i32, [12 x i8] }>], i32 }> }>, align 4
-// CHECK: @c4 = external hidden addrspace(2) global <{ [1 x <{ %S, [8 x i8] }>], %S }>, align 1
+// CHECK: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12) }>], <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>, align 4
+// CHECK: @c4 = external hidden addrspace(2) global <{ [1 x <{ %S, target("dx.Padding", 8) }>], %S }>, align 1
 
 cbuffer CBArrays : register(b0) {
   float c1[2];

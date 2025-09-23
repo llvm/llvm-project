@@ -9,6 +9,7 @@
 #include "HLSLBufferLayoutBuilder.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenModule.h"
+#include "TargetInfo.h"
 #include "clang/AST/Type.h"
 #include <climits>
 
@@ -22,13 +23,6 @@ using namespace clang::CodeGen;
 
 static const CharUnits CBufferRowSize =
     CharUnits::fromQuantity(llvm::hlsl::CBufferRowSizeInBytes);
-
-static llvm::Type *getPadding(CodeGenModule &CGM, CharUnits NumBytes) {
-  llvm::LLVMContext &Context = CGM.getLLVMContext();
-  // TODO: Target padding type
-  return llvm::ArrayType::get(llvm::Type::getInt8Ty(Context),
-                              NumBytes.getQuantity());
-}
 
 namespace clang {
 namespace CodeGen {
@@ -68,7 +62,9 @@ llvm::StructType *HLSLBufferLayoutBuilder::layOutStruct(
 
     CharUnits NextOffset = CurrentOffset.alignTo(Align);
     if (NextOffset > CurrentOffset) {
-      Layout.emplace_back(getPadding(CGM, NextOffset - CurrentOffset));
+      llvm::Type *Padding = CGM.getTargetCodeGenInfo().getHLSLPadding(
+          CGM, NextOffset - CurrentOffset);
+      Layout.emplace_back(Padding);
       CurrentOffset = NextOffset;
     }
     Layout.emplace_back(LayoutType);
@@ -128,8 +124,10 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
     return llvm::ArrayType::get(EltTy, Count);
 
   llvm::LLVMContext &Context = CGM.getLLVMContext();
-  auto *PaddedEltTy = llvm::StructType::get(
-      Context, {EltTy, getPadding(CGM, Padding)}, /*isPacked=*/true);
+  llvm::Type *PaddingTy =
+      CGM.getTargetCodeGenInfo().getHLSLPadding(CGM, Padding);
+  auto *PaddedEltTy =
+      llvm::StructType::get(Context, {EltTy, PaddingTy}, /*isPacked=*/true);
   return llvm::StructType::get(
       Context, {llvm::ArrayType::get(PaddedEltTy, Count - 1), EltTy},
       /*IsPacked=*/true);

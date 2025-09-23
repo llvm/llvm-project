@@ -325,12 +325,8 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
       continue;
     }
 
-    // Skip padding.
-    // TODO: We should be more explicit here.
-    if (auto *ATy = dyn_cast<llvm::ArrayType>(*ElemIt))
-      if (auto *ITy = dyn_cast<llvm::IntegerType>(ATy->getElementType()))
-        if (ITy->getBitWidth() == 8)
-          ++ElemIt;
+    if (CGM.getTargetCodeGenInfo().isHLSLPadding(*ElemIt))
+      ++ElemIt;
 
     assert(ElemIt != LayoutStruct->element_end() &&
            "number of elements in layout struct does not match");
