@@ -56,6 +56,10 @@ struct DirectiveNameScope {
     return name;
   }
 
+  static OmpDirectiveName GetOmpDirectiveName(const OmpDirectiveName &x) {
+    return x;
+  }
+
   static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
     return x.DirName();
   }
