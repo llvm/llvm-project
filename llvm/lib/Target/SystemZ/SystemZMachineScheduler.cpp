@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMachineScheduler.h"
-#include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
 using namespace llvm;
@@ -198,7 +196,7 @@ static int biasPhysRegExtra(const SUnit *SU) {
     return Res;
 
   // Also recognize Load Address of stack slot. There are (at least
-  // currently) no instructions here defining a physreg that uses a vreg.
+  // currently) no instructions here defining a physreg that use a vreg.
   const MachineInstr *MI = SU->getInstr();
   if (MI->getNumOperands() && !MI->isCopy()) {
     const MachineOperand &DefMO = MI->getOperand(0);

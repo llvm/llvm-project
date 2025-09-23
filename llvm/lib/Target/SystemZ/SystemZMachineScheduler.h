@@ -8,11 +8,11 @@
 
 // -------------------------- Pre RA scheduling ----------------------------- //
 //
-// SystemZPreRASchedStrategy keeps track of currently live registers and first
-// tries to reduce live ranges by scheduling e.g. a load of a live register
-// immediately (bottom-up). It also aims to preserve the scheduled latency.
-// Small regions (up to 10 instructions) are mostly left alone as the input
-// order is usually then preferred.
+// SystemZPreRASchedStrategy tries to reduce register pressure by applying
+// OOO heuristics and then also in certain regions reduces latency. Tiny
+// regions are mostly left alone as the input order is usually then preferred
+// (due to copys involving physregs and comparison elimination
+// opportunities).
 //
 // -------------------------- Post RA scheduling ---------------------------- //
 //
