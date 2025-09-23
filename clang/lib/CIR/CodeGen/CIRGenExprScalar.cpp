@@ -687,6 +687,10 @@ public:
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
   }
+  mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *e) {
+    cgf.emitCXXDeleteExpr(e);
+    return {};
+  }
 
   mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
     cgf.emitCXXThrowExpr(e);
