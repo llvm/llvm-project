@@ -14,13 +14,120 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <cstdint>
 
 using namespace mlir;
 using namespace mlir::spirv;
+
+namespace {
+// Helper function to collect extensions implied by a type by visiting all its
+// subtypes. Maintains a set of `seen` types to avoid recursion in structs.
+//
+// Serves as the source-of-truth for type extension information. All extension
+// logic should be added to this class, while the
+// `SPIRVType::getExtensions` function should not handle extension-related logic
+// directly and only invoke `TypeExtensionVisitor::add(Type *)`.
+class TypeExtensionVisitor {
+public:
+  TypeExtensionVisitor(SPIRVType::ExtensionArrayRefVector &extensions,
+                       std::optional<StorageClass> storage)
+      : extensions(extensions), storage(storage) {}
+
+  // Main visitor entry point. Adds all extensions to the vector. Saves `type`
+  // as seen and dispatches to the right concrete `.add` function.
+  void add(SPIRVType type) {
+    if (auto [_it, inserted] = seen.insert({type, storage}); !inserted)
+      return;
+
+    TypeSwitch<SPIRVType>(type)
+        .Case<CooperativeMatrixType, PointerType, ScalarType, TensorArmType>(
+            [this](auto concreteType) { addConcrete(concreteType); })
+        .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
+            [this](auto concreteType) { add(concreteType.getElementType()); })
+        .Case<SampledImageType>([this](SampledImageType concreteType) {
+          add(concreteType.getImageType());
+        })
+        .Case<StructType>([this](StructType concreteType) {
+          for (Type elementType : concreteType.getElementTypes())
+            add(elementType);
+        })
+        .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
+  }
+
+  void add(Type type) { add(cast<SPIRVType>(type)); }
+
+private:
+  // Types that add unique extensions.
+  void addConcrete(CooperativeMatrixType type);
+  void addConcrete(PointerType type);
+  void addConcrete(ScalarType type);
+  void addConcrete(TensorArmType type);
+
+  SPIRVType::ExtensionArrayRefVector &extensions;
+  std::optional<StorageClass> storage;
+  llvm::SmallDenseSet<std::pair<Type, std::optional<StorageClass>>> seen;
+};
+
+// Helper function to collect capabilities implied by a type by visiting all its
+// subtypes. Maintains a set of `seen` types to avoid recursion in structs.
+//
+// Serves as the source-of-truth for type capability information. All capability
+// logic should be added to this class, while the
+// `SPIRVType::getCapabilities` function should not handle capability-related
+// logic directly and only invoke `TypeCapabilityVisitor::add(Type *)`.
+class TypeCapabilityVisitor {
+public:
+  TypeCapabilityVisitor(SPIRVType::CapabilityArrayRefVector &capabilities,
+                        std::optional<StorageClass> storage)
+      : capabilities(capabilities), storage(storage) {}
+
+  // Main visitor entry point. Adds all extensions to the vector. Saves `type`
+  // as seen and dispatches to the right concrete `.add` function.
+  void add(SPIRVType type) {
+    if (auto [_it, inserted] = seen.insert({type, storage}); !inserted)
+      return;
+
+    TypeSwitch<SPIRVType>(type)
+        .Case<CooperativeMatrixType, ImageType, MatrixType, PointerType,
+              RuntimeArrayType, ScalarType, TensorArmType, VectorType>(
+            [this](auto concreteType) { addConcrete(concreteType); })
+        .Case<ArrayType>([this](ArrayType concreteType) {
+          add(concreteType.getElementType());
+        })
+        .Case<SampledImageType>([this](SampledImageType concreteType) {
+          add(concreteType.getImageType());
+        })
+        .Case<StructType>([this](StructType concreteType) {
+          for (Type elementType : concreteType.getElementTypes())
+            add(elementType);
+        })
+        .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
+  }
+
+  void add(Type type) { add(cast<SPIRVType>(type)); }
+
+private:
+  // Types that add unique extensions.
+  void addConcrete(CooperativeMatrixType type);
+  void addConcrete(ImageType type);
+  void addConcrete(MatrixType type);
+  void addConcrete(PointerType type);
+  void addConcrete(RuntimeArrayType type);
+  void addConcrete(ScalarType type);
+  void addConcrete(TensorArmType type);
+  void addConcrete(VectorType type);
+
+  SPIRVType::CapabilityArrayRefVector &capabilities;
+  std::optional<StorageClass> storage;
+  llvm::SmallDenseSet<std::pair<Type, std::optional<StorageClass>>> seen;
+};
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ArrayType
@@ -64,18 +171,6 @@ unsigned ArrayType::getNumElements() const { return getImpl()->elementCount; }
 Type ArrayType::getElementType() const { return getImpl()->elementType; }
 
 unsigned ArrayType::getArrayStride() const { return getImpl()->stride; }
-
-void ArrayType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                              std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
-}
-
-void ArrayType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getElementType())
-      .getCapabilities(capabilities, storage);
-}
 
 std::optional<int64_t> ArrayType::getSizeInBytes() {
   auto elementType = llvm::cast<SPIRVType>(getElementType());
@@ -140,51 +235,14 @@ bool CompositeType::hasCompileTimeKnownNumElements() const {
   return !llvm::isa<CooperativeMatrixType, RuntimeArrayType>(*this);
 }
 
-void CompositeType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  TypeSwitch<Type>(*this)
-      .Case<ArrayType, CooperativeMatrixType, MatrixType, RuntimeArrayType,
-            StructType>(
-          [&](auto type) { type.getExtensions(extensions, storage); })
-      .Case<VectorType>([&](VectorType type) {
-        return llvm::cast<ScalarType>(type.getElementType())
-            .getExtensions(extensions, storage);
-      })
-      .Case<TensorArmType>([&](TensorArmType type) {
-        static constexpr Extension ext{Extension::SPV_ARM_tensors};
-        extensions.push_back(ext);
-        return llvm::cast<ScalarType>(type.getElementType())
-            .getExtensions(extensions, storage);
-      })
+void TypeCapabilityVisitor::addConcrete(VectorType type) {
+  add(type.getElementType());
 
-      .Default([](Type) { llvm_unreachable("invalid composite type"); });
-}
-
-void CompositeType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  TypeSwitch<Type>(*this)
-      .Case<ArrayType, CooperativeMatrixType, MatrixType, RuntimeArrayType,
-            StructType>(
-          [&](auto type) { type.getCapabilities(capabilities, storage); })
-      .Case<VectorType>([&](VectorType type) {
-        auto vecSize = getNumElements();
-        if (vecSize == 8 || vecSize == 16) {
-          static const Capability caps[] = {Capability::Vector16};
-          ArrayRef<Capability> ref(caps, std::size(caps));
-          capabilities.push_back(ref);
-        }
-        return llvm::cast<ScalarType>(type.getElementType())
-            .getCapabilities(capabilities, storage);
-      })
-      .Case<TensorArmType>([&](TensorArmType type) {
-        static constexpr Capability cap{Capability::TensorsARM};
-        capabilities.push_back(cap);
-        return llvm::cast<ScalarType>(type.getElementType())
-            .getCapabilities(capabilities, storage);
-      })
-      .Default([](Type) { llvm_unreachable("invalid composite type"); });
+  int64_t vecSize = type.getNumElements();
+  if (vecSize == 8 || vecSize == 16) {
+    static constexpr auto cap = Capability::Vector16;
+    capabilities.push_back(cap);
+  }
 }
 
 std::optional<int64_t> CompositeType::getSizeInBytes() {
@@ -284,20 +342,15 @@ CooperativeMatrixUseKHR CooperativeMatrixType::getUse() const {
   return getImpl()->use;
 }
 
-void CooperativeMatrixType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
-  static constexpr Extension exts[] = {Extension::SPV_KHR_cooperative_matrix};
-  extensions.push_back(exts);
+void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
+  add(type.getElementType());
+  static constexpr auto ext = Extension::SPV_KHR_cooperative_matrix;
+  extensions.push_back(ext);
 }
 
-void CooperativeMatrixType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getElementType())
-      .getCapabilities(capabilities, storage);
-  static constexpr Capability caps[] = {Capability::CooperativeMatrixKHR};
+void TypeCapabilityVisitor::addConcrete(CooperativeMatrixType type) {
+  add(type.getElementType());
+  static constexpr auto caps = Capability::CooperativeMatrixKHR;
   capabilities.push_back(caps);
 }
 
@@ -403,19 +456,14 @@ ImageSamplerUseInfo ImageType::getSamplerUseInfo() const {
 
 ImageFormat ImageType::getImageFormat() const { return getImpl()->format; }
 
-void ImageType::getExtensions(SPIRVType::ExtensionArrayRefVector &,
-                              std::optional<StorageClass>) {
-  // Image types do not require extra extensions thus far.
-}
-
-void ImageType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass>) {
-  if (auto dimCaps = spirv::getCapabilities(getDim()))
+void TypeCapabilityVisitor::addConcrete(ImageType type) {
+  if (auto dimCaps = spirv::getCapabilities(type.getDim()))
     capabilities.push_back(*dimCaps);
 
-  if (auto fmtCaps = spirv::getCapabilities(getImageFormat()))
+  if (auto fmtCaps = spirv::getCapabilities(type.getImageFormat()))
     capabilities.push_back(*fmtCaps);
+
+  add(type.getElementType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -454,26 +502,27 @@ StorageClass PointerType::getStorageClass() const {
   return getImpl()->storageClass;
 }
 
-void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                                std::optional<StorageClass> storage) {
+void TypeExtensionVisitor::addConcrete(PointerType type) {
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
-  llvm::cast<SPIRVType>(getPointeeType())
-      .getExtensions(extensions, getStorageClass());
+  std::optional<StorageClass> oldStorageClass = storage;
+  storage = type.getStorageClass();
+  add(type.getPointeeType());
+  storage = oldStorageClass;
 
-  if (auto scExts = spirv::getExtensions(getStorageClass()))
+  if (auto scExts = spirv::getExtensions(type.getStorageClass()))
     extensions.push_back(*scExts);
 }
 
-void PointerType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
+void TypeCapabilityVisitor::addConcrete(PointerType type) {
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
-  llvm::cast<SPIRVType>(getPointeeType())
-      .getCapabilities(capabilities, getStorageClass());
+  std::optional<StorageClass> oldStorageClass = storage;
+  storage = type.getStorageClass();
+  add(type.getPointeeType());
+  storage = oldStorageClass;
 
-  if (auto scCaps = spirv::getCapabilities(getStorageClass()))
+  if (auto scCaps = spirv::getCapabilities(type.getStorageClass()))
     capabilities.push_back(*scCaps);
 }
 
@@ -513,22 +562,10 @@ Type RuntimeArrayType::getElementType() const { return getImpl()->elementType; }
 
 unsigned RuntimeArrayType::getArrayStride() const { return getImpl()->stride; }
 
-void RuntimeArrayType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
-}
-
-void RuntimeArrayType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  {
-    static const Capability caps[] = {Capability::Shader};
-    ArrayRef<Capability> ref(caps, std::size(caps));
-    capabilities.push_back(ref);
-  }
-  llvm::cast<SPIRVType>(getElementType())
-      .getCapabilities(capabilities, storage);
+void TypeCapabilityVisitor::addConcrete(RuntimeArrayType type) {
+  add(type.getElementType());
+  static constexpr auto cap = Capability::Shader;
+  capabilities.push_back(cap);
 }
 
 //===----------------------------------------------------------------------===//
@@ -553,10 +590,9 @@ bool ScalarType::isValid(IntegerType type) {
   return llvm::is_contained({1u, 8u, 16u, 32u, 64u}, type.getWidth());
 }
 
-void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                               std::optional<StorageClass> storage) {
-  if (isa<BFloat16Type>(*this)) {
-    static const Extension ext = Extension::SPV_KHR_bfloat16;
+void TypeExtensionVisitor::addConcrete(ScalarType type) {
+  if (isa<BFloat16Type>(type)) {
+    static constexpr auto ext = Extension::SPV_KHR_bfloat16;
     extensions.push_back(ext);
   }
 
@@ -570,18 +606,16 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
   case StorageClass::PushConstant:
   case StorageClass::StorageBuffer:
   case StorageClass::Uniform:
-    if (getIntOrFloatBitWidth() == 8) {
-      static const Extension exts[] = {Extension::SPV_KHR_8bit_storage};
-      ArrayRef<Extension> ref(exts, std::size(exts));
-      extensions.push_back(ref);
+    if (type.getIntOrFloatBitWidth() == 8) {
+      static constexpr auto ext = Extension::SPV_KHR_8bit_storage;
+      extensions.push_back(ext);
     }
     [[fallthrough]];
   case StorageClass::Input:
   case StorageClass::Output:
-    if (getIntOrFloatBitWidth() == 16) {
-      static const Extension exts[] = {Extension::SPV_KHR_16bit_storage};
-      ArrayRef<Extension> ref(exts, std::size(exts));
-      extensions.push_back(ref);
+    if (type.getIntOrFloatBitWidth() == 16) {
+      static constexpr auto ext = Extension::SPV_KHR_16bit_storage;
+      extensions.push_back(ext);
     }
     break;
   default:
@@ -589,10 +623,8 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
   }
 }
 
-void ScalarType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  unsigned bitwidth = getIntOrFloatBitWidth();
+void TypeCapabilityVisitor::addConcrete(ScalarType type) {
+  unsigned bitwidth = type.getIntOrFloatBitWidth();
 
   // 8- or 16-bit integer/floating-point numbers will require extra capabilities
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -601,15 +633,13 @@ void ScalarType::getCapabilities(
 #define STORAGE_CASE(storage, cap8, cap16)                                     \
   case StorageClass::storage: {                                                \
     if (bitwidth == 8) {                                                       \
-      static const Capability caps[] = {Capability::cap8};                     \
-      ArrayRef<Capability> ref(caps, std::size(caps));                         \
-      capabilities.push_back(ref);                                             \
+      static constexpr auto cap = Capability::cap8;                            \
+      capabilities.push_back(cap);                                             \
       return;                                                                  \
     }                                                                          \
     if (bitwidth == 16) {                                                      \
-      static const Capability caps[] = {Capability::cap16};                    \
-      ArrayRef<Capability> ref(caps, std::size(caps));                         \
-      capabilities.push_back(ref);                                             \
+      static constexpr auto cap = Capability::cap16;                           \
+      capabilities.push_back(cap);                                             \
       return;                                                                  \
     }                                                                          \
     /* For 64-bit integers/floats, Int64/Float64 enables support for all */    \
@@ -628,9 +658,8 @@ void ScalarType::getCapabilities(
     case StorageClass::Input:
     case StorageClass::Output: {
       if (bitwidth == 16) {
-        static const Capability caps[] = {Capability::StorageInputOutput16};
-        ArrayRef<Capability> ref(caps, std::size(caps));
-        capabilities.push_back(ref);
+        static constexpr auto cap = Capability::StorageInputOutput16;
+        capabilities.push_back(cap);
         return;
       }
       break;
@@ -646,12 +675,11 @@ void ScalarType::getCapabilities(
 
 #define WIDTH_CASE(type, width)                                                \
   case width: {                                                                \
-    static const Capability caps[] = {Capability::type##width};                \
-    ArrayRef<Capability> ref(caps, std::size(caps));                           \
-    capabilities.push_back(ref);                                               \
+    static constexpr auto cap = Capability::type##width;                       \
+    capabilities.push_back(cap);                                               \
   } break
 
-  if (auto intType = llvm::dyn_cast<IntegerType>(*this)) {
+  if (auto intType = dyn_cast<IntegerType>(type)) {
     switch (bitwidth) {
       WIDTH_CASE(Int, 8);
       WIDTH_CASE(Int, 16);
@@ -663,14 +691,14 @@ void ScalarType::getCapabilities(
       llvm_unreachable("invalid bitwidth to getCapabilities");
     }
   } else {
-    assert(llvm::isa<FloatType>(*this));
+    assert(isa<FloatType>(type));
     switch (bitwidth) {
     case 16: {
-      if (isa<BFloat16Type>(*this)) {
-        static const Capability cap = Capability::BFloat16TypeKHR;
+      if (isa<BFloat16Type>(type)) {
+        static constexpr auto cap = Capability::BFloat16TypeKHR;
         capabilities.push_back(cap);
       } else {
-        static const Capability cap = Capability::Float16;
+        static constexpr auto cap = Capability::Float16;
         capabilities.push_back(cap);
       }
       break;
@@ -722,45 +750,13 @@ bool SPIRVType::isScalarOrVector() {
 
 void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                               std::optional<StorageClass> storage) {
-  if (auto scalarType = llvm::dyn_cast<ScalarType>(*this)) {
-    scalarType.getExtensions(extensions, storage);
-  } else if (auto compositeType = llvm::dyn_cast<CompositeType>(*this)) {
-    compositeType.getExtensions(extensions, storage);
-  } else if (auto imageType = llvm::dyn_cast<ImageType>(*this)) {
-    imageType.getExtensions(extensions, storage);
-  } else if (auto sampledImageType = llvm::dyn_cast<SampledImageType>(*this)) {
-    sampledImageType.getExtensions(extensions, storage);
-  } else if (auto matrixType = llvm::dyn_cast<MatrixType>(*this)) {
-    matrixType.getExtensions(extensions, storage);
-  } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
-    ptrType.getExtensions(extensions, storage);
-  } else if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
-    tensorArmType.getExtensions(extensions, storage);
-  } else {
-    llvm_unreachable("invalid SPIR-V Type to getExtensions");
-  }
+  TypeExtensionVisitor{extensions, storage}.add(*this);
 }
 
 void SPIRVType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
-  if (auto scalarType = llvm::dyn_cast<ScalarType>(*this)) {
-    scalarType.getCapabilities(capabilities, storage);
-  } else if (auto compositeType = llvm::dyn_cast<CompositeType>(*this)) {
-    compositeType.getCapabilities(capabilities, storage);
-  } else if (auto imageType = llvm::dyn_cast<ImageType>(*this)) {
-    imageType.getCapabilities(capabilities, storage);
-  } else if (auto sampledImageType = llvm::dyn_cast<SampledImageType>(*this)) {
-    sampledImageType.getCapabilities(capabilities, storage);
-  } else if (auto matrixType = llvm::dyn_cast<MatrixType>(*this)) {
-    matrixType.getCapabilities(capabilities, storage);
-  } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
-    ptrType.getCapabilities(capabilities, storage);
-  } else if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(*this)) {
-    tensorArmType.getCapabilities(capabilities, storage);
-  } else {
-    llvm_unreachable("invalid SPIR-V Type to getCapabilities");
-  }
+  TypeCapabilityVisitor{capabilities, storage}.add(*this);
 }
 
 std::optional<int64_t> SPIRVType::getSizeInBytes() {
@@ -816,18 +812,6 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "Dim must not be SubpassData or Buffer";
 
   return success();
-}
-
-void SampledImageType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-  llvm::cast<ImageType>(getImageType()).getExtensions(extensions, storage);
-}
-
-void SampledImageType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  llvm::cast<ImageType>(getImageType()).getCapabilities(capabilities, storage);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1182,19 +1166,6 @@ StructType::trySetBody(ArrayRef<Type> memberTypes,
                       structDecorations);
 }
 
-void StructType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                               std::optional<StorageClass> storage) {
-  for (Type elementType : getElementTypes())
-    llvm::cast<SPIRVType>(elementType).getExtensions(extensions, storage);
-}
-
-void StructType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  for (Type elementType : getElementTypes())
-    llvm::cast<SPIRVType>(elementType).getCapabilities(capabilities, storage);
-}
-
 llvm::hash_code spirv::hash_value(
     const StructType::MemberDecorationInfo &memberDecorationInfo) {
   return llvm::hash_combine(memberDecorationInfo.memberIndex,
@@ -1287,21 +1258,10 @@ unsigned MatrixType::getNumElements() const {
   return (getImpl()->columnCount) * getNumRows();
 }
 
-void MatrixType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                               std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getColumnType()).getExtensions(extensions, storage);
-}
-
-void MatrixType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  {
-    static const Capability caps[] = {Capability::Matrix};
-    ArrayRef<Capability> ref(caps, std::size(caps));
-    capabilities.push_back(ref);
-  }
-  // Add any capabilities associated with the underlying vectors (i.e., columns)
-  llvm::cast<SPIRVType>(getColumnType()).getCapabilities(capabilities, storage);
+void TypeCapabilityVisitor::addConcrete(MatrixType type) {
+  add(type.getColumnType());
+  static constexpr auto cap = Capability::Matrix;
+  capabilities.push_back(cap);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1347,21 +1307,15 @@ TensorArmType TensorArmType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 Type TensorArmType::getElementType() const { return getImpl()->elementType; }
 ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
 
-void TensorArmType::getExtensions(
-    SPIRVType::ExtensionArrayRefVector &extensions,
-    std::optional<StorageClass> storage) {
-
-  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
-  static constexpr Extension ext{Extension::SPV_ARM_tensors};
+void TypeExtensionVisitor::addConcrete(TensorArmType type) {
+  add(type.getElementType());
+  static constexpr auto ext = Extension::SPV_ARM_tensors;
   extensions.push_back(ext);
 }
 
-void TensorArmType::getCapabilities(
-    SPIRVType::CapabilityArrayRefVector &capabilities,
-    std::optional<StorageClass> storage) {
-  llvm::cast<SPIRVType>(getElementType())
-      .getCapabilities(capabilities, storage);
-  static constexpr Capability cap{Capability::TensorsARM};
+void TypeCapabilityVisitor::addConcrete(TensorArmType type) {
+  add(type.getElementType());
+  static constexpr auto cap = Capability::TensorsARM;
   capabilities.push_back(cap);
 }
 
