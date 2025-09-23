@@ -2514,6 +2514,8 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                                         SIAtomicAddrSpace AddrSpace,
                                         bool IsCrossAddrSpaceOrdering,
                                         Position Pos) const {
+  bool Changed = false;
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -2521,53 +2523,51 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
   // memory.
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+    if (Pos == Position::AFTER)
+      ++MI;
 
-  // Other address spaces do not have a cache.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
-    return false;
-
-  if (Pos == Position::AFTER)
-    ++MI;
-
-  // global_wb is only necessary at system scope for GFX12.0,
-  // they're also necessary at device scope for GFX12.5.
-  //
-  // Emitting it for lower scopes is a slow no-op, so we omit it
-  // for performance.
-  switch (Scope) {
-  case SIAtomicScope::SYSTEM:
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_SYS);
-    break;
-  case SIAtomicScope::AGENT:
-    // TODO DOCS
-    if (ST.hasGFX1250Insts()) {
+    // global_wb is only necessary at system scope for GFX12.0,
+    // they're also necessary at device scope for GFX12.5.
+    //
+    // Emitting it for lower scopes is a slow no-op, so we omit it
+    // for performance.
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-          .addImm(AMDGPU::CPol::SCOPE_DEV);
+          .addImm(AMDGPU::CPol::SCOPE_SYS);
+      Changed = true;
+      break;
+    case SIAtomicScope::AGENT:
+      // TODO DOCS
+      if (ST.hasGFX1250Insts()) {
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+            .addImm(AMDGPU::CPol::SCOPE_DEV);
+        Changed = true;
+      }
+      break;
+    case SIAtomicScope::CLUSTER:
+    case SIAtomicScope::WORKGROUP:
+      // No WB necessary, but we still have to wait.
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // No WB or wait necessary here, but insertWait takes care of that.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
     }
-    break;
-  case SIAtomicScope::CLUSTER:
-  case SIAtomicScope::WORKGROUP:
-    // No WB necessary, but we still have to wait.
-    break;
-  case SIAtomicScope::WAVEFRONT:
-  case SIAtomicScope::SINGLETHREAD:
-    // No WB or wait necessary here.
-    return false;
-  default:
-    llvm_unreachable("Unsupported synchronization scope");
-  }
 
-  if (Pos == Position::AFTER)
-    --MI;
+    if (Pos == Position::AFTER)
+      --MI;
+  }
 
   // We always have to wait for previous memory operations (load/store) to
   // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
   // we of course need to wait for that as well.
-  insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-             IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
+  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
 
-  return true;
+  return Changed;
 }
 
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
