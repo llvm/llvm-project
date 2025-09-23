@@ -87,7 +87,9 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 #### LoopVectorize
 
 Florian Hahn \
-flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub) \
+David Sherwood \
+david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHub)
 
 #### MemorySSA
 
@@ -504,7 +506,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.md)
 
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 

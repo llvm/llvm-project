@@ -638,6 +638,9 @@ def err_decomp_decl_std_tuple_element_not_specialized : Error<
 def err_decomp_decl_std_tuple_size_not_constant : Error<
   "cannot decompose this type; 'std::tuple_size<%0>::value' "
   "is not a valid integral constant expression">;
+def err_decomp_decl_std_tuple_size_invalid
+    : Error<"cannot decompose this type; 'std::tuple_size<%0>::value' "
+            "is not a valid size: %1">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
 def err_arg_is_not_destructurable : Error<
@@ -3980,6 +3983,14 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
   " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def warn_sme_streaming_compatible_vl_mismatch : Warning<
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a %select{non-streaming|streaming}1"
+  " function is undefined behaviour when the streaming-compatible caller is%select{| not}1 in streaming"
+  " mode, because the streaming vector length (%2 bit) and non-streaming vector length (%3 bit) differ">,
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def err_sme_streaming_transition_vl_mismatch : Error<
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is undefined behaviour because the streaming vector length (%1 bit) and non-streaming vector length (%2 bit) differ">;
 def err_conflicting_attributes_arm_agnostic : Error<
   "__arm_agnostic(\"sme_za_state\") cannot share ZA state with its caller">;
 def err_conflicting_attributes_arm_state : Error<
@@ -9048,7 +9059,7 @@ def ext_typecheck_convert_incompatible_pointer : ExtWarn<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">,
-  InGroup<IncompatiblePointerTypes>;
+  InGroup<IncompatiblePointerTypes>, DefaultError;
 def err_typecheck_convert_incompatible_pointer : Error<
   "incompatible pointer types "
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
@@ -11708,12 +11719,18 @@ def err_omp_threadprivate_incomplete_type : Error<
   "threadprivate variable with incomplete type %0">;
 def err_omp_no_dsa_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes">;
+def err_omp_groupprivate_incomplete_type : Error<
+  "groupprivate variable with incomplete type %0">;
+def err_omp_groupprivate_with_initializer : Error<
+  "variable %0 with initializer cannot appear in groupprivate directive">;
 def err_omp_defaultmap_no_attr_for_variable : Error<
   "variable %0 must have explicitly specified data sharing attributes, data mapping attributes, or in an is_device_ptr clause">;
 def note_omp_default_dsa_none : Note<
   "explicit data sharing attribute requested here">;
 def note_omp_defaultmap_attr_none : Note<
   "explicit data sharing attribute, data mapping attribute, or is_device_ptr clause requested here">;
+def err_omp_default_vc : Error<
+  "wrong variable category specified with modifier %0 in the default clause">;
 def err_omp_wrong_dsa : Error<
   "%0 variable cannot be %1">;
 def err_omp_variably_modified_type_not_supported : Error<
@@ -13121,6 +13138,11 @@ def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier 
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
+def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
+def err_hlsl_semantic_output_not_supported
+    : Error<"semantic %0 does not support output">;
+def err_hlsl_semantic_indexing_not_supported
+    : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
@@ -13212,6 +13234,8 @@ def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 def err_hlsl_incomplete_resource_array_in_function_param: Error<
   "incomplete resource array in a function parameter">;
+def err_hlsl_assign_to_global_resource: Error<
+  "assignment to global resource variable %0 is not allowed">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

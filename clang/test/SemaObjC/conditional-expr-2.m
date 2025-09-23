@@ -25,5 +25,5 @@ void foo (int i, NSKey *NSKeyValueCoding_NullValue, UpdatesList *nukedUpdatesLis
   obj = i ? NSKeyValueCoding_NullValue : nukedUpdatesList; // expected-warning{{incompatible operand types ('NSKey *' and 'UpdatesList *')}}
   key = i ? NSKeyValueCoding_NullValue : nukedUpdatesList; // expected-warning{{incompatible operand types ('NSKey *' and 'UpdatesList *')}}
   key = i ? NSKeyValueCoding_NullValue : keysub;
-  keysub = i ? NSKeyValueCoding_NullValue : keysub; // expected-warning{{incompatible pointer types assigning to 'KeySub *' from 'NSKey *'}}
+  keysub = i ? NSKeyValueCoding_NullValue : keysub; // expected-error{{incompatible pointer types assigning to 'KeySub *' from 'NSKey *'}}
 }

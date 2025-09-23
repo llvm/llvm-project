@@ -132,6 +132,7 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsScalable = VT->getValueAsBit("isScalable");
     bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
+    bool IsCheriCapability = VT->getValueAsBit("isCheriCapability");
     int64_t NF = VT->getValueAsInt("NF");
     bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
     int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
@@ -152,6 +153,7 @@ void VTEmitter::run(raw_ostream &OS) {
     UpdateVTRange("INTEGER_VALUETYPE", Name, IsInteger && !IsVector);
     UpdateVTRange("FP_VALUETYPE", Name, IsFP && !IsVector);
     UpdateVTRange("VALUETYPE", Name, IsNormalValueType);
+    UpdateVTRange("CHERI_CAPABILITY_VALUETYPE", Name, IsCheriCapability);
 
     // clang-format off
     OS << "  GET_VT_ATTR("

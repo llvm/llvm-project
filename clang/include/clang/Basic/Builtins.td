@@ -1256,6 +1256,18 @@ def MaskedCompressStore : Builtin {
   let Prototype = "void(...)";
 }
 
+def MaskedGather : Builtin {
+  let Spellings = ["__builtin_masked_gather"];
+  let Attributes = [NoThrow, Pure, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def MaskedScatter : Builtin {
+  let Spellings = ["__builtin_masked_scatter"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
@@ -1551,13 +1563,13 @@ def ElementwiseFshr : Builtin {
 }
 
 def ElementwiseCtlz : Builtin {
-  let Spellings = ["__builtin_elementwise_ctlz"];
+  let Spellings = ["__builtin_elementwise_clzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseCttz : Builtin {
-  let Spellings = ["__builtin_elementwise_cttz"];
+  let Spellings = ["__builtin_elementwise_ctzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }

@@ -85,16 +85,16 @@ struct ConvertLayoutOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
-    xegpu::DistributeLayoutAttr input_layout = op.getInputLayoutAttr();
-    xegpu::DistributeLayoutAttr target_layout = op.getTargetLayoutAttr();
-    if (input_layout.getInstDataAsInt().empty() ||
-        target_layout.getInstDataAsInt().empty())
+    xegpu::DistributeLayoutAttr inputLayout = op.getInputLayoutAttr();
+    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
+    if (inputLayout.getEffectiveInstDataAsInt().empty() ||
+        targetLayout.getEffectiveInstDataAsInt().empty())
       return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
 
-    input_layout = input_layout.dropInstData();
-    target_layout = target_layout.dropInstData();
+    inputLayout = inputLayout.dropInstData();
+    targetLayout = targetLayout.dropInstData();
     auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
-        op.getLoc(), op.getType(), op.getSource(), input_layout, target_layout);
+        op.getLoc(), op.getType(), op.getSource(), inputLayout, targetLayout);
     rewriter.replaceOp(op, newOp);
     return success();
   }
@@ -145,8 +145,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   xegpu::DistributeLayoutAttr layout =
       xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
-    if (!layout.getInstDataAsInt().empty())
-      return layout.getInstDataAsInt();
+    if (!layout.getEffectiveInstDataAsInt().empty())
+      return layout.getEffectiveInstDataAsInt();
 
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
@@ -226,7 +226,7 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
     Type valTy = value.getType();
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(valTy)) {
       xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
-      return layout && !layout.getInstDataAsInt().empty();
+      return layout && !layout.getEffectiveInstDataAsInt().empty();
     }
     auto shapedType = dyn_cast<ShapedType>(valTy);
     return shapedType && !llvm::equal(tileShape, shapedType.getShape());

@@ -73,6 +73,10 @@ public:
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
 
+  llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
+      lambdaCaptureFields;
+  clang::FieldDecl *lambdaThisCaptureField = nullptr;
+
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
   ImplicitParamDecl *cxxabiThisDecl = nullptr;
@@ -91,6 +95,8 @@ public:
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
+  /// This is the inner-most code context, which includes blocks.
+  const clang::Decl *curCodeDecl = nullptr;
 
   /// The function for which code is currently being generated.
   cir::FuncOp curFn;
@@ -706,6 +712,14 @@ public:
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
                                    mlir::Type fieldType, unsigned index);
 
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -1056,7 +1070,7 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
-  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+  void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
 
@@ -1376,6 +1390,10 @@ public:
   LValue emitLValue(const clang::Expr *e);
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitLValueForLambdaField(const FieldDecl *field);
+  LValue emitLValueForLambdaField(const FieldDecl *field,
+                                  mlir::Value thisValue);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
