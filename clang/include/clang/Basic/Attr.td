@@ -4585,6 +4585,12 @@ def OMPThreadPrivateDecl : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
+def OMPGroupPrivateDecl : InheritableAttr {
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def OMPCaptureNoInit : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
