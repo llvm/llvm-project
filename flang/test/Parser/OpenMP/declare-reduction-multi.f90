@@ -26,8 +26,7 @@ program omp_examples
   type(tt) :: values(n), sum, prod, big, small
 
   !$omp declare reduction(+:tt:omp_out%r = omp_out%r + omp_in%r) initializer(omp_priv%r = 0)
-!CHECK: !$OMP DECLARE REDUCTION(+:tt: omp_out%r=omp_out%r+omp_in%r
-!CHECK-NEXT: ) INITIALIZER(omp_priv%r=0_4)
+!CHECK: !$OMP DECLARE REDUCTION(+:tt: omp_out%r = omp_out%r+omp_in%r) INITIALIZER(omp_priv%r = 0_4)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
@@ -39,8 +38,7 @@ program omp_examples
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=0._4'
 
   !$omp declare reduction(*:tt:omp_out%r = omp_out%r * omp_in%r) initializer(omp_priv%r = 1)
-!CHECK-NEXT: !$OMP DECLARE REDUCTION(*:tt: omp_out%r=omp_out%r*omp_in%r
-!CHECK-NEXT: ) INITIALIZER(omp_priv%r=1_4)
+!CHECK-NEXT: !$OMP DECLARE REDUCTION(*:tt: omp_out%r = omp_out%r*omp_in%r) INITIALIZER(omp_priv%r = 1_4)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
@@ -52,8 +50,7 @@ program omp_examples
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=1._4'
 
   !$omp declare reduction(max:tt:omp_out = mymax(omp_out, omp_in)) initializer(omp_priv%r = 0)
-!CHECK-NEXT: !$OMP DECLARE REDUCTION(max:tt: omp_out=mymax(omp_out,omp_in)
-!CHECK-NEXT: ) INITIALIZER(omp_priv%r=0_4)
+!CHECK-NEXT: !$OMP DECLARE REDUCTION(max:tt: omp_out = mymax(omp_out,omp_in)) INITIALIZER(omp_priv%r = 0_4)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
@@ -65,8 +62,7 @@ program omp_examples
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=0._4'
 
   !$omp declare reduction(min:tt:omp_out%r = min(omp_out%r, omp_in%r)) initializer(omp_priv%r = 1)
-!CHECK-NEXT: !$OMP DECLARE REDUCTION(min:tt: omp_out%r=min(omp_out%r,omp_in%r)
-!CHECK-NEXT: ) INITIALIZER(omp_priv%r=1_4)
+!CHECK-NEXT: !$OMP DECLARE REDUCTION(min:tt: omp_out%r = min(omp_out%r,omp_in%r)) INITIALIZER(omp_priv%r = 1_4)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
