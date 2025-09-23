@@ -95,8 +95,8 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
                                          llvm::StringRef Data) {
   if (Desc == RISCVLMULInstrument::DESC_NAME) {
     if (!RISCVLMULInstrument::isDataValid(Data)) {
-      LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc << ": "
-                        << Data << '\n');
+      LDBG() << "RVCB: Bad data for instrument kind " << Desc << ": " << Data
+             << '\n';
       return nullptr;
     }
     return std::make_unique<RISCVLMULInstrument>(Data);
@@ -104,15 +104,14 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
 
   if (Desc == RISCVSEWInstrument::DESC_NAME) {
     if (!RISCVSEWInstrument::isDataValid(Data)) {
-      LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc << ": "
-                        << Data << '\n');
+      LDBG() << "RVCB: Bad data for instrument kind " << Desc << ": " << Data
+             << '\n';
       return nullptr;
     }
     return std::make_unique<RISCVSEWInstrument>(Data);
   }
 
-  LLVM_DEBUG(dbgs() << "RVCB: Creating default instrument for Desc: " << Desc
-                    << '\n');
+  LDBG() << "RVCB: Creating default instrument for Desc: " << Desc << '\n';
   return InstrumentManager::createInstrument(Desc, Data);
 }
 
@@ -120,8 +119,8 @@ SmallVector<UniqueInstrument>
 RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
   if (Inst.getOpcode() == RISCV::VSETVLI ||
       Inst.getOpcode() == RISCV::VSETIVLI) {
-    LLVM_DEBUG(dbgs() << "RVCB: Found VSETVLI and creating instrument for it: "
-                      << Inst << "\n");
+    LDBG() << "RVCB: Found VSETVLI and creating instrument for it: " << Inst
+           << "\n");
     unsigned VTypeI = Inst.getOperand(2).getImm();
     RISCVVType::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
 
@@ -252,8 +251,7 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   // Need LMUL or LMUL, SEW in order to override opcode. If no LMUL is provided,
   // then no option to override.
   if (!LI) {
-    LLVM_DEBUG(
-        dbgs() << "RVCB: Did not use instrumentation to override Opcode.\n");
+    LDBG() << "RVCB: Did not use instrumentation to override Opcode.\n";
     return SchedClassID;
   }
   uint8_t LMUL = LI->getLMUL();
@@ -315,22 +313,21 @@ unsigned RISCVInstrumentManager::getSchedClassID(
 
   // Not a RVV instr
   if (!VPOpcode) {
-    LLVM_DEBUG(
-        dbgs() << "RVCB: Could not find PseudoInstruction for Opcode "
-               << MCII.getName(Opcode)
-               << ", LMUL=" << (LI ? LI->getData() : "Unspecified")
-               << ", SEW=" << (SI ? SI->getData() : "Unspecified")
+    LDBG() << "RVCB: Could not find PseudoInstruction for Opcode "
+           << MCII.getName(Opcode) << ", LMUL=" << (LI ? LI->getData() : "Unspecified")
+               << ", SEW=" << (SI ? SI->getData() :
+                                    "Unspecified")
                << ". Ignoring instrumentation and using original SchedClassID="
-               << SchedClassID << '\n');
+               << SchedClassID << '\n';
     return SchedClassID;
   }
 
   // Override using pseudo
-  LLVM_DEBUG(dbgs() << "RVCB: Found Pseudo Instruction for Opcode "
-                    << MCII.getName(Opcode) << ", LMUL=" << LI->getData()
-                    << ", SEW=" << (SI ? SI->getData() : "Unspecified")
+  LDBG() << "RVCB: Found Pseudo Instruction for Opcode " << MCII.getName(Opcode)
+         << ", LMUL=" << LI->getData() << ", SEW=" << (SI ? SI->getData() :
+                                                            "Unspecified")
                     << ". Overriding original SchedClassID=" << SchedClassID
-                    << " with " << MCII.getName(*VPOpcode) << '\n');
+                    << " with " << MCII.getName(*VPOpcode) << '\n';
   return MCII.get(*VPOpcode).getSchedClass();
 }
 
