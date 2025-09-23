@@ -1151,11 +1151,11 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
       packOp.getDimAndTileMapping();
   int64_t srcRank = packOp.getSourceRank();
   int64_t destRank = packOp.getDestRank();
-  int64_t numTiles = destRank - srcRank;
 
-  // 1. Extract the inner tile sizes.
-  // Where possible, values are replaced with constant attributes (to match the
-  // behaviour of `getPackOpSourceOrPaddedSource`).
+  // 1. Extract the inner tile sizes and the shapes for the tensor.empty op
+  // before transposing. Where possible, values are replaced with constant
+  // attributes (to match the behaviour of `getPackOpSourceOrPaddedSource`).
+  SmallVector<OpFoldResult> transShapeForEmptyOp(srcRank, oneIdxAttr);
   SmallVector<OpFoldResult> tileSizes;
   for (auto i : llvm::seq<unsigned>(0, srcRank)) {
     if (dimAndTileMapping.count(i)) {
@@ -1165,6 +1165,7 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
       auto [_, tileSize] =
           getSimplifiedOfrAndStaticSizePair(dimAndTileMapping[i], rewriter);
       tileSizes.push_back(tileSize);
+      transShapeForEmptyOp[i] = tileSize;
     }
   }
 
@@ -1194,18 +1195,14 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   LDBG() << "Pack permutation: " << packOp;
   LDBG() << "perm: " << llvm::interleaved(srcPermForTranspose);
 
-  // 2.1 Create tensor.empty (init value for TransposeOp)
-  SmallVector<OpFoldResult> transShapeForEmptyOp(srcRank - numTiles,
-                                                 oneIdxAttr);
-  transShapeForEmptyOp.append(tileSizes);
-
+  // 2.2 Transpose the tensor.empty shapes.
   applyPermutationToVector<OpFoldResult>(transShapeForEmptyOp,
                                          srcPermForTranspose);
   Value empty =
       tensor::EmptyOp::create(rewriter, loc, transShapeForEmptyOp,
                               packOp.getSourceType().getElementType());
 
-  // 2.2 Create linalg.transpose
+  // 2.3 Create linalg.transpose
   auto transposedOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
                                                   srcPermForTranspose);
 
