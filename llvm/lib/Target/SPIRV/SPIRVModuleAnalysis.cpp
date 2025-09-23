@@ -1747,9 +1747,6 @@ void addInstrRequirements(const MachineInstr &MI,
                          false);
     SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
     SPIRV::AddressingModel::AddressingModel AddrModel = MAI.Addr;
-    unsigned PointerSize = ST.getPointerSize();
-    AddrModel = PointerSize == 32 ? SPIRV::AddressingModel::Physical32
-                                  : SPIRV::AddressingModel::Physical64;
     SPIRVType *TyDef = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
     if (MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL &&
         TyDef->getOpcode() != SPIRV::OpTypeImage) {
