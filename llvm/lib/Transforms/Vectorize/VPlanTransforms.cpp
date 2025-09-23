@@ -3543,22 +3543,20 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   };
 
   VPValue *VecOp = Red->getVecOp();
-  VPValue *Mul = nullptr;
   VPValue *Sub = nullptr;
   VPValue *A, *B;
   // Sub reductions could have a sub between the add reduction and vec op.
-  if (match(VecOp,
-            m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Mul))))
+  if (match(VecOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue()))) {
     Sub = VecOp;
-  else
-    Mul = VecOp;
+    VecOp = cast<VPWidenRecipe>(VecOp->getDefiningRecipe())->getOperand(1);
+  }
   // Try to match reduce.add(mul(...)).
-  if (match(Mul, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     auto *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    auto *MulR = cast<VPWidenRecipe>(Mul->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
     // Match reduce.add(mul(ext, ext)).
     if (RecipeA && RecipeB &&
@@ -3567,35 +3565,35 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   MulR, RecipeA, RecipeB, nullptr)) {
+                                   Mul, RecipeA, RecipeB, nullptr)) {
       if (Sub)
         return new VPExpressionRecipe(
-            RecipeA, RecipeB, MulR,
+            RecipeA, RecipeB, Mul,
             cast<VPWidenRecipe>(Sub->getDefiningRecipe()), Red);
-      return new VPExpressionRecipe(RecipeA, RecipeB, MulR, Red);
+      return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
     }
     // Match reduce.add(mul).
     // TODO: Add an expression type for this variant with a negated mul
     if (!Sub &&
-        IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr))
-      return new VPExpressionRecipe(MulR, Red);
+        IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+      return new VPExpressionRecipe(Mul, Red);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
   // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
-  if (!Sub && match(Mul, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                            m_ZExtOrSExt(m_VPValue()))))) {
+  if (!Sub && match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                              m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
-    auto *MulR = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
     auto *Ext0 =
-        cast<VPWidenCastRecipe>(MulR->getOperand(0)->getDefiningRecipe());
+        cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
     auto *Ext1 =
-        cast<VPWidenCastRecipe>(MulR->getOperand(1)->getDefiningRecipe());
+        cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
     if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   MulR, Ext0, Ext1, Ext)) {
+                                   Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
           *Ext0, Ext0->getDebugLoc());
@@ -3608,10 +3606,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                         Ext1->getDebugLoc());
         NewExt1->insertBefore(Ext1);
       }
-      MulR->setOperand(0, NewExt0);
-      MulR->setOperand(1, NewExt1);
-      Red->setOperand(1, MulR);
-      return new VPExpressionRecipe(NewExt0, NewExt1, MulR, Red);
+      Mul->setOperand(0, NewExt0);
+      Mul->setOperand(1, NewExt1);
+      Red->setOperand(1, Mul);
+      return new VPExpressionRecipe(NewExt0, NewExt1, Mul, Red);
     }
   }
   return nullptr;
