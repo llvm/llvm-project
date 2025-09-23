@@ -1137,6 +1137,63 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     messages.Say(
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
+
+  // passing global variables
+  if (actualFirstSymbol) {
+    bool warn{false};
+    std::string ownerType{""};
+    std::string ownerName{""};
+    if (actualFirstSymbol->flags().test(Symbol::Flag::InCommonBlock)) {
+      const Symbol *common{FindCommonBlockContaining(*actualFirstSymbol)};
+      ownerType = "COMMON";
+      ownerName = common->name().ToString();
+      if (!(actualFirstSymbol->Rank() == 1 && actualFirstSymbol->offset() == 0)) {
+        warn |= true;
+      } else if (actualFirstSymbol->Rank() == 1) {
+        bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
+        if (!actualIsArrayElement) {
+          warn |= true;
+        }
+        if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+            dims && dims->IsExplicitShape()) {
+          if (!((*dims)[0].lbound().GetExplicit() == (*dims)[0].ubound().GetExplicit())) {
+            warn |= true;
+          }
+        }
+        if (common->get<CommonBlockDetails>().objects().size() > 1) {
+          warn |= true;
+        }
+      }
+    } else if (const auto &owner{actualFirstSymbol->GetUltimate().owner()};
+               owner.IsModule() || owner.IsSubmodule()) {
+      const Scope *module{FindModuleContaining(owner)};
+      ownerType = "MODULE";
+      ownerName = module->GetName()->ToString();
+      if (actualFirstSymbol->attrs().test(Attr::PARAMETER)) {
+        warn |= false;
+      } else if (actualFirstSymbol->Rank() != 1) {
+        warn |= true;
+      } else if (!actualFirstSymbol->attrs().test(Attr::ALLOCATABLE) &&
+                 !actualFirstSymbol->attrs().test(Attr::POINTER) &&
+                 !actualFirstSymbol->attrs().test(Attr::VOLATILE)) {
+        bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
+        if (!actualIsArrayElement) {
+          warn |= true;
+        }
+        if (const ArraySpec *dims{actualFirstSymbol->GetShape()};
+            dims && dims->IsExplicitShape()) {
+          if (!((*dims)[0].lbound().GetExplicit() == (*dims)[0].ubound().GetExplicit())) {
+            warn |= true;
+          }
+        }
+      }
+    }
+    if (warn) {
+      context.Warn(common::UsageWarning::PassGlobalVariable, messages.at(),
+        "Passing global variable '%s' from %s '%s' as function argument"_warn_en_US,
+        actualFirstSymbol->name(), ownerType, ownerName);
+    }
+  }
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
