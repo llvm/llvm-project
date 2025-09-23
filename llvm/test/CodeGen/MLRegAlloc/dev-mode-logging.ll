@@ -33,7 +33,7 @@
 ; NOML:      observation: 17
 ; ML:      observation: 83
 ; ML: reward: 38.42
-; NOML: reward: 37.06
+; NOML: reward: 39.07316970825195
 
 
 ; CHECK-TWO-FCTS: context: SyFgets

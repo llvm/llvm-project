@@ -186,6 +186,20 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
+  bool hasCLZLike() const {
+    return HasStdExtZbb || HasVendorXTHeadBb ||
+           (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCTZLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCPOPLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasREV8Like() const {
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+  }
+
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
   bool hasCZEROLike() const {
@@ -196,6 +210,14 @@ public:
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
            hasShortForwardBranchOpt();
+  }
+
+  bool hasShlAdd(int64_t ShAmt) const {
+    if (ShAmt <= 0)
+      return false;
+    if (ShAmt <= 3)
+      return HasStdExtZba || HasVendorXAndesPerf || HasVendorXTHeadBa;
+    return ShAmt <= 31 && HasVendorXqciac;
   }
 
   bool is64Bit() const { return IsRV64; }

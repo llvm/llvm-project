@@ -1176,12 +1176,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_SPECIALIZATIONS
 #  endif
 
-#  if __has_cpp_attribute(_Clang::__standalone_debug__)
-#    define _LIBCPP_STANDALONE_DEBUG [[_Clang::__standalone_debug__]]
-#  else
-#    define _LIBCPP_STANDALONE_DEBUG
-#  endif
-
 #  if __has_cpp_attribute(_Clang::__preferred_name__)
 #    define _LIBCPP_PREFERRED_NAME(x) [[_Clang::__preferred_name__(x)]]
 #  else

@@ -56,30 +56,6 @@ template <typename T> struct const_pointer_or_const_ref {
                          typename add_const_past_pointer<T>::type, const T &>;
 };
 
-namespace detail {
-template <class T> union trivial_helper {
-  T t;
-};
-
-} // namespace detail
-
-template <typename T> struct is_copy_assignable {
-  template <class F>
-  static auto get(F *)
-      -> decltype(std::declval<F &>() = std::declval<const F &>(),
-                  std::true_type{});
-  static std::false_type get(...);
-  static constexpr bool value = decltype(get((T *)nullptr))::value;
-};
-
-template <typename T> struct is_move_assignable {
-  template <class F>
-  static auto get(F *)
-      -> decltype(std::declval<F &>() = std::declval<F &&>(), std::true_type{});
-  static std::false_type get(...);
-  static constexpr bool value = decltype(get((T *)nullptr))::value;
-};
-
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_TYPE_TRAITS_H

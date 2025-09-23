@@ -442,15 +442,8 @@ template <class T> struct has_CustomMappingTraits {
       is_detected<check, CustomMappingTraits<T>>::value;
 };
 
-// has_FlowTraits<int> will cause an error with some compilers because
-// it subclasses int.  Using this wrapper only instantiates the
-// real has_FlowTraits only if the template type is a class.
-template <typename T, bool Enabled = std::is_class_v<T>> class has_FlowTraits {
-public:
-  static constexpr bool value = false;
-};
-
-template <class T> struct has_FlowTraits<T, true> {
+// Test if flow is defined on type T.
+template <typename T> struct has_FlowTraits {
   template <class U> using check = decltype(&U::flow);
 
   static constexpr bool value = is_detected<check, T>::value;
@@ -459,8 +452,7 @@ template <class T> struct has_FlowTraits<T, true> {
 // Test if SequenceTraits<T> is defined on type T
 template <typename T>
 struct has_SequenceTraits
-    : public std::integral_constant<bool, has_SequenceMethodTraits<T>::value> {
-};
+    : public std::bool_constant<has_SequenceMethodTraits<T>::value> {};
 
 // Test if DocumentListTraits<T> is defined on type T
 template <class T> struct has_DocumentListTraits {
@@ -669,29 +661,27 @@ inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
 
 template <typename T, typename Context>
 struct missingTraits
-    : public std::integral_constant<bool,
-                                    !has_ScalarEnumerationTraits<T>::value &&
-                                        !has_ScalarBitSetTraits<T>::value &&
-                                        !has_ScalarTraits<T>::value &&
-                                        !has_BlockScalarTraits<T>::value &&
-                                        !has_TaggedScalarTraits<T>::value &&
-                                        !has_MappingTraits<T, Context>::value &&
-                                        !has_SequenceTraits<T>::value &&
-                                        !has_CustomMappingTraits<T>::value &&
-                                        !has_DocumentListTraits<T>::value &&
-                                        !has_PolymorphicTraits<T>::value> {};
+    : public std::bool_constant<
+          !has_ScalarEnumerationTraits<T>::value &&
+          !has_ScalarBitSetTraits<T>::value && !has_ScalarTraits<T>::value &&
+          !has_BlockScalarTraits<T>::value &&
+          !has_TaggedScalarTraits<T>::value &&
+          !has_MappingTraits<T, Context>::value &&
+          !has_SequenceTraits<T>::value && !has_CustomMappingTraits<T>::value &&
+          !has_DocumentListTraits<T>::value &&
+          !has_PolymorphicTraits<T>::value> {};
 
 template <typename T, typename Context>
 struct validatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                has_MappingValidateTraits<T, Context>::value> {
+};
 
 template <typename T, typename Context>
 struct unvalidatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    !has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                !has_MappingValidateTraits<T, Context>::value> {
+};
 
 // Base class for Input and Output.
 class LLVM_ABI IO {
