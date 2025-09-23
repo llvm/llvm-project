@@ -126,6 +126,15 @@ struct KernelLaunchParamsTy {
   /// Ptrs to the Data entries. Only strictly required for the host plugin.
   void **Ptrs = nullptr;
 };
+
+/// Rectangular range for rect memcpies. Should be the same layout as
+/// liboffload's `ol_memcpy_rect_t`.
+struct MemcpyRectTy {
+  void *Base;
+  uint32_t Offset[3];
+  size_t Pitch;
+  size_t Slice;
+};
 }
 
 #endif // OMPTARGET_SHARED_API_TYPES_H

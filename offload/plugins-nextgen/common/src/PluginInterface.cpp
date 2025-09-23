@@ -1437,11 +1437,33 @@ Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
   return Err;
 }
 
+Error GenericDeviceTy::dataSubmitRect(MemcpyRectTy TgtRect,
+                                      const MemcpyRectTy HstRect,
+                                      uint32_t Size[3],
+                                      __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataSubmitRectImpl(TgtRect, HstRect, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
                                     int64_t Size, __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   auto Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataRetrieveRect(MemcpyRectTy HstRect,
+                                        const MemcpyRectTy TgtRect,
+                                        uint32_t Size[3],
+                                        __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataRetrieveRectImpl(HstRect, TgtRect, Size, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -1452,6 +1474,19 @@ Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   auto Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataExchangeRect(MemcpyRectTy SrcRect,
+                                        GenericDeviceTy &DstDev,
+                                        const MemcpyRectTy DstRect,
+                                        uint32_t Size[3],
+                                        __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err =
+      dataExchangeRectImpl(SrcRect, DstDev, DstRect, Size, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

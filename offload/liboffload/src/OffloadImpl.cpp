@@ -1001,6 +1001,36 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   return Error::success();
 }
 
+Error olMemcpyRect_impl(ol_queue_handle_t Queue, ol_memcpy_rect_t DstRect,
+                        ol_device_handle_t DstDevice, ol_memcpy_rect_t SrcRect,
+                        ol_device_handle_t SrcDevice, ol_dimensions_t Size) {
+  auto Host = OffloadContext::get().HostDevice();
+  if (DstDevice == Host && SrcDevice == Host) {
+    return createOffloadError(
+        ErrorCode::INVALID_ARGUMENT,
+        "one of DstDevice and SrcDevice must be a non-host device");
+  }
+
+  // If no queue is given the memcpy will be synchronous
+  auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
+
+  static_assert(sizeof(ol_memcpy_rect_t) == sizeof(MemcpyRectTy));
+  auto AsPIDst = bit_cast<MemcpyRectTy>(DstRect);
+  auto AsPISrc = bit_cast<MemcpyRectTy>(SrcRect);
+  uint32_t AsPISize[3] = {Size.x, Size.y, Size.z};
+
+  if (DstDevice == Host)
+    return SrcDevice->Device->dataRetrieveRect(AsPIDst, AsPISrc, AsPISize,
+                                               QueueImpl);
+
+  if (SrcDevice == Host)
+    return DstDevice->Device->dataSubmitRect(AsPIDst, AsPISrc, AsPISize,
+                                             QueueImpl);
+
+  return DstDevice->Device->dataExchangeRect(AsPISrc, *DstDevice->Device,
+                                             AsPIDst, AsPISize, QueueImpl);
+}
+
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
                      const void *PatternPtr, size_t FillSize) {
   return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,

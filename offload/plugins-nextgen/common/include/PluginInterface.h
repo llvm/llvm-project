@@ -921,11 +921,24 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  Error dataSubmitRect(MemcpyRectTy TgtRect, const MemcpyRectTy HstRect,
+                       uint32_t Size[3], __tgt_async_info *AsyncInfo);
+  virtual Error dataSubmitRectImpl(const MemcpyRectTy TgtRect,
+                                   MemcpyRectTy HstRect, uint32_t Size[3],
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size,
                      __tgt_async_info *AsyncInfo);
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  Error dataRetrieveRect(MemcpyRectTy HstRect, const MemcpyRectTy TgtRect,
+                         uint32_t Size[3], __tgt_async_info *AsyncInfo);
+  virtual Error dataRetrieveRectImpl(MemcpyRectTy HstRect,
+                                     const MemcpyRectTy TgtRect,
+                                     uint32_t Size[3],
+                                     AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Instert a data fence between previous data operations and the following
   /// operations if necessary for the device
@@ -939,6 +952,15 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                  void *DstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+
+  Error dataExchangeRect(MemcpyRectTy SrcRect, GenericDeviceTy &DstDev,
+                         const MemcpyRectTy DstRect, uint32_t Size[3],
+                         __tgt_async_info *AsyncInfo);
+  virtual Error dataExchangeRectImpl(MemcpyRectTy SrcRect,
+                                     GenericDeviceTy &DstDev,
+                                     const MemcpyRectTy DstRect,
+                                     uint32_t Size[3],
+                                     AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Fill data on the device with a pattern from the host
   Error dataFill(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,

@@ -22,7 +22,8 @@ def ol_alloc_type_t : Enum {
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
-      "All allocations through olMemAlloc regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+      "All allocations through olMemAlloc regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "The returned memory allocation will be aligned at least to a 4 byte boundry.",
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
@@ -111,6 +112,58 @@ def olMemcpy : Function {
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
     ];
     let returns = [];
+}
+
+def ol_memcpy_rect_t : Struct {
+  let desc = "A 3D view into a buffer for `olMemcpyRect`";
+  let members = [
+    StructMember<"void*", "buffer", "the buffer backing this range">,
+    StructMember<"ol_dimensions_t", "offset", "byte coordinate offset into the space">,
+    StructMember<"size_t", "pitch", "the pitch of the buffer in bytes (i.e. how large each `x` row is)">,
+    StructMember<"size_t", "slice", "the slice of the buffer in bytes (i.e. how large each `pitch * y` plane is)">,
+  ];
+}
+
+def olMemcpyRect : Function {
+    let desc = "Enqueue a 2D or 3D memcpy operation.";
+    let details = [
+        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform.",
+        "If a queue is specified, at least one device must be a non-host device",
+        "For both the source and destination, the base pointer, pitch and slice must all be aligned to 4 bytes",
+        "For 2D copies (where `Size.z` is 1), the slice value is ignored",
+        "Both the source and destination must have been allocated via `olMemAlloc`",
+        "Either the source or destination (or both) must have a non-host device",
+        "If a queue is not specified, the memcpy happens synchronously",
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
+        Param<"ol_memcpy_rect_t", "DstRect", "pointer to copy to", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN>,
+        Param<"ol_memcpy_rect_t", "SrcRect", "pointer to copy from", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN>,
+        Param<"ol_dimensions_t", "Size", "size in bytes of data to copy", PARAM_IN>,
+    ];
+    let returns = [
+      Return<"OL_ERRC_INVALID_SIZE", [
+        "`DstRect.pitch % 4 > 0`",
+        "`DstRect.slice % 4 > 0`",
+        "`(uintptr_t)DstRect.buffer % 4 > 0`",
+        "`SrcRect.pitch % 4 > 0`",
+        "`SrcRect.slice % 4 > 0`",
+        "`(uintptr_t)SrcRect.buffer % 4 > 0`",
+        "`Size.x == 0 || Size.y == 0 || Size.z == 0`",
+      ]>,
+      Return<"OL_ERRC_INVALID_NULL_POINTER", [
+        "`DstRect.buffer == NULL`",
+        "`SrcRect.buffer == NULL`",
+      ]>,
+      Return<"OL_ERRC_INVALID_VALUE", [
+        "Either the source or destination was not allocated via `olMemAlloc`",
+      ]>,
+      Return<"OL_ERRC_INVALID_ARGUMENT", [
+        "Both arguments are the host device",
+      ]>
+    ];
 }
 
 def olMemFill : Function {
