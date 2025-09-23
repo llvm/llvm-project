@@ -162,13 +162,13 @@ define amdgpu_kernel void @fmul_f16() #0 {
 
 define amdgpu_kernel void @fmul_bf16() #0 {
 ; GFX9-LABEL: 'fmul_bf16'
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = fmul bfloat undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fmul bfloat undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fmul_bf16'
@@ -182,23 +182,23 @@ define amdgpu_kernel void @fmul_bf16() #0 {
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1250-LABEL: 'fmul_bf16'
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = fmul bfloat undef, undef
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fmul bfloat undef, undef
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'fmul_bf16'
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fmul bfloat undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fmul_bf16'
@@ -214,11 +214,11 @@ define amdgpu_kernel void @fmul_bf16() #0 {
 ; GFX1250-SIZE-LABEL: 'fmul_bf16'
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fmul bfloat undef, undef
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2bf16 = fmul <2 x bfloat> undef, undef
-; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
-; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
-; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
-; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
-; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3bf16 = fmul <3 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4bf16 = fmul <4 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5bf16 = fmul <5 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16bf16 = fmul <16 x bfloat> undef, undef
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17bf16 = fmul <17 x bfloat> undef, undef
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
   %bf16 = fmul bfloat undef, undef
   %v2bf16 = fmul <2 x bfloat> undef, undef
