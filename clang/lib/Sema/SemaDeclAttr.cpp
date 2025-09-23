@@ -1802,7 +1802,11 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() == 1) {
     DeallocPtrIdx = ParamIdx(1, DeallocFD);
 
-    if (!DeallocPtrIdx.isValid() ||
+    // FIXME: We could probably be better about diagnosing that there IS no
+    // argument, or that the function doesn't have a prototype, but this is how
+    // GCC diagnoses this, and is reasonably clear.
+    if (!DeallocPtrIdx.isValid() || !hasFunctionProto(DeallocFD) ||
+        getFunctionOrMethodNumParams(DeallocFD) < 1 ||
         !getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex())
              .getCanonicalType()
              ->isPointerType()) {

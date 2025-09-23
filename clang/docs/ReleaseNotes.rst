@@ -250,6 +250,9 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- The definition of a function declaration with ``[[clang::cfi_unchecked_callee]]`` inherits this
+  attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
+  treated as an error where the definition and declaration would have differing types.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -347,6 +350,9 @@ Bug Fixes in This Version
   ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
+- Fixed an assertion when an improper use of the ``malloc`` attribute targeting
+  a function without arguments caused us to try to access a non-existent argument.
+  (#GH159080)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

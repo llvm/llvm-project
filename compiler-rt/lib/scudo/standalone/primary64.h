@@ -1379,8 +1379,6 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
-  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
-
   const uptr BlockSize = getSizeByClassId(ClassId);
   uptr BytesInFreeList;
   const uptr AllocatedUserEnd =
@@ -1444,6 +1442,12 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   //    Then we can tell which pages are in-use by querying
   //    `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context =
       markFreeBlocks(Region, BlockSize, AllocatedUserEnd,
                      getCompactPtrBaseByClassId(ClassId), GroupsToRelease);
