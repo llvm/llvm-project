@@ -2960,7 +2960,7 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 5);
 
   const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
-  unsigned DstLen = VecT->getNumElements();
+  const unsigned DstLen = VecT->getNumElements();
   const PrimType &DstElemT = *S.getContext().classify(VecT->getElementType());
 
   APSInt U = popToAPSInt(S, Call->getArg(4));
@@ -2973,7 +2973,7 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
 
   for (unsigned I = 0; I != DstLen; ++I) {
     APSInt ALane, BLane, CLane;
-    INT_TYPE_SWITCH(DstElemT, {
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
       ALane = A.elem<T>(I).toAPSInt();
       BLane = B.elem<T>(I).toAPSInt();
       CLane = C.elem<T>(I).toAPSInt();
@@ -2984,7 +2984,11 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
 
     if (U[I]) {
       for (unsigned Bit = 0; Bit != BitWidth; ++Bit) {
-        unsigned Idx = (ALane[Bit] << 2) | (BLane[Bit] << 1) | (CLane[Bit]);
+        unsigned ABit = ALane[Bit];
+        unsigned BBit = BLane[Bit];
+        unsigned CBit = CLane[Bit];
+
+        unsigned Idx = (ABit << 2) | (BBit << 1) | (CBit);
         RLane.setBitVal(Bit, Imm[Idx]);
       }
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
