@@ -742,6 +742,11 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// __builtin_extract
+static bool interp__builtin_x86_extract_vector(Inter)
+
+
+
 /// rotateleft(value, amount)
 static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
