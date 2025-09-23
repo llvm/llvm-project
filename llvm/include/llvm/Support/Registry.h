@@ -58,8 +58,8 @@ namespace llvm {
     // declaration causing error C2487 "member of dll interface class may not
     // be declared with dll interface".
     // https://developercommunity.visualstudio.com/t/c2487-in-dllexport-class-with-static-members/69878
-    inline static node *Head = nullptr;
-    inline static node *Tail = nullptr;
+    static inline node *Head = nullptr;
+    static inline node *Tail = nullptr;
 
   public:
     /// Node in linked list of entries.
