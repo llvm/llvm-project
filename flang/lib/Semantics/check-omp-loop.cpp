@@ -491,7 +491,10 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
                       checkReductionSymbolInScan(name);
                     }
                   },
-                  [&](const auto &name) { checkReductionSymbolInScan(&name); },
+                  [&](const parser::Name &name) {
+                    checkReductionSymbolInScan(&name);
+                  },
+                  [&](const parser::OmpObject::Invalid &invalid) {},
               },
               ompObj.u);
         }
