@@ -137,6 +137,8 @@ void Statusline::Redraw(std::optional<ExecutionContextRef> exe_ctx_ref) {
   llvm::Expected<StoppedExecutionContext> stopped_exe_ctx =
       GetStoppedExecutionContext(&m_exe_ctx_ref);
   if (stopped_exe_ctx) {
+    // The StoppedExecutionContext only ensures that we hold the run lock.
+    // The process could be in an exited or unloaded state and have no frame.
     if (auto frame_sp = stopped_exe_ctx->GetFrameSP())
       sym_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
   } else {
