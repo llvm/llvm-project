@@ -223,12 +223,13 @@ TEST(IntegerInclusiveIntervalTest, MergeAdjacentIntervals) {
   Input.clear();
   Expected.clear();
   Input.push_back(IntegerInclusiveInterval(1, 3));
-  Input.push_back(IntegerInclusiveInterval(4, 6));     // Adjacent to first.
-  Input.push_back(IntegerInclusiveInterval(8, 10));    // Gap.
-  Input.push_back(IntegerInclusiveInterval(11, 13));   // Adjacent to third.
-  Input.push_back(IntegerInclusiveInterval(14, 16));   // Adjacent to fourth.
-  Expected.push_back(IntegerInclusiveInterval(1, 6));  // Merged 1-3 and 4-6.
-  Expected.push_back(IntegerInclusiveInterval(8, 16)); // Merged 8-10, 11-13, 14-16.
+  Input.push_back(IntegerInclusiveInterval(4, 6));    // Adjacent to first.
+  Input.push_back(IntegerInclusiveInterval(8, 10));   // Gap.
+  Input.push_back(IntegerInclusiveInterval(11, 13));  // Adjacent to third.
+  Input.push_back(IntegerInclusiveInterval(14, 16));  // Adjacent to fourth.
+  Expected.push_back(IntegerInclusiveInterval(1, 6)); // Merged 1-3 and 4-6.
+  Expected.push_back(
+      IntegerInclusiveInterval(8, 16)); // Merged 8-10, 11-13, 14-16.
   Result = IntegerIntervalUtils::mergeAdjacentIntervals(Input);
   EXPECT_EQ(Expected, Result);
 

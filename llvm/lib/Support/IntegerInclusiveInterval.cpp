@@ -78,7 +78,8 @@ bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value) {
   return false;
 }
 
-void printIntervals(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals,
+void printIntervals(raw_ostream &OS,
+                    ArrayRef<IntegerInclusiveInterval> Intervals,
                     char Separator) {
   if (Intervals.empty()) {
     OS << "empty";
@@ -93,8 +94,8 @@ void printIntervals(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Interval
   }
 }
 
-IntervalList mergeAdjacentIntervals(
-    ArrayRef<IntegerInclusiveInterval> Intervals) {
+IntervalList
+mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals) {
   if (Intervals.empty())
     return {};
 

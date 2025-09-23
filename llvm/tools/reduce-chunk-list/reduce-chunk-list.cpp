@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/IntegerInclusiveInterval.h"
+#include "llvm/Support/Program.h"
 
 using namespace llvm;
 
@@ -133,7 +133,6 @@ int main(int argc, char **argv) {
 
   errs() << "Minimal Chunks = ";
   IntegerIntervalUtils::printIntervals(
-      llvm::errs(),
-      IntegerIntervalUtils::mergeAdjacentIntervals(CurrChunks));
+      llvm::errs(), IntegerIntervalUtils::mergeAdjacentIntervals(CurrChunks));
   errs() << "\n";
 }
