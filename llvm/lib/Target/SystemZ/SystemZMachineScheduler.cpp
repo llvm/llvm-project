@@ -127,7 +127,11 @@ bool SystemZPreRASchedStrategy::shouldReduceLatency(SchedBoundary *Zone) const {
 
   if (PreRALatRed == SystemZSched::More)
     return true;
+
   if (PreRALatRed == SystemZSched::Heuristics)
+    // Don't extend the scheduled latency in regions with many nodes in data
+    // sequences, or for (single block loop) regions that are acyclically
+    // (within a single loop iteration) latency limited.
     return HasDataSequences || Rem.IsAcyclicLatencyLimited;
 
   if (PreRALatRed == SystemZSched::CycleBased) {
@@ -343,13 +347,12 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     if (tryLess(TryCandScore, CandScore, TryCand, Cand, LivenessReduce))
       return TryCand.Reason != NoCand;
 
-    // Don't extend the scheduled latency in regions with many nodes in
-    // simple data sequences, or for (single block loop) regions that are
-    // acyclically (within a single loop iteration) latency limited.
+    // Avoid increasing the scheduled latency.
     if (shouldReduceLatency(Zone) &&
         TryCand.SU->getHeight() != Cand.SU->getHeight() &&
         (std::max(TryCand.SU->getHeight(), Cand.SU->getHeight()) >
          Zone->getScheduledLatency())) {
+      // Put the higher SU above only if its depth is less than what's remaining.
       unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight()
                                    ? Cand.SU->getDepth()
                                    : TryCand.SU->getDepth();
