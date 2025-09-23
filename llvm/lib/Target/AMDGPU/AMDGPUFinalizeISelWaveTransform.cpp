@@ -166,14 +166,12 @@ bool Vreg1WideningHelper::widenVreg1s() {
         assert(!MI.getOperand(1).getSubReg());
         if (isLaneMaskReg(SrcReg)) {
           ConstrainRegs.insert(SrcReg);
-          MachineInstr *NewMI =
-              BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64),
-                      DefReg32b)
-                  .addImm(0)
-                  .addImm(0)
-                  .addImm(0)
-                  .addImm(-1)
-                  .addReg(SrcReg);
+          BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DefReg32b)
+              .addImm(0)
+              .addImm(0)
+              .addImm(0)
+              .addImm(-1)
+              .addReg(SrcReg);
           DeadCopies.push_back(&MI);
         } else {
           assert(isVreg1(SrcReg) || Vreg32Set.count(SrcReg));

@@ -585,7 +585,7 @@ public:
   static char ID;
 
   AMDGPULateCodeGenPrepareLegacy(bool IsOptNone = false)
-      : IsOptNone(IsOptNone), FunctionPass(ID) {}
+      : FunctionPass(ID), IsOptNone(IsOptNone) {}
 
   StringRef getPassName() const override {
     return "AMDGPU IR late optimizations";
