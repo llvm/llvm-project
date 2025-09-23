@@ -182,6 +182,9 @@ namespace offload {
 struct AllocInfo {
   ol_device_handle_t Device;
   ol_alloc_type_t Type;
+  void *Start;
+  // One byte past the end
+  void *End;
 };
 
 // Global shared state for liboffload
@@ -200,6 +203,9 @@ struct OffloadContext {
   bool ValidationEnabled = true;
   DenseMap<void *, AllocInfo> AllocInfoMap{};
   std::mutex AllocInfoMapMutex{};
+  // Partitioned list of memory base addresses. Each element in this list is a
+  // key in AllocInfoMap
+  llvm::SmallVector<void *> AllocBases{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
   size_t RefCount;
 
@@ -613,20 +619,61 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   }
 }
 
+constexpr size_t MAX_ALLOC_TRIES = 50;
 Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                       size_t Size, void **AllocationOut) {
-  auto Alloc =
-      Device->Device->dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
-  if (!Alloc)
-    return Alloc.takeError();
+  SmallVector<void *> Rejects;
 
-  *AllocationOut = *Alloc;
-  {
-    std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
-    OffloadContext::get().AllocInfoMap.insert_or_assign(
-        *Alloc, AllocInfo{Device, Type});
+  // Repeat the allocation up to a certain amount of times. If it happens to
+  // already be allocated (e.g. by a device from another vendor) throw it away
+  // and try again.
+  for (size_t Count = 0; Count < MAX_ALLOC_TRIES; Count++) {
+    auto NewAlloc = Device->Device->dataAlloc(Size, nullptr,
+                                              convertOlToPluginAllocTy(Type));
+    if (!NewAlloc)
+      return NewAlloc.takeError();
+
+    void *NewEnd = &static_cast<char *>(*NewAlloc)[Size];
+    auto &AllocBases = OffloadContext::get().AllocBases;
+    auto &AllocInfoMap = OffloadContext::get().AllocInfoMap;
+    {
+      std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
+
+      // Check that this memory region doesn't overlap another one
+      // That is, the start of this allocation needs to be after another
+      // allocation's end point, and the end of this allocation needs to be
+      // before the next one's start.
+      // `Gap` is the first alloc who ends after the new alloc's start point.
+      auto Gap =
+          std::lower_bound(AllocBases.begin(), AllocBases.end(), *NewAlloc,
+                           [&](const void *Iter, const void *Val) {
+                             return AllocInfoMap.at(Iter).End <= Val;
+                           });
+      if (Gap == AllocBases.end() || NewEnd <= AllocInfoMap.at(*Gap).Start) {
+        // Success, no conflict
+        AllocInfoMap.insert_or_assign(
+            *NewAlloc, AllocInfo{Device, Type, *NewAlloc, NewEnd});
+        AllocBases.insert(
+            std::lower_bound(AllocBases.begin(), AllocBases.end(), *NewAlloc),
+            *NewAlloc);
+        *AllocationOut = *NewAlloc;
+
+        for (void *R : Rejects)
+          if (auto Err =
+                  Device->Device->dataDelete(R, convertOlToPluginAllocTy(Type)))
+            return Err;
+        return Error::success();
+      }
+
+      // To avoid the next attempt allocating the same memory we just freed, we
+      // hold onto it until we complete the allocation
+      Rejects.push_back(*NewAlloc);
+    }
   }
-  return Error::success();
+
+  // We've tried multiple times, and can't allocate a non-overlapping region.
+  return createOffloadError(ErrorCode::BACKEND_FAILURE,
+                            "failed to allocate non-overlapping memory");
 }
 
 Error olMemFree_impl(void *Address) {
@@ -642,6 +689,9 @@ Error olMemFree_impl(void *Address) {
     Device = AllocInfo.Device;
     Type = AllocInfo.Type;
     OffloadContext::get().AllocInfoMap.erase(Address);
+
+    auto &Bases = OffloadContext::get().AllocBases;
+    Bases.erase(std::lower_bound(Bases.begin(), Bases.end(), Address));
   }
 
   if (auto Res =
