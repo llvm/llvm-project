@@ -47,6 +47,7 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/from_range.h>
+#include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
