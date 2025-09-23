@@ -1,20 +1,20 @@
-; Test that verifies functionality for -opt-bisect with range specifications
+; Test that verifies functionality for -opt-bisect with interval specifications
 
-; Test basic range functionality: run passes 1-3 and 7-8
+; Test basic interval functionality: run passes 1-3 and 7-8
 ; RUN: opt -passes='annotation2metadata,forceattrs,inferattrs,function(lower-expect),function(simplifycfg),function(sroa),function(early-cse),openmp-opt' \
-; RUN:   -opt-bisect=1-3,7-8 %s 2>&1 | FileCheck %s --check-prefix=CHECK-RANGES
-; CHECK-RANGES: BISECT: running pass (1) annotation2metadata on [module]
-; CHECK-RANGES: BISECT: running pass (2) forceattrs on [module]
-; CHECK-RANGES: BISECT: running pass (3) inferattrs on [module]
-; CHECK-RANGES: BISECT: NOT running pass (4) lower-expect on foo
-; CHECK-RANGES: BISECT: NOT running pass (5) simplifycfg on foo
-; CHECK-RANGES: BISECT: NOT running pass (6) sroa on foo
-; CHECK-RANGES: BISECT: running pass (7) early-cse on foo
-; CHECK-RANGES: BISECT: running pass (8) openmp-opt on [module]
+; RUN:   -opt-bisect=1-3,7-8 %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTERVALS
+; CHECK-INTERVALS: BISECT: running pass (1) annotation2metadata on [module]
+; CHECK-INTERVALS: BISECT: running pass (2) forceattrs on [module]
+; CHECK-INTERVALS: BISECT: running pass (3) inferattrs on [module]
+; CHECK-INTERVALS: BISECT: NOT running pass (4) lower-expect on foo
+; CHECK-INTERVALS: BISECT: NOT running pass (5) simplifycfg on foo
+; CHECK-INTERVALS: BISECT: NOT running pass (6) sroa on foo
+; CHECK-INTERVALS: BISECT: running pass (7) early-cse on foo
+; CHECK-INTERVALS: BISECT: running pass (8) openmp-opt on [module]
 
 ; Test single pass selection: run only pass 5
 ; RUN: opt -passes='annotation2metadata,forceattrs,inferattrs,function(lower-expect),function(simplifycfg),function(sroa),function(early-cse),openmp-opt' \
-; RUN:   -opt-bisect=5 %s 2>&1 | FileCheck %s --check-prefix=CHECK-SINGLE
+; RUN:   -opt-bisect=5 %s 2>&1 | FileCheck %s --check-prefix=CHECK-SINGLE-INTERVAL
 ; CHECK-SINGLE: BISECT: NOT running pass (1) annotation2metadata on [module]
 ; CHECK-SINGLE: BISECT: NOT running pass (2) forceattrs on [module]
 ; CHECK-SINGLE: BISECT: NOT running pass (3) inferattrs on [module]

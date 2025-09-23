@@ -14,8 +14,6 @@
 #ifndef LLVM_IR_OPTBISECT_H
 #define LLVM_IR_OPTBISECT_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
@@ -55,12 +53,12 @@ public:
 
   ~OptBisect() override = default;
 
-  /// Checks the bisect ranges to determine if the specified pass should run.
+  /// Checks the bisect intervals to determine if the specified pass should run.
   ///
   /// The method prints the name of the pass, its assigned bisect number, and
   /// whether or not the pass will be executed. It returns true if the pass
-  /// should run, i.e. if no ranges are specified or the current pass number
-  /// falls within one of the specified ranges.
+  /// should run, i.e. if no intervals are specified or the current pass number
+  /// falls within one of the specified intervals.
   ///
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
@@ -69,22 +67,22 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return !BisectRanges.empty(); }
+  bool isEnabled() const override { return !BisectIntervals.empty(); }
 
   /// Set intervals directly from an IntervalList.
-  void setRanges(IntegerIntervalUtils::IntervalList Ranges) {
-    BisectRanges = std::move(Ranges);
+  void setIntervals(IntegerIntervalUtils::IntervalList Intervals) {
+    BisectIntervals = std::move(Intervals);
   }
 
-  /// Clear all ranges, effectively disabling bisection.
-  void clearRanges() {
-    BisectRanges.clear();
+  /// Clear all intervals, effectively disabling bisection.
+  void clearIntervals() {
+    BisectIntervals.clear();
     LastBisectNum = 0;
   }
 
 private:
   mutable int LastBisectNum = 0;
-  IntegerIntervalUtils::IntervalList BisectRanges;
+  IntegerIntervalUtils::IntervalList BisectIntervals;
 };
 
 /// This class implements a mechanism to disable passes and individual

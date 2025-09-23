@@ -1,4 +1,4 @@
-//===- llvm/Support/Range.cpp - Range parsing utility ---------*- C++ -*-===//
+//===- llvm/Support/IntegerInclusiveInterval.cpp - Integer inclusive interval parsing utility -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +25,7 @@ Expected<IntervalList> parseIntervals(StringRef Str, char Separator) {
     return std::move(Intervals);
 
   // Regex to match either single number or interval "num1-num2".
-  const Regex RangeRegex("^([0-9]+)(-([0-9]+))?$");
+  const Regex IntervalRegex("^([0-9]+)(-([0-9]+))?$");
 
   for (StringRef Part : llvm::split(Str, Separator)) {
     Part = Part.trim();
@@ -33,9 +33,9 @@ Expected<IntervalList> parseIntervals(StringRef Str, char Separator) {
       continue;
 
     SmallVector<StringRef, 4> Matches;
-    if (!RangeRegex.match(Part, &Matches))
+    if (!IntervalRegex.match(Part, &Matches))
       return createStringError(std::errc::invalid_argument,
-                               "Invalid range format: '%s'",
+                               "Invalid interval format: '%s'",
                                Part.str().c_str());
 
     int64_t Begin, End;
@@ -45,14 +45,14 @@ Expected<IntervalList> parseIntervals(StringRef Str, char Separator) {
                                Matches[1].str().c_str());
 
     if (!Matches[3].empty()) {
-      // Range format "begin-end".
+      // Interval format "begin-end".
       if (Matches[3].getAsInteger(10, End))
         return createStringError(std::errc::invalid_argument,
                                  "Failed to parse number: '%s'",
                                  Matches[3].str().c_str());
       if (Begin >= End)
         return createStringError(std::errc::invalid_argument,
-                                 "Invalid range: %lld >= %lld", Begin, End);
+                                 "Invalid interval: %lld >= %lld", Begin, End);
     } else
       // Single number.
       End = Begin;
