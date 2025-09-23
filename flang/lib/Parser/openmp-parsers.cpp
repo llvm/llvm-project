@@ -824,9 +824,9 @@ TYPE_PARSER(construct<OmpFailClause>(
     "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
     "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
 
-TYPE_PARSER(construct<OmpGraphIdClause>(expr))
+TYPE_PARSER(construct<OmpGraphIdClause>(scalarIntExpr))
 
-TYPE_PARSER(construct<OmpGraphResetClause>(expr))
+TYPE_PARSER(construct<OmpGraphResetClause>(scalarLogicalExpr))
 
 // 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(
