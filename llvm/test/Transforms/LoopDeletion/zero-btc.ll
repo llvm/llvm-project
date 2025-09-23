@@ -32,7 +32,7 @@ define void @test_bottom_tested() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, ptr @G, align 4
-; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -90,7 +90,7 @@ define void @test_multi_exit1() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, ptr @G, align 4
-; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
 ; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
@@ -155,7 +155,7 @@ define void @test_multi_exit3(i1 %cond1) {
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 1, ptr @G, align 4
-; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
