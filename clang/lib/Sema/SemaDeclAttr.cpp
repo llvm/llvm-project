@@ -3632,7 +3632,7 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
       .Cases("gnu_strftime", "strftime", StrftimeFormat)
 
       // Otherwise, check for supported formats.
-      .Cases("gnu_scanf", "scanf", "gnu_printf", "printf", "printf0", "strfmon", SupportedFormat)
+      .Cases("gnu_scanf", "scanf", "gnu_printf", "printf", "printf0", "gnu_strfmon", "strfmon", SupportedFormat)
       .Cases("cmn_err", "vcmn_err", "zcmn_err", SupportedFormat)
       .Cases("kprintf", "syslog", SupportedFormat) // OpenBSD.
       .Case("freebsd_kprintf", SupportedFormat)    // FreeBSD.

@@ -6866,7 +6866,7 @@ FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
       .Cases("gnu_printf", "printf", "printf0", "syslog", FormatStringType::Printf)
       .Cases("NSString", "CFString", FormatStringType::NSString)
       .Cases("gnu_strftime", "strftime", FormatStringType::Strftime)
-      .Case("strfmon", FormatStringType::Strfmon)
+      .Cases("gnu_strfmon", "strfmon", FormatStringType::Strfmon)
       .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
              FormatStringType::Kprintf)
       .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
