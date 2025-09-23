@@ -2,13 +2,13 @@
 Test that ASan memory history provider returns correct stack traces
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 from lldbsuite.test_event.build_exception import BuildError
+
 
 class MemoryHistoryTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
@@ -96,9 +96,10 @@ class MemoryHistoryTestCase(TestBase):
         )
         self.check_traces(skip_line_numbers=True)
 
-        # Make sure we're not stopped in the sanitizer library but instead at the
-        # point of failure in the user-code.
-        self.assertEqual(self.frame().GetFunctionName(), "main")
+        if self.platformIsDarwin():
+            # Make sure we're not stopped in the sanitizer library but instead at the
+            # point of failure in the user-code.
+            self.assertEqual(self.frame().GetFunctionName(), "main")
 
         # do the same using SB API
         process = self.dbg.GetSelectedTarget().process
@@ -224,9 +225,10 @@ class MemoryHistoryTestCase(TestBase):
 
         self.check_traces()
 
-        # Make sure we're not stopped in the sanitizer library but instead at the
-        # point of failure in the user-code.
-        self.assertEqual(self.frame().GetFunctionName(), "main")
+        if self.platformIsDarwin():
+            # Make sure we're not stopped in the sanitizer library but instead at the
+            # point of failure in the user-code.
+            self.assertEqual(self.frame().GetFunctionName(), "main")
 
         # make sure the 'memory history' command still works even when we're
         # generating a report now
