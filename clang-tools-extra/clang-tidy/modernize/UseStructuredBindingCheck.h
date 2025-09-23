@@ -17,7 +17,7 @@ namespace clang::tidy::modernize {
 /// suggests replacing them.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-structured-binding.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-structured-binding.html
 class UseStructuredBindingCheck : public ClangTidyCheck {
 public:
   UseStructuredBindingCheck(StringRef Name, ClangTidyContext *Context)
