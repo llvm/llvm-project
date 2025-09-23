@@ -1,8 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK-DAG: OpCapability Addresses
-; CHECK-DAG: OpName %[[#]] "foo"
-; CHECK-DAG: OpNop
+; CHECK: OpNop
+; CHECK-NEXT: OpReturn
 
 declare void @llvm.debugtrap()
 
