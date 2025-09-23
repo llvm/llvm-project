@@ -301,7 +301,7 @@ protected:
 
   /// Check if any atomic operation on AS can affect memory accessible via the
   /// global address space.
-  virtual bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const = 0;
+  bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const;
 
 public:
 
@@ -405,10 +405,6 @@ protected:
   /// is modified, false otherwise.
   bool enableSLCBit(const MachineBasicBlock::iterator &MI) const {
     return enableNamedBit(MI, AMDGPU::CPol::SLC);
-  }
-
-  bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const override {
-    return (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE;
   }
 
 public:
@@ -616,15 +612,6 @@ protected:
 
   bool setAtomicScope(const MachineBasicBlock::iterator &MI,
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
-
-  bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const override {
-    assert((!ST.hasGloballyAddressableScratch() ||
-            ((AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) ||
-            (AS & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) &&
-           "scratch instructions should already be replaced by flat "
-           "instructions if GloballyAddressableScratch is enabled");
-    return (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE;
-  }
 
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {
@@ -1006,6 +993,15 @@ bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
 
   CPol->setImm(CPol->getImm() | Bit);
   return true;
+}
+
+bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
+  assert((!ST.hasGloballyAddressableScratch() ||
+          (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE ||
+          (AS & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) &&
+         "scratch instructions should already be replaced by flat "
+         "instructions if GloballyAddressableScratch is enabled");
+  return (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE;
 }
 
 /* static */
