@@ -3571,6 +3571,23 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fshr:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
+  case clang::X86::BI__builtin_ia32_pslldqi128:
+  case clang::X86::BI__builtin_ia32_pslldqi256:
+  case clang::X86::BI__builtin_ia32_pslldqi512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned ShiftAmt = RHS.getZExtValue();
+          return LHS.shl(ShiftAmt * 8);
+        });
+
+  case clang::X86::BI__builtin_ia32_psrldqi128:
+  case clang::X86::BI__builtin_ia32_psrldqi256:
+  case clang::X86::BI__builtin_ia32_psrldqi512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned ShiftAmt = RHS.getZExtValue();
+          return LHS.lshr(ShiftAmt * 8);
+        });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
