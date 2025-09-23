@@ -52,7 +52,7 @@ class CustomBuilder : public mlir::ImplicitLocOpBuilder {
 public:
   mlir::NamedOp f(const char *name) {
     // CHECK-MESSAGES: :[[@LINE+2]]:12: warning: use 'OpType::create(builder, ...)'
-    // CHECK-FIXES: NamedOp::create(*this, name);
+    // CHECK-FIXES: mlir::NamedOp::create(*this, name);
     return create<mlir::NamedOp>(name);
   }
 };
