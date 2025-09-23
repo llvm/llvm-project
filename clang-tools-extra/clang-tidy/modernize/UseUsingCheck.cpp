@@ -89,14 +89,10 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
                 << FixItHint::CreateRemoval(RemovalRange);
 
     SmallString<128> Scratch;
-    if (Lexer::getSpelling(MatchedDecl.getBeginLoc(), Scratch, SM, LO) ==
-        "typedef")
-      Diag << FixItHint::CreateRemoval(MatchedDecl.getBeginLoc());
-
-    Scratch.resize(0);
-    if (Lexer::getSpelling(TokenBeforeName.getLocation(), Scratch, SM, LO) ==
-        "typedef")
-      Diag << FixItHint::CreateRemoval(TokenBeforeName.getLocation());
+    for (const SourceLocation Loc :
+         {MatchedDecl.getBeginLoc(), TokenBeforeName.getLocation()})
+      if (Lexer::getSpelling(Loc, Scratch, SM, LO) == "typedef")
+        Diag << FixItHint::CreateRemoval(Loc);
 
     FirstTypedefName = MatchedDecl.getName();
   } else {
