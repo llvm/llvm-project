@@ -227,11 +227,12 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   const MachineOperand &MO0 = MI->getOperand(0);
   assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
   bool IsLoad = isRegDef(MO0) && !MO0.isDead() && !IsRedefining[SU->NodeNum];
-  bool IsStore = isStoreOfVReg(MI);
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
   unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
   bool HasDistToTop = NumLeft > Margin;
+  bool IsKillingStore = isStoreOfVReg(MI) &&
+    !DAG->getBotRPTracker().isRegLive(MO0.getReg());
 
   // Before pulling down a load (to close the live range), the liveness of
   // the other operands are checked: only if no use register would become
@@ -239,7 +240,7 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
   // the operands of MI and checking if the reg is live, or the PDiff of the
   // SU can be used to infer the same answers. Both methods seem to give the
   // same identical result, at least when building the benchmarks.
-  bool UsesLivePrio = false, UsesLiveAll = false, StoreKill = false;
+  bool UsesLivePrio = false, UsesLiveAll = false;
   if (!WITHPDIFFS) {
     // Find uses of registers that are not already live (kills).
     bool PrioKill = false;
@@ -263,7 +264,6 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
     UsesLivePrio = IsLoad && !PrioKill &&
                    (isPrioVirtReg(MO0.getReg(), &DAG->MRI) || !GPRKill);
     UsesLiveAll = !PrioKill && !GPRKill;
-    StoreKill = (PrioKill || (!HasPrioUse && GPRKill));
   } else if (MO0.isReg() && MO0.getReg().isVirtual()) {
     int PrioPressureChange = 0;
     int GPRPressureChange = 0;
@@ -284,11 +284,6 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
       UsesLivePrio = (PrioDefNoKill || (!PrioPressureChange && GPRDefNoKill));
       UsesLiveAll = (PrioDefNoKill && !GPRPressureChange) ||
                     (!PrioPressureChange && GPRDefNoKill);
-    } else if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
-      bool SrcKill = !DAG->getBotRPTracker().isRegLive(MO0.getReg());
-      StoreKill =
-          SrcKill && (PrioPressureChange == RegWeight ||
-                      (!PrioPressureChange && GPRPressureChange == RegWeight));
     }
   }
 
@@ -303,8 +298,8 @@ int SystemZPreRASchedStrategy::computeSULivenessScore(
 
   // This handles regions with many chained stores of the same depth at the
   // bottom in the input order (cactus). Push them upwards during scheduling.
-  bool SchedHigh = IsStore && FirstStoreInGroupScheduled &&
-                   StoresGroup.count(SU) && StoreKill;
+  bool SchedHigh = IsKillingStore && FirstStoreInGroupScheduled &&
+                   StoresGroup.count(SU);
 
   if (SchedLow)
     return -1;
