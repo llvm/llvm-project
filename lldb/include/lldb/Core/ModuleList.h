@@ -22,6 +22,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/CAS/CASConfiguration.h"
 #include "llvm/Support/RWMutex.h"
 
 #include <functional>
@@ -99,6 +100,17 @@ public:
   AutoBool GetSwiftEnableFullDwarfDebugging() const;
   bool GetSwiftEnableASTContext() const;
   // END SWIFT
+
+  // START CAS
+  /// Get CASPath set via properties.
+  FileSpec GetCASOnDiskPath() const;
+
+  /// Get CASPluginPath set via properties.
+  FileSpec GetCASPluginPath() const;
+
+  /// Get CASPluginOptions set via properties.
+  std::vector<std::pair<std::string, std::string>> GetCASPluginOptions() const;
+  // END CAS
 
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(const FileSpec &path);
@@ -521,6 +533,27 @@ public:
                   const FileSpecList *module_search_paths_ptr,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr, bool always_create = false);
+
+  // START CAS
+
+  /// Get CAS configuration using global module properties or from candidate
+  /// search path.
+  static std::optional<llvm::cas::CASConfiguration>
+  GetCASConfiguration(FileSpec CandidateConfigSearchPath);
+
+  /// Gets the shared module from CAS. It works the same as `GetSharedModule`
+  /// but the lookup is done inside the CAS.
+  ///
+  /// \return
+  ///    true if module is successfully loaded, false if module is not found
+  ///    in the CAS, error if there are any errors happened during the loading
+  ///    process.
+  static llvm::Expected<bool> GetSharedModuleFromCAS(ConstString module_name,
+                                                     llvm::StringRef cas_id,
+                                                     FileSpec cu_path,
+                                                     ModuleSpec &module_spec,
+                                                     lldb::ModuleSP &module_sp);
+  // END CAS
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 

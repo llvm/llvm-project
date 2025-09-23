@@ -162,6 +162,8 @@ if(TARGET clang)
 
   # TestFullLtoStepping depends on LTO, and only runs when the compiler is clang.
   add_lldb_test_dependency(LTO)
+  # Clang explicit module build test requires clang-scan-deps
+  add_lldb_test_dependency(clang-scan-deps)
 
   if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
     set(LLDB_HAS_LIBCXX ON)

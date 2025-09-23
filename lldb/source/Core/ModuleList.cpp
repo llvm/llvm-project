@@ -21,11 +21,14 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/FileUtilities.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -33,6 +36,8 @@
 
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/CASConfiguration.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -281,6 +286,32 @@ bool ModuleListProperties::GetSwiftEnableASTContext() const {
       idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 // END SWIFT
+
+// START CAS
+FileSpec ModuleListProperties::GetCASOnDiskPath() const {
+  const uint32_t idx = ePropertyCASOnDiskPath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+FileSpec ModuleListProperties::GetCASPluginPath() const {
+  const uint32_t idx = ePropertyCASPluginPath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+std::vector<std::pair<std::string, std::string>>
+ModuleListProperties::GetCASPluginOptions() const {
+  Args args;
+  const uint32_t idx = ePropertyCASPluginOptions;
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
+  std::vector<std::pair<std::string, std::string>> options;
+  for (auto &arg : args) {
+    llvm::StringRef opt = arg.c_str();
+    auto splitted = opt.split("=");
+    options.emplace_back(splitted.first.str(), splitted.second.str());
+  }
+  return options;
+}
+// END CAS
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
   const uint32_t idx = ePropertyLLDBIndexCachePath;
@@ -1253,8 +1284,11 @@ private:
 struct SharedModuleListInfo {
   SharedModuleList module_list;
   ModuleListProperties module_list_properties;
+  std::shared_ptr<llvm::cas::ObjectStore> cas_object_store;
+  std::mutex shared_lock;
 };
 }
+
 static SharedModuleListInfo &GetSharedModuleListInfo()
 {
   static SharedModuleListInfo *g_shared_module_list_info = nullptr;
@@ -1271,6 +1305,47 @@ static SharedModuleListInfo &GetSharedModuleListInfo()
 
 static SharedModuleList &GetSharedModuleList() {
   return GetSharedModuleListInfo().module_list;
+}
+
+std::optional<llvm::cas::CASConfiguration>
+ModuleList::GetCASConfiguration(FileSpec CandidateConfigSearchPath) {
+  // Config CAS from properties.
+  llvm::cas::CASConfiguration cas_config;
+  cas_config.CASPath =
+      ModuleList::GetGlobalModuleListProperties().GetCASOnDiskPath().GetPath();
+  cas_config.PluginPath =
+      ModuleList::GetGlobalModuleListProperties().GetCASPluginPath().GetPath();
+  cas_config.PluginOptions =
+      ModuleList::GetGlobalModuleListProperties().GetCASPluginOptions();
+
+  if (!cas_config.CASPath.empty())
+    return cas_config;
+
+  auto search_config = llvm::cas::CASConfiguration::createFromSearchConfigFile(
+      CandidateConfigSearchPath.GetPath());
+  if (search_config)
+    return search_config->second;
+
+  return std::nullopt;
+}
+
+static llvm::Expected<std::shared_ptr<llvm::cas::ObjectStore>>
+GetOrCreateCASStorage(FileSpec CandidateConfigSearchPath) {
+  auto &shared_module_list = GetSharedModuleListInfo();
+  if (shared_module_list.cas_object_store)
+    return shared_module_list.cas_object_store;
+
+  auto config = ModuleList::GetCASConfiguration(CandidateConfigSearchPath);
+  if (!config)
+    return nullptr;
+
+  auto cas = config->createDatabases();
+  if (!cas)
+    return cas.takeError();
+
+  std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
+  shared_module_list.cas_object_store = std::move(cas->first);
+  return shared_module_list.cas_object_store;
 }
 
 ModuleListProperties &ModuleList::GetGlobalModuleListProperties() {
@@ -1542,6 +1617,65 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   }
 
   return error;
+}
+
+static llvm::Expected<bool> loadModuleFromCAS(ConstString module_name,
+                                              llvm::StringRef cas_id,
+                                              FileSpec cu_path,
+                                              ModuleSpec &module_spec) {
+  auto maybe_cas = GetOrCreateCASStorage(cu_path);
+  if (!maybe_cas)
+    return maybe_cas.takeError();
+
+  auto cas = std::move(*maybe_cas);
+  if (!cas) {
+    LLDB_LOG(GetLog(LLDBLog::Modules),
+             "skip loading module '{0}' from CAS: CAS is not available",
+             module_name);
+    return false;
+  }
+
+  auto id = cas->parseID(cas_id);
+  if (!id) {
+    LLDB_LOG(GetLog(LLDBLog::Modules), "'{0}' is not valid CASID: {1}", cas_id,
+             toString(id.takeError()));
+    return false;
+  }
+
+  auto module_proxy = cas->getProxy(*id);
+  if (!module_proxy)
+    return module_proxy.takeError();
+
+  auto file_buffer =
+      std::make_shared<DataBufferLLVM>(module_proxy->getMemoryBuffer());
+
+  // Swap out the module_spec with the one loaded via CAS.
+  ModuleSpec loaded(module_spec.GetFileSpec(), module_spec.GetUUID(),
+                    std::move(file_buffer));
+  loaded.GetArchitecture() = module_spec.GetArchitecture();
+  module_spec = loaded;
+
+  LLDB_LOG(GetLog(LLDBLog::Modules), "loading module '{0}' using CASID '{1}'",
+           module_name, cas_id);
+  return true;
+}
+
+llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
+    ConstString module_name, llvm::StringRef cas_id, FileSpec cu_path,
+    ModuleSpec &module_spec, lldb::ModuleSP &module_sp) {
+  auto loaded = loadModuleFromCAS(module_name, cas_id, cu_path, module_spec);
+  if (!loaded)
+    return loaded.takeError();
+
+  if (!*loaded)
+    return false;
+
+  auto status =
+      GetSharedModule(module_spec, module_sp, nullptr, nullptr, nullptr,
+                      /*always_create=*/true);
+  if (status.Success())
+    return true;
+  return status.takeError();
 }
 
 bool ModuleList::RemoveSharedModule(lldb::ModuleSP &module_sp) {

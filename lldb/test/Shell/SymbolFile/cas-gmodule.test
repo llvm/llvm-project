@@ -1,0 +1,50 @@
+# REQUIRES: system-darwin
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+
+# RUN: %python %S/../../../scripts/clang-explicit-module-build.py -cas-path %t/cas -- %clang_host -c -g -o %t/test.o %t/tu.c -fmodules -gmodules -fmodules-cache-path=%t/module-cache
+# RUN: %clang_host %t/test.o -o %t/main
+# RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s --check-prefix=FAIL
+# RUN: sed "s|DIR|%/t|g" %t/cas-config.template > %t/.cas-config
+# RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s
+
+# FAIL: skip loading module 'Bottom' from CAS: CAS is not available
+# FAIL: Unable to locate module needed for external types.
+# CHECK: loading module 'Bottom' using CASID
+# CHECK: loading module 'Top' using CASID
+# CHECK: top = (x = 1)
+
+//--- module.modulemap
+module Top { header "Top.h" export *}
+module Bottom { header "Bottom.h" export *}
+
+//--- Top.h
+#pragma once
+struct Top { int x; };
+
+//--- Bottom.h
+#pragma once
+#include "Top.h"
+struct Bottom { struct Top top; };
+
+//--- tu.c
+#include "Bottom.h"
+
+int main(void) {
+  struct Bottom _bottom;
+  _bottom.top.x = 1;
+
+  return 0; // BREAK HERE
+}
+
+//--- cas-config.template
+{
+  "CASPath": "DIR/cas"
+}
+
+//--- lldb.script
+log enable lldb module
+b tu.c:7
+run
+expr _bottom
+quit

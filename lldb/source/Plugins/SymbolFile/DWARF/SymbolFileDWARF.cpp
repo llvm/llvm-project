@@ -2004,6 +2004,23 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
       continue;
 
     ModuleSpec dwo_module_spec;
+
+    dwo_module_spec.GetArchitecture() =
+        m_objfile_sp->GetModule()->GetArchitecture();
+
+    // Try load from CAS, if loaded, continue to next one.
+    auto loaded = ModuleList::GetSharedModuleFromCAS(
+        const_name, dwo_path, GetObjectFile()->GetFileSpec(), dwo_module_spec,
+        module_sp);
+    if (!loaded)
+      GetObjectFile()->GetModule()->ReportWarning(
+          "Failed to load module '{0}' from CAS: {1}", const_name,
+          toString(loaded.takeError()));
+
+    // succeed, loaded next module.
+    if (*loaded)
+      continue;
+
     dwo_module_spec.GetFileSpec().SetFile(dwo_path, FileSpec::Style::native);
     if (dwo_module_spec.GetFileSpec().IsRelative()) {
       const char *comp_dir =
@@ -2015,8 +2032,6 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
         dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
       }
     }
-    dwo_module_spec.GetArchitecture() =
-        m_objfile_sp->GetModule()->GetArchitecture();
 
     // When LLDB loads "external" modules it looks at the presence of
     // DW_AT_dwo_name. However, when the already created module

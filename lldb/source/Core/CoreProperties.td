@@ -74,6 +74,19 @@ let Definition = "modulelist" in {
     DefaultTrue,
     Desc<"Enable instantiating Swift AST contexts.">;
 // END SWIFT
+// BEGIN CAS
+  def CASOnDiskPath: Property<"cas-path", "FileSpec">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"The path for CAS storage">;
+  def CASPluginPath: Property<"cas-plugin-path", "FileSpec">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"The path for CAS plugin dynamic library">;
+  def CASPluginOptions: Property<"cas-plugin-options", "Array">,
+    ElementType<"String">,
+    Desc<"A list of options to be passed to CAS plugins">;
+// END CAS
   def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
     Global,
     DefaultStringValue<"">,
