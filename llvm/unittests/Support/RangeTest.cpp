@@ -9,7 +9,6 @@
 #include "llvm/Support/Range.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <limits>
 
 using namespace llvm;
 
