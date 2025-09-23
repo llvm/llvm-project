@@ -48,4 +48,6 @@ add_fp_unittest(
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
+    libc.src.__support.math.rsqrtf16
+
 )

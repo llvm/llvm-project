@@ -973,7 +973,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-    roundevenbf16
+  roundevenbf16
   SRCS
     roundevenbf16.cpp
   HDRS
@@ -986,6 +986,17 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
+)
+
+add_entrypoint_object(
+  rsqrtf16
+  SRCS
+    rsqrtf16.cpp
+  HDRS
+    ../rsqrtf16.h
+  DEPENDS
+    libc.src.__support.math.rsqrtf16
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
