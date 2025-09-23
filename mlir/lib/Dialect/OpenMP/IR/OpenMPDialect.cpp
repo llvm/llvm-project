@@ -170,22 +170,21 @@ static std::string generateLoopNestingName(StringRef prefix,
   std::reverse(components.begin(), components.end());
 
   // Determine whether a component is not needed
-  for (auto &c : components) {
+  for (Component &c : components) {
     c.skipRegion = c.isOnlyRegionInOp;
     c.skipOp = c.isOnlyOpInRegion && !isa<CanonicalLoopOp>(c.thisOp);
   }
 
   // Find runs of perfect nests and merge them into a single component
-  int curNestRoot = 0;
-  int curNestDepth = 1;
-  auto mergeLoopNest = [&](int innermost) {
-    auto outermost = curNestRoot;
+  size_t curNestRoot = 0;
+  size_t curNestDepth = 1;
+  auto mergeLoopNest = [&](size_t innermost) {
+    size_t outermost = curNestRoot;
 
     // Don't do enything if it does not consist of at least 2 loops
     if (outermost < innermost) {
-      for (auto i : llvm::seq<int>(outermost + 1, innermost)) {
+      for (auto i : llvm::seq<int>(outermost + 1, innermost))
         components[i].skipOp = true;
-      }
       components[innermost].depth = curNestDepth;
     }
 
