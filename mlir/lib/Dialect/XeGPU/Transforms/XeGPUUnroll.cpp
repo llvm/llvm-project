@@ -195,7 +195,6 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
       newOps = computeUnrolledOffsets(op.getMixedOffsets(), tdescTy,
                                       *targetShape, createOp, loc, rewriter);
     }
-
     Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
     rewriter.replaceOp(op, castOp);
 
@@ -248,8 +247,11 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
 
-    if (hasOffsets)
+    if (hasOffsets) {
+      // only need one tdesc, tile offsets will be computed
+      // at the operation level
       convertedTdescTypes.resize(1);
+    }
 
     SmallVector<Value> convertedTdesc = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
@@ -298,8 +300,11 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
 
-    if (hasOffsets)
+    if (hasOffsets) {
+      // only need one tdesc, tile offsets will be computed
+      // at the operation level
       convertedTdescTypes.resize(1);
+    }
 
     SmallVector<Value> convertedTdescs = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
@@ -323,6 +328,7 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     }
 
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
+
     rewriter.replaceOp(op, castOp);
     return success();
   }
@@ -348,8 +354,11 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
 
-    if (hasOffsets)
+    if (hasOffsets) {
+      // only need one tdesc, tile offsets will be computed
+      // at the operation level
       convertedTdescTypes.resize(1);
+    }
 
     SmallVector<Value> convertedTdescs = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
