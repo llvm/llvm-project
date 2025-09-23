@@ -3323,7 +3323,8 @@ static void BuildFlattenedTypeList(QualType BaseTy,
 
       llvm::SmallVector<QualType, 16> FieldTypes;
       for (const auto *FD : RD->fields())
-        FieldTypes.push_back(FD->getType());
+        if (!FD->isUnnamedBitField())
+          FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
       llvm::append_range(WorkList, FieldTypes);
@@ -4158,6 +4159,8 @@ class InitListTransformer {
       while (!RecordDecls.empty()) {
         CXXRecordDecl *RD = RecordDecls.pop_back_val();
         for (auto *FD : RD->fields()) {
+          if (FD->isUnnamedBitField())
+            continue;
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -4207,7 +4210,8 @@ class InitListTransformer {
       while (!RecordDecls.empty()) {
         CXXRecordDecl *RD = RecordDecls.pop_back_val();
         for (auto *FD : RD->fields())
-          Inits.push_back(generateInitListsImpl(FD->getType()));
+          if (!FD->isUnnamedBitField())
+            Inits.push_back(generateInitListsImpl(FD->getType()));
       }
     }
     auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
