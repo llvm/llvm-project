@@ -1650,9 +1650,11 @@ public:
     FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
     // The inputZp and outputZp may be either constant or non-constant,
     // depending on whether dynamic extension is enabled.
-    // - If the zp is non-constant, add it as an input to linalg::GenericOp by:
+    // - If the zp's are non-constant, add them as an inputs to
+    // linalg::GenericOp by:
     //     1. Pushing it into 'genericInputs'.
     //     2. Appending a corresponding affine map to 'indexingMaps'.
+    // - If the zp's are constant, they would be generated as arith.constant.
     int64_t iZpArg = 0;
     if (failed(maybeIZp)) {
       genericInputs.push_back(
