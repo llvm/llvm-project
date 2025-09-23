@@ -4484,15 +4484,15 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
-    case tok::kw___wrap:
+    case tok::kw___ob_wrap:
       isInvalid = DS.SetOverflowBehavior(
-          OverflowBehaviorType::OverflowBehaviorKind::Wrap,
-          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+          OverflowBehaviorType::OverflowBehaviorKind::Wrap, Loc, PrevSpec,
+          DiagID);
       break;
-    case tok::kw___no_wrap:
+    case tok::kw___ob_trap:
       isInvalid = DS.SetOverflowBehavior(
-          OverflowBehaviorType::OverflowBehaviorKind::NoWrap,
-          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+          OverflowBehaviorType::OverflowBehaviorKind::Trap, Loc, PrevSpec,
+          DiagID);
       break;
 
     // C++ typename-specifier:
@@ -5635,8 +5635,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
-  case tok::kw___wrap:
-  case tok::kw___no_wrap:
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
   case tok::kw__Sat:
 
     // Debugger support.
@@ -5850,8 +5850,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
-  case tok::kw___wrap:
-  case tok::kw___no_wrap:
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
   case tok::kw__Sat:
 
     // function-specifier
@@ -6165,15 +6165,15 @@ void Parser::ParseTypeQualifierListOpt(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
-    case tok::kw___wrap:
+    case tok::kw___ob_wrap:
       isInvalid = DS.SetOverflowBehavior(
-          OverflowBehaviorType::OverflowBehaviorKind::Wrap,
-          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+          OverflowBehaviorType::OverflowBehaviorKind::Wrap, Loc, PrevSpec,
+          DiagID);
       break;
-    case tok::kw___no_wrap:
+    case tok::kw___ob_trap:
       isInvalid = DS.SetOverflowBehavior(
-          OverflowBehaviorType::OverflowBehaviorKind::NoWrap,
-          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+          OverflowBehaviorType::OverflowBehaviorKind::Trap, Loc, PrevSpec,
+          DiagID);
       break;
     case tok::kw__Atomic:
       if (!AtomicOrPtrauthAllowed)

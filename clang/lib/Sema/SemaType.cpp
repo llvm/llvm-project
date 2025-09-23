@@ -1562,27 +1562,20 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Qualified;
   }
 
-  // Check for __wrap and __no_wrap
-  if (DS.isWrapSpecified() || DS.isNoWrapSpecified()) {
+  // Check for __ob_wrap and __ob_trap
+  if (DS.isOverflowBehaviorSpecified()) {
     if (!Result->isIntegerType()) {
-      SourceLocation Loc =
-          DS.isWrapSpecified() ? DS.getWrapSpecLoc() : DS.getNoWrapSpecLoc();
-      StringRef SpecifierName = DS.isWrapSpecified() ? "__wrap" : "__no_wrap";
-      S.Diag(Loc, diag::warn_overflow_behavior_non_integer_type)
+      SourceLocation Loc = DS.getOverflowBehaviorLoc();
+      StringRef SpecifierName =
+          DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
+      S.Diag(Loc, diag::err_overflow_behavior_non_integer_type)
           << SpecifierName << Result.getAsString() << 1;
     } else {
-      if (DS.isWrapSpecified() && DS.isNoWrapSpecified()) {
-        DS.DiagnoseOverflowBehaviorConflict(S, DS.getNoWrapSpecLoc(),
-                                            DS.getNoWrapSpelling());
-        Result = state.getOverflowBehaviorType(
-            OverflowBehaviorType::OverflowBehaviorKind::NoWrap, Result);
-      } else {
-        OverflowBehaviorType::OverflowBehaviorKind Kind =
-            DS.isWrapSpecified()
-                ? OverflowBehaviorType::OverflowBehaviorKind::Wrap
-                : OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
-        Result = state.getOverflowBehaviorType(Kind, Result);
-      }
+      OverflowBehaviorType::OverflowBehaviorKind Kind =
+          DS.isWrapSpecified()
+              ? OverflowBehaviorType::OverflowBehaviorKind::Wrap
+              : OverflowBehaviorType::OverflowBehaviorKind::Trap;
+      Result = state.getOverflowBehaviorType(Kind, Result);
     }
   }
 
@@ -6683,7 +6676,7 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
 
   // Check that the underlying type is an integer type
   if (!Type->isIntegerType()) {
-    S.Diag(Attr.getLoc(), diag::warn_overflow_behavior_non_integer_type)
+    S.Diag(Attr.getLoc(), diag::err_overflow_behavior_non_integer_type)
         << Attr << Type.getAsString() << 0; // 0 for attribute
     Attr.setInvalid();
     return;
@@ -6699,7 +6692,7 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
 
   // Support identifier or string argument types. Failure to provide one of
   // these two types results in a diagnostic that hints towards using string
-  // arguments (either "wrap" or "no_wrap") as this is the most common use
+  // arguments (either "wrap" or "trap") as this is the most common use
   // pattern.
   if (!Ident) {
     auto *Str = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
@@ -6716,11 +6709,33 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
   OverflowBehaviorType::OverflowBehaviorKind Kind;
   if (KindName == "wrap") {
     Kind = OverflowBehaviorType::OverflowBehaviorKind::Wrap;
-  } else if (KindName == "no_wrap") {
-    Kind = OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+  } else if (KindName == "trap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::Trap;
   } else {
     S.Diag(Attr.getLoc(), diag::err_overflow_behavior_unknown_ident)
         << KindName << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Check for mixed specifier/attribute usage
+  const DeclSpec &DS = State.getDeclarator().getDeclSpec();
+  if (DS.isWrapSpecified() || DS.isTrapSpecified()) {
+    // We have both specifier and attribute on the same type. If
+    // OverflowBehaviorKinds are the same we can just warn.
+    OverflowBehaviorType::OverflowBehaviorKind SpecifierKind =
+        DS.isWrapSpecified() ? OverflowBehaviorType::OverflowBehaviorKind::Wrap
+                             : OverflowBehaviorType::OverflowBehaviorKind::Trap;
+
+    if (SpecifierKind != Kind) {
+      StringRef SpecifierName = DS.isWrapSpecified() ? "wrap" : "trap";
+      S.Diag(Attr.getLoc(), diag::err_conflicting_overflow_behaviors)
+          << 1 << SpecifierName << KindName;
+      Attr.setInvalid();
+      return;
+    }
+    S.Diag(Attr.getLoc(), diag::warn_redundant_overflow_behaviors_mixed)
+        << KindName;
     Attr.setInvalid();
     return;
   }
@@ -6730,9 +6745,8 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
     OverflowBehaviorType::OverflowBehaviorKind ExistingKind =
         ExistingOBT->getBehaviorKind();
     if (ExistingKind != Kind) {
-      S.Diag(Attr.getLoc(), diag::warn_conflicting_overflow_behavior_attributes)
-          << 0;
-      if (Kind == OverflowBehaviorType::OverflowBehaviorKind::NoWrap) {
+      S.Diag(Attr.getLoc(), diag::err_conflicting_overflow_behaviors) << 0;
+      if (Kind == OverflowBehaviorType::OverflowBehaviorKind::Trap) {
         Type = State.getOverflowBehaviorType(Kind,
                                              ExistingOBT->getUnderlyingType());
       }

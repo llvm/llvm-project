@@ -23,12 +23,12 @@
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=NOSAN
 
 #define __wrap __attribute__((overflow_behavior("wrap")))
-#define __nowrap __attribute__((overflow_behavior("no_wrap")))
+#define __no_trap __attribute__((overflow_behavior("trap")))
 
 // DEFAULT-LABEL: define {{.*}} @test1
 // TRAPV-HANDLER-LABEL: define {{.*}} @test1
 // NOSAN-LABEL: define {{.*}} @test1
-void test1(int __wrap a, int __nowrap b) {
+void test1(int __ob_wrap a, int __ob_trap b) {
   // DEFAULT: add i32
   // TRAPV-HANDLER: add i32
   // NOSAN: add i32
@@ -76,7 +76,7 @@ void test1(int __wrap a, int __nowrap b) {
 }
 
 // DEFAULT-LABEL: define {{.*}} @test2
-void test2(unsigned char __wrap a, unsigned char __nowrap b) {
+void test2(unsigned char __ob_wrap a, unsigned char __ob_trap b) {
   // DEFAULT: add i8
   (a + 1);
   // DEFAULT: llvm.uadd.with.overflow.i8
@@ -96,8 +96,8 @@ void test2(unsigned char __wrap a, unsigned char __nowrap b) {
 
 // DEFAULT-LABEL: define {{.*}} @test3
 void test3(void) {
-  volatile extern char __wrap a;
-  volatile extern short __wrap b;
+  volatile extern char __ob_wrap a;
+  volatile extern short __ob_wrap b;
   // less-than-int arithmetic is possible when one or more wrapping types are
   // present. When both operands are wrapping types, the larger of the two
   // types should be used as the result of the arithmetic.
@@ -105,9 +105,9 @@ void test3(void) {
   // DEFAULT: add i16
   (a + b);
 
-  // nowrap has precedence over wrap, regardless of bit widths
-  volatile extern unsigned long long __wrap c;
-  volatile extern char __nowrap d;
+  // no_trap has precedence over wrap, regardless of bit widths
+  volatile extern unsigned long long __ob_wrap c;
+  volatile extern char __ob_trap d;
 
   // DEFAULT: %[[T0:.*]] = load volatile i64, ptr @c
   // DEFAULT: %[[TRUNC1:.*]] = icmp eq i64 {{.*}} %[[T0]]
@@ -116,17 +116,17 @@ void test3(void) {
   // DEFAULT-NEXT: @llvm.sadd.with.overflow.i8
   (c + d);
 
-  volatile extern int __nowrap e;
-  volatile extern unsigned int __wrap f;
+  volatile extern int __ob_trap e;
+  volatile extern unsigned int __ob_wrap f;
 
   // DEFAULT: @llvm.ssub.with.overflow.i32
   (e - f);
 }
 
 typedef int __attribute__((overflow_behavior(wrap))) wrap_int;
-typedef int __attribute__((overflow_behavior(no_wrap))) nowrap_int;
+typedef int __attribute__((overflow_behavior(trap))) no_trap_int;
 // DEFAULT-LABEL: define {{.*}} @typedefs
-void typedefs(nowrap_int a, wrap_int b) {
+void typedefs(no_trap_int a, wrap_int b) {
   // DEFAULT: llvm.sadd.with.overflow.i32
   (a + 100);
 
@@ -135,7 +135,7 @@ void typedefs(nowrap_int a, wrap_int b) {
 }
 
 // EXCL-LABEL: define {{.*}} @ignored_patterns
-void ignored_patterns(unsigned long __attribute__((overflow_behavior(no_wrap))) a) {
+void ignored_patterns(unsigned long __attribute__((overflow_behavior(trap))) a) {
   // EXCL: %[[T0:.*]] = load i64, ptr %a.addr
   // EXCL-NEXT: add i64 %[[T0]], -1
   while (a--) { /*...*/ }
@@ -143,6 +143,6 @@ void ignored_patterns(unsigned long __attribute__((overflow_behavior(no_wrap))) 
   // EXCL: %[[T1:.*]] = load i64, ptr %a.addr
   // EXCL: %[[T2:.*]] = load volatile i64, ptr %b
   // EXCL-NEXT: add i64 %[[T1]], %[[T2]]
-  volatile unsigned long __attribute__((overflow_behavior(no_wrap))) b;
+  volatile unsigned long __attribute__((overflow_behavior(trap))) b;
   if (a + b < a) { /*...*/ }
 }

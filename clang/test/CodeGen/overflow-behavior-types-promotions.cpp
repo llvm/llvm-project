@@ -2,16 +2,16 @@
 // RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow -emit-llvm -o - -std=c++14 | FileCheck %s
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
-#define __nowrap __attribute__((overflow_behavior(no_wrap)))
+#define __no_trap __attribute__((overflow_behavior(trap)))
 
-typedef int __wrap wrap_int;
-typedef char __wrap wrap_char;
-typedef int __nowrap nowrap_int;
-typedef unsigned int __wrap u_wrap_int;
-typedef unsigned int __nowrap u_nowrap_int;
+typedef int __ob_wrap wrap_int;
+typedef char __ob_wrap wrap_char;
+typedef int __ob_trap no_trap_int;
+typedef unsigned int __ob_wrap u_wrap_int;
+typedef unsigned int __ob_trap u_no_trap_int;
 
-// CHECK-LABEL: define {{.*}} @_Z30conditional_operator_promotionbU11ObtWrap_cU13ObtNoWrap_ii
-void conditional_operator_promotion(bool cond, wrap_char w, nowrap_int nw, int i) {
+// CHECK-LABEL: define {{.*}} @_Z30conditional_operator_promotionbU8ObtWrap_cU8ObtTrap_ii
+void conditional_operator_promotion(bool cond, wrap_char w, no_trap_int nw, int i) {
   // OBT wins over regular integer.
   // CHECK: cond.end:
   // CHECK-NEXT: %cond1 = phi i8
@@ -21,7 +21,7 @@ void conditional_operator_promotion(bool cond, wrap_char w, nowrap_int nw, int i
   auto r1 = cond ? w : i;
   (void)(r1 + 2147483647);
 
-  // nowrap wins over wrap.
+  // no_trap wins over wrap.
   // CHECK: cond.end6:
   // CHECK-NEXT: %cond7 = phi i32
   // CHECK-NEXT: store i32 %cond7, ptr %r2
@@ -31,19 +31,19 @@ void conditional_operator_promotion(bool cond, wrap_char w, nowrap_int nw, int i
   (void)(r2 + 2147483647);
 }
 
-// CHECK-LABEL: define {{.*}} @_Z20promotion_rules_testU11ObtWrap_iU13ObtNoWrap_iU11ObtWrap_jU13ObtNoWrap_j
-void promotion_rules_test(wrap_int sw, nowrap_int snw, u_wrap_int uw, u_nowrap_int unw) {
+// CHECK-LABEL: define {{.*}} @_Z20promotion_rules_testU8ObtWrap_iU8ObtTrap_iU8ObtWrap_jU8ObtTrap_j
+void promotion_rules_test(wrap_int sw, no_trap_int snw, u_wrap_int uw, u_no_trap_int unw) {
   // Unsigned is favored over signed for same-behavior OBTs.
   // CHECK: add i32
   auto r1 = sw + uw;
   (void)r1;
 
-  // nowrap is favored over wrap. Result is unsigned nowrap.
+  // no_trap is favored over wrap. Result is unsigned no_trap.
   // CHECK: call { i32, i1 } @llvm.uadd.with.overflow.i32
   auto r2 = sw + unw;
   (void)r2;
 
-  // nowrap is favored over wrap. Result is signed nowrap.
+  // no_trap is favored over wrap. Result is signed no_trap.
   // CHECK: call { i32, i1 } @llvm.sadd.with.overflow.i32
   auto r3 = uw + snw;
   (void)r3;

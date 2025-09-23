@@ -1152,8 +1152,8 @@ public:
   /// Returns true if it is a OverflowBehaviorType of Wrap kind.
   bool isWrapType() const;
 
-  /// Returns true if it is a OverflowBehaviorType of NoWrap kind.
-  bool isNoWrapType() const;
+  /// Returns true if it is a OverflowBehaviorType of Trap kind.
+  bool isTrapType() const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -6697,7 +6697,7 @@ public:
 
 class OverflowBehaviorType : public Type, public llvm::FoldingSetNode {
 public:
-  enum OverflowBehaviorKind { Wrap, NoWrap };
+  enum OverflowBehaviorKind { Wrap, Trap };
 
 private:
   friend class ASTContext; // ASTContext creates these
@@ -6713,9 +6713,7 @@ public:
   OverflowBehaviorKind getBehaviorKind() const { return BehaviorKind; }
 
   bool isWrapKind() const { return BehaviorKind == OverflowBehaviorKind::Wrap; }
-  bool isNoWrapKind() const {
-    return BehaviorKind == OverflowBehaviorKind::NoWrap;
-  }
+  bool isTrapKind() const { return BehaviorKind == OverflowBehaviorKind::Trap; }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return getUnderlyingType(); }

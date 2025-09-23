@@ -12,22 +12,22 @@ int scanf(const char *restrict, ...);
 int sscanf(const char *restrict, const char *restrict, ...);
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
-#define __no_wrap __attribute__((overflow_behavior(no_wrap)))
+#define __trap __attribute__((overflow_behavior(trap)))
 
-typedef int __wrap wrap_int;
-typedef int __no_wrap nowrap_int;
-typedef unsigned int __wrap wrap_uint;
-typedef unsigned int __no_wrap nowrap_uint;
-typedef short __wrap wrap_short;
-typedef long __no_wrap nowrap_long;
+typedef int __ob_wrap wrap_int;
+typedef int __ob_trap no_trap_int;
+typedef unsigned int __ob_wrap wrap_uint;
+typedef unsigned int __ob_trap no_trap_uint;
+typedef short __ob_wrap wrap_short;
+typedef long __ob_trap no_trap_long;
 
 void test_printf_compatibility() {
   wrap_int wi = 42;
-  nowrap_int ni = 42;
+  no_trap_int ni = 42;
   wrap_uint wu = 42U;
-  nowrap_uint nu = 42U;
+  no_trap_uint nu = 42U;
   wrap_short ws = 42;
-  nowrap_long nl = 42L;
+  no_trap_long nl = 42L;
 
   // These should all work without warnings - OBTs should be treated as their underlying types
   printf("%d", wi);
@@ -46,11 +46,11 @@ void test_printf_compatibility() {
 
 void test_scanf_compatibility() {
   wrap_int wi;
-  nowrap_int ni;
+  no_trap_int ni;
   wrap_uint wu;
-  nowrap_uint nu;
+  no_trap_uint nu;
   wrap_short ws;
-  nowrap_long nl;
+  no_trap_long nl;
 
   // These should all work without warnings - pointers to OBTs should be treated as pointers to underlying types
   scanf("%d", &wi);
@@ -75,8 +75,8 @@ void test_mixed_formats() {
   scanf("%d %d", &wi, &regular_int);
 }
 
-typedef unsigned char __wrap wrap_byte;
-typedef long long __no_wrap safe_longlong;
+typedef unsigned char __ob_wrap wrap_byte;
+typedef long long __ob_trap safe_longlong;
 
 void test_typedef_formats() {
   wrap_byte wb = 255;

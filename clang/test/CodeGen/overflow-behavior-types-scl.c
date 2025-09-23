@@ -16,7 +16,7 @@ type:*
 
 //--- test.c
 #define __wrap __attribute__((overflow_behavior("wrap")))
-#define __nowrap __attribute__((overflow_behavior("no_wrap")))
+#define __no_trap __attribute__((overflow_behavior("trap")))
 
 // SIO-LABEL: define {{.*}} @foo
 // UIO-LABEL: define {{.*}} @foo
@@ -24,7 +24,7 @@ void foo(void) {
   // SIO-LABEL: load volatile i32, ptr @a, align 4
   volatile extern int a;
   volatile extern char b;
-  volatile extern char __nowrap c; // nowrap has precedence over scl entries
+  volatile extern char __ob_trap c; // nowrap has precedence over scl entries
 
   // SIO: add nsw i32
   (a + 1);
@@ -35,7 +35,7 @@ void foo(void) {
 
   // UIO-LABEL: load volatile i32, ptr @d, align 4
   volatile extern unsigned int d;
-  volatile extern unsigned short __nowrap e;
+  volatile extern unsigned short __ob_trap e;
   // UIO: add i32
   (d + 1);
   // UIO: @llvm.uadd.with.overflow.i16

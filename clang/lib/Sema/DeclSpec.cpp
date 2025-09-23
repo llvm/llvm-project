@@ -616,6 +616,18 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   llvm_unreachable("Unknown typespec!");
 }
 
+const char *DeclSpec::getSpecifierName(OverflowBehaviorState S) {
+  switch (S) {
+  case OverflowBehaviorState::Unspecified:
+    return "unspecified";
+  case OverflowBehaviorState::Wrap:
+    return "__ob_wrap";
+  case OverflowBehaviorState::Trap:
+    return "__ob_trap";
+  }
+  llvm_unreachable("Unknown overflow behavior state!");
+}
+
 bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
                                    const char *&PrevSpec,
                                    unsigned &DiagID,
@@ -1004,44 +1016,22 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
 }
 
 bool DeclSpec::SetOverflowBehavior(
-    OverflowBehaviorType::OverflowBehaviorKind Kind,
-    OverflowBehaviorSpelling Spelling, SourceLocation Loc,
+    OverflowBehaviorType::OverflowBehaviorKind Kind, SourceLocation Loc,
     const char *&PrevSpec, unsigned &DiagID) {
-  if (Kind == OverflowBehaviorType::OverflowBehaviorKind::Wrap) {
-    if (OB_wrap_specified) {
-      PrevSpec = "__wrap";
-      DiagID = diag::warn_duplicate_declspec;
-      return true;
-    }
-    OB_wrap_specified = true;
-    OB_wrap_spelling = Spelling;
-    OB_wrapLoc = Loc;
-  } else {
-    if (OB_no_wrap_specified) {
-      PrevSpec = "__no_wrap";
-      DiagID = diag::warn_duplicate_declspec;
-      return true;
-    }
-    OB_no_wrap_specified = true;
-    OB_no_wrap_spelling = Spelling;
-    OB_no_wrapLoc = Loc;
+  OverflowBehaviorState NewState =
+      (Kind == OverflowBehaviorType::OverflowBehaviorKind::Wrap)
+          ? OverflowBehaviorState::Wrap
+          : OverflowBehaviorState::Trap;
+
+  OverflowBehaviorState CurrentState = getOverflowBehaviorState();
+
+  if (CurrentState != OverflowBehaviorState::Unspecified) {
+    return BadSpecifier(NewState, CurrentState, PrevSpec, DiagID);
   }
+
+  OB_state = static_cast<unsigned>(NewState);
+  OB_Loc = Loc;
   return false;
-}
-
-void DeclSpec::DiagnoseOverflowBehaviorConflict(
-    Sema &S, SourceLocation NewLoc,
-    OverflowBehaviorSpelling NewSpelling) const {
-  OverflowBehaviorSpelling ExistingSpelling;
-  ExistingSpelling =
-      OB_wrap_specified ? getWrapSpelling() : getNoWrapSpelling();
-
-  unsigned DiagSelector = NewSpelling == OBS_Keyword ? 1 : 0;
-  if (NewSpelling != ExistingSpelling)
-    DiagSelector = 0;
-
-  S.Diag(NewLoc, diag::warn_conflicting_overflow_behavior_attributes)
-      << DiagSelector;
 }
 
 bool DeclSpec::setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,

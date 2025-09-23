@@ -3,12 +3,12 @@
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
-#define __no_wrap __attribute__((overflow_behavior(no_wrap)))
+#define __trap __attribute__((overflow_behavior(trap)))
 
 class Foo {
 public:
   unsigned long other;
-  char __wrap a;
+  char __ob_wrap a;
 
   Foo() = delete;
   Foo(char _a) : a(_a) {}
@@ -30,8 +30,8 @@ void test_members(char some) {
   (void)(foo.getA() + 1);
 }
 
-// DEFAULT-LABEL: define {{.*}} @_Z9test_autoU11ObtWrap_c
-void test_auto(char __wrap a) {
+// DEFAULT-LABEL: define {{.*}} @_Z9test_autoU8ObtWrap_c
+void test_auto(char __ob_wrap a) {
   auto b = a;
 
   // DEFAULT: %[[T1:.*]] = load i8, ptr %b
@@ -40,7 +40,7 @@ void test_auto(char __wrap a) {
 }
 
 
-int overloadme(__no_wrap int a) { return 0; }
+int overloadme(__ob_trap int a) { return 0; }
 int overloadme(int a) { return 1; } // make sure we pick this one
 // DEFAULT-LABEL: define {{.*}}test_overload_set_exact_match
 int test_overload_set_exact_match(int a) {

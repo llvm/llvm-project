@@ -5,13 +5,13 @@
 // RUN: %clang_cc1 -foverflow-behavior-types -std=c++11 -ast-print %t.1.cpp -o %t.2.cpp
 // RUN: diff %t.1.cpp %t.2.cpp
 
-extern int __attribute__((overflow_behavior(no_wrap))) a;
+extern int __attribute__((overflow_behavior(trap))) a;
 extern int __attribute__((overflow_behavior(wrap))) b;
 
-extern int __no_wrap c;
-extern int __wrap d;
+extern int __ob_trap c;
+extern int __ob_wrap d;
 
-// PRINT: extern __no_wrap int a;
-// PRINT: extern __wrap int b;
-// PRINT: extern __no_wrap int c;
-// PRINT: extern __wrap int d;
+// PRINT: extern __ob_trap int a;
+// PRINT: extern __ob_wrap int b;
+// PRINT: extern __ob_trap int c;
+// PRINT: extern __ob_wrap int d;

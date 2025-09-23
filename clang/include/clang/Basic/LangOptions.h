@@ -121,8 +121,8 @@ public:
     // __attribute__((overflow_behavior("wrap")))
     OB_Wrap,
 
-    // __attribute__((overflow_behavior("no_wrap")))
-    OB_NoWrap,
+    // __attribute__((overflow_behavior("trap")))
+    OB_Trap,
 
     // Signed types defined as wrapping via -fwrapv can still be instrumented
     // by sanitizers (PR82432). This field is needed to disambiguate canonical

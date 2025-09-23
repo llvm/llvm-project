@@ -2,12 +2,12 @@
 // RUN: -fsanitize=signed-integer-overflow -emit-llvm -o - -std=c++14 | FileCheck %s
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
-#define __nowrap __attribute__((overflow_behavior(no_wrap)))
+#define __no_trap __attribute__((overflow_behavior(trap)))
 
-typedef int __wrap wrap_int;
-typedef int __nowrap nowrap_int;
-typedef unsigned int __wrap u_wrap_int;
-typedef unsigned int __nowrap u_nowrap_int;
+typedef int __ob_wrap wrap_int;
+typedef int __ob_trap no_trap_int;
+typedef unsigned int __ob_wrap u_wrap_int;
+typedef unsigned int __ob_trap u_no_trap_int;
 
 //===----------------------------------------------------------------------===//
 // Compound Assignment Operators
@@ -19,7 +19,7 @@ void compound_assignment_operator() {
   // CHECK: add i32
   a += 1;
 
-  nowrap_int b = 1;
+  no_trap_int b = 1;
   // CHECK: llvm.sadd.with.overflow.i32
   b += 1;
 
@@ -27,7 +27,7 @@ void compound_assignment_operator() {
   // CHECK: sub i32
   c -= 1;
 
-  u_nowrap_int d = 1;
+  u_no_trap_int d = 1;
   // CHECK: llvm.usub.with.overflow.i32
   d -= 1;
 
@@ -35,7 +35,7 @@ void compound_assignment_operator() {
   // CHECK: mul i32
   e *= 2;
 
-  nowrap_int f = 2;
+  no_trap_int f = 2;
   // CHECK: llvm.smul.with.overflow.i32
   f *= 2;
 }
@@ -51,7 +51,7 @@ void bitwise_and_shift_operators() {
   // No overflow check for shifts
   a <<= 1;
 
-  nowrap_int b = 1;
+  no_trap_int b = 1;
   // CHECK: ashr i32
   // No overflow check for shifts
   b >>= 1;
@@ -60,7 +60,7 @@ void bitwise_and_shift_operators() {
   // CHECK: and i32
   c &= 1;
 
-  nowrap_int d = 1;
+  no_trap_int d = 1;
   // CHECK: xor i32
   d ^= 1;
 

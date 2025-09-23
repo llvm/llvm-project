@@ -30,8 +30,8 @@ There are two syntax options for specifying overflow behavior:
 
 .. code-block:: c++
 
-  __wrap          // equivalent to __attribute__((overflow_behavior(wrap)))
-  __no_wrap       // equivalent to __attribute__((overflow_behavior(no_wrap)))
+  __ob_wrap       // equivalent to __attribute__((overflow_behavior(wrap)))
+  __ob_trap       // equivalent to __attribute__((overflow_behavior(trap)))
 
 Where ``behavior`` can be one of the following:
 
@@ -44,7 +44,7 @@ Where ``behavior`` can be one of the following:
   ``implicit-unsigned-integer-truncation``) are suppressed for the attributed
   type.
 
-* ``no_wrap``: Specifies that arithmetic operations on the integer type should
+* ``trap``: Specifies that arithmetic operations on the integer type should
   be checked for overflow. When using the ``signed-integer-overflow`` sanitizer
   or when using ``-ftrapv`` alongside a signed type, this is the default
   behavior. Using this, one may enforce overflow checks for a type even when
@@ -65,7 +65,7 @@ Here are examples using both syntax options:
 
 .. code-block:: c++
 
-  typedef unsigned int __attribute__((overflow_behavior(no_wrap))) non_wrapping_uint;
+  typedef unsigned int __attribute__((overflow_behavior(trap))) non_wrapping_uint;
 
   non_wrapping_uint add_one(non_wrapping_uint a) {
     return a + 1; // Overflow is checked for this operation.
@@ -75,7 +75,7 @@ Here are examples using both syntax options:
 
 .. code-block:: c++
 
-  typedef unsigned int __no_wrap non_wrapping_uint;
+  typedef unsigned int __trap non_wrapping_uint;
 
   non_wrapping_uint add_one(non_wrapping_uint a) {
     return a + 1; // Overflow is checked for this operation.
@@ -121,10 +121,10 @@ variety of scenarios is detailed below.
 
   .. code-block:: c++
 
-    typedef char __no_wrap no_wrap_char;
-    no_wrap_char c;
+    typedef char __trap trap_char;
+    trap_char c;
     unsigned long ul;
-    auto result = c + ul; // result is no_wrap_char
+    auto result = c + ul; // result is trap_char
 
 * **Two OBTs of the Same Kind**: When an operation involves two OBTs of the
   same kind (e.g., both ``wrap``), the result will have the larger of the two
@@ -140,11 +140,11 @@ variety of scenarios is detailed below.
     auto result = a + b; // result is u16_wrap
 
 * **Two OBTs of Different Kinds**: In an operation between a ``wrap`` and a
-  ``no_wrap`` type, a ``no_wrap`` type is always produced. Clang will bias the
-  ``no_wrap`` type as converting from ``wrap`` to ``no_wrap`` is not as
-  troubling as converting from ``no_wrap`` to ``wrap``, in most cases.
+  ``trap`` type, a ``trap`` type is always produced. Clang will bias the
+  ``trap`` type as converting from ``wrap`` to ``trap`` is not as
+  troubling as converting from ``trap`` to ``wrap``, in most cases.
   Therefore, the resulting type matches the bit-width, sign and behavior of the
-  ``no_wrap`` type. It is recommended to avoid such operations, as Clang may
+  ``trap`` type. It is recommended to avoid such operations, as Clang may
   emit a warning for these cases in the future.
 
 
@@ -156,10 +156,10 @@ variety of scenarios is detailed below.
      - Result Type
    * - OBT + Standard Integer
      - OBT type (preserves overflow behavior, sign, and bit-width)
-   * - Same Kind OBTs (both ``wrap`` or both ``no_wrap``)
+   * - Same Kind OBTs (both ``wrap`` or both ``trap``)
      - Larger bit-width; unsigned favored if same width
-   * - Different Kind OBTs (``wrap`` + ``no_wrap``)
-     - ``no_wrap`` type (matches ``no_wrap`` operand's characteristics)
+   * - Different Kind OBTs (``wrap`` + ``trap``)
+     - ``trap`` type (matches ``trap`` operand's characteristics)
 
 Following traditional C promotion rules for integer types often results in
 modified bit boundaries for types. Since overflow behavior types aim to make
@@ -173,13 +173,13 @@ promotion rules:
 
 .. code-block:: c++
 
-  unsigned short __no_wrap a = 0; // u16 __no_wrap
+  unsigned short __trap a = 0; // u16 __trap
 
   // Normally, arithmetic that is less-than-int is promoted to at least int.
   // Following traditional C promotion rules: u16 + s32 results in s32
-  // However, since `a` is an OBT, our special promotion rules apply: u16 __no_wrap + s32 results in u16 __no_wrap
+  // However, since `a` is an OBT, our special promotion rules apply: u16 __trap + s32 results in u16 __trap
 
-  a + 1; // result is short __no_wrap
+  a + 1; // result is short __trap
 
 Conversion Semantics
 ====================
@@ -207,8 +207,8 @@ the **destination type**:
   // Examples of constant conversion behavior
   short x1 = (int __wrap)100000;        // Warning: truncation to standard type
   short __wrap x2 = (int)100000;        // No warning: wrapping destination (also no UBSan truncation warning)
-  short __no_wrap x3 = (int)100000;     // Warning: truncation with overflow check
-  short x4 = (int __no_wrap)100000;     // Warning: truncation to standard type
+  short __trap x3 = (int)100000;     // Warning: truncation with overflow check
+  short x4 = (int __trap)100000;     // Warning: truncation to standard type
 
 This rule ensures that explicit use of wrapping types suppresses warnings
 only when the destination is intended to wrap, while preserving warnings
@@ -237,9 +237,9 @@ is always used - just like with traditional integer types.
 .. code-block:: c++
 
   long __wrap x = __LONG_MAX__;
-  int __no_wrap a = x; // x converted to int __no_wrap
+  int __trap a = x; // x converted to int __trap
 
-For the purposes of truncation warnings from UBSAN or ``-Wconversion``, the
+For the purposes of truncation warnings from UBSan or ``-Wconversion``, the
 left-hand side's overflow behavior determines the instrumentation and
 reporting. For example, the code above would cause a ``-Wshorten-64-to-32``
 warning. Swapping the overflow behavior kinds in the above example would not
@@ -266,7 +266,7 @@ conversion, the behavior depends on the **destination type**:
   // C++ narrowing conversion behavior
   constexpr short __wrap x1 = {(int)100000};    // OK: wrapping destination
   constexpr short x2 = {(int)100000};           // Error: standard destination
-  constexpr short __no_wrap x3 = {(int)100000}; // Error: non-wrapping destination
+  constexpr short __trap x3 = {(int)100000}; // Error: non-wrapping destination
 
 This allows ``wrap`` types to be used seamlessly in ``constexpr`` contexts
 where truncation is intentional and expected.
@@ -298,7 +298,7 @@ type of an OBT parameter is not enough to precisely pick an overload candidate.
 
 .. code-block:: c++
 
-  void foo(int __no_wrap a);
+  void foo(int __trap a);
   void foo(short a);
 
   void bar(int a) {
@@ -311,11 +311,11 @@ candidates are not implicitly convertible.
 
 .. code-block:: c++
 
-  void foo(int __no_wrap a);
+  void foo(int __trap a);
   void foo(char *a);
 
   void bar(int a) {
-    foo(a); // picks foo(__no_wrap int)
+    foo(a); // picks foo(__trap int)
   }
 
 
@@ -324,7 +324,7 @@ certain contexts.
 
 .. code-block:: c++
 
-  void foo(int __no_wrap a);
+  void foo(int __trap a);
   void foo(int __wrap a);
 
   void bar(int a) {
@@ -382,8 +382,8 @@ specialization purposes, enabling precise type-based template selection.
   };
 
   template<>
-  struct TypeProcessor<int __no_wrap> {
-    static constexpr int value = 3; // __no_wrap int specialization
+  struct TypeProcessor<int __trap> {
+    static constexpr int value = 3; // __trap int specialization
   };
 
 When no exact template specialization exists for an OBT, it falls back to the
@@ -413,7 +413,7 @@ global flags. The following table summarizes the interactions:
      - Wraps
      - No report
      - Overrides SSCL
-   * - ``overflow_behavior(no_wrap)``
+   * - ``overflow_behavior(trap)``
      - Traps
      - Traps
      - Traps
@@ -421,7 +421,7 @@ global flags. The following table summarizes the interactions:
      - Overrides SSCL
 
 It is important to note the distinction between signed and unsigned types. For
-unsigned integers, which wrap on overflow by default, ``overflow_behavior(no_wrap)``
+unsigned integers, which wrap on overflow by default, ``overflow_behavior(trap)``
 is particularly useful for enabling overflow checks. For signed integers, whose
 overflow behavior is undefined by default, ``overflow_behavior(wrap)`` provides
 a guaranteed wrapping behavior.
@@ -493,11 +493,11 @@ loss of the specified overflow behavior. This is the main warning in the
                // [-Wimplicit-overflow-behavior-conversion]
   }
 
-Here's another example showing function parameter conversion with a ``no_wrap`` type:
+Here's another example showing function parameter conversion with a ``trap`` type:
 
 .. code-block:: c++
 
-  typedef int __no_wrap safe_int;
+  typedef int __trap safe_int;
 
   void bar(int x); // Function expects standard int
 
@@ -514,7 +514,7 @@ integer type.
 .. code-block:: c++
 
   typedef int __wrap wrapping_int;
-  typedef int __no_wrap safe_int;
+  typedef int __trap safe_int;
 
   void some_function() {
     wrapping_int w = 1;
@@ -589,7 +589,7 @@ types when passed to any varargs function.
   #include <cstdio>
 
   typedef int __wrap wrap_int;
-  typedef unsigned int __no_wrap nowrap_uint;
+  typedef unsigned int __trap nowrap_uint;
 
   void example() {
     wrap_int wi = 42;
@@ -609,19 +609,17 @@ The format string checker uses the underlying type to determine compatibility,
 so ``int __wrap`` is fully compatible with
 ``%d``, ``%i``, ``%x``, etc., just like a regular ``int`` would be.
 
--Woverflow-behavior-attribute-ignored
--------------------------------------
+Using With Non-Integer Types
+----------------------------
 
-This warning is issued when attempting to create an overflow behavior type from
+An error is issued when attempting to create an overflow behavior type from
 a non-integer type.
 
 .. code-block:: c++
 
   typedef float __attribute__((overflow_behavior(wrap))) wrapping_float;
-  // warning: 'overflow_behavior' attribute only applies to integer types;
-  // attribute is ignored [-Woverflow-behavior-attribute-ignored]
+  // error: 'overflow_behavior' attribute cannot be applied to non-integer type 'float'
 
   typedef struct S { int i; } __attribute__((overflow_behavior(wrap))) S_t;
-  // warning: 'overflow_behavior' attribute only applies to integer types;
-  // attribute is ignored [-Woverflow-behavior-attribute-ignored]
+  // error: 'overflow_behavior' attribute cannot be applied to non-integer type 'struct S'
 

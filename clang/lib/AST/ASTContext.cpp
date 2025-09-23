@@ -5816,8 +5816,8 @@ QualType ASTContext::getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
   OverflowBehaviorType::OverflowBehaviorKind Kind;
   if (IdentName == "wrap") {
     Kind = OverflowBehaviorType::OverflowBehaviorKind::Wrap;
-  } else if (IdentName == "no_wrap") {
-    Kind = OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+  } else if (IdentName == "trap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::Trap;
   } else {
     return Underlying;
   }
@@ -5842,9 +5842,8 @@ QualType ASTContext::getOverflowBehaviorType(
     SplitQualType canonSplit = getCanonicalType(Underlying).split();
     Canonical = getOverflowBehaviorType(Kind, QualType(canonSplit.Ty, 0));
     Canonical = getQualifiedType(Canonical, canonSplit.Quals);
-    [[maybe_unused]] OverflowBehaviorType *NewOBT =
-        OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos);
-    assert(!NewOBT && "Shouldn't be in the map!");
+    assert(!OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos) &&
+           "Shouldn't be in the map");
   }
 
   OverflowBehaviorType *Ty = new (*this, alignof(OverflowBehaviorType))

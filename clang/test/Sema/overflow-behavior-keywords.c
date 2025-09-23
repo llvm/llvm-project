@@ -1,66 +1,66 @@
 // RUN: %clang_cc1 -fsyntax-only -foverflow-behavior-types -verify %s
 
-int __wrap a;
-int __no_wrap b;
+int __ob_wrap a;
+int __ob_trap b;
 
-const int __wrap c;
-volatile int __no_wrap d;
-const volatile int __wrap e;
+const int __ob_wrap c;
+volatile int __ob_trap d;
+const volatile int __ob_wrap e;
 
 int __attribute__((overflow_behavior(wrap))) attr_style_var;
-int __wrap keyword_style_var;
+int __ob_wrap keyword_style_var;
 
-int __wrap __no_wrap conflicting_var; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
+int __ob_wrap __ob_trap conflicting_var; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
 
 // Test duplicate qualifiers
-int __wrap __wrap duplicate_wrap; // expected-warning{{duplicate '__wrap' declaration specifier}}
-int __no_wrap __no_wrap duplicate_no_wrap; // expected-warning{{duplicate '__no_wrap' declaration specifier}}
+int __ob_wrap __ob_wrap duplicate_wrap; // expected-warning{{duplicate '__ob_wrap' declaration specifier}}
+int __ob_trap __ob_trap duplicate_trap; // expected-warning{{duplicate '__ob_trap' declaration specifier}}
 
-int __attribute__((overflow_behavior(wrap))) __attribute__((overflow_behavior(no_wrap))) attr_conflict; // expected-warning{{conflicting 'overflow_behavior' attributes on the same type; 'no_wrap' takes precedence over 'wrap'}}
+int __attribute__((overflow_behavior(wrap))) __attribute__((overflow_behavior(trap))) attr_conflict; // expected-error{{conflicting 'overflow_behavior' attributes on the same type}}
 
 // Test duplicate attributes - no warning, less problematic than duplicate decl specifiers
 int __attribute__((overflow_behavior(wrap))) __attribute__((overflow_behavior(wrap))) duplicate_attr;
 
-const volatile int __wrap __no_wrap __wrap complex_conflict; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}} expected-warning{{duplicate '__wrap' declaration specifier}}
+const volatile int __ob_wrap __ob_trap __ob_wrap complex_conflict; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}} expected-warning{{duplicate '__ob_wrap' declaration specifier}}
 
-extern int __wrap __no_wrap extern_conflict; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
-static int __wrap __no_wrap static_conflict; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
+extern int __ob_wrap __ob_trap extern_conflict; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
+static int __ob_wrap __ob_trap static_conflict; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
 
 void test_storage_class(void) {
-    register int __wrap __no_wrap register_conflict; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
+    register int __ob_wrap __ob_trap register_conflict; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
 }
 
-int __wrap __no_wrap *ptr_conflict; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
-int __wrap __no_wrap arr_conflict[5]; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
+int __ob_wrap __ob_trap *ptr_conflict; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
+int __ob_wrap __ob_trap arr_conflict[5]; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
 
-int __wrap __no_wrap (*func_ptr_conflict)(void); // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
+int __ob_wrap __ob_trap (*func_ptr_conflict)(void); // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
 
-void param_test(int __wrap __no_wrap param); // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
+void param_test(int __ob_wrap __ob_trap param); // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
 
 struct conflict_struct {
-    int __wrap __no_wrap member; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
-    int __wrap __wrap dup_member; // expected-warning{{duplicate '__wrap' declaration specifier}}
+    int __ob_wrap __ob_trap member; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
+    int __ob_wrap __ob_wrap dup_member; // expected-warning{{duplicate '__ob_wrap' declaration specifier}}
 };
 
-typedef int __wrap __no_wrap conflict_typedef; // expected-warning{{conflicting overflow behavior specifiers on the same type; 'no_wrap' takes precedence over 'wrap'}}
-typedef int __wrap __wrap dup_typedef; // expected-warning{{duplicate '__wrap' declaration specifier}}
+typedef int __ob_wrap __ob_trap conflict_typedef; // expected-error{{cannot combine with previous '__ob_wrap' declaration specifier}}
+typedef int __ob_wrap __ob_wrap dup_typedef; // expected-warning{{duplicate '__ob_wrap' declaration specifier}}
 
-int __wrap *ptr_to_wrap;
-int __no_wrap arr[10];
-int __wrap (*func_ptr)(int);
+int __ob_wrap *ptr_to_wrap;
+int __ob_trap arr[10];
+int __ob_wrap (*func_ptr)(int);
 
-void test_function(int __wrap param1, int __no_wrap param2);
+void test_function(int __ob_wrap param1, int __ob_trap param2);
 
 struct test_struct {
-    int __wrap member1;
-    int __no_wrap member2;
+    int __ob_wrap member1;
+    int __ob_trap member2;
 };
 
-typedef int __wrap wrap_int_t;
-typedef int __no_wrap no_wrap_int_t;
+typedef int __ob_wrap wrap_int_t;
+typedef int __ob_trap trap_int_t;
 
-typedef float __wrap float_wrap; // expected-warning{{__wrap specifier cannot be applied to non-integer type 'float'; specifier ignored}}
-typedef double __no_wrap double_no_wrap; // expected-warning{{__no_wrap specifier cannot be applied to non-integer type 'double'; specifier ignored}}
+typedef float __ob_wrap float_wrap; // expected-error{{__ob_wrap specifier cannot be applied to non-integer type 'float'}}
+typedef double __ob_trap double_trap; // expected-error{{__ob_trap specifier cannot be applied to non-integer type 'double'}}
 
 struct S { int i; };
-typedef struct S __wrap struct_wrap; // expected-warning{{__wrap specifier cannot be applied to non-integer type 'struct S'; specifier ignored}}
+typedef struct S __ob_wrap struct_wrap; // expected-error{{__ob_wrap specifier cannot be applied to non-integer type 'struct S'}}

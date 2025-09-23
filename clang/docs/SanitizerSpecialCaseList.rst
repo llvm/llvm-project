@@ -156,11 +156,11 @@ instrumentation for it.
   $ cat foo.c
   // Force 'critical_type' to always have overflow checks,
   // overriding the ignorelist.
-  typedef int __attribute__((overflow_behavior(no_wrap))) critical_type;
+  typedef int __attribute__((overflow_behavior(trap))) critical_type;
 
   void foo(int x) {
     critical_type a = x;
-    a++; // Overflow is checked here due to the 'no_wrap' attribute.
+    a++; // Overflow is checked here due to the 'trap' attribute.
 
     int b = x;
     b++; // Overflow is NOT checked here due to the ignorelist.

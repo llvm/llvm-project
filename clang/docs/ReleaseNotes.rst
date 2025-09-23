@@ -251,7 +251,7 @@ Attribute Changes in Clang
 --------------------------
 
 - Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
-  currently accepts either ``wrap`` or ``no_wrap`` as an argument, enabling
+  currently accepts either ``wrap`` or ``trap`` as an argument, enabling
   type-level control over overflow behavior.
 
 Improvements to Clang's diagnostics

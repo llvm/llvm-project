@@ -4587,9 +4587,9 @@ void CXXNameMangler::mangleType(const OverflowBehaviorType *T) {
   // Vender-extended type mangling for OverflowBehaviorType
   // <type> ::= U <behavior> <underlying_type>
   if (T->isWrapKind()) {
-    Out << "U11ObtWrap_";
+    Out << "U8ObtWrap_";
   } else {
-    Out << "U13ObtNoWrap_";
+    Out << "U8ObtTrap_";
   }
   mangleType(T->getUnderlyingType());
 }

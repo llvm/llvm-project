@@ -3796,7 +3796,7 @@ void MicrosoftCXXNameMangler::mangleType(const OverflowBehaviorType *T,
   if (T->isWrapKind()) {
     Extra.mangleSourceName("ObtWrap_");
   } else {
-    Extra.mangleSourceName("ObtNoWrap_");
+    Extra.mangleSourceName("ObtTrap_");
   }
   Extra.mangleType(UnderlyingType, Range, QMM_Escape);
 

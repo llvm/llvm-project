@@ -3002,10 +3002,10 @@ bool QualType::isWrapType() const {
   return false;
 }
 
-bool QualType::isNoWrapType() const {
+bool QualType::isTrapType() const {
   if (const auto *OBT = getCanonicalType()->getAs<OverflowBehaviorType>())
     return OBT->getBehaviorKind() ==
-           OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+           OverflowBehaviorType::OverflowBehaviorKind::Trap;
 
   return false;
 }

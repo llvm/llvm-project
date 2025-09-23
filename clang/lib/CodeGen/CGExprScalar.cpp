@@ -205,8 +205,8 @@ getOverflowBehaviorConsideringType(const CodeGenFunction &CGF,
     switch (OBT->getBehaviorKind()) {
     case OverflowBehaviorType::OverflowBehaviorKind::Wrap:
       return LangOptions::OverflowBehaviorKind::OB_Wrap;
-    case OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
-      return LangOptions::OverflowBehaviorKind::OB_NoWrap;
+    case OverflowBehaviorType::OverflowBehaviorKind::Trap:
+      return LangOptions::OverflowBehaviorKind::OB_Trap;
     }
     llvm_unreachable("Unknown OverflowBehaviorKind");
   }
@@ -221,7 +221,7 @@ getOverflowBehaviorConsideringType(const CodeGenFunction &CGF,
   case LangOptions::SignedOverflowBehaviorTy::SOB_Undefined:
     return LangOptions::OverflowBehaviorKind::OB_Unset;
   case LangOptions::SignedOverflowBehaviorTy::SOB_Trapping:
-    return LangOptions::OverflowBehaviorKind::OB_NoWrap;
+    return LangOptions::OverflowBehaviorKind::OB_Trap;
   }
 }
 
@@ -245,7 +245,7 @@ static bool CanElideOverflowCheck(ASTContext &Ctx, const BinOpInfo &Op) {
 
   if (Op.Ty.isWrapType())
     return true;
-  if (Op.Ty.isNoWrapType())
+  if (Op.Ty.isTrapType())
     return false;
 
   if (Op.Ty->isSignedIntegerType() &&
@@ -829,7 +829,7 @@ public:
           return isSigned ? Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul")
                           : Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
         [[fallthrough]];
-      case LangOptions::OB_NoWrap:
+      case LangOptions::OB_Trap:
         if (CanElideOverflowCheck(CGF.getContext(), Ops))
           return isSigned ? Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul")
                           : Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
@@ -1210,7 +1210,7 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   // truncation sanitizers.
   if (const auto *OBT = DstType->getAs<OverflowBehaviorType>()) {
     if (OBT->getBehaviorKind() !=
-        OverflowBehaviorType::OverflowBehaviorKind::NoWrap)
+        OverflowBehaviorType::OverflowBehaviorKind::Trap)
       return;
   } else if (ignoredBySanitizer)
     return;
@@ -3069,7 +3069,7 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
       return isSigned ? Builder.CreateNSWAdd(InVal, Amount, Name)
                       : Builder.CreateAdd(InVal, Amount, Name);
     [[fallthrough]];
-  case LangOptions::OB_NoWrap:
+  case LangOptions::OB_Trap:
     if (!Ty->getAs<OverflowBehaviorType>() && !E->canOverflow())
       return Builder.CreateAdd(InVal, Amount, Name);
     BinOpInfo Info = createBinOpInfoFromIncDec(
@@ -4542,7 +4542,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
         return isSigned ? Builder.CreateNSWAdd(op.LHS, op.RHS, "add")
                         : Builder.CreateAdd(op.LHS, op.RHS, "add");
       [[fallthrough]];
-    case LangOptions::OB_NoWrap:
+    case LangOptions::OB_Trap:
       if (CanElideOverflowCheck(CGF.getContext(), op))
         return isSigned ? Builder.CreateNSWAdd(op.LHS, op.RHS, "add")
                         : Builder.CreateAdd(op.LHS, op.RHS, "add");
@@ -4702,7 +4702,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
           return isSigned ? Builder.CreateNSWSub(op.LHS, op.RHS, "sub")
                           : Builder.CreateSub(op.LHS, op.RHS, "sub");
         [[fallthrough]];
-      case LangOptions::OB_NoWrap:
+      case LangOptions::OB_Trap:
         if (CanElideOverflowCheck(CGF.getContext(), op))
           return isSigned ? Builder.CreateNSWSub(op.LHS, op.RHS, "sub")
                           : Builder.CreateSub(op.LHS, op.RHS, "sub");

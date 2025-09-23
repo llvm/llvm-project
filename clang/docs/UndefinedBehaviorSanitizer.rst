@@ -394,7 +394,7 @@ The ``overflow_behavior`` attribute not only affects UBSan instrumentation
 but also changes the fundamental overflow behavior of arithmetic operations
 on the annotated type. Operations on types marked with ``wrap`` will have
 well-defined wrapping semantics, while operations on types marked with
-``no_wrap`` will be checked for overflow (regardless of global flags like
+``trap`` will be checked for overflow (regardless of global flags like
 ``-fwrapv``).
 
 The attribute also affects implicit type promotion rules: when an overflow
@@ -406,10 +406,10 @@ the constraints of the smallest annotated type in the expression.
 
 For more information, see :doc:`OverflowBehaviorTypes`.
 
-Enforcing Overflow Instrumentation with ``__attribute__((overflow_behavior(no_wrap)))``
+Enforcing Overflow Instrumentation with ``__attribute__((overflow_behavior(trap)))``
 ---------------------------------------------------------------------------------------
 
-Conversely, you can use ``__attribute__((overflow_behavior(no_wrap)))`` to
+Conversely, you can use ``__attribute__((overflow_behavior(trap)))`` to
 enforce overflow checks for a specific type, even when ``-fwrapv`` is enabled
 globally. This is useful for ensuring that critical calculations are always
 checked for overflow, regardless of the global compiler settings.
