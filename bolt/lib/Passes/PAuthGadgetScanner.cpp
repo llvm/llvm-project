@@ -1680,7 +1680,7 @@ static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
     MCInstReference Inst(BB, I);
     if (BC.MIB->isCFI(Inst))
       continue;
-    BC.printInstruction(outs(), Inst, Inst.getAddress(), BF);
+    BC.printInstruction(outs(), Inst, Inst.computeAddress(), BF);
   }
 }
 
@@ -1700,14 +1700,15 @@ void Diagnostic::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                                 StringRef IssueKind) const {
   const BinaryBasicBlock *BB = Location.getBasicBlock();
   const BinaryFunction *BF = Location.getFunction();
+  const uint64_t Address = Location.computeAddress();
 
   OS << "\nGS-PAUTH: " << IssueKind;
   OS << " in function " << BF->getPrintName();
   if (BB)
     OS << ", basic block " << BB->getName();
-  OS << ", at address " << llvm::format("%x", Location.getAddress()) << "\n";
+  OS << ", at address " << llvm::format("%x", Address) << "\n";
   OS << "  The instruction is ";
-  BC.printInstruction(OS, Location, Location.getAddress(), BF);
+  BC.printInstruction(OS, Location, Address, BF);
 }
 
 void GadgetDiagnostic::generateReport(raw_ostream &OS,
@@ -1721,15 +1722,17 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   const BinaryContext &BC = BF.getBinaryContext();
 
   // Sort by address to ensure output is deterministic.
-  SmallVector<MCInstReference> RI(RelatedInstrs);
-  llvm::sort(RI, [](const MCInstReference &A, const MCInstReference &B) {
-    return A.getAddress() < B.getAddress();
-  });
+  SmallVector<std::pair<uint64_t, MCInstReference>> RI;
+  for (auto &InstRef : RelatedInstrs)
+    RI.push_back(std::make_pair(InstRef.computeAddress(), InstRef));
+  llvm::sort(RI, [](auto A, auto B) { return A.first < B.first; });
+
   for (unsigned I = 0; I < RI.size(); ++I) {
-    MCInstReference InstRef = RI[I];
+    auto [Address, InstRef] = RI[I];
     OS << "  " << (I + 1) << ". ";
-    BC.printInstruction(OS, InstRef, InstRef.getAddress(), &BF);
+    BC.printInstruction(OS, InstRef, InstRef.computeAddress(), &BF);
   };
+
   if (RelatedInstrs.size() == 1) {
     const MCInstReference RelatedInst = RelatedInstrs[0];
     // Printing the details for the MCInstReference::FunctionParent case

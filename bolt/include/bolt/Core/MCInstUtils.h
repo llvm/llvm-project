@@ -90,8 +90,17 @@ public:
     return nullptr;
   }
 
-  // MCCodeEmitter is not thread safe.
-  uint64_t getAddress(const MCCodeEmitter *Emitter = nullptr) const;
+  /// Computes the address of the instruction (or offset from base for PIC).
+  ///
+  /// This function is intended for the use cases like debug printing, as it
+  /// is only as precise as BinaryContext::computeCodeSize() is and requires
+  /// iterating over the prefix of the basic block (when CFG is available) or
+  /// of the function (when CFG is unavailable).
+  ///
+  /// MCCodeEmitter is not thread safe and the default instance from
+  /// BinaryContext is used by default, thus pass an instance explicitly if
+  /// this function may be called from multithreaded code.
+  uint64_t computeAddress(const MCCodeEmitter *Emitter = nullptr) const;
 
   raw_ostream &print(raw_ostream &OS) const;
 
