@@ -339,21 +339,18 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
                      this](SourceLocation DiagLoc, SourceRange ReplaceRange,
                            TransferType TT = TT_ByVal) {
-    StringRef Prefix;
-    switch (TT) {
-    case TT_ByVal:
-      Prefix = "auto";
-      break;
-    case TT_ByConstVal:
-      Prefix = "const auto";
-      break;
-    case TT_ByRef:
-      Prefix = "auto&";
-      break;
-    case TT_ByConstRef:
-      Prefix = "const auto&";
-      break;
-    }
+    const auto Prefix = [&TT]() -> StringRef {
+      switch (TT) {
+      case TT_ByVal:
+        return "auto";
+      case TT_ByConstVal:
+        return "const auto";
+      case TT_ByRef:
+        return "auto&";
+      case TT_ByConstRef:
+        return "const auto&";
+      }
+    }();
 
     std::string ReplacementText =
         (Twine(Prefix) + " [" + FirstVar->getNameAsString() + ", " +
