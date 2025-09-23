@@ -600,7 +600,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__functional/hash.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/string.h>
-#  include <__ios/fpos.h>
 #  include <__iterator/bounded_iter.h>
 #  include <__iterator/distance.h>
 #  include <__iterator/iterator_traits.h>
@@ -620,7 +619,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
-#  include <__ranges/size.h>
 #  include <__string/char_traits.h>
 #  include <__string/extern_template_lists.h>
 #  include <__type_traits/conditional.h>
@@ -637,8 +635,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/remove_cvref.h>
-#  include <__type_traits/void_t.h>
-#  include <__utility/auto_cast.h>
 #  include <__utility/default_three_way_comparator.h>
 #  include <__utility/forward.h>
 #  include <__utility/is_pointer_in_range.h>
