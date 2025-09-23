@@ -3418,17 +3418,18 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
 static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
   // Query if the given function is local to the load module.
   auto IsLocalFunc = [](const Function *F) {
-    return F->isStrongDefinitionForLinker() && F->isDSOLocal();
+    bool Result = F->isStrongDefinitionForLinker() && F->isDSOLocal();
+    LLVM_DEBUG(dbgs() << F->getName() << " is " << (Result ? "local\n" : "not local\n"));
+    return Result;
   };
   // Recursive walker that checks if all possible runtime values of the given
   // llvm::Value are addresses of local functions.
-  std::function<bool(const Value*)> ValueIsALocalFunc = [&IsLocalFunc, &ValueIsALocalFunc](const Value *V) -> bool{
+  std::function<bool(const Value*)> ValueIsALocalFunc = [&IsLocalFunc, &ValueIsALocalFunc](const Value *V) -> bool {
     if (auto *F = dyn_cast<Function>(V))
       return IsLocalFunc(F);
     if (!isa<Instruction>(V))
       return false;
 
-    Value *Op;
     auto *I = cast<Instruction>(V);
     // return isP9 ? foo_p9 : foo_default;
     if (auto *SI = dyn_cast<SelectInst>(I))
@@ -3442,7 +3443,10 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
     // @switch.table.resolve_foo = private unnamed_addr constant [3 x ptr] [ptr @foo_static, ptr @foo_hidden, ptr @foo_protected]
     // %switch.gep = getelementptr inbounds nuw ptr, ptr @switch.table, i64 %2
     // V = load ptr, ptr %switch.gep,
-    else if (match(I, m_Load(m_GEP(m_Value(Op), m_Value())))) {
+    else if (auto *Op = getPointerOperand(I)) {
+      while (isa<GEPOperator>(Op))
+        Op = cast<GEPOperator>(Op)->getPointerOperand();
+
       if (!isa<GlobalVariable>(Op))
         return false;
       auto *GV = dyn_cast<GlobalVariable>(Op);
@@ -3480,8 +3484,10 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
     if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
       Value *RV = Ret->getReturnValue();
       assert(RV);
-      if (!ValueIsALocalFunc(RV))
+      if (!ValueIsALocalFunc(RV)) {
+        LLVM_DEBUG(dbgs() << "return value " << RV->getName() << " is not a local function\n");
         return true;
+      }
     }
   }
   // all return values where local functions, so no TOC save/restore needed.
