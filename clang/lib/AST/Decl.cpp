@@ -4024,12 +4024,17 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
   ASTContext &Context = getASTContext();
 
   if (Context.getLangOpts().GNUInline || hasAttr<GNUInlineAttr>()) {
+    // GNU inline semantics:
+    //
+    // A function defined 'inline' is externally visible.
+    // A function defined 'extern inline' is not externally visible.
+    //
+    // If any declaration is 'inline' but not 'extern', the definition is
+    // externally visible. This is the only case that matters for a function
+    // defined 'extern inline'.
+    //
     // Note: If you change the logic here, please change
     // doesDeclarationForceExternallyVisibleDefinition as well.
-    //
-    // If it's not the case that both 'inline' and 'extern' are
-    // specified on the definition, then this inline definition is
-    // externally visible.
     if (Context.getLangOpts().CPlusPlus)
       return false;
     if (!(isInlineSpecified() && getStorageClass() == SC_Extern))
