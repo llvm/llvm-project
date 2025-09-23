@@ -2805,7 +2805,7 @@ float4 radians(float4);
 /// call.
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
-void GroupMemoryBarrierWithGroupSync(void);
+__attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

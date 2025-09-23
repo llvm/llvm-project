@@ -135,7 +135,7 @@ public:
   ToolOutputFile *operator->() { return &*OutputFile; }
 };
 
-/// Setup optimization remarks that output to a file. The LLVMRemarkFileHandle
+/// Set up optimization remarks that output to a file. The LLVMRemarkFileHandle
 /// manages the lifetime of the underlying ToolOutputFile to ensure \ref
 /// finalizeLLVMOptimizationRemarks() is called before the file is destroyed or
 /// released from the handle. The handle must be kept alive until all remarks
@@ -145,7 +145,7 @@ LLVM_ABI Expected<LLVMRemarkFileHandle> setupLLVMOptimizationRemarks(
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0);
 
-/// Setup optimization remarks that output directly to a raw_ostream.
+/// Set up optimization remarks that output directly to a raw_ostream.
 /// \p OS is managed by the caller and must be open for writing until
 /// \ref finalizeLLVMOptimizationRemarks() is called.
 LLVM_ABI Error setupLLVMOptimizationRemarks(
@@ -155,7 +155,7 @@ LLVM_ABI Error setupLLVMOptimizationRemarks(
 
 /// Finalize optimization remarks and deregister the RemarkStreamer from the \p
 /// Context. This must be called before closing the (file) stream that was used
-/// to setup the remarks.
+/// to set up the remarks.
 LLVM_ABI void finalizeLLVMOptimizationRemarks(LLVMContext &Context);
 
 } // end namespace llvm
