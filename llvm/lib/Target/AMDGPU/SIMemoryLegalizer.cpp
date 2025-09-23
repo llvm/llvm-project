@@ -2514,6 +2514,8 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                                         SIAtomicAddrSpace AddrSpace,
                                         bool IsCrossAddrSpaceOrdering,
                                         Position Pos) const {
+  bool Changed = false;
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -2534,12 +2536,14 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     case SIAtomicScope::SYSTEM:
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
           .addImm(AMDGPU::CPol::SCOPE_SYS);
+      Changed = true;
       break;
     case SIAtomicScope::AGENT:
       // TODO DOCS
       if (ST.hasGFX1250Insts()) {
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
             .addImm(AMDGPU::CPol::SCOPE_DEV);
+        Changed = true;
       }
       break;
     case SIAtomicScope::CLUSTER:
@@ -2560,10 +2564,10 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // We always have to wait for previous memory operations (load/store) to
   // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
   // we of course need to wait for that as well.
-  insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-             IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
+  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
 
-  return true;
+  return Changed;
 }
 
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
