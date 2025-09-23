@@ -226,6 +226,8 @@ bool RISCVInstructionSelector::hasAllNBitUsers(const MachineInstr &MI,
     case RISCV::ADDW:
     case RISCV::ADDIW:
     case RISCV::SUBW:
+    case RISCV::FCVT_D_W:
+    case RISCV::FCVT_S_W:
       if (Bits >= 32)
         break;
       return false;
@@ -738,12 +740,17 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     // TODO: Use constant pool for complex constants.
     Register DstReg = MI.getOperand(0).getReg();
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
-    APInt Imm = FPimm.bitcastToAPInt();
     unsigned Size = MRI->getType(DstReg).getSizeInBits();
     if (Size == 16 || Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
-      Register GPRReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-      if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
-        return false;
+      Register GPRReg;
+      if (FPimm.isPosZero()) {
+        GPRReg = RISCV::X0;
+      } else {
+        GPRReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+        APInt Imm = FPimm.bitcastToAPInt();
+        if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
+          return false;
+      }
 
       unsigned Opcode = Size == 64   ? RISCV::FMV_D_X
                         : Size == 32 ? RISCV::FMV_W_X
@@ -756,7 +763,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       assert(Size == 64 && !Subtarget->is64Bit() &&
              "Unexpected size or subtarget");
 
-      if (Imm.isNonNegative() && Imm.isZero()) {
+      if (FPimm.isPosZero()) {
         // Optimize +0.0 to use fcvt.d.w
         MachineInstrBuilder FCVT =
             MIB.buildInstr(RISCV::FCVT_D_W, {DstReg}, {Register(RISCV::X0)})
@@ -771,6 +778,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       // Split into two pieces and build through the stack.
       Register GPRRegHigh = MRI->createVirtualRegister(&RISCV::GPRRegClass);
       Register GPRRegLow = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      APInt Imm = FPimm.bitcastToAPInt();
       if (!materializeImm(GPRRegHigh, Imm.extractBits(32, 32).getSExtValue(),
                           MIB))
         return false;
@@ -1158,8 +1166,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
   switch (TM.getCodeModel()) {
   default: {
-    reportGISelFailure(const_cast<MachineFunction &>(*MF), *TPC, *MORE,
-                       getName(), "Unsupported code model for lowering", MI);
+    reportGISelFailure(*MF, *TPC, *MORE, getName(),
+                       "Unsupported code model for lowering", MI);
     return false;
   }
   case CodeModel::Small: {

@@ -395,7 +395,7 @@ public:
 
   RT_API_ATTRS void BadInquiryKeywordHashCrash(InquiryKeywordHash);
 
-  RT_API_ATTRS void ReportUnsupportedChildIo() const {
+  RT_API_ATTRS [[noreturn]] void ReportUnsupportedChildIo() const {
     Crash("not yet implemented: child IO");
   }
 
@@ -457,6 +457,11 @@ public:
     realPart_ = imaginaryPart_ = false;
     namelistGroup_ = namelistGroup;
   }
+
+  RT_API_ATTRS bool eatComma() const { return eatComma_; }
+  RT_API_ATTRS void set_eatComma(bool yes) { eatComma_ = yes; }
+  RT_API_ATTRS bool hitSlash() const { return hitSlash_; }
+  RT_API_ATTRS void set_hitSlash(bool yes) { hitSlash_ = yes; }
 
 protected:
   const NamelistGroup *namelistGroup_{nullptr};

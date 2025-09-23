@@ -1879,12 +1879,12 @@ protected:
       const size_t num_files = m_options.m_filenames.GetSize();
       if (num_files == 0) {
         if (!GetDefaultFile(m_exe_ctx, file, result)) {
-          result.AppendError("No file supplied and no default file available.");
+          result.AppendError("no file supplied and no default file available.");
           return;
         }
       } else if (num_files > 1) {
-        result.AppendError("Only one file at a time is allowed for file and "
-                           "line breakpoints.");
+        result.AppendError("only one file at a time is allowed for file and "
+                           "line breakpoints");
         return;
       } else
         file = m_options.m_filenames.GetFileSpecAtIndex(0);
@@ -2054,7 +2054,7 @@ protected:
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else if (!bp_sp) {
-      result.AppendError("Breakpoint creation failed: No breakpoint created.");
+      result.AppendError("breakpoint creation failed: no breakpoint created");
     }
   }
 
@@ -2176,7 +2176,7 @@ protected:
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
-      result.AppendError("No breakpoints exist to be enabled.");
+      result.AppendError("no breakpoints exist to be enabled");
       return;
     }
 
@@ -2284,7 +2284,7 @@ protected:
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
-      result.AppendError("No breakpoints exist to be disabled.");
+      result.AppendError("no breakpoints exist to be disabled");
       return;
     }
 
@@ -2460,7 +2460,7 @@ protected:
         }
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
-        result.AppendError("Invalid breakpoint ID.");
+        result.AppendError("invalid breakpoint ID");
       }
     }
   }
@@ -2554,7 +2554,7 @@ protected:
 
     // Early return if there's no breakpoint at all.
     if (num_breakpoints == 0) {
-      result.AppendError("Breakpoint clear: No breakpoint cleared.");
+      result.AppendError("breakpoint clear: no breakpoint cleared");
       return;
     }
 
@@ -2600,7 +2600,7 @@ protected:
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendError("Breakpoint clear: No breakpoint cleared.");
+      result.AppendError("breakpoint clear: no breakpoint cleared");
     }
   }
 
@@ -2695,7 +2695,7 @@ protected:
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
-      result.AppendError("No breakpoints exist to be deleted.");
+      result.AppendError("no breakpoints exist to be deleted");
       return;
     }
 
@@ -2740,7 +2740,7 @@ protected:
         }
       }
       if (valid_bp_ids.GetSize() == 0) {
-        result.AppendError("No disabled breakpoints.");
+        result.AppendError("no disabled breakpoints");
         return;
       }
     } else {
@@ -2948,7 +2948,7 @@ protected:
 
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
-      result.AppendError("No names provided.");
+      result.AppendError("no names provided");
       return;
     }
 
@@ -3035,7 +3035,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (!m_name_options.m_name.OptionWasSet()) {
-      result.AppendError("No name option provided.");
+      result.AppendError("no name option provided");
       return;
     }
 
@@ -3049,7 +3049,7 @@ protected:
 
     size_t num_breakpoints = breakpoints.GetSize();
     if (num_breakpoints == 0) {
-      result.AppendError("No breakpoints, cannot add names.");
+      result.AppendError("no breakpoints, cannot add names");
       return;
     }
 
@@ -3061,7 +3061,7 @@ protected:
 
     if (result.Succeeded()) {
       if (valid_bp_ids.GetSize() == 0) {
-        result.AppendError("No breakpoints specified, cannot add names.");
+        result.AppendError("no breakpoints specified, cannot add names");
         return;
       }
       size_t num_valid_ids = valid_bp_ids.GetSize();
@@ -3109,7 +3109,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (!m_name_options.m_name.OptionWasSet()) {
-      result.AppendError("No name option provided.");
+      result.AppendError("no name option provided");
       return;
     }
 
@@ -3123,7 +3123,7 @@ protected:
 
     size_t num_breakpoints = breakpoints.GetSize();
     if (num_breakpoints == 0) {
-      result.AppendError("No breakpoints, cannot delete names.");
+      result.AppendError("no breakpoints, cannot delete names");
       return;
     }
 
@@ -3135,7 +3135,7 @@ protected:
 
     if (result.Succeeded()) {
       if (valid_bp_ids.GetSize() == 0) {
-        result.AppendError("No breakpoints specified, cannot delete names.");
+        result.AppendError("no breakpoints specified, cannot delete names");
         return;
       }
       ConstString bp_name(m_name_options.m_name.GetCurrentValue());

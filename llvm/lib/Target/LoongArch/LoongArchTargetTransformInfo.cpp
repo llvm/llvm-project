@@ -100,6 +100,13 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   default:
     return true;
   case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_xor:
     return false;
   }
 }

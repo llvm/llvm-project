@@ -75,21 +75,22 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty())
     return nullptr;
-  std::unique_ptr<MLModelRunner> AOTRunner;
-  if (InteractiveChannelBaseName.empty())
-    AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), getFeatureMap(), DecisionName,
-        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
-  else {
-    auto Features = getFeatureMap();
-    if (InteractiveIncludeDefault)
-      Features.push_back(DefaultDecisionSpec);
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-        M.getContext(), Features, InlineDecisionSpec,
-        InteractiveChannelBaseName + ".out",
-        InteractiveChannelBaseName + ".in");
-  }
-  return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner),
+  auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
+      -> std::unique_ptr<MLModelRunner> {
+    std::unique_ptr<MLModelRunner> AOTRunner;
+    if (InteractiveChannelBaseName.empty())
+      AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+          M.getContext(), InputFeatures, DecisionName,
+          EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
+    else {
+      AOTRunner = std::make_unique<InteractiveModelRunner>(
+          M.getContext(), InputFeatures, InlineDecisionSpec,
+          InteractiveChannelBaseName + ".out",
+          InteractiveChannelBaseName + ".in");
+    }
+    return AOTRunner;
+  };
+  return std::make_unique<MLInlineAdvisor>(M, MAM, RunnerFactory,
                                            GetDefaultAdvice);
 }
 
@@ -107,7 +108,7 @@ static cl::opt<bool> KeepFPICache(
         "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache"),
     cl::init(false));
 
-std::vector<TensorSpec> &llvm::getFeatureMap() {
+const std::vector<TensorSpec> &MLInlineAdvisor::getInitialFeatureMap() {
   // clang-format off
 static std::vector<TensorSpec> FeatureMap{
 #define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
@@ -142,17 +143,17 @@ CallBase *getInlinableCS(Instruction &I) {
 
 MLInlineAdvisor::MLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
-    std::unique_ptr<MLModelRunner> Runner,
+    std::function<
+        std::unique_ptr<MLModelRunner>(const std::vector<TensorSpec> &)>
+        GetModelRunner,
     std::function<bool(CallBase &)> GetDefaultAdvice)
     : InlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-      ModelRunner(std::move(Runner)), GetDefaultAdvice(GetDefaultAdvice),
+      GetDefaultAdvice(GetDefaultAdvice), FeatureMap(getInitialFeatureMap()),
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
       UseIR2Vec(MAM.getCachedResult<IR2VecVocabAnalysis>(M) != nullptr),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize),
       PSI(MAM.getResult<ProfileSummaryAnalysis>(M)) {
-  assert(ModelRunner);
-  ModelRunner->switchContext("");
   // Extract the 'call site height' feature - the position of a call site
   // relative to the farthest statically reachable SCC node. We don't mutate
   // this value while inlining happens. Empirically, this feature proved
@@ -192,18 +193,27 @@ MLInlineAdvisor::MLInlineAdvisor(
   }
   NodeCount = AllNodes.size();
 
-  if (auto IR2VecVocabResult = MAM.getCachedResult<IR2VecVocabAnalysis>(M)) {
+  if (auto *IR2VecVocabResult = MAM.getCachedResult<IR2VecVocabAnalysis>(M)) {
     if (!IR2VecVocabResult->isValid()) {
       M.getContext().emitError("IR2VecVocabAnalysis is not valid");
       return;
     }
     // Add the IR2Vec features to the feature map
     auto IR2VecDim = IR2VecVocabResult->getDimension();
-    getFeatureMap().push_back(
+    FeatureMap.push_back(
         TensorSpec::createSpec<float>("callee_embedding", {IR2VecDim}));
-    getFeatureMap().push_back(
+    FeatureMap.push_back(
         TensorSpec::createSpec<float>("caller_embedding", {IR2VecDim}));
   }
+  if (InteractiveIncludeDefault)
+    FeatureMap.push_back(DefaultDecisionSpec);
+
+  ModelRunner = GetModelRunner(getFeatureMap());
+  if (!ModelRunner) {
+    M.getContext().emitError("Could not create model runner");
+    return;
+  }
+  ModelRunner->switchContext("");
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -475,7 +485,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(getFeatureMap().size()) =
+    *ModelRunner->getTensor<int64_t>(getFeatureMap().size() - 1) =
         GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
@@ -554,8 +564,8 @@ void MLInlineAdvice::reportContextForRemark(
     DiagnosticInfoOptimizationBase &OR) {
   using namespace ore;
   OR << NV("Callee", Callee->getName());
-  for (size_t I = 0; I < getFeatureMap().size(); ++I)
-    OR << NV(getFeatureMap()[I].name(),
+  for (size_t I = 0; I < getAdvisor()->getFeatureMap().size(); ++I)
+    OR << NV(getAdvisor()->getFeatureMap()[I].name(),
              *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());
 }

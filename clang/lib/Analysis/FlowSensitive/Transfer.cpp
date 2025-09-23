@@ -610,7 +610,15 @@ public:
       // Even if the copy/move constructor call is elidable, we choose to copy
       // the record in all cases (which isn't wrong, just potentially not
       // optimal).
-      copyRecord(*ArgLoc, Loc, Env);
+      //
+      // To handle cases of base class initializers in constructors, where a
+      // sibling derived class can be used to initialize a shared-base-class
+      // subobject through a DerivedToBase cast, intentionally copy only the
+      // parts of `ArgLoc` that are part of the base class being initialized.
+      // This is necessary because the type of `Loc` in these cases is the
+      // derived type ultimately being constructed, not the type of the base
+      // class subobject.
+      copyRecord(*ArgLoc, Loc, Env, S->getType());
       return;
     }
 

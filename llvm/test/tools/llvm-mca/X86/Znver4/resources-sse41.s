@@ -174,7 +174,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   movntdqa	(%rax), %xmm2
 # CHECK-NEXT:  4      4     2.00                        mpsadbw	$1, %xmm0, %xmm2
 # CHECK-NEXT:  6      11    2.00    *                   mpsadbw	$1, (%rax), %xmm2
-# CHECK-NEXT:  1      2     1.00                        packusdw	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        packusdw	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   packusdw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pblendvb	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   pblendvb	%xmm0, (%rax), %xmm2
@@ -279,7 +279,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     31.00  43.50  28.50  16.00  35.50  35.50  7.00   16.33  16.33  16.33  14.67  14.67  14.67  2.50   2.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     31.00  43.00  28.00  16.00  35.50  35.50  7.00   16.33  16.33  16.33  14.67  14.67  14.67  2.50   2.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -302,7 +302,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     movntdqa	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     mpsadbw	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00   2.00   2.00   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     mpsadbw	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     packusdw	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     packusdw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     packusdw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -     pblendvb	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     pblendvb	%xmm0, (%rax), %xmm2

@@ -1939,3 +1939,25 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
     defm vsm3me  : RVVOutOp1BuiltinSet<"vsm3me", "i", [["vv", "Uv", "UvUvUv"]]>;
   }
 }
+
+// Zvqdotq
+multiclass RVVVQDOTQBuiltinSet<list<list<string>> suffixes_prototypes> {
+  let UnMaskedPolicyScheme = HasPolicyOperand,
+      HasMaskedOffOperand = false,
+      OverloadedName = NAME,
+      Log2LMUL = [-1, 0, 1, 2, 3] in {
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "i", suffixes_prototypes>;
+  }
+}
+
+// Only SEW=32 is defined for zvqdotq so far, and since inputs are in fact four
+// 8-bit integer bundles, we use unsigned type to represent all of them
+let RequiredFeatures = ["zvqdotq"] in {
+  defm vqdot : RVVVQDOTQBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
+                                    ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
+  defm vqdotu : RVVVQDOTQBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
+                                     ["vx", "Uv", "UvUv(FixedSEW:8)UvUe"]]>;
+  defm vqdotsu : RVVVQDOTQBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
+                                      ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
+  defm vqdotus : RVVVQDOTQBuiltinSet<[["vx", "v", "vv(FixedSEW:8)UvUe"]]>;
+}

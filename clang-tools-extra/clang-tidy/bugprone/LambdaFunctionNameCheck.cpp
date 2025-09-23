@@ -1,4 +1,4 @@
-//===--- LambdaFunctionNameCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,8 +64,7 @@ AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
 LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(
-          Options.getLocalOrGlobal("IgnoreMacros", DefaultIgnoreMacros)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", DefaultIgnoreMacros)) {}
 
 void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

@@ -224,6 +224,7 @@ add_lldb_test_dependency(
   llvm-pdbutil
   llvm-readobj
   llvm-ar
+  yaml2macho-core
   )
 
 if(TARGET lld)
@@ -249,6 +250,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLVM_ENABLE_DIA_SDK
   LLDB_HAS_LIBCXX
   LLDB_TEST_SHELL_DISABLE_REMOTE
   LLDB_TOOL_LLDB_SERVER_BUILD

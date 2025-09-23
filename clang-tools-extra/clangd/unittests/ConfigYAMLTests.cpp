@@ -66,7 +66,6 @@ Index:
 Diagnostics:
   ClangTidy:
     CheckOptions:
-      IgnoreMacros: true
       example-check.ExampleOption: 0
   UnusedIncludes: Strict
   )yaml";
@@ -83,8 +82,7 @@ Diagnostics:
   ASSERT_TRUE(Results[2].Index.Background);
   EXPECT_EQ("Skip", **Results[2].Index.Background);
   EXPECT_THAT(Results[3].Diagnostics.ClangTidy.CheckOptions,
-              ElementsAre(PairVal("IgnoreMacros", "true"),
-                          PairVal("example-check.ExampleOption", "0")));
+              ElementsAre(PairVal("example-check.ExampleOption", "0")));
   EXPECT_TRUE(Results[3].Diagnostics.UnusedIncludes);
   EXPECT_EQ("Strict", **Results[3].Diagnostics.UnusedIncludes);
 }

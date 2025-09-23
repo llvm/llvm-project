@@ -57,7 +57,7 @@ define <8 x half> @minsh(<8 x half> %va, ptr %pb) {
 ; CHECK-LABEL: minsh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vminsh (%rdi), %xmm0, %xmm1
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
   %a = extractelement <8 x half> %va, i32 0
   %b = load half, ptr %pb
@@ -70,7 +70,7 @@ define <8 x half> @maxsh(<8 x half> %va, ptr %pb) {
 ; CHECK-LABEL: maxsh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vminsh (%rdi), %xmm0, %xmm1
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
   %a = extractelement <8 x half> %va, i32 0
   %b = load half, ptr %pb

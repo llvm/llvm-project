@@ -796,9 +796,10 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                        bool isSystem, bool isOverridden,
-                        bool isExplicitModule) override {
+    bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                   StringRef Filename, bool isSystem,
+                                   bool isOverridden,
+                                   bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
 
@@ -1309,16 +1310,27 @@ void HLSLFrontendAction::ExecuteAction() {
                   /*CodeCompleteConsumer=*/nullptr);
   Sema &S = CI.getSema();
 
+  auto &TargetInfo = CI.getASTContext().getTargetInfo();
+  bool IsRootSignatureTarget =
+      TargetInfo.getTriple().getEnvironment() == llvm::Triple::RootSignature;
+  StringRef HLSLEntry = TargetInfo.getTargetOpts().HLSLEntry;
+
   // Register HLSL specific callbacks
   auto LangOpts = CI.getLangOpts();
+  StringRef RootSigName =
+      IsRootSignatureTarget ? HLSLEntry : LangOpts.HLSLRootSigOverride;
+
   auto MacroCallback = std::make_unique<InjectRootSignatureCallback>(
-      S, LangOpts.HLSLRootSigOverride, LangOpts.HLSLRootSigVer);
+      S, RootSigName, LangOpts.HLSLRootSigVer);
 
   Preprocessor &PP = CI.getPreprocessor();
   PP.addPPCallbacks(std::move(MacroCallback));
 
-  // Invoke as normal
-  WrapperFrontendAction::ExecuteAction();
+  // If we are targeting a root signature, invoke custom handling
+  if (IsRootSignatureTarget)
+    return hlsl::HandleRootSignatureTarget(S, HLSLEntry);
+  else // otherwise, invoke as normal
+    return WrapperFrontendAction::ExecuteAction();
 }
 
 HLSLFrontendAction::HLSLFrontendAction(
