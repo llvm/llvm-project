@@ -32,7 +32,7 @@ struct StructuredOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           StructuredOpInterface<T>, T> {
   void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+                                   Location loc, unsigned verboseLevel) const {
     auto linalgOp = llvm::cast<LinalgOp>(op);
 
     SmallVector<Range> loopRanges = linalgOp.createLoopRanges(builder, loc);
@@ -73,7 +73,8 @@ struct StructuredOpInterface
         auto msg = RuntimeVerifiableOpInterface::generateErrorMessage(
             linalgOp, "unexpected negative result on dimension #" +
                           std::to_string(dim) + " of input/output operand #" +
-                          std::to_string(opOperand.getOperandNumber()));
+                          std::to_string(opOperand.getOperandNumber()),
+            verboseLevel);
         builder.createOrFold<cf::AssertOp>(loc, cmpOp, msg);
 
         // Generate:
@@ -104,7 +105,8 @@ struct StructuredOpInterface
             linalgOp, "dimension #" + std::to_string(dim) +
                           " of input/output operand #" +
                           std::to_string(opOperand.getOperandNumber()) +
-                          " is incompatible with inferred dimension size");
+                          " is incompatible with inferred dimension size",
+            verboseLevel);
         builder.createOrFold<cf::AssertOp>(loc, cmpOp, msg);
       }
     }

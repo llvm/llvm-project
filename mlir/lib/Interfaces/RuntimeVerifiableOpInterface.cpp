@@ -15,7 +15,7 @@ class OpBuilder;
 /// Generate an error message string for the given op and the specified error.
 std::string
 RuntimeVerifiableOpInterface::generateErrorMessage(Operation *op,
-                                                   const std::string &msg) {
+                                                   const std::string &msg, unsigned verboseLevel) {
   std::string buffer;
   llvm::raw_string_ostream stream(buffer);
   OpPrintingFlags flags;
@@ -26,9 +26,25 @@ RuntimeVerifiableOpInterface::generateErrorMessage(Operation *op,
   flags.skipRegions();
   flags.useLocalScope();
   stream << "ERROR: Runtime op verification failed\n";
-  op->print(stream, flags);
-  stream << "\n^ " << msg;
-  stream << "\nLocation: ";
+  if (verboseLevel == 2){
+    // print full op including operand names, very expensive
+    op->print(stream, flags);
+  stream << "\n " << msg;
+  }else if (verboseLevel == 1){
+    // print op name and operand types
+    stream << "Op: " << op->getName().getStringRef() << "\n";
+    stream << "Operand Types:";
+    for (const auto &operand : op->getOpOperands()) {
+      stream << " " << operand.get().getType();
+    }
+    stream << "\n" << msg;
+    stream << "Result Types:";
+    for (const auto &result : op->getResults()) {
+      stream << " " << result.getType();
+    }
+    stream << "\n" << msg;
+  }
+  stream << "^\nLocation: ";
   op->getLoc().print(stream);
   return buffer;
 }

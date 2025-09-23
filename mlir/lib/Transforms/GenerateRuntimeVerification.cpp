@@ -28,6 +28,14 @@ struct GenerateRuntimeVerificationPass
 } // namespace
 
 void GenerateRuntimeVerificationPass::runOnOperation() {
+  // Check verboseLevel is in range [0, 2].
+  if (verboseLevel > 2) {
+    getOperation()->emitError(
+      "generate-runtime-verification pass: set verboseLevel to 0, 1 or 2");
+    signalPassFailure();
+    return;
+  }
+
   // The implementation of the RuntimeVerifiableOpInterface may create ops that
   // can be verified. We don't want to generate verification for IR that
   // performs verification, so gather all runtime-verifiable ops first.
@@ -39,7 +47,8 @@ void GenerateRuntimeVerificationPass::runOnOperation() {
   OpBuilder builder(getOperation()->getContext());
   for (RuntimeVerifiableOpInterface verifiableOp : ops) {
     builder.setInsertionPoint(verifiableOp);
-    verifiableOp.generateRuntimeVerification(builder, verifiableOp.getLoc());
+    verifiableOp.generateRuntimeVerification(builder, verifiableOp.getLoc(),
+                                           verboseLevel);
   };
 }
 
