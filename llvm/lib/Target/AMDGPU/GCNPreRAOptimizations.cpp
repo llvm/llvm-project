@@ -34,7 +34,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -44,11 +43,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
 
-static cl::opt<bool> EnableRegisterAvoidListForMFMARegs(
-    "amdgpu-avoid-hazard-hint-for-mfma", cl::Hidden,
-    cl::desc("Enable Register Avoidance for "
-             "MFMA in GCNPreRAOptimizations stage."),
-    cl::init(true));
+static cl::opt<bool>
+    EnableAntiHintsForMFMARegs("amdgpu-anti-hints-for-mfma", cl::Hidden,
+                               cl::desc("Enable Anti-Hints for "
+                                        "MFMA in GCNPreRAOptimizations stage."),
+                               cl::init(true));
 
 namespace {
 
@@ -256,10 +255,9 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   // Single pass implementation
-  if (EnableRegisterAvoidListForMFMARegs && ST.hasMAIInsts()) {
+  if (EnableAntiHintsForMFMARegs && ST.hasMAIInsts()) {
     // Max lookback window for RAW or WAW hazard
     constexpr unsigned MaxLookbackWindow = 19;
-    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     for (const MachineBasicBlock &MBB : MF) {
 
       SmallVector<std::pair<SlotIndex, SmallVector<Register, 4>>, 16>
