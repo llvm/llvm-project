@@ -1369,7 +1369,8 @@ bool SemaHLSL::handleRootSignatureElements(
              "Number of unbound elements must match the number of clauses");
       bool HasAnySampler = false;
       bool HasAnyNonSampler = false;
-      uint32_t Offset = 0;
+      uint64_t Offset = 0;
+      bool IsPrevUnbound = false;
       for (const auto &[Clause, ClauseElem] : UnboundClauses) {
         SourceLocation Loc = ClauseElem->getLocation();
         if (Clause->Type == llvm::dxil::ResourceClass::Sampler)
@@ -1386,32 +1387,28 @@ bool SemaHLSL::handleRootSignatureElements(
         if (Clause->NumDescriptors == 0)
           return true;
 
-        if (Clause->Offset !=
-            llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
-          // Manually specified the offset
+        bool IsAppending =
+            Clause->Offset == llvm::hlsl::rootsig::DescriptorTableOffsetAppend;
+        if (!IsAppending)
           Offset = Clause->Offset;
-        }
 
         uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
             Offset, Clause->NumDescriptors);
 
-        if (!llvm::hlsl::rootsig::verifyBoundOffset(Offset)) {
-          // Trying to append onto unbound offset
+        if (IsPrevUnbound && IsAppending)
           Diag(Loc, diag::err_hlsl_appending_onto_unbound);
-        } else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound)) {
-          // Upper bound overflows maximum offset
+        else if (!llvm::hlsl::rootsig::verifyNoOverflowedOffset(RangeBound))
           Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
-        }
 
-        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
-                     ? uint32_t(RangeBound)
-                     : uint32_t(RangeBound + 1);
+        // Update offset to be 1 past this range's bound
+        Offset = RangeBound + 1;
+        IsPrevUnbound = Clause->NumDescriptors ==
+                        llvm::hlsl::rootsig::NumDescriptorsUnbounded;
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
-        uint32_t UpperBound = Clause->NumDescriptors == ~0u
-                                  ? ~0u
-                                  : LowerBound + Clause->NumDescriptors - 1;
+        uint32_t UpperBound = llvm::hlsl::rootsig::computeRangeBound(
+            LowerBound, Clause->NumDescriptors);
 
         BindingChecker.trackBinding(
             Table->Visibility,

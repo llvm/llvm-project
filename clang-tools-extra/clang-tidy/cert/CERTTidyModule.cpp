@@ -17,6 +17,7 @@
 #include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
+#include "../bugprone/ThrowingStaticInitializationCheck.h"
 #include "../bugprone/UncheckedStringToNumberConversionCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
@@ -27,6 +28,8 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidSetjmpLongjmpCheck.h"
+#include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
@@ -38,16 +41,13 @@
 #include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
-#include "SetLongJmpCheck.h"
-#include "StaticObjectExceptionCheck.h"
 #include "ThrownExceptionTypeCheck.h"
-#include "VariadicFunctionDefCheck.h"
 
 namespace {
 
 // Checked functions for cert-err33-c.
-// The following functions are deliberately excluded because they can be called
-// with NULL argument and in this case the check is not applicable:
+// The following functions are deliberately excluded because they can be
+// called with NULL argument and in this case the check is not applicable:
 // `mblen, mbrlen, mbrtowc, mbtowc, wctomb, wctomb_s`.
 // FIXME: The check can be improved to handle such cases.
 const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
@@ -245,7 +245,8 @@ public:
         .registerCheck<bugprone::PointerArithmeticOnPolymorphicObjectCheck>(
             "cert-ctr56-cpp");
     // DCL
-    CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
+    CheckFactories.registerCheck<modernize::AvoidVariadicFunctionsCheck>(
+        "cert-dcl50-cpp");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
@@ -256,8 +257,10 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
-    CheckFactories.registerCheck<StaticObjectExceptionCheck>("cert-err58-cpp");
+    CheckFactories.registerCheck<modernize::AvoidSetjmpLongjmpCheck>(
+        "cert-err52-cpp");
+    CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
+        "cert-err58-cpp");
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");

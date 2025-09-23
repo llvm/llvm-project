@@ -231,7 +231,6 @@ protected:
 
   // The pointers to call/move/destroy functions are determined for each
   // callable type (and called-as type, which determines the overload chosen).
-  // (definitions are out-of-line).
 
   // By default, we need an object that contains all the different
   // type erased behaviors needed. Create a static instance of the struct type
@@ -239,14 +238,15 @@ protected:
   // Wrap in a struct to avoid https://gcc.gnu.org/PR71954
   template <typename CallableT, typename CalledAs, typename Enable = void>
   struct CallbacksHolder {
-    static NonTrivialCallbacks Callbacks;
+    inline static NonTrivialCallbacks Callbacks = {
+        &CallImpl<CalledAs>, &MoveImpl<CallableT>, &DestroyImpl<CallableT>};
   };
   // See if we can create a trivial callback. We need the callable to be
   // trivially moved and trivially destroyed so that we don't have to store
   // type erased callbacks for those operations.
   template <typename CallableT, typename CalledAs>
   struct CallbacksHolder<CallableT, CalledAs, EnableIfTrivial<CallableT>> {
-    static TrivialCallback Callbacks;
+    inline static TrivialCallback Callbacks = {&CallImpl<CalledAs>};
   };
 
   // A simple tag type so the call-as type to be passed to the constructor.
@@ -343,19 +343,6 @@ public:
     return (bool)CallbackAndInlineFlag.getPointer();
   }
 };
-
-template <typename R, typename... P>
-template <typename CallableT, typename CalledAsT, typename Enable>
-typename UniqueFunctionBase<R, P...>::NonTrivialCallbacks UniqueFunctionBase<
-    R, P...>::CallbacksHolder<CallableT, CalledAsT, Enable>::Callbacks = {
-    &CallImpl<CalledAsT>, &MoveImpl<CallableT>, &DestroyImpl<CallableT>};
-
-template <typename R, typename... P>
-template <typename CallableT, typename CalledAsT>
-typename UniqueFunctionBase<R, P...>::TrivialCallback
-    UniqueFunctionBase<R, P...>::CallbacksHolder<
-        CallableT, CalledAsT, EnableIfTrivial<CallableT>>::Callbacks{
-        &CallImpl<CalledAsT>};
 
 } // namespace detail
 

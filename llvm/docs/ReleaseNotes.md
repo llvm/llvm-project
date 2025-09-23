@@ -126,6 +126,7 @@ Changes to the RISC-V Backend
 * Add support for Zvfbfa (Additional BF16 vector compute support)
 * Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
 * Add support for Zvfofp8min (OFP8 conversion extension)
+* Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------

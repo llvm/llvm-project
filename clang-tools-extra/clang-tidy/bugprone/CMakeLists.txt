@@ -90,6 +90,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
+  ThrowingStaticInitializationCheck.cpp
   TooSmallLoopVariableCheck.cpp
   UncheckedOptionalAccessCheck.cpp
   UncheckedStringToNumberConversionCheck.cpp

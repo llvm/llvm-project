@@ -16,7 +16,7 @@ namespace clang::tidy::abseil {
 // Find potential incorrect uses of integer division of absl::Duration objects.
 //
 // For the user-facing documentation see:
-// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-division.html
+// https://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-division.html
 
 class DurationDivisionCheck : public ClangTidyCheck {
 public:

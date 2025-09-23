@@ -316,6 +316,14 @@ static void addOneOperandFields(const Record *EncodingDef,
     else
       OpInfo.addField(I, J - I, Offset);
   }
+
+  if (!OpInfo.InitValue && OpInfo.fields().empty()) {
+    // We found a field in InstructionEncoding record that corresponds to the
+    // named operand, but that field has no constant bits and doesn't contribute
+    // to the Inst field. For now, treat that field as if it didn't exist.
+    // TODO: Remove along with IgnoreNonDecodableOperands.
+    OpInfo.HasNoEncoding = true;
+  }
 }
 
 void InstructionEncoding::parseFixedLenOperands(const BitsInit &Bits) {

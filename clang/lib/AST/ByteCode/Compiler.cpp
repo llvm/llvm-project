@@ -1787,7 +1787,12 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     return false;
   if (DiscardResult)
     return this->emitPopPtr(E);
-  return true;
+
+  if (E->isGLValue())
+    return true;
+
+  OptPrimType T = classifyPrim(E);
+  return this->emitLoadPop(*T, E);
 }
 
 template <class Emitter>
@@ -2378,13 +2383,8 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->visitDeclRef(Member, E);
   }
 
-  if (Initializing) {
-    if (!this->delegate(Base))
-      return false;
-  } else {
-    if (!this->visit(Base))
-      return false;
-  }
+  if (!this->visit(Base))
+    return false;
 
   // Base above gives us a pointer on the stack.
   const auto *FD = cast<FieldDecl>(Member);
