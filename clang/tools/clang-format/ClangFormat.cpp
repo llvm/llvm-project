@@ -131,9 +131,10 @@ static cl::opt<std::string> Files(
     cl::desc("A file containing a list of files to process, one per line."),
     cl::value_desc("filename"), cl::init(""), cl::cat(ClangFormatCategory));
 
-static cl::opt<bool> Recursive("r",
-                             cl::desc("Recursively format files in any specified directories"),
-                             cl::cat(ClangFormatCategory));
+static cl::opt<bool>
+    Recursive("r",
+              cl::desc("Recursively format files in any specified directories"),
+              cl::cat(ClangFormatCategory));
 
 static cl::opt<bool>
     Verbose("verbose", cl::desc("If set, shows the list of processed files"),
