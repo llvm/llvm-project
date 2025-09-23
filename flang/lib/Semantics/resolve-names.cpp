@@ -1518,9 +1518,7 @@ public:
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
-    ProcessMapperSpecifier(std::get<parser::OmpMapperSpecifier>(x.t),
-        std::get<parser::OmpClauseList>(x.t));
-    return false;
+    return true;
   }
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
@@ -1693,6 +1691,11 @@ public:
     if (NeedsScope(x)) {
       PopScope();
     }
+  }
+  bool Pre(const parser::OmpMapperSpecifier &x) {
+    // OmpMapperSpecifier is handled explicitly, and the AST traversal
+    // should not reach a point where it calls this function.
+    llvm_unreachable("This function should not be reached by AST traversal");
   }
   bool Pre(const parser::OmpDirectiveSpecification &x);
   void Post(const parser::OmpDirectiveSpecification &) {

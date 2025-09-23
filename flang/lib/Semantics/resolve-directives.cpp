@@ -2346,7 +2346,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
-  PushContext(x.source, llvm::omp::Directive::OMPD_declare_mapper);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContext(dirName.source, dirName.v);
   return true;
 }
 

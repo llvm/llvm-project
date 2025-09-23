@@ -330,3 +330,19 @@
            vucmprhh 1, 3, 6
 #CHECK-BE: vucmprhh 1, 3, 6               # encoding: [0x10,0x23,0x31,0x03]
 #CHECK-LE: vucmprhh 1, 3, 6               # encoding: [0x03,0x31,0x23,0x10]
+
+           xxaes192encp 8, 10, 14
+#CHECK-BE: xxaes192encp 8, 10, 14         # encoding: [0xf1,0x0b,0x76,0x10]
+#CHECK-LE: xxaes192encp 8, 10, 14         # encoding: [0x10,0x76,0x0b,0xf1]
+
+           xxaes256decp 14, 10, 6
+#CHECK-BE: xxaes256decp 14, 10, 6         # encoding: [0xf1,0xca,0x3e,0x50]
+#CHECK-LE: xxaes256decp 14, 10, 6         # encoding: [0x50,0x3e,0xca,0xf1]
+
+           xxaes128genlkp 4, 8
+#CHECK-BE: xxaes128genlkp 4, 8            # encoding: [0xf0,0x80,0x46,0x90]
+#CHECK-LE: xxaes128genlkp 4, 8            # encoding: [0x90,0x46,0x80,0xf0]
+
+           xxgfmul128gcm 7, 5, 4
+#CHECK-BE: xxgfmul128gcm 7, 5, 4          # encoding: [0xf0,0xe5,0x26,0xd0]
+#CHECK-LE: xxgfmul128gcm 7, 5, 4          # encoding: [0xd0,0x26,0xe5,0xf0]

@@ -41,7 +41,6 @@ struct ConstructId {
 MAKE_CONSTR_ID(OmpDeclareVariantDirective, D::OMPD_declare_variant);
 MAKE_CONSTR_ID(OpenMPDeclarativeAllocate, D::OMPD_allocate);
 MAKE_CONSTR_ID(OpenMPDeclarativeAssumes, D::OMPD_assumes);
-MAKE_CONSTR_ID(OpenMPDeclareMapperConstruct, D::OMPD_declare_mapper);
 MAKE_CONSTR_ID(OpenMPDeclareReductionConstruct, D::OMPD_declare_reduction);
 MAKE_CONSTR_ID(OpenMPDeclareSimdConstruct, D::OMPD_declare_simd);
 MAKE_CONSTR_ID(OpenMPDeclareTargetConstruct, D::OMPD_declare_target);
@@ -96,7 +95,6 @@ struct DirectiveNameScope {
       } else if constexpr (std::is_same_v<T, OmpDeclareVariantDirective> ||
           std::is_same_v<T, OpenMPDeclarativeAllocate> ||
           std::is_same_v<T, OpenMPDeclarativeAssumes> ||
-          std::is_same_v<T, OpenMPDeclareMapperConstruct> ||
           std::is_same_v<T, OpenMPDeclareReductionConstruct> ||
           std::is_same_v<T, OpenMPDeclareSimdConstruct> ||
           std::is_same_v<T, OpenMPDeclareTargetConstruct> ||

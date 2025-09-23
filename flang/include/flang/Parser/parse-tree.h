@@ -4953,9 +4953,9 @@ struct OpenMPDeclareTargetConstruct {
 // OMP v5.2: 5.8.8
 //  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
 struct OpenMPDeclareMapperConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareMapperConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpMapperSpecifier, OmpClauseList> t;
 };
 
 // ref: 5.2: Section 5.5.11 139-141
