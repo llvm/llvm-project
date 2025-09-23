@@ -219,7 +219,7 @@ static MachineInstr *findStartOfTree(MachineOperand &MO,
 // FAKE_USEs are no-ops, so remove them here so that the values used by them
 // will be correctly dropped later.
 static void removeFakeUses(MachineFunction &MF) {
-  SmallVector<MachineInstr*> ToDelete;
+  SmallVector<MachineInstr *> ToDelete;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
       if (MI.isFakeUse())
