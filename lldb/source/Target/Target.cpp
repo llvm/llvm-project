@@ -3171,7 +3171,13 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   bool should_stop = false;
   bool requested_continue = false;
 
-  for (auto stop_entry : m_stop_hooks) {
+  // A stop hook might get deleted while running stop hooks.  
+  // We have to decide what that means.  We will follow the rule that deleting
+  // a stop hook while processing these stop hooks will delete it for FUTURE
+  // stops but not this stop.  The easiest way to do that is to copy the
+  // stop hooks and iterate over the copy.
+  StopHookCollection stop_hooks_copy = m_stop_hooks;
+  for (auto stop_entry : stop_hooks_copy) {
     StopHookSP cur_hook_sp = stop_entry.second;
     if (!cur_hook_sp->IsActive())
       continue;
