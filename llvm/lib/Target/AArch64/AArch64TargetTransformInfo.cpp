@@ -2014,6 +2014,34 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   else
     SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
 
+  // If both operands are convert.to.svbool from the same narrower predicate
+  // type, try to simplify the operation at that narrower type. This is valid
+  // because the conversions zero the lanes not represented by the narrower
+  // type, so those lanes of the result are zero either way.
+  Value *NarrowOp1, *NarrowOp2;
+  if (!SimpleII &&
+      match(Op1, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                     m_Value(NarrowOp1))) &&
+      match(Op2, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                     m_Value(NarrowOp2))) &&
+      NarrowOp1->getType() == NarrowOp2->getType() &&
+      NarrowOp1->getType()->isScalableTy() &&
+      NarrowOp1->getType()->isIntOrIntVectorTy(1)) {
+    Value *SimpleNarrow = simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL);
+    if (SimpleNarrow && !isa<UndefValue>(SimpleNarrow)) {
+      if (match(SimpleNarrow, m_ZeroInt()))
+        SimpleII = Constant::getNullValue(II.getType());
+      else if (SimpleNarrow == NarrowOp1)
+        SimpleII = Op1;
+      else if (SimpleNarrow == NarrowOp2)
+        SimpleII = Op2;
+      else
+        SimpleII = IC.Builder.CreateIntrinsic(
+            Intrinsic::aarch64_sve_convert_to_svbool, {SimpleNarrow->getType()},
+            {SimpleNarrow});
+    }
+  }
+
   // An SVE intrinsic's result is always defined. However, this is not the case
   // for its equivalent IR instruction (e.g. when shifting by an amount more
   // than the data's bitwidth). Simplifications to an undefined result must be
