@@ -427,6 +427,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(UseX87 && !Is64Bit, {s64})
       .lower();
 
+  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX}).lower();
+
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor(HasSSE1 || UseX87, {s8, s32})
