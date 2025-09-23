@@ -39,6 +39,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmlsl_d
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_pmull_64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_pmull_high_64
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_commutable_pmull_64
 
 define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull8h:

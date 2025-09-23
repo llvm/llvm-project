@@ -1177,7 +1177,7 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   /*immArgPositions=*/[0], /*immArgAttrNames=*/["failureKind"]> {
   let arguments = (ins I8Attr:$failureKind);
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 /// Create a call to vscale intrinsic.

@@ -362,16 +362,14 @@ multiclass SiFive7WriteResBase<int VLEN,
   def : WriteRes<WriteFST64, [PipeA]>;
 
   let Latency = 3 in {
-  def : WriteRes<WriteLDB, [PipeA]>;
-  def : WriteRes<WriteLDH, [PipeA]>;
-  def : WriteRes<WriteLDW, [PipeA]>;
-  def : WriteRes<WriteLDD, [PipeA]>;
-  }
+    def : WriteRes<WriteLDB, [PipeA]>;
+    def : WriteRes<WriteLDH, [PipeA]>;
+    def : WriteRes<WriteLDW, [PipeA]>;
+    def : WriteRes<WriteLDD, [PipeA]>;
 
-  let Latency = 2 in {
-  def : WriteRes<WriteFLD16, [PipeA]>;
-  def : WriteRes<WriteFLD32, [PipeA]>;
-  def : WriteRes<WriteFLD64, [PipeA]>;
+    def : WriteRes<WriteFLD16, [PipeA]>;
+    def : WriteRes<WriteFLD32, [PipeA]>;
+    def : WriteRes<WriteFLD64, [PipeA]>;
   }
 
   // Atomic memory
@@ -694,8 +692,11 @@ multiclass SiFive7WriteResBase<int VLEN,
 
   foreach mx = SchedMxList in {
     foreach sew = SchedSEWSet<mx>.val in {
-      defvar Cycles = !mul(SiFive7GetDivOrSqrtFactor<sew>.c,
-                           !div(SiFive7GetCyclesOnePerElement<mx, sew, VLEN>.c, 4));
+      // One bit at a time, but up to four elements can be processed at a time.
+      // Add 3 to number of elements to ensure the group formed by remainder
+      // elements are accounted for.
+      defvar Cycles =
+          !mul(sew, !div(!add(3, SiFive7GetCyclesOnePerElement<mx, sew, VLEN>.c), 4));
       defvar IsWorstCase = SiFive7IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
       let Latency = Cycles, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
         defm : LMULSEWWriteResMXSEW<"WriteVIDivV", [VCQ, VA1], mx, sew, IsWorstCase>;

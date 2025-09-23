@@ -3858,30 +3858,22 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPSectionsConstruct &sectionsConstruct) {
-  const auto &beginSectionsDirective =
-      std::get<parser::OmpBeginSectionsDirective>(sectionsConstruct.t);
-  List<Clause> clauses = makeClauses(
-      std::get<parser::OmpClauseList>(beginSectionsDirective.t), semaCtx);
-  const auto &endSectionsDirective =
-      std::get<std::optional<parser::OmpEndSectionsDirective>>(
-          sectionsConstruct.t);
-  assert(endSectionsDirective &&
+                   const parser::OpenMPSectionsConstruct &construct) {
+  const parser::OmpDirectiveSpecification &beginSpec{construct.BeginDir()};
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  const auto &endSpec{construct.EndDir()};
+  assert(endSpec &&
          "Missing end section directive should have been handled in semantics");
-  clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endSectionsDirective->t), semaCtx));
+  clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  llvm::omp::Directive directive =
-      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).v;
-  const parser::CharBlock &source =
-      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).source;
+  const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, source, directive, clauses)};
+                          eval, beginName.source, beginName.v, clauses)};
 
   mlir::SaveStateStack<SectionsConstructStackFrame> saveStateStack{
-      converter.getStateStack(), sectionsConstruct};
+      converter.getStateStack(), construct};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }

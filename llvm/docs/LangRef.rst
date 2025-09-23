@@ -1022,13 +1022,14 @@ On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
 Mach-O platforms, they are lowered in terms of ``.symbol_resolver`` functions,
 which lazily resolve the callee the first time they are called.
 
-IFunc may have an optional :ref:`linkage type <linkage>` and an optional
-:ref:`visibility style <visibility>`.
+IFunc may have an optional :ref:`linkage type <linkage>`, an optional
+:ref:`visibility style <visibility>`, an option partition, and an optional
+list of attached :ref:`metadata <metadata>`.
 
 Syntax::
 
     @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
-              [, partition "name"]
+              [, partition "name"] (, !name !N)*
 
 
 .. _langref_comdats:

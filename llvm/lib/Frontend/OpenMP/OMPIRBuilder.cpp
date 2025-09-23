@@ -3507,6 +3507,8 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
         return AfterIP.takeError();
       if (!Builder.GetInsertBlock())
         return ReductionFunc;
+
+      Builder.restoreIP(*AfterIP);
       Builder.CreateStore(Reduced, LHSPtr);
     }
   }
@@ -3751,6 +3753,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
           RI.ReductionGen(Builder.saveIP(), RHSValue, LHSValue, Reduced);
       if (!AfterIP)
         return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
       Builder.CreateStore(Reduced, LHS, false);
     }
   }
