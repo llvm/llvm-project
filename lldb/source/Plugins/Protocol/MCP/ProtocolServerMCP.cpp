@@ -116,7 +116,7 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   m_running = true;
   m_server_info_handle = std::move(*server_info_handle);
   m_accept_handles = std::move(*handles);
-  m_loop_thread = std::thread([=] {
+  m_loop_thread = std::thread([this] {
     llvm::set_thread_name("protocol-server.mcp");
     m_loop.Run();
   });

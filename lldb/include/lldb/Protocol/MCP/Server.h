@@ -43,7 +43,7 @@ public:
   llvm::Error Accept(lldb_private::MainLoop &, MCPTransportUP);
 
 protected:
-  MCPTransport::BinderUP Bind(MCPTransport &);
+  MCPBinderUP Bind(MCPTransport &);
 
   ServerCapabilities GetCapabilities();
 
@@ -72,7 +72,7 @@ private:
   struct Client {
     ReadHandleUP handle;
     MCPTransportUP transport;
-    MCPTransport::BinderUP binder;
+    MCPBinderUP binder;
   };
   std::map<MCPTransport *, Client> m_instances;
 

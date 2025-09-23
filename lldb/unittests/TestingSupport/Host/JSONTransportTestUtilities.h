@@ -21,20 +21,19 @@
 #include <memory>
 #include <utility>
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 class TestTransport final
-    : public lldb_private::transport::JSONTransport<Id, Req, Resp, Evt> {
+    : public lldb_private::transport::JSONTransport<Proto> {
 public:
   using MessageHandler =
-      typename lldb_private::transport::JSONTransport<Id, Req, Resp,
-                                                      Evt>::MessageHandler;
+      typename lldb_private::transport::JSONTransport<Proto>::MessageHandler;
 
-  static std::pair<std::unique_ptr<TestTransport<Id, Req, Resp, Evt>>,
-                   std::unique_ptr<TestTransport<Id, Req, Resp, Evt>>>
+  static std::pair<std::unique_ptr<TestTransport<Proto>>,
+                   std::unique_ptr<TestTransport<Proto>>>
   createPair() {
-    std::unique_ptr<TestTransport<Id, Req, Resp, Evt>> transports[2] = {
-        std::make_unique<TestTransport<Id, Req, Resp, Evt>>(),
-        std::make_unique<TestTransport<Id, Req, Resp, Evt>>()};
+    std::unique_ptr<TestTransport<Proto>> transports[2] = {
+        std::make_unique<TestTransport<Proto>>(),
+        std::make_unique<TestTransport<Proto>>()};
     return std::make_pair(std::move(transports[0]), std::move(transports[1]));
   }
 
@@ -47,7 +46,7 @@ public:
     m_dummy_file = std::move(*dummy_file);
   }
 
-  llvm::Error Send(const Evt &evt) override {
+  llvm::Error Send(const Proto::Evt &evt) override {
     EXPECT_TRUE(m_loop && m_handler)
         << "Send called before RegisterMessageHandler";
     m_loop->AddPendingCallback([this, evt](lldb_private::MainLoopBase &) {
@@ -56,7 +55,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error Send(const Req &req) override {
+  llvm::Error Send(const Proto::Req &req) override {
     EXPECT_TRUE(m_loop && m_handler)
         << "Send called before RegisterMessageHandler";
     m_loop->AddPendingCallback([this, req](lldb_private::MainLoopBase &) {
@@ -65,7 +64,7 @@ public:
     return llvm::Error::success();
   }
 
-  llvm::Error Send(const Resp &resp) override {
+  llvm::Error Send(const Proto::Resp &resp) override {
     EXPECT_TRUE(m_loop && m_handler)
         << "Send called before RegisterMessageHandler";
     m_loop->AddPendingCallback([this, resp](lldb_private::MainLoopBase &) {
@@ -99,14 +98,13 @@ private:
   lldb::FileSP m_dummy_file = nullptr;
 };
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 class MockMessageHandler final
-    : public lldb_private::transport::JSONTransport<Id, Req, Resp,
-                                                    Evt>::MessageHandler {
+    : public lldb_private::transport::JSONTransport<Proto>::MessageHandler {
 public:
-  MOCK_METHOD(void, Received, (const Req &), (override));
-  MOCK_METHOD(void, Received, (const Resp &), (override));
-  MOCK_METHOD(void, Received, (const Evt &), (override));
+  MOCK_METHOD(void, Received, (const typename Proto::Req &), (override));
+  MOCK_METHOD(void, Received, (const typename Proto::Resp &), (override));
+  MOCK_METHOD(void, Received, (const typename Proto::Evt &), (override));
   MOCK_METHOD(void, OnError, (llvm::Error), (override));
   MOCK_METHOD(void, OnClosed, (), (override));
 };

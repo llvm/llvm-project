@@ -11,6 +11,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "Transport.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
@@ -47,9 +48,7 @@ inline void PrintTo(const Message &message, std::ostream *os) {
 
 namespace lldb_dap_tests {
 
-using TestDAPTransport =
-    TestTransport<int64_t, lldb_dap::protocol::Request,
-                  lldb_dap::protocol::Response, lldb_dap::protocol::Event>;
+using TestDAPTransport = TestTransport<lldb_dap::ProtocolDescriptor>;
 
 /// A base class for tests that need transport configured for communicating DAP
 /// messages.
@@ -63,9 +62,7 @@ protected:
   std::unique_ptr<lldb_dap::Log> log;
 
   std::unique_ptr<TestDAPTransport> to_client;
-  MockMessageHandler<int64_t, lldb_dap::protocol::Request,
-                     lldb_dap::protocol::Response, lldb_dap::protocol::Event>
-      client;
+  MockMessageHandler<lldb_dap::ProtocolDescriptor> client;
 
   std::unique_ptr<TestDAPTransport> to_server;
   std::unique_ptr<lldb_dap::DAP> dap;

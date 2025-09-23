@@ -71,7 +71,11 @@ public:
   std::error_code convertToErrorCode() const override;
 
 private:
+  /// The JSONRPC remote method call.
   std::string m_method;
+
+  /// Additional context from the parsing failure, e.g. "missing value at
+  /// (root)[1].str".
   std::string m_context;
 };
 
@@ -91,19 +95,32 @@ private:
   std::string m_method;
 };
 
+// FIXME: Once we upgrade to c++20, use this concept for JSONTransport.
+// template <typename T>
+// concept ProtocolDescriptor = requires {
+//   typename T::Id;
+//   typename T::Req;
+//   typename T::Resp;
+//   typename T::Evt;
+// };
+
 /// A transport is responsible for maintaining the connection to a client
 /// application, and reading/writing structured messages to it.
 ///
 /// JSONTransport have limited thread safety requirements:
 ///  - Messages will not be sent concurrently.
 ///  - Messages MAY be sent while Run() is reading, or its callback is active.
-template <typename Id, typename Req, typename Resp, typename Evt>
-class JSONTransport {
+///
+/// FIXME: Once we upgrade to c++20, use template <ProtocolDescriptor Proto>
+template <typename Proto> class JSONTransport {
 public:
+  using Req = typename Proto::Req;
+  using Resp = typename Proto::Resp;
+  using Evt = typename Proto::Evt;
   using Message = std::variant<Req, Resp, Evt>;
 
-  class Binder;
-  using BinderUP = std::unique_ptr<Binder>;
+  // class Binder;
+  // using BinderUP = std::unique_ptr<Binder>;
 
   virtual ~JSONTransport() = default;
 
@@ -152,19 +169,17 @@ protected:
 };
 
 /// An IOTransport sends and receives messages using an IOObject.
-template <typename Id, typename Req, typename Resp, typename Evt>
-class IOTransport : public JSONTransport<Id, Req, Resp, Evt> {
+template <typename Proto> class IOTransport : public JSONTransport<Proto> {
 public:
-  using Message = typename JSONTransport<Id, Req, Resp, Evt>::Message;
-  using MessageHandler =
-      typename JSONTransport<Id, Req, Resp, Evt>::MessageHandler;
+  using Message = typename JSONTransport<Proto>::Message;
+  using MessageHandler = typename JSONTransport<Proto>::MessageHandler;
 
   IOTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
       : m_in(in), m_out(out) {}
 
-  llvm::Error Send(const Evt &evt) override { return Write(evt); }
-  llvm::Error Send(const Req &req) override { return Write(req); }
-  llvm::Error Send(const Resp &resp) override { return Write(resp); }
+  llvm::Error Send(const Proto::Evt &evt) override { return Write(evt); }
+  llvm::Error Send(const Proto::Req &req) override { return Write(req); }
+  llvm::Error Send(const Proto::Resp &resp) override { return Write(resp); }
 
   llvm::Expected<MainLoop::ReadHandleUP>
   RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
@@ -244,10 +259,10 @@ private:
 };
 
 /// A transport class for JSON with a HTTP header.
-template <typename Id, typename Req, typename Resp, typename Evt>
-class HTTPDelimitedJSONTransport : public IOTransport<Id, Req, Resp, Evt> {
+template <typename Proto>
+class HTTPDelimitedJSONTransport : public IOTransport<Proto> {
 public:
-  using IOTransport<Id, Req, Resp, Evt>::IOTransport;
+  using IOTransport<Proto>::IOTransport;
 
 protected:
   /// Encodes messages based on
@@ -311,10 +326,9 @@ protected:
 };
 
 /// A transport class for JSON RPC.
-template <typename Id, typename Req, typename Resp, typename Evt>
-class JSONRPCTransport : public IOTransport<Id, Req, Resp, Evt> {
+template <typename Proto> class JSONRPCTransport : public IOTransport<Proto> {
 public:
-  using IOTransport<Id, Req, Resp, Evt>::IOTransport;
+  using IOTransport<Proto>::IOTransport;
 
 protected:
   std::string Encode(const llvm::json::Value &message) override {
@@ -368,34 +382,51 @@ using OutgoingRequest = typename detail::request_t<R, P>::type;
 /// A function to send an outgoing event.
 template <typename P> using OutgoingEvent = typename detail::event_t<P>::type;
 
-/// Creates a request with the given id, method, and optional params.
-template <typename Id, typename Req>
-Req MakeRequest(Id, llvm::StringRef, std::optional<llvm::json::Value>);
-
-/// Creates an error response for a given request.
-template <typename Req, typename Resp>
-Resp MakeResponse(const Req &, llvm::Error);
-
-/// Creates a success response for a given request.
-template <typename Req, typename Resp>
-Resp MakeResponse(const Req &, llvm::json::Value);
-
-/// Creates an event.
-template <typename Evt>
-Evt MakeEvent(llvm::StringRef, std::optional<llvm::json::Value>);
-
-/// Extracts the result value from a response.
-template <typename Resp>
-llvm::Expected<llvm::json::Value> GetResult(const Resp &);
-
-/// Extracts the id from a response.
-template <typename Id, typename Resp> Id GetId(const Resp &);
-
-/// Extracts the method from a request or event.
-template <typename T> llvm::StringRef GetMethod(const T &);
-
-/// Extracts the parameters from a request or event.
-template <typename T> llvm::json::Value GetParams(const T &);
+// FIXME: With c++20, we should use this concept:
+// template <typename T>
+// concept BindingBuilder =
+//     ProtocolDescriptor<T> &&
+//     requires(T::Id id, T::Req req, T::Resp resp, T::Evt evt,
+//              llvm::StringRef method, std::optional<llvm::json::Value> params,
+//              std::optional<llvm::json::Value> result, llvm::Error err) {
+//       // For initializing the unique sequence identifier;
+//       { T::InitialId() } -> std::same_as<typename T::Id>;
+//       // Incrementing the sequence identifier.
+//       { id++ } -> std::same_as<typename T::Id>;
+//
+//       // Constructing protocol types
+//       // @{
+//       // Construct a new request.
+//       { T::Make(id, method, params) } -> std::same_as<typename T::Req>;
+//       // Construct a new error response.
+//       { T::Make(req, std::move(err)) } -> std::same_as<typename T::Resp>;
+//       // Construct a new success response.
+//       { T::Make(req, result) } -> std::same_as<typename T::Resp>;
+//       // Construct a new event.
+//       { T::Make(method, params) } -> std::same_as<typename T::Evt>;
+//       // @}
+//
+//       // Keys for associated types.
+//       // @{
+//       // Looking up in flight responses.
+//       { T::KeyFor(resp) } -> std::same_as<typename T::Id>;
+//       // Extract method from request.
+//       { T::KeyFor(req) } -> std::same_as<llvm::StringRef>;
+//       // Extract method from event.
+//       { T::KeyFor(evt) } -> std::same_as<llvm::StringRef>;
+//       // @}
+//
+//       // Extracting information from associated types.
+//       // @{
+//       // Extract parameters from a request.
+//       { T::Extract(req) } -> std::same_as<std::optional<llvm::json::Value>>;
+//       // Extract result from a response.
+//       { T::Extract(resp) } ->
+//       std::same_as<llvm::Expected<llvm::json::Value>>;
+//       // Extract parameters from an event.
+//       { T::Extract(evt) } -> std::same_as<std::optional<llvm::json::Value>>;
+//       // @}
+//     };
 
 /// Binder collects a table of functions that handle calls.
 ///
@@ -422,10 +453,14 @@ template <typename T> llvm::json::Value GetParams(const T &);
 ///   cout << *result << "\n";
 /// });
 /// \endcode
-template <typename Id, typename Req, typename Resp, typename Evt>
-class JSONTransport<Id, Req, Resp, Evt>::Binder
-    : public JSONTransport<Id, Req, Resp, Evt>::MessageHandler {
-  using Transport = JSONTransport<Id, Req, Resp, Evt>;
+// FIXME: In c++20 use: template <BindingBuilder Proto>
+template <typename Proto>
+class Binder : public JSONTransport<Proto>::MessageHandler {
+  using Req = Proto::Req;
+  using Resp = Proto::Resp;
+  using Evt = Proto::Evt;
+  using Id = Proto::Id;
+  using Transport = JSONTransport<Proto>;
   using MessageHandler = typename Transport::MessageHandler;
 
 public:
@@ -470,7 +505,7 @@ public:
 
   void Received(const Evt &evt) override {
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-    auto it = m_event_handlers.find(GetMethod(evt));
+    auto it = m_event_handlers.find(Proto::KeyFor(evt));
     if (it == m_event_handlers.end()) {
       OnError(llvm::createStringError(
           llvm::formatv("no handled for event {0}", toJSON(evt))));
@@ -483,10 +518,9 @@ public:
     ReplyOnce reply(req, &m_transport, this);
 
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-    auto it = m_request_handlers.find(GetMethod(req));
+    auto it = m_request_handlers.find(Proto::KeyFor(req));
     if (it == m_request_handlers.end()) {
-      reply(MakeResponse<Req, Resp>(
-          req, llvm::createStringError("method not found")));
+      reply(Proto::Make(req, llvm::createStringError("method not found")));
       return;
     }
 
@@ -496,7 +530,7 @@ public:
   void Received(const Resp &resp) override {
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
 
-    Id id = GetId<Id, Resp>(resp);
+    Id id = Proto::KeyFor(resp);
     auto it = m_pending_responses.find(id);
     if (it == m_pending_responses.end()) {
       OnError(llvm::createStringError(
@@ -566,8 +600,7 @@ private:
     ~ReplyOnce() {
       if (transport && handler && !replied) {
         assert(false && "must reply to all calls!");
-        (*this)(MakeResponse<Req, Resp>(
-            req, llvm::createStringError("failed to reply")));
+        (*this)(Proto::Make(req, llvm::createStringError("failed to reply")));
       }
     }
 
@@ -584,29 +617,26 @@ private:
   };
 };
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename Fn, typename... Args>
-void JSONTransport<Id, Req, Resp, Evt>::Binder::OnDisconnect(Fn &&fn,
-                                                             Args &&...args) {
+void Binder<Proto>::OnDisconnect(Fn &&fn, Args &&...args) {
   m_disconnect_handler = [fn, args...]() mutable {
     std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...);
   };
 }
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename Fn, typename... Args>
-void JSONTransport<Id, Req, Resp, Evt>::Binder::OnError(Fn &&fn,
-                                                        Args &&...args) {
+void Binder<Proto>::OnError(Fn &&fn, Args &&...args) {
   m_error_handler = [fn, args...](llvm::Error error) mutable {
     std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...,
                 std::move(error));
   };
 }
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename Result, typename Params, typename Fn, typename... Args>
-void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
-                                                     Fn &&fn, Args &&...args) {
+void Binder<Proto>::Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
   assert(m_request_handlers.find(method) == m_request_handlers.end() &&
          "request already bound");
   if constexpr (std::is_void_v<Result> && std::is_void_v<Params>) {
@@ -615,7 +645,7 @@ void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
                       llvm::unique_function<void(const Resp &)> reply) mutable {
           llvm::Error result =
               std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...);
-          reply(MakeResponse<Req, Resp>(req, std::move(result)));
+          reply(Proto::Make(req, std::move(result)));
         };
   } else if constexpr (std::is_void_v<Params>) {
     m_request_handlers[method] =
@@ -624,8 +654,8 @@ void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
           llvm::Expected<Result> result =
               std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...);
           if (!result)
-            return reply(MakeResponse<Req, Resp>(req, result.takeError()));
-          reply(MakeResponse<Req, Resp>(req, toJSON(*result)));
+            return reply(Proto::Make(req, result.takeError()));
+          reply(Proto::Make(req, toJSON(*result)));
         };
   } else if constexpr (std::is_void_v<Result>) {
     m_request_handlers[method] =
@@ -633,13 +663,13 @@ void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
          args...](const Req &req,
                   llvm::unique_function<void(const Resp &)> reply) mutable {
           llvm::Expected<Params> params =
-              Parse<Params>(GetParams<Req>(req), method);
+              Parse<Params>(Proto::Extract(req), method);
           if (!params)
-            return reply(MakeResponse<Req, Resp>(req, params.takeError()));
+            return reply(Proto::Make(req, params.takeError()));
 
           llvm::Error result = std::invoke(
               std::forward<Fn>(fn), std::forward<Args>(args)..., *params);
-          reply(MakeResponse<Req, Resp>(req, std::move(result)));
+          reply(Proto::Make(req, std::move(result)));
         };
   } else {
     m_request_handlers[method] =
@@ -647,24 +677,23 @@ void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
          args...](const Req &req,
                   llvm::unique_function<void(const Resp &)> reply) mutable {
           llvm::Expected<Params> params =
-              Parse<Params>(GetParams<Req>(req), method);
+              Parse<Params>(Proto::Extract(req), method);
           if (!params)
-            return reply(MakeResponse<Req, Resp>(req, params.takeError()));
+            return reply(Proto::Make(req, params.takeError()));
 
           llvm::Expected<Result> result = std::invoke(
               std::forward<Fn>(fn), std::forward<Args>(args)..., *params);
           if (!result)
-            return reply(MakeResponse<Req, Resp>(req, result.takeError()));
+            return reply(Proto::Make(req, result.takeError()));
 
-          reply(MakeResponse<Req, Resp>(req, toJSON(*result)));
+          reply(Proto::Make(req, toJSON(*result)));
         };
   }
 }
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename Params, typename Fn, typename... Args>
-void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
-                                                     Fn &&fn, Args &&...args) {
+void Binder<Proto>::Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
   assert(m_event_handlers.find(method) == m_event_handlers.end() &&
          "event already bound");
   if constexpr (std::is_void_v<Params>) {
@@ -675,7 +704,7 @@ void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
     m_event_handlers[method] = [this, method, fn,
                                 args...](const Evt &evt) mutable {
       llvm::Expected<Params> params =
-          Parse<Params>(GetParams<Evt>(evt), method);
+          Parse<Params>(Proto::Extract(evt), method);
       if (!params)
         return OnError(params.takeError());
       std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)..., *params);
@@ -683,17 +712,17 @@ void JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method,
   }
 }
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename Result, typename Params>
 OutgoingRequest<Result, Params>
-JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method) {
+Binder<Proto>::Bind(llvm::StringLiteral method) {
   if constexpr (std::is_void_v<Result> && std::is_void_v<Params>) {
     return [this, method](Reply<Result> fn) {
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
       Id id = ++m_seq;
-      Req req = MakeRequest<Id, Req>(id, method, std::nullopt);
+      Req req = Proto::Make(id, method, std::nullopt);
       m_pending_responses[id] = [fn = std::move(fn)](const Resp &resp) mutable {
-        llvm::Expected<llvm::json::Value> result = GetResult<Resp>(resp);
+        llvm::Expected<llvm::json::Value> result = Proto::Extract(resp);
         if (!result)
           return fn(result.takeError());
         fn(llvm::Error::success());
@@ -705,10 +734,10 @@ JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method) {
     return [this, method](Reply<Result> fn) {
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
       Id id = ++m_seq;
-      Req req = MakeRequest<Id, Req>(id, method, std::nullopt);
+      Req req = Proto::Make(id, method, std::nullopt);
       m_pending_responses[id] = [fn = std::move(fn),
                                  method](const Resp &resp) mutable {
-        llvm::Expected<llvm::json::Value> result = GetResult<Resp>(resp);
+        llvm::Expected<llvm::json::Value> result = Proto::Extract(resp);
         if (!result)
           return fn(result.takeError());
         fn(Parse<Result>(*result, method));
@@ -720,9 +749,9 @@ JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method) {
     return [this, method](const Params &params, Reply<Result> fn) {
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
       Id id = ++m_seq;
-      Req req = MakeRequest<Id, Req>(id, method, llvm::json::Value(params));
+      Req req = Proto::Make(id, method, llvm::json::Value(params));
       m_pending_responses[id] = [fn = std::move(fn)](const Resp &resp) mutable {
-        llvm::Expected<llvm::json::Value> result = GetResult<Resp>(resp);
+        llvm::Expected<llvm::json::Value> result = Proto::Extract(resp);
         if (!result)
           return fn(result.takeError());
         fn(llvm::Error::success());
@@ -734,10 +763,10 @@ JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method) {
     return [this, method](const Params &params, Reply<Result> fn) {
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
       Id id = ++m_seq;
-      Req req = MakeRequest<Id, Req>(id, method, llvm::json::Value(params));
+      Req req = Proto::Make(id, method, llvm::json::Value(params));
       m_pending_responses[id] = [fn = std::move(fn),
                                  method](const Resp &resp) mutable {
-        llvm::Expected<llvm::json::Value> result = GetResult<Resp>(resp);
+        llvm::Expected<llvm::json::Value> result = Proto::Extract(resp);
         if (llvm::Error err = result.takeError())
           return fn(std::move(err));
         fn(Parse<Result>(*result, method));
@@ -748,30 +777,28 @@ JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method) {
   }
 }
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename Params>
-OutgoingEvent<Params>
-JSONTransport<Id, Req, Resp, Evt>::Binder::Bind(llvm::StringLiteral method) {
+OutgoingEvent<Params> Binder<Proto>::Bind(llvm::StringLiteral method) {
   if constexpr (std::is_void_v<Params>) {
     return [this, method]() {
       if (llvm::Error error =
-              m_transport.Send(MakeEvent<Evt>(method, std::nullopt)))
+              m_transport.Send(Proto::Make(method, std::nullopt)))
         OnError(std::move(error));
     };
   } else {
     return [this, method](const Params &params) {
       if (llvm::Error error =
-              m_transport.Send(MakeEvent<Evt>(method, toJSON(params))))
+              m_transport.Send(Proto::Make(method, toJSON(params))))
         OnError(std::move(error));
     };
   }
 }
 
-template <typename Id, typename Req, typename Resp, typename Evt>
+template <typename Proto>
 template <typename T>
-llvm::Expected<T>
-JSONTransport<Id, Req, Resp, Evt>::Binder::Parse(const llvm::json::Value &raw,
-                                                 llvm::StringRef method) {
+llvm::Expected<T> Binder<Proto>::Parse(const llvm::json::Value &raw,
+                                       llvm::StringRef method) {
   T result;
   llvm::json::Path::Root root;
   if (!fromJSON(raw, result, root)) {

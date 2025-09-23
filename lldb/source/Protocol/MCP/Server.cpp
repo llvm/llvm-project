@@ -126,9 +126,8 @@ void Server::AddResourceProvider(
   m_resource_providers.push_back(std::move(resource_provider));
 }
 
-MCPTransport::BinderUP Server::Bind(MCPTransport &transport) {
-  MCPTransport::BinderUP binder =
-      std::make_unique<MCPTransport::Binder>(transport);
+MCPBinderUP Server::Bind(MCPTransport &transport) {
+  MCPBinderUP binder = std::make_unique<MCPBinder>(transport);
   binder->Bind<InitializeResult, InitializeParams>(
       "initialize", &Server::InitializeHandler, this);
   binder->Bind<ListToolsResult, void>("tools/list", &Server::ToolsListHandler,
@@ -145,7 +144,7 @@ MCPTransport::BinderUP Server::Bind(MCPTransport &transport) {
 }
 
 llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {
-  MCPTransport::BinderUP binder = Bind(*transport);
+  MCPBinderUP binder = Bind(*transport);
   MCPTransport *transport_ptr = transport.get();
   binder->OnDisconnect([this, transport_ptr]() {
     assert(m_instances.find(transport_ptr) != m_instances.end() &&

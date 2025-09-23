@@ -127,9 +127,7 @@ public:
   using Server::Server;
 };
 
-using Transport = TestTransport<int64_t, lldb_protocol::mcp::Request,
-                                lldb_protocol::mcp::Response,
-                                lldb_protocol::mcp::Notification>;
+using Transport = TestTransport<lldb_protocol::mcp::ProtocolDescriptor>;
 
 class ProtocolServerMCPTest : public testing::Test {
 public:
@@ -139,11 +137,11 @@ public:
   lldb_private::MainLoop::ReadHandleUP handles[2];
 
   std::unique_ptr<Transport> to_server;
-  Transport::BinderUP binder;
+  MCPBinderUP binder;
   std::unique_ptr<TestServer> server_up;
 
   std::unique_ptr<Transport> to_client;
-  MockMessageHandler<int64_t, Request, Response, Notification> client;
+  MockMessageHandler<lldb_protocol::mcp::ProtocolDescriptor> client;
 
   std::vector<std::string> logged_messages;
 
@@ -176,8 +174,8 @@ public:
   template <typename Result, typename Params>
   Expected<json::Value> Call(StringRef method, const Params &params) {
     std::promise<Response> promised_result;
-    Request req = MakeRequest<int64_t, lldb_protocol::mcp::Request>(
-        /*id=*/1, method, toJSON(params));
+    Request req =
+        lldb_protocol::mcp::Request{/*id=*/1, method.str(), toJSON(params)};
     EXPECT_THAT_ERROR(to_server->Send(req), Succeeded());
     EXPECT_CALL(client, Received(testing::An<const Response &>()))
         .WillOnce(
