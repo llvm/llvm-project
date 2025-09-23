@@ -1882,19 +1882,15 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
     if (HasThreadLocalSideEffects) {
       const BasicBlock *Unreachable = nullptr;
-      const BasicBlock *InLoop = nullptr;
       for (const BasicBlock *Succ : BI->successors()) {
         if (isa<UnreachableInst>(Succ->getTerminator()))
           Unreachable = Succ;
-        else if (L->contains(Succ))
-          InLoop = Succ;
       }
       // Exit BB which have one branch back into the loop and another one to
       // a trap can still be optimized, because local side effects cannot
       // be observed in the exit case (the trap). We could be smarter about
       // this, but for now lets pattern match common cases that directly trap.
-      if (Unreachable == nullptr || InLoop == nullptr ||
-          !crashingBBWithoutEffect(*Unreachable))
+      if (Unreachable == nullptr || !crashingBBWithoutEffect(*Unreachable))
         return Changed;
     }
     Value *NewCond;
