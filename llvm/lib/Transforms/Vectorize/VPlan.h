@@ -3045,8 +3045,11 @@ public:
       if (ExpressionRecipesSeen.insert(R).second)
         delete R;
     }
-    for (VPValue *T : LiveInPlaceholders)
-      delete T;
+    SmallSet<VPValue *, 4> PlaceholdersSeen;
+    for (VPValue *T : LiveInPlaceholders) {
+      if (PlaceholdersSeen.insert(T).second)
+        delete T;
+    }
   }
 
   VP_CLASSOF_IMPL(VPDef::VPExpressionSC)

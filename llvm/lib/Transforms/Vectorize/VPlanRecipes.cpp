@@ -2790,34 +2790,32 @@ VPExpressionRecipe::VPExpressionRecipe(
       R->removeFromParent();
   }
 
-  // Keep track of how many instances of each recipe occur in the recipe list
-  SmallMapVector<VPSingleDefRecipe *, unsigned, 4> ExpressionRecipeCounts;
-  for (auto *R : ExpressionRecipes) {
-    auto *F = ExpressionRecipeCounts.find(R);
-    if (F == ExpressionRecipeCounts.end())
-      ExpressionRecipeCounts.insert(std::make_pair(R, 1));
-    else
-      F->second++;
-  }
-
   // Internalize all external operands to the expression recipes. To do so,
   // create new temporary VPValues for all operands defined by a recipe outside
   // the expression. The original operands are added as operands of the
   // VPExpressionRecipe itself.
+
+  // This map caches the temporary placeholders so duplicates aren't created in
+  // the case that recipes share operands.
+  SmallMapVector<VPValue *, VPValue *, 4> OperandPlaceholders;
+
   for (auto *R : ExpressionRecipes) {
-    auto *F = ExpressionRecipeCounts.find(R);
-    F->second--;
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      auto *Tmp = new VPValue();
-      LiveInPlaceholders.push_back(Tmp);
-      // Only modify this recipe's operands if it's the last time it occurs in
-      // the recipe list
-      if (F->second == 0)
-        R->setOperand(Idx, Tmp);
+      if (OperandPlaceholders.find(Op) == OperandPlaceholders.end())
+        OperandPlaceholders[Op] = new VPValue();
+      LiveInPlaceholders.push_back(OperandPlaceholders[Op]);
+    }
+  }
+
+  for (auto *R : ExpressionRecipes) {
+    for (const auto &[Idx, Op] : enumerate(R->operands())) {
+      auto *Entry = OperandPlaceholders.find(Op);
+      if (Entry != OperandPlaceholders.end())
+        R->setOperand(Idx, Entry->second);
     }
   }
 }
