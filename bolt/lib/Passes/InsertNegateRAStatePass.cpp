@@ -92,9 +92,7 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
   bool FirstIter = true;
   MCInst PrevInst;
   for (BinaryBasicBlock &BB : BF) {
-    for (auto It = BB.begin(); It != BB.end(); ++It) {
-
-      MCInst &Inst = *It;
+    for (MCInst &Inst : BB) {
       if (BC.MIB->isCFI(Inst))
         continue;
 

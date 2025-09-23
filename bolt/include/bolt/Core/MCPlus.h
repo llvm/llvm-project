@@ -72,8 +72,8 @@ public:
     kLabel,               /// MCSymbol pointing to this instruction.
     kSize,                /// Size of the instruction.
     kDynamicBranch,       /// Jit instruction patched at runtime.
-    kSigned,              /// Inst is in a range where RA is signed.
-    kUnsigned,            /// Inst is in a range where RA is unsigned.
+    kRASigned,            /// Inst is in a range where RA is signed.
+    kRAUnsigned,          /// Inst is in a range where RA is unsigned.
     kRememberState,       /// Inst has rememberState CFI.
     kRestoreState,        /// Inst has restoreState CFI.
     kNegateState,         /// Inst has OpNegateRAState CFI.

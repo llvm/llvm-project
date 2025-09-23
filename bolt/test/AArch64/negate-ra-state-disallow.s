@@ -2,7 +2,7 @@
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
 # RUN: not llvm-bolt %t.exe -o %t.exe.bolt --update-branch-protection=false 2>&1 | FileCheck %s
 
-# CHECK: BOLT-ERROR: --update-branch-protection is set to false, but foo contains .cfi-negate-ra-state.
+# CHECK: BOLT-ERROR: --update-branch-protection is set to false, but foo contains .cfi-negate-ra-state
 
   .text
   .globl  foo

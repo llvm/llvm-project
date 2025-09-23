@@ -35,9 +35,8 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
 
   BinaryContext &BC = BF.getBinaryContext();
 
-  for (BinaryBasicBlock &BB : BF) {
-    for (auto It = BB.begin(); It != BB.end(); ++It) {
-      MCInst &Inst = *It;
+  for (const BinaryBasicBlock &BB : BF) {
+    for (const MCInst &Inst : BB) {
       if ((BC.MIB->isPSignOnLR(Inst) ||
            (BC.MIB->isPAuthOnLR(Inst) && !BC.MIB->isPAuthAndRet(Inst))) &&
           !BC.MIB->hasNegateRAState(Inst)) {
@@ -58,9 +57,7 @@ bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
   RAStateStack.push(RAState);
 
   for (BinaryBasicBlock &BB : BF) {
-    for (auto It = BB.begin(); It != BB.end(); ++It) {
-
-      MCInst &Inst = *It;
+    for (MCInst &Inst : BB) {
       if (BC.MIB->isCFI(Inst))
         continue;
 
@@ -150,7 +147,7 @@ Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
     BC.outs() << "BOLT-INFO: MarkRAStates ran on " << Total
               << " functions. Ignored " << FunctionsIgnored << " functions "
               << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
-              << " because of CFI inconsistencies.\n";
+              << " because of CFI inconsistencies\n";
   }
 
   return Error::success();
