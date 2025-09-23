@@ -3441,6 +3441,20 @@ func.func @from_elements_float16_to_i16_conversion() -> vector<6xi16> {
   return %v : vector<6xi16>
 }
 
+// CHECK-LABEL: func @from_elements_f64_to_i64_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 4607182418800017408, -4616189618054758400, 4614253070214989087, 9218868437227405311, -4503599627370497]> : vector<6xi64>
+// CHECK-NEXT:    return %[[CST]] : vector<6xi64>
+func.func @from_elements_f64_to_i64_conversion() -> vector<6xi64> {
+  %cst0 = llvm.mlir.constant(0.0 : f64) : i64
+  %cst1 = llvm.mlir.constant(1.0 : f64) : i64
+  %cst_neg1 = llvm.mlir.constant(-1.0 : f64) : i64
+  %cst_pi = llvm.mlir.constant(3.14 : f64) : i64
+  %cst_max = llvm.mlir.constant(1.7976931348623157e+308 : f64) : i64
+  %cst_min = llvm.mlir.constant(-1.7976931348623157e+308 : f64) : i64
+  %v = vector.from_elements %cst0, %cst1, %cst_neg1, %cst_pi, %cst_max, %cst_min : vector<6xi64>
+  return %v : vector<6xi64>
+}
+
 // -----
 
 // CHECK-LABEL: func @from_elements_i1_to_i8_conversion(
@@ -3450,6 +3464,19 @@ func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
   %cst = llvm.mlir.constant(0: i1) : i8
   %v = vector.from_elements %cst : vector<1xi8>
   return %v : vector<1xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_index_to_i64_conversion(
+// CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 1, 42]> : vector<3xi64>
+// CHECK-NEXT:    return %[[CST]] : vector<3xi64>
+func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
+  %cst0 = llvm.mlir.constant(0 : index) : i64
+  %cst1 = llvm.mlir.constant(1 : index) : i64
+  %cst42 = llvm.mlir.constant(42 : index) : i64
+  %v = vector.from_elements %cst0, %cst1, %cst42 : vector<3xi64>
+  return %v : vector<3xi64>
 }
 
 // +---------------------------------------------------------------------------
