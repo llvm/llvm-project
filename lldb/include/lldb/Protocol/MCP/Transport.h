@@ -54,8 +54,8 @@ struct ProtocolDescriptor {
     return Response{req.id, std::move(result)};
   }
   static inline Id KeyFor(Response r) { return std::get<Id>(r.id); }
-  static inline llvm::StringRef KeyFor(Request r) { return r.method; }
-  static inline llvm::StringRef KeyFor(Notification n) { return n.method; }
+  static inline std::string KeyFor(Request r) { return r.method; }
+  static inline std::string KeyFor(Notification n) { return n.method; }
   static inline std::optional<llvm::json::Value> Extract(Request r) {
     return r.params;
   }

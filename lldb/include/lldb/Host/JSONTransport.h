@@ -35,6 +35,9 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#if __cplusplus >= 202002L
+#include <concepts>
+#endif
 
 namespace lldb_private::transport {
 
@@ -95,9 +98,7 @@ private:
   std::string m_method;
 };
 
-/*
-FIXME: Once we upgrade to c++20, use this concept for JSONTransport.
-
+#if __cplusplus >= 202002L
 /// A ProtocolDescriptor details the types used in a JSONTransport for handling
 /// transport communication.
 template <typename T>
@@ -107,7 +108,7 @@ concept ProtocolDescriptor = requires {
   typename T::Resp;
   typename T::Evt;
 };
-*/
+#endif
 
 /// A transport is responsible for maintaining the connection to a client
 /// application, and reading/writing structured messages to it.
@@ -116,8 +117,12 @@ concept ProtocolDescriptor = requires {
 ///  - Messages will not be sent concurrently.
 ///  - Messages MAY be sent while Run() is reading, or its callback is active.
 ///
-/// FIXME: Once we upgrade to c++20, use `template <ProtocolDescriptor Proto>`
-template <typename Proto> class JSONTransport {
+#if __cplusplus >= 202002L
+template <ProtocolDescriptor Proto>
+#else
+template <typename Proto>
+#endif
+class JSONTransport {
 public:
   using Req = typename Proto::Req;
   using Resp = typename Proto::Resp;
@@ -179,9 +184,15 @@ public:
   IOTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
       : m_in(in), m_out(out) {}
 
-  llvm::Error Send(const Proto::Evt &evt) override { return Write(evt); }
-  llvm::Error Send(const Proto::Req &req) override { return Write(req); }
-  llvm::Error Send(const Proto::Resp &resp) override { return Write(resp); }
+  llvm::Error Send(const typename Proto::Evt &evt) override {
+    return Write(evt);
+  }
+  llvm::Error Send(const typename Proto::Req &req) override {
+    return Write(req);
+  }
+  llvm::Error Send(const typename Proto::Resp &resp) override {
+    return Write(resp);
+  }
 
   llvm::Expected<MainLoop::ReadHandleUP>
   RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
@@ -261,7 +272,11 @@ private:
 };
 
 /// A transport class for JSON with a HTTP header.
+#if __cplusplus >= 202002L
+template <ProtocolDescriptor Proto>
+#else
 template <typename Proto>
+#endif
 class HTTPDelimitedJSONTransport : public IOTransport<Proto> {
 public:
   using IOTransport<Proto>::IOTransport;
@@ -328,7 +343,12 @@ protected:
 };
 
 /// A transport class for JSON RPC.
-template <typename Proto> class JSONRPCTransport : public IOTransport<Proto> {
+#if __cplusplus >= 202002L
+template <ProtocolDescriptor Proto>
+#else
+template <typename Proto>
+#endif
+class JSONRPCTransport : public IOTransport<Proto> {
 public:
   using IOTransport<Proto>::IOTransport;
 
@@ -384,9 +404,7 @@ using OutgoingRequest = typename detail::request_t<R, P>::type;
 /// A function to send an outgoing event.
 template <typename P> using OutgoingEvent = typename detail::event_t<P>::type;
 
-/*
-FIXME: With c++20, we should use this concept:
-
+#if __cplusplus >= 202002L
 /// This represents a protocol description that includes additional helpers
 /// for constructing requests, responses and events to work with `Binder`.
 template <typename T>
@@ -417,9 +435,9 @@ concept BindingBuilder =
       /// Looking up in flight responses.
       { T::KeyFor(resp) } -> std::same_as<typename T::Id>;
       /// Extract method from request.
-      { T::KeyFor(req) } -> std::same_as<llvm::StringRef>;
+      { T::KeyFor(req) } -> std::same_as<std::string>;
       /// Extract method from event.
-      { T::KeyFor(evt) } -> std::same_as<llvm::StringRef>;
+      { T::KeyFor(evt) } -> std::same_as<std::string>;
       /// @}
 
       /// Extracting information from associated types.
@@ -427,13 +445,12 @@ concept BindingBuilder =
       /// Extract parameters from a request.
       { T::Extract(req) } -> std::same_as<std::optional<llvm::json::Value>>;
       /// Extract result from a response.
-      { T::Extract(resp) } ->
-      std::same_as<llvm::Expected<llvm::json::Value>>;
+      { T::Extract(resp) } -> std::same_as<llvm::Expected<llvm::json::Value>>;
       /// Extract parameters from an event.
       { T::Extract(evt) } -> std::same_as<std::optional<llvm::json::Value>>;
       /// @}
     };
-*/
+#endif
 
 /// Binder collects a table of functions that handle calls.
 ///
@@ -461,13 +478,16 @@ concept BindingBuilder =
 ///   cout << *result << "\n";
 /// });
 /// \endcode
-/// FIXME: In c++20 use `template <BindingBuilder Proto>`.
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 class Binder : public JSONTransport<Proto>::MessageHandler {
-  using Req = Proto::Req;
-  using Resp = Proto::Resp;
-  using Evt = Proto::Evt;
-  using Id = Proto::Id;
+  using Req = typename Proto::Req;
+  using Resp = typename Proto::Resp;
+  using Evt = typename Proto::Evt;
+  using Id = typename Proto::Id;
   using Transport = JSONTransport<Proto>;
   using MessageHandler = typename Transport::MessageHandler;
 
@@ -625,7 +645,11 @@ private:
   };
 };
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename Fn, typename... Args>
 void Binder<Proto>::OnDisconnect(Fn &&fn, Args &&...args) {
   m_disconnect_handler = [fn, args...]() mutable {
@@ -633,7 +657,11 @@ void Binder<Proto>::OnDisconnect(Fn &&fn, Args &&...args) {
   };
 }
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename Fn, typename... Args>
 void Binder<Proto>::OnError(Fn &&fn, Args &&...args) {
   m_error_handler = [fn, args...](llvm::Error error) mutable {
@@ -642,7 +670,11 @@ void Binder<Proto>::OnError(Fn &&fn, Args &&...args) {
   };
 }
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename Result, typename Params, typename Fn, typename... Args>
 void Binder<Proto>::Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
   assert(m_request_handlers.find(method) == m_request_handlers.end() &&
@@ -699,7 +731,11 @@ void Binder<Proto>::Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
   }
 }
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename Params, typename Fn, typename... Args>
 void Binder<Proto>::Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
   assert(m_event_handlers.find(method) == m_event_handlers.end() &&
@@ -720,7 +756,11 @@ void Binder<Proto>::Bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
   }
 }
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename Result, typename Params>
 OutgoingRequest<Result, Params>
 Binder<Proto>::Bind(llvm::StringLiteral method) {
@@ -785,7 +825,11 @@ Binder<Proto>::Bind(llvm::StringLiteral method) {
   }
 }
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename Params>
 OutgoingEvent<Params> Binder<Proto>::Bind(llvm::StringLiteral method) {
   if constexpr (std::is_void_v<Params>) {
@@ -803,7 +847,11 @@ OutgoingEvent<Params> Binder<Proto>::Bind(llvm::StringLiteral method) {
   }
 }
 
+#if __cplusplus >= 202002L
+template <BindingBuilder Proto>
+#else
 template <typename Proto>
+#endif
 template <typename T>
 llvm::Expected<T> Binder<Proto>::Parse(const llvm::json::Value &raw,
                                        llvm::StringRef method) {

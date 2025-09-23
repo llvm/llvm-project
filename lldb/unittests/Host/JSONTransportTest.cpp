@@ -216,8 +216,8 @@ struct ProtoDesc {
     return Resp{req.id, 0, std::move(result)};
   }
   static inline Id KeyFor(Resp r) { return r.id; }
-  static inline llvm::StringRef KeyFor(Req r) { return r.name; }
-  static inline llvm::StringRef KeyFor(Evt e) { return e.name; }
+  static inline std::string KeyFor(Req r) { return r.name; }
+  static inline std::string KeyFor(Evt e) { return e.name; }
   static inline std::optional<llvm::json::Value> Extract(Req r) {
     return r.params;
   }
