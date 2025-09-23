@@ -8,7 +8,7 @@ import lldbdap_testcase
 import re
 
 # Flakey in Github CI runs, see https://github.com/llvm/llvm-project/issues/137660.
-@SkipIfLinux
+@skipIfLinux
 class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
     def run_test(self, symbol_basename, expect_debug_info_size):
         program_basename = "a.out.stripped"
