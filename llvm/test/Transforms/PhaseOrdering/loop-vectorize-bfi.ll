@@ -2,6 +2,11 @@
 ; REQUIRES: riscv-registered-target
 ; RUN: opt -p 'lto<O3>' -mtriple riscv64 -mattr=+v -S < %s | FileCheck %s
 
+; Test that BlockFrequencyInfo is invalidated after loop passes, so it's
+; accurate whenever LoopVectorize uses it. LoopVectorizer requires that
+; innermost loop headers have a greater than or equal to frequency than any
+; block it dominates.
+
 define void @f(i1 %0) !prof !0 {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: i1 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {{.*}}{
