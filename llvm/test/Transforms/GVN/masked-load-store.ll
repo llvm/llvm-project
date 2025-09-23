@@ -94,7 +94,8 @@ define <vscale x 4 x float> @forward_masked_load_scalable(ptr %0, ptr %1, <vscal
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP0:%.*]], i32 1, <vscale x 4 x i1> [[TMP3]], <vscale x 4 x float> [[PASSTHROUGH:%.*]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP4]], ptr [[TMP1:%.*]], i32 1, <vscale x 4 x i1> [[TMP3]])
-; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x float> [[TMP4]], <vscale x 4 x float> [[PASSTHROUGH]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP5]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
   %load1 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr %0, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> %passthrough)
@@ -103,12 +104,12 @@ define <vscale x 4 x float> @forward_masked_load_scalable(ptr %0, ptr %1, <vscal
   ret <vscale x 4 x float> %load2
 }
 
-define <vscale x 4 x float> @bail_on_different_passthrough(ptr %0, ptr %1, <vscale x 4 x float> %passthrough) {
-; CHECK-LABEL: @bail_on_different_passthrough(
+define <vscale x 4 x float> @generate_sel_with_passthrough(ptr %0, ptr %1, <vscale x 4 x float> %passthrough) {
+; CHECK-LABEL: @generate_sel_with_passthrough(
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP0:%.*]], i32 1, <vscale x 4 x i1> [[TMP3]], <vscale x 4 x float> zeroinitializer)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP4]], ptr [[TMP1:%.*]], i32 1, <vscale x 4 x i1> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP1]], i32 1, <vscale x 4 x i1> [[TMP3]], <vscale x 4 x float> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x float> [[TMP4]], <vscale x 4 x float> [[PASSTHROUGH:%.*]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP5]]
 ;
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
