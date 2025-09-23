@@ -325,7 +325,6 @@ static bool getPackedOperandDetails(
 ///    inner_dims_pos = [0]
 ///    inner_tiles = [8]
 ///    into %init : tensor<?xf32> -> tensor<?x8xf32>
-
 static std::tuple<Value, AffineMap> getOrCreatePackedViewOfOperand(
     OpBuilder &b, Location loc, OpOperand *opOperand,
     const DenseMap<OpOperand *, PackedOperandDetails> &packedOperandMap) {
