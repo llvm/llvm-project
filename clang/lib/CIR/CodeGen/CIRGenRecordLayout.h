@@ -141,6 +141,10 @@ private:
   // for both virtual and non-virtual bases.
   llvm::DenseMap<const clang::CXXRecordDecl *, unsigned> nonVirtualBases;
 
+  /// Map from virtual bases to their field index in the complete object.
+  llvm::DenseMap<const clang::CXXRecordDecl *, unsigned>
+      completeObjectVirtualBases;
+
   /// Map from (bit-field) record field to the corresponding CIR record type
   /// field no. This info is populated by record builder.
   llvm::DenseMap<const clang::FieldDecl *, CIRGenBitFieldInfo> bitFields;

@@ -878,10 +878,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // Treat the enumeration as its underlying type and use the builtin type
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
-        T1 = T1->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
+        T1 = cast<EnumType>(T1)->getOriginalDecl()->getIntegerType();
         assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
       } else if (T2->getTypeClass() == Type::Enum) {
-        T2 = T2->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
+        T2 = cast<EnumType>(T2)->getOriginalDecl()->getIntegerType();
         assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
       }
       TC = Type::Builtin;
@@ -1381,20 +1381,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   Typename2->getIdentifier()))
       return false;
 
-    break;
-  }
-
-  case Type::DependentTemplateSpecialization: {
-    const auto *Spec1 = cast<DependentTemplateSpecializationType>(T1);
-    const auto *Spec2 = cast<DependentTemplateSpecializationType>(T2);
-    if (Spec1->getKeyword() != Spec2->getKeyword())
-      return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->getDependentTemplateName(),
-                                  Spec2->getDependentTemplateName()))
-      return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
-                                  Spec2->template_arguments()))
-      return false;
     break;
   }
 

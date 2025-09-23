@@ -445,8 +445,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
 
   if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
       s.getNRVOCandidate()->isNRVOVariable()) {
-    getCIRGenModule().errorNYI(s.getSourceRange(),
-                               "named return value optimization");
+    assert(!cir::MissingFeatures::openMP());
+    assert(!cir::MissingFeatures::nrvo());
   } else if (!rv) {
     // No return expression. Do nothing.
   } else if (rv->getType()->isVoidType()) {
@@ -471,9 +471,16 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
         builder.CIRBaseBuilderTy::createStore(loc, value, *fnRetAlloca);
       }
       break;
-    default:
+    case cir::TEK_Complex:
       getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "non-scalar function return type");
+                                 "complex function return type");
+      break;
+    case cir::TEK_Aggregate:
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
+                                            AggValueSlot::IsDestructed,
+                                            AggValueSlot::IsNotAliased,
+                                            getOverlapForReturnValue()));
       break;
     }
   }
@@ -508,7 +515,7 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
-  builder.createContinue(getLoc(s.getContinueLoc()));
+  builder.createContinue(getLoc(s.getKwLoc()));
 
   // Insert the new block to continue codegen after the continue statement.
   builder.createBlock(builder.getBlock()->getParent());
@@ -543,7 +550,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
 }
 
 mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
-  builder.createBreak(getLoc(s.getBreakLoc()));
+  builder.createBreak(getLoc(s.getKwLoc()));
 
   // Insert the new block to continue codegen after the break statement.
   builder.createBlock(builder.getBlock()->getParent());

@@ -67,7 +67,8 @@ class MxCASARIDOp<bits<2> size_encoding, MxType type>
              "cas."#type.Prefix#" $dc, $du, $mem"> {
   let Inst = (ascend
                 (descend 0b00001, size_encoding, 0b011, MxEncAddrMode_p<"mem">.EA),
-                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3))
+                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3)),
+                MxEncAddrMode_p<"mem">.Supplement
               );
   let Constraints = "$out = $dc";
   let mayLoad = 1;
@@ -84,7 +85,8 @@ class MxCASARIIOp<bits<2> size_encoding, MxType type>
              "cas."#type.Prefix#" $dc, $du, $mem"> {
   let Inst = (ascend
                 (descend 0b00001, size_encoding, 0b011, MxEncAddrMode_f<"mem">.EA),
-                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3))
+                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3)),
+                MxEncAddrMode_f<"mem">.Supplement
               );
   let Constraints = "$out = $dc";
   let mayLoad = 1;
@@ -100,8 +102,9 @@ class MxCASALOp<bits<2> size_encoding, MxType type>
              (ins type.ROp:$dc, type.ROp:$du, !cast<MxMemOp>("MxAL"#type.Size):$mem),
              "cas."#type.Prefix#" $dc, $du, $mem"> {
   let Inst = (ascend
-                (descend 0b00001, size_encoding, 0b011, MxEncAddrMode_abs<"mem">.EA),
-                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3))
+                (descend 0b00001, size_encoding, 0b011, MxEncAddrMode_abs<"mem", true>.EA),
+                (descend 0b0000000, (operand "$du", 3), 0b000, (operand "$dc", 3)),
+                MxEncAddrMode_abs<"mem", true>.Supplement
               );
   let Constraints = "$out = $dc";
   let mayLoad = 1;

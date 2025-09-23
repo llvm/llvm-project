@@ -31,23 +31,22 @@ llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
   HANDLE hThread = (HANDLE)::_beginthreadex(NULL, StackSizeInBytes.value_or(0),
                                             ThreadFunc, Arg, 0, NULL);
 
-  if (!hThread) {
+  if (!hThread)
     ReportLastErrorFatal("_beginthreadex failed");
-  }
 
   return hThread;
 }
 
 void llvm_thread_join_impl(HANDLE hThread) {
-  if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
+  if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED)
     ReportLastErrorFatal("WaitForSingleObject failed");
-  }
+  if (::CloseHandle(hThread) == FALSE)
+    ReportLastErrorFatal("CloseHandle failed");
 }
 
 void llvm_thread_detach_impl(HANDLE hThread) {
-  if (::CloseHandle(hThread) == FALSE) {
+  if (::CloseHandle(hThread) == FALSE)
     ReportLastErrorFatal("CloseHandle failed");
-  }
 }
 
 DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
@@ -202,9 +201,9 @@ template <typename F>
 static bool IterateProcInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, F Fn) {
   DWORD Len = 0;
   BOOL R = ::GetLogicalProcessorInformationEx(Relationship, NULL, &Len);
-  if (R || GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+  if (R || GetLastError() != ERROR_INSUFFICIENT_BUFFER)
     return false;
-  }
+
   auto *Info = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)calloc(1, Len);
   R = ::GetLogicalProcessorInformationEx(Relationship, Info, &Len);
   if (R) {

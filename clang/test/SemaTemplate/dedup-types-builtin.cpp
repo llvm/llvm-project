@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify
+// RUN: %clang_cc1 %s -verify -Wno-c++20-extensions
 template <typename...> struct TypeList;
 
 // === Check results of the builtin.
@@ -211,8 +211,7 @@ InUsingDecl<WithFunc1, WithFunc2> iu2; // expected-note {{in instantiation of te
 template <class ...T>
 struct LambdaInitCaptures {
   static constexpr int test() {
-    [...foos=__builtin_dedup_pack<T...>()]{}; // expected-warning {{initialized lambda pack captures are a C++20 extension}} \
-                                              // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here.}}
+    [...foos=__builtin_dedup_pack<T...>()]{}; // expected-error 2{{expansions of '__builtin_dedup_pack' are not supported here.}}
     return 3;
   }
 };

@@ -2855,12 +2855,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    mov w20, w0
 ; CHECK0-NEXT:    msub x9, x8, x8, x9
 ; CHECK0-NEXT:    mov sp, x9
-; CHECK0-NEXT:    stur x9, [x29, #-80]
-; CHECK0-NEXT:    sub x9, x29, #80
-; CHECK0-NEXT:    sturh wzr, [x29, #-70]
-; CHECK0-NEXT:    stur wzr, [x29, #-68]
-; CHECK0-NEXT:    sturh w8, [x29, #-72]
-; CHECK0-NEXT:    msr TPIDR2_EL0, x9
+; CHECK0-NEXT:    sub x10, x29, #80
+; CHECK0-NEXT:    stp x9, x8, [x29, #-80]
+; CHECK0-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK0-NEXT:    smstop sm
 ; CHECK0-NEXT:    bl other
 ; CHECK0-NEXT:    smstart sm
@@ -2930,12 +2927,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    msub x9, x8, x8, x9
 ; CHECK64-NEXT:    mov x19, sp
 ; CHECK64-NEXT:    mov sp, x9
-; CHECK64-NEXT:    str x9, [x19]
-; CHECK64-NEXT:    add x9, x19, #0
-; CHECK64-NEXT:    strh wzr, [x19, #10]
-; CHECK64-NEXT:    str wzr, [x19, #12]
-; CHECK64-NEXT:    strh w8, [x19, #8]
-; CHECK64-NEXT:    msr TPIDR2_EL0, x9
+; CHECK64-NEXT:    add x10, x19, #0
+; CHECK64-NEXT:    stp x9, x8, [x19]
+; CHECK64-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK64-NEXT:    smstop sm
 ; CHECK64-NEXT:    bl other
 ; CHECK64-NEXT:    smstart sm
@@ -3011,12 +3005,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    msub x9, x8, x8, x9
 ; CHECK1024-NEXT:    mov x19, sp
 ; CHECK1024-NEXT:    mov sp, x9
-; CHECK1024-NEXT:    str x9, [x19]
-; CHECK1024-NEXT:    add x9, x19, #0
-; CHECK1024-NEXT:    strh wzr, [x19, #10]
-; CHECK1024-NEXT:    str wzr, [x19, #12]
-; CHECK1024-NEXT:    strh w8, [x19, #8]
-; CHECK1024-NEXT:    msr TPIDR2_EL0, x9
+; CHECK1024-NEXT:    add x10, x19, #0
+; CHECK1024-NEXT:    stp x9, x8, [x19]
+; CHECK1024-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:    bl other
 ; CHECK1024-NEXT:    smstart sm

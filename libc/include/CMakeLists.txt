@@ -70,6 +70,7 @@ add_header_macro(
   dlfcn.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.dl_info
 )
 
 add_header_macro(

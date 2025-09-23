@@ -12,8 +12,6 @@
 // failures when back-deploying.
 // XFAIL: availability-verbose_abort-missing
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__verbose_abort>
 #include <cstdlib>
 

@@ -1169,6 +1169,7 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
 
 clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
+  TypeSystemClang::RequireCompleteType(ToCompilerType(element_type));
 
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
@@ -1453,8 +1454,9 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
-void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter) {
-  m_clang.Dump(stream.AsRawOstream(), filter);
+void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter,
+                         bool show_color) {
+  m_clang.Dump(stream.AsRawOstream(), filter, show_color);
 }
 
 clang::NamespaceDecl *

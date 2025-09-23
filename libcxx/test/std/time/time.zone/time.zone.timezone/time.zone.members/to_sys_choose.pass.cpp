@@ -141,7 +141,7 @@ static void test_ambiguous() {
   assert(tz->to_sys(time + 0ms, std::chrono::choose::earliest) == earlier);
   assert(tz->to_sys(time + 0s, std::chrono::choose::latest) == later);
 
-  // Test times in the ambigious hour
+  // Test times in the ambiguous hour
   assert(tz->to_sys(time + 1s, std::chrono::choose::earliest) == earlier + 1s);
   assert(tz->to_sys(time + 1min, std::chrono::choose::latest) == later + 1min);
   assert(tz->to_sys(time + 30min, std::chrono::choose::earliest) == earlier + 30min);

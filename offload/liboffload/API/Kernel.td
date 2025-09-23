@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Struct {
-    let name = "ol_kernel_launch_size_args_t";
+def ol_kernel_launch_size_args_t : Struct {
     let desc = "Size-related arguments for a kernel launch.";
     let members = [
         StructMember<"size_t", "Dimensions", "Number of work dimensions">,
@@ -21,8 +20,7 @@ def : Struct {
     ];
 }
 
-def : Function {
-    let name = "olLaunchKernel";
+def olLaunchKernel : Function {
     let desc = "Enqueue a kernel launch with the specified size and parameters.";
     let details = [
         "If a queue is not specified, kernel execution happens synchronously",
@@ -43,8 +41,7 @@ def : Function {
     ];
 }
 
-def : Function {
-    let name = "olCalculateOptimalOccupancy";
+def olCalculateOptimalOccupancy : Function {
     let desc = "Given dynamic memory size, query the device for a workgroup size that will result in optimal occupancy.";
     let details = [
         "For most devices, this will be the largest workgroup size that will result in all work items fitting on the device at once.",

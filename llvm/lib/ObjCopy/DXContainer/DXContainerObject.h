@@ -30,6 +30,8 @@ struct Part {
   }
 };
 
+using PartPred = llvm::function_ref<bool(const Part &)>;
+
 struct Object {
   ::llvm::dxbc::Header Header;
   SmallVector<Part> Parts;
@@ -38,6 +40,9 @@ struct Object {
     return sizeof(::llvm::dxbc::Header)       // base header
            + sizeof(uint32_t) * Parts.size(); // part offset values
   }
+
+  Error removeParts(PartPred ToRemove);
+  void recomputeHeader();
 };
 
 } // end namespace dxbc

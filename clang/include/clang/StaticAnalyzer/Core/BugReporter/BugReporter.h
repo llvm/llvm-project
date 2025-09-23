@@ -623,10 +623,12 @@ public:
   ASTContext &getContext() { return D.getASTContext(); }
 
   const SourceManager &getSourceManager() { return D.getSourceManager(); }
+  const SourceManager &getSourceManager() const { return D.getSourceManager(); }
 
   const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
   Preprocessor &getPreprocessor() { return D.getPreprocessor(); }
+  const Preprocessor &getPreprocessor() const { return D.getPreprocessor(); }
 
   /// Get the top-level entry point for the issue to be reported.
   const Decl *getAnalysisEntryPoint() const { return AnalysisEntryPoint; }

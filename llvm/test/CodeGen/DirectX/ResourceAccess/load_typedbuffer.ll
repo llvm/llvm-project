@@ -10,7 +10,7 @@ declare void @use_float1(<1 x float>)
 define void @load_float4(i32 %index, i32 %elemindex) {
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -40,7 +40,7 @@ define void @load_float4(i32 %index, i32 %elemindex) {
 ; CHECK-LABEL: define void @load_float(
 define void @load_float(i32 %index) {
   %buffer = call target("dx.TypedBuffer", float, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -65,7 +65,7 @@ define void @load_float(i32 %index) {
 ; CHECK-LABEL: define void @load_float1(
 define void @load_float1(i32 %index) {
   %buffer = call target("dx.TypedBuffer", <1 x float>, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(

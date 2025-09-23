@@ -64,30 +64,30 @@ define dso_local void @_Z13distribution3PiS_S_S_i(ptr nocapture noundef %a, ptr 
 ; CHECK:       [[FOR_BODY_LDIST1]]:
 ; CHECK-NEXT:    [[IDXPROM_LDIST1:%.*]] = phi i64 [ 0, %[[FOR_BODY_PH_LDIST1]] ], [ [[I6_LDIST1:%.*]], %[[FOR_BODY_LDIST1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_LDIST1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IDXPROM_LDIST1]]
-; CHECK-NEXT:    [[I2_LDIST1:%.*]] = load i32, ptr [[ARRAYIDX_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META6:![0-9]+]]
+; CHECK-NEXT:    [[I2_LDIST1:%.*]] = load i32, ptr [[ARRAYIDX_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[ADD4_LDIST1:%.*]] = add nsw i32 [[I2_LDIST1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX8_LDIST1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM_LDIST1]]
-; CHECK-NEXT:    store i32 [[ADD4_LDIST1]], ptr [[ARRAYIDX8_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
+; CHECK-NEXT:    store i32 [[ADD4_LDIST1]], ptr [[ARRAYIDX8_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META10:![0-9]+]], !noalias [[META12:![0-9]+]]
 ; CHECK-NEXT:    [[I3_LDIST1:%.*]] = getelementptr i32, ptr [[C]], i64 [[IDXPROM_LDIST1]]
 ; CHECK-NEXT:    [[ARRAYIDX17_LDIST1:%.*]] = getelementptr i8, ptr [[I3_LDIST1]], i64 -4
-; CHECK-NEXT:    [[I4_LDIST1:%.*]] = load i32, ptr [[ARRAYIDX17_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META14:![0-9]+]], !noalias [[META15:![0-9]+]]
+; CHECK-NEXT:    [[I4_LDIST1:%.*]] = load i32, ptr [[ARRAYIDX17_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META15:![0-9]+]], !noalias [[META16:![0-9]+]]
 ; CHECK-NEXT:    [[SUB18_LDIST1:%.*]] = sub nsw i32 [[ADD4_LDIST1]], [[I4_LDIST1]]
-; CHECK-NEXT:    store i32 [[SUB18_LDIST1]], ptr [[I3_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META14]], !noalias [[META15]]
+; CHECK-NEXT:    store i32 [[SUB18_LDIST1]], ptr [[I3_LDIST1]], align 4, !tbaa [[TBAA0]], !alias.scope [[META15]], !noalias [[META16]]
 ; CHECK-NEXT:    [[I6_LDIST1]] = add i64 [[IDXPROM_LDIST1]], 1
 ; CHECK-NEXT:    [[CMP1_NOT_LDIST1:%.*]] = icmp eq i64 [[I6_LDIST1]], [[LEN]]
-; CHECK-NEXT:    br i1 [[CMP1_NOT_LDIST1]], label %[[FOR_BODY_PH:.*]], label %[[FOR_BODY_LDIST1]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP1_NOT_LDIST1]], label %[[FOR_BODY_PH:.*]], label %[[FOR_BODY_LDIST1]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[FOR_BODY_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = phi i64 [ 0, %[[FOR_BODY_PH]] ], [ [[I6:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[I5:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA0]], !alias.scope [[META9]], !noalias [[META11]]
+; CHECK-NEXT:    [[I5:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA0]], !alias.scope [[META10]], !noalias [[META12]]
 ; CHECK-NEXT:    [[ADD27:%.*]] = add nsw i32 [[I5]], 2
 ; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store i32 [[ADD27]], ptr [[ARRAYIDX31]], align 4, !tbaa [[TBAA0]], !alias.scope [[META15]], !noalias [[META6]]
+; CHECK-NEXT:    store i32 [[ADD27]], ptr [[ARRAYIDX31]], align 4, !tbaa [[TBAA0]], !alias.scope [[META16]], !noalias [[META7]]
 ; CHECK-NEXT:    [[I6]] = add i64 [[IDXPROM]], 1
 ; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[I6]], [[LEN]]
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[END_LOOPEXIT_LOOPEXIT20:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP16]]
+; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[END_LOOPEXIT_LOOPEXIT20:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP17]]
 ; CHECK:       [[END_LOOPEXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[END_LOOPEXIT:.*]]
 ; CHECK:       [[END_LOOPEXIT_LOOPEXIT20]]:
@@ -143,17 +143,18 @@ end:                                              ; preds = %end.loopexit, %entr
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; CHECK: [[META5]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
-; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
-; CHECK: [[META10]] = distinct !{[[META10]], [[META8]]}
-; CHECK: [[META11]] = !{[[META12:![0-9]+]], [[META13:![0-9]+]], [[META7]]}
-; CHECK: [[META12]] = distinct !{[[META12]], [[META8]]}
-; CHECK: [[META13]] = distinct !{[[META13]], [[META8]]}
-; CHECK: [[META14]] = !{[[META12]]}
+; CHECK: [[META6]] = !{!"llvm.loop.isdistributed", i32 1}
+; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]], !"LVerDomain"}
+; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META9]]}
+; CHECK: [[META12]] = !{[[META13:![0-9]+]], [[META14:![0-9]+]], [[META8]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META9]]}
+; CHECK: [[META14]] = distinct !{[[META14]], [[META9]]}
 ; CHECK: [[META15]] = !{[[META13]]}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META5]]}
+; CHECK: [[META16]] = !{[[META14]]}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META5]]}
 ;.
