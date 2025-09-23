@@ -11721,10 +11721,19 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   // we'll have to do 2x as many shuffles in order to achieve this, a 2-input
   // pre-shuffle first is a better strategy.
   if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
+    // If we don't have blends, see if we can create a cheap unpack.
+    if (!Subtarget.hasSSE41() && VT.is128BitVector() &&
+        (is128BitUnpackShuffleMask(V1Mask, DAG) ||
+         is128BitUnpackShuffleMask(V2Mask, DAG)))
+      if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
+              DL, VT, V1, V2, Mask, Subtarget, DAG))
+        return PermUnpack;
+
     // Only prefer immediate blends to unpack/rotate.
-    if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
-                                                          DAG, true))
+    if (SDValue BlendPerm =
+            lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask, DAG, true))
       return BlendPerm;
+
     // If either input vector provides only a single element which is repeated
     // multiple times, unpacking from both input vectors would generate worse
     // code. e.g. for
@@ -11736,13 +11745,16 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
       if (SDValue UnpackPerm =
               lowerShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask, DAG))
         return UnpackPerm;
+
     if (SDValue RotatePerm = lowerShuffleAsByteRotateAndPermute(
             DL, VT, V1, V2, Mask, Subtarget, DAG))
       return RotatePerm;
+
     // Unpack/rotate failed - try again with variable blends.
     if (SDValue BlendPerm = lowerShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask,
                                                           DAG))
       return BlendPerm;
+
     if (VT.getScalarSizeInBits() >= 32)
       if (SDValue PermUnpack = lowerShuffleAsPermuteAndUnpack(
               DL, VT, V1, V2, Mask, Subtarget, DAG))
