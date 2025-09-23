@@ -532,6 +532,8 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``AlignFreeVariableDeclarations`` and ``AlignMemberVariableDeclarations``
+  to ``AlignConsecutiveDeclarations``.
 
 libclang
 --------
