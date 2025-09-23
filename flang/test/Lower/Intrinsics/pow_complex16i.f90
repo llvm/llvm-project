@@ -4,7 +4,7 @@
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
 
 ! PRECISE: fir.call @_FortranAcqpowi({{.*}}){{.*}}: (complex<f128>, i32) -> complex<f128>
-! CHECK: complex.pow %{{.*}}, %{{.*}} fastmath<contract> : complex<f128>
+! CHECK: complex.powi %{{.*}}, %{{.*}} fastmath<contract> : complex<f128>
   complex(16) :: a
   integer(4) :: b
   b = a ** b

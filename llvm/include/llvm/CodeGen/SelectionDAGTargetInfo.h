@@ -162,7 +162,7 @@ public:
 
   virtual std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src, MachinePointerInfo SrcPtrInfo) const {
+                          SDValue Src, const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 
