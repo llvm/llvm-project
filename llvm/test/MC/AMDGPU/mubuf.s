@@ -647,6 +647,10 @@ buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // VI:   buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc ; encoding: [0xff,0x4f,0x08,0xe1,0x00,0x05,0x02,0xf8]
 
+buffer_atomic_add v5, off, s[8:11], INV2PI offset:4095 glc
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// VI:   buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc ; encoding: [0xff,0x4f,0x08,0xe1,0x00,0x05,0x02,0xf8]
+
 buffer_atomic_fcmpswap v[0:1], off, s[0:3], s0 offset:4095
 // SICI: buffer_atomic_fcmpswap v[0:1], off, s[0:3], s0 offset:4095 ; encoding: [0xff,0x0f,0xf8,0xe0,0x00,0x00,0x00,0x00]
 // NOVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

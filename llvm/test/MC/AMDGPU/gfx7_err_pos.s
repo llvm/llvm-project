@@ -37,6 +37,16 @@ v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
 // CHECK-NEXT:{{^}}v_and_b32_e64 v0, 0.159154943091895317852646485335, v1
 // CHECK-NEXT:{{^}}                  ^
 
+v_and_b32_e64 v0, INV2PI, v1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_and_b32_e64 v0, INV2PI, v1
+// CHECK-NEXT:{{^}}                  ^
+
+v_and_b32_e64 v0, INV2PI64, v1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
+// CHECK-NEXT:{{^}}v_and_b32_e64 v0, INV2PI64, v1
+// CHECK-NEXT:{{^}}                  ^
+
 //==============================================================================
 // cache policy is not supported for SMRD instructions
 
