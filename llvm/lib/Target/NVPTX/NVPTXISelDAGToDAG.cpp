@@ -38,6 +38,9 @@ static cl::opt<bool>
     EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
                    cl::desc("Enable reciprocal sqrt optimization"));
 
+// FIXME: This is a WAR to recover lost performance from #155024.
+// We still need to investigate the regression and find a more permanent
+// solution.
 static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
                                    cl::Hidden,
                                    cl::desc("Enable MAD wide optimization"));
