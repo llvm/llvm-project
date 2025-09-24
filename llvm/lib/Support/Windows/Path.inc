@@ -130,7 +130,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
 namespace fs {
 
-const file_t kInvalidFile = INVALID_HANDLE_VALUE;
+const file_t::value_type file_t::Invalid = INVALID_HANDLE_VALUE;
 
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   SmallVector<wchar_t, MAX_PATH> PathName;
@@ -1397,7 +1397,7 @@ std::error_code unlockFile(int FD) {
 
 std::error_code closeFile(file_t &F) {
   file_t TmpF = F;
-  F = kInvalidFile;
+  F = file_t::Invalid;
   if (!::CloseHandle(TmpF))
     return mapWindowsError(::GetLastError());
   return std::error_code();

@@ -170,16 +170,22 @@ TEST_F(MemoryBufferTest, copy) {
 
 #if LLVM_ENABLE_THREADS
 TEST_F(MemoryBufferTest, createFromPipe) {
-  sys::fs::file_t pipes[2];
+  int pipes[2];
 #if LLVM_ON_UNIX
   ASSERT_EQ(::pipe(pipes), 0) << strerror(errno);
 #else
   ASSERT_TRUE(::CreatePipe(&pipes[0], &pipes[1], nullptr, 0))
       << ::GetLastError();
 #endif
-  auto ReadCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[0]); });
+  auto ReadCloser = make_scope_exit([&] {
+    sys::fs::file_t F(pipes[0]);
+    sys::fs::closeFile(F);
+  });
   std::thread Writer([&] {
-    auto WriteCloser = make_scope_exit([&] { sys::fs::closeFile(pipes[1]); });
+    auto WriteCloser = make_scope_exit([&] {
+      sys::fs::file_t F(pipes[1]);
+      sys::fs::closeFile(F);
+    });
     for (unsigned i = 0; i < 5; ++i) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
 #if LLVM_ON_UNIX

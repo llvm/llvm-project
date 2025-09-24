@@ -56,7 +56,6 @@ using namespace llvm::vfs;
 using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_status;
 using llvm::sys::fs::file_type;
-using llvm::sys::fs::kInvalidFile;
 using llvm::sys::fs::perms;
 using llvm::sys::fs::UniqueID;
 
@@ -198,7 +197,7 @@ class RealFile : public File {
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
         RealName(NewRealPathName.str()) {
-    assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
+    assert(FD.isValid() && "Invalid or inactive file descriptor");
   }
 
 public:
@@ -219,7 +218,7 @@ public:
 RealFile::~RealFile() { close(); }
 
 ErrorOr<Status> RealFile::status() {
-  assert(FD != kInvalidFile && "cannot stat closed file");
+  assert(FD.isValid() && "cannot stat closed file");
   if (!S.isStatusKnown()) {
     file_status RealStatus;
     if (std::error_code EC = sys::fs::status(FD, RealStatus))
@@ -236,14 +235,14 @@ ErrorOr<std::string> RealFile::getName() {
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                     bool RequiresNullTerminator, bool IsVolatile) {
-  assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  assert(FD.isValid() && "cannot get buffer for closed file");
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
 
 std::error_code RealFile::close() {
   std::error_code EC = sys::fs::closeFile(FD);
-  FD = kInvalidFile;
+  FD = file_t::Invalid;
   return EC;
 }
 

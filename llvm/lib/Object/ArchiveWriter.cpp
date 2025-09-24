@@ -132,7 +132,7 @@ Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
   if (!FDOrErr)
     return FDOrErr.takeError();
   sys::fs::file_t FD = *FDOrErr;
-  assert(FD != sys::fs::kInvalidFile);
+  assert(FD.isValid());
 
   if (auto EC = sys::fs::status(FD, Status))
     return errorCodeToError(EC);
