@@ -928,3 +928,7 @@ void no_throw_in_lambda_by_reference_capture(const copy_constructor_throws& a) n
   [&] { a; };
   [&a] {};
 }
+
+const auto throw_in_noexcept_lambda = [] () noexcept { throw 42; };
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
+// CHECK-MESSAGES: :[[@LINE-2]]:56: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
