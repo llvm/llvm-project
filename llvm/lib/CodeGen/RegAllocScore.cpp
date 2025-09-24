@@ -79,8 +79,8 @@ llvm::calculateRegAllocScore(const MachineFunction &MF,
         return MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
       },
       [&](const MachineInstr &MI) {
-        auto *TTI = MF.getSubtarget().getInstrInfo();
-        return TTI->isTriviallyReMaterializable(MI);
+        return MF.getSubtarget().getInstrInfo()->isReMaterializable(
+            MI);
       });
 }
 
