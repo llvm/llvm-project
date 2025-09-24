@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -1965,6 +1966,8 @@ public:
   /// int64_t, throwing an exception if the field does not exist or if the
   /// value is not the right type.
   int64_t getValueAsInt(StringRef FieldName) const;
+
+  llvm::IRMemLocation getLocationTypeAsInt(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as an Dag,
   /// throwing an exception if the field does not exist or if the value is not
