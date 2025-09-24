@@ -561,23 +561,26 @@ static Error
 validateDescriptorTableRegisterOverflow(const mcdxbc::DescriptorTable &Table,
                                         uint32_t Location) {
   uint64_t Offset = 0;
-
+  bool IsPrevUnbound = false;
+  
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
     // Validation of NumDescriptors should have happened by this point.
     if (Range.NumDescriptors == 0)
       continue;
 
-    if (Range.OffsetInDescriptorsFromTableStart != DescriptorTableOffsetAppend)
-      Offset = Range.OffsetInDescriptorsFromTableStart;
-
-    if (!verifyNoOverflowedOffset(Offset))
-      return make_error<OffsetOverflowError>(
-          Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
-
     const uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
         Range.BaseShaderRegister, Range.NumDescriptors);
 
     if (!verifyNoOverflowedOffset(RangeBound))
+      return make_error<ShaderRegisterOverflowError>(
+          Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+
+    bool IsAppending =
+        Range.OffsetInDescriptorsFromTableStart == DescriptorTableOffsetAppend;
+    if (!IsAppending)
+      Offset = Range.OffsetInDescriptorsFromTableStart;
+
+    if (IsPrevUnbound && IsAppending)
       return make_error<ShaderRegisterOverflowError>(
           Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
@@ -587,8 +590,10 @@ validateDescriptorTableRegisterOverflow(const mcdxbc::DescriptorTable &Table,
     if (!verifyNoOverflowedOffset(OffsetBound))
       return make_error<DescriptorRangeOverflowError>(
           Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
-    Offset = updateOngoingOffset(Offset, Range.NumDescriptors,
-                                 Range.OffsetInDescriptorsFromTableStart);
+
+    Offset = OffsetBound + 1;
+    IsPrevUnbound =
+        Range.NumDescriptors == llvm::hlsl::rootsig::NumDescriptorsUnbounded;
   }
 
   return Error::success();
