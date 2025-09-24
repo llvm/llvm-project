@@ -340,12 +340,12 @@ public:
   virtual void finalize() {} // optional
 };
 
+using ReportFn = llvm::unique_function<void(const Remark &)>;
+
 /// Base class for MLIR remark emitting policies that is used to emit
 /// optimization remarks to the underlying remark streamer. The derived classes
 /// should implement the `reportRemark` method to provide the actual emitting
 /// implementation.
-using ReportFn = llvm::unique_function<void(const Remark &)>;
-
 class RemarkEmittingPolicyBase {
 protected:
   ReportFn reportImpl;
@@ -492,22 +492,33 @@ public:
 /// Policy that emits final remarks.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
-  /// Postponed remarks. They are deferred to the end of the pipeline, where the
-  /// user can intercept them for custom processing, otherwise they will be
-  /// reported on engine destruction.
+  /// user can intercept them for custom processing via a registered callback,
+  /// otherwise they will be reported on engine destruction.
   llvm::DenseSet<detail::Remark> postponedRemarks;
+  /// Optional user callback for intercepting postponed remarks.
+  std::function<void(const detail::Remark &)> postponedRemarkCallback;
 
 public:
   RemarkEmittingPolicyFinal();
+
+  /// Register a callback to intercept postponed remarks before they are
+  /// reported. The callback will be invoked for each postponed remark in
+  /// finalize().
+  void
+  setPostponedRemarkCallback(std::function<void(const detail::Remark &)> cb) {
+    postponedRemarkCallback = std::move(cb);
+  }
 
   void reportRemark(const detail::Remark &remark) override {
     postponedRemarks.erase(remark);
     postponedRemarks.insert(remark);
   }
   void finalize() override {
-    for (auto &remark : postponedRemarks)
+    for (auto &remark : postponedRemarks) {
+      if (postponedRemarkCallback)
+        postponedRemarkCallback(remark);
       reportImpl(remark);
-    postponedRemarks.clear();
+    }
   }
 };
 
@@ -570,8 +581,8 @@ inline detail::InFlightRemark analysis(Location loc, RemarkOpts opts) {
 
 /// Setup remarks for the context. This function will enable the remark engine
 /// and set the streamer to be used for optimization remarks. The remark
-/// categories are used to filter the remarks that will be emitted by the remark
-/// engine. If a category is not specified, it will not be emitted. If
+/// categories are used to filter the remarks that will be emitted by the
+/// remark engine. If a category is not specified, it will not be emitted. If
 /// `printAsEmitRemarks` is true, the remarks will be printed as
 /// mlir::emitRemarks. 'streamer' must inherit from MLIRRemarkStreamerBase and
 /// will be used to stream the remarks.
