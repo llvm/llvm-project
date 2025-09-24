@@ -402,8 +402,8 @@ def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
 def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
 def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
 def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
-def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
-def HasP10Vector: Predicate<"Subtarget->hasP10Vector()">;
+def NoP10Vector : Predicate<"!Subtarget->hasP10Vector()">;
+def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
 
 // Predicates used to differenciate between different ISAs.
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
