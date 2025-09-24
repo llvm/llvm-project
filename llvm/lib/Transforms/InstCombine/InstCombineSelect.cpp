@@ -4613,7 +4613,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *MaskedLoadPtr;
   const APInt *MaskedLoadAlignment;
-  if (match(TrueVal,
+  if (TrueVal->hasOneUse() &&
+      match(TrueVal,
             m_MaskedLoad(m_Value(MaskedLoadPtr), m_APInt(MaskedLoadAlignment),
                          m_Specific(CondVal), m_Value())))
     return replaceInstUsesWith(

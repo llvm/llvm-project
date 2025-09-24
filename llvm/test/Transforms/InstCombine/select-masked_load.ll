@@ -136,6 +136,19 @@ define <vscale x 4 x float> @neg_fold_sel_into_masked_load_mask_mismatch(ptr %lo
   ret <vscale x 4 x float> %sel
 }
 
+define <vscale x 4 x float> @fold_sel_into_masked_load_scalable_one_use_check(ptr %loc1, <vscale x 4 x i1> %mask, <vscale x 4 x float> %passthrough, ptr %loc2) {
+; CHECK-LABEL: @fold_sel_into_masked_load_scalable_one_use_check(
+; CHECK-NEXT:    [[LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[LOC:%.*]], i32 1, <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[SEL:%.*]] = select <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> [[LOAD]], <vscale x 4 x float> [[PASSTHROUGH:%.*]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[LOAD]], ptr [[LOC2:%.*]], i32 1, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[SEL]]
+;
+  %load = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr %loc1, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x float> zeroinitializer)
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %load, <vscale x 4 x float> %passthrough
+  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %load, ptr %loc2, i32 1, <vscale x 4 x i1> %mask)
+  ret <vscale x 4 x float> %sel
+}
+
 declare <8 x float> @llvm.masked.load.v8f32.p0(ptr, i32 immarg, <8 x i1>, <8 x float>)
 declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
 declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>)
