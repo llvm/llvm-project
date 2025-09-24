@@ -123,13 +123,11 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND
-    MLIR_TEST_DEPENDS
-    FileCheck count not
-    split-file yaml2obj
-    MLIRCAPIIR
-    MLIRCAPIArith
-  )
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+endif()
+# Examples/standalone/test.toy (vis-a-vis the standalone example) depends on these.
+if(LLVM_INCLUDE_EXAMPLES)
+  list(APPEND MLIR_TEST_DEPENDS MLIRCAPIIR MLIRCAPIArith)
 endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
