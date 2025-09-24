@@ -6,6 +6,8 @@
 SomeObj *provide();
 void consume_obj(SomeObj*);
 
+NSString *provide_str();
+
 CFMutableArrayRef provide_cf();
 void consume_cf(CFMutableArrayRef);
 
@@ -610,6 +612,10 @@ void foo() {
   [self doWork:__null];
   [self doWork:nil];
   [NSApp run];
+  [provide() isEqual:provide()];
+  [provide_str() isEqualToString:@"foo"];
+  [provide_str() copyWithZone:nullptr];
+  [provide_str() mutableCopy];
 }
 
 - (SomeObj *)getSomeObj {

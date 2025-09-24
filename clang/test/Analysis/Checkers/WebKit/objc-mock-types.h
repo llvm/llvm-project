@@ -160,6 +160,8 @@ __attribute__((objc_root_class))
 - ( const char *)UTF8String;
 - (id)initWithUTF8String:(const char *)nullTerminatedCString;
 - (NSString *)copy;
+- (NSString *)mutableCopy;
+- (BOOL)isEqualToString:(NSString *)aString;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
@@ -198,6 +200,7 @@ extern NSApplication * NSApp;
 + (SomeObj *)sharedInstance;
 - (instancetype)_init;
 - (SomeObj *)mutableCopy;
+- (BOOL)isEqual:(SomeObj *)other;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;
 - (SomeObj *)other;

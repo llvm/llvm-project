@@ -74,6 +74,10 @@ void basic_correct_arc() {
   return copy;
 }
 
+- (BOOL)isEqual:(SomeObj *)other {
+  return self.value == other.value && self.next == other.next && _other == other.other;
+}
+
 - (SomeObj *)copyWithValue:(int)value {
   auto *copy = [[SomeObj alloc] init];
   // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}

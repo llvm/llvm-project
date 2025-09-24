@@ -190,7 +190,6 @@ public:
         if (auto *InnerMsg =
                 dyn_cast<ObjCMessageExpr>(Receiver->IgnoreParenCasts())) {
           auto InnerSelector = InnerMsg->getSelector();
-          auto SelName = Selector.getNameForSlot(0);
           if (InnerSelector.getNameForSlot(0).starts_with("alloc") &&
               (SelName.starts_with("init") || SelName.starts_with("_init")))
             return;
