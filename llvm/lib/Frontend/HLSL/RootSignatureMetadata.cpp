@@ -562,7 +562,6 @@ validateDescriptorTableRegisterOverflow(const mcdxbc::DescriptorTable &Table,
                                         uint32_t Location) {
   uint64_t Offset = 0;
   bool IsPrevUnbound = false;
-  
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
     // Validation of NumDescriptors should have happened by this point.
     if (Range.NumDescriptors == 0)
