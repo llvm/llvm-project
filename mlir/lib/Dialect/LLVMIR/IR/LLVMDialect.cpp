@@ -4098,7 +4098,8 @@ LogicalResult LLVM::SincosOp::verify() {
       resultStructType.getBody()[0] != operandType ||
       resultStructType.getBody()[1] != operandType) {
     return emitOpError("expected result type to be an homogeneous struct with "
-                       "two elements matching the operand type");
+                       "two elements matching the operand type, but got ")
+           << resultType;
   }
   return success();
 }
