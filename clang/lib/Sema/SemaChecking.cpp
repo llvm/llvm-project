@@ -12910,8 +12910,8 @@ static void AnalyzeImplicitConversions(
   // Skip past explicit casts.
   if (auto *CE = dyn_cast<ExplicitCastExpr>(E)) {
     E = CE->getSubExpr();
-    // In the special case of C++ function-style cast with braces,
-    // CXXFunctionalCastExpr has InitListExpr as direct child with a single
+    // In the special case of a C++ function-style cast with braces,
+    // CXXFunctionalCastExpr has an InitListExpr as direct child with a single
     // initializer. This InitListExpr basically belongs to the cast itself, so
     // we skip it too. Specifically this is needed to silence -Wdouble-promotion
     if (isa<CXXFunctionalCastExpr>(CE)) {
