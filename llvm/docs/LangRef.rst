@@ -3013,6 +3013,8 @@ assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
 location. Operand bundles enable assumptions that are either hard or impossible
 to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
 
+Assumes with operand bundles must have ``i1 true`` as the condition operand.
+
 An assume operand bundle has the form:
 
 ::
@@ -3045,7 +3047,7 @@ allows the optimizer to assume that at location of call to
 
 .. code-block:: llvm
 
-      call void @llvm.assume(i1 %cond) ["cold"(), "nonnull"(ptr %val)]
+      call void @llvm.assume(i1 true) ["cold"(), "nonnull"(ptr %val)]
 
 allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
