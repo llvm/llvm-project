@@ -299,6 +299,10 @@ protected:
   bool enableNamedBit(const MachineBasicBlock::iterator MI,
                       AMDGPU::CPol::CPol Bit) const;
 
+  /// Check if any atomic operation on AS can affect memory accessible via the
+  /// global address space.
+  bool canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const;
+
 public:
 
   /// Create a cache control for the subtarget \p ST.
@@ -991,6 +995,15 @@ bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
   return true;
 }
 
+bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
+  assert((!ST.hasGloballyAddressableScratch() ||
+          (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE ||
+          (AS & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) &&
+         "scratch instructions should already be replaced by flat "
+         "instructions if GloballyAddressableScratch is enabled");
+  return (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE;
+}
+
 /* static */
 std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
@@ -1016,7 +1029,7 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1239,7 +1252,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1299,7 +1312,7 @@ bool SIGfx7CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1336,7 +1349,7 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1378,7 +1391,7 @@ bool SIGfx90ACacheControl::enableRMWCacheBypass(
   assert(MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1487,7 +1500,7 @@ bool SIGfx90ACacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Ensures that following loads will not see stale remote VMEM data or
@@ -1551,7 +1564,7 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
@@ -1594,7 +1607,7 @@ bool SIGfx940CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Set SC bits to indicate system scope.
@@ -1638,7 +1651,7 @@ bool SIGfx940CacheControl::enableStoreCacheBypass(
   assert(!MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Set SC bits to indicate system scope.
@@ -1678,7 +1691,7 @@ bool SIGfx940CacheControl::enableRMWCacheBypass(
   assert(MI->mayLoad() && MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Set SC1 bit to indicate system scope.
@@ -1756,7 +1769,7 @@ bool SIGfx940CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Ensures that following loads will not see stale remote VMEM data or
@@ -1840,7 +1853,7 @@ bool SIGfx940CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
@@ -1897,7 +1910,7 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -2129,7 +2142,7 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -2194,7 +2207,7 @@ bool SIGfx11CacheControl::enableLoadCacheBypass(
   assert(MI->mayLoad() && !MI->mayStore());
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -2462,7 +2475,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   /// memory.
 
   /// Other address spaces do not have a cache.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+  if (!canAffectGlobalAddrSpace(AddrSpace))
     return false;
 
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
@@ -2523,7 +2536,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
   // memory.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     if (Pos == Position::AFTER)
       ++MI;
 
@@ -2655,7 +2668,7 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
                                          SIAtomicAddrSpace AddrSpace) const {
   bool Changed = false;
 
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
