@@ -637,7 +637,7 @@ LLVM_ABI std::error_code is_other(const Twine &path, bool &result);
 LLVM_ABI std::error_code status(const Twine &path, file_status &result,
                                 bool follow = true);
 
-/// A version for when a file is already available.
+/// A version for when a file_t is already available.
 LLVM_ABI std::error_code status(file_t F, file_status &Result);
 
 /// A version for when a file descriptor is already available.
@@ -994,15 +994,15 @@ inline file_t convertFDToNativeFile(int FD) { return file_t(FD); }
 #endif
 
 /// Return an open handle to standard in. On Unix, this is typically FD 0.
-/// Returns Invalid file_t when the stream is closed.
+/// Returns invalid file_t when the stream is closed.
 LLVM_ABI file_t getStdinHandle();
 
 /// Return an open handle to standard out. On Unix, this is typically FD 1.
-/// Returns Invalid file_t when the stream is closed.
+/// Returns invalid file_t when the stream is closed.
 LLVM_ABI file_t getStdoutHandle();
 
 /// Return an open handle to standard error. On Unix, this is typically FD 2.
-/// Returns kInvalidFile when the stream is closed.
+/// Returns invalid file_t when the stream is closed.
 LLVM_ABI file_t getStderrHandle();
 
 /// Reads \p Buf.size() bytes from \p FileHandle into \p Buf. Returns the number

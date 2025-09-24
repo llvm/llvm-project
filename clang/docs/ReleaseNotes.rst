@@ -422,6 +422,7 @@ Bug Fixes to C++ Support
   ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
+- Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
