@@ -11,16 +11,10 @@
 
 define void @foo() {
 ; SSE-LABEL: @foo(
-; SSE-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 16
-; SSE-NEXT:    store i32 [[TMP1]], ptr @a, align 16
-; SSE-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([8 x i32], ptr @b, i64 0, i64 2), align 8
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 2), align 8
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 3), align 4
-; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 4), align 16
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 5), align 4
-; SSE-NEXT:    store i32 [[TMP1]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 6), align 8
-; SSE-NEXT:    store i32 [[TMP2]], ptr getelementptr inbounds ([8 x i32], ptr @a, i64 0, i64 7), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr @b, align 16
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; SSE-NEXT:    store <8 x i32> [[TMP3]], ptr @a, align 16
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @foo(
