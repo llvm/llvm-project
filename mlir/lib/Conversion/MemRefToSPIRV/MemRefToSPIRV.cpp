@@ -758,8 +758,7 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (memrefType.getRank() != 1) {
     auto coordVectorType = VectorType::get({loadOp.getMemRefType().getRank()},
                                            adaptor.getIndices().getType()[0]);
-    auto indices = llvm::to_vector(adaptor.getIndices());
-    auto indicesReversed = llvm::to_vector(llvm::reverse(indices));
+    auto indicesReversed = llvm::to_vector(llvm::reverse(adaptor.getIndices()));
     coords = spirv::CompositeConstructOp::create(rewriter, loc, coordVectorType,
                                                  indicesReversed);
   } else {
