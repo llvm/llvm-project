@@ -2,15 +2,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for fcvtas_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtau_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtms_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtmu_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtps_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtpu_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtns_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcvtnu_1d
-
 define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtas_2s:
 ; CHECK:       // %bb.0:
