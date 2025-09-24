@@ -696,6 +696,8 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
   for (auto &MO : CurrMI->operands()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
+    if (MO.isUse() && CurrMI->getOpcode() == AMDGPU::PHI)
+      break;
     if (MO.isUse() && !MO.readsReg())
       continue;
     if (!UseInternalIterator && MO.isDef())
