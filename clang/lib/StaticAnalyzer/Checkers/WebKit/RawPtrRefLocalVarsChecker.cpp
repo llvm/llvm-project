@@ -443,10 +443,6 @@ public:
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
   }
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
-  }
   bool isSafeDecl(const Decl *D) const final {
     // Treat NS/CF globals in system header as immortal.
     return BR->getSourceManager().isInSystemHeader(D->getLocation());
