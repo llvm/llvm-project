@@ -30,7 +30,7 @@ char InvalidRSMetadataValue::ID;
 char TableSamplerMixinError::ID;
 char ShaderRegisterOverflowError::ID;
 char OffsetOverflowError::ID;
-char DescriptorRangeOverflowError::ID;
+char OffsetAppendAfterOverflow::ID;
 
 template <typename T> char RootSignatureValidationError<T>::ID;
 
@@ -581,14 +581,14 @@ validateDescriptorTableRegisterOverflow(const mcdxbc::DescriptorTable &Table,
       Offset = Range.OffsetInDescriptorsFromTableStart;
 
     if (IsPrevUnbound && IsAppending)
-      return make_error<ShaderRegisterOverflowError>(
+      return make_error<OffsetAppendAfterOverflow>(
           Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     const uint64_t OffsetBound =
         llvm::hlsl::rootsig::computeRangeBound(Offset, Range.NumDescriptors);
 
     if (!verifyNoOverflowedOffset(OffsetBound))
-      return make_error<DescriptorRangeOverflowError>(
+      return make_error<OffsetOverflowError>(
           Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     Offset = OffsetBound + 1;

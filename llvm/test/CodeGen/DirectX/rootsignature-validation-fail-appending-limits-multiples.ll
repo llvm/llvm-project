@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: Cannot append range with implicit lower bound after an unbounded range CBV(register=2, space=0).
+; CHECK: error: Offset overflow for descriptor range: CBV(register=2, space=0).
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:

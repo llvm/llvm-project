@@ -48,22 +48,20 @@ public:
   }
 };
 
-class OffsetOverflowError : public ErrorInfo<OffsetOverflowError> {
+class OffsetAppendAfterOverflow : public ErrorInfo<OffsetAppendAfterOverflow> {
 public:
   static char ID;
   dxil::ResourceClass Type;
   uint32_t Register;
   uint32_t Space;
 
-  OffsetOverflowError(dxil::ResourceClass Type, uint32_t Register,
+  OffsetAppendAfterOverflow(dxil::ResourceClass Type, uint32_t Register,
                       uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
-    OS << "Cannot append range with implicit lower bound after an unbounded "
-          "range "
-       << getResourceClassName(Type) << "(register=" << Register
-       << ", space=" << Space << ").";
+    OS << "Range " << getResourceClassName(Type) << "(register=" << Register
+       << ", space=" << Space << ") " << "cannot be appended after an unbounded range ";
   }
 
   std::error_code convertToErrorCode() const override {
@@ -93,20 +91,20 @@ public:
   }
 };
 
-class DescriptorRangeOverflowError
-    : public ErrorInfo<DescriptorRangeOverflowError> {
+class OffsetOverflowError
+    : public ErrorInfo<OffsetOverflowError> {
 public:
   static char ID;
   dxil::ResourceClass Type;
   uint32_t Register;
   uint32_t Space;
 
-  DescriptorRangeOverflowError(dxil::ResourceClass Type, uint32_t Register,
+  OffsetOverflowError(dxil::ResourceClass Type, uint32_t Register,
                                uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
-    OS << "Overflow for descriptor range: " << getResourceClassName(Type)
+    OS << "Offset overflow for descriptor range: " << getResourceClassName(Type)
        << "(register=" << Register << ", space=" << Space << ").";
   }
 
