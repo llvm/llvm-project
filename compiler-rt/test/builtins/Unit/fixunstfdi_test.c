@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if defined(CRT_HAS_TF_MODE)
 
 #define QUAD_PRECISION
 #include "fp_lib.h"
@@ -38,7 +38,7 @@ char assumption_3[sizeof(fp_t)*CHAR_BIT == 128] = {0};
 
 int main()
 {
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if defined(CRT_HAS_TF_MODE)
     if (test__fixunstfdi(0.0, 0))
         return 1;
 
