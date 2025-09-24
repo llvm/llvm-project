@@ -105,7 +105,7 @@ class PrepareForOMPOffloadPrivatizationPass
           varPtr = mapInfoOp.getVarPtr();
 
         assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
-        Value heapMem = allocateHeapMem(targetOp, varPtr, mod, rewriter);
+        Value heapMem = allocateHeapMem(targetOp, varPtr, mapInfoOp.getVarType(), mod, rewriter);
         if (!heapMem)
           targetOp.emitError(
               "Unable to allocate heap memory when trying to move "
@@ -129,8 +129,13 @@ class PrepareForOMPOffloadPrivatizationPass
         // instead.
         Operation *varPtrDefiningOp = varPtr.getDefiningOp();
         DenseSet<Operation *> users;
-        users.insert(varPtrDefiningOp->user_begin(),
-                     varPtrDefiningOp->user_end());
+        if (varPtrDefiningOp) {
+          users.insert(varPtrDefiningOp->user_begin(),
+                       varPtrDefiningOp->user_end());
+        } else {
+          auto blockArg = cast<BlockArgument>(varPtr);
+          users.insert(blockArg.user_begin(), blockArg.user_end());
+        }
 
         auto usesVarPtr = [&users](Operation *op) -> bool {
           return users.count(op);
@@ -149,6 +154,7 @@ class PrepareForOMPOffloadPrivatizationPass
               chainOfOps.push_back(memberMap.getVarPtrPtr().getDefiningOp());
           }
         }
+
         DominanceInfo dom;
         llvm::sort(chainOfOps, [&](Operation *l, Operation *r) {
           return dom.dominates(l, r);
@@ -158,9 +164,9 @@ class PrepareForOMPOffloadPrivatizationPass
 
         Operation *firstOp = chainOfOps.front();
         Location loc = firstOp->getLoc();
-        Type varType = getElemType(varPtr);
+        //        Type varType = getElemType(varPtr);
+        Type varType = mapInfoOp.getVarType();
 
-        LDBG() << "varType = " << varType << "\n";
         // // auto loadVal = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
         // // (void)rewriter.create<LLVM::StoreOp>(loc, loadVal.getResult(), heapMem);
         #if 0
@@ -183,8 +189,6 @@ class PrepareForOMPOffloadPrivatizationPass
         // LLVM::BrOp::create(rewriter, loc,
         //            , );
 #else
-        // Todo: Handle boxchar (by value)
-
         // Create a llvm.func for 'region' that is marked always_inline and call it.
         auto createAlwaysInlineFuncAndCallIt = [&](Region &region,
                                                    llvm::StringRef funcName,
@@ -196,7 +200,6 @@ class PrepareForOMPOffloadPrivatizationPass
               funcName,
               firstOp, rewriter);
           auto call = rewriter.create<LLVM::CallOp>(loc, func, ValueRange{mold, arg1});
-          LDBG() << "inside createAlwaysInlineFuncAndCallIt\n";
           return call.getResult();
         };
         Value moldArg, newArg;
@@ -207,13 +210,17 @@ class PrepareForOMPOffloadPrivatizationPass
           moldArg = varPtr;
           newArg = heapMem;
         }
-        Value initializedVal = createAlwaysInlineFuncAndCallIt(
+
+        Value initializedVal;
+        if (!privatizer.getInitRegion().empty())
+          initializedVal = createAlwaysInlineFuncAndCallIt(
             privatizer.getInitRegion(),
             llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
             moldArg, newArg);
-        LDBG() << "initializedVal = " << initializedVal << "\n";
+        else
+          initializedVal = newArg;
 #endif
-        if (isFirstPrivate)
+        if (isFirstPrivate && !privatizer.getCopyRegion().empty())
           initializedVal = createAlwaysInlineFuncAndCallIt(
               privatizer.getCopyRegion(),
               llvm::formatv("{0}_{1}", privatizer.getSymName(), "copy").str(),
@@ -370,20 +377,28 @@ private:
   }
 
   template <typename OpTy>
-  Value allocateHeapMem(OpTy targetOp, Value privVar, ModuleOp mod,
+  Value allocateHeapMem(OpTy targetOp, Value privVar, Type varType, ModuleOp mod,
                         IRRewriter &rewriter) const {
+    OpBuilder::InsertionGuard guard(rewriter);
     Value varPtr = privVar;
     Operation *definingOp = varPtr.getDefiningOp();
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(definingOp);
+    BlockArgument blockArg;
+    if (!definingOp) {
+      blockArg = mlir::dyn_cast<BlockArgument>(varPtr);
+      rewriter.setInsertionPointToStart(blockArg.getParentBlock());
+    } else {
+      rewriter.setInsertionPoint(definingOp);
+    }
+    Location loc = definingOp ? definingOp->getLoc() : blockArg.getLoc();
     LLVM::LLVMFuncOp mallocFn = getMalloc(mod, rewriter);
 
-    Location loc = definingOp->getLoc();
-    Type varType = getElemType(varPtr);
+    // Type varType = getElemType(varPtr);
     assert(mod.getDataLayoutSpec() &&
            "MLIR module with no datalayout spec not handled yet");
+
     const DataLayout &dl = DataLayout(mod);
     std::int64_t distance = getSizeInBytes(dl, varType);
+
     Value sizeBytes = rewriter.create<LLVM::ConstantOp>(
         loc, mallocFn.getFunctionType().getParamType(0), distance);
 
