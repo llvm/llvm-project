@@ -2106,7 +2106,7 @@ public:
     Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpTypeNameList>(x.t));
-    Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
+    Walk(": ", std::get<std::optional<OmpReductionCombiner>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
@@ -2168,10 +2168,22 @@ public:
   void Unparse(const OmpContextSelectorSpecification &x) { Walk(x.v, ", "); }
 
   void Unparse(const OmpObject &x) {
-    common::visit(common::visitors{
-                      [&](const Designator &y) { Walk(y); },
-                      [&](const Name &y) { Put("/"), Walk(y), Put("/"); },
-                  },
+    common::visit( //
+        common::visitors{
+            [&](const Designator &y) { Walk(y); },
+            [&](const Name &y) {
+              Put("/");
+              Walk(y);
+              Put("/");
+            },
+            [&](const OmpObject::Invalid &y) {
+              switch (y.v) {
+              case OmpObject::Invalid::Kind::BlankCommonBlock:
+                Put("//");
+                break;
+              }
+            },
+        },
         x.u);
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
@@ -2488,18 +2500,24 @@ public:
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
     if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
-      Walk(assignment->t, "=");
+      Walk(assignment->t, " = ");
+    } else {
+      Walk(x.u);
+    }
+  }
+  void Unparse(const OmpReductionCombiner &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, " = ");
     } else {
       Walk(x.u);
     }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE REDUCTION ");
-    Put("(");
-    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
-    Put(")");
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2547,21 +2565,10 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &z) {
+  void Unparse(const OpenMPDeclareMapperConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE MAPPER (");
-    const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
-    const auto &mapperName{std::get<std::string>(spec.t)};
-    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
-      Walk(mapperName);
-      Put(":");
-    }
-    Walk(std::get<TypeSpec>(spec.t));
-    Put("::");
-    Walk(std::get<Name>(spec.t));
-    Put(")");
-
-    Walk(std::get<OmpClauseList>(z.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2599,24 +2606,28 @@ public:
   }
   void Unparse(const OpenMPThreadprivate &x) {
     BeginOpenMP();
-    Word("!$OMP THREADPRIVATE (");
-    Walk(std::get<parser::OmpObjectList>(x.t));
-    Put(")\n");
+    Word("!$OMP ");
+    Walk(x.v);
+    Put("\n");
     EndOpenMP();
   }
-
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
   }
   void Unparse(const OmpErrorDirective &x) {
-    Word("!$OMP ERROR ");
-    Walk(x.t);
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OmpNothingDirective &x) {
-    Word("!$OMP NOTHING");
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OpenMPSectionConstruct &x) {
     if (auto &&dirSpec{
@@ -2661,8 +2672,8 @@ public:
   void Unparse(const OmpFailClause &x) { Walk(x.v); }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
-    Word("!$OMP METADIRECTIVE ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -3082,11 +3093,7 @@ template void Unparse<Expr>(llvm::raw_ostream &, const Expr &,
     const common::LangOptions &, Encoding, bool, bool, preStatementType *,
     AnalyzedObjectsAsFortran *);
 
-template void Unparse<parser::OpenMPDeclareReductionConstruct>(
-    llvm::raw_ostream &, const parser::OpenMPDeclareReductionConstruct &,
-    const common::LangOptions &, Encoding, bool, bool, preStatementType *,
-    AnalyzedObjectsAsFortran *);
-template void Unparse<parser::OmpMetadirectiveDirective>(llvm::raw_ostream &,
-    const parser::OmpMetadirectiveDirective &, const common::LangOptions &,
+template void Unparse<parser::OpenMPDeclarativeConstruct>(llvm::raw_ostream &,
+    const parser::OpenMPDeclarativeConstruct &, const common::LangOptions &,
     Encoding, bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser
