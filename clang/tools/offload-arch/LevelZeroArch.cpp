@@ -13,19 +13,14 @@
 
 #ifndef HAVE_LEVEL_ZERO_HEADERS
 
-int printGPUsByLevelZero() {
-   return 0;
-}
+int printGPUsByLevelZero() { return 0; }
 
 #else
 
-#include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
-#include <cstdint>
 #include <cstdio>
-#include <memory>
 #include <level_zero/ze_api.h>
 
 using namespace llvm;
@@ -56,7 +51,7 @@ static bool loadLevelZero() {
       ErrMsg = "unknown error";
     if (Verbose)
       llvm::errs() << "Unable to load library '" << L0Library << "': " << ErrMsg
-                   << "!\n";
+                   << "\n";
     return false;
   }
 
@@ -73,8 +68,8 @@ static bool loadLevelZero() {
     void *P = DynlibHandle->getAddressOfSymbol(entry.name);
     if (P == nullptr) {
       if (Verbose)
-        llvm::errs() << "Unable to find '" << entry.name << "' in '" << L0Library
-                     << "'!\n";
+        llvm::errs() << "Unable to find '" << entry.name << "' in '"
+                     << L0Library << "'\n";
       return false;
     }
     *(entry.fptr) = P;
