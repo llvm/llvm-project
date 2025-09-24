@@ -201,3 +201,16 @@ void f_copy_after_ref()
   f(ptr);
   *ref = 1;
 }
+
+int f_lvalue(std::shared_ptr<int>&);
+int f_lvalue_const(const std::shared_ptr<int>&);
+
+void f_ref_lvalue(std::shared_ptr<int> ptr)
+{
+  f_lvalue(ptr); // no fix
+}
+
+void f_ref_lvalue_const(std::shared_ptr<int> ptr)
+{
+  f_lvalue_const(ptr); // no fix
+}
