@@ -12700,8 +12700,8 @@ cc_library(
     deps = [
         ":DialectUtils",
         ":IR",
-        ":Support",
         ":MemOpInterfacesIncGen",
+        ":Support",
     ],
 )
 
