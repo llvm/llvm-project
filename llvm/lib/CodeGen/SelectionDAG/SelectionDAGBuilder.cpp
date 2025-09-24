@@ -6854,6 +6854,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
           "llvm.ct.select: predicates with vector types not supported yet");
     }
 
+    // Set function attribute to indicate ct.select usage
+    Function &F = DAG.getMachineFunction().getFunction();
+    F.addFnAttr("ct-select");
+
     // Handle scalar types
     if (TLI.isSelectSupported(
             TargetLoweringBase::SelectSupportKind::CtSelect) &&

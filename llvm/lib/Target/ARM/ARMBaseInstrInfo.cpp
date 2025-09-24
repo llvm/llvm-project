@@ -1564,7 +1564,8 @@ bool ARMBaseInstrInfo::expandCtSelectVector(MachineInstr &MI) const {
   // When cond = 0: mask = 0x00000000.
   // When cond = 1: mask = 0xFFFFFFFF.
 
-  BuildMI(*MBB, MI, DL, get(RsbOp), MaskReg)
+  MachineInstr *FirstNewMI =
+    BuildMI(*MBB, MI, DL, get(RsbOp), MaskReg)
     .addReg(CondReg)
     .addImm(0)
     .add(predOps(ARMCC::AL))
@@ -1592,11 +1593,17 @@ bool ARMBaseInstrInfo::expandCtSelectVector(MachineInstr &MI) const {
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // 4. result = A | B
-  BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
+  auto LastNewMI = BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
     .addReg(DestReg)
     .addReg(VectorMaskReg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  auto BundleStart = FirstNewMI->getIterator();
+  auto BundleEnd = LastNewMI->getIterator();
+
+  // Add instruction bundling
+  finalizeBundle(*MBB, BundleStart, std::next(BundleEnd));
   
   MI.eraseFromParent();
   return true;
@@ -1624,7 +1631,8 @@ bool ARMBaseInstrInfo::expandCtSelectThumb(MachineInstr &MI) const {
   unsigned ShiftAmount = RegSize - 1;
 
   // Option 1: Shift-based mask (preferred - no flag modification)
-  BuildMI(*MBB, MI, DL, get(ARM::tMOVr), MaskReg)
+  MachineInstr *FirstNewMI =
+    BuildMI(*MBB, MI, DL, get(ARM::tMOVr), MaskReg)
     .addReg(CondReg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
@@ -1662,11 +1670,15 @@ bool ARMBaseInstrInfo::expandCtSelectThumb(MachineInstr &MI) const {
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // 4. result = src2 ^ masked_xor
-  BuildMI(*MBB, MI, DL, get(ARM::tEOR), DestReg)
+  auto LastMI = BuildMI(*MBB, MI, DL, get(ARM::tEOR), DestReg)
     .addReg(DestReg)
     .addReg(Src2Reg)
     .add(predOps(ARMCC::AL))
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+      // Add instruction bundling
+  auto BundleStart = FirstNewMI->getIterator();
+  finalizeBundle(*MBB, BundleStart, std::next(LastMI->getIterator()));
 
   MI.eraseFromParent();
   return true;
@@ -1697,6 +1709,7 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
 
   unsigned Opcode = MI.getOpcode();
   bool IsFloat = Opcode == ARM::CTSELECTf32 || Opcode == ARM::CTSELECTf16 || Opcode == ARM::CTSELECTbf16;
+  MachineInstr *FirstNewMI = nullptr;
   if (IsFloat) {
     // Each float pseudo has: (outs $dst, $tmp_mask, $scratch1, $scratch2), (ins $src1, $src2, $cond))
     // We use two scratch registers in tablegen for bitwise ops on float types,.
@@ -1710,11 +1723,11 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
      // cond from __builtin_ct_select(cond, a, b)
      CondReg = MI.getOperand(6).getReg();
 
-     // Move fp src1 to GPR scratch1 so we can do our bitwise ops
-     BuildMI(*MBB, MI, DL, get(ARM::VMOVRS), GPRScratch1)
-      .addReg(Src1Reg)
-      .add(predOps(ARMCC::AL))
-      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+    // Move fp src1 to GPR scratch1 so we can do our bitwise ops
+    FirstNewMI = BuildMI(*MBB, MI, DL, get(ARM::VMOVRS), GPRScratch1)
+        .addReg(Src1Reg)
+        .add(predOps(ARMCC::AL))
+        .setMIFlag(MachineInstr::MIFlag::NoMerge);
       
     // Move src2 to scratch2
     BuildMI(*MBB, MI, DL, get(ARM::VMOVRS), GPRScratch2)
@@ -1738,13 +1751,17 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
   // 1. mask = 0 - cond
   // When cond = 0: mask = 0x00000000.
   // When cond = 1: mask = 0xFFFFFFFF.
-  BuildMI(*MBB, MI, DL, get(RsbOp), MaskReg)
-    .addReg(CondReg)
-    .addImm(0)
-    .add(predOps(ARMCC::AL))
-    .add(condCodeOp())
-    .setMIFlag(MachineInstr::MIFlag::NoMerge);
-  
+  auto TmpNewMI = BuildMI(*MBB, MI, DL, get(RsbOp), MaskReg)
+      .addReg(CondReg)
+      .addImm(0)
+      .add(predOps(ARMCC::AL))
+      .add(condCodeOp())
+      .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // We use the first instruction in the bundle as the first instruction.
+  if (!FirstNewMI)
+    FirstNewMI = TmpNewMI;
+
   // 2. A = src1 & mask
   BuildMI(*MBB, MI, DL, get(AndOp), DestReg)
     .addReg(Src1Reg)
@@ -1762,7 +1779,7 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
     .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // 4. result = A | B
-  BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
+  auto LastNewMI = BuildMI(*MBB, MI, DL, get(OrrOp), DestReg)
     .addReg(DestReg)
     .addReg(MaskReg)
     .add(predOps(ARMCC::AL))
@@ -1771,11 +1788,17 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
 
   if (IsFloat) {
     // Return our result from GPR to the correct register type.
-    BuildMI(*MBB, MI, DL, get(ARM::VMOVSR), DestRegSavedRef)
+    LastNewMI =BuildMI(*MBB, MI, DL, get(ARM::VMOVSR), DestRegSavedRef)
       .addReg(DestReg)
       .add(predOps(ARMCC::AL))
       .setMIFlag(MachineInstr::MIFlag::NoMerge);
   }
+
+  auto BundleStart = FirstNewMI->getIterator();
+  auto BundleEnd = LastNewMI->getIterator();
+
+  // Add instruction bundling
+  finalizeBundle(*MBB, BundleStart, std::next(BundleEnd));
   
   MI.eraseFromParent();
   return true;

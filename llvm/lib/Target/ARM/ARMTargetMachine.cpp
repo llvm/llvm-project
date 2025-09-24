@@ -519,7 +519,8 @@ void ARMPassConfig::addPreEmitPass() {
 
   // Constant island pass work on unbundled instructions.
   addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getSubtarget<ARMSubtarget>().isThumb2();
+    return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
+    MF.getFunction().hasFnAttribute("ct-select");
   }));
 
   // Don't optimize barriers or block placement at -O0.
