@@ -92,6 +92,7 @@ if(NOT EXTERNAL_PROJECT_BUILD)
     OUTPUTS "${_core_type_stub_sources}"
     DEPENDS_TARGET_SRC_DEPS "${_core_extension_srcs}"
     IMPORT_PATHS "${StandalonePythonModules_ROOT_PREFIX}/_mlir_libs"
+    VERBOSE
   )
   set(_mlir_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
 
