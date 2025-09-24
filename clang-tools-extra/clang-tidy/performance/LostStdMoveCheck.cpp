@@ -70,6 +70,11 @@ AST_MATCHER(CXXRecordDecl, hasTrivialMoveConstructor) {
   return Node.hasDefinition() && Node.hasTrivialMoveConstructor();
 }
 
+AST_MATCHER_P(Expr, ignoreParens, ast_matchers::internal::Matcher<Expr>,
+              innerMatcher) {
+  return innerMatcher.matches(*Node.IgnoreParens(), Finder, Builder);
+}
+
 void LostStdMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
 }
@@ -86,33 +91,28 @@ void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto LeafStatement = stmt(OutermostExpr);
 
   Finder->addMatcher(
-      declRefExpr(
-          // not "return x;"
-          unless(ReturnParent),
-          unless(hasType(namedDecl(hasName("::std::string_view")))),
-          // non-trivial type
-          hasType(hasCanonicalType(hasDeclaration(cxxRecordDecl()))),
-          // non-trivial X(X&&)
-          unless(hasType(hasCanonicalType(
-              hasDeclaration(cxxRecordDecl(hasTrivialMoveConstructor()))))),
-          // Not in a cycle
-          unless(hasAncestor(forStmt())), unless(hasAncestor(doStmt())),
-          unless(hasAncestor(whileStmt())),
-          // Not in a body of lambda
-          unless(hasAncestor(compoundStmt(hasAncestor(lambdaExpr())))),
-          // only non-X&
-          unless(hasDeclaration(
-              varDecl(hasType(qualType(lValueReferenceType()))))),
-          hasAncestor(LeafStatement.bind("leaf_statement")),
-          hasDeclaration(
-              varDecl(hasAncestor(functionDecl().bind("func"))).bind("decl")),
-          anyOf(
-              // f(x)
-              hasParent(expr(hasParent(cxxConstructExpr())).bind("use_parent")),
-              // f((x))
-              hasParent(parenExpr(hasParent(
-                  expr(hasParent(cxxConstructExpr())).bind("use_parent"))))))
-          .bind("use"),
+      cxxConstructExpr(has(expr(has(ignoreParens(
+          declRefExpr(
+              // not "return x;"
+              unless(ReturnParent),
+              unless(hasType(namedDecl(hasName("::std::string_view")))),
+              // non-trivial type
+              hasType(hasCanonicalType(hasDeclaration(cxxRecordDecl()))),
+              // non-trivial X(X&&)
+              unless(hasType(hasCanonicalType(
+                  hasDeclaration(cxxRecordDecl(hasTrivialMoveConstructor()))))),
+              // Not in a cycle
+              unless(hasAncestor(forStmt())), unless(hasAncestor(doStmt())),
+              unless(hasAncestor(whileStmt())),
+              // Not in a body of lambda
+              unless(hasAncestor(compoundStmt(hasAncestor(lambdaExpr())))),
+              // only non-X&
+              unless(hasDeclaration(
+                  varDecl(hasType(qualType(lValueReferenceType()))))),
+              hasAncestor(LeafStatement.bind("leaf_statement")),
+              hasDeclaration(varDecl(hasAncestor(functionDecl().bind("func")))
+                                 .bind("decl")))
+              .bind("use")))))),
       this);
 }
 
@@ -120,14 +120,11 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("decl");
   const auto *MatchedFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *MatchedUse = Result.Nodes.getNodeAs<Expr>("use");
-  const auto *MatchedUseCall = Result.Nodes.getNodeAs<CallExpr>("use_parent");
   const auto *MatchedLeafStatement =
       Result.Nodes.getNodeAs<Stmt>("leaf_statement");
 
-  if (!MatchedDecl->hasLocalStorage())
-    return;
-
-  if (MatchedUseCall) {
+  if (!MatchedDecl->hasLocalStorage()) {
+    // global or static variable
     return;
   }
 
