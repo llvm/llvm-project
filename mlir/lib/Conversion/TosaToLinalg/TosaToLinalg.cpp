@@ -1484,49 +1484,25 @@ static void setupLinalgGenericOpInputAndIndexingMap(
 }
 
 // Return the extended Zp to be used in subsequent arithmetic operations.
-static Value getExtendInputZp(OpBuilder &builder, Type valueTy,
-                              FailureOr<int64_t> maybeZp, Location loc,
-                              ValueRange blockArgs, int64_t iZpArg) {
+static Value getExtendZp(OpBuilder &builder, Type valueTy,
+                         FailureOr<int64_t> maybeZp, Location loc,
+                         ValueRange blockArgs, int64_t zpArg,
+                         bool isOutputZp = false) {
   Value result;
+  const int32_t bitwidth = valueTy.getIntOrFloatBitWidth();
+  const uint32_t attrBitwidth =
+      isOutputZp ? 32 : (bitwidth > 32 ? bitwidth : 32);
+  auto extendType = builder.getIntegerType(attrBitwidth);
   // The Zp value can be either constant or non-constant, depending on
   // whether dynamic extension is enabled.
   // If 'maybeZp' fails, it indicates that Zp is non-constant and will
   // be passed as an input to linalg::GenericOp.
   if (failed(maybeZp)) {
-    result = blockArgs[iZpArg];
+    result = blockArgs[zpArg];
     auto zpTy = result.getType();
-    if (zpTy.getIntOrFloatBitWidth() < 32) {
-      if (zpTy.isUnsignedInteger()) {
-        return builder.create<arith::ExtUIOp>(loc, builder.getI32Type(),
-                                              result);
-      } else {
-        return builder.create<arith::ExtSIOp>(loc, builder.getI32Type(),
-                                              result);
-      }
-    }
-  } else {
-    const int32_t bitwidth = valueTy.getIntOrFloatBitWidth();
-    // Extend zeropoint for sub-32bits widths.
-    const int32_t attrBitwidth = bitwidth > 32 ? bitwidth : 32;
-    return builder.create<arith::ConstantOp>(
-        loc, IntegerAttr::get(builder.getIntegerType(attrBitwidth), *maybeZp));
-  }
-  return result;
-}
-
-// Return the i32 outputZp to be used in subsequent arithmetic operations.
-static Value getI32OutputZp(OpBuilder &builder, Type valueTy,
-                            FailureOr<int64_t> maybeZp, Location loc,
-                            ValueRange blockArgs, int64_t oZpArg) {
-  Value result;
-  // The Zp value can be either constant or non-constant, depending on
-  // whether dynamic extension is enabled.
-  // If 'maybeZp' fails, it indicates that Zp is non-constant and will
-  // be passed as an input to linalg::GenericOp.
-  if (failed(maybeZp)) {
-    result = blockArgs[oZpArg];
-    auto zpTy = result.getType();
-    if (zpTy.getIntOrFloatBitWidth() < 32) {
+    if (zpTy.getIntOrFloatBitWidth() < attrBitwidth) {
+      // For ExtUIOp, the input must be signless.
+      // UnrealizedConversionCastOp will cast the input to signless type.
       if (zpTy.isUnsignedInteger()) {
         result =
             UnrealizedConversionCastOp::create(
@@ -1535,16 +1511,14 @@ static Value getI32OutputZp(OpBuilder &builder, Type valueTy,
                 .getResult(0);
       }
       if (zpTy.isUnsignedInteger()) {
-        return builder.create<arith::ExtUIOp>(loc, builder.getI32Type(),
-                                              result);
+        return builder.create<arith::ExtUIOp>(loc, extendType, result);
       } else {
-        return builder.create<arith::ExtSIOp>(loc, builder.getI32Type(),
-                                              result);
+        return builder.create<arith::ExtSIOp>(loc, extendType, result);
       }
     }
   } else {
     return builder.create<arith::ConstantOp>(
-        loc, IntegerAttr::get(builder.getIntegerType(32), *maybeZp));
+        loc, IntegerAttr::get(extendType, *maybeZp));
   }
   return result;
 }
@@ -1687,12 +1661,12 @@ public:
           Type valueTy = value.getType();
 
           FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
-          auto inputZp = getExtendInputZp(nestedBuilder, valueTy, maybeIZp,
-                                          nestedLoc, blockArgs, iZpArg);
+          auto inputZp = getExtendZp(nestedBuilder, valueTy, maybeIZp,
+                                     nestedLoc, blockArgs, iZpArg);
 
           FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
-          auto outputZp = getI32OutputZp(nestedBuilder, valueTy, maybeOZp,
-                                         nestedLoc, blockArgs, oZpArg);
+          auto outputZp = getExtendZp(nestedBuilder, valueTy, maybeOZp,
+                                      nestedLoc, blockArgs, oZpArg, true);
 
           IntegerType outIntType =
               cast<IntegerType>(blockArgs.back().getType());
