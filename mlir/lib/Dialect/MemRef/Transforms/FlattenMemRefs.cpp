@@ -271,16 +271,26 @@ struct FlattenMemrefsPass
 
 } // namespace
 
-void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
-  patterns.insert<MemRefRewritePattern<memref::LoadOp>,
-                  MemRefRewritePattern<memref::StoreOp>,
-                  MemRefRewritePattern<memref::AllocOp>,
-                  MemRefRewritePattern<memref::AllocaOp>,
-                  MemRefRewritePattern<vector::LoadOp>,
+void memref::populateFlattenVectorOpsOnMemrefPatterns(
+    RewritePatternSet &patterns) {
+  patterns.insert<MemRefRewritePattern<vector::LoadOp>,
                   MemRefRewritePattern<vector::StoreOp>,
                   MemRefRewritePattern<vector::TransferReadOp>,
                   MemRefRewritePattern<vector::TransferWriteOp>,
                   MemRefRewritePattern<vector::MaskedLoadOp>,
                   MemRefRewritePattern<vector::MaskedStoreOp>>(
       patterns.getContext());
+}
+
+void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
+  patterns.insert<MemRefRewritePattern<memref::LoadOp>,
+                  MemRefRewritePattern<memref::StoreOp>,
+                  MemRefRewritePattern<memref::AllocOp>,
+                  MemRefRewritePattern<memref::AllocaOp>>(
+      patterns.getContext());
+}
+
+void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
+  populateFlattenMemrefOpsPatterns(patterns);
+  populateFlattenVectorOpsOnMemrefPatterns(patterns);
 }

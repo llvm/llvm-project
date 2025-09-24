@@ -72,6 +72,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -1128,6 +1129,16 @@ public:
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
+  }
+
+  void checkCoarrayEnabled() override final {
+    if (!getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::Coarray))
+      fir::emitFatalError(
+          getCurrentLocation(),
+          "Not yet implemented: Multi-image features are experimental and are "
+          "disabled by default, use '-fcoarray' to enable.",
+          false);
   }
 
   void registerTypeInfo(mlir::Location loc,
@@ -2198,6 +2209,11 @@ private:
     // Loops with induction variables inside OpenACC compute constructs
     // need special handling to ensure that the IVs are privatized.
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
+      // Open up a new scope for the loop variables.
+      localSymbols.pushScope();
+      auto scopeGuard =
+          llvm::make_scope_exit([&]() { localSymbols.popScope(); });
+
       mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
           *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
       bool success = loopOp != nullptr;
@@ -2214,6 +2230,8 @@ private:
         for (auto end = --eval.getNestedEvaluations().end(); iter != end;
              ++iter)
           genFIR(*iter, unstructuredContext);
+
+        builder->setInsertionPointAfter(loopOp);
         return;
       }
       // Fall back to normal loop handling.

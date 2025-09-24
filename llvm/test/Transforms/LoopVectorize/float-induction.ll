@@ -1644,7 +1644,7 @@ for.end:
 define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC4_INTERL1-LABEL: @float_induction_with_dbg_on_fadd(
 ; VEC4_INTERL1-NEXT:  entry:
-; VEC4_INTERL1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VEC4_INTERL1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VEC4_INTERL1:       vector.ph:
 ; VEC4_INTERL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL1:       vector.body:
@@ -1659,13 +1659,13 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC4_INTERL1:       scalar.ph:
 ; VEC4_INTERL1-NEXT:    br label [[LOOP:%.*]]
 ; VEC4_INTERL1:       loop:
-; VEC4_INTERL1-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP16:![0-9]+]]
+; VEC4_INTERL1-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]]
 ; VEC4_INTERL1:       exit:
 ; VEC4_INTERL1-NEXT:    ret i32 0
 ;
 ; VEC4_INTERL2-LABEL: @float_induction_with_dbg_on_fadd(
 ; VEC4_INTERL2-NEXT:  entry:
-; VEC4_INTERL2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VEC4_INTERL2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VEC4_INTERL2:       vector.ph:
 ; VEC4_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL2:       vector.body:
@@ -1682,13 +1682,13 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC4_INTERL2:       scalar.ph:
 ; VEC4_INTERL2-NEXT:    br label [[LOOP:%.*]]
 ; VEC4_INTERL2:       loop:
-; VEC4_INTERL2-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP16:![0-9]+]]
+; VEC4_INTERL2-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]]
 ; VEC4_INTERL2:       exit:
 ; VEC4_INTERL2-NEXT:    ret i32 0
 ;
 ; VEC1_INTERL2-LABEL: @float_induction_with_dbg_on_fadd(
 ; VEC1_INTERL2-NEXT:  entry:
-; VEC1_INTERL2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VEC1_INTERL2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VEC1_INTERL2:       vector.ph:
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
@@ -1709,7 +1709,7 @@ define i32 @float_induction_with_dbg_on_fadd(ptr %dst) {
 ; VEC1_INTERL2:       scalar.ph:
 ; VEC1_INTERL2-NEXT:    br label [[LOOP:%.*]]
 ; VEC1_INTERL2:       loop:
-; VEC1_INTERL2-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP16:![0-9]+]]
+; VEC1_INTERL2-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]]
 ; VEC1_INTERL2:       exit:
 ; VEC1_INTERL2-NEXT:    ret i32 0
 ;

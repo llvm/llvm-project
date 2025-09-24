@@ -45,12 +45,14 @@ using namespace NVVM;
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
 
+static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
+
 //===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
 
 // This verifier is shared among the following Ops:
-// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
+// CpAsyncBulkTensorSharedCTAToGlobalOp (TMA Store)
 // CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
 static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
                                                      bool isIm2Col,
@@ -72,13 +74,6 @@ static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
           loc, "im2col offsets must be 2 less than number of coordinates");
   }
   return success();
-}
-
-LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  size_t numIm2ColOffsets = getIm2colOffsets().size();
-  bool isIm2Col = numIm2ColOffsets > 0;
-  return cpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
-                                         numIm2ColOffsets, getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -154,6 +149,38 @@ static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
 }
 
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
+  return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
+                             getMode(), getLoc());
+}
+
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  TMALoadMode mode = getMode();
+  bool isCTAOnly = getIsCTAOnly();
+  if (getPredicate()) { // Inline-asm based lowering
+    if (isCTAOnly)
+      return emitError("Predicate is supported only for shared::cluster mode.");
+    if (mode != TMALoadMode::TILE && mode != TMALoadMode::IM2COL)
+      return emitError(
+          "Predicate is supported only for Tile and Im2col modes.");
+  } else { // Intrinsics-based lowering
+    NVVMMemorySpace expectedAS =
+        isCTAOnly ? NVVMMemorySpace::Shared : NVVMMemorySpace::SharedCluster;
+    unsigned AS = llvm::cast<LLVM::LLVMPointerType>(getDstMem().getType())
+                      .getAddressSpace();
+    if (AS != expectedAS)
+      return emitError()
+             << (isCTAOnly
+                     ? "Shared::cta destination requires address-space 3."
+                     : "Shared::cluster destination requires address-space 7.");
+    // Checks specific to shared::cta mode
+    if (isCTAOnly) {
+      if (getMulticastMask())
+        return emitError("Multicast is not supported with shared::cta mode.");
+      if (getGroup())
+        return emitError("CTAGroup is not supported with shared::cta mode.");
+    }
+  }
+
   return verifyTMALoadParams(getCoordinates().size(), getIm2colOffsets().size(),
                              getMode(), getLoc());
 }
@@ -800,8 +827,8 @@ inferMMATypeFromMNK(NVVM::MMATypes type, NVVM::MMAFrag frag, int m, int n,
 LogicalResult NVVM::WMMALoadOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 0 && addressSpace != NVVM::kGlobalMemorySpace &&
-      addressSpace != NVVM::kSharedMemorySpace)
+  if (addressSpace != 0 && addressSpace != NVVMMemorySpace::Global &&
+      addressSpace != NVVMMemorySpace::Shared)
     return emitOpError("expected source pointer in memory "
                        "space 0, 1, 3");
 
@@ -821,8 +848,8 @@ LogicalResult NVVM::WMMALoadOp::verify() {
 LogicalResult NVVM::WMMAStoreOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 0 && addressSpace != NVVM::kGlobalMemorySpace &&
-      addressSpace != NVVM::kSharedMemorySpace)
+  if (addressSpace != 0 && addressSpace != NVVMMemorySpace::Global &&
+      addressSpace != NVVMMemorySpace::Shared)
     return emitOpError("expected operands to be a source pointer in memory "
                        "space 0, 1, 3");
 
@@ -951,7 +978,7 @@ LogicalResult NVVM::StMatrixOp::verify() {
   return success();
 }
 
-FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
+static FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   if (typeA == NVVM::WGMMATypes::tf32)
     return 8;
   if (typeA == NVVM::WGMMATypes::f16 || typeA == NVVM::WGMMATypes::bf16)
@@ -965,9 +992,9 @@ FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   return failure();
 }
 
-LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
-                                     NVVM::WGMMATypes typeA,
-                                     NVVM::WGMMATypes typeB) {
+static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
+                                            NVVM::WGMMATypes typeA,
+                                            NVVM::WGMMATypes typeB) {
   switch (typeA) {
   case NVVM::WGMMATypes::f16:
     if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
@@ -1007,7 +1034,7 @@ LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
   return failure();
 }
 
-LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
+static LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
   SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
                                72,  80,  88,  96,  104, 112, 120, 128,
                                136, 144, 152, 160, 168, 176, 184, 192,
@@ -1339,8 +1366,8 @@ LogicalResult NVVM::PrefetchOp::verify() {
     return emitOpError("cannot specify both tensormap and cache level");
 
   if (getTensormap()) {
-    if (addressSpace != MemSpace::kGenericMemorySpace &&
-        addressSpace != MemSpace::kConstantMemorySpace) {
+    if (addressSpace != MemSpace::Generic &&
+        addressSpace != MemSpace::Constant) {
       return emitOpError(
           "prefetch tensormap requires a generic or constant pointer");
     }
@@ -1350,15 +1377,14 @@ LogicalResult NVVM::PrefetchOp::verify() {
           "prefetch tensormap does not support eviction priority");
     }
 
-    if (getInParamSpace() && addressSpace != MemSpace::kGenericMemorySpace) {
+    if (getInParamSpace() && addressSpace != MemSpace::Generic) {
       return emitOpError(
           "in_param_space can only be specified for a generic pointer");
     }
 
   } else if (cacheLevel) {
-    if (addressSpace != MemSpace::kGenericMemorySpace &&
-        addressSpace != MemSpace::kGlobalMemorySpace &&
-        addressSpace != MemSpace::kLocalMemorySpace) {
+    if (addressSpace != MemSpace::Generic && addressSpace != MemSpace::Global &&
+        addressSpace != MemSpace::Local) {
       return emitOpError("prefetch to cache level requires a generic, global, "
                          "or local pointer");
     }
@@ -1370,7 +1396,7 @@ LogicalResult NVVM::PrefetchOp::verify() {
             "cache level is L1");
       }
 
-      if (addressSpace != MemSpace::kGenericMemorySpace) {
+      if (addressSpace != MemSpace::Generic) {
         return emitOpError(
             "prefetch to uniform cache requires a generic pointer");
       }
@@ -1381,7 +1407,7 @@ LogicalResult NVVM::PrefetchOp::verify() {
         return emitOpError(
             "cache eviction priority supported only for cache level L2");
 
-      if (addressSpace != MemSpace::kGlobalMemorySpace)
+      if (addressSpace != MemSpace::Global)
         return emitOpError("cache eviction priority requires a global pointer");
 
       if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
@@ -1399,6 +1425,24 @@ LogicalResult NVVM::PrefetchOp::verify() {
         "requires specification of either cache level or tensormap");
   }
 
+  return success();
+}
+
+LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
+  switch (getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    if (!getType().isInteger(1))
+      return emitOpError("is_canceled query type returns an i1");
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    if (!getType().isInteger(32)) {
+      return emitOpError("get_first_cta_id_x, get_first_cta_id_y, "
+                         "get_first_cta_id_z query types return an i32");
+    }
+    break;
+  }
   return success();
 }
 
@@ -1536,6 +1580,130 @@ mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
+bool CpAsyncBulkTensorGlobalToSharedClusterOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  // Add all the operands but not the attrs to the asmValues list.
+  // The attrs here are used to generate the right variants for
+  // intrinsics-lowering. So, we ignore them while generating inline-PTX.
+  for (auto val : getOperands())
+    asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+
+  return false;
+}
+
+mlir::NVVM::IDArgPair
+CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(op);
+  const bool isCTAOnly = thisOp.getIsCTAOnly();
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getMbar()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+
+  // Coordinates and im2col-offsets
+  for (mlir::Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+  for (mlir::Value v : thisOp.getIm2colOffsets())
+    args.push_back(mt.lookupValue(v));
+
+  // MulticastMask, if available
+  mlir::Value mcMask = thisOp.getMulticastMask();
+  const bool hasMC = static_cast<bool>(mcMask);
+  llvm::Value *i16Zero =
+      llvm::ConstantInt::get(llvm::Type::getInt16Ty(mt.getLLVMContext()), 0);
+
+  // CacheHint, if available
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Zero =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+
+  // Flag argument CTAGroup
+  // CTA_1/2 is mapped to values 1 and 2 for the intrinsics.
+  // Hence, the +1 to getGroup().
+  const int32_t val =
+      thisOp.getGroup() ? (static_cast<int32_t>(*thisOp.getGroup()) + 1) : 0;
+  llvm::Value *cg =
+      llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
+
+  if (!isCTAOnly) {
+    // For shared::cluster, all the arguments that we build are applicable.
+    args.push_back(hasMC ? mt.lookupValue(mcMask) : i16Zero);
+    args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
+    args.push_back(builder.getInt1(hasMC));
+    args.push_back(builder.getInt1(hasCacheHint));
+    args.push_back(cg);
+  } else {
+    // For shared::cta, only cache-hint is applicable.
+    args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
+    args.push_back(builder.getInt1(hasCacheHint));
+  }
+
+  constexpr size_t numDims = 5;  // 1D to 5D
+  constexpr size_t numModes = 5; // Tile, Im2col, w, w_128, gather4
+  using rowTy = std::array<llvm::Intrinsic::ID, numDims + 1>;
+  using TableTy = std::array<rowTy, numModes>;
+  static constexpr TableTy IDTable{
+      {{notIntrinsic, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_128_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_128_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_w_128_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d}}};
+
+  static constexpr TableTy IDTableCTA{
+      {{notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_1d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_2d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_128_3d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_128_4d,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_im2col_w_128_5d},
+       {notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic, notIntrinsic,
+        llvm::Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d}}};
+
+  static_assert(
+      (getMaxEnumValForTMALoadMode() == std::size(IDTable) - 1) &&
+          (getMaxEnumValForTMALoadMode() == std::size(IDTableCTA) - 1),
+      "TMALoadModes must match number of rows in IDTable and IDTableCTA");
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  auto id = isCTAOnly ? IDTableCTA[mode][dim] : IDTable[mode][dim];
+  assert(id != notIntrinsic &&
+         "Invalid intrinsic for CpAsyncBulkTensorGlobalToSharedClusterOp.");
+
+  return {id, std::move(args)};
+}
+
 mlir::NVVM::IDArgPair CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorPrefetchOp>(op);
@@ -1634,53 +1802,148 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
-#define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
-  llvm::Intrinsic::nvvm_cp_async_bulk_tensor_##op##_##mode##_##dim##d
+NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOp>(op);
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
 
-#define CP_ASYNC_BULK_TENSOR_REDUCE(op, dim, is_im2col)                        \
-  is_im2col ? CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, im2col)                \
-            : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
+  llvm::SmallVector<llvm::Value *> args;
 
-#define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
-  [&]() -> auto {                                                              \
-    switch (dims) {                                                            \
-    case 1:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
-    case 2:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 2, tile);                    \
-    case 3:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 3, is_im2col);                    \
-    case 4:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 4, is_im2col);                    \
-    case 5:                                                                    \
-      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 5, is_im2col);                    \
-    default:                                                                   \
-      llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");     \
-    }                                                                          \
-  }()
+  // Arguments to the intrinsic:
+  // shared_mem_ptr, tmaDesc, tensorDims
+  // cache_hint(if applicable) and flag(boolean)
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
 
-llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
-    int tensorDims, NVVM::TMAReduxKind kind, bool isIm2Col) {
-  using RedTy = NVVM::TMAReduxKind;
-  switch (kind) {
-  case RedTy::ADD:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_add, tensorDims, isIm2Col);
-  case RedTy::MIN:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_min, tensorDims, isIm2Col);
-  case RedTy::MAX:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_max, tensorDims, isIm2Col);
-  case RedTy::INC:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_inc, tensorDims, isIm2Col);
-  case RedTy::DEC:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_dec, tensorDims, isIm2Col);
-  case RedTy::AND:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_and, tensorDims, isIm2Col);
-  case RedTy::OR:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_or, tensorDims, isIm2Col);
-  case RedTy::XOR:
-    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
-  }
-  llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
+  for (Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64ZeroValue =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64ZeroValue);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  const llvm::Intrinsic::ID notIntrinsic = llvm::Intrinsic::not_intrinsic;
+
+  constexpr unsigned numRedKinds = 8; // ADD, MIN, MAX, INC, DEC, AND, OR, XOR
+  constexpr unsigned numLayouts = 2;  // TILE, IM2COL
+  constexpr unsigned maxDim = 5;      // 1D to 5D
+  using row = std::array<llvm::Intrinsic::ID, maxDim + 1>;
+  using layoutTable = std::array<row, numLayouts>;
+  using fullTable = std::array<layoutTable, numRedKinds>;
+  static constexpr fullTable IDTable{
+      {// RedTy::ADD
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_5d}}}},
+       // RedTy::MIN
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_5d}}}},
+       // RedTy::MAX
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_5d}}}},
+       // RedTy::INC
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_5d}}}},
+       // RedTy::DEC
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_5d}}}},
+       // RedTy::AND
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_5d}}}},
+       // RedTy::OR
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_5d}}}},
+       // RedTy::XOR
+       {{{{notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_1d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_2d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_4d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_5d}},
+         {{notIntrinsic, notIntrinsic, notIntrinsic,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_im2col_3d,
+           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_im2col_4d,
+           llvm::Intrinsic::
+               nvvm_cp_async_bulk_tensor_reduce_xor_im2col_5d}}}}}};
+
+  static_assert(getMaxEnumValForTMAReduxKind() == std::size(IDTable) - 1,
+                "TMAReduxKinds must match number of rows in IDTable");
+
+  size_t redKind = static_cast<size_t>(thisOp.getRedKind());
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+
+  assert(redKind < IDTable.size() &&
+         "Invalid redKind for CpAsyncBulkTensorReduceOp");
+  assert(mode < IDTable[redKind].size() &&
+         "Invalid mode for CpAsyncBulkTensorReduceOp");
+  assert(dim < IDTable[redKind][mode].size() &&
+         "Invalid dim for CpAsyncBulkTensorReduceOp");
+
+  llvm::Intrinsic::ID intrinsicID = IDTable[redKind][mode][dim];
+
+  assert(intrinsicID != notIntrinsic &&
+         "Invalid intrinsic for CpAsyncBulkTensorReduceOp.");
+
+  return {intrinsicID, std::move(args)};
 }
 
 #define _none
@@ -1796,7 +2059,7 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
+  bool isShared = as == NVVMMemorySpace::Shared;
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id;
@@ -1845,7 +2108,7 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
+  bool isShared = as == NVVMMemorySpace::Shared;
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
@@ -2051,18 +2314,18 @@ PrefetchOp::getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,
     }
   }
 
-  switch (addressSpace) {
-  case MemSpace::kGenericMemorySpace:
+  switch (static_cast<MemSpace>(addressSpace)) {
+  case MemSpace::Generic:
     return *cacheLevel == CacheLevel::L1
                ? NVVM::IDArgPair({llvm::Intrinsic::nvvm_prefetch_L1, args})
                : NVVM::IDArgPair({llvm::Intrinsic::nvvm_prefetch_L2, args});
-  case MemSpace::kGlobalMemorySpace:
+  case MemSpace::Global:
     return *cacheLevel == CacheLevel::L1
                ? NVVM::IDArgPair(
                      {llvm::Intrinsic::nvvm_prefetch_global_L1, args})
                : NVVM::IDArgPair(
                      {llvm::Intrinsic::nvvm_prefetch_global_L2, args});
-  case MemSpace::kLocalMemorySpace:
+  case MemSpace::Local:
     return *cacheLevel == CacheLevel::L1
                ? NVVM::IDArgPair(
                      {llvm::Intrinsic::nvvm_prefetch_local_L1, args})
@@ -2086,6 +2349,51 @@ bool NVVM::InlinePtxOp::getAsmValues(
   if (getPredicate())
     asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
   return false; // No manual mapping needed
+}
+
+NVVM::IDArgPair ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlTryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getSmemAddress()));
+  args.push_back(mt.lookupValue(curOp.getMbarrier()));
+
+  llvm::Intrinsic::ID intrinsicID =
+      curOp.getMulticast()
+          ? llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+          : llvm::Intrinsic::nvvm_clusterlaunchcontrol_try_cancel_async_shared;
+
+  return {intrinsicID, args};
+}
+
+NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlQueryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getTryCancelResponse()));
+
+  llvm::Intrinsic::ID intrinsicID;
+
+  switch (curOp.getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    intrinsicID =
+        llvm::Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z;
+    break;
+  }
+  return {intrinsicID, args};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2183,6 +2491,66 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Address Space Attr
+//===----------------------------------------------------------------------===//
+
+unsigned NVVMMemorySpaceAttr::getAddressSpace() const {
+  return static_cast<unsigned>(getValue());
+}
+
+bool NVVMMemorySpaceAttr::isValidLoad(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return LLVM::detail::isValidLoadStoreImpl(type, ordering, alignment,
+                                            dataLayout, emitError);
+}
+
+bool NVVMMemorySpaceAttr::isValidStore(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return LLVM::detail::isValidLoadStoreImpl(type, ordering, alignment,
+                                            dataLayout, emitError);
+}
+
+bool NVVMMemorySpaceAttr::isValidAtomicOp(
+    ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_rmw` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool NVVMMemorySpaceAttr::isValidAtomicXchg(
+    Type type, ptr::AtomicOrdering successOrdering,
+    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_cmpxchg` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool NVVMMemorySpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the `ptr.addrspace_cast` op is added to the
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool NVVMMemorySpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the int-cast ops are added to the `ptr`
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

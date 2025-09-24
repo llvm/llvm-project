@@ -5,10 +5,7 @@
 define amdgpu_ps float @xor3_i1_const(float inreg %arg1, i32 inreg %arg2) {
 ; GCN-LABEL: xor3_i1_const:
 ; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v0, 0x42640000
-; GCN-NEXT:    v_cmp_lt_f32_e64 s[2:3], s0, 0
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], vcc
+; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s[0:1]
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:

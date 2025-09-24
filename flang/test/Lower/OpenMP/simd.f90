@@ -175,7 +175,7 @@ subroutine simd_with_collapse_clause(n)
   ! CHECK-NEXT: omp.loop_nest (%[[ARG_0:.*]], %[[ARG_1:.*]]) : i32 = (
   ! CHECK-SAME:                %[[LOWER_I]], %[[LOWER_J]]) to (
   ! CHECK-SAME:                %[[UPPER_I]], %[[UPPER_J]]) inclusive step (
-  ! CHECK-SAME:                %[[STEP_I]], %[[STEP_J]]) {
+  ! CHECK-SAME:                %[[STEP_I]], %[[STEP_J]]) collapse(2) {
   !$OMP SIMD COLLAPSE(2)
   do i = 1, n
     do j = 1, n

@@ -108,6 +108,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
       InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
+    DwarfVersion = opts.DwarfVersion;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -134,6 +135,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
+  bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =
       ""; ///< Name of the instrument-function that is called on each
           ///< function-entry
@@ -143,6 +145,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::
           CX_Full; ///< Method for calculating complex number division
+  int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
 };
 
 struct OffloadModuleOpts {

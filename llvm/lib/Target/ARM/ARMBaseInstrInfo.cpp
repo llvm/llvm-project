@@ -107,9 +107,9 @@ static const ARM_MLxEntry ARM_MLxTable[] = {
   { ARM::VMLSslfq,    ARM::VMULslfq,    ARM::VSUBfq,     false,  true  },
 };
 
-ARMBaseInstrInfo::ARMBaseInstrInfo(const ARMSubtarget& STI)
-  : ARMGenInstrInfo(ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP),
-    Subtarget(STI) {
+ARMBaseInstrInfo::ARMBaseInstrInfo(const ARMSubtarget &STI)
+    : ARMGenInstrInfo(STI, ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP),
+      Subtarget(STI) {
   for (unsigned i = 0, e = std::size(ARM_MLxTable); i != e; ++i) {
     if (!MLxEntryMap.insert(std::make_pair(ARM_MLxTable[i].MLxOpc, i)).second)
       llvm_unreachable("Duplicated entries?");
@@ -6510,14 +6510,14 @@ bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(
   return Subtarget.isMClass() && MF.getFunction().hasMinSize();
 }
 
-bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(
+bool ARMBaseInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   // Try hard to rematerialize any VCTPs because if we spill P0, it will block
   // the tail predication conversion. This means that the element count
   // register has to be live for longer, but that has to be better than
   // spill/restore and VPT predication.
   return (isVCTP(&MI) && !isPredicated(MI)) ||
-         TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+         TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 unsigned llvm::getBLXOpcode(const MachineFunction &MF) {

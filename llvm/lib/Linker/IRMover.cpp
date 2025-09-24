@@ -1152,7 +1152,6 @@ void IRLinker::linkNamedMDNodes() {
       if (Inserted.insert(MD).second)
         DestNMD->addOperand(MD);
     }
-    assert(Inserted.size() == DestNMD->getNumOperands());
   }
 }
 

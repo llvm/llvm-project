@@ -352,6 +352,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
+    Value *IndexOp = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
+        ArrayRef<Value *>{IndexOp});
+  }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -604,12 +611,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *OpTrue =
         RValTrue.isScalar()
             ? RValTrue.getScalarVal()
-            : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
+            : Builder.CreateLoad(RValTrue.getAggregateAddress(), "true_val");
     RValue RValFalse = EmitAnyExpr(E->getArg(2));
     Value *OpFalse =
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
-            : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+            : Builder.CreateLoad(RValFalse.getAggregateAddress(), "false_val");
     if (auto *VTy = E->getType()->getAs<VectorType>()) {
       if (!OpTrue->getType()->isVectorTy())
         OpTrue =

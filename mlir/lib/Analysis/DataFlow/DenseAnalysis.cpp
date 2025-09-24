@@ -64,10 +64,12 @@ void AbstractDenseForwardDataFlowAnalysis::visitCallOperation(
     AbstractDenseLattice *after) {
   // Allow for customizing the behavior of calls to external symbols, including
   // when the analysis is explicitly marked as non-interprocedural.
-  auto callable =
-      dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
-  if (!getSolverConfig().isInterprocedural() ||
-      (callable && !callable.getCallableRegion())) {
+  auto isExternalCallable = [&]() {
+    auto callable =
+        dyn_cast_if_present<CallableOpInterface>(call.resolveCallable());
+    return callable && !callable.getCallableRegion();
+  };
+  if (!getSolverConfig().isInterprocedural() || isExternalCallable()) {
     return visitCallControlFlowTransfer(
         call, CallControlFlowAction::ExternalCallee, before, after);
   }
@@ -290,6 +292,12 @@ AbstractDenseBackwardDataFlowAnalysis::visit(ProgramPoint *point) {
 void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
     CallOpInterface call, const AbstractDenseLattice &after,
     AbstractDenseLattice *before) {
+  // If the solver is not interprocedural, let the hook handle it as an external
+  // callee.
+  if (!getSolverConfig().isInterprocedural())
+    return visitCallControlFlowTransfer(
+        call, CallControlFlowAction::ExternalCallee, after, before);
+
   // Find the callee.
   Operation *callee = call.resolveCallableInTable(&symbolTable);
 
@@ -297,12 +305,10 @@ void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
   // No region means the callee is only declared in this module.
   // If that is the case or if the solver is not interprocedural,
   // let the hook handle it.
-  if (!getSolverConfig().isInterprocedural() ||
-      (callable && (!callable.getCallableRegion() ||
-                    callable.getCallableRegion()->empty()))) {
+  if (callable &&
+      (!callable.getCallableRegion() || callable.getCallableRegion()->empty()))
     return visitCallControlFlowTransfer(
         call, CallControlFlowAction::ExternalCallee, after, before);
-  }
 
   if (!callable)
     return setToExitState(before);

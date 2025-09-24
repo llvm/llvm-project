@@ -79,6 +79,7 @@ struct UnrollLoopOptions {
   const Instruction *Heart = nullptr;
   unsigned SCEVExpansionBudget;
   bool RuntimeUnrollMultiExit = false;
+  bool AddAdditionalAccumulators = false;
 };
 
 LLVM_ABI LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO,
