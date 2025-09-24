@@ -260,7 +260,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
         canUseShiftPair(Inst, Imm))
       return TTI::TCC_Free;
     if (Inst && Idx == 1 && Imm.getBitWidth() == 64 &&
-        canUseSRAIWCmp(Inst, Imm))
+        canUseShiftCmp(Inst, Imm))
       return TTI::TCC_Free;
     Takes12BitImm = true;
     break;
