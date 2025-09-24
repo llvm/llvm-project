@@ -43,12 +43,21 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       SmallVector<OperandBundleDef> KeptBundles;
       unsigned NumBundles = Assume->getNumOperandBundles();
       for (unsigned I = 0; I != NumBundles; ++I) {
-        OperandBundleUse Bundle = Assume->getOperandBundleAt(I);
-        SmallPtrSet<Value *, 8> Affected;
-        AssumptionCache::findValuesAffectedByOperandBundle(
-            Bundle, [&](Value *A) { Affected.insert(A); });
+        auto IsDead = [](OperandBundleUse Bundle) {
+          // Bundles without arguments do not affect any specific values.
+          // Always keep them for now.
+          if (Bundle.Inputs.empty())
+            return false;
 
-        if (affectedValuesAreEphemeral(Affected))
+          SmallPtrSet<Value *, 8> Affected;
+          AssumptionCache::findValuesAffectedByOperandBundle(
+              Bundle, [&](Value *A) { Affected.insert(A); });
+
+          return affectedValuesAreEphemeral(Affected);
+        };
+
+        OperandBundleUse Bundle = Assume->getOperandBundleAt(I);
+        if (IsDead(Bundle))
           append_range(DeadBundleArgs, Bundle.Inputs);
         else
           KeptBundles.emplace_back(Bundle);

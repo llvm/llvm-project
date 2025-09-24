@@ -120,6 +120,15 @@ define void @operand_bundle_remove_dead_insts(ptr %x) {
   ret void
 }
 
+define void @operand_bundle_no_args() {
+; CHECK-LABEL: define void @operand_bundle_no_args() {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["cold"()]
+  ret void
+}
+
 define void @type_test(ptr %x) {
 ; CHECK-LABEL: define void @type_test(
 ; CHECK-SAME: ptr [[X:%.*]]) {
