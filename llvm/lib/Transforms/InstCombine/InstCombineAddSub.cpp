@@ -2354,12 +2354,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // and let's try to sink `(sub 0, b)` into `b` itself. But only if this isn't
   // a pure negation used by a select that looks like abs/nabs.
   bool IsNegation = match(Op0, m_ZeroInt());
-  if (!IsNegation || none_of(I.users(), [&I, Op1](const User *U) {
-        const Instruction *UI = dyn_cast<Instruction>(U);
-        if (!UI)
-          return false;
-        return match(UI, m_c_Select(m_Specific(Op1), m_Specific(&I)));
-      })) {
+  if (!IsNegation || none_of(I.users(), match_fn(m_c_Select(m_Specific(Op1),
+                                                            m_Specific(&I))))) {
     if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
                                                         I.hasNoSignedWrap(),
                                         Op1, *this))

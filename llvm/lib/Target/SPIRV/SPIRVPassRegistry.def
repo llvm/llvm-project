@@ -13,6 +13,11 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("spirv-cbuffer-access", SPIRVCBufferAccess())
+#undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
