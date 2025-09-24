@@ -2149,7 +2149,9 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
-    if (ST.hasMovB64()) {
+    MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Dst);
+    if (ST.hasMovB64() && RI.isProperlyAlignedRC(*RC)) {
       MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
           isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
@@ -2159,7 +2161,8 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
-      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo)) {
+      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo) &&
+          RI.isProperlyAlignedRC(*RC)) {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
           .addImm(SISrcMods::OP_SEL_1)
           .addImm(Lo.getSExtValue())
