@@ -1777,7 +1777,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     auto Region = DAG.Regions[I];
     for (auto MI = Region.first; MI != Region.second; ++MI) {
-      // The instruction must be trivially rematerializable.
+      // The instruction must be rematerializable.
       MachineInstr &DefMI = *MI;
       if (!isReMaterializable(DefMI))
         continue;
