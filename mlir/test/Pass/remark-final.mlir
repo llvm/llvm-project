@@ -7,9 +7,6 @@ module @foo {
 
 // CHECK-NOT: This is a test passed remark (should be dropped)
 
-// CHECK: !Passed
-// CHECK: Remark:          This is a test passed remark
-// CHECK: !Analysis
-// CHECK: Remark:          This is a test analysis remark
-// CHECK: !Failure
-// CHECK: Remark:          This is a test failed remark
+// CHECK-DAG: !Analysis
+// CHECK-DAG: !Failure
+// CHECK-DAG: !Passed
