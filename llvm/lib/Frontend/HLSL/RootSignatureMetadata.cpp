@@ -212,7 +212,8 @@ MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
       ConstantAsMetadata::get(Builder.getInt32(Sampler.Space)),
       ConstantAsMetadata::get(
           Builder.getInt32(to_underlying(Sampler.Visibility))),
-      ConstantAsMetadata::get(Sampler.Flags),
+      ConstantAsMetadata::get(
+        Builder.getInt32(to_underlying(Sampler.Visibility))),
   };
   return MDNode::get(Ctx, Operands);
 }
