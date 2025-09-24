@@ -149,10 +149,24 @@ protected:
     dataSharingAttributeObjects_.clear();
   }
   bool HasDataSharingAttributeObject(const Symbol &);
+
+  /// Extract the iv and bounds of a DO loop:
+  /// 1. The loop index/induction variable
+  /// 2. The lower bound
+  /// 3. The upper bound
+  /// 4. The step/increment (or nullptr if not present)
+  ///
+  /// Each returned tuple value can be nullptr if not present. Diagnoses an
+  /// error if the the DO loop is a DO WHILE or DO CONCURRENT loop.
   std::tuple<const parser::Name *, const parser::ScalarExpr *,
       const parser::ScalarExpr *, const parser::ScalarExpr *>
   GetLoopBounds(const parser::DoConstruct &);
+
+  /// Extract the loop index/induction variable from a DO loop. Diagnoses an
+  /// error if the the DO loop is a DO WHILE or DO CONCURRENT loop and returns
+  /// nullptr.
   const parser::Name *GetLoopIndex(const parser::DoConstruct &);
+
   const parser::DoConstruct *GetDoConstructIf(
       const parser::ExecutionPartConstruct &);
   Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
@@ -1025,7 +1039,7 @@ DirectiveAttributeVisitor<T>::GetLoopBounds(const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
     if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
-      auto &&step = b->step;
+      auto &step = b->step;
       return {&b->name.thing, &b->lower, &b->upper,
           step.has_value() ? &step.value() : nullptr};
     }
@@ -1042,8 +1056,7 @@ DirectiveAttributeVisitor<T>::GetLoopBounds(const parser::DoConstruct &x) {
 template <typename T>
 const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
     const parser::DoConstruct &x) {
-  auto &&[iv, lb, ub, step] = GetLoopBounds(x);
-  return iv;
+  return std::get<const parser::Name *>(GetLoopBounds(x));
 }
 
 template <typename T>
@@ -2176,7 +2189,7 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
 
 void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
     const parser::OpenMPLoopConstruct &x) {
-  auto &dirContext = GetContext();
+  auto &dirContext{GetContext()};
   std::int64_t dirDepth{dirContext.associatedLoopLevel};
   if (dirDepth <= 0)
     return;
