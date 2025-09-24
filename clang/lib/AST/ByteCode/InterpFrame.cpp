@@ -59,7 +59,7 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
   if (Func->hasRVO()) {
-    // RVOPtrOffset is always 0.
+    // RVO pointer offset is always 0.
   }
 
   if (Func->hasThisPointer())
