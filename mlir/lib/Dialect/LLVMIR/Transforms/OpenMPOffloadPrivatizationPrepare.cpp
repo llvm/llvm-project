@@ -167,28 +167,6 @@ class PrepareForOMPOffloadPrivatizationPass
         //        Type varType = getElemType(varPtr);
         Type varType = mapInfoOp.getVarType();
 
-        // // auto loadVal = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
-        // // (void)rewriter.create<LLVM::StoreOp>(loc, loadVal.getResult(), heapMem);
-        #if 0
-        Region &initRegion = privatizer.getInitRegion();
-        assert(!initRegion.empty() && "initRegion cannot be empty");
-        Block &entryBlock = initRegion.front();
-        Block *insertBlock = firstOp->getBlock();
-        Block *newBlock = insertBlock->splitBlock(firstOp);
-        Region *destRegion = firstOp->getParentRegion();
-        IRMapping irMap;
-        irMap.map(varPtr, entryBlock.getArgument(0));
-        irMap.map(heapMem, entryBlock.getArgument(1));
-
-        LDBG() << "Operation being walked before cloning the init region\n\n";
-        LLVM_DEBUG(llvm::dbgs() << getOperation() << "\n");
-        initRegion.cloneInto(destRegion, Region::iterator(newBlock), irMap);
-        LDBG() << "Operation being walked after cloning the init region\n";
-        LLVM_DEBUG(llvm::dbgs() << getOperation() << "\n");
-        //        rewriter.setInsertionPointToEnd(insertBlock);
-        // LLVM::BrOp::create(rewriter, loc,
-        //            , );
-#else
         // Create a llvm.func for 'region' that is marked always_inline and call it.
         auto createAlwaysInlineFuncAndCallIt = [&](Region &region,
                                                    llvm::StringRef funcName,
@@ -202,6 +180,7 @@ class PrepareForOMPOffloadPrivatizationPass
           auto call = rewriter.create<LLVM::CallOp>(loc, func, ValueRange{mold, arg1});
           return call.getResult();
         };
+
         Value moldArg, newArg;
         if (isPrivatizedByValue) {
           moldArg = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
@@ -219,7 +198,7 @@ class PrepareForOMPOffloadPrivatizationPass
             moldArg, newArg);
         else
           initializedVal = newArg;
-#endif
+
         if (isFirstPrivate && !privatizer.getCopyRegion().empty())
           initializedVal = createAlwaysInlineFuncAndCallIt(
               privatizer.getCopyRegion(),
