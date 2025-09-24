@@ -167,6 +167,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
   case VPReductionEVLSC:
+  case VPPartialReductionSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
@@ -2851,11 +2852,18 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
   case ExpressionTypes::ExtendedReduction: {
+    unsigned Opcode = RecurrenceDescriptor::getOpcode(
+        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
+    auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    if (isa<VPPartialReductionRecipe>(ExpressionRecipes.back())) {
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr, RedTy, VF,
+          TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
+          TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
+    }
     return Ctx.TTI.getExtendedReductionCost(
-        Opcode,
-        cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
-            Instruction::ZExt,
-        RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
+        Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy, SrcVecTy,
+        std::nullopt, Ctx.CostKind);
   }
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
@@ -2866,6 +2874,19 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     if (ExpressionType == ExpressionTypes::ExtNegatedMulAccReduction &&
         Opcode == Instruction::Add)
       Opcode = Instruction::Sub;
+    if (isa<VPPartialReductionRecipe>(ExpressionRecipes.back())) {
+      auto *Ext0R = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+      auto *Ext1R = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
+      auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[2]);
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)),
+          Ctx.Types.inferScalarType(getOperand(1)), RedTy, VF,
+          TargetTransformInfo::getPartialReductionExtendKind(
+              Ext0R->getOpcode()),
+          TargetTransformInfo::getPartialReductionExtendKind(
+              Ext1R->getOpcode()),
+          Mul->getOpcode(), Ctx.CostKind);
+    }
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
@@ -2898,12 +2919,15 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  bool IsPartialReduction = isa<VPPartialReductionRecipe>(Red);
 
   switch (ExpressionType) {
   case ExpressionTypes::ExtendedReduction: {
     getOperand(1)->printAsOperand(O, SlotTracker);
-    O << " +";
-    O << " reduce." << Instruction::getOpcodeName(Opcode) << " (";
+    O << " + ";
+    if (IsPartialReduction)
+      O << "partial.";
+    O << "reduce." << Instruction::getOpcodeName(Opcode) << " (";
     getOperand(0)->printAsOperand(O, SlotTracker);
     Red->printFlags(O);
 
@@ -2919,7 +2943,10 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    O << " + reduce."
+    O << " + ";
+    if (IsPartialReduction)
+      O << "partial.";
+    O << "reduce."
       << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (sub (0, mul";
@@ -2945,6 +2972,8 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::ExtMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     O << " + ";
+    if (IsPartialReduction)
+      O << "partial.";
     O << "reduce."
       << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
