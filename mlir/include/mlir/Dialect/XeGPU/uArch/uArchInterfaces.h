@@ -26,12 +26,11 @@ namespace mlir {
 namespace xegpu {
 namespace uArch {
 
-enum class MMAOpndEnum { MatrixA, MatrixB, MatrixC, MatrixD };
+enum class MMAOpndKind { MatrixA, MatrixB, MatrixC, MatrixD };
 struct MMAInstructionInterface {
   // Get supported Matrix shapes
   virtual std::vector<std::pair<uint32_t, uint32_t>>
-  getSupportedShapes(mlir::Type dataType, MMAOpndEnum matrixType) = 0;
-
+  getSupportedShapes(mlir::Type dataType, MMAOpndKind matrixType) = 0;
   // @TODO: This method takes an context object as a parameter, this is to
   // create the mlir::Type objects from the same context. Since type objects are
   // uniqued in a specific context, to do things like "aType == bType" (where
@@ -46,7 +45,7 @@ struct MMAInstructionInterface {
   // Untill we have a better solution, we stick to passing context object to
   // this method.
   virtual std::vector<mlir::Type> getSupportedTypes(MLIRContext &context,
-                                                    MMAOpndEnum matrixType) = 0;
+                                                    MMAOpndKind matrixType) = 0;
   virtual bool
   checkSupportedShapesAndTypes(std::pair<uint32_t, uint32_t> AShape,
                                std::pair<uint32_t, uint32_t> BShape,

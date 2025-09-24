@@ -16,7 +16,7 @@ namespace Xe2Plus {
 
 std::vector<std::pair<uint32_t, uint32_t>>
 DPASInstruction::getSupportedShapes(mlir::Type dataType,
-                                    MMAOpndEnum matrixType) {
+                                    MMAOpndKind matrixType) {
   auto combineVectors = [](const std::vector<uint32_t> &a,
                            const std::vector<uint32_t> &b)
       -> std::vector<std::pair<uint32_t, uint32_t>> {
@@ -35,16 +35,16 @@ DPASInstruction::getSupportedShapes(mlir::Type dataType,
   std::vector<std::pair<unsigned, unsigned>> resultMatrix;
 
   switch (matrixType) {
-  case MMAOpndEnum::MatrixA:
+  case MMAOpndKind::MatrixA:
     resultMatrix = combineVectors(M, K);
     break;
-  case MMAOpndEnum::MatrixB:
+  case MMAOpndKind::MatrixB:
     resultMatrix = combineVectors(K, N);
     break;
-  case MMAOpndEnum::MatrixC:
+  case MMAOpndKind::MatrixC:
     resultMatrix = combineVectors(M, N);
     break;
-  case MMAOpndEnum::MatrixD:
+  case MMAOpndKind::MatrixD:
     resultMatrix = combineVectors(M, N);
     break;
   }
@@ -53,23 +53,23 @@ DPASInstruction::getSupportedShapes(mlir::Type dataType,
 
 std::vector<mlir::Type>
 DPASInstruction::getSupportedTypes(MLIRContext &context,
-                                   MMAOpndEnum matrixType) {
+                                   MMAOpndKind matrixType) {
   mlir::Type bf16Type = mlir::BFloat16Type::get(&context);
   mlir::Type f16Type = mlir::Float16Type::get(&context);
   mlir::Type tf32Type = mlir::FloatTF32Type::get(&context);
   mlir::Type f32Type = mlir::Float32Type::get(&context);
 
   switch (matrixType) {
-  case MMAOpndEnum::MatrixA:
+  case MMAOpndKind::MatrixA:
     return {bf16Type, f16Type, tf32Type};
     break;
-  case MMAOpndEnum::MatrixB:
+  case MMAOpndKind::MatrixB:
     return {bf16Type, f16Type, tf32Type};
     break;
-  case MMAOpndEnum::MatrixC:
+  case MMAOpndKind::MatrixC:
     return {bf16Type, f16Type, f32Type};
     break;
-  case MMAOpndEnum::MatrixD:
+  case MMAOpndKind::MatrixD:
     return {bf16Type, f16Type, f32Type};
     break;
   }
@@ -110,10 +110,10 @@ bool DPASInstruction::checkSupportedShapesAndTypes(
     std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
     std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
     mlir::Type AType, mlir::Type BType, mlir::Type CType, mlir::Type DType) {
-  auto supportedAShapes = getSupportedShapes(AType, MMAOpndEnum::MatrixA);
-  auto supportedBShapes = getSupportedShapes(BType, MMAOpndEnum::MatrixB);
-  auto supportedCShapes = getSupportedShapes(CType, MMAOpndEnum::MatrixC);
-  auto supportedDShapes = getSupportedShapes(DType, MMAOpndEnum::MatrixD);
+  auto supportedAShapes = getSupportedShapes(AType, MMAOpndKind::MatrixA);
+  auto supportedBShapes = getSupportedShapes(BType, MMAOpndKind::MatrixB);
+  auto supportedCShapes = getSupportedShapes(CType, MMAOpndKind::MatrixC);
+  auto supportedDShapes = getSupportedShapes(DType, MMAOpndKind::MatrixD);
   return llvm::is_contained(supportedAShapes, AShape) &&
          llvm::is_contained(supportedBShapes, BShape) &&
          llvm::is_contained(supportedCShapes, CShape) &&

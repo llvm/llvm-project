@@ -45,11 +45,10 @@ struct Xe2Plus : public uArch {
   Xe2Plus(
       const std::string &archName, const std::string &archDescription,
       const XeCoreInfo &xeCore,
-      const std::vector<uArchHierarchyComponent> &hierarchy = {},
-      const std::map<std::string, RegisterFileInfo> &regInfo = {},
+      const std::map<RegisterFileType, RegisterFileInfo> &regInfo = {},
       const std::vector<CacheInfo> &cacheInfo = {},
       const std::map<std::string, std::shared_ptr<Instruction>> &instrs = {})
-      : uArch(archName, archDescription, hierarchy, regInfo, cacheInfo, instrs),
+      : uArch(archName, archDescription, regInfo, cacheInfo, instrs),
         xe_core(xeCore) {}
 };
 
@@ -62,9 +61,9 @@ struct DPASInstruction : public Instruction, public MMAInstructionInterface {
 
   // Override all virtuals from MatrixOpInterface
   virtual std::vector<std::pair<uint32_t, uint32_t>>
-  getSupportedShapes(mlir::Type dataType, MMAOpndEnum matrixType) override;
+  getSupportedShapes(mlir::Type dataType, MMAOpndKind matrixType) override;
   virtual std::vector<mlir::Type>
-  getSupportedTypes(MLIRContext &context, MMAOpndEnum matrixType) override;
+  getSupportedTypes(MLIRContext &context, MMAOpndKind matrixType) override;
   virtual bool
   checkSupportedShapesAndTypes(std::pair<uint32_t, uint32_t> AShape,
                                std::pair<uint32_t, uint32_t> BShape,
@@ -97,29 +96,22 @@ struct PVCuArch : public Xe2Plus {
                 {/* cache_info */},         // Optional: empty
                 {/* instructions */}        // Optional: empty
         ) {
-    // Initialize uArchHierarchy
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("thread", 0));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("XeCore", 8));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("XeSlice", 16));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("XeStack", 4));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("gpu", 2));
     // Intialize register file info
     // GRF
-    this->register_file_info.emplace(
-        "GRF",
-        RegisterFileInfo(64 * 1024,          // size in bits
-                         {"small", "large"}, // GRF modes
-                         {128, 256},         // registers per thread per mode
-                         0,                  // number of banks
-                         0                   // bank size
-                         ));
+    this->registerFileInfo.emplace(
+        RegisterFileType::GRF,
+        RegisterFileInfo(
+            64 * 1024,                                          // size in bits
+            {RegisterFileMode::Small, RegisterFileMode::Large}, // GRF modes
+            {128, 256} // registers per thread per mode
+            ));
     // Initialize cache info
     // L1 cache, XeCore level
-    this->cache_info.push_back(
-        CacheInfo(512 * 1024, 64, this->uArch_hierarchy[1]));
-    // L3 cache, XeStack level
-    this->cache_info.push_back(
-        CacheInfo(512 * 1024, 64, this->uArch_hierarchy[3]));
+    this->cacheInfo.push_back(
+        CacheInfo(512 * 1024, 64, CacheHierarchyLevel::L1));
+    // L2 cache, XeStack level
+    this->cacheInfo.push_back(
+        CacheInfo(512 * 1024, 64, CacheHierarchyLevel::L2));
 
     // Add the instructions
     auto dpas = std::make_shared<DPASInstruction>();
@@ -140,31 +132,22 @@ struct BMGuArch : public Xe2Plus {
                 XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8), // xeCore
                 {/* register_file_info */}, // Optional: empty
                 {/* cache_info */},         // Optional: empty
-                {/* instructions */},       // Optional: empty
-                {/* restrictions */}        // Optional: empty
+                {/* instructions */}        // Optional: empty)
         ) {
-    // Initialize uArchHierarchy
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("thread", 0));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("XeCore", 8));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("XeSlice", 4));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("XeStack", 5));
-    this->uArch_hierarchy.push_back(uArchHierarchyComponent("gpu", 1));
     // Intialize register file info
     // GRF
-    this->register_file_info["GRF"] =
-        RegisterFileInfo(64 * 1024,          // size in bits
-                         {"small", "large"}, // GRF modes
-                         {128, 256},         // registers per thread per mode
-                         0,                  // number of banks
-                         0                   // bank size
-        );
+    this->registerFileInfo[RegisterFileType::GRF] = RegisterFileInfo(
+        64 * 1024,                                          // size in bits
+        {RegisterFileMode::Small, RegisterFileMode::Large}, // GRF modes
+        {128, 256} // registers per thread per mode
+    );
     // Initialize cache info
     // L1 cache, XeCore level
-    this->cache_info.push_back(
-        CacheInfo(256 * 1024, 64, this->uArch_hierarchy[1]));
-    // L3 cache, XeStack level
-    this->cache_info.push_back(
-        CacheInfo(18 * 1024 * 1024, 256, this->uArch_hierarchy[3]));
+    this->cacheInfo.push_back(
+        CacheInfo(256 * 1024, 64, CacheHierarchyLevel::L1));
+    // L2 cache, XeStack level
+    this->cacheInfo.push_back(
+        CacheInfo(18 * 1024 * 1024, 256, CacheHierarchyLevel::L2));
 
     // Add the instructions
     auto dpas = std::make_shared<DPASInstruction>();
