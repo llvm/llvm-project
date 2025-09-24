@@ -12029,7 +12029,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
 
   // vector extract
-  case X86::BI__builtin_ia32_extract128i256: 
+  case X86::BI__builtin_ia32_extract128i256: // avx2
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256: {
@@ -12060,12 +12060,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), RetLen), E);
   }
 
-  // masked extract (ex: mm512_mask_extract32x4_epi32 / 512 -> 128)
   case X86::BI__builtin_ia32_extracti32x4_256_mask:  // _mm256_extracti32x4_epi32
   case X86::BI__builtin_ia32_extracti32x4_mask:      // _mm512_extracti32x4_epi32
   case X86::BI__builtin_ia32_extracti32x8_mask:      // _mm512_extracti32x8_epi32
   case X86::BI__builtin_ia32_extracti64x2_256_mask:  // _mm256_extracti64x2_epi64
-  case X86::BI__builtin_ia32_extracti64x2_512_mask:      // _mm512_extracti64x2_epi64
+  case X86::BI__builtin_ia32_extracti64x2_512_mask:  // _mm512_extracti64x2_epi64
   case X86::BI__builtin_ia32_extracti64x4_mask: {    // _mm512_extracti64x4_epi64
     APValue SourceVec, SourceImm, SourceMerge, SourceKmask;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
