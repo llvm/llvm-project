@@ -25149,8 +25149,62 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
 
       // Load complete f64 result from memory
       return DAG.getLoad(MVT::f64, DL, StoreResHi, ResultSlot, MachinePointerInfo());
+    } else if (VT == MVT::f80) {
+      // For f80 on i386, use memory-based approach with 3×32-bit chunks
+      // f80 is stored as 96 bits (80 bits + 16 padding), handled as 3×i32
+      // TODO: Consider creating CTSELECT_I386_F80mm pseudo instruction
+      // for single bundled 80-bit memory-based post-RA expansion
+
+      SDValue Chain = DAG.getEntryNode();
+
+      // Create temporary stack slots for input f80 values
+      SDValue TrueSlot = DAG.CreateStackTemporary(MVT::f80);
+      SDValue FalseSlot = DAG.CreateStackTemporary(MVT::f80);
+
+      // Store f80 values to memory
+      SDValue StoreTrueF80 = DAG.getStore(Chain, DL, TrueOp, TrueSlot,
+                                          MachinePointerInfo());
+      SDValue StoreFalseF80 = DAG.getStore(Chain, DL, FalseOp, FalseSlot,
+                                           MachinePointerInfo());
+
+      // Load i32 parts from memory (3 chunks: [0-3], [4-7], [8-11] bytes)
+      SDValue TruePart0 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TrueSlot,
+                                      MachinePointerInfo());
+      SDValue TruePart1Ptr = DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(4), DL);
+      SDValue TruePart1 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TruePart1Ptr,
+                                      MachinePointerInfo());
+      SDValue TruePart2Ptr = DAG.getMemBasePlusOffset(TrueSlot, TypeSize::getFixed(8), DL);
+      SDValue TruePart2 = DAG.getLoad(MVT::i32, DL, StoreTrueF80, TruePart2Ptr,
+                                      MachinePointerInfo());
+
+      SDValue FalsePart0 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalseSlot,
+                                       MachinePointerInfo());
+      SDValue FalsePart1Ptr = DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(4), DL);
+      SDValue FalsePart1 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalsePart1Ptr,
+                                       MachinePointerInfo());
+      SDValue FalsePart2Ptr = DAG.getMemBasePlusOffset(FalseSlot, TypeSize::getFixed(8), DL);
+      SDValue FalsePart2 = DAG.getLoad(MVT::i32, DL, StoreFalseF80, FalsePart2Ptr,
+                                       MachinePointerInfo());
+
+      // Create three i32 CTSELECT operations
+      SDValue Part0Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart0, FalsePart0);
+      SDValue Part1Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart1, FalsePart1);
+      SDValue Part2Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart2, FalsePart2);
+
+      // Create result stack slot and store the selected parts
+      SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f80);
+      SDValue StorePart0 = DAG.getStore(Chain, DL, Part0Select, ResultSlot,
+                                        MachinePointerInfo());
+      SDValue ResPart1Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
+      SDValue StorePart1 = DAG.getStore(StorePart0, DL, Part1Select, ResPart1Ptr,
+                                        MachinePointerInfo());
+      SDValue ResPart2Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(8), DL);
+      SDValue StorePart2 = DAG.getStore(StorePart1, DL, Part2Select, ResPart2Ptr,
+                                        MachinePointerInfo());
+
+      // Load complete f80 result from memory
+      return DAG.getLoad(MVT::f80, DL, StorePart2, ResultSlot, MachinePointerInfo());
     }
-    // For f80 on i386, fall through to generic handling for now
   }
 
   if (isScalarFPTypeInSSEReg(VT)) {
