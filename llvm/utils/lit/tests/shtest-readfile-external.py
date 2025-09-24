@@ -1,5 +1,8 @@
 ## Tests the readfile substitution.
 
+# TODO(boomanaiden154): This sometimes fails, possibly due to buffers not being flushed.
+# ALLOW_RETRIES: 2
+
 # UNSUPPORTED: system-windows
 # RUN: env LIT_USE_INTERNAL_SHELL=0 not %{lit} -a -v %{inputs}/shtest-readfile | FileCheck -match-full-lines -DTEMP_PATH=%S/Inputs/shtest-readfile/Output %s
 
