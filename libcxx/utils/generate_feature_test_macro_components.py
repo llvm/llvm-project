@@ -1087,6 +1087,11 @@ feature_test_macros = [
             "headers": ["ranges"],
         },
         {
+            "name": "__cpp_lib_ranges_cache_latest",
+            "values": {"c++23": 202411},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_chunk",
             "values": {"c++23": 202202},
             "headers": ["ranges"],

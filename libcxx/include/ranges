@@ -362,6 +362,13 @@ namespace std::ranges {
   class chunk_by_view;                                                      // C++23
 
   namespace views { inline constexpr unspecified chunk_by = unspecified; }  // C++23
+
+  // [range.cache.latest], cache latest view
+  template<input_range V>
+    requires view<V>
+  class cache_latest_view;                                                      // C++26
+
+  namespace views { inline constexpr unspecified cache_latest = unspecified; }  // C++26
 }
 
 namespace std {
@@ -451,6 +458,10 @@ namespace std {
 #    include <__ranges/to.h>
 #    include <__ranges/zip_transform_view.h>
 #    include <__ranges/zip_view.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__ranges/cache_latest_view.h>
 #  endif
 
 #  include <version>
