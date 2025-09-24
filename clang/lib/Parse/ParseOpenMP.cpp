@@ -3164,7 +3164,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_simdlen:
   case OMPC_collapse:
   case OMPC_ordered:
-  case OMPC_nowait:
   case OMPC_priority:
   case OMPC_grainsize:
   case OMPC_num_tasks:
@@ -3213,8 +3212,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
-    if ((CKind == OMPC_ordered || CKind == OMPC_nowait ||
-         CKind == OMPC_partial) &&
+    if ((CKind == OMPC_ordered || CKind == OMPC_partial) &&
         PP.LookAhead(/*N=*/0).isNot(tok::l_paren))
       Clause = ParseOpenMPClause(CKind, WrongDirective);
     else if (CKind == OMPC_grainsize || CKind == OMPC_num_tasks ||
@@ -3279,6 +3277,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_holds:
     Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     break;
+  case OMPC_nowait:
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_read:
@@ -3312,7 +3311,11 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
-    Clause = ParseOpenMPClause(CKind, WrongDirective);
+    if (CKind == OMPC_nowait &&
+        PP.LookAhead(/*N=*/0).is(tok::l_paren) && getLangOpts().OpenMP >= 60)
+      Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
+    else
+      Clause = ParseOpenMPClause(CKind, WrongDirective);
     break;
   case OMPC_self_maps:
     // OpenMP [6.0, self_maps clause]

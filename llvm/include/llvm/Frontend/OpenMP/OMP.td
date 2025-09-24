@@ -712,7 +712,6 @@ def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_CancellationConstructType>,
     VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_NoWait, 60>,
   ];
   let association = AS_None;
   let category = CA_Executable;
