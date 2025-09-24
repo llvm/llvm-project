@@ -229,6 +229,9 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+; It is theoretically possible to replace the `ssub.with.overflow` with a
+; condition on the IV, but SCEV cannot represent non-unsigned-wrapping
+; subtraction operations.
 define void @f_ssub_overflow(ptr nocapture %a) {
 ; CHECK-LABEL: define void @f_ssub_overflow(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]]) {
@@ -322,6 +325,9 @@ cont:                                             ; preds = %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+; It is theoretically possible to replace the `usub.with.overflow` with a
+; condition on the IV, but SCEV cannot represent non-unsigned-wrapping
+; subtraction operations.
 define void @f_usub_overflow(ptr nocapture %a) {
 ; CHECK-LABEL: define void @f_usub_overflow(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]]) {
@@ -357,10 +363,6 @@ for.body:                                         ; preds = %entry, %cont
   store i8 0, ptr %arrayidx, align 1
   %0 = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %i.04, i32 1)
   %1 = extractvalue { i32, i1 } %0, 1
-
-; It is theoretically possible to prove this, but SCEV cannot
-; represent non-unsigned-wrapping subtraction operations.
-
   br i1 %1, label %trap, label %cont, !nosanitize !{}
 
 trap:                                             ; preds = %for.body
