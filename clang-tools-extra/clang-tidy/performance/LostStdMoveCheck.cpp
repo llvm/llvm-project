@@ -15,8 +15,8 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::performance {
 
 template <typename Node>
-void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
-                        llvm::SmallPtrSet<const Node *, 16> &Nodes) {
+static void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
+                               llvm::SmallPtrSet<const Node *, 16> &Nodes) {
   for (const BoundNodes &Match : Matches)
     Nodes.insert(Match.getNodeAs<Node>(ID));
 }
@@ -66,14 +66,18 @@ getLastVarUsage(const llvm::SmallPtrSet<const DeclRefExpr *, 16> &Exprs) {
   return LastExpr;
 }
 
+namespace {
+
 AST_MATCHER(CXXRecordDecl, hasTrivialMoveConstructor) {
   return Node.hasDefinition() && Node.hasTrivialMoveConstructor();
 }
 
 AST_MATCHER_P(Expr, ignoreParens, ast_matchers::internal::Matcher<Expr>,
-              innerMatcher) {
-  return innerMatcher.matches(*Node.IgnoreParens(), Finder, Builder);
+              InnerMatcher) {
+  return InnerMatcher.matches(*Node.IgnoreParens(), Finder, Builder);
 }
+
+} // namespace
 
 void LostStdMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
