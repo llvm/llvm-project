@@ -1937,10 +1937,6 @@ void SubstituteParameterMappings::buildParameterMapping(
         static_cast<FoldExpandedConstraint &>(N).getPattern(),
         /*OnlyDeduced=*/false,
         /*Depth=*/0, OccurringIndices);
-
-    SemaRef.MarkUsedTemplateParametersForSubsumptionParameterMapping(
-        static_cast<FoldExpandedConstraint &>(N).getPattern(),
-        /*Depth=*/0, OccurringIndicesForSubsumption);
   }
   TemplateArgumentLoc *TempArgs =
       new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];

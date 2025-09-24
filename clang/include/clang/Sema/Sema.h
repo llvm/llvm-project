@@ -12779,7 +12779,7 @@ public:
   /// Mark which template parameters are named in a given expression.
   ///
   /// Unlike MarkUsedTemplateParameters, this excludes parameter that
-  /// are used but not directly named by an expression - ie it excludes
+  /// are used but not directly named by an expression - i.e. it excludes
   /// any template parameter that denotes the type of a referenced NTTP.
   ///
   /// \param Used a bit vector whose elements will be set to \c true

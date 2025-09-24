@@ -57,6 +57,24 @@ static_assert(foo<int, 'a'>() == 2);
 
 }
 
+namespace packs {
+
+template<auto T, decltype(T)... U>
+concept C1 = (sizeof(U) && ...) >= 4;
+
+template<typename Y, char... V>
+concept C2 = (C1<Y{}, V> && ...);
+
+template<char... W>
+constexpr int foo() requires (C2<int, W> && ...) { return 1; }
+
+template<char... X>
+constexpr int foo() requires (C1<1, X> && ...) && true { return 2; }
+
+static_assert(foo<'a'>() == 2);
+
+}
+
 namespace case2 {
 template<auto T> concept C1 = sizeof(decltype(T)) >= 0;
 template<typename Y> concept C2 = C1<Y{}>;
