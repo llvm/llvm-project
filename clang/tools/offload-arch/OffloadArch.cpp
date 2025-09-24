@@ -21,6 +21,7 @@ enum VendorName {
   all,
   amdgpu,
   nvptx,
+  intel,
 };
 
 static cl::opt<VendorName>
@@ -28,7 +29,8 @@ static cl::opt<VendorName>
          cl::init(all),
          cl::values(clEnumVal(all, "Print all GPUs (default)"),
                     clEnumVal(amdgpu, "Only print AMD GPUs"),
-                    clEnumVal(nvptx, "Only print NVIDIA GPUs")));
+                    clEnumVal(nvptx, "Only print NVIDIA GPUs"),
+                    clEnumVal(intel, "Only print Intel GPUs")));
 
 cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
                       cl::init(false), cl::cat(OffloadArchCategory));
@@ -40,6 +42,7 @@ static void PrintVersion(raw_ostream &OS) {
 int printGPUsByKFD();
 int printGPUsByHIP();
 int printGPUsByCUDA();
+int printGPUsByLevelZero();
 
 static int printAMD() {
 #ifndef _WIN32
@@ -51,6 +54,7 @@ static int printAMD() {
 }
 
 static int printNVIDIA() { return printGPUsByCUDA(); }
+static int printIntel() { return printGPUsByLevelZero(); }
 
 int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(OffloadArchCategory);
@@ -73,15 +77,22 @@ int main(int argc, char *argv[]) {
                     sys::path::stem(argv[0]).starts_with("amdgpu-arch");
   bool NVIDIAOnly = Only == VendorName::nvptx ||
                     sys::path::stem(argv[0]).starts_with("nvptx-arch");
+  bool IntelOnly = Only == VendorName::intel ||
+                   sys::path::stem(argv[0]).starts_with("intelgpu-arch");
+  bool All = !AMDGPUOnly && !NVIDIAOnly && !IntelOnly;
 
   int NVIDIAResult = 0;
-  if (!AMDGPUOnly)
+  if (NVIDIAOnly || All)
     NVIDIAResult = printNVIDIA();
 
   int AMDResult = 0;
-  if (!NVIDIAOnly)
+  if (AMDGPUOnly || All)
     AMDResult = printAMD();
 
+  int IntelResult = 0;
+  if (IntelOnly || All)
+    IntelResult = printIntel();
+
   // We only failed if all cases returned an error.
-  return AMDResult && NVIDIAResult;
+  return AMDResult && NVIDIAResult && IntelResult;
 }
