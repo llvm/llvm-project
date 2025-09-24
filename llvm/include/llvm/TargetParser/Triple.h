@@ -110,7 +110,6 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
-    nvsass,         // NVIDIA SASS
     LastArchType = ve
   };
   enum SubArchType {
@@ -906,8 +905,6 @@ public:
 
   bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
 
-  bool isNVSASS() const { return getArch() == Triple::nvsass; }
-
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
     return getArch() == Triple::thumb || getArch() == Triple::thumbeb;
@@ -1276,9 +1273,7 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const {
-    return isSPIRV() || isNVPTX() || isAMDGPU() || isNVSASS();
-  }
+  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;
