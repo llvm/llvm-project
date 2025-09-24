@@ -141,7 +141,6 @@ public:
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
   std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
-  std::optional<llvm::StringRef> FindMangledSymbol(SegmentOffset so);
 
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
@@ -271,6 +270,8 @@ private:
 
   void CacheUdtDeclarations();
   llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
+
+  std::optional<llvm::StringRef> FindMangledSymbol(SegmentOffset so);
 
   llvm::BumpPtrAllocator m_allocator;
 
