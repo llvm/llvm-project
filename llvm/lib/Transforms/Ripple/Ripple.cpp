@@ -19,6 +19,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
@@ -70,6 +71,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
@@ -738,11 +740,13 @@ bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
         if (dyn_cast<LoadInst>(I)) {
           R << "tensor access requires gather: ";
           R << "base is a tensor with shape " << BaseShapeStr << "; ";
-          R << "cannot form contiguous loads" << "\n";
+          R << "cannot form contiguous loads"
+            << "\n";
         } else {
           R << "tensor access requires scatter: ";
           R << "base is a tensor with shape " << BaseShapeStr << "; ";
-          R << "cannot form contiguous stores" << "\n";
+          R << "cannot form contiguous stores"
+            << "\n";
         }
         return R;
       });
@@ -771,11 +775,13 @@ bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
           if (dyn_cast<LoadInst>(I)) {
             R << "tensor access requires gather: ";
             R << "strided memory access along dimension " << std::to_string(i);
-            R << " prevents coalesced vector load" << "\n";
+            R << " prevents coalesced vector load"
+              << "\n";
           } else {
             R << "tensor access requires scatter: ";
             R << "strided memory access along dimension " << std::to_string(i);
-            R << " prevents coalesced vector store" << "\n";
+            R << " prevents coalesced vector store"
+              << "\n";
           }
           return R;
         });
@@ -789,11 +795,13 @@ bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
         if (dyn_cast<LoadInst>(I)) {
           R << "tensor access requires gather: ";
           R << "non-constant stride along dimension " << std::to_string(i);
-          R << " prevents coalesced vector load" << "\n";
+          R << " prevents coalesced vector load"
+            << "\n";
         } else {
           R << "tensor access requires scatter: ";
           R << "non-constant stride along dimension " << std::to_string(i);
-          R << " prevents coalesced vector store" << "\n";
+          R << " prevents coalesced vector store"
+            << "\n";
         }
         return R;
       });
@@ -848,7 +856,8 @@ Value *NDLoadStoreFactory::genUnstructuredLoad(LoadInst *Load, Value *Address,
       R << "gather instructions are typically expensive and may degrade "
            "performance. ";
       R << "improved data layout, access patterns, and loop structures ";
-      R << "can help reduce this cost." << "\n";
+      R << "can help reduce this cost."
+        << "\n";
       return R;
     });
   }
@@ -951,7 +960,8 @@ Value *NDLoadStoreFactory::genUnstructuredStore(StoreInst *Store, Value *Val,
       R << "scatter instructions are typically expensive and may degrade "
            "performance. ";
       R << "improved data layout, access patterns, and loop structures ";
-      R << "can help reduce this cost." << "\n";
+      R << "can help reduce this cost."
+        << "\n";
       return R;
     });
   }
@@ -2084,7 +2094,7 @@ void Ripple::padToTargetSIMDWidth() {
           MustBePadded.insert(I);
           AddUserInstsToWorklist(I, Worklist);
         }
-      } else if (auto* CallI = dyn_cast<CallInst>(I)) {
+      } else if (auto *CallI = dyn_cast<CallInst>(I)) {
         std::string ErrStr;
         raw_string_ostream OSS(ErrStr);
         OSS << "Only call instructions that accept legalizable types suported. "
@@ -3313,9 +3323,9 @@ void Ripple::genVectorInstructions() {
       return Vector;
     };
 
-    auto &ExternElemWiseShape = ExternF.elementWiseShape();
+    const auto &ExternElemWiseShape = ExternF.elementWiseShape();
     LLVM_DEBUG(dbgs() << "Extern call shape: " << ExternElemWiseShape << "\n");
-    unsigned ExternElemCount = ExternElemWiseShape.flatShape();
+    const unsigned ExternElemCount = ExternElemWiseShape.flatShape();
     auto TensorArgShapes = ExternF.returnTensorShape(Call, *this);
     // This is checked during the shape propagation phase, in
     // inferShapeFromOperands, CallInst case
@@ -3358,11 +3368,11 @@ void Ripple::genVectorInstructions() {
         report_fatal_error(
             "Unimplemented slicing of element-wise byval arguments");
 
-    SmallVector<int, 0> ShuffleIndices(ExternElemWiseShape.flatShape());
+    SmallVector<int, 0> ShuffleIndices(ExternElemCount);
     SmallVector<Value *, 0> SlicedCallArgs;
     SmallVector<Value *, 0> ExternCallReturnSlices;
-    for (unsigned SliceIdx = 0, E = divideCeil(TensorArgShapes->flatShape(),
-                                               ExternElemWiseShape.flatShape());
+    for (unsigned SliceIdx = 0,
+                  E = divideCeil(TensorArgShapes->flatShape(), ExternElemCount);
          SliceIdx < E; ++SliceIdx) {
       SlicedCallArgs.clear();
       for (unsigned ArgIdx = 0, E = TensorArgs.size(); ArgIdx < E; ++ArgIdx) {
@@ -3371,10 +3381,9 @@ void Ripple::genVectorInstructions() {
         } else {
           std::iota(ShuffleIndices.begin(), ShuffleIndices.end(),
                     SliceIdx * ExternElemCount);
-          assert(ShuffleIndices.size() == ExternElemWiseShape.flatShape());
-          LLVM_DEBUG(dbgs()
-                     << "Shuffling " << *TensorArgs[ArgIdx] << " Mask length: "
-                     << ExternElemWiseShape.flatShape() << "\n");
+          assert(ShuffleIndices.size() == ExternElemCount);
+          LLVM_DEBUG(dbgs() << "Shuffling " << *TensorArgs[ArgIdx]
+                            << " Mask length: " << ExternElemCount << "\n");
           Value *Shuffle = irBuilder.CreateShuffleVector(
               TensorArgs[ArgIdx],
               ConstantAggregateZero::get(TensorArgs[ArgIdx]->getType()),
@@ -7589,9 +7598,97 @@ ExternalRippleFunction::createExternalFunction(Function *F,
   if (!usesRippleNamingConvention(F))
     return nullptr;
   auto Options_and_Basename = removeRipplePrefix(F);
-  auto [BaseName, OptionList] = splitOptions(Options_and_Basename);
+  auto [SignatureAndBaseName, OptionList] = splitOptions(Options_and_Basename);
+
+  SmallVector<ArgumentSignatureInfo> ArgumentSignatures;
+  ReturnSignatureInfo ReturnSignature;
+  bool IsUniformSignature = false;
+  auto BaseNameOpt =
+      parseSignature(SignatureAndBaseName, *F, ArgumentSignatures,
+                     ReturnSignature, IsUniformSignature);
+  if (!BaseNameOpt)
+    return nullptr;
+  if (BaseNameOpt->empty()) {
+    std::string ErrMsg;
+    {
+      raw_string_ostream RSO(ErrMsg);
+      RSO << "the external ripple function '" << F->getName()
+          << "' is missing a function name following the function "
+             "options and tensor shapes, e.g., '"
+          << F->getName() << "myFunction'";
+    }
+    DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+    F->getContext().diagnose(Diag);
+    return nullptr;
+  }
+  auto &[ReturnMultidimType, ReturnMultidimTS] = ReturnSignature;
+  bool AnyVectorType = ReturnMultidimTS.isVector();
+  auto *NormalizedFTy = normalizeFunctionType(F);
+  if (ReturnMultidimType) {
+    LLVM_DEBUG(dbgs() << "Signature return type is " << *ReturnMultidimType
+                      << " and tensor shape " << ReturnMultidimTS << "\n");
+    // This candidate is not fit for this function
+    if (ReturnMultidimTS.rank() > TensorRank)
+      return nullptr;
+    // Check that the type agrees with the return shape
+    if (auto *VecRetTy = dyn_cast<VectorType>(NormalizedFTy->getReturnType())) {
+      if (VecRetTy->getElementCount().getFixedValue() !=
+          ReturnMultidimTS.flatShape()) {
+        std::string ErrMsg;
+        {
+          raw_string_ostream RSO(ErrMsg);
+          RSO << "the external ripple function '" << F->getName()
+              << "' return value tensor shape '" << ReturnMultidimTS
+              << "' is incompatible with a vector size of "
+              << VecRetTy->getElementCount().getFixedValue();
+        }
+        DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+        F->getContext().diagnose(Diag);
+        return nullptr;
+      }
+    }
+  }
+  for (auto &[ArgTy, ArgTS, ArgIdx] : ArgumentSignatures) {
+    LLVM_DEBUG(dbgs() << "Signature argument " << ArgIdx << " type is "
+                      << *ArgTy << " and shape " << ArgTS << "\n");
+    if (ArgTS.rank() > TensorRank) {
+      LLVM_DEBUG(dbgs() << "External function rank greater than local tensor "
+                           "rank, not considering\n");
+      return nullptr;
+    }
+    AnyVectorType = AnyVectorType || ArgTS.isVector();
+    if (ArgIdx >= NormalizedFTy->getNumParams()) {
+      std::string ErrMsg;
+      {
+        raw_string_ostream RSO(ErrMsg);
+        RSO << "the external ripple function '" << F->getName()
+            << "' tensor shape argument index " << ArgIdx
+            << " is out of bound; function has only "
+            << NormalizedFTy->getNumParams() << " arguments";
+      }
+      DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+      F->getContext().diagnose(Diag);
+      return nullptr;
+    }
+    if (auto *ArgVecTy =
+            dyn_cast<VectorType>(NormalizedFTy->getParamType(ArgIdx))) {
+      if (ArgVecTy->getElementCount().getFixedValue() != ArgTS.flatShape()) {
+        std::string ErrMsg;
+        {
+          raw_string_ostream RSO(ErrMsg);
+          RSO << "the external ripple function '" << F->getName()
+              << "' argument at index " << ArgIdx << " tensor shape '" << ArgTS
+              << "' is incompatible with a vector size of "
+              << ArgVecTy->getElementCount().getFixedValue();
+        }
+        DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+        F->getContext().diagnose(Diag);
+        return nullptr;
+      }
+    }
+  }
   // Check vector-ness
-  bool AnyVectorType = isa<VectorType>(F->getReturnType());
+  AnyVectorType = AnyVectorType || isa<VectorType>(F->getReturnType());
   for (auto &Arg : F->args()) {
     Type *ArgTy = Arg.getType();
     if (Arg.hasByValAttr() || Arg.hasStructRetAttr())
@@ -7650,8 +7747,10 @@ ExternalRippleFunction::createExternalFunction(Function *F,
     }
   }
 
-  auto NewExternalF = std::unique_ptr<ExternalRippleFunction>(
-      new ExternalRippleFunction(F, BaseName, OptionList, TensorRank));
+  auto NewExternalF =
+      std::unique_ptr<ExternalRippleFunction>(new ExternalRippleFunction(
+          F, BaseNameOpt.value(), OptionList, TensorRank, ReturnSignature,
+          ArgumentSignatures, IsUniformSignature));
 
   return NewExternalF;
 }
@@ -8165,24 +8264,63 @@ Ripple::getInstructionToRippleShape() const {
 ExternalRippleFunction::ExternalRippleFunction(
     Function *Fun, StringRef ScalarName,
     const SmallVectorImpl<StringRef> &Options, size_t TensorRank,
-    size_t DimOffset)
+    const std::tuple<Type *, TensorShape> &ReturnSignature,
+    const SmallVectorImpl<std::tuple<Type *, TensorShape, unsigned>>
+        &ArgumentSignatures,
+    bool UniformSignature)
     : F(Fun), ScalarName(ScalarName) {
 
   // 1D Shape from LLVM vector types
-  auto ShapeFromType = [TensorRank](const Type *Ty,
-                                    unsigned DimOffset) -> TensorShape::Shape {
+  auto ShapeFromType = [TensorRank](const Type *Ty) -> TensorShape::Shape {
     TensorShape::Shape TypeShape(TensorRank, 1u);
 
     if (const VectorType *VT = dyn_cast<VectorType>(Ty))
-      TypeShape[0 + DimOffset] = VT->getElementCount().getKnownMinValue();
+      TypeShape[0] = VT->getElementCount().getKnownMinValue();
 
     return TypeShape;
   };
 
-  ReturnShape = TensorShape(ShapeFromType(getTrueReturnType(), 0));
+  auto &[RetTySig, RetShapeSig] = ReturnSignature;
+  if (RetTySig) {
+    assert(RetShapeSig.rank() <= TensorRank);
+    TensorShape::Shape RS(TensorRank, TensorShape::DimSize(1));
+    std::copy(RetShapeSig.begin(),
+              RetShapeSig.begin() + std::min(static_cast<unsigned>(TensorRank),
+                                             RetShapeSig.rank()),
+              RS.begin());
+    ReturnShape = TensorShape(std::move(RS));
+  } else {
+    ReturnShape = TensorShape(ShapeFromType(getTrueReturnType()));
+  }
   for (auto &Params : getTrueArgumentTypes()) {
-    ArgShapes.push_back(TensorShape(ShapeFromType(Params, 0)));
-    // LLVM_DEBUG(dbgs() << "Arg shape is " << ArgShapes.back() << "\n");
+    unsigned ArgIdx = ArgShapes.size();
+    if (auto Found = llvm::find_if(
+            ArgumentSignatures,
+            [ArgIdx](auto &Tuple) { return std::get<2>(Tuple) == ArgIdx; });
+        Found != ArgumentSignatures.end()) {
+      auto &[ArgTySig, ArgShapeSig, ArgIdx] = *Found;
+      assert(ArgShapeSig.rank() <= TensorRank);
+      TensorShape::Shape AS(TensorRank, TensorShape::DimSize(1));
+      std::copy(
+          ArgShapeSig.begin(),
+          ArgShapeSig.begin() +
+              std::min(static_cast<unsigned>(TensorRank), ArgShapeSig.rank()),
+          AS.begin());
+      ArgShapes.push_back(TensorShape(std::move(AS)));
+    } else {
+      if (UniformSignature && RetTySig && Params->isVectorTy()) {
+        assert(RetShapeSig.rank() <= TensorRank);
+        TensorShape::Shape AS(TensorRank, TensorShape::DimSize(1));
+        std::copy(
+            RetShapeSig.begin(),
+            RetShapeSig.begin() +
+                std::min(static_cast<unsigned>(TensorRank), RetShapeSig.rank()),
+            AS.begin());
+        ArgShapes.push_back(TensorShape(std::move(AS)));
+      } else {
+        ArgShapes.push_back(TensorShape(ShapeFromType(Params)));
+      }
+    }
   }
 
   applyOptions(Options);
@@ -9525,6 +9663,259 @@ Ripple::promotedIntrinsicArgShapesAndReturnTy(
       ArgShapes.push_back(&ShapeIgnoredByRipple);
   }
   return std::make_pair(std::move(ArgShapes), FTy->getReturnType());
+}
+
+std::optional<std::tuple<Type *, TensorShape, int, StringRef>>
+ExternalRippleFunction::parseTensorType(StringRef S, const Function &Fn) {
+  LLVM_DEBUG(dbgs() << "Tentative parse tensor type in " << S << "\n");
+  constexpr auto NotAnIntegerError = "Expected an integer";
+  // unspecified
+  int ArgIdx = -1;
+  if (S.starts_with(ArgShape)) {
+    // Matching an argument index
+    const Regex ArgRE("^arg([0-9]+)_");
+    SmallVector<StringRef, 2> MatchResults;
+    if (!ArgRE.match(S, &MatchResults)) {
+      std::string ErrMsg;
+      {
+        raw_string_ostream RSO(ErrMsg);
+        RSO << "the external ripple function '" << Fn.getName()
+            << "' 'arg' tensor shape requires an index followed by an "
+               "underscore (e.g., 'arg1_t2x4f32'); '"
+            << S << "' is invalid";
+      }
+      DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+      Fn.getContext().diagnose(Diag);
+      return std::nullopt;
+    }
+    // Advance S
+    S = S.substr(MatchResults[0].size());
+    if (MatchResults[1].getAsInteger(10, ArgIdx))
+      llvm_unreachable(NotAnIntegerError);
+    LLVM_DEBUG(dbgs() << "Matched argument shape Idx(" << ArgIdx << ")\n");
+  } else if (S.consume_front(RetShape)) {
+    LLVM_DEBUG(dbgs() << "Matched return shape\n");
+    ArgIdx = -2;
+  }
+  LLVM_DEBUG(dbgs() << "Parsing Tshape: " << S << "\n");
+
+  auto warningContextMessage = [&](raw_string_ostream &RSO) {
+    RSO << "the external ripple function '" << Fn.getName() << "' ";
+    if (ArgIdx == -2) {
+      RSO << "'ret_'";
+    } else if (ArgIdx >= 0) {
+      RSO << "'arg" << ArgIdx << "_'";
+    }
+    RSO << " tensor shape";
+  };
+
+  // Parsing "t[0-9]+(x[0-9]+)*
+  SmallVector<StringRef, 4> ShapeMatchResults;
+  const Regex TShapeRE("^t([0-9]+)((x[0-9]+)*)");
+  if (!TShapeRE.match(S, &ShapeMatchResults)) {
+    if (ArgIdx != -1) {
+      std::string ErrMsg;
+      {
+        raw_string_ostream RSO(ErrMsg);
+        warningContextMessage(RSO);
+        RSO << " is invalid '" << S
+            << "'; expected 't<dims><type>' (e.g., 't2x4f32')";
+      }
+      DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+      Fn.getContext().diagnose(Diag);
+    }
+    return std::nullopt;
+  }
+  LLVM_DEBUG(dbgs() << "Matched: " << ShapeMatchResults[0] << "\n");
+  // Advance S
+  S = S.substr(ShapeMatchResults[0].size());
+  LLVM_DEBUG(dbgs() << "Parsing tensor type: " << S << "\n");
+  SmallVector<unsigned, 4> TensorDimShapes;
+  TensorDimShapes.push_back(0);
+  if (ShapeMatchResults[1].getAsInteger(10, TensorDimShapes.back()))
+    llvm_unreachable(NotAnIntegerError);
+  StringRef OtherDims = ShapeMatchResults[2];
+  {
+    // Now we get all the other dimensions
+    SmallVector<StringRef> AllXShapes;
+    const Regex XDimRE("x([0-9]+)");
+    if (XDimRE.match(OtherDims, &AllXShapes)) {
+      assert(ShapeMatchResults.size() % 2 == 0);
+      for (unsigned Idx = 0; Idx < AllXShapes.size() / 2; Idx += 2) {
+        TensorDimShapes.push_back(0);
+        if (AllXShapes[Idx + 1].getAsInteger(10, TensorDimShapes.back()))
+          llvm_unreachable(NotAnIntegerError);
+      }
+    }
+  }
+  TensorShape::Shape TShape(TensorDimShapes.size(), TensorShape::DimSize(1));
+  std::copy(TensorDimShapes.begin(), TensorDimShapes.end(), TShape.begin());
+  TensorShape TS(std::move(TShape));
+
+  // Parsing the data type section coming after the tensor shape
+  const Regex TypeStrRE("^(f16|bf16|f32|f64|i1|i8|i16|i32|i64|u8|u16|u32|u64)");
+  SmallVector<StringRef, 2> TypeMatchResult;
+  if (!TypeStrRE.match(S, &TypeMatchResult)) {
+    std::string ErrMsg;
+    {
+      raw_string_ostream RSO(ErrMsg);
+      warningContextMessage(RSO);
+      RSO << "'s type is not valid starting at '" << S
+          << "'; expected one of: f16, bf16, f32, f64, i1, i8, i16, i32, i64, "
+             "u8, u16, u32 or u64";
+    }
+    DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+    Fn.getContext().diagnose(Diag);
+    return std::nullopt;
+  }
+  // Advance S
+  if (S.size() <= TypeMatchResult[0].size() ||
+      S[TypeMatchResult[0].size()] != '_') {
+    std::string ErrMsg;
+    {
+      raw_string_ostream RSO(ErrMsg);
+      warningContextMessage(RSO);
+      RSO << " expects '_' after '" << ShapeMatchResults[0]
+          << TypeMatchResult[0] << "'";
+      StringRef Left = S.substr(TypeMatchResult[0].size());
+      if (!Left.empty()) {
+        RSO << " before '" << Left << "'";
+      }
+    }
+    DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+    Fn.getContext().diagnose(Diag);
+    return std::nullopt;
+  }
+  S = S.substr(TypeMatchResult[0].size() + 1);
+
+  bool IsFloat = TypeMatchResult[1].consume_front("f");
+  bool IsBFloat = TypeMatchResult[1].consume_front("bf");
+  bool IsInteger = !IsFloat && !IsBFloat;
+  if (IsInteger) {
+    // Remove the 'u'/'i' part
+    TypeMatchResult[1] = TypeMatchResult[1].substr(1);
+  }
+  unsigned Size;
+  if (TypeMatchResult[1].getAsInteger(10, Size))
+    llvm_unreachable(NotAnIntegerError);
+  Type *DataTy = nullptr;
+  auto &C = Fn.getContext();
+  if (IsFloat) {
+    switch (Size) {
+    case 16:
+      DataTy = Type::getHalfTy(C);
+      break;
+    case 32:
+      DataTy = Type::getFloatTy(C);
+      break;
+    case 64:
+      DataTy = Type::getDoubleTy(C);
+      break;
+    default:
+      llvm_unreachable("Non supported floating point type");
+    }
+  } else if (IsBFloat) {
+    DataTy = Type::getBFloatTy(C);
+  } else {
+    DataTy = Type::getIntNTy(C, Size);
+  }
+
+  return std::make_tuple(DataTy, std::move(TS), ArgIdx, S);
+}
+
+std::optional<StringRef> ExternalRippleFunction::parseSignature(
+    StringRef S, const Function &Fn,
+    SmallVectorImpl<ArgumentSignatureInfo> &ArgumentShapes,
+    ReturnSignatureInfo &ReturnShape, bool &IsUniform) {
+
+  IsUniform = S.consume_front(UniformShape);
+  if (IsUniform) {
+    if (auto TT = parseTensorType(S, Fn)) {
+      auto &[ParsedTy, TS, ArgIdx, NewS] = TT.value();
+      // Advance S
+      S = NewS;
+      if (ArgIdx != -1) {
+        // We cannot use uniform shape and use an "arg" or "ret" specifier
+        std::string ErrMsg;
+        {
+          raw_string_ostream RSO(ErrMsg);
+          RSO << "in the external ripple function '" << Fn.getName()
+              << "' 'uniform_' cannot be combined with '";
+          if (ArgIdx == -2)
+            RSO << "ret_";
+          else
+            RSO << "arg" << ArgIdx << "_";
+          RSO << "'; use one or the other";
+        }
+        DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+        Fn.getContext().diagnose(Diag);
+        return std::nullopt;
+      }
+      // Set return shape and type
+      auto &[RetTy, RetShape] = ReturnShape;
+      RetTy = ParsedTy;
+      std::swap(RetShape, TS);
+    } else {
+      // Warn that we parsed `uniform_` but couldn't find a valid tensor shape
+      // following it
+      std::string ErrMsg;
+      {
+        raw_string_ostream RSO(ErrMsg);
+        RSO << "the external ripple function '" << Fn.getName()
+            << "' uniform shape requires a tensor shape specifier ";
+        if (S.empty())
+          RSO << "and a function name, e.g., 'uniform_t2x4f32_myFunction'";
+        else
+          RSO << "between 'uniform_' and '" << S << "', e.g., 'uniform_t2x4f32_"
+              << S << "'";
+      }
+      DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+      Fn.getContext().diagnose(Diag);
+    }
+  } else {
+    // Keep track of the indices for duplicare error reporting
+    SmallSet<int, 16> AllIndices;
+    // The rule is that we start at zero, assign and increment when
+    // undefined or take the next index when defined
+    unsigned ArgIdx = 0;
+    while (auto TT = parseTensorType(S, Fn)) {
+      auto &[ParsedTy, TS, SigIndex, SR] = TT.value();
+      if (SigIndex >= 0)
+        ArgIdx = SigIndex;
+
+      // Check for duplicate shape definitions
+      auto [_, Inserted] = AllIndices.insert(SigIndex == -2 ? -2 : ArgIdx);
+      if (!Inserted) {
+        std::string ErrMsg;
+        {
+          raw_string_ostream RSO(ErrMsg);
+          RSO << "the external ripple function '" << Fn.getName()
+              << "' has duplicate tensor shape specified for '";
+          if (SigIndex == -2)
+            RSO << "ret";
+          else
+            RSO << "arg" << ArgIdx;
+          RSO << "'; second definition starts at '" << S << "'";
+        }
+        DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+        Fn.getContext().diagnose(Diag);
+        return std::nullopt;
+      }
+      // Advance S
+      S = SR;
+      if (SigIndex == -2) {
+        auto &[RetTy, RetShape] = ReturnShape;
+        RetTy = ParsedTy;
+        std::swap(RetShape, TS);
+      } else {
+        ArgumentShapes.push_back(
+            std::make_tuple(ParsedTy, TS, static_cast<unsigned>(ArgIdx)));
+        // Increment the index for the next potential parsing
+        ArgIdx++;
+      }
+    }
+  }
+  return S;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

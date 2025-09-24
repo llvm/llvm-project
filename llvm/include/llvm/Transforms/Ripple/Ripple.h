@@ -71,7 +71,9 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -591,7 +593,7 @@ class Ripple;
 class NDLoadStoreFactory {
 public:
   NDLoadStoreFactory(IRBuilder<> &IrBuilder, Module &Mod, Ripple &MyRipple)
-      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple) {};
+      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple){};
 
   /// @brief Generates a n-d load of a data set described by AddressSeries
   /// @param AddressSeries represents the sequence of addresses to be loaded
@@ -849,9 +851,13 @@ private:
   static StringRef removeRipplePrefix(const Function *Fun);
 
   /// @brief Private ExternalRippleFunction constructor
-  ExternalRippleFunction(Function *Fun, StringRef ScalarName,
-                         const SmallVectorImpl<StringRef> &Options,
-                         size_t TensorRank, size_t DimOffset = 0);
+  ExternalRippleFunction(
+      Function *Fun, StringRef ScalarName,
+      const SmallVectorImpl<StringRef> &Options, size_t TensorRank,
+      const std::tuple<Type *, TensorShape> &ReturnShape,
+      const SmallVectorImpl<std::tuple<Type *, TensorShape, unsigned>>
+          &ArgumentShapes,
+      bool Uniform = false);
 
   static constexpr StringRef RipplePrefix = "ripple_";
   static constexpr StringRef ElementWiseOption = "ew_";
@@ -859,6 +865,13 @@ private:
   static constexpr StringRef PureOption = "pure_";
   static constexpr StringRef AllOptions[] = {ElementWiseOption, MaskedOption,
                                              PureOption};
+  static constexpr StringRef UniformShape = "uniform_";
+  static constexpr StringRef RetShape = "ret_";
+  static constexpr StringRef ArgShape = "arg";
+  /// @brief <Scalar Type, Tensor Shape>
+  using ReturnSignatureInfo = std::pair<Type *, TensorShape>;
+  /// @brief <Scalar Type, Tensor Shape, Argument Index>
+  using ArgumentSignatureInfo = std::tuple<Type *, TensorShape, unsigned>;
 
   /// @brief Parse and toggle Ripple External function options, e.g.,
   /// element-wise, multi-dimensional tensor shapes, etc
@@ -867,6 +880,23 @@ private:
 
   /// Update this object w/ the option list
   void applyOptions(const SmallVectorImpl<StringRef> &Options);
+
+  /// @brief Attempts to parse a tensor type expressed as string and returns a
+  /// tuple <element data type, tensor shape, index, string w/o the tensor type
+  /// annotation>.
+  /// Index can be -1, for unspecified, -2 for return or a positive representing
+  /// an argument index.
+  static std::optional<std::tuple<Type *, TensorShape, int, StringRef>>
+  parseTensorType(StringRef S, const Function &Fn);
+
+  /// @brief Attempts to parse a tensor signature, i.e.,
+  /// (uniform_t[0-9]+(x[0-9]+)*(type))|((arg[0-9]+_|ret_)?t[0-9]+(x[0-9]+)*(type))
+  /// where type is
+  /// (f16|bf16|f32|f64|i1|i8|i16|i32|i64|u8|u16|u32|u64)
+  static std::optional<StringRef>
+  parseSignature(StringRef S, const Function &Fn,
+                 SmallVectorImpl<ArgumentSignatureInfo> &ArgumentShapes,
+                 ReturnSignatureInfo &ReturnShape, bool &IsUniform);
 };
 
 namespace {
