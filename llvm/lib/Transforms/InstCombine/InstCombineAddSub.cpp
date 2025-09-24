@@ -1913,8 +1913,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   {
     Value *X;
     const APInt *C1, *C2;
-    if (match(&I, m_c_Add(m_NNegZExt(m_Add(m_Value(X), m_APInt(C1))),
-                          m_APInt(C2)))) {
+    if (match(&I,
+              m_Add(m_NNegZExt(m_Add(m_Value(X), m_APInt(C1))), m_APInt(C2)))) {
       // Check if inner constant C1 is negative C1 < 0 and outer constant C2 >=
       // 0
       if (!C1->isNegative() || C2->isNegative())
@@ -1923,7 +1923,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       APInt Sum = C1->sext(C2->getBitWidth()) + *C2;
       APInt newSum = Sum.trunc(C1->getBitWidth());
 
-      if (newSum.sext(C2->getBitWidth()) != Sum)
+      if (!Sum.isSignedIntN(C1->getBitWidth()))
         return nullptr;
 
       // X if sum is zero, else X + newSum
@@ -1932,8 +1932,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
               ? X
               : Builder.CreateAdd(X, ConstantInt::get(X->getType(), newSum));
 
-      Value *NewZExt = Builder.CreateZExt(Inner, I.getType());
-      return replaceInstUsesWith(I, NewZExt);
+      return new ZExtInst(Inner, I.getType());
     }
   }
 
