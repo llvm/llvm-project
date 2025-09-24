@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -1812,6 +1813,46 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
+/// Test if a pair of compares with a shared operand and 2 constants has an
+/// empty set intersection, full set union, or if one compare is a superset of
+/// the other.
+static Value *simplifyAndOrOfFCmpsWithConstants(FCmpInst *Cmp0, FCmpInst *Cmp1,
+                                                bool IsAnd) {
+  // Look for this pattern: {and/or} (fcmp X, C0), (fcmp X, C1)).
+  if (Cmp0->getOperand(0) != Cmp1->getOperand(0))
+    return nullptr;
+
+  const APFloat *C0, *C1;
+  if (!match(Cmp0->getOperand(1), m_APFloat(C0)) ||
+      !match(Cmp1->getOperand(1), m_APFloat(C1)))
+    return nullptr;
+
+  auto Range0 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp0->getPredicate() : Cmp0->getInversePredicate(), *C0);
+  auto Range1 = ConstantFPRange::makeExactFCmpRegion(
+      IsAnd ? Cmp1->getPredicate() : Cmp1->getInversePredicate(), *C1);
+
+  if (!Range0 || !Range1)
+    return nullptr;
+
+  // For and-of-compares, check if the intersection is empty:
+  // (fcmp X, C0) && (fcmp X, C1) --> empty set --> false
+  if (Range0->intersectWith(*Range1).isEmptySet())
+    return ConstantInt::getBool(Cmp0->getType(), !IsAnd);
+
+  // Is one range a superset of the other?
+  // If this is and-of-compares, take the smaller set:
+  // (fcmp ogt X, 4) && (fcmp ogt X, 42) --> fcmp ogt X, 42
+  // If this is or-of-compares, take the larger set:
+  // (fcmp ogt X, 4) || (fcmp ogt X, 42) --> fcmp ogt X, 4
+  if (Range0->contains(*Range1))
+    return Cmp1;
+  if (Range1->contains(*Range0))
+    return Cmp0;
+
+  return nullptr;
+}
+
 static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                                    FCmpInst *RHS, bool IsAnd) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
@@ -1850,34 +1891,8 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
   }
 
-  Value *V0;
-  const APFloat *V0Op1, *V1Op1;
-  // (fcmp olt V0, V0Op1) || (fcmp olt V0, V1Op1)
-  //                      --> fcmp olt V0, max(V0Op1, V1Op1)
-  // (fcmp ogt V0, V0Op1) || (fcmp ogt V0, V1Op1)
-  //                      --> fcmp ogt V0, max(V0Op1, V1Op1)
-  //
-  // (fcmp olt V0, V0Op1) && (fcmp olt V0, V1Op1)
-  //                      --> fcmp olt V0, min(V0Op1, V1Op1)
-  // (fcmp ogt V0, V0Op1) && (fcmp ogt V0, V1Op1)
-  //                      --> fcmp ogt V0, min(V0Op1, V1Op1)
-  if (match(LHS, m_SpecificFCmp(FCmpInst::FCMP_OLT, m_Value(V0),
-                                m_APFloat(V0Op1))) &&
-      match(RHS, m_SpecificFCmp(FCmpInst::FCMP_OLT, m_Specific(V0),
-                                m_APFloat(V1Op1)))) {
-    if (*V0Op1 > *V1Op1)
-      return IsAnd ? RHS : LHS;
-    if (*V1Op1 > *V0Op1)
-      return IsAnd ? LHS : RHS;
-  } else if (match(LHS, m_SpecificFCmp(FCmpInst::FCMP_OGT, m_Value(V0),
-                                       m_APFloat(V0Op1))) &&
-             match(RHS, m_SpecificFCmp(FCmpInst::FCMP_OGT, m_Specific(V0),
-                                       m_APFloat(V1Op1)))) {
-    if (*V0Op1 < *V1Op1)
-      return IsAnd ? RHS : LHS;
-    if (*V1Op1 < *V0Op1)
-      return IsAnd ? LHS : RHS;
-  }
+  if (auto *V = simplifyAndOrOfFCmpsWithConstants(LHS, RHS, IsAnd))
+    return V;
 
   return nullptr;
 }

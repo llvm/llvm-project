@@ -1212,6 +1212,20 @@ cc_binary(
 )
 
 cc_binary(
+    name = "_mlirDialectsIRDL.so",
+    srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    deps = [
+        ":CAPIIR",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
+        "@nanobind",
+    ],
+)
+
+cc_binary(
     name = "_mlirDialectsLinalg.so",
     srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
     copts = PYBIND11_COPTS,
@@ -3721,6 +3735,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":Support",
         ":TransformUtils",
@@ -9305,6 +9320,7 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformSMTExtension",
         ":TransformTuneExtension",
         ":UBToLLVM",
         ":VectorToLLVM",
@@ -11862,6 +11878,49 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "TransformSMTExtensionOpsTdFiles",
+    srcs = ["include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td"],
+    includes = ["include"],
+    deps = [
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+        ":TransformInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformSMTExtensionOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.h.inc": [
+            "-gen-op-decls",
+        ],
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.cpp.inc": [
+            "-gen-op-defs",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td",
+    deps = [
+        ":TransformSMTExtensionOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "TransformSMTExtension",
+    srcs = glob(["lib/Dialect/Transform/SMTExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/SMTExtension/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":IR",
+        ":SMTDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformSMTExtensionOpsIncGen",
+    ],
+)
+
 gentbl_cc_library(
     name = "TransformIRDLExtensionOpsIncGen",
     tbl_outs = {
@@ -12176,6 +12235,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ComplexDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
@@ -12524,6 +12584,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ComplexDialect",
         ":DialectUtils",
         ":IR",
         ":MathDialect",

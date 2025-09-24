@@ -160,15 +160,15 @@ struct CUDAKernelTy : public GenericKernelTy {
   /// Return maximum block size for maximum occupancy
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &,
                                   uint64_t DynamicMemSize) const override {
-    int minGridSize;
-    int maxBlockSize;
+    int MinGridSize;
+    int MaxBlockSize;
     auto Res = cuOccupancyMaxPotentialBlockSize(
-        &minGridSize, &maxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
+        &MinGridSize, &MaxBlockSize, Func, NULL, DynamicMemSize, INT_MAX);
     if (auto Err = Plugin::check(
             Res, "error in cuOccupancyMaxPotentialBlockSize: %s")) {
       return Err;
     }
-    return maxBlockSize;
+    return MaxBlockSize;
   }
 
 private:
@@ -587,16 +587,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
       MemAlloc = (void *)DevicePtr;
       break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
-        break;
-      cuStreamSynchronize(Stream);
-      Res = cuStreamDestroy(Stream);
-      MemAlloc = (void *)DevicePtr;
-    }
     }
 
     if (auto Err =
@@ -627,15 +617,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_HOST:
       Res = cuMemFreeHost(TgtPtr);
       break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
-      cuStreamSynchronize(Stream);
-      if ((Res = cuStreamDestroy(Stream)))
-        break;
-    }
     }
 
     if (auto Err = Plugin::check(Res, "error in cuMemFree[Host]: %s")) {

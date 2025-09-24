@@ -36,7 +36,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def variadic1(self):
+  // CHECK: def variadic1(self) -> _ods_ir.OpOperandList:
   // CHECK:   operand_range = _ods_segmented_accessor(
   // CHECK:       self.operation.operands,
   // CHECK:       self.operation.attributes["operandSegmentSizes"], 0)
@@ -44,14 +44,14 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK-NOT: if len(operand_range)
   //
   // CHECK: @builtins.property
-  // CHECK: def non_variadic(self):
+  // CHECK: def non_variadic(self) -> _ods_ir.Value:
   // CHECK:   operand_range = _ods_segmented_accessor(
   // CHECK:       self.operation.operands,
   // CHECK:       self.operation.attributes["operandSegmentSizes"], 1)
   // CHECK:   return operand_range[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def variadic2(self):
+  // CHECK: def variadic2(self) -> _Optional[_ods_ir.Value]:
   // CHECK:   operand_range = _ods_segmented_accessor(
   // CHECK:       self.operation.operands,
   // CHECK:       self.operation.attributes["operandSegmentSizes"], 2)
@@ -84,21 +84,21 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def variadic1(self):
+  // CHECK: def variadic1(self) -> _Optional[_ods_ir.OpResult]:
   // CHECK:   result_range = _ods_segmented_accessor(
   // CHECK:       self.operation.results,
   // CHECK:       self.operation.attributes["resultSegmentSizes"], 0)
   // CHECK:   return result_range[0] if len(result_range) > 0 else None
   //
   // CHECK: @builtins.property
-  // CHECK: def non_variadic(self):
+  // CHECK: def non_variadic(self) -> _ods_ir.OpResult:
   // CHECK:   result_range = _ods_segmented_accessor(
   // CHECK:       self.operation.results,
   // CHECK:       self.operation.attributes["resultSegmentSizes"], 1)
   // CHECK:   return result_range[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def variadic2(self):
+  // CHECK: def variadic2(self) -> _ods_ir.OpResultList:
   // CHECK:   result_range = _ods_segmented_accessor(
   // CHECK:       self.operation.results,
   // CHECK:       self.operation.attributes["resultSegmentSizes"], 2)
@@ -139,21 +139,21 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def i32attr(self):
+  // CHECK: def i32attr(self) -> _ods_ir.IntegerAttr:
   // CHECK:   return self.operation.attributes["i32attr"]
 
   // CHECK: @builtins.property
-  // CHECK: def optionalF32Attr(self):
+  // CHECK: def optionalF32Attr(self) -> _Optional[_ods_ir.FloatAttr]:
   // CHECK:   if "optionalF32Attr" not in self.operation.attributes:
   // CHECK:     return None
   // CHECK:   return self.operation.attributes["optionalF32Attr"]
 
   // CHECK: @builtins.property
-  // CHECK: def unitAttr(self):
+  // CHECK: def unitAttr(self) -> bool:
   // CHECK:   return "unitAttr" in self.operation.attributes
 
   // CHECK: @builtins.property
-  // CHECK: def in_(self):
+  // CHECK: def in_(self) -> _ods_ir.IntegerAttr:
   // CHECK:   return self.operation.attributes["in"]
 
   let arguments = (ins I32Attr:$i32attr, OptionalAttr<F32Attr>:$optionalF32Attr,
@@ -186,11 +186,11 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def in_(self):
+  // CHECK: def in_(self) -> bool:
   // CHECK:   return "in" in self.operation.attributes
 
   // CHECK: @builtins.property
-  // CHECK: def is_(self):
+  // CHECK: def is_(self) -> _Optional[_ods_ir.FloatAttr]:
   // CHECK:   if "is" not in self.operation.attributes:
   // CHECK:     return None
   // CHECK:   return self.operation.attributes["is"]
@@ -350,16 +350,16 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def f32(self):
+  // CHECK: def f32(self) -> _ods_ir.Value:
   // CHECK:   return self.operation.operands[1]
   let arguments = (ins I32, F32:$f32, I64);
 
   // CHECK: @builtins.property
-  // CHECK: def i32(self):
+  // CHECK: def i32(self) -> _ods_ir.OpResult:
   // CHECK:   return self.operation.results[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def i64(self):
+  // CHECK: def i64(self) -> _ods_ir.OpResult:
   // CHECK:   return self.operation.results[2]
   let results = (outs I32:$i32, AnyFloat, I64:$i64);
 }
@@ -388,11 +388,11 @@ def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def non_optional(self):
+  // CHECK: def non_optional(self) -> _ods_ir.Value:
   // CHECK:   return self.operation.operands[0]
 
   // CHECK: @builtins.property
-  // CHECK: def optional(self):
+  // CHECK: def optional(self) -> _Optional[_ods_ir.Value]:
   // CHECK:   return None if len(self.operation.operands) < 2 else self.operation.operands[1]
 }
 
@@ -419,11 +419,11 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def non_variadic(self):
+  // CHECK: def non_variadic(self) -> _ods_ir.Value:
   // CHECK:   return self.operation.operands[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def variadic(self):
+  // CHECK: def variadic(self) -> _ods_ir.OpOperandList:
   // CHECK:   _ods_variadic_group_length = len(self.operation.operands) - 2 + 1
   // CHECK:   return self.operation.operands[1:1 + _ods_variadic_group_length]
   let arguments = (ins AnyType:$non_variadic, Variadic<AnyType>:$variadic);
@@ -452,12 +452,12 @@ def OneVariadicResultOp : TestOp<"one_variadic_result"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def variadic(self):
+  // CHECK: def variadic(self) -> _ods_ir.OpResultList:
   // CHECK:   _ods_variadic_group_length = len(self.operation.results) - 2 + 1
   // CHECK:   return self.operation.results[0:0 + _ods_variadic_group_length]
   //
   // CHECK: @builtins.property
-  // CHECK: def non_variadic(self):
+  // CHECK: def non_variadic(self) -> _ods_ir.OpResult:
   // CHECK:   _ods_variadic_group_length = len(self.operation.results) - 2 + 1
   // CHECK:   return self.operation.results[1 + _ods_variadic_group_length - 1]
   let results = (outs Variadic<AnyType>:$variadic, AnyType:$non_variadic);
@@ -484,7 +484,7 @@ def PythonKeywordOp : TestOp<"python_keyword"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def in_(self):
+  // CHECK: def in_(self) -> _ods_ir.Value:
   // CHECK:   return self.operation.operands[0]
   let arguments = (ins AnyType:$in);
 }
@@ -523,17 +523,17 @@ def SameResultsVariadicOp : TestOp<"same_results_variadic", [SameOperandsAndResu
 def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
                                        [SameVariadicOperandSize]> {
   // CHECK: @builtins.property
-  // CHECK: def variadic1(self):
+  // CHECK: def variadic1(self) -> _ods_ir.OpOperandList:
   // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 0, 0)
   // CHECK:   return self.operation.operands[start:start + elements_per_group]
   //
   // CHECK: @builtins.property
-  // CHECK: def non_variadic(self):
+  // CHECK: def non_variadic(self) -> _ods_ir.Value:
   // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 0, 1)
   // CHECK:   return self.operation.operands[start]
   //
   // CHECK: @builtins.property
-  // CHECK: def variadic2(self):
+  // CHECK: def variadic2(self) -> _ods_ir.OpOperandList:
   // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 1, 1)
   // CHECK:   return self.operation.operands[start:start + elements_per_group]
   let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
@@ -549,17 +549,17 @@ def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
 def SameVariadicResultSizeOp : TestOp<"same_variadic_result",
                                       [SameVariadicResultSize]> {
   // CHECK: @builtins.property
-  // CHECK: def variadic1(self):
+  // CHECK: def variadic1(self) -> _ods_ir.OpResultList:
   // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 0, 0)
   // CHECK:   return self.operation.results[start:start + elements_per_group]
   //
   // CHECK: @builtins.property
-  // CHECK: def non_variadic(self):
+  // CHECK: def non_variadic(self) -> _ods_ir.OpResult:
   // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 0, 1)
   // CHECK:   return self.operation.results[start]
   //
   // CHECK: @builtins.property
-  // CHECK: def variadic2(self):
+  // CHECK: def variadic2(self) -> _ods_ir.OpResultList:
   // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 1, 1)
   // CHECK:   return self.operation.results[start:start + elements_per_group]
   let results = (outs Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
@@ -590,20 +590,20 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def i32(self):
+  // CHECK: def i32(self) -> _ods_ir.Value:
   // CHECK:   return self.operation.operands[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def f32(self):
+  // CHECK: def f32(self) -> _ods_ir.Value:
   // CHECK:   return self.operation.operands[1]
   let arguments = (ins I32:$i32, F32:$f32);
 
   // CHECK: @builtins.property
-  // CHECK: def i64(self):
+  // CHECK: def i64(self) -> _ods_ir.OpResult:
   // CHECK:   return self.operation.results[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def f64(self):
+  // CHECK: def f64(self) -> _ods_ir.OpResult:
   // CHECK:   return self.operation.results[1]
   let results = (outs I64:$i64, AnyFloat:$f64);
 }
@@ -628,11 +628,11 @@ def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
   let regions = (region AnyRegion:$region, AnyRegion, VariadicRegion<AnyRegion>:$variadic);
 
   // CHECK:  @builtins.property
-  // CHECK:  def region(self):
+  // CHECK:  def region(self) -> _ods_ir.Region:
   // CHECK:    return self.regions[0]
 
   // CHECK:  @builtins.property
-  // CHECK:  def variadic(self):
+  // CHECK:  def variadic(self) -> _ods_ir.RegionSequence:
   // CHECK:    return self.regions[2:]
 }
 
@@ -656,7 +656,7 @@ def VariadicRegionOp : TestOp<"variadic_region"> {
   let regions = (region VariadicRegion<AnyRegion>:$Variadic);
 
   // CHECK:  @builtins.property
-  // CHECK:  def Variadic(self):
+  // CHECK:  def Variadic(self) -> _ods_ir.RegionSequence:
   // CHECK:    return self.regions[0:]
 }
 

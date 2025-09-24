@@ -99,6 +99,7 @@ public:
     assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
     Visit(e->getSubExpr());
   }
+  void VisitLambdaExpr(LambdaExpr *e);
 
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
@@ -238,9 +239,6 @@ public:
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
-  }
-  void VisitLambdaExpr(LambdaExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitLambdaExpr");
   }
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -495,12 +493,14 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   if (isa<NoInitExpr>(e))
     return;
 
-  if (type->isReferenceType())
-    cgf.cgm.errorNYI("emitInitializationToLValue ReferenceType");
+  if (type->isReferenceType()) {
+    RValue rv = cgf.emitReferenceBindingToExpr(e);
+    return cgf.emitStoreThroughLValue(rv, lv);
+  }
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
+    cgf.emitComplexExprIntoLValue(e, lv, /*isInit*/ true);
     break;
   case cir::TEK_Aggregate:
     cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
@@ -548,6 +548,47 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
   // memsets; that would be easy for arrays, but relatively
   // difficult for structures with the current code.
   cgf.emitNullInitialization(loc, lv.getAddress(), lv.getType());
+}
+
+void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
+  CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  [[maybe_unused]] LValue slotLV =
+      cgf.makeAddrLValue(slot.getAddress(), e->getType());
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception or contains branch out of the expressions.
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+
+  for (auto [curField, capture, captureInit] : llvm::zip(
+           e->getLambdaClass()->fields(), e->captures(), e->capture_inits())) {
+    // Pick a name for the field.
+    llvm::StringRef fieldName = curField->getName();
+    if (capture.capturesVariable()) {
+      assert(!curField->isBitField() && "lambdas don't have bitfield members!");
+      ValueDecl *v = capture.getCapturedVar();
+      fieldName = v->getName();
+      cgf.cgm.lambdaFieldToName[curField] = fieldName;
+    } else if (capture.capturesThis()) {
+      cgf.cgm.lambdaFieldToName[curField] = "this";
+    } else {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unhandled capture kind");
+      cgf.cgm.lambdaFieldToName[curField] = "unhandled-capture-kind";
+    }
+
+    // Emit initialization
+    LValue lv =
+        cgf.emitLValueForFieldInitialization(slotLV, curField, fieldName);
+    if (curField->hasCapturedVLAType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda captured VLA type");
+
+    emitInitializationToLValue(captureInit, lv);
+
+    // Push a destructor if necessary.
+    if ([[maybe_unused]] QualType::DestructionKind DtorKind =
+            curField->getType().isDestructedType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
+  }
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {

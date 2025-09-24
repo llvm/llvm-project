@@ -114,6 +114,15 @@ AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
 
+- Pretty-printing of atomic builtins ``__atomic_test_and_set`` and ``__atomic_clear`` in ``-ast-print`` output.
+  These previously displayed an extra ``<null expr>`` argument, e.g.:
+
+    ``__atomic_test_and_set(p, <null expr>, 0)``
+
+  Now they are printed as:
+
+    ``__atomic_test_and_set(p, 0)``
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -204,6 +213,10 @@ Non-comprehensive list of changes in this release
   conditional memory loads from vectors. Binds to the LLVM intrinsics of the
   same name.
 
+- Added ``__builtin_masked_gather`` and ``__builtin_masked_scatter`` for
+  conditional gathering and scattering operations on vectors. Binds to the LLVM
+  intrinsics of the same name.
+
 - The ``__builtin_popcountg``, ``__builtin_ctzg``, and ``__builtin_clzg``
   functions now accept fixed-size boolean vectors.
 
@@ -262,6 +275,8 @@ Improvements to Clang's diagnostics
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
+- Implemented diagnostics when retrieving the tuple size for types where its specialization of `std::tuple_size`
+  produces an invalid size (either negative or greater than the implementation limit). (#GH159563)
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 - Added fix-it hint for when scoped enumerations require explicit conversions for binary operations. (#GH24265)
@@ -347,14 +362,15 @@ Bug Fixes in This Version
   and vector of 4 ``float`` values. (#GH155405)
 - Fixed inconsistent shadow warnings for lambda capture of structured bindings.
   Previously, ``[val = val]`` (regular parameter) produced no warnings with ``-Wshadow``
-  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``) 
-  incorrectly produced warnings. Both cases now consistently show no warnings with 
+  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``)
+  incorrectly produced warnings. Both cases now consistently show no warnings with
   ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
 - Fixed an assertion when an improper use of the ``malloc`` attribute targeting
   a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
+- Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -519,6 +535,7 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
+- Add ``AllowBreakBeforeQtProperty`` option.
 
 libclang
 --------

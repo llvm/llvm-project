@@ -18,7 +18,7 @@ namespace clang::tidy::misc {
 /// suggests moving them to an anonymous namespace.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-anonymous-namespace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/use-anonymous-namespace.html
 class UseAnonymousNamespaceCheck : public ClangTidyCheck {
 public:
   UseAnonymousNamespaceCheck(StringRef Name, ClangTidyContext *Context);

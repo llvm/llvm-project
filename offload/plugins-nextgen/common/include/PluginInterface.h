@@ -193,7 +193,7 @@ struct InfoTreeNode {
 
   InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
   InfoTreeNode(std::string Key, VariantType Value, std::string Units)
-      : Key(Key), Value(Value), Units(Units) {}
+      : Key(std::move(Key)), Value(Value), Units(std::move(Units)) {}
 
   /// Add a new info entry as a child of this node. The entry requires at least
   /// a key string in \p Key. The value in \p Value is optional and can be any
@@ -202,7 +202,7 @@ struct InfoTreeNode {
   /// use that value for an appropriate olGetDeviceInfo query
   template <typename T = std::monostate>
   InfoTreeNode *add(std::string Key, T Value = T(),
-                    const std::string &Units = std::string(),
+                    std::string Units = std::string(),
                     std::optional<DeviceInfo> DeviceInfoKey = std::nullopt) {
     assert(!Key.empty() && "Invalid info key");
 
@@ -217,7 +217,8 @@ struct InfoTreeNode {
     else
       ValueVariant = std::string{Value};
 
-    auto Ptr = &Children->emplace_back(Key, ValueVariant, Units);
+    auto Ptr =
+        &Children->emplace_back(std::move(Key), ValueVariant, std::move(Units));
 
     if (DeviceInfoKey)
       DeviceInfoMap[*DeviceInfoKey] = Children->size() - 1;
@@ -1378,10 +1379,10 @@ public:
 
   /// Returns non-zero if the \p Image is compatible with the plugin. This
   /// function does not require the plugin to be initialized before use.
-  int32_t is_plugin_compatible(__tgt_device_image *Image);
+  int32_t isPluginCompatible(StringRef Image);
 
   /// Returns non-zero if the \p Image is compatible with the device.
-  int32_t is_device_compatible(int32_t DeviceId, __tgt_device_image *Image);
+  int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
   /// Returns non-zero if the plugin device has been initialized.
   int32_t is_device_initialized(int32_t DeviceId) const;

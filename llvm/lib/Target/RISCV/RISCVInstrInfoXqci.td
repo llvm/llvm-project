@@ -953,7 +953,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   }
 
   def QC_MULIADD : RVInstI<0b110, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
-                           (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12),
+                           (ins GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12),
                            "qc.muliadd", "$rd, $rs1, $imm12"> {
     let Constraints = "$rd = $rd_wb";
   }
@@ -1411,8 +1411,8 @@ class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
            (IntCCtoRISCVCC $cc), GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
 let Predicates = [HasVendorXqciac, IsRV32] in {
-def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12:$imm12))),
-          (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12)>;
+def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
+          (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
 def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, uimm5gt3:$imm), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, uimm5gt3:$imm, GPRNoX0:$rs2)),
@@ -1667,27 +1667,27 @@ def : CompressPat<(QC_E_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
                   (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
-def : CompressPat<(QC_E_LB GPR:$rd, GPRMem:$rs1, simm12:$imm12),
-                  (LB GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
-def : CompressPat<(QC_E_LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
-                  (LBU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
-def : CompressPat<(QC_E_LH GPR:$rd, GPRMem:$rs1, simm12:$imm12),
-                  (LH GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
-def : CompressPat<(QC_E_LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12),
-                  (LHU GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
-def : CompressPat<(QC_E_LW GPR:$rd, GPRMem:$rs1, simm12:$imm12),
-                  (LW GPR:$rd, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_LB GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
+                  (LB GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LBU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
+                  (LBU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LH GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
+                  (LH GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LHU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
+                  (LHU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LW GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
+                  (LW GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
 
 def : CompressPat<(QC_E_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
-def : CompressPat<(QC_E_SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
-                  (SB GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
-def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
-                  (SH GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
-def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
-                  (SW GPR:$rs2, GPRMem:$rs1, simm12:$imm12)>;
+def : CompressPat<(QC_E_SB GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+                  (SB GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+                  (SH GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+                  (SW GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {
@@ -1752,23 +1752,23 @@ def : CompressPat<(QC_E_ADDAI X2, simm10_lsb0000nonzero:$imm),
 def : CompressPat<(QC_E_ADDI X2, X2, simm10_lsb0000nonzero:$imm),
                   (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 
-def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm),
-                  (ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm)>;
-def : CompressPat<(QC_E_ANDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm),
-                  (ANDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm)>;
-def : CompressPat<(QC_E_ORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm),
-                  (ORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm)>;
-def : CompressPat<(QC_E_XORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm),
-                  (XORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12:$imm)>;
+def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm),
+                  (ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm)>;
+def : CompressPat<(QC_E_ANDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm),
+                  (ANDI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm)>;
+def : CompressPat<(QC_E_ORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm),
+                  (ORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm)>;
+def : CompressPat<(QC_E_XORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm),
+                  (XORI GPRNoX0:$rs1, GPRNoX0:$rs2, simm12_lo:$imm)>;
 
-def : CompressPat<(QC_E_ADDAI GPRNoX0:$rd, simm12:$imm),
-                  (ADDI GPRNoX0:$rd, GPRNoX0:$rd, simm12:$imm)>;
-def : CompressPat<(QC_E_ANDAI GPRNoX0:$rd, simm12:$imm),
-                  (ANDI GPRNoX0:$rd, GPRNoX0:$rd, simm12:$imm)>;
-def : CompressPat<(QC_E_ORAI GPRNoX0:$rd, simm12:$imm),
-                  (ORI GPRNoX0:$rd, GPRNoX0:$rd, simm12:$imm)>;
-def : CompressPat<(QC_E_XORAI GPRNoX0:$rd, simm12:$imm),
-                  (XORI GPRNoX0:$rd, GPRNoX0:$rd, simm12:$imm)>;
+def : CompressPat<(QC_E_ADDAI GPRNoX0:$rd, simm12_lo:$imm),
+                  (ADDI GPRNoX0:$rd, GPRNoX0:$rd, simm12_lo:$imm)>;
+def : CompressPat<(QC_E_ANDAI GPRNoX0:$rd, simm12_lo:$imm),
+                  (ANDI GPRNoX0:$rd, GPRNoX0:$rd, simm12_lo:$imm)>;
+def : CompressPat<(QC_E_ORAI GPRNoX0:$rd, simm12_lo:$imm),
+                  (ORI GPRNoX0:$rd, GPRNoX0:$rd, simm12_lo:$imm)>;
+def : CompressPat<(QC_E_XORAI GPRNoX0:$rd, simm12_lo:$imm),
+                  (XORI GPRNoX0:$rd, GPRNoX0:$rd, simm12_lo:$imm)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqciac, IsRV32] in {

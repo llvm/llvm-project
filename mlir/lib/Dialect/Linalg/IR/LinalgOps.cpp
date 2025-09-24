@@ -5583,14 +5583,13 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
   // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
-    if (unPackOp.getSourceType() != packOp.getDestType())
-      return failure();
-    if (packOp.getPaddingValue() ||
-        !hasSameInnerOuterAttribute(packOp, unPackOp) ||
-        !haveSameTiles(packOp, unPackOp))
-      return failure();
-    rewriter.replaceOp(packOp, unPackOp.getSource());
-    return success();
+    if (unPackOp.getSourceType() == packOp.getDestType() &&
+        !packOp.getPaddingValue() &&
+        hasSameInnerOuterAttribute(packOp, unPackOp) &&
+        haveSameTiles(packOp, unPackOp)) {
+      rewriter.replaceOp(packOp, unPackOp.getSource());
+      return success();
+    }
   }
 
   // Fold optional PaddingValue operand away if padding is not needed.

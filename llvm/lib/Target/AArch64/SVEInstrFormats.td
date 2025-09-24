@@ -10727,7 +10727,9 @@ class sve2p1_vector_to_pred<bits<4> opc, string mnemonic,
 }
 
 multiclass sve2p1_vector_to_pred<string mnemonic, SDPatternOperator Op_lane, SDPatternOperator Op> {
-  def _B : sve2p1_vector_to_pred<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex032b>;
+  def _B : sve2p1_vector_to_pred<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex032b> {
+    bits<0> index;
+  }
   def _H : sve2p1_vector_to_pred<{0, 0, 1, ?}, mnemonic, PPR16, VectorIndexD32b> {
     bits<1> index;
     let Inst{17} = index;
@@ -10794,7 +10796,9 @@ class sve2p1_pred_to_vector<bits<4> opc, string mnemonic,
 
 multiclass sve2p1_pred_to_vector<string mnemonic, SDPatternOperator MergeOp,
                                  SDPatternOperator ZeroOp> {
-  def _B : sve2p1_pred_to_vector<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex0>;
+  def _B : sve2p1_pred_to_vector<{0, 0, 0, 1}, mnemonic, PPR8,  VectorIndex0> {
+    bits<0> index;
+  }
   def _H : sve2p1_pred_to_vector<{0, 0, 1, ?}, mnemonic, PPR16, VectorIndexD32b> {
     bits<1> index;
     let Inst{17} = index;
