@@ -12623,6 +12623,15 @@ cc_library(
 )
 
 td_library(
+    name = "MemOpInterfacesTdFiles",
+    srcs = ["include/mlir/Interfaces/MemOpInterfaces.td"],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+td_library(
     name = "MemRefOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/MemRef/IR/MemRefBase.td",
@@ -12633,12 +12642,24 @@ td_library(
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":MemOpInterfacesTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":ShapedOpInterfacesTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "MemOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/MemOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/MemOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/MemOpInterfaces.td",
+    deps = [":MemOpInterfacesTdFiles"],
 )
 
 gentbl_cc_library(
@@ -12672,6 +12693,19 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "MemOpInterfaces",
+    srcs = ["lib/Interfaces/MemOpInterfaces.cpp"],
+    hdrs = ["include/mlir/Interfaces/MemOpInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":DialectUtils",
+        ":IR",
+        ":Support",
+        ":MemOpInterfacesIncGen",
+    ],
+)
+
+cc_library(
     name = "MemRefDialect",
     srcs = glob(
         [
@@ -12700,6 +12734,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":MemOpInterfaces",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":MemorySlotInterfaces",
