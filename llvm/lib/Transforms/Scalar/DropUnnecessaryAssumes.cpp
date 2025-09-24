@@ -37,42 +37,40 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (!Assume)
       continue;
 
-    SmallVector<WeakTrackingVH> DeadBundleArgs;
-    SmallVector<OperandBundleDef> KeptBundles;
-    unsigned NumBundles = Assume->getNumOperandBundles();
-    for (unsigned I = 0; I != NumBundles; ++I) {
+    if (Assume->hasOperandBundles()) {
       // Handle operand bundle assumptions.
-      OperandBundleUse Bundle = Assume->getOperandBundleAt(I);
-      SmallPtrSet<Value *, 8> Affected;
-      AssumptionCache::findValuesAffectedByOperandBundle(
-          Bundle, [&](Value *A) { Affected.insert(A); });
+      SmallVector<WeakTrackingVH> DeadBundleArgs;
+      SmallVector<OperandBundleDef> KeptBundles;
+      unsigned NumBundles = Assume->getNumOperandBundles();
+      for (unsigned I = 0; I != NumBundles; ++I) {
+        OperandBundleUse Bundle = Assume->getOperandBundleAt(I);
+        SmallPtrSet<Value *, 8> Affected;
+        AssumptionCache::findValuesAffectedByOperandBundle(
+            Bundle, [&](Value *A) { Affected.insert(A); });
 
-      if (affectedValuesAreEphemeral(Affected))
-        append_range(DeadBundleArgs, Bundle.Inputs);
-      else
-        KeptBundles.emplace_back(Bundle);
-    }
-
-    if (KeptBundles.size() != NumBundles) {
-      if (KeptBundles.size() == 0) {
-        // All operand bundles are dead, remove the whole assume.
-        Assume->eraseFromParent();
-      } else {
-        // Otherwise only drop the dead operand bundles.
-        CallBase *NewAssume =
-            CallBase::Create(Assume, KeptBundles, Assume->getIterator());
-        AC.registerAssumption(cast<AssumeInst>(NewAssume));
-        Assume->eraseFromParent();
+        if (affectedValuesAreEphemeral(Affected))
+          append_range(DeadBundleArgs, Bundle.Inputs);
+        else
+          KeptBundles.emplace_back(Bundle);
       }
 
-      RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadBundleArgs);
-      Changed = true;
+      if (KeptBundles.size() != NumBundles) {
+        if (KeptBundles.size() == 0) {
+          // All operand bundles are dead, remove the whole assume.
+          Assume->eraseFromParent();
+        } else {
+          // Otherwise only drop the dead operand bundles.
+          CallBase *NewAssume =
+              CallBase::Create(Assume, KeptBundles, Assume->getIterator());
+          AC.registerAssumption(cast<AssumeInst>(NewAssume));
+          Assume->eraseFromParent();
+        }
+
+        RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadBundleArgs);
+        Changed = true;
+      }
       continue;
     }
-
-    // Ignore condition on assumes with operand bundles.
-    if (NumBundles != 0)
-      continue;
 
     Value *Cond = Assume->getArgOperand(0);
     // Don't drop type tests, which have special semantics.
