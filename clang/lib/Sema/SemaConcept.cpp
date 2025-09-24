@@ -1964,10 +1964,10 @@ void SubstituteParameterMappings::buildParameterMapping(
       TemplateParams->getLAngleLoc(), UsedParams,
       /*RAngleLoc=*/SourceLocation(),
       /*RequiresClause=*/nullptr);
+  unsigned Size = OccurringIndices.count();
   N.updateParameterMapping(
       std::move(OccurringIndices), std::move(OccurringIndicesForSubsumption),
-      MutableArrayRef<TemplateArgumentLoc>{TempArgs, OccurringIndices.count()},
-      UsedList);
+      MutableArrayRef<TemplateArgumentLoc>{TempArgs, Size}, UsedList);
 }
 
 bool SubstituteParameterMappings::substitute(
