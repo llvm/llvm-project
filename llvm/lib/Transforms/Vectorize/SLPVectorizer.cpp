@@ -6948,7 +6948,10 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                                    cast<Instruction>(V), UserIgnoreList);
                              }))
       return LoadsState::CompressVectorize;
-    if (isStridedLoad(PointerOps, ScalarTy, CommonAlignment, *Diff, Ptr0, PtrN,
+    Align Alignment =
+        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
+            ->getAlign();
+    if (isStridedLoad(PointerOps, ScalarTy, Alignment, *Diff, Ptr0, PtrN,
                       SPtrInfo))
       return LoadsState::StridedVectorize;
   }
