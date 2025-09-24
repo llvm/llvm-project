@@ -11,7 +11,11 @@ class CPUFeature:
         self.sysctl_key = darwin_sysctl_key
 
     def __str__(self):
-        return self.cpu_info_flag
+        for arch_class in ALL_ARCHS:
+            for feat_var in dir(arch_class):
+                if self == getattr(arch_class, feat_var):
+                    return f"{arch_class.__name__}.{feat_var}"
+        raise AssertionError("unreachable")
 
     def is_supported(self, triple, cmd_runner):
         if re.match(".*-.*-linux", triple):
@@ -28,7 +32,7 @@ class CPUFeature:
 
     def _is_supported_linux(self, cmd_runner):
         if not self.cpu_info_flag:
-            return "Unspecified cpuinfo flag", False
+            return f"Unspecified cpuinfo flag for {self}", False
 
         cmd = "cat /proc/cpuinfo"
         err, retcode, output = cmd_runner(cmd)
@@ -41,7 +45,7 @@ class CPUFeature:
 
     def _is_supported_darwin(self, cmd_runner):
         if not self.sysctl_key:
-            return "Unspecified sysctl key", False
+            return f"Unspecified sysctl key for {self}", False
 
         cmd = f"sysctl -n {self.sysctl_key}"
         err, retcode, output = cmd_runner(cmd)
@@ -66,3 +70,6 @@ class AArch64:
 class Loong:
     LASX = CPUFeature("lasx")
     LSX = CPUFeature("lsx")
+
+
+ALL_ARCHS = [AArch64, Loong]
