@@ -47,7 +47,8 @@
       "serializer", cl::init(Format::Auto),                                    \
       cl::desc("Output remark format to serialize"),                           \
       cl::values(clEnumValN(Format::Auto, "auto",                              \
-                            "Follow the parser format (default)"),             \
+                            "Automatic detection based on output file "        \
+                            "extension or parser format (default)"),           \
                  clEnumValN(Format::YAML, "yaml", "YAML"),                     \
                  clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),     \
       cl::sub(SUBOPT));
@@ -150,6 +151,12 @@ Expected<std::unique_ptr<ToolOutputFile>>
 getOutputFileWithFlags(StringRef OutputFileName, sys::fs::OpenFlags Flags);
 Expected<std::unique_ptr<ToolOutputFile>>
 getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat);
+
+/// Choose the serializer format. If \p SelectedFormat is Format::Auto, try to
+/// detect the format based on the extension of \p OutputFileName or fall back
+/// to \p DefaultFormat.
+Format getSerializerFormat(StringRef OutputFileName, Format SelectedFormat,
+                           Format DefaultFormat);
 
 /// Filter object which can be either a string or a regex to match with the
 /// remark properties.
