@@ -15632,14 +15632,14 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
         auto *LA = dyn_cast<LoadSDNode>(LHS);
         auto *LB = dyn_cast<LoadSDNode>(RHS);
         if (!LA || !LB)
-          return SDValue();
+          return DAGCombineTruncBoolExt(N, DCI);
 
         // If either memory operation (LA or LB) is volatile, do not perform any
         // optimization or transformation. Volatile operations must be preserved
         // as written to ensure correct program behavior, so we return an empty
         // SDValue to indicate no action.
         if (LA->isVolatile() || LB->isVolatile())
-          return SDValue();
+          return DAGCombineTruncBoolExt(N, DCI);
 
         // Only combine loads if both use the unindexed addressing mode.
         // PowerPC AltiVec/VMX does not support vector loads or stores with
@@ -15648,7 +15648,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
         // instructions.
         if (LA->getAddressingMode() != ISD::UNINDEXED ||
             LB->getAddressingMode() != ISD::UNINDEXED)
-          return SDValue();
+          return DAGCombineTruncBoolExt(N, DCI);
 
         // Only combine loads if both are non-extending loads
         // (ISD::NON_EXTLOAD). Extending loads (such as ISD::ZEXTLOAD or
@@ -15656,7 +15656,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
         // loaded value's semantics and are not compatible with vector loads.
         if (LA->getExtensionType() != ISD::NON_EXTLOAD ||
             LB->getExtensionType() != ISD::NON_EXTLOAD)
-          return SDValue();
+          return DAGCombineTruncBoolExt(N, DCI);
 
         // Following code transforms the DAG
         // t0: ch,glue = EntryToken
