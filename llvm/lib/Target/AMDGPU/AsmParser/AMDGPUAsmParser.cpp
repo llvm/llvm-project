@@ -3227,6 +3227,13 @@ AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
   return AMDGPUOperand::CreateReg(this, Reg, StartLoc, EndLoc);
 }
 
+static bool isInv2PiToken(const AsmToken &Tok) {
+  if (!Tok.is(AsmToken::Identifier))
+    return false;
+  StringRef Str = Tok.getIdentifier();
+  return (Str.str() == "INV2PI" || Str.str() == "INV2PI64");
+}
+
 ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
                                       bool HasSP3AbsModifier, LitModifier Lit) {
   // TODO: add syntactic sugar for 1/(2*PI)
@@ -3253,11 +3260,12 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
 
   const auto& Tok = getToken();
   const auto& NextTok = peekToken();
-  bool IsReal = Tok.is(AsmToken::Real);
+  bool IsReal = Tok.is(AsmToken::Real) || isInv2PiToken(Tok);
   SMLoc S = getLoc();
   bool Negate = false;
 
-  if (!IsReal && Tok.is(AsmToken::Minus) && NextTok.is(AsmToken::Real)) {
+  if (!IsReal && Tok.is(AsmToken::Minus) &&
+      (NextTok.is(AsmToken::Real) || isInv2PiToken(NextTok))) {
     lex();
     IsReal = true;
     Negate = true;
@@ -3272,6 +3280,10 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     // optional sign.
 
     StringRef Num = getTokenStr();
+    if (Num.str() == "INV2PI")
+      Num = "0.15915494";
+    else if (Num.str() == "INV2PI64")
+      Num = "0.15915494309189532";
     lex();
 
     APFloat RealVal(APFloat::IEEEdouble());

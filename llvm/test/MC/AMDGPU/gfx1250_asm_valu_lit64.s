@@ -235,6 +235,13 @@ v_ceil_f64 v[254:255], 0x3fc45f306dc9c882
 v_ceil_f64 v[254:255], 0.15915494309189532
 // GFX1250: v_ceil_f64_e32 v[254:255], 0.15915494309189532 ; encoding: [0xf8,0x30,0xfc,0x7f]
 
+v_ceil_f64 v[254:255], INV2PI64
+// GFX1250: v_ceil_f64_e32 v[254:255], 0.15915494309189532 ; encoding: [0xf8,0x30,0xfc,0x7f]
+
+// using INV2PI produces a different result
+v_ceil_f64 v[254:255], INV2PI
+// GFX1250: v_ceil_f64_e32 v[254:255], lit64(0x3fc45f306725feed) ; encoding: [0xfe,0x30,0xfc,0x7f,0xed,0xfe,0x25,0x67,0x30,0x5f,0xc4,0x3f]
+
 v_ceil_f64 v[254:255], -4.0
 // GFX1250: v_ceil_f64_e32 v[254:255], -4.0         ; encoding: [0xf7,0x30,0xfc,0x7f]
 
