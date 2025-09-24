@@ -73,6 +73,11 @@ macro(add_lld_tool name)
 endmacro()
 
 macro(add_lld_symlink name dest)
+  # In standalone builds, LLVM_USE_SYMLINKS may not be defined.
+  # In that case, default to using symlinks on Unix platforms.
+  if(NOT DEFINED LLVM_USE_SYMLINKS)
+    set(LLVM_USE_SYMLINKS ${CMAKE_HOST_UNIX})
+  endif()
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
   if(LLVM_TOOL_LLVM_DRIVER_BUILD
      AND ${dest} IN_LIST LLVM_DRIVER_TOOLS
