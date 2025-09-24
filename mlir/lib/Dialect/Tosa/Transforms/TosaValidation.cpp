@@ -578,7 +578,7 @@ private:
 
 template <>
 bool TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
   if (!levelCheckRank(op, tosaOp.getInput(), "operand", tosaLevel.MAX_RANK))
     return false;
 
@@ -591,7 +591,7 @@ bool TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
 
 template <>
 bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
 
   // Only the condition input has rank limitation.
   if (!levelCheckRank(op, tosaOp.getCondition(), "operand", tosaLevel.MAX_RANK))
@@ -602,7 +602,7 @@ bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
 
 template <>
 bool TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
   auto variableType = getVariableType(tosaOp);
   if (!levelCheckRank(op, variableType, "variable type", tosaLevel.MAX_RANK))
     return false;
@@ -612,7 +612,7 @@ bool TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
 
 template <>
 bool TosaValidation::levelCheckSizes(tosa::VariableOp tosaOp) {
-  auto op = tosaOp.getOperation();
+  auto *op = tosaOp.getOperation();
   auto variableType = getVariableType(tosaOp);
   if (!levelCheckSize(op, variableType, "variable type"))
     return false;
@@ -1257,8 +1257,8 @@ bool checkErrorIfCondIf(Operation *op) {
   //   tosa.yield %arg4
   // }
 
-  return failed(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) ||
-         failed(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
+  return succeeded(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) &&
+         succeeded(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
 }
 
 bool checkErrorIfWhileLoop(Operation *op) {
@@ -1266,8 +1266,8 @@ bool checkErrorIfWhileLoop(Operation *op) {
   if (!whileOp)
     return true;
 
-  return failed(checkIsolatedRegion(op, whileOp.getCondGraph(), "cond")) ||
-         failed(checkIsolatedRegion(op, whileOp.getBodyGraph(), "body"));
+  return succeeded(checkIsolatedRegion(op, whileOp.getCondGraph(), "cond")) &&
+         succeeded(checkIsolatedRegion(op, whileOp.getBodyGraph(), "body"));
 }
 
 bool checkErrorIfScatter(Operation *op) {

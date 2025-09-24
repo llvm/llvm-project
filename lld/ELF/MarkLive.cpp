@@ -528,10 +528,18 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
     MarkLive<ELFT, false>(ctx, 1).moveToMain();
 
   // Report garbage-collected sections.
-  if (ctx.arg.printGcSections)
-    for (InputSectionBase *sec : ctx.inputSections)
-      if (!sec->isLive())
-        Msg(ctx) << "removing unused section " << sec;
+  if (ctx.arg.printGcSections.empty())
+    return;
+  std::error_code ec;
+  raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.printGcSections, ec);
+  if (ec) {
+    Err(ctx) << "cannot open --print-gc-sections= file "
+             << ctx.arg.printGcSections << ": " << ec.message();
+    return;
+  }
+  for (InputSectionBase *sec : ctx.inputSections)
+    if (!sec->isLive())
+      os << "removing unused section " << toStr(ctx, sec) << '\n';
 }
 
 template void elf::markLive<ELF32LE>(Ctx &);
