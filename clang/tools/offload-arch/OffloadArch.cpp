@@ -56,10 +56,10 @@ static int printAMD() {
 static int printNVIDIA() { return printGPUsByCUDA(); }
 static int printIntel() { return printGPUsByLevelZero(); }
 
-const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{{
-                                           {VendorName::amdgpu, printAMD},
-                                           {VendorName::nvptx, printNVIDIA},
-                                           {VendorName::intel, printIntel}}};
+const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{
+    {{VendorName::amdgpu, printAMD},
+     {VendorName::nvptx, printNVIDIA},
+     {VendorName::intel, printIntel}}};
 
 int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(OffloadArchCategory);

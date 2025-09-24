@@ -113,7 +113,7 @@ static bool loadLevelZero() {
   constexpr struct {
     const char *Name;
     void **FuncPtr;
-  } Wrappers [] = {
+  } Wrappers[] = {
       {"zeInitDrivers", &zeInitDriversPtr},
       {"zeDeviceGet", &zeDeviceGetPtr},
       {"zeDeviceGetProperties", &zeDeviceGetPropertiesPtr},
