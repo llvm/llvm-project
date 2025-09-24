@@ -88,7 +88,8 @@ struct FunctionToCleanUp {
 struct OperationToCleanup {
   Operation *op;
   BitVector nonLive;
-  Operation *callee = nullptr; // Optional: For CallOpInterface ops, stores the callee function
+  Operation *callee =
+      nullptr; // Optional: For CallOpInterface ops, stores the callee function
 };
 
 struct BlockArgsToCleanup {
@@ -318,7 +319,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
     // Store the funcOp as the callee to avoid expensive symbol lookup later.
-    cl.operands.push_back({callOp, BitVector(callOp->getNumOperands(), false), funcOp.getOperation()});
+    cl.operands.push_back({callOp, BitVector(callOp->getNumOperands(), false),
+                           funcOp.getOperation()});
   }
 
   // Do (3).
@@ -770,13 +772,15 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
     if (auto call = dyn_cast<CallOpInterface>(o.op)) {
-      // Use the stored callee reference if available, avoiding expensive symbol lookup
+      // Use the stored callee reference if available, avoiding expensive symbol
+      // lookup
       if (o.callee) {
         auto it = erasedFuncArgs.find(o.callee);
         if (it != erasedFuncArgs.end()) {
           const BitVector &deadArgIdxs = it->second;
           MutableOperandRange args = call.getArgOperandsMutable();
-          // First, erase the call arguments corresponding to erased callee args.
+          // First, erase the call arguments corresponding to erased callee
+          // args.
           for (int i = static_cast<int>(args.size()) - 1; i >= 0; --i) {
             if (i < static_cast<int>(deadArgIdxs.size()) && deadArgIdxs.test(i))
               args.erase(i);

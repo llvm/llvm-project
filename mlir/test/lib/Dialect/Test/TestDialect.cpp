@@ -467,7 +467,7 @@ MutableOperandRange CallWithSegmentsOp::getArgOperandsMutable() {
   // args size stored in the attribute.
   auto sizes = sizesAttr.asArrayRef();
   unsigned start = static_cast<unsigned>(sizes[0]); // prefix size
-  unsigned len = static_cast<unsigned>(sizes[1]);    // args size
+  unsigned len = static_cast<unsigned>(sizes[1]);   // args size
 
   NamedAttribute segNamed(segName, sizesAttr);
   MutableOperandRange::OperandSegment binding{kTestCallWithSegmentsArgsSegIndex,
