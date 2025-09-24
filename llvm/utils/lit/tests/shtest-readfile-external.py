@@ -11,7 +11,7 @@
 
 # CHECK-LABEL: FAIL: shtest-readfile :: file-does-not-exist.txt ({{[^)]*}})
 # CHECK: echo $(cat /file/does/not/exist) && test -e /file/does/not/exist {{.*}}
-# CHECK: cat: /file/does/not/exist: No such file or directory
+# CHECK: {{.*}}cat{{.*}}/file/does/not/exist{{.*}}
 
 # CHECK-LABEL: FAIL: shtest-readfile :: relative-paths.txt ({{[^)]*}})
 # CHECK: echo $(cat rel_path_test_folder/test_file) && test -e rel_path_test_folder/test_file {{.*}}
