@@ -25097,6 +25097,18 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
   }
 
+  // Handle floating point on i386 without SSE/CMOV (constant-time requirement)
+  if (!Subtarget.hasSSE1() && VT.isFloatingPoint() && !VT.isVector()) {
+    if (VT == MVT::f32) {
+      // Bitcast f32 to i32, use raw condition with ISD::CTSELECT (avoids EFLAGS redundancy)
+      TrueOp = DAG.getBitcast(MVT::i32, TrueOp);
+      FalseOp = DAG.getBitcast(MVT::i32, FalseOp);
+      SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueOp, FalseOp);
+      return DAG.getBitcast(VT, CtSelect);
+    }
+    // For f64 and f80 on i386, fall through to generic handling for now
+  }
+
   if (isScalarFPTypeInSSEReg(VT)) {
     MVT IntVT = (VT == MVT::f32) ? MVT::i32 : MVT::i64;
     TrueOp = DAG.getBitcast(IntVT, TrueOp);
