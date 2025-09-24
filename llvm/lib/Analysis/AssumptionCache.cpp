@@ -172,7 +172,7 @@ void AssumptionCache::scanFunction() {
   for (BasicBlock &B : F)
     for (Instruction &I : B)
       if (isa<AssumeInst>(&I))
-        AssumeHandles.push_back({&I, ExprResultIdx});
+        AssumeHandles.push_back(&I);
 
   // Mark the scan as complete.
   Scanned = true;
@@ -188,7 +188,7 @@ void AssumptionCache::registerAssumption(AssumeInst *CI) {
   if (!Scanned)
     return;
 
-  AssumeHandles.push_back({CI, ExprResultIdx});
+  AssumeHandles.push_back(CI);
 
 #ifndef NDEBUG
   assert(CI->getParent() &&

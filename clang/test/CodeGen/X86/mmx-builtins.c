@@ -371,7 +371,6 @@ __m64 test_mm_max_pi16(__m64 a, __m64 b) {
   // CHECK: call <4 x i16> @llvm.smax.v4i16(
   return _mm_max_pi16(a, b);
 }
-
 TEST_CONSTEXPR(match_v4hi(_mm_max_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-1, 2, -3, 4}), 1, 2, 3, 4));
 
 __m64 test_mm_max_pu8(__m64 a, __m64 b) {
@@ -379,13 +378,13 @@ __m64 test_mm_max_pu8(__m64 a, __m64 b) {
   // CHECK: call <8 x i8> @llvm.umax.v8i8(
   return _mm_max_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_max_pu8((__m64)(__v8qs){ 16, 17, 18, -19, -20, 21, -22, -23}, (__m64)(__v8qs){ 1, -2, -3, 4, 5, 0, 7, -8}),  16, -2, -3, -19, -20, 21, -22, -8));
 
 __m64 test_mm_min_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_min_pi16
   // CHECK: call <4 x i16> @llvm.smin.v4i16(
   return _mm_min_pi16(a, b);
 }
-
 TEST_CONSTEXPR(match_v4hi(_mm_min_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-1, 2, -3, 4}), -1, -2, -3, -4));
 
 __m64 test_mm_min_pu8(__m64 a, __m64 b) {
@@ -393,6 +392,7 @@ __m64 test_mm_min_pu8(__m64 a, __m64 b) {
   // CHECK: call <8 x i8> @llvm.umin.v8i8(
   return _mm_min_pu8(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_min_pu8((__m64)(__v8qs){ 16, 17, 18, -19, -20, 21, -22, -23}, (__m64)(__v8qs){ 1, -2, -3, 4, 5, 0, 7, -8}),  1, 17, 18, 4, 5, 0, 7, -23));
 
 int test_mm_movemask_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_movemask_pi8
