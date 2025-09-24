@@ -294,14 +294,13 @@ static void validateRootSignature(Module &M,
 
     HasBindings = true;
   }
-  const std::optional<dxbc::RootFlags> Mask =
-      getEnvironmentDenyFlagMask(MMI.ShaderProfile);
 
-  if (!Mask.has_value() || !HasBindings)
+  if (!HasBindings)
     return;
 
-  const dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
-  reportIfDeniedShaderStageAccess(M, Flags, Mask.value());
+  if (std::optional<dxbc::RootFlags> Mask =
+          getEnvironmentDenyFlagMask(MMI.ShaderProfile))
+    reportIfDeniedShaderStageAccess(M, dxbc::RootFlags(RSD.Flags), *Mask);
 }
 
 static mcdxbc::RootSignatureDesc *
