@@ -820,6 +820,22 @@ func.func @store_with_alignment(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : ind
 
 // -----
 
+#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>>
+#alias_scope0 = #llvm.alias_scope<id = distinct[1]<>, domain = #alias_scope_domain>
+#alias_scope1 = #llvm.alias_scope<id = distinct[2]<>, domain = #alias_scope_domain>
+
+// ALL-LABEL: func @load_store_alias_attrs
+func.func @load_store_alias_attrs(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
+// ALL:   llvm.load {{.*}} {alias_scopes = [#[[SCOPE0:.*]]], llvm.noalias = [#[[SCOPE1:.*]]]}
+// ALL:   llvm.store {{.*}} {alias_scopes = [#[[SCOPE1]]], llvm.noalias = [#[[SCOPE0]]]} : f32, !llvm.ptr
+  %c0 = arith.constant 0 : index
+  %0 = memref.load %arg0[%c0] {alias_scopes = [#alias_scope0], llvm.noalias = [#alias_scope1]} : memref<?xf32>
+  memref.store %0, %arg1[%c0] {alias_scopes = [#alias_scope1], llvm.noalias = [#alias_scope0]} : memref<?xf32>
+  func.return
+}
+
+// -----
+
 // Ensure unconvertable memory space not cause a crash
 
 // CHECK-LABEL: @alloca_unconvertable_memory_space

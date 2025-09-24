@@ -922,6 +922,18 @@ struct GetGlobalMemrefOpLowering
   }
 };
 
+static SmallVector<std::pair<StringAttr, Attribute>>
+copyImportantAttrs(Operation *op) {
+  SmallVector<std::pair<StringAttr, Attribute>> attrs;
+  for (StringRef attrName : {LLVM::LLVMDialect::getAliasScopesAttrName(),
+                             LLVM::LLVMDialect::getNoAliasAttrName()}) {
+    auto nameAttr = StringAttr::get(op->getContext(), attrName);
+    if (auto attr = op->getAttr(nameAttr))
+      attrs.emplace_back(nameAttr, attr);
+  }
+  return attrs;
+}
+
 // Load operation is lowered to obtaining a pointer to the indexed element
 // and loading it.
 struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
@@ -932,15 +944,22 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
 
+    SmallVector<std::pair<StringAttr, Attribute>> importantAttrs =
+        copyImportantAttrs(loadOp);
+
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
                                          adaptor.getMemref(),
                                          adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
         loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+
+    for (auto [nameAttr, attr] : importantAttrs)
+      newOp->setAttr(nameAttr, attr);
+
     return success();
   }
 };
@@ -955,15 +974,22 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
 
+    SmallVector<std::pair<StringAttr, Attribute>> importantAttrs =
+        copyImportantAttrs(op);
+
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr =
         getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
                              adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        op, adaptor.getValue(), dataPtr, op.getAlignment().value_or(0), false,
+        op.getNontemporal());
+
+    for (auto [nameAttr, attr] : importantAttrs)
+      newOp->setAttr(nameAttr, attr);
+
     return success();
   }
 };
