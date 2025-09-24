@@ -55,6 +55,7 @@ LLVM_ABI void initializeAlwaysInlinerLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeAssignmentTrackingAnalysisPass(PassRegistry &);
 LLVM_ABI void initializeAssumptionCacheTrackerPass(PassRegistry &);
 LLVM_ABI void initializeAtomicExpandLegacyPass(PassRegistry &);
+LLVM_ABI void initializeBasicBlockMatchingAndInferencePass(PassRegistry &);
 LLVM_ABI void initializeBasicBlockPathCloningPass(PassRegistry &);
 LLVM_ABI void
 initializeBasicBlockSectionsProfileReaderWrapperPassPass(PassRegistry &);
@@ -62,6 +63,7 @@ LLVM_ABI void initializeBasicBlockSectionsPass(PassRegistry &);
 LLVM_ABI void initializeBarrierNoopPass(PassRegistry &);
 LLVM_ABI void initializeBasicAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBlockFrequencyInfoWrapperPassPass(PassRegistry &);
+LLVM_ABI void initializeMachineBlockHashInfoPass(PassRegistry&);
 LLVM_ABI void initializeBranchFolderLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBranchRelaxationLegacyPass(PassRegistry &);
