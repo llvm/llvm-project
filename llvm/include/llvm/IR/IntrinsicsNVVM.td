@@ -1493,7 +1493,8 @@ let TargetPrefix = "nvvm" in {
     }
   }
 
-  // RS rounding mode conversions for f16x2, bf16x2 types
+  // RS rounding mode (Stochastic Rounding) conversions for f16x2, bf16x2 types
+  // The last i32 operand provides the random bits for the conversion
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
@@ -1527,7 +1528,8 @@ let TargetPrefix = "nvvm" in {
     }
   }
   
-  // RS rounding mode conversions for f8x4 types
+  // RS rounding mode (Stochastic Rounding) conversions for f8x4 types
+  // The last i32 operand provides the random bits for the conversion
   foreach type = ["e4m3x4", "e5m2x4"] in {
     foreach relu = ["", "_relu"] in {
       def int_nvvm_f32x4_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
@@ -1544,7 +1546,8 @@ let TargetPrefix = "nvvm" in {
         PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
   }
   
-  // RS rounding mode conversions for f4x4 type
+  // RS rounding mode (Stochastic Rounding) conversions for f4x4 type
+  // The last i32 operand provides the random bits for the conversion
   foreach relu = ["", "_relu"] in {
     def int_nvvm_f32x4_to_e2m1x4_rs # relu # _satfinite : NVVMBuiltin,
         PureIntrinsic<[llvm_i16_ty], [llvm_v4f32_ty, llvm_i32_ty]>;
@@ -1561,7 +1564,8 @@ let TargetPrefix = "nvvm" in {
     }
   }
   
-  // RS rounding mode conversions for f6x4 types
+  // RS rounding mode (Stochastic Rounding) conversions for f6x4 types
+  // The last i32 operand provides the random bits for the conversion
   foreach type = ["e2m3x4", "e3m2x4"] in {
     foreach relu = ["", "_relu"] in {
       def int_nvvm_f32x4_to_ # type # _rs # relu # _satfinite : NVVMBuiltin,
