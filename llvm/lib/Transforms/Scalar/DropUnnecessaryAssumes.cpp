@@ -44,6 +44,10 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       unsigned NumBundles = Assume->getNumOperandBundles();
       for (unsigned I = 0; I != NumBundles; ++I) {
         auto IsDead = [](OperandBundleUse Bundle) {
+          // "ignore" operand bundles are always dead.
+          if (Bundle.getTagName() == "ignore")
+            return true;
+
           // Bundles without arguments do not affect any specific values.
           // Always keep them for now.
           if (Bundle.Inputs.empty())

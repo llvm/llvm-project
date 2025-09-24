@@ -129,6 +129,17 @@ define void @operand_bundle_no_args() {
   ret void
 }
 
+; Can always drop ignore bundles, regardless of uses.
+define ptr @operand_bundle_ignore(ptr %x) {
+; CHECK-LABEL: define ptr @operand_bundle_ignore(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[X]]) ]
+; CHECK-NEXT:    ret ptr [[X]]
+;
+  call void @llvm.assume(i1 true) ["ignore"(), "ignore"(ptr %x), "nonnull"(ptr %x)]
+  ret ptr %x
+}
+
 define void @type_test(ptr %x) {
 ; CHECK-LABEL: define void @type_test(
 ; CHECK-SAME: ptr [[X:%.*]]) {
