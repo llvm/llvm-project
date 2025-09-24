@@ -2600,7 +2600,8 @@ static bool
 interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
                          llvm::function_ref<APInt(const APSInt &)> PackFn) {
   const auto *VT0 = E->getArg(0)->getType()->castAs<VectorType>();
-  const auto *VT1 = E->getArg(1)->getType()->castAs<VectorType>();
+  [[maybe_unused]] const auto *VT1 =
+      E->getArg(1)->getType()->castAs<VectorType>();
   assert(VT0 && VT1 && "pack builtin VT0 and VT1 must be VectorType");
   assert(VT0->getElementType() == VT1->getElementType() &&
          VT0->getNumElements() == VT1->getNumElements() &&
