@@ -4613,15 +4613,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *MaskedLoadPtr;
   const APInt *MaskedLoadAlignment;
-  if (TrueVal->hasOneUse() &&
-      match(TrueVal,
-            m_MaskedLoad(m_Value(MaskedLoadPtr), m_APInt(MaskedLoadAlignment),
-                         m_Specific(CondVal), m_Value())))
+  if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
+                                           m_APInt(MaskedLoadAlignment),
+                                           m_Specific(CondVal), m_Value()))))
     return replaceInstUsesWith(
-        SI, Builder.CreateMaskedLoad(
-                TrueVal->getType(), MaskedLoadPtr,
-                llvm::Align(MaskedLoadAlignment->getZExtValue()), CondVal,
-                FalseVal));
+        SI, Builder.CreateMaskedLoad(TrueVal->getType(), MaskedLoadPtr,
+                                     Align(MaskedLoadAlignment->getZExtValue()),
+                                     CondVal, FalseVal));
 
   return nullptr;
 }
