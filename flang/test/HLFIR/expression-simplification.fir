@@ -98,4 +98,4 @@ func.func @_QPtest_char_cmp2(%arg0: !fir.boxchar<1> {fir.bindc_name = "x"}, %arg
 }
 
 // CHECK-LABEL: func.func @_QPtest_char_cmp2(
-// CHECK:         hlfir.cmpchar eq
+// CHECK:         hlfir.char_trim
