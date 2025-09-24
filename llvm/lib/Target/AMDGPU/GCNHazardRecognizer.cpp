@@ -441,7 +441,7 @@ using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
 using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 
 // Search for a hazard in a block and its predecessors.
-template <typename StateT, typename StateTraitsT>
+template <typename StateT>
 static bool
 hasHazard(StateT InitialState,
           function_ref<HazardFnResult(StateT &, const MachineInstr &)> IsHazard,
@@ -467,10 +467,10 @@ hasHazard(StateT InitialState,
               DenseMapInfo<unsigned>::getTombstoneKey()};
     }
     static unsigned getHashValue(const StateMapKey &Key) {
-      return StateTraitsT::getHashValue((*Key.States)[Key.Idx]);
+      return StateT::getHashValue((*Key.States)[Key.Idx]);
     }
     static unsigned getHashValue(const StateT &State) {
-      return StateTraitsT::getHashValue(State);
+      return StateT::getHashValue(State);
     }
     static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
       const auto EKey = getEmptyKey();
@@ -478,23 +478,22 @@ hasHazard(StateT InitialState,
       if (StateMapKey::isEqual(LHS, EKey) || StateMapKey::isEqual(RHS, EKey) ||
           StateMapKey::isEqual(LHS, TKey) || StateMapKey::isEqual(RHS, TKey))
         return StateMapKey::isEqual(LHS, RHS);
-      return StateTraitsT::isEqual((*LHS.States)[LHS.Idx],
-                                   (*RHS.States)[RHS.Idx]);
+      return StateT::isEqual((*LHS.States)[LHS.Idx], (*RHS.States)[RHS.Idx]);
     }
     static bool isEqual(const StateT &LHS, const StateMapKey &RHS) {
       if (StateMapKey::isEqual(RHS, getEmptyKey()) ||
           StateMapKey::isEqual(RHS, getTombstoneKey()))
         return false;
-      return StateTraitsT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
+      return StateT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
     }
   };
 
   SmallDenseMap<StateMapKey, unsigned, 8, StateMapKeyTraits> StateMap;
   SmallVector<StateT, 8> States;
 
+  MachineBasicBlock::const_reverse_instr_iterator I = InitialI;
   const MachineBasicBlock *MBB = InitialMBB;
   StateT State = InitialState;
-  auto I = InitialI;
 
   SmallSetVector<std::pair<const MachineBasicBlock *, unsigned>, 16> Worklist;
   unsigned WorkIdx = 0;
@@ -520,15 +519,13 @@ hasHazard(StateT InitialState,
     }
 
     if (!Expired) {
-      auto StateIt = StateMap.find_as(State);
-      unsigned StateIdx;
-      if (StateIt != StateMap.end()) {
-        StateIdx = StateIt->getSecond();
-      } else {
-        StateIdx = States.size();
+      unsigned StateIdx = States.size();
+      StateMapKey Key = {&States, StateIdx};
+      auto Insertion = StateMap.insert_as(std::pair(Key, StateIdx), State);
+      if (Insertion.second) {
         States.emplace_back(State);
-        StateMapKey Key = {&States, StateIdx};
-        StateMap.insert(std::pair(Key, StateIdx));
+      } else {
+        StateIdx = Insertion.first->second;
       }
       for (MachineBasicBlock *Pred : MBB->predecessors())
         Worklist.insert(std::pair(Pred, StateIdx));
@@ -1705,8 +1702,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
     SmallDenseMap<Register, int, 4> DefPos;
     int ExecPos = std::numeric_limits<int>::max();
     int VALUs = 0;
-  };
-  struct StateTraits {
+
     static unsigned getHashValue(const StateType &State) {
       return hash_combine(State.ExecPos, State.VALUs,
                           hash_combine_range(State.DefPos));
@@ -1809,9 +1805,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
       State.VALUs += 1;
   };
 
-  if (!hasHazard<StateType, StateTraits>(State, IsHazardFn, UpdateStateFn,
-                                         MI->getParent(),
-                                         std::next(MI->getReverseIterator())))
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator())))
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -1852,8 +1847,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   struct StateType {
     int VALUs = 0;
     int TRANS = 0;
-  };
-  struct StateTraits {
+
     static unsigned getHashValue(const StateType &State) {
       return hash_combine(State.VALUs, State.TRANS);
     }
@@ -1895,9 +1889,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
       State.TRANS += 1;
   };
 
-  if (!hasHazard<StateType, StateTraits>(State, IsHazardFn, UpdateStateFn,
-                                         MI->getParent(),
-                                         std::next(MI->getReverseIterator())))
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator())))
     return false;
 
   // Hazard is observed - insert a wait on va_dst counter to ensure hazard is
