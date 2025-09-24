@@ -49,7 +49,7 @@ static_assert(foo<char, 'a'>() == 2);
 // expected-error@-1{{no matching function for call to 'foo'}}
 // expected-note@#case1_foo1{{candidate template ignored: constraints not satisfied [with T = char, W = 'a']}}
 // expected-note@#case1_foo1{{because 'C2<char, 'a'>' evaluated to false}}
-// expected-note@#case1_C2{{because 'C1<Y{}, V>' evaluated to false}}
+// expected-note@#case1_C2{{because 'C1<char{}, 'a'>' evaluated to false}}
 // expected-note@#case1_C1{{because 'sizeof ('\x00') >= 4' (1 >= 4) evaluated to false}}
 // expected-note@#case1_foo2{{candidate template ignored: constraints not satisfied [with T = char, X = 'a']}}
 // expected-note@#case1_foo2{{because 'C1<char{}, 'a'>' evaluated to false}}

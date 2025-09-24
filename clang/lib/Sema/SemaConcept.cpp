@@ -1937,6 +1937,13 @@ void SubstituteParameterMappings::buildParameterMapping(
         static_cast<FoldExpandedConstraint &>(N).getPattern(),
         /*OnlyDeduced=*/false,
         /*Depth=*/0, OccurringIndices);
+  } else if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId) {
+    auto *Args = static_cast<ConceptIdConstraint &>(N)
+                     .getConceptId()
+                     ->getTemplateArgsAsWritten();
+    if (Args)
+      SemaRef.MarkUsedTemplateParameters(Args->arguments(),
+                                         /*Depth=*/0, OccurringIndices);
   }
   TemplateArgumentLoc *TempArgs =
       new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];

@@ -1311,4 +1311,26 @@ static_assert(!E<int>);
 
 }
 
+
+namespace case3 {
+template <class> constexpr bool is_move_constructible_v = false;
+
+template <class _Tp>
+concept __cpp17_move_constructible = is_move_constructible_v<_Tp>; // #is_move_constructible_v
+
+template <class _Tp>
+concept __cpp17_copy_constructible = __cpp17_move_constructible<_Tp>; // #__cpp17_move_constructible
+
+template <class _Iter>
+concept __cpp17_iterator = __cpp17_copy_constructible<_Iter>; // #__cpp17_copy_constructible
+
+struct not_move_constructible {};
+static_assert(__cpp17_iterator<not_move_constructible>); \
+// expected-error {{static assertion failed}} \
+// expected-note {{because 'not_move_constructible' does not satisfy '__cpp17_iterator'}} \
+// expected-note@#__cpp17_copy_constructible {{because 'not_move_constructible' does not satisfy '__cpp17_copy_constructible'}} \
+// expected-note@#__cpp17_move_constructible {{because 'parameter_mapping_regressions::case3::not_move_constructible' does not satisfy '__cpp17_move_constructible'}} \
+// expected-note@#is_move_constructible_v {{because 'is_move_constructible_v<parameter_mapping_regressions::case3::not_move_constructible>' evaluated to false}}
+}
+
 }
