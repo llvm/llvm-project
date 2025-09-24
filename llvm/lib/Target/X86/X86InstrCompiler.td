@@ -747,9 +747,6 @@ let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
     defm CTSELECT_I386_INT_GR16 : CTSELECT_I386_INTERNAL<GR16, GR8>;
     defm CTSELECT_I386_INT_GR32 : CTSELECT_I386_INTERNAL<GR32, GR8>;
   }
-  let Predicates = [NoCMOV, HasMMX] in {
-    defm CTSELECT_I386_VR64 : CTSELECT_I386_VR64<VR64>;
-  }
 }
 
 let usesCustomInserter = 1,
@@ -784,12 +781,6 @@ let Predicates = [NoNativeCMOV] in {
             (CTSELECT_I386_GR32rr GR32:$src1, GR32:$src2, timm:$cond)>;
 
   // i64 patterns handled automatically by type legalization
-}
-
-// Pattern matching for VR64 CTSELECT on i386 without CMOV (routes to post-RA expansion)
-let Predicates = [NoCMOV, Not64BitMode, HasMMX] in {
-  def : Pat<(x86mmx(X86ctselect VR64:$src1, VR64:$src2, timm:$cond, EFLAGS)),
-            (CTSELECT_I386_VR64rr VR64:$src1, VR64:$src2, timm:$cond)>;
 }
 
 //===----------------------------------------------------------------------===//

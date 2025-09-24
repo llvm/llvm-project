@@ -6834,9 +6834,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::ct_select: {
-    // Set function attribute to indicate ct.select usage
-    Function &F = DAG.getMachineFunction().getFunction();
-    F.addFnAttr("ct-select");
 
     SDLoc DL = getCurSDLoc();
 

@@ -1023,15 +1023,6 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
   // Remove the original pseudo instruction
   MI.eraseFromParent();
 
-  // Bundle all generated instructions for atomic execution
-  auto BundleEnd = MI.getIterator();
-  if (BundleStart != BundleEnd) {
-    // Only bundle if we have multiple instructions
-    finalizeBundle(*MBB, BundleStart, BundleEnd);
-  }
-
-  // Remove the original pseudo instruction
-  MI.eraseFromParent();
   return true;
 }
 
@@ -7010,13 +7001,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return expandCtSelectVector(MI);
 
   // i386-specific CTSELECT expansion (post-RA, constant-time)
-  case X86::CTSELECT_I386_GR16rr:
-  case X86::CTSELECT_I386_GR32rr:
-    return expandCtSelectI386(MI);
+  //case X86::CTSELECT_I386_GR16rr:
+  //case X86::CTSELECT_I386_GR32rr:
+   // return expandCtSelectI386(MI);
 
   // VR64-specific CTSELECT expansion (post-RA, constant-time)
-  case X86::CTSELECT_I386_VR64rr:
-    return expandCtSelectI386VR64(MI);
+  //case X86::CTSELECT_I386_VR64rr:
+  //  return expandCtSelectI386VR64(MI);
   }
   return false;
 }
