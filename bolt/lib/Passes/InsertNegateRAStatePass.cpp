@@ -126,26 +126,15 @@ Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
     return !BF.containedNegateRAState() || BF.isIgnored();
   };
 
-  int Total = llvm::count_if(
-      BC.getBinaryFunctions(),
-      [&](std::pair<const unsigned long, BinaryFunction> &P) {
-        return P.second.containedNegateRAState() && !P.second.isIgnored();
-      });
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
+      SkipPredicate, "InsertNegateRAStatePass");
 
-  // If we attempt to run the pass, but SkipPredicate skips all functions,
-  // we get a warning that the SchedulingPolicy is changed to trivial.
-  // This would break bolt/test/AArch64/unmarked-data.test.
-  if (Total != 0) {
-    ParallelUtilities::runOnEachFunction(
-        BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
-        SkipPredicate, "InsertNegateRAStatePass");
-
-    BC.outs() << "BOLT-INFO: rewritten pac-ret DWARF info in "
-              << FunctionsModified << " out of "
-              << BC.getBinaryFunctions().size() << " functions "
-              << format("(%.2lf%%).\n", (100.0 * FunctionsModified) /
-                                            BC.getBinaryFunctions().size());
-  }
+  BC.outs() << "BOLT-INFO: rewritten pac-ret DWARF info in "
+            << FunctionsModified << " out of " << BC.getBinaryFunctions().size()
+            << " functions "
+            << format("(%.2lf%%).\n", (100.0 * FunctionsModified) /
+                                          BC.getBinaryFunctions().size());
   return Error::success();
 }
 
