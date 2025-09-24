@@ -1852,10 +1852,10 @@ TYPE_PARSER(
     lookAhead(endOmpLine / !statement(allocateStmt)))
 
 // Assumes Construct
-TYPE_PARSER(construct<OpenMPDeclarativeAssumes>(
+TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
     predicated(OmpDirectiveNameParser{},
         IsDirective(llvm::omp::Directive::OMPD_assumes)) >=
-    Parser<OmpDirectiveSpecification>{}))
+    Parser<OmpDirectiveSpecification>{})))
 
 // Declarative constructs
 TYPE_PARSER(
