@@ -13,7 +13,6 @@ add_clang_library(clangTidyCERTModule STATIC
   MutatingCopyCheck.cpp
   NonTrivialTypesLibcMemoryCallsCheck.cpp
   ProperlySeededRandomGeneratorCheck.cpp
-  SetLongJmpCheck.cpp
   ThrownExceptionTypeCheck.cpp
 
   LINK_LIBS

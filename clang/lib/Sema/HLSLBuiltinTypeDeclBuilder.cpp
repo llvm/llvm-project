@@ -748,8 +748,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
 // Adds default constructor to the resource class:
 // Resource::Resource()
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   QualType HandleType = getResourceHandleField()->getType();
@@ -773,8 +772,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
 //   return tmp;
 // }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
@@ -811,8 +809,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
 //   return tmp;
 // }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
@@ -838,8 +835,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromImplicitBinding() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
   QualType RecordType = AST.getCanonicalTagType(Record);
@@ -857,8 +853,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyConstructor() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCopyAssignmentOperator() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = SemaRef.getASTContext();
   QualType RecordType = AST.getCanonicalTagType(Record);
@@ -889,8 +884,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
-  if (Record->isCompleteDefinition())
-    return *this;
+  assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = Record->getASTContext();
   IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
@@ -930,12 +924,6 @@ BuiltinTypeDeclBuilder::getResourceAttrs() const {
   QualType HandleType = getResourceHandleField()->getType();
   return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
-
-// BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {
-//   assert(!Record->isCompleteDefinition() && "record is already complete");
-//   Record->startDefinition();
-//   return *this;
-// }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::completeDefinition() {
   assert(!Record->isCompleteDefinition() && "record is already complete");

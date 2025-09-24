@@ -216,6 +216,11 @@ New check aliases
   <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-err52-cpp <clang-tidy/checks/cert/err52-cpp>` to
+  :doc:`modernize-avoid-setjmp-longjmp
+  <clang-tidy/checks/modernize/avoid-setjmp-longjmp>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
   :doc:`bugprone-throwing-static-initialization
   <clang-tidy/checks/bugprone/throwing-static-initialization>`
@@ -295,6 +300,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
   uses of non-standard ``enable_if`` with a signature different from
   ``std::enable_if`` (such as ``boost::enable_if``).
+
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check to
+  enhance the robustness of the member initializer detection.
 
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
