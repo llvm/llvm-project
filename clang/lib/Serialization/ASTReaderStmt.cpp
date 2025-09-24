@@ -485,6 +485,7 @@ void ASTStmtReader::VisitCoawaitExpr(CoawaitExpr *E) {
   for (auto &SubExpr: E->SubExprs)
     SubExpr = Record.readSubStmt();
   E->OpaqueValue = cast_or_null<OpaqueValueExpr>(Record.readSubStmt());
+  E->setUseAwaitSuspendDestroy(Record.readInt() != 0);
   E->setIsImplicit(Record.readInt() != 0);
 }
 
@@ -494,6 +495,7 @@ void ASTStmtReader::VisitCoyieldExpr(CoyieldExpr *E) {
   for (auto &SubExpr: E->SubExprs)
     SubExpr = Record.readSubStmt();
   E->OpaqueValue = cast_or_null<OpaqueValueExpr>(Record.readSubStmt());
+  E->setUseAwaitSuspendDestroy(Record.readInt() != 0);
 }
 
 void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
