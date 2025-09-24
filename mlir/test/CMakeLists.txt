@@ -129,7 +129,6 @@ if(NOT MLIR_STANDALONE_BUILD)
     split-file yaml2obj
     MLIRCAPIIR
     MLIRCAPIArith
-    MLIRCAPIBuiltin
   )
 endif()
 

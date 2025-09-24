@@ -32,7 +32,6 @@ declare_mlir_python_extension(StandalonePythonSources.Pybind11Extension
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIArith
-    MLIRCAPIBuiltin
     MLIRCAPITransforms
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY pybind11
@@ -48,7 +47,6 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIArith
-    MLIRCAPIBuiltin
     MLIRCAPITransforms
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY nanobind

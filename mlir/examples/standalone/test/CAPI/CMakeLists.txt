@@ -7,7 +7,6 @@ add_mlir_aggregate(StandaloneCAPITestLib
   EMBED_LIBS
   MLIRCAPIIR
   MLIRCAPIArith
-  MLIRCAPIBuiltin
   StandaloneCAPI
 )
 

@@ -13,13 +13,11 @@
 
 #include "Standalone-c/Dialects.h"
 #include "mlir-c/Dialect/Arith.h"
-#include "mlir-c/Dialect/Builtin.h"
 #include "mlir-c/IR.h"
 
 int main(int argc, char **argv) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__arith__(), ctx);
-  mlirDialectHandleRegisterDialect(mlirGetDialectHandle__builtin__(), ctx);
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__standalone__(), ctx);
 
   MlirModule module = mlirModuleCreateParse(
