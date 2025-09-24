@@ -381,25 +381,24 @@ static Metadata *updateLoopMetadataDebugLocationsRecursive(
   const MDTuple *M = dyn_cast_or_null<MDTuple>(MetadataIn);
   // The loop metadata options should start with a MDString.
   if (!M || M->getNumOperands() < 1 || !isa<MDString>(M->getOperand(0)))
-    return nullptr;
+    return MetadataIn;
 
   bool Updated = false;
   SmallVector<Metadata *, 4> MDs{M->getOperand(0)};
   for (Metadata *MD : llvm::drop_begin(M->operands())) {
-    if (!MD) {
+    if (!MD)
       MDs.push_back(nullptr);
-    } else if (Metadata *NewMD =
-                   updateLoopMetadataDebugLocationsRecursive(MD, Updater)) {
-      MDs.push_back(NewMD);
-      Updated = true;
-    } else if (Metadata *NewMD = Updater(MD)) {
-      MDs.push_back(NewMD);
+    else {
+      Metadata *NewMD =
+          Updater(updateLoopMetadataDebugLocationsRecursive(MD, Updater));
+      if (NewMD)
+        MDs.push_back(NewMD);
       Updated |= NewMD != MD;
     }
   }
 
-  assert(!M->isDistinct() && "Assuming that M isn't distinct.");
-  return Updated ? MDNode::get(M->getContext(), MDs) : nullptr;
+  assert(!M->isDistinct() && "M should not be distinct.");
+  return Updated ? MDNode::get(M->getContext(), MDs) : MetadataIn;
 }
 
 static MDNode *updateLoopMetadataDebugLocationsImpl(
@@ -415,10 +414,8 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
   for (Metadata *MD : llvm::drop_begin(OrigLoopID->operands())) {
     if (!MD)
       MDs.push_back(nullptr);
-    else if (Metadata *NewMD =
-                 updateLoopMetadataDebugLocationsRecursive(MD, Updater))
-      MDs.push_back(NewMD);
-    else if (Metadata *NewMD = Updater(MD))
+    else if (Metadata *NewMD = Updater(
+                 updateLoopMetadataDebugLocationsRecursive(MD, Updater)))
       MDs.push_back(NewMD);
   }
 
