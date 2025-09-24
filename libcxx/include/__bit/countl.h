@@ -37,7 +37,7 @@ template <__unsigned_integer _Tp>
 
 template <__unsigned_integer _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countl_one(_Tp __t) noexcept {
-  return __t != numeric_limits<_Tp>::max() ? std::countl_zero(static_cast<_Tp>(~__t)) : numeric_limits<_Tp>::digits;
+  return std::countl_zero(static_cast<_Tp>(~__t));
 }
 
 #endif // _LIBCPP_STD_VER >= 20
