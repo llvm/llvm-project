@@ -13,9 +13,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-LABEL: test_tuple:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX900-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -31,22 +28,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX900-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX900-NEXT:    v_writelane_b32 v63, s36, 0
-; GFX900-NEXT:    v_writelane_b32 v63, s37, 1
-; GFX900-NEXT:    v_writelane_b32 v63, s38, 2
-; GFX900-NEXT:    v_writelane_b32 v63, s39, 3
-; GFX900-NEXT:    v_writelane_b32 v63, s48, 4
-; GFX900-NEXT:    v_writelane_b32 v63, s49, 5
-; GFX900-NEXT:    v_writelane_b32 v63, s50, 6
-; GFX900-NEXT:    v_writelane_b32 v63, s51, 7
-; GFX900-NEXT:    v_writelane_b32 v63, s52, 8
-; GFX900-NEXT:    v_writelane_b32 v63, s53, 9
-; GFX900-NEXT:    v_writelane_b32 v63, s54, 10
-; GFX900-NEXT:    v_writelane_b32 v63, s55, 11
-; GFX900-NEXT:    v_writelane_b32 v63, s64, 12
-; GFX900-NEXT:    v_writelane_b32 v63, s65, 13
-; GFX900-NEXT:    v_writelane_b32 v63, s66, 14
-; GFX900-NEXT:    v_writelane_b32 v63, s67, 15
 ; GFX900-NEXT:    v_mov_b32_e32 v33, v30
 ; GFX900-NEXT:    v_mov_b32_e32 v34, v29
 ; GFX900-NEXT:    v_mov_b32_e32 v35, v28
@@ -78,38 +59,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    v_mov_b32_e32 v61, v2
 ; GFX900-NEXT:    v_mov_b32_e32 v62, v1
 ; GFX900-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
-; GFX900-NEXT:    ; implicit-def: $sgpr4
 ; GFX900-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v62
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v61
@@ -142,24 +91,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX900-NEXT:    v_mov_b32_e32 v30, v33
 ; GFX900-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
-; GFX900-NEXT:    ; implicit-def: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
 ; GFX900-NEXT:    v_mov_b32_e32 v0, 0
-; GFX900-NEXT:    v_readlane_b32 s67, v63, 15
-; GFX900-NEXT:    v_readlane_b32 s66, v63, 14
-; GFX900-NEXT:    v_readlane_b32 s65, v63, 13
-; GFX900-NEXT:    v_readlane_b32 s64, v63, 12
-; GFX900-NEXT:    v_readlane_b32 s55, v63, 11
-; GFX900-NEXT:    v_readlane_b32 s54, v63, 10
-; GFX900-NEXT:    v_readlane_b32 s53, v63, 9
-; GFX900-NEXT:    v_readlane_b32 s52, v63, 8
-; GFX900-NEXT:    v_readlane_b32 s51, v63, 7
-; GFX900-NEXT:    v_readlane_b32 s50, v63, 6
-; GFX900-NEXT:    v_readlane_b32 s49, v63, 5
-; GFX900-NEXT:    v_readlane_b32 s48, v63, 4
-; GFX900-NEXT:    v_readlane_b32 s39, v63, 3
-; GFX900-NEXT:    v_readlane_b32 s38, v63, 2
-; GFX900-NEXT:    v_readlane_b32 s37, v63, 1
-; GFX900-NEXT:    v_readlane_b32 s36, v63, 0
 ; GFX900-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -175,18 +107,12 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX900-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: test_tuple:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX906-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; GFX906-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX906-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -202,22 +128,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX906-NEXT:    v_writelane_b32 v63, s36, 0
-; GFX906-NEXT:    v_writelane_b32 v63, s37, 1
-; GFX906-NEXT:    v_writelane_b32 v63, s38, 2
-; GFX906-NEXT:    v_writelane_b32 v63, s39, 3
-; GFX906-NEXT:    v_writelane_b32 v63, s48, 4
-; GFX906-NEXT:    v_writelane_b32 v63, s49, 5
-; GFX906-NEXT:    v_writelane_b32 v63, s50, 6
-; GFX906-NEXT:    v_writelane_b32 v63, s51, 7
-; GFX906-NEXT:    v_writelane_b32 v63, s52, 8
-; GFX906-NEXT:    v_writelane_b32 v63, s53, 9
-; GFX906-NEXT:    v_writelane_b32 v63, s54, 10
-; GFX906-NEXT:    v_writelane_b32 v63, s55, 11
-; GFX906-NEXT:    v_writelane_b32 v63, s64, 12
-; GFX906-NEXT:    v_writelane_b32 v63, s65, 13
-; GFX906-NEXT:    v_writelane_b32 v63, s66, 14
-; GFX906-NEXT:    v_writelane_b32 v63, s67, 15
 ; GFX906-NEXT:    v_mov_b32_e32 v33, v30
 ; GFX906-NEXT:    v_mov_b32_e32 v34, v29
 ; GFX906-NEXT:    v_mov_b32_e32 v35, v28
@@ -249,38 +159,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    v_mov_b32_e32 v61, v2
 ; GFX906-NEXT:    v_mov_b32_e32 v62, v1
 ; GFX906-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
-; GFX906-NEXT:    ; implicit-def: $sgpr4
 ; GFX906-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
 ; GFX906-NEXT:    v_mov_b32_e32 v1, v62
 ; GFX906-NEXT:    v_mov_b32_e32 v2, v61
@@ -313,24 +191,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX906-NEXT:    v_mov_b32_e32 v30, v33
 ; GFX906-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
-; GFX906-NEXT:    ; implicit-def: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
-; GFX906-NEXT:    v_readlane_b32 s67, v63, 15
-; GFX906-NEXT:    v_readlane_b32 s66, v63, 14
-; GFX906-NEXT:    v_readlane_b32 s65, v63, 13
-; GFX906-NEXT:    v_readlane_b32 s64, v63, 12
-; GFX906-NEXT:    v_readlane_b32 s55, v63, 11
-; GFX906-NEXT:    v_readlane_b32 s54, v63, 10
-; GFX906-NEXT:    v_readlane_b32 s53, v63, 9
-; GFX906-NEXT:    v_readlane_b32 s52, v63, 8
-; GFX906-NEXT:    v_readlane_b32 s51, v63, 7
-; GFX906-NEXT:    v_readlane_b32 s50, v63, 6
-; GFX906-NEXT:    v_readlane_b32 s49, v63, 5
-; GFX906-NEXT:    v_readlane_b32 s48, v63, 4
-; GFX906-NEXT:    v_readlane_b32 s39, v63, 3
-; GFX906-NEXT:    v_readlane_b32 s38, v63, 2
-; GFX906-NEXT:    v_readlane_b32 s37, v63, 1
-; GFX906-NEXT:    v_readlane_b32 s36, v63, 0
 ; GFX906-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -346,18 +207,12 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GFX906-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX906-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; GFX906-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: test_tuple:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX908-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX908-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
@@ -372,22 +227,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
-; GFX908-NEXT:    v_writelane_b32 v62, s36, 0
-; GFX908-NEXT:    v_writelane_b32 v62, s37, 1
-; GFX908-NEXT:    v_writelane_b32 v62, s38, 2
-; GFX908-NEXT:    v_writelane_b32 v62, s39, 3
-; GFX908-NEXT:    v_writelane_b32 v62, s48, 4
-; GFX908-NEXT:    v_writelane_b32 v62, s49, 5
-; GFX908-NEXT:    v_writelane_b32 v62, s50, 6
-; GFX908-NEXT:    v_writelane_b32 v62, s51, 7
-; GFX908-NEXT:    v_writelane_b32 v62, s52, 8
-; GFX908-NEXT:    v_writelane_b32 v62, s53, 9
-; GFX908-NEXT:    v_writelane_b32 v62, s54, 10
-; GFX908-NEXT:    v_writelane_b32 v62, s55, 11
-; GFX908-NEXT:    v_writelane_b32 v62, s64, 12
-; GFX908-NEXT:    v_writelane_b32 v62, s65, 13
-; GFX908-NEXT:    v_writelane_b32 v62, s66, 14
-; GFX908-NEXT:    v_writelane_b32 v62, s67, 15
+; GFX908-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
 ; GFX908-NEXT:    v_mov_b32_e32 v33, v30
 ; GFX908-NEXT:    v_mov_b32_e32 v34, v29
 ; GFX908-NEXT:    v_mov_b32_e32 v35, v28
@@ -417,46 +257,10 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_mov_b32_e32 v59, v4
 ; GFX908-NEXT:    v_mov_b32_e32 v60, v3
 ; GFX908-NEXT:    v_mov_b32_e32 v61, v2
-; GFX908-NEXT:    v_mov_b32_e32 v32, v1
-; GFX908-NEXT:    buffer_load_dword v1, off, s[0:3], s32
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_accvgpr_write_b32 a14, v1 ; Reload Reuse
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
-; GFX908-NEXT:    ; implicit-def: $sgpr4
+; GFX908-NEXT:    v_mov_b32_e32 v62, v1
+; GFX908-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; GFX908-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
-; GFX908-NEXT:    v_mov_b32_e32 v1, v32
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_read_b32 v32, a14 ; Reload Reuse
+; GFX908-NEXT:    v_mov_b32_e32 v1, v62
 ; GFX908-NEXT:    v_mov_b32_e32 v2, v61
 ; GFX908-NEXT:    v_mov_b32_e32 v3, v60
 ; GFX908-NEXT:    v_mov_b32_e32 v4, v59
@@ -487,24 +291,8 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX908-NEXT:    v_mov_b32_e32 v30, v33
 ; GFX908-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
-; GFX908-NEXT:    ; implicit-def: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 0
-; GFX908-NEXT:    v_readlane_b32 s67, v62, 15
-; GFX908-NEXT:    v_readlane_b32 s66, v62, 14
-; GFX908-NEXT:    v_readlane_b32 s65, v62, 13
-; GFX908-NEXT:    v_readlane_b32 s64, v62, 12
-; GFX908-NEXT:    v_readlane_b32 s55, v62, 11
-; GFX908-NEXT:    v_readlane_b32 s54, v62, 10
-; GFX908-NEXT:    v_readlane_b32 s53, v62, 9
-; GFX908-NEXT:    v_readlane_b32 s52, v62, 8
-; GFX908-NEXT:    v_readlane_b32 s51, v62, 7
-; GFX908-NEXT:    v_readlane_b32 s50, v62, 6
-; GFX908-NEXT:    v_readlane_b32 s49, v62, 5
-; GFX908-NEXT:    v_readlane_b32 s48, v62, 4
-; GFX908-NEXT:    v_readlane_b32 s39, v62, 3
-; GFX908-NEXT:    v_readlane_b32 s38, v62, 2
-; GFX908-NEXT:    v_readlane_b32 s37, v62, 1
-; GFX908-NEXT:    v_readlane_b32 s36, v62, 0
+; GFX908-NEXT:    v_accvgpr_read_b32 v62, a14 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v61, a13 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v60, a12 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v59, a11 ; Reload Reuse
@@ -519,18 +307,12 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_accvgpr_read_b32 v42, a2 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
-; GFX908-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX908-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX908-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90a-LABEL: test_tuple:
 ; GFX90a:       ; %bb.0:
 ; GFX90a-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90a-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX90a-NEXT:    buffer_store_dword v63, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX90a-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
@@ -546,22 +328,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
-; GFX90a-NEXT:    v_writelane_b32 v63, s36, 0
-; GFX90a-NEXT:    v_writelane_b32 v63, s37, 1
-; GFX90a-NEXT:    v_writelane_b32 v63, s38, 2
-; GFX90a-NEXT:    v_writelane_b32 v63, s39, 3
-; GFX90a-NEXT:    v_writelane_b32 v63, s48, 4
-; GFX90a-NEXT:    v_writelane_b32 v63, s49, 5
-; GFX90a-NEXT:    v_writelane_b32 v63, s50, 6
-; GFX90a-NEXT:    v_writelane_b32 v63, s51, 7
-; GFX90a-NEXT:    v_writelane_b32 v63, s52, 8
-; GFX90a-NEXT:    v_writelane_b32 v63, s53, 9
-; GFX90a-NEXT:    v_writelane_b32 v63, s54, 10
-; GFX90a-NEXT:    v_writelane_b32 v63, s55, 11
-; GFX90a-NEXT:    v_writelane_b32 v63, s64, 12
-; GFX90a-NEXT:    v_writelane_b32 v63, s65, 13
-; GFX90a-NEXT:    v_writelane_b32 v63, s66, 14
-; GFX90a-NEXT:    v_writelane_b32 v63, s67, 15
 ; GFX90a-NEXT:    v_mov_b32_e32 v33, v30
 ; GFX90a-NEXT:    v_mov_b32_e32 v34, v29
 ; GFX90a-NEXT:    v_mov_b32_e32 v35, v28
@@ -593,38 +359,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_mov_b32_e32 v61, v2
 ; GFX90a-NEXT:    v_mov_b32_e32 v62, v1
 ; GFX90a-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
-; GFX90a-NEXT:    ; implicit-def: $sgpr4
 ; GFX90a-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, v62
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, v61
@@ -657,24 +391,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX90a-NEXT:    v_mov_b32_e32 v30, v33
 ; GFX90a-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
-; GFX90a-NEXT:    ; implicit-def: $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90a-NEXT:    v_readlane_b32 s67, v63, 15
-; GFX90a-NEXT:    v_readlane_b32 s66, v63, 14
-; GFX90a-NEXT:    v_readlane_b32 s65, v63, 13
-; GFX90a-NEXT:    v_readlane_b32 s64, v63, 12
-; GFX90a-NEXT:    v_readlane_b32 s55, v63, 11
-; GFX90a-NEXT:    v_readlane_b32 s54, v63, 10
-; GFX90a-NEXT:    v_readlane_b32 s53, v63, 9
-; GFX90a-NEXT:    v_readlane_b32 s52, v63, 8
-; GFX90a-NEXT:    v_readlane_b32 s51, v63, 7
-; GFX90a-NEXT:    v_readlane_b32 s50, v63, 6
-; GFX90a-NEXT:    v_readlane_b32 s49, v63, 5
-; GFX90a-NEXT:    v_readlane_b32 s48, v63, 4
-; GFX90a-NEXT:    v_readlane_b32 s39, v63, 3
-; GFX90a-NEXT:    v_readlane_b32 s38, v63, 2
-; GFX90a-NEXT:    v_readlane_b32 s37, v63, 1
-; GFX90a-NEXT:    v_readlane_b32 s36, v63, 0
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v62, a14 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v61, a13 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v60, a12 ; Reload Reuse
@@ -690,9 +407,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v42, a2 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
-; GFX90a-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GFX90a-NEXT:    buffer_load_dword v63, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX90a-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX90a-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90a-NEXT:    s_setpc_b64 s[30:31]
   %2 = shufflevector <16 x i64> %0, <16 x i64> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

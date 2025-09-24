@@ -91,9 +91,7 @@ class DebugMap {
 
 public:
   DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
-           ArrayRef<uint8_t> BinaryUUID = ArrayRef<uint8_t>())
-      : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
-        BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
+           ArrayRef<uint8_t> BinaryUUID = ArrayRef<uint8_t>());
 
   using const_iterator = ObjectContainer::const_iterator;
 

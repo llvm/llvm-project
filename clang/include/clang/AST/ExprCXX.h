@@ -1712,6 +1712,19 @@ public:
     CXXConstructExprBits.IsImmediateEscalating = Set;
   }
 
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getConstructor(), getType());
+  }
+
+  /// Returns true if this call expression should warn on unused results.
+  bool hasUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttr(Ctx).second != nullptr;
+  }
+
   SourceLocation getBeginLoc() const LLVM_READONLY;
   SourceLocation getEndLoc() const LLVM_READONLY;
   SourceRange getParenOrBraceRange() const { return ParenOrBraceRange; }

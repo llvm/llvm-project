@@ -51,12 +51,12 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE MAPPER (t::v) MAP(v%x)
+!UNPARSE: !$OMP DECLARE_MAPPER(t::v) MAP(v%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpMapperSpecifier
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareMapperConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare mapper
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
 !PARSE-TREE: | | string = 't.omp.default.mapper'
 !PARSE-TREE: | | TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
@@ -66,6 +66,7 @@ end
 !PARSE-TREE: | | | DataRef -> Name = 'v'
 !PARSE-TREE: | | | Name = 'x'
 !PARSE-TREE: | | bool = 'true'
+!PARSE-TREE: | Flags = None
 
 subroutine f02
   type :: t
@@ -78,13 +79,12 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE REDUCTION (+:t: omp_out%x=omp_out%x+omp_in%x
-!UNPARSE: )
+!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x+omp_in%x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpReductionSpecifier
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
@@ -104,6 +104,7 @@ end
 !PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_in'
 !PARSE-TREE: | | | | | | | Name = 'x'
 !PARSE-TREE: | OmpClauseList ->
+!PARSE-TREE: | Flags = None
 
 subroutine f03
   !$omp declare_simd
@@ -175,7 +176,7 @@ end
 !UNPARSE: !$OMP END TARGET_DATA
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Map -> OmpMapClause

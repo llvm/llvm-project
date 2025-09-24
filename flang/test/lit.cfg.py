@@ -18,11 +18,22 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "Flang"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -118,10 +129,11 @@ if config.flang_standalone_build:
                 "PATH", config.flang_llvm_tools_dir, append_path=True
             )
 
-# On MacOS, -isysroot is needed to build binaries.
+# On MacOS, some tests need -isysroot to build binaries.
 isysroot_flag = []
 if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
+config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 
 # Check for DEFAULT_SYSROOT, because when it is set -isysroot has no effect.
 if config.default_sysroot:
@@ -133,7 +145,6 @@ tools = [
     ToolSubst(
         "%flang",
         command=FindTool("flang"),
-        extra_args=isysroot_flag,
         unresolved="fatal",
     ),
     ToolSubst(
@@ -171,6 +182,11 @@ if config.flang_standalone_build:
     )
 else:
     llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
+
+llvm_config.use_clang(required=False)
+
+# Clang may need the include path for ISO_fortran_binding.h.
+config.substitutions.append(("%flang_include", config.flang_headers_dir))
 
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")

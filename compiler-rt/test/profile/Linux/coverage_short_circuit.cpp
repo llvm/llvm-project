@@ -1,3 +1,4 @@
+// REQUIRES: lld-available
 // RUN: %clangxx_profgen -std=c++17 -fuse-ld=lld -fcoverage-mapping -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw

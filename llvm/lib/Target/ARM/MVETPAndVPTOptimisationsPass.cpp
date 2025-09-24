@@ -922,7 +922,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
   // the function.
   unsigned LastVPTImm = 0;
   Register LastVPTReg = 0;
-  SmallSet<MachineInstr *, 4> DeadInstructions;
+  SmallPtrSet<MachineInstr *, 4> DeadInstructions;
 
   for (MachineInstr &Instr : MBB.instrs()) {
     // Look for predicated MVE instructions.

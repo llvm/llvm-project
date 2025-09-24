@@ -121,7 +121,8 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZicsr,
                                       FeatureVendorXMIPSCMov,
                                       FeatureVendorXMIPSLSP,
-                                      FeatureVendorXMIPSCBOP],
+                                      FeatureVendorXMIPSCBOP,
+                                      FeatureVendorXMIPSEXECTL],
                                      [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
@@ -389,7 +390,11 @@ def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                        FeatureStdExtC,
                                        FeatureStdExtZba,
                                        FeatureStdExtZbb],
-                                      SiFiveP500TuneFeatures>;
+                                      SiFiveP500TuneFeatures> {
+  let MVendorID = 0x489;
+  let MArchID = 0x8000000000000008;
+  let MImpID = 0x6220425;
+}
 
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       !listconcat(RVA22U64Features,
@@ -673,6 +678,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZvfh,
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b,
+                                        FeatureVendorXSMTVDot,
                                         FeatureUnalignedScalarMem]),
                                        [TuneDLenFactor2,
                                         TuneOptimizedNF2SegmentLoadStore,

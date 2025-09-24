@@ -1414,7 +1414,7 @@ struct UnrollTransferWriteConversion
   /// Return the vector from which newly generated ExtracOps will extract.
   Value getDataVector(TransferWriteOp xferOp) const {
     if (auto extractOp = getExtractOp(xferOp))
-      return extractOp.getVector();
+      return extractOp.getSource();
     return xferOp.getVector();
   }
 

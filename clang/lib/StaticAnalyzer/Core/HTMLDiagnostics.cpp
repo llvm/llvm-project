@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PlistDiagnostics.h"
+#include "SarifDiagnostics.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
@@ -169,6 +171,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ArrowMap &Indices) {
 
 } // namespace
 
+/// Creates and registers an HTML diagnostic consumer, without any additional
+/// text consumer.
+static void createHTMLDiagnosticConsumerImpl(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &OutputDir, const Preprocessor &PP,
+    bool SupportMultipleFiles) {
+
+  // TODO: Emit an error here.
+  if (OutputDir.empty())
+    return;
+
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(
+      std::move(DiagOpts), OutputDir, PP, SupportMultipleFiles));
+}
+
 void ento::createHTMLDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
@@ -183,12 +200,8 @@ void ento::createHTMLDiagnosticConsumer(
   createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU,
                                           MacroExpansions);
 
-  // TODO: Emit an error here.
-  if (OutputDir.empty())
-    return;
-
-  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
-                                                   OutputDir, PP, true));
+  createHTMLDiagnosticConsumerImpl(DiagOpts, C, OutputDir, PP,
+                                   /*SupportMultipleFiles=*/true);
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -199,12 +212,8 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU,
                                           MacroExpansions);
 
-  // TODO: Emit an error here.
-  if (OutputDir.empty())
-    return;
-
-  C.emplace_back(std::make_unique<HTMLDiagnostics>(std::move(DiagOpts),
-                                                   OutputDir, PP, false));
+  createHTMLDiagnosticConsumerImpl(DiagOpts, C, OutputDir, PP,
+                                   /*SupportMultipleFiles=*/false);
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(
@@ -212,11 +221,10 @@ void ento::createPlistHTMLDiagnosticConsumer(
     const std::string &prefix, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
-  createHTMLDiagnosticConsumer(
-      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP, CTU,
-      MacroExpansions);
-  createPlistMultiFileDiagnosticConsumer(DiagOpts, C, prefix, PP, CTU,
-                                         MacroExpansions);
+  createHTMLDiagnosticConsumerImpl(
+      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP, true);
+  createPlistDiagnosticConsumerImpl(DiagOpts, C, prefix, PP, CTU,
+                                    MacroExpansions, true);
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, prefix, PP,
                                           CTU, MacroExpansions);
 }
@@ -226,11 +234,11 @@ void ento::createSarifHTMLDiagnosticConsumer(
     const std::string &sarif_file, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
-  createHTMLDiagnosticConsumer(
+  createHTMLDiagnosticConsumerImpl(
       DiagOpts, C, std::string(llvm::sys::path::parent_path(sarif_file)), PP,
-      CTU, MacroExpansions);
-  createSarifDiagnosticConsumer(DiagOpts, C, sarif_file, PP, CTU,
-                                MacroExpansions);
+      true);
+  createSarifDiagnosticConsumerImpl(DiagOpts, C, sarif_file, PP);
+
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, sarif_file,
                                           PP, CTU, MacroExpansions);
 }

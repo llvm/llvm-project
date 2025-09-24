@@ -20,7 +20,9 @@
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -83,9 +85,14 @@ static cl::opt<unsigned>
     BDisplacementBits("aarch64-b-offset-bits", cl::Hidden, cl::init(26),
                       cl::desc("Restrict range of B instructions (DEBUG)"));
 
+static cl::opt<unsigned> GatherOptSearchLimit(
+    "aarch64-search-limit", cl::Hidden, cl::init(2048),
+    cl::desc("Restrict range of instructions to search for the "
+             "machine-combiner gather pattern optimization"));
+
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
-    : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP,
-                          AArch64::CATCHRET),
+    : AArch64GenInstrInfo(STI, AArch64::ADJCALLSTACKDOWN,
+                          AArch64::ADJCALLSTACKUP, AArch64::CATCHRET),
       RI(STI.getTargetTriple(), STI.getHwMode()), Subtarget(STI) {}
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -1292,6 +1299,7 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     break;
   case AArch64::PTEST_PP:
   case AArch64::PTEST_PP_ANY:
+  case AArch64::PTEST_PP_FIRST:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = MI.getOperand(1).getReg();
     if (MI.getOperand(2).getSubReg())
@@ -1605,6 +1613,16 @@ bool AArch64InstrInfo::optimizePTestInstr(
     const MachineRegisterInfo *MRI) const {
   auto *Mask = MRI->getUniqueVRegDef(MaskReg);
   auto *Pred = MRI->getUniqueVRegDef(PredReg);
+
+  if (Pred->isCopy() && PTest->getOpcode() == AArch64::PTEST_PP_FIRST) {
+    // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
+    // before the branch to extract each subregister.
+    auto Op = Pred->getOperand(1);
+    if (Op.isReg() && Op.getReg().isVirtual() &&
+        Op.getSubReg() == AArch64::psub0)
+      Pred = MRI->getUniqueVRegDef(Op.getReg());
+  }
+
   unsigned PredOpcode = Pred->getOpcode();
   auto NewOp = canRemovePTestInstr(PTest, Mask, Pred, MRI);
   if (!NewOp)
@@ -1684,7 +1702,8 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   }
 
   if (CmpInstr.getOpcode() == AArch64::PTEST_PP ||
-      CmpInstr.getOpcode() == AArch64::PTEST_PP_ANY)
+      CmpInstr.getOpcode() == AArch64::PTEST_PP_ANY ||
+      CmpInstr.getOpcode() == AArch64::PTEST_PP_FIRST)
     return optimizePTestInstr(&CmpInstr, SrcReg, SrcReg2, MRI);
 
   if (SrcReg2 != 0)
@@ -5068,7 +5087,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addImm(0)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
       }
-    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroingGP()) {
+    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroingGPR32()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
@@ -5078,8 +5097,13 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
-        MCRegister SrcRegX = TRI->getMatchingSuperReg(
-            SrcReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
+        assert(DestRegX.isValid() && "Destination super-reg not valid");
+        MCRegister SrcRegX =
+            SrcReg == AArch64::WZR
+                ? AArch64::XZR
+                : TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
+                                           &AArch64::GPR64spRegClass);
+        assert(SrcRegX.isValid() && "Source super-reg not valid");
         // This instruction is reading and writing X registers.  This may upset
         // the register scavenger and machine verifier, so we need to indicate
         // that we are reading an undefined value from SrcRegX, but a proper
@@ -5190,7 +5214,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroingGP()) {
+    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroingGPR64()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
@@ -5306,15 +5330,49 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR64RegClass.contains(DestReg) &&
       AArch64::FPR64RegClass.contains(SrcReg)) {
-    BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::dsub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::dsub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVDr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
 
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::FPR32RegClass.contains(SrcReg)) {
-    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::ssub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+               !Subtarget.hasZeroCycleRegMoveFPR32()) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::ssub,
                                                      &AArch64::FPR64RegClass);
@@ -5336,8 +5394,24 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR16RegClass.contains(DestReg) &&
       AArch64::FPR16RegClass.contains(SrcReg)) {
-    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::hsub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+               !Subtarget.hasZeroCycleRegMoveFPR32()) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::hsub,
                                                      &AArch64::FPR64RegClass);
@@ -5363,8 +5437,24 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR8RegClass.contains(DestReg) &&
       AArch64::FPR8RegClass.contains(SrcReg)) {
-    if (Subtarget.hasZeroCycleRegMoveFPR64() &&
-        !Subtarget.hasZeroCycleRegMoveFPR32()) {
+    if (Subtarget.hasZeroCycleRegMoveFPR128() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() &&
+        !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable()) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      MCRegister DestRegQ = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
+                                                     &AArch64::FPR128RegClass);
+      MCRegister SrcRegQ = TRI->getMatchingSuperReg(SrcReg, AArch64::bsub,
+                                                    &AArch64::FPR128RegClass);
+      // This instruction is reading and writing Q registers. This may upset
+      // the register scavenger and machine verifier, so we need to indicate
+      // that we are reading an undefined value from SrcRegQ, but a proper
+      // value from SrcReg.
+      BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestRegQ)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcRegQ, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit | getKillRegState(KillSrc));
+    } else if (Subtarget.hasZeroCycleRegMoveFPR64() &&
+               !Subtarget.hasZeroCycleRegMoveFPR32()) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       MCRegister DestRegD = TRI->getMatchingSuperReg(DestReg, AArch64::bsub,
                                                      &AArch64::FPR64RegClass);
@@ -5391,8 +5481,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copies between GPR64 and FPR64.
   if (AArch64::FPR64RegClass.contains(DestReg) &&
       AArch64::GPR64RegClass.contains(SrcReg)) {
-    BuildMI(MBB, I, DL, get(AArch64::FMOVXDr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (AArch64::XZR == SrcReg) {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVD0), DestReg);
+    } else {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVXDr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
   if (AArch64::GPR64RegClass.contains(DestReg) &&
@@ -5404,8 +5498,12 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copies between GPR32 and FPR32.
   if (AArch64::FPR32RegClass.contains(DestReg) &&
       AArch64::GPR32RegClass.contains(SrcReg)) {
-    BuildMI(MBB, I, DL, get(AArch64::FMOVWSr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+    if (AArch64::WZR == SrcReg) {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVS0), DestReg);
+    } else {
+      BuildMI(MBB, I, DL, get(AArch64::FMOVWSr), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+    }
     return;
   }
   if (AArch64::GPR32RegClass.contains(DestReg) &&
@@ -5888,6 +5986,18 @@ static void appendReadRegExpr(SmallVectorImpl<char> &Expr, unsigned RegNum) {
   Expr.push_back(0);
 }
 
+// Convenience function to create a DWARF expression for loading a register from
+// a CFA offset.
+static void appendLoadRegExpr(SmallVectorImpl<char> &Expr,
+                              int64_t OffsetFromDefCFA) {
+  // This assumes the top of the DWARF stack contains the CFA.
+  Expr.push_back(dwarf::DW_OP_dup);
+  // Add the offset to the register.
+  appendConstantExpr(Expr, OffsetFromDefCFA, dwarf::DW_OP_plus);
+  // Dereference the address (loads a 64 bit value)..
+  Expr.push_back(dwarf::DW_OP_deref);
+}
+
 // Convenience function to create a comment for
 //  (+/-) NumBytes (* RegScale)?
 static void appendOffsetComment(int NumBytes, llvm::raw_string_ostream &Comment,
@@ -5920,7 +6030,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   // Build up the expression (Reg + NumBytes + VG * NumVGScaledBytes)
   SmallString<64> Expr;
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  assert(DwarfReg >= 0 && DwarfReg <= 31 && "DwarfReg out of bounds (0..31)");
+  assert(DwarfReg <= 31 && "DwarfReg out of bounds (0..31)");
   // Reg + NumBytes
   Expr.push_back(dwarf::DW_OP_breg0 + DwarfReg);
   appendLEB128<LEB128Sign::Signed>(Expr, NumBytes);
@@ -5956,9 +6066,10 @@ MCCFIInstruction llvm::createDefCFA(const TargetRegisterInfo &TRI,
   return MCCFIInstruction::cfiDefCfa(nullptr, DwarfReg, (int)Offset.getFixed());
 }
 
-MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
-                                       unsigned Reg,
-                                       const StackOffset &OffsetFromDefCFA) {
+MCCFIInstruction
+llvm::createCFAOffset(const TargetRegisterInfo &TRI, unsigned Reg,
+                      const StackOffset &OffsetFromDefCFA,
+                      std::optional<int64_t> IncomingVGOffsetFromDefCFA) {
   int64_t NumBytes, NumVGScaledBytes;
   AArch64InstrInfo::decomposeStackOffsetForDwarfOffsets(
       OffsetFromDefCFA, NumBytes, NumVGScaledBytes);
@@ -5977,9 +6088,16 @@ MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
   assert(NumVGScaledBytes && "Expected scalable offset");
   SmallString<64> OffsetExpr;
   // + VG * NumVGScaledBytes
-  appendOffsetComment(NumVGScaledBytes, Comment, "* VG");
-  appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+  StringRef VGRegScale;
+  if (IncomingVGOffsetFromDefCFA) {
+    appendLoadRegExpr(OffsetExpr, *IncomingVGOffsetFromDefCFA);
+    VGRegScale = "* IncomingVG";
+  } else {
+    appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+    VGRegScale = "* VG";
+  }
   appendConstantExpr(OffsetExpr, NumVGScaledBytes, dwarf::DW_OP_mul);
+  appendOffsetComment(NumVGScaledBytes, Comment, VGRegScale);
   OffsetExpr.push_back(dwarf::DW_OP_plus);
   if (NumBytes) {
     // + NumBytes
@@ -6155,6 +6273,11 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
       Offset, Bytes, NumPredicateVectors, NumDataVectors);
 
+  // Insert ADDSXri for scalable offset at the end.
+  bool NeedsFinalDefNZCV = SetNZCV && (NumPredicateVectors || NumDataVectors);
+  if (NeedsFinalDefNZCV)
+    SetNZCV = false;
+
   // First emit non-scalable frame offsets, or a simple 'mov'.
   if (Bytes || (!Offset && SrcReg != DestReg)) {
     assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
@@ -6174,8 +6297,6 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
     FrameReg = DestReg;
   }
 
-  assert(!(SetNZCV && (NumPredicateVectors || NumDataVectors)) &&
-         "SetNZCV not supported with SVE vectors");
   assert(!(NeedsWinCFI && NumPredicateVectors) &&
          "WinCFI can't allocate fractions of an SVE data vector");
 
@@ -6195,6 +6316,12 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                        Flag, NeedsWinCFI, HasWinCFI, EmitCFAOffset, CFAOffset,
                        FrameReg);
   }
+
+  if (NeedsFinalDefNZCV)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDSXri), DestReg)
+        .addReg(DestReg)
+        .addImm(0)
+        .addImm(0);
 }
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
@@ -6620,7 +6747,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
   if (MO.isReg() && MO.getReg().isVirtual())
     MI = MRI.getUniqueVRegDef(MO.getReg());
   // And it needs to be in the trace (otherwise, it won't have a depth).
-  if (!MI || MI->getParent() != &MBB || (unsigned)MI->getOpcode() != CombineOpc)
+  if (!MI || MI->getParent() != &MBB || MI->getOpcode() != CombineOpc)
     return false;
   // Must only used by the user we combine with.
   if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
@@ -7412,11 +7539,319 @@ static bool getMiscPatterns(MachineInstr &Root,
   return false;
 }
 
+/// Check if the given instruction forms a gather load pattern that can be
+/// optimized for better Memory-Level Parallelism (MLP). This function
+/// identifies chains of NEON lane load instructions that load data from
+/// different memory addresses into individual lanes of a 128-bit vector
+/// register, then attempts to split the pattern into parallel loads to break
+/// the serial dependency between instructions.
+///
+/// Pattern Matched:
+///   Initial scalar load -> SUBREG_TO_REG (lane 0) -> LD1i* (lane 1) ->
+///   LD1i* (lane 2) -> ... -> LD1i* (lane N-1, Root)
+///
+/// Transformed Into:
+///   Two parallel vector loads using fewer lanes each, followed by ZIP1v2i64
+///   to combine the results, enabling better memory-level parallelism.
+///
+/// Supported Element Types:
+///   - 32-bit elements (LD1i32, 4 lanes total)
+///   - 16-bit elements (LD1i16, 8 lanes total)
+///   - 8-bit elements (LD1i8, 16 lanes total)
+static bool getGatherLanePattern(MachineInstr &Root,
+                                 SmallVectorImpl<unsigned> &Patterns,
+                                 unsigned LoadLaneOpCode, unsigned NumLanes) {
+  const MachineFunction *MF = Root.getMF();
+
+  // Early exit if optimizing for size.
+  if (MF->getFunction().hasMinSize())
+    return false;
+
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+
+  // The root of the pattern must load into the last lane of the vector.
+  if (Root.getOperand(2).getImm() != NumLanes - 1)
+    return false;
+
+  // Check that we have load into all lanes except lane 0.
+  // For each load we also want to check that:
+  // 1. It has a single non-debug use (since we will be replacing the virtual
+  // register)
+  // 2. That the addressing mode only uses a single pointer operand
+  auto *CurrInstr = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  auto Range = llvm::seq<unsigned>(1, NumLanes - 1);
+  SmallSet<unsigned, 16> RemainingLanes(Range.begin(), Range.end());
+  SmallVector<const MachineInstr *, 16> LoadInstrs;
+  while (!RemainingLanes.empty() && CurrInstr &&
+         CurrInstr->getOpcode() == LoadLaneOpCode &&
+         MRI.hasOneNonDBGUse(CurrInstr->getOperand(0).getReg()) &&
+         CurrInstr->getNumOperands() == 4) {
+    RemainingLanes.erase(CurrInstr->getOperand(2).getImm());
+    LoadInstrs.push_back(CurrInstr);
+    CurrInstr = MRI.getUniqueVRegDef(CurrInstr->getOperand(1).getReg());
+  }
+
+  // Check that we have found a match for lanes N-1.. 1.
+  if (!RemainingLanes.empty())
+    return false;
+
+  // Match the SUBREG_TO_REG sequence.
+  if (CurrInstr->getOpcode() != TargetOpcode::SUBREG_TO_REG)
+    return false;
+
+  // Verify that the subreg to reg loads an integer into the first lane.
+  auto Lane0LoadReg = CurrInstr->getOperand(2).getReg();
+  unsigned SingleLaneSizeInBits = 128 / NumLanes;
+  if (TRI->getRegSizeInBits(Lane0LoadReg, MRI) != SingleLaneSizeInBits)
+    return false;
+
+  // Verify that it also has a single non debug use.
+  if (!MRI.hasOneNonDBGUse(Lane0LoadReg))
+    return false;
+
+  LoadInstrs.push_back(MRI.getUniqueVRegDef(Lane0LoadReg));
+
+  // If there is any chance of aliasing, do not apply the pattern.
+  // Walk backward through the MBB starting from Root.
+  // Exit early if we've encountered all load instructions or hit the search
+  // limit.
+  auto MBBItr = Root.getIterator();
+  unsigned RemainingSteps = GatherOptSearchLimit;
+  SmallPtrSet<const MachineInstr *, 16> RemainingLoadInstrs;
+  RemainingLoadInstrs.insert(LoadInstrs.begin(), LoadInstrs.end());
+  const MachineBasicBlock *MBB = Root.getParent();
+
+  for (; MBBItr != MBB->begin() && RemainingSteps > 0 &&
+         !RemainingLoadInstrs.empty();
+       --MBBItr, --RemainingSteps) {
+    const MachineInstr &CurrInstr = *MBBItr;
+
+    // Remove this instruction from remaining loads if it's one we're tracking.
+    RemainingLoadInstrs.erase(&CurrInstr);
+
+    // Check for potential aliasing with any of the load instructions to
+    // optimize.
+    if (CurrInstr.isLoadFoldBarrier())
+      return false;
+  }
+
+  // If we hit the search limit without finding all load instructions,
+  // don't match the pattern.
+  if (RemainingSteps == 0 && !RemainingLoadInstrs.empty())
+    return false;
+
+  switch (NumLanes) {
+  case 4:
+    Patterns.push_back(AArch64MachineCombinerPattern::GATHER_LANE_i32);
+    break;
+  case 8:
+    Patterns.push_back(AArch64MachineCombinerPattern::GATHER_LANE_i16);
+    break;
+  case 16:
+    Patterns.push_back(AArch64MachineCombinerPattern::GATHER_LANE_i8);
+    break;
+  default:
+    llvm_unreachable("Got bad number of lanes for gather pattern.");
+  }
+
+  return true;
+}
+
+/// Search for patterns of LD instructions we can optimize.
+static bool getLoadPatterns(MachineInstr &Root,
+                            SmallVectorImpl<unsigned> &Patterns) {
+
+  // The pattern searches for loads into single lanes.
+  switch (Root.getOpcode()) {
+  case AArch64::LD1i32:
+    return getGatherLanePattern(Root, Patterns, Root.getOpcode(), 4);
+  case AArch64::LD1i16:
+    return getGatherLanePattern(Root, Patterns, Root.getOpcode(), 8);
+  case AArch64::LD1i8:
+    return getGatherLanePattern(Root, Patterns, Root.getOpcode(), 16);
+  default:
+    return false;
+  }
+}
+
+/// Generate optimized instruction sequence for gather load patterns to improve
+/// Memory-Level Parallelism (MLP). This function transforms a chain of
+/// sequential NEON lane loads into parallel vector loads that can execute
+/// concurrently.
+static void
+generateGatherLanePattern(MachineInstr &Root,
+                          SmallVectorImpl<MachineInstr *> &InsInstrs,
+                          SmallVectorImpl<MachineInstr *> &DelInstrs,
+                          DenseMap<Register, unsigned> &InstrIdxForVirtReg,
+                          unsigned Pattern, unsigned NumLanes) {
+  MachineFunction &MF = *Root.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+
+  // Gather the initial load instructions to build the pattern.
+  SmallVector<MachineInstr *, 16> LoadToLaneInstrs;
+  MachineInstr *CurrInstr = &Root;
+  for (unsigned i = 0; i < NumLanes - 1; ++i) {
+    LoadToLaneInstrs.push_back(CurrInstr);
+    CurrInstr = MRI.getUniqueVRegDef(CurrInstr->getOperand(1).getReg());
+  }
+
+  // Sort the load instructions according to the lane.
+  llvm::sort(LoadToLaneInstrs,
+             [](const MachineInstr *A, const MachineInstr *B) {
+               return A->getOperand(2).getImm() > B->getOperand(2).getImm();
+             });
+
+  MachineInstr *SubregToReg = CurrInstr;
+  LoadToLaneInstrs.push_back(
+      MRI.getUniqueVRegDef(SubregToReg->getOperand(2).getReg()));
+  auto LoadToLaneInstrsAscending = llvm::reverse(LoadToLaneInstrs);
+
+  const TargetRegisterClass *FPR128RegClass =
+      MRI.getRegClass(Root.getOperand(0).getReg());
+
+  // Helper lambda to create a LD1 instruction.
+  auto CreateLD1Instruction = [&](MachineInstr *OriginalInstr,
+                                  Register SrcRegister, unsigned Lane,
+                                  Register OffsetRegister,
+                                  bool OffsetRegisterKillState) {
+    auto NewRegister = MRI.createVirtualRegister(FPR128RegClass);
+    MachineInstrBuilder LoadIndexIntoRegister =
+        BuildMI(MF, MIMetadata(*OriginalInstr), TII->get(Root.getOpcode()),
+                NewRegister)
+            .addReg(SrcRegister)
+            .addImm(Lane)
+            .addReg(OffsetRegister, getKillRegState(OffsetRegisterKillState));
+    InstrIdxForVirtReg.insert(std::make_pair(NewRegister, InsInstrs.size()));
+    InsInstrs.push_back(LoadIndexIntoRegister);
+    return NewRegister;
+  };
+
+  // Helper to create load instruction based on the NumLanes in the NEON
+  // register we are rewriting.
+  auto CreateLDRInstruction = [&](unsigned NumLanes, Register DestReg,
+                                  Register OffsetReg,
+                                  bool KillState) -> MachineInstrBuilder {
+    unsigned Opcode;
+    switch (NumLanes) {
+    case 4:
+      Opcode = AArch64::LDRSui;
+      break;
+    case 8:
+      Opcode = AArch64::LDRHui;
+      break;
+    case 16:
+      Opcode = AArch64::LDRBui;
+      break;
+    default:
+      llvm_unreachable(
+          "Got unsupported number of lanes in machine-combiner gather pattern");
+    }
+    // Immediate offset load
+    return BuildMI(MF, MIMetadata(Root), TII->get(Opcode), DestReg)
+        .addReg(OffsetReg)
+        .addImm(0);
+  };
+
+  // Load the remaining lanes into register 0.
+  auto LanesToLoadToReg0 =
+      llvm::make_range(LoadToLaneInstrsAscending.begin() + 1,
+                       LoadToLaneInstrsAscending.begin() + NumLanes / 2);
+  Register PrevReg = SubregToReg->getOperand(0).getReg();
+  for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg0)) {
+    const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
+    PrevReg = CreateLD1Instruction(LoadInstr, PrevReg, Index + 1,
+                                   OffsetRegOperand.getReg(),
+                                   OffsetRegOperand.isKill());
+    DelInstrs.push_back(LoadInstr);
+  }
+  Register LastLoadReg0 = PrevReg;
+
+  // First load into register 1. Perform an integer load to zero out the upper
+  // lanes in a single instruction.
+  MachineInstr *Lane0Load = *LoadToLaneInstrsAscending.begin();
+  MachineInstr *OriginalSplitLoad =
+      *std::next(LoadToLaneInstrsAscending.begin(), NumLanes / 2);
+  Register DestRegForMiddleIndex = MRI.createVirtualRegister(
+      MRI.getRegClass(Lane0Load->getOperand(0).getReg()));
+
+  const MachineOperand &OriginalSplitToLoadOffsetOperand =
+      OriginalSplitLoad->getOperand(3);
+  MachineInstrBuilder MiddleIndexLoadInstr =
+      CreateLDRInstruction(NumLanes, DestRegForMiddleIndex,
+                           OriginalSplitToLoadOffsetOperand.getReg(),
+                           OriginalSplitToLoadOffsetOperand.isKill());
+
+  InstrIdxForVirtReg.insert(
+      std::make_pair(DestRegForMiddleIndex, InsInstrs.size()));
+  InsInstrs.push_back(MiddleIndexLoadInstr);
+  DelInstrs.push_back(OriginalSplitLoad);
+
+  // Subreg To Reg instruction for register 1.
+  Register DestRegForSubregToReg = MRI.createVirtualRegister(FPR128RegClass);
+  unsigned SubregType;
+  switch (NumLanes) {
+  case 4:
+    SubregType = AArch64::ssub;
+    break;
+  case 8:
+    SubregType = AArch64::hsub;
+    break;
+  case 16:
+    SubregType = AArch64::bsub;
+    break;
+  default:
+    llvm_unreachable(
+        "Got invalid NumLanes for machine-combiner gather pattern");
+  }
+
+  auto SubRegToRegInstr =
+      BuildMI(MF, MIMetadata(Root), TII->get(SubregToReg->getOpcode()),
+              DestRegForSubregToReg)
+          .addImm(0)
+          .addReg(DestRegForMiddleIndex, getKillRegState(true))
+          .addImm(SubregType);
+  InstrIdxForVirtReg.insert(
+      std::make_pair(DestRegForSubregToReg, InsInstrs.size()));
+  InsInstrs.push_back(SubRegToRegInstr);
+
+  // Load remaining lanes into register 1.
+  auto LanesToLoadToReg1 =
+      llvm::make_range(LoadToLaneInstrsAscending.begin() + NumLanes / 2 + 1,
+                       LoadToLaneInstrsAscending.end());
+  PrevReg = SubRegToRegInstr->getOperand(0).getReg();
+  for (auto [Index, LoadInstr] : llvm::enumerate(LanesToLoadToReg1)) {
+    const MachineOperand &OffsetRegOperand = LoadInstr->getOperand(3);
+    PrevReg = CreateLD1Instruction(LoadInstr, PrevReg, Index + 1,
+                                   OffsetRegOperand.getReg(),
+                                   OffsetRegOperand.isKill());
+
+    // Do not add the last reg to DelInstrs - it will be removed later.
+    if (Index == NumLanes / 2 - 2) {
+      break;
+    }
+    DelInstrs.push_back(LoadInstr);
+  }
+  Register LastLoadReg1 = PrevReg;
+
+  // Create the final zip instruction to combine the results.
+  MachineInstrBuilder ZipInstr =
+      BuildMI(MF, MIMetadata(Root), TII->get(AArch64::ZIP1v2i64),
+              Root.getOperand(0).getReg())
+          .addReg(LastLoadReg0)
+          .addReg(LastLoadReg1);
+  InsInstrs.push_back(ZipInstr);
+}
+
 CombinerObjective
 AArch64InstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case AArch64MachineCombinerPattern::SUBADD_OP1:
   case AArch64MachineCombinerPattern::SUBADD_OP2:
+  case AArch64MachineCombinerPattern::GATHER_LANE_i32:
+  case AArch64MachineCombinerPattern::GATHER_LANE_i16:
+  case AArch64MachineCombinerPattern::GATHER_LANE_i8:
     return CombinerObjective::MustReduceDepth;
   default:
     return TargetInstrInfo::getCombinerObjective(Pattern);
@@ -7444,6 +7879,10 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
 
   // Other patterns
   if (getMiscPatterns(Root, Patterns))
+    return true;
+
+  // Load patterns
+  if (getLoadPatterns(Root, Patterns))
     return true;
 
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
@@ -8699,6 +9138,21 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   }
   case AArch64MachineCombinerPattern::FNMADD: {
     MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs);
+    break;
+  }
+  case AArch64MachineCombinerPattern::GATHER_LANE_i32: {
+    generateGatherLanePattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
+                              Pattern, 4);
+    break;
+  }
+  case AArch64MachineCombinerPattern::GATHER_LANE_i16: {
+    generateGatherLanePattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
+                              Pattern, 8);
+    break;
+  }
+  case AArch64MachineCombinerPattern::GATHER_LANE_i8: {
+    generateGatherLanePattern(Root, InsInstrs, DelInstrs, InstrIdxForVirtReg,
+                              Pattern, 16);
     break;
   }
 
@@ -10506,9 +10960,8 @@ static Register cloneInstr(const MachineInstr *MI, unsigned ReplaceOprNum,
           MRI.getRegClass(NewMI->getOperand(0).getReg()));
       NewMI->getOperand(I).setReg(Result);
     } else if (I == ReplaceOprNum) {
-      MRI.constrainRegClass(
-          ReplaceReg,
-          TII->getRegClass(NewMI->getDesc(), I, TRI, *MBB.getParent()));
+      MRI.constrainRegClass(ReplaceReg,
+                            TII->getRegClass(NewMI->getDesc(), I, TRI));
       NewMI->getOperand(I).setReg(ReplaceReg);
     }
   }
@@ -10831,7 +11284,6 @@ AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
 /// verifyInstruction - Perform target specific instruction verification.
 bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
                                          StringRef &ErrInfo) const {
-
   // Verify that immediate offsets on load/store instructions are within range.
   // Stack objects with an FI operand are excluded as they can be fixed up
   // during PEI.
@@ -10845,6 +11297,30 @@ bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Unexpected immediate on load/store instruction";
         return false;
       }
+    }
+  }
+
+  const MCInstrDesc &MCID = MI.getDesc();
+  for (unsigned Op = 0; Op < MCID.getNumOperands(); Op++) {
+    const MachineOperand &MO = MI.getOperand(Op);
+    switch (MCID.operands()[Op].OperandType) {
+    case AArch64::OPERAND_IMPLICIT_IMM_0:
+      if (!MO.isImm() || MO.getImm() != 0) {
+        ErrInfo = "OPERAND_IMPLICIT_IMM_0 should be 0";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_SHIFT_MSL:
+      if (!MO.isImm() ||
+          AArch64_AM::getShiftType(MO.getImm()) != AArch64_AM::MSL ||
+          (AArch64_AM::getShiftValue(MO.getImm()) != 8 &&
+           AArch64_AM::getShiftValue(MO.getImm()) != 16)) {
+        ErrInfo = "OPERAND_SHIFT_MSL should be msl shift of 8 or 16";
+        return false;
+      }
+      break;
+    default:
+      break;
     }
   }
   return true;

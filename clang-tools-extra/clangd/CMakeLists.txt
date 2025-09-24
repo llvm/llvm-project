@@ -6,7 +6,7 @@ add_subdirectory(support)
 
 # Configure the Features.inc file.
 if (NOT DEFINED CLANGD_BUILD_XPC)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(CLANGD_BUILD_XPC_DEFAULT ON)
   else ()
     set(CLANGD_BUILD_XPC_DEFAULT OFF)
@@ -193,7 +193,7 @@ if(CLANGD_TIDY_CHECKS)
 endif()
 
 add_subdirectory(refactor/tweaks)
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   # FIXME: Make fuzzer not use linux-specific APIs, build it everywhere.
   add_subdirectory(fuzzer)
 endif()

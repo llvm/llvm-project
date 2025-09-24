@@ -321,7 +321,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       const bool colorize_err = error_sp->GetFile().GetIsTerminalWithColors();
 
       EvaluateExpressionOptions expr_options = m_expr_options;
-      expr_options.SetCoerceToId(m_varobj_options.use_objc);
+      expr_options.SetCoerceToId(m_varobj_options.use_object_desc);
       expr_options.SetKeepInMemory(true);
       expr_options.SetUseDynamic(m_varobj_options.use_dynamic);
       expr_options.SetGenerateDebugInfo(true);

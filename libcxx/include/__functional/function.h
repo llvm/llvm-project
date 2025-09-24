@@ -15,16 +15,14 @@
 #include <__cstddef/nullptr_t.h>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>
-#include <__functional/invoke.h>
 #include <__functional/unary_function.h>
 #include <__memory/addressof.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/is_core_convertible.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_scalar.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_void.h>
 #include <__type_traits/strip_signature.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -95,29 +93,29 @@ template <class _Rp, class _A1, class _A2>
 struct __maybe_derive_from_binary_function<_Rp(_A1, _A2)> : public __binary_function<_A1, _A2, _Rp> {};
 
 template <class _Fp>
-_LIBCPP_HIDE_FROM_ABI bool __not_null(_Fp const&) {
-  return true;
+_LIBCPP_HIDE_FROM_ABI bool __is_null(_Fp const&) {
+  return false;
 }
 
 template <class _Fp>
-_LIBCPP_HIDE_FROM_ABI bool __not_null(_Fp* __ptr) {
-  return __ptr;
+_LIBCPP_HIDE_FROM_ABI bool __is_null(_Fp* __ptr) {
+  return !__ptr;
 }
 
 template <class _Ret, class _Class>
-_LIBCPP_HIDE_FROM_ABI bool __not_null(_Ret _Class::*__ptr) {
-  return __ptr;
+_LIBCPP_HIDE_FROM_ABI bool __is_null(_Ret _Class::* __ptr) {
+  return !__ptr;
 }
 
 template <class _Fp>
-_LIBCPP_HIDE_FROM_ABI bool __not_null(function<_Fp> const& __f) {
-  return !!__f;
+_LIBCPP_HIDE_FROM_ABI bool __is_null(function<_Fp> const& __f) {
+  return !__f;
 }
 
 #  if __has_extension(blocks)
 template <class _Rp, class... _Args>
-_LIBCPP_HIDE_FROM_ABI bool __not_null(_Rp (^__p)(_Args...)) {
-  return __p;
+_LIBCPP_HIDE_FROM_ABI bool __is_null(_Rp (^__p)(_Args...)) {
+  return !__p;
 }
 #  endif
 
@@ -206,12 +204,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __value_func(_Fp&& __f) : __f_(nullptr) {
     typedef __function::__func<_Fp, _Rp(_ArgTypes...)> _Fun;
 
-    if (__function::__not_null(__f)) {
-      if (sizeof(_Fun) <= sizeof(__buf_) && is_nothrow_copy_constructible<_Fp>::value) {
-        __f_ = ::new (std::addressof(__buf_)) _Fun(std::move(__f));
-      } else {
-        __f_ = new _Fun(std::move(__f));
-      }
+    if (__function::__is_null(__f))
+      return;
+
+    if (sizeof(_Fun) <= sizeof(__buf_) && is_nothrow_copy_constructible<_Fp>::value) {
+      __f_ = ::new (std::addressof(__buf_)) _Fun(std::move(__f));
+    } else {
+      __f_ = new _Fun(std::move(__f));
     }
   }
 
@@ -356,7 +355,31 @@ struct __policy {
   // type.
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create() {
-    return __choose_policy<_Fun>(__use_small_storage<_Fun>());
+    if constexpr (__use_small_storage<_Fun>::value) {
+      static constexpr __policy __policy = {
+          nullptr,
+          nullptr,
+          false,
+#  if _LIBCPP_HAS_RTTI
+          &typeid(_Fun)
+#  else
+          nullptr
+#  endif
+      };
+      return &__policy;
+    } else {
+      static constexpr __policy __policy = {
+          std::addressof(__large_clone<_Fun>),
+          std::addressof(__large_destroy<_Fun>),
+          false,
+#  if _LIBCPP_HAS_RTTI
+          &typeid(_Fun)
+#  else
+          nullptr
+#  endif
+      };
+      return &__policy;
+    }
   }
 
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create_empty() {
@@ -383,36 +406,6 @@ private:
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static void __large_destroy(void* __s) {
     delete static_cast<_Fun*>(__s);
-  }
-
-  template <typename _Fun>
-  _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
-    static constexpr __policy __policy = {
-        std::addressof(__large_clone<_Fun>),
-        std::addressof(__large_destroy<_Fun>),
-        false,
-#  if _LIBCPP_HAS_RTTI
-        &typeid(_Fun)
-#  else
-        nullptr
-#  endif
-    };
-    return &__policy;
-  }
-
-  template <typename _Fun>
-  _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ true_type) {
-    static constexpr __policy __policy = {
-        nullptr,
-        nullptr,
-        false,
-#  if _LIBCPP_HAS_RTTI
-        &typeid(_Fun)
-#  else
-        nullptr
-#  endif
-    };
-    return &__policy;
   }
 };
 
@@ -455,14 +448,15 @@ public:
 
   template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __policy_func>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __policy_func(_Fp&& __f) : __policy_(__policy::__create_empty()) {
-    if (__function::__not_null(__f)) {
-      __func_   = __call_func<_Fp>;
-      __policy_ = __policy::__create<_Fp>();
-      if (__use_small_storage<_Fp>()) {
-        ::new ((void*)&__buf_.__small) _Fp(std::move(__f));
-      } else {
-        __buf_.__large = ::new _Fp(std::move(__f));
-      }
+    if (__function::__is_null(__f))
+      return;
+
+    __func_   = __call_func<_Fp>;
+    __policy_ = __policy::__create<_Fp>();
+    if (__use_small_storage<_Fp>()) {
+      ::new ((void*)&__buf_.__small) _Fp(std::move(__f));
+    } else {
+      __buf_.__large = ::new _Fp(std::move(__f));
     }
   }
 
@@ -615,21 +609,9 @@ class function<_Rp(_ArgTypes...)>
 
   __func __f_;
 
-  template <class _Fp,
-            bool = _And<_IsNotSame<__remove_cvref_t<_Fp>, function>, __is_invocable<_Fp, _ArgTypes...> >::value>
-  struct __callable;
   template <class _Fp>
-  struct __callable<_Fp, true> {
-    static const bool value =
-        is_void<_Rp>::value || __is_core_convertible<__invoke_result_t<_Fp, _ArgTypes...>, _Rp>::value;
-  };
-  template <class _Fp>
-  struct __callable<_Fp, false> {
-    static const bool value = false;
-  };
-
-  template <class _Fp>
-  using _EnableIfLValueCallable _LIBCPP_NODEBUG = __enable_if_t<__callable<_Fp&>::value>;
+  using _EnableIfLValueCallable _LIBCPP_NODEBUG = __enable_if_t<
+      _And<_IsNotSame<__remove_cvref_t<_Fp>, function>, __is_invocable_r<_Rp, _Fp&, _ArgTypes...>>::value>;
 
 public:
   typedef _Rp result_type;

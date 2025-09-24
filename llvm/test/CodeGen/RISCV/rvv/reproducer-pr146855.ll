@@ -6,7 +6,7 @@ target triple = "riscv64-unknown-linux-gnu"
 define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wide.load, <vscale x 4 x i1> %0, <vscale x 4 x i1> %1, <vscale x 4 x i1> %2, <vscale x 4 x i1> %3) #0 {
 ; CHECK-LABEL: _ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v0
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -14,7 +14,7 @@ define i32 @_ZN4Mesh12rezone_countESt6vectorIiSaIiEERiS3_(<vscale x 4 x i32> %wi
 ; CHECK-NEXT:    vmv.v.i v14, 0
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    vmv2r.v v16, v10
