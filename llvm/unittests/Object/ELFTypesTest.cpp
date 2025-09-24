@@ -128,9 +128,9 @@ TEST(ELFTypesTest, BBAddrMapFeaturesEncodingTest) {
 
 TEST(ELFTypesTest, BBAddrMapFeaturesInvalidEncodingTest) {
   const std::array<std::string, 2> Errors = {
-      "invalid encoding for BBAddrMap::Features: 0x40",
+      "invalid encoding for BBAddrMap::Features: 0x80",
       "invalid encoding for BBAddrMap::Features: 0xf0"};
-  const std::array<uint8_t, 2> Values = {{0b100'0000, 0b1111'0000}};
+  const std::array<uint8_t, 2> Values = {{0b1000'0000, 0b1111'0000}};
   for (const auto &[Val, Error] : llvm::zip(Values, Errors)) {
     EXPECT_THAT_ERROR(BBAddrMap::Features::decode(Val).takeError(),
                       FailedWithMessage(Error));
