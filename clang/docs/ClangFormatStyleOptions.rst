@@ -216,7 +216,7 @@ the configuration (without a prefix: ``Auto``).
     replaced with ``true`` and with setting of new style options using
     ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
     ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
-    ``BreakBeforeCloseBracketFunction``, and ``BreakAfterOpenBracketIf``.
+    ``BreakBeforeCloseBracketFunction``, and ``BreakBeforeCloseBracketIf``.
 
   This applies to round brackets (parentheses), angle brackets and square
   brackets.
