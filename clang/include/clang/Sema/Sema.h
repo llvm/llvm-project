@@ -12776,6 +12776,18 @@ public:
   void MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
                                   unsigned Depth, llvm::SmallBitVector &Used);
 
+  /// Mark which template parameters are named in a given expression.
+  ///
+  /// Unlike MarkUsedTemplateParameters, this excludes parameter that
+  /// are used but not directly named by an expression - ie it excludes
+  /// any template parameter that denotes the type of a referenced NTTP.
+  ///
+  /// \param Used a bit vector whose elements will be set to \c true
+  /// to indicate when the corresponding template parameter will be
+  /// deduced.
+  void MarkUsedTemplateParametersForSubsumptionParameterMapping(
+      const Expr *E, unsigned Depth, llvm::SmallBitVector &Used);
+
   /// Mark which template parameters can be deduced from a given
   /// template argument list.
   ///

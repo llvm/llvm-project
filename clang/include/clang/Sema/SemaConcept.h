@@ -61,9 +61,15 @@ protected:
     unsigned Kind : 5;
     unsigned Placeholder : 1;
     unsigned PackSubstitutionIndex : 26;
-    // Indexes and Args are part of the common initial sequences
-    // of constraints that do have a mapping.
+    // Indexes, IndexesForSubsumption, and Args are part of the common initial
+    // sequences of constraints that do have a mapping.
+
+    // Indexes of the parameters used in a constraint expression.
     OccurenceList Indexes;
+    // Indexes of the parameters named directly in a constraint expression.
+    // FIXME: we should try to reduce the size of this struct?
+    OccurenceList IndexesForSubsumption;
+
     TemplateArgumentLoc *Args;
     TemplateParameterList *ParamList;
     ExprOrConcept ConstraintExpr;
@@ -77,6 +83,7 @@ protected:
     unsigned FoldOperator : 1;
     unsigned Placeholder : 26;
     OccurenceList Indexes;
+    OccurenceList IndexesForSubsumption;
     TemplateArgumentLoc *Args;
     TemplateParameterList *ParamList;
     const Expr *Pattern;
@@ -119,6 +126,7 @@ protected:
                /*Placeholder=*/0,
                PackIndex.toInternalRepresentation(),
                /*Indexes=*/{},
+               /*IndexesForSubsumption=*/{},
                /*Args=*/nullptr,
                /*ParamList=*/nullptr,
                ConstraintExpr,
@@ -131,6 +139,7 @@ protected:
                      llvm::to_underlying(OpKind),
                      /*Placeholder=*/0,
                      /*Indexes=*/{},
+                     /*IndexesForSubsumption=*/{},
                      /*Args=*/nullptr,
                      /*ParamList=*/nullptr,
                      Pattern,
@@ -145,6 +154,7 @@ protected:
       : ConceptId{{llvm::to_underlying(ConstraintKind::ConceptId),
                    /*Placeholder=*/0, PackIndex.toInternalRepresentation(),
                    /*Indexes=*/{},
+                   /*IndexesForSubsumption=*/{},
                    /*Args=*/nullptr, /*ParamList=*/nullptr, ConceptId,
                    ConstraintDecl},
                   SubConstraint,
@@ -166,6 +176,11 @@ protected:
     return Atomic.Indexes;
   }
 
+  const OccurenceList &mappingOccurenceListForSubsumption() const {
+    assert(hasParameterMapping() && "This constraint has no parameter mapping");
+    return Atomic.IndexesForSubsumption;
+  }
+
   llvm::MutableArrayRef<TemplateArgumentLoc> getParameterMapping() const {
     return {Atomic.Args, Atomic.Indexes.count()};
   }
@@ -175,11 +190,16 @@ protected:
   }
 
   void updateParameterMapping(OccurenceList Indexes,
+                              OccurenceList IndexesForSubsumption,
                               llvm::MutableArrayRef<TemplateArgumentLoc> Args,
                               TemplateParameterList *ParamList) {
     assert(getKind() != ConstraintKind::Compound);
     assert(Indexes.count() == Args.size());
-    Atomic.Indexes = Indexes;
+    assert(IndexesForSubsumption.size() == Indexes.size());
+    assert((Indexes & IndexesForSubsumption) == Indexes);
+
+    Atomic.IndexesForSubsumption = std::move(IndexesForSubsumption);
+    Atomic.Indexes = std::move(Indexes);
     Atomic.Args = Args.data();
     Atomic.ParamList = ParamList;
   }
@@ -198,10 +218,17 @@ protected:
     llvm::ArrayRef<TemplateArgumentLoc> OtherParameterMapping =
         Other.getParameterMapping();
 
+    const OccurenceList &Indexes = mappingOccurenceListForSubsumption();
+    const OccurenceList &OtherIndexes =
+        Other.mappingOccurenceListForSubsumption();
+
     if (ParameterMapping.size() != OtherParameterMapping.size())
       return false;
-
     for (unsigned I = 0, S = ParameterMapping.size(); I < S; ++I) {
+      if (Indexes[I] != OtherIndexes[I])
+        return false;
+      if (!Indexes[I])
+        continue;
       llvm::FoldingSetNodeID IDA, IDB;
       C.getCanonicalTemplateArgument(ParameterMapping[I].getArgument())
           .Profile(IDA, C);
@@ -296,6 +323,7 @@ public:
   using NormalizedConstraint::hasMatchingParameterMapping;
   using NormalizedConstraint::hasParameterMapping;
   using NormalizedConstraint::mappingOccurenceList;
+  using NormalizedConstraint::mappingOccurenceListForSubsumption;
   using NormalizedConstraint::updateParameterMapping;
 
   const NamedDecl *getConstraintDecl() const { return Atomic.ConstraintDecl; }

@@ -6702,10 +6702,11 @@ namespace {
 struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
   llvm::SmallBitVector &Used;
   unsigned Depth;
+  bool VisitDeclRefTypes = true;
 
-  MarkUsedTemplateParameterVisitor(llvm::SmallBitVector &Used,
-                                   unsigned Depth)
-      : Used(Used), Depth(Depth) { }
+  MarkUsedTemplateParameterVisitor(llvm::SmallBitVector &Used, unsigned Depth,
+                                   bool VisitDeclRefTypes = true)
+      : Used(Used), Depth(Depth), VisitDeclRefTypes(VisitDeclRefTypes) {}
 
   bool VisitTemplateTypeParmType(TemplateTypeParmType *T) override {
     if (T->getDepth() == Depth)
@@ -6726,7 +6727,8 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getDecl()))
       if (NTTP->getDepth() == Depth)
         Used[NTTP->getIndex()] = true;
-    DynamicRecursiveASTVisitor::TraverseType(E->getType());
+    if (VisitDeclRefTypes)
+      DynamicRecursiveASTVisitor::TraverseType(E->getType());
     return true;
   }
 
@@ -7174,6 +7176,13 @@ Sema::MarkUsedTemplateParameters(const Expr *E, bool OnlyDeduced,
                                  unsigned Depth,
                                  llvm::SmallBitVector &Used) {
   ::MarkUsedTemplateParameters(Context, E, OnlyDeduced, Depth, Used);
+}
+
+void Sema::MarkUsedTemplateParametersForSubsumptionParameterMapping(
+    const Expr *E, unsigned Depth, llvm::SmallBitVector &Used) {
+  MarkUsedTemplateParameterVisitor(Used, Depth, /*VisitDeclRefTypes=*/false)
+      .TraverseStmt(const_cast<Expr *>(E));
+  return;
 }
 
 void

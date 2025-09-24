@@ -1919,25 +1919,28 @@ void SubstituteParameterMappings::buildParameterMapping(
       cast<TemplateDecl>(N.getConstraintDecl())->getTemplateParameters();
 
   llvm::SmallBitVector OccurringIndices(TemplateParams->size());
+  llvm::SmallBitVector OccurringIndicesForSubsumption(TemplateParams->size());
 
   if (N.getKind() == NormalizedConstraint::ConstraintKind::Atomic) {
     SemaRef.MarkUsedTemplateParameters(
         static_cast<AtomicConstraint &>(N).getConstraintExpr(),
         /*OnlyDeduced=*/false,
         /*Depth=*/0, OccurringIndices);
+
+    SemaRef.MarkUsedTemplateParametersForSubsumptionParameterMapping(
+        static_cast<AtomicConstraint &>(N).getConstraintExpr(),
+        /*Depth=*/0, OccurringIndicesForSubsumption);
+
   } else if (N.getKind() ==
              NormalizedConstraint::ConstraintKind::FoldExpanded) {
     SemaRef.MarkUsedTemplateParameters(
         static_cast<FoldExpandedConstraint &>(N).getPattern(),
         /*OnlyDeduced=*/false,
         /*Depth=*/0, OccurringIndices);
-  } else if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId) {
-    auto *Args = static_cast<ConceptIdConstraint &>(N)
-                     .getConceptId()
-                     ->getTemplateArgsAsWritten();
-    if (Args)
-      SemaRef.MarkUsedTemplateParameters(Args->arguments(),
-                                         /*Depth=*/0, OccurringIndices);
+
+    SemaRef.MarkUsedTemplateParametersForSubsumptionParameterMapping(
+        static_cast<FoldExpandedConstraint &>(N).getPattern(),
+        /*Depth=*/0, OccurringIndicesForSubsumption);
   }
   TemplateArgumentLoc *TempArgs =
       new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];
@@ -1962,7 +1965,7 @@ void SubstituteParameterMappings::buildParameterMapping(
       /*RAngleLoc=*/SourceLocation(),
       /*RequiresClause=*/nullptr);
   N.updateParameterMapping(
-      OccurringIndices,
+      std::move(OccurringIndices), std::move(OccurringIndicesForSubsumption),
       MutableArrayRef<TemplateArgumentLoc>{TempArgs, OccurringIndices.count()},
       UsedList);
 }
@@ -2023,7 +2026,8 @@ bool SubstituteParameterMappings::substitute(
 
   MutableArrayRef<TemplateArgumentLoc> Mapping(TempArgs,
                                                CTAI.SugaredConverted.size());
-  N.updateParameterMapping(N.mappingOccurenceList(), Mapping,
+  N.updateParameterMapping(N.mappingOccurenceList(),
+                           N.mappingOccurenceListForSubsumption(), Mapping,
                            N.getUsedTemplateParamList());
   return false;
 }
@@ -2481,10 +2485,13 @@ auto SubsumptionChecker::find(const AtomicConstraint *Ori) -> Literal {
   ID.AddBoolean(Ori->hasParameterMapping());
   if (Ori->hasParameterMapping()) {
     const auto &Mapping = Ori->getParameterMapping();
-    for (const TemplateArgumentLoc &TAL : Mapping) {
-      SemaRef.getASTContext()
-          .getCanonicalTemplateArgument(TAL.getArgument())
-          .Profile(ID, SemaRef.getASTContext());
+    const NormalizedConstraint::OccurenceList &Indexes =
+        Ori->mappingOccurenceListForSubsumption();
+    for (auto [Idx, TAL] : llvm::enumerate(Mapping)) {
+      if (Indexes[Idx])
+        SemaRef.getASTContext()
+            .getCanonicalTemplateArgument(TAL.getArgument())
+            .Profile(ID, SemaRef.getASTContext());
     }
   }
   auto It = Elems.find(ID);
