@@ -463,6 +463,13 @@ protected:
       TypeResults results;
       target->GetImages().FindTypes(search_first.get(), query, results);
       TypeSP type_sp = results.GetFirstType();
+      if (!type_sp) {
+        // Retry, searching for typename as a mangled name.
+        query.SetSearchByMangledName(true);
+        TypeResults results;
+        target->GetImages().FindTypes(search_first.get(), query, results);
+        type_sp = results.GetFirstType();
+      }
 
       if (!type_sp && lookup_type_name.GetCString()) {
         LanguageType language_for_type =
