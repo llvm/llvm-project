@@ -83,9 +83,11 @@ static auto [cx, cy, cz] = C();
 void f() {
   static thread_local auto [cx, cy, cz] = C();
 #if __cplusplus <= 201703L
-    // expected-warning@-2 {{decomposition declaration declared with 'static thread_local' specifiers is a C++20 extension}}
+    // expected-warning@-2 {{decomposition declaration declared 'static' is a C++20 extension}}
+    // expected-warning@-3 {{decomposition declaration declared 'thread_local' is a C++20 extension}}
 #else
-    // expected-warning@-4 {{decomposition declaration declared with 'static thread_local' specifiers is incompatible with C++ standards before C++20}}
+    // expected-warning@-5 {{decomposition declaration declared 'static' is incompatible with C++ standards before C++20}}
+    // expected-warning@-6 {{decomposition declaration declared 'thread_local' is incompatible with C++ standards before C++20}}
 #endif
 }
 

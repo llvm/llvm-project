@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if defined(CRT_HAS_TF_MODE)
 
 #include "int_lib.h"
 
@@ -35,7 +35,7 @@ char assumption_3[sizeof(long double)*CHAR_BIT == 128] = {0};
 
 int main()
 {
-#if _ARCH_PPC || __aarch64__ || __arm64ec__
+#if defined(CRT_HAS_TF_MODE)
     if (test__fixunstfdi(0.0, 0))
         return 1;
 

@@ -83,11 +83,19 @@ namespace BadSpecifiers {
       friend auto &[g] = n; // expected-error {{'auto' not allowed}} expected-error {{friends can only be classes or functions}}
     };
     typedef auto &[h] = n; // expected-error {{cannot be declared 'typedef'}}
-    constexpr auto &[i] = n; // expected-error {{cannot be declared 'constexpr'}}
+    constexpr auto &[i] = n; // pre2c-error {{cannot be declared 'constexpr'}}
   }
 
-  static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
-  static thread_local auto &[j2] = n; // cxx17-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
+  static constexpr inline thread_local auto &[j1] = n;
+  // pre2c-error@-1 {{cannot be declared 'constexpr'}} \
+  // expected-error@-1 {{cannot be declared 'inline'}} \
+  // cxx17-warning@-1 {{declared 'static' is a C++20 extension}} \
+  // cxx17-warning@-1 {{declared 'thread_local' is a C++20 extension}}
+
+  static thread_local auto &[j2] = n;
+  // cxx17-warning@-1 {{declared 'static' is a C++20 extension}}\
+  // cxx17-warning@-1 {{declared 'thread_local' is a C++20 extension}}
+
 
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 

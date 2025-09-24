@@ -842,9 +842,7 @@ struct OpenACCPrivateRecipe {
   VarDecl *AllocaDecl;
   Expr *InitExpr;
 
-  OpenACCPrivateRecipe(VarDecl *A, Expr *I) : AllocaDecl(A), InitExpr(I) {
-    assert(!AllocaDecl || AllocaDecl->getInit() == nullptr);
-  }
+  OpenACCPrivateRecipe(VarDecl *A, Expr *I) : AllocaDecl(A), InitExpr(I) {}
 
   bool isSet() const { return AllocaDecl; }
 

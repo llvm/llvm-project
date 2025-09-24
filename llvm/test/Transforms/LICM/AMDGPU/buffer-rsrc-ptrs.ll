@@ -75,13 +75,13 @@ define void @hoistable_alias_scope(ptr addrspace(8) %p, ptr addrspace(8) %q, i32
 ; CHECK-LABEL: define void @hoistable_alias_scope
 ; CHECK-SAME: (ptr addrspace(8) [[P:%.*]], ptr addrspace(8) [[Q:%.*]], i32 [[BOUND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[HOISTABLE:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) [[Q]], i32 0, i32 0, i32 0, i32 0), !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[HOISTABLE:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) [[Q]], i32 0, i32 0, i32 0, i32 0), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ORIG:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[ORIG:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[HOISTABLE]], [[ORIG]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[INC]], ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope !3, !noalias !0
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[INC]], ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[NEXT]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[TAIL:%.*]]
@@ -165,8 +165,8 @@ define void @hoistable_buffer_construction_intrinsic(ptr addrspace(1) noalias %p
 ; CHECK-LABEL: define void @hoistable_buffer_construction_intrinsic
 ; CHECK-SAME: (ptr addrspace(1) noalias [[P_GLOBAL:%.*]], ptr addrspace(1) noalias [[Q_GLOBAL:%.*]], i32 [[BOUND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[P_GLOBAL]], i16 0, i32 0, i32 0)
-; CHECK-NEXT:    [[Q:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[Q_GLOBAL]], i16 0, i32 0, i32 0)
+; CHECK-NEXT:    [[P:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[P_GLOBAL]], i16 0, i64 0, i32 0)
+; CHECK-NEXT:    [[Q:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[Q_GLOBAL]], i16 0, i64 0, i32 0)
 ; CHECK-NEXT:    [[HOISTABLE:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) [[Q]], i32 0, i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -181,8 +181,8 @@ define void @hoistable_buffer_construction_intrinsic(ptr addrspace(1) noalias %p
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %p = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %p.global, i16 0, i32 0, i32 0)
-  %q = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %q.global, i16 0, i32 0, i32 0)
+  %p = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %p.global, i16 0, i64 0, i32 0)
+  %q = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %q.global, i16 0, i64 0, i32 0)
   br label %loop
 loop:
   %i = phi i32 [0, %entry], [%next, %loop]
@@ -212,13 +212,13 @@ define void @hoistable_buffer_construction_alias_scope(ptr addrspace(1) %p.globa
 ; CHECK-NEXT:    [[Q_EXT:%.*]] = zext i48 [[Q_TRUNC]] to i128
 ; CHECK-NEXT:    [[P:%.*]] = inttoptr i128 [[P_EXT]] to ptr addrspace(8)
 ; CHECK-NEXT:    [[Q:%.*]] = inttoptr i128 [[Q_EXT]] to ptr addrspace(8)
-; CHECK-NEXT:    [[HOISTABLE:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) [[Q]], i32 0, i32 0, i32 0, i32 0), !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[HOISTABLE:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) [[Q]], i32 0, i32 0, i32 0, i32 0), !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ORIG:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[ORIG:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[HOISTABLE]], [[ORIG]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[INC]], ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope !3, !noalias !0
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[INC]], ptr addrspace(8) [[P]], i32 [[I]], i32 0, i32 0), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[NEXT]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[TAIL:%.*]]
@@ -257,7 +257,7 @@ declare i32 @llvm.amdgcn.struct.ptr.buffer.load.i32(ptr addrspace(8) nocapture r
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8) nocapture writeonly, i32, i32, i32 immarg) #1
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) nocapture readnone, i16, i32, i32) #2
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) readnone nocapture, i16, i32, i32)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) readnone nocapture, i16, i64, i32)
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

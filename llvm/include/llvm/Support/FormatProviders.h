@@ -389,7 +389,7 @@ template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
     StringRef Sep = consumeOneOption(Style, '$', ", ");
     StringRef Args = consumeOneOption(Style, '@', "");
     assert(Style.empty() && "Unexpected text in range option string!");
-    return std::make_pair(Sep, Args);
+    return {Sep, Args};
   }
 
 public:

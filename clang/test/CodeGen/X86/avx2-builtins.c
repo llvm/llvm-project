@@ -263,6 +263,7 @@ __m256i test_mm_broadcastsi128_si256(__m128i a) {
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   return _mm_broadcastsi128_si256(a);
 }
+TEST_CONSTEXPR(match_m256i(_mm_broadcastsi128_si256(((__m128i)(__v2di){42, -99})), 42, -99, 42, -99));
 
 __m128 test_mm_broadcastss_ps(__m128 a) {
   // CHECK-LABEL: test_mm_broadcastss_ps

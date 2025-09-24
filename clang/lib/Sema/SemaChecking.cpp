@@ -2268,7 +2268,7 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 }
 
 static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
-                                   unsigned Pos, bool Vector = true) {
+                                   unsigned Pos) {
   QualType MaskTy = MaskArg->getType();
   if (!MaskTy->isExtVectorBoolType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
@@ -2276,11 +2276,9 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
            << MaskTy;
 
   QualType PtrTy = PtrArg->getType();
-  if (!PtrTy->isPointerType() ||
-      (Vector && !PtrTy->getPointeeType()->isVectorType()) ||
-      (!Vector && PtrTy->getPointeeType()->isVectorType()))
+  if (!PtrTy->isPointerType() || PtrTy->getPointeeType()->isVectorType())
     return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-           << Pos << (Vector ? "pointer to vector" : "scalar pointer");
+           << Pos << "scalar pointer";
   return false;
 }
 
@@ -2297,24 +2295,18 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   QualType PtrTy = PtrArg->getType();
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *DataVecTy = PointeeTy->getAs<VectorType>();
 
+  QualType RetTy =
+      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
   if (TheCall->getNumArgs() == 3) {
     Expr *PassThruArg = TheCall->getArg(2);
     QualType PassThruTy = PassThruArg->getType();
-    if (!S.Context.hasSameType(PassThruTy, PointeeTy))
+    if (!S.Context.hasSameType(PassThruTy, RetTy))
       return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-             << /* third argument */ 3 << PointeeTy;
+             << /* third argument */ 3 << RetTy;
   }
 
-  if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
-    return ExprError(
-        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getQuotedName(
-               TheCall->getBuiltinCallee())
-        << MaskTy << PointeeTy);
-
-  TheCall->setType(PointeeTy);
+  TheCall->setType(RetTy);
   return TheCall;
 }
 
@@ -2339,18 +2331,10 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
 
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
-  const VectorType *PtrVecTy = PointeeTy->getAs<VectorType>();
+  QualType RetTy =
+      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
 
-  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements() ||
-      MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
-    return ExprError(
-        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getQuotedName(
-               TheCall->getBuiltinCallee())
-        << MaskTy << PointeeTy);
-
-  if (!S.Context.hasSameType(ValTy, PointeeTy))
+  if (!S.Context.hasSameType(ValTy, RetTy))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
@@ -2368,7 +2352,7 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3))
     return ExprError();
 
   QualType IdxTy = IdxArg->getType();
@@ -2413,7 +2397,7 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   Expr *ValArg = TheCall->getArg(2);
   Expr *PtrArg = TheCall->getArg(3);
 
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3))
     return ExprError();
 
   QualType IdxTy = IdxArg->getType();
@@ -13043,7 +13027,19 @@ static void AnalyzeImplicitConversions(
 
   // Skip past explicit casts.
   if (auto *CE = dyn_cast<ExplicitCastExpr>(E)) {
-    E = CE->getSubExpr()->IgnoreParenImpCasts();
+    E = CE->getSubExpr();
+    // In the special case of a C++ function-style cast with braces,
+    // CXXFunctionalCastExpr has an InitListExpr as direct child with a single
+    // initializer. This InitListExpr basically belongs to the cast itself, so
+    // we skip it too. Specifically this is needed to silence -Wdouble-promotion
+    if (isa<CXXFunctionalCastExpr>(CE)) {
+      if (auto *InitListE = dyn_cast<InitListExpr>(E)) {
+        if (InitListE->getNumInits() == 1) {
+          E = InitListE->getInit(0);
+        }
+      }
+    }
+    E = E->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
     WorkList.push_back({E, CC, IsListInit});

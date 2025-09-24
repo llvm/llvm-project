@@ -2758,16 +2758,18 @@ ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,
 } // namespace
 
 OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
-  VarExpr = StripOffBounds(VarExpr);
-
+  // We don't strip bounds here, so that we are doing our recipe init at the
+  // 'lowest' possible level.  Codegen is going to have to do its own 'looping'.
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCPrivateRecipe::Empty();
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
 
-  // TODO: OpenACC: for arrays/bounds versions, we're going to have to do a
-  // different initializer, but for now we can go ahead with this.
+  // Array sections are special, and we have to treat them that way.
+  if (const auto *ASE =
+          dyn_cast<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()))
+    VarTy = ArraySectionExpr::getBaseOriginalType(ASE);
 
   VarDecl *AllocaDecl = CreateAllocaDecl(
       getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
@@ -2780,11 +2782,19 @@ OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
   InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
   ExprResult Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
 
+  // For 'no bounds' version, we can use this as a shortcut, so set the init
+  // anyway.
+  if (Init.isUsable()) {
+    AllocaDecl->setInit(Init.get());
+    AllocaDecl->setInitStyle(VarDecl::CallInit);
+  }
+
   return OpenACCPrivateRecipe(AllocaDecl, Init.get());
 }
 
 OpenACCFirstPrivateRecipe
 SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
+  // TODO: OpenACC: This shouldn't be necessary, see PrivateInitRecipe
   VarExpr = StripOffBounds(VarExpr);
 
   if (!VarExpr || VarExpr->getType()->isDependentType())
@@ -2869,6 +2879,7 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
 }
 OpenACCReductionRecipe SemaOpenACC::CreateReductionInitRecipe(
     OpenACCReductionOperator ReductionOperator, const Expr *VarExpr) {
+  // TODO: OpenACC: This shouldn't be necessary, see PrivateInitRecipe
   VarExpr = StripOffBounds(VarExpr);
 
   if (!VarExpr || VarExpr->getType()->isDependentType())

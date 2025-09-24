@@ -950,7 +950,8 @@ Each builtin accesses memory according to a provided boolean mask. These are
 provided as ``__builtin_masked_load`` and ``__builtin_masked_store``. The first
 argument is always boolean mask vector. The ``__builtin_masked_load`` builtin
 takes an optional third vector argument that will be used for the result of the
-masked-off lanes. These builtins assume the memory is always aligned.
+masked-off lanes. These builtins assume the memory is unaligned, use
+``__builtin_assume_aligned`` if alignment is desired.
 
 The ``__builtin_masked_expand_load`` and ``__builtin_masked_compress_store``
 builtins have the same interface but store the result in consecutive indices.
@@ -969,17 +970,17 @@ Example:
     using v8b = bool [[clang::ext_vector_type(8)]];
     using v8i = int [[clang::ext_vector_type(8)]];
 
-    v8i load(v8b mask, v8i *ptr) { return __builtin_masked_load(mask, ptr); }
+    v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
     
-    v8i load_expand(v8b mask, v8i *ptr) {
+    v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
     
-    void store(v8b mask, v8i val, v8i *ptr) {
+    void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
     
-    void store_compress(v8b mask, v8i val, v8i *ptr) {
+    void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
     }
 

@@ -8046,11 +8046,11 @@ bool VPRecipeBuilder::getScaledReductions(
   BinaryOperator *ExtendUser = dyn_cast<BinaryOperator>(Op);
   std::optional<unsigned> BinOpc;
   Type *ExtOpTypes[2] = {nullptr};
+  TTI::PartialReductionExtendKind ExtKinds[2] = {TTI::PR_None};
 
-  auto CollectExtInfo = [this, &Exts,
-                         &ExtOpTypes](SmallVectorImpl<Value *> &Ops) -> bool {
-    unsigned I = 0;
-    for (Value *OpI : Ops) {
+  auto CollectExtInfo = [this, &Exts, &ExtOpTypes,
+                         &ExtKinds](SmallVectorImpl<Value *> &Ops) -> bool {
+    for (const auto &[I, OpI] : enumerate(Ops)) {
       Value *ExtOp;
       if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
         return false;
@@ -8061,7 +8061,7 @@ bool VPRecipeBuilder::getScaledReductions(
         return false;
 
       ExtOpTypes[I] = ExtOp->getType();
-      I++;
+      ExtKinds[I] = TTI::getPartialReductionExtendKind(Exts[I]);
     }
     return true;
   };
@@ -8090,10 +8090,6 @@ bool VPRecipeBuilder::getScaledReductions(
   } else
     return false;
 
-  TTI::PartialReductionExtendKind OpAExtend =
-      TTI::getPartialReductionExtendKind(Exts[0]);
-  TTI::PartialReductionExtendKind OpBExtend =
-      Exts[1] ? TTI::getPartialReductionExtendKind(Exts[1]) : TTI::PR_None;
   PartialReductionChain Chain(RdxExitInstr, Exts[0], Exts[1], ExtendUser);
 
   TypeSize PHISize = PHI->getType()->getPrimitiveSizeInBits();
@@ -8106,7 +8102,8 @@ bool VPRecipeBuilder::getScaledReductions(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
-                PHI->getType(), VF, OpAExtend, OpBExtend, BinOpc, CM.CostKind);
+                PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
+                CM.CostKind);
             return Cost.isValid();
           },
           Range)) {

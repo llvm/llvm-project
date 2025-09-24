@@ -128,21 +128,7 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Section - Multiple Calls",
 
      }},
-    {"interpolation.json",
-     {
-         "Triple Mustache",
-         "Triple Mustache Integer Interpolation",
-         "Triple Mustache Decimal Interpolation",
-         "Triple Mustache Null Interpolation",
-         "Triple Mustache Context Miss Interpolation",
-         "Dotted Names - Triple Mustache Interpolation",
-         "Implicit Iterators - Triple Mustache",
-         "Triple Mustache - Surrounding Whitespace",
-         "Triple Mustache - Standalone",
-         "Triple Mustache With Padding",
-     }},
     {"partials.json", {"Standalone Indentation"}},
-    {"sections.json", {"Implicit Iterator - Triple mustache"}},
 }};
 
 struct TestData {

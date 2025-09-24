@@ -38,7 +38,7 @@ TEST(OffsetDistribution, AlignToBegin) {
   const size_t BufferSize = 8192;
   OffsetDistribution OD(BufferSize, 1024, std::nullopt);
   std::default_random_engine Gen;
-  for (size_t I = 0; I <= 10; ++I)
+  for (size_t i = 0; i <= 10; ++i)
     EXPECT_EQ(OD(Gen), 0U);
 }
 
@@ -46,7 +46,7 @@ TEST(OffsetDistribution, NoAlignment) {
   const size_t BufferSize = 8192;
   OffsetDistribution OD(BufferSize, 1, Align(1));
   std::default_random_engine Gen;
-  for (size_t I = 0; I <= 10; ++I)
+  for (size_t i = 0; i <= 10; ++i)
     EXPECT_THAT(OD(Gen), AllOf(Ge(0U), Lt(8192U)));
 }
 
@@ -59,7 +59,7 @@ TEST(OffsetDistribution, Aligned) {
   const size_t BufferSize = 8192;
   OffsetDistribution OD(BufferSize, 1, Align(16));
   std::default_random_engine Gen;
-  for (size_t I = 0; I <= 10; ++I)
+  for (size_t i = 0; i <= 10; ++i)
     EXPECT_THAT(OD(Gen), AllOf(Ge(0U), Lt(8192U), IsDivisibleBy(16U)));
 }
 

@@ -447,7 +447,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     if (verifySelfRef(node))
       return DistinctAttr::create(builder.getUnitAttr());
 
-    auto name = cast<llvm::MDString>(node->getOperand(0));
+    auto *name = cast<llvm::MDString>(node->getOperand(0));
     return builder.getStringAttr(name->getString());
   };
 
@@ -1123,7 +1123,7 @@ void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
 void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
                                    Operation *op) const {
   auto iface = cast<DisjointFlagInterface>(op);
-  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
+  auto *instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
 
   iface.setIsDisjoint(instDisjoint->isDisjoint());
 }

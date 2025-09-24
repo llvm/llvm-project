@@ -3,7 +3,6 @@
 
 import sys
 from mlir_standalone.ir import *
-from mlir_standalone.dialects import builtin as builtin_d
 
 if sys.argv[1] == "pybind11":
     from mlir_standalone.dialects import standalone_pybind11 as standalone_d
@@ -14,7 +13,7 @@ else:
 
 
 with Context():
-    standalone_d.register_dialect()
+    standalone_d.register_dialects()
     module = Module.parse(
         """
     %0 = arith.constant 2 : i32

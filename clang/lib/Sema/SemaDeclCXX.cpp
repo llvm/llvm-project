@@ -768,58 +768,44 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // C++23 [dcl.pre]/6:
   //   Each decl-specifier in the decl-specifier-seq shall be static,
   //   thread_local, auto (9.2.9.6 [dcl.spec.auto]), or a cv-qualifier.
+  // C++23 [dcl.pre]/7:
+  //   Each decl-specifier in the decl-specifier-seq shall be constexpr,
+  //   constinit, static, thread_local, auto, or a cv-qualifier
   auto &DS = D.getDeclSpec();
-  {
-    // Note: While constrained-auto needs to be checked, we do so separately so
-    // we can emit a better diagnostic.
-    SmallVector<StringRef, 8> BadSpecifiers;
-    SmallVector<SourceLocation, 8> BadSpecifierLocs;
-    SmallVector<StringRef, 8> CPlusPlus20Specifiers;
-    SmallVector<SourceLocation, 8> CPlusPlus20SpecifierLocs;
-    if (auto SCS = DS.getStorageClassSpec()) {
-      if (SCS == DeclSpec::SCS_static) {
-        CPlusPlus20Specifiers.push_back(DeclSpec::getSpecifierName(SCS));
-        CPlusPlus20SpecifierLocs.push_back(DS.getStorageClassSpecLoc());
-      } else {
-        BadSpecifiers.push_back(DeclSpec::getSpecifierName(SCS));
-        BadSpecifierLocs.push_back(DS.getStorageClassSpecLoc());
-      }
-    }
-    if (auto TSCS = DS.getThreadStorageClassSpec()) {
-      CPlusPlus20Specifiers.push_back(DeclSpec::getSpecifierName(TSCS));
-      CPlusPlus20SpecifierLocs.push_back(DS.getThreadStorageClassSpecLoc());
-    }
-    if (DS.hasConstexprSpecifier()) {
-      BadSpecifiers.push_back(
-          DeclSpec::getSpecifierName(DS.getConstexprSpecifier()));
-      BadSpecifierLocs.push_back(DS.getConstexprSpecLoc());
-    }
-    if (DS.isInlineSpecified()) {
-      BadSpecifiers.push_back("inline");
-      BadSpecifierLocs.push_back(DS.getInlineSpecLoc());
-    }
+  auto DiagBadSpecifier = [&](StringRef Name, SourceLocation Loc) {
+    Diag(Loc, diag::err_decomp_decl_spec) << Name;
+  };
 
-    if (!BadSpecifiers.empty()) {
-      auto &&Err = Diag(BadSpecifierLocs.front(), diag::err_decomp_decl_spec);
-      Err << (int)BadSpecifiers.size()
-          << llvm::join(BadSpecifiers.begin(), BadSpecifiers.end(), " ");
-      // Don't add FixItHints to remove the specifiers; we do still respect
-      // them when building the underlying variable.
-      for (auto Loc : BadSpecifierLocs)
-        Err << SourceRange(Loc, Loc);
-    } else if (!CPlusPlus20Specifiers.empty()) {
-      auto &&Warn = DiagCompat(CPlusPlus20SpecifierLocs.front(),
-                               diag_compat::decomp_decl_spec);
-      Warn << (int)CPlusPlus20Specifiers.size()
-           << llvm::join(CPlusPlus20Specifiers.begin(),
-                         CPlusPlus20Specifiers.end(), " ");
-      for (auto Loc : CPlusPlus20SpecifierLocs)
-        Warn << SourceRange(Loc, Loc);
-    }
-    // We can't recover from it being declared as a typedef.
-    if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
-      return nullptr;
+  auto DiagCpp20Specifier = [&](StringRef Name, SourceLocation Loc) {
+    DiagCompat(Loc, diag_compat::decomp_decl_spec) << Name;
+  };
+
+  if (auto SCS = DS.getStorageClassSpec()) {
+    if (SCS == DeclSpec::SCS_static)
+      DiagCpp20Specifier(DeclSpec::getSpecifierName(SCS),
+                         DS.getStorageClassSpecLoc());
+    else
+      DiagBadSpecifier(DeclSpec::getSpecifierName(SCS),
+                       DS.getStorageClassSpecLoc());
   }
+  if (auto TSCS = DS.getThreadStorageClassSpec())
+    DiagCpp20Specifier(DeclSpec::getSpecifierName(TSCS),
+                       DS.getThreadStorageClassSpecLoc());
+
+  if (DS.isInlineSpecified())
+    DiagBadSpecifier("inline", DS.getInlineSpecLoc());
+
+  if (ConstexprSpecKind ConstexprSpec = DS.getConstexprSpecifier();
+      ConstexprSpec != ConstexprSpecKind::Unspecified) {
+    if (ConstexprSpec == ConstexprSpecKind::Consteval ||
+        !getLangOpts().CPlusPlus26)
+      DiagBadSpecifier(DeclSpec::getSpecifierName(ConstexprSpec),
+                       DS.getConstexprSpecLoc());
+  }
+
+  // We can't recover from it being declared as a typedef.
+  if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef)
+    return nullptr;
 
   // C++2a [dcl.struct.bind]p1:
   //   A cv that includes volatile is deprecated

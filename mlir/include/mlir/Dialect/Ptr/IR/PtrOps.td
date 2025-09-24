@@ -416,6 +416,63 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
 }
 
 //===----------------------------------------------------------------------===//
+// PtrDiffOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_PtrDiffOp : Pointer_Op<"ptr_diff", [
+    Pure, AllTypesMatch<["lhs", "rhs"]>, SameOperandsAndResultShape
+  ]> {
+  let summary = "Pointer difference operation";
+  let description = [{
+    The `ptr_diff` operation computes the difference between two pointers,
+    returning an integer or index value representing the number of bytes
+    between them.
+
+    The operation supports both scalar and shaped types with value semantics:
+    - When both operands are scalar: produces a single difference value
+    - When both are shaped: performs element-wise subtraction,
+      shapes must be the same
+
+    The operation also supports the following flags:
+    - `none`: No flags are set.
+    - `nuw`: No Unsigned Wrap, if the subtraction causes an unsigned overflow
+      (that is: the result would be negative), the result is a poison value.
+    - `nsw`: No Signed Wrap, if the subtraction causes a signed overflow, the
+      result is a poison value.
+
+    NOTE: The pointer difference is calculated using an integer type specified
+    by the data layout. The final result will be sign-extended or truncated to
+    fit the result type as necessary.
+
+    Example:
+
+    ```mlir
+    // Scalar pointers
+    %diff = ptr.ptr_diff %p1, %p2 : !ptr.ptr<#ptr.generic_space> -> i64
+
+    // Shaped pointers
+    %diffs = ptr.ptr_diff nsw %ptrs1, %ptrs2 :
+      vector<4x!ptr.ptr<#ptr.generic_space>> -> vector<4xi64>
+    ```
+  }];
+  let arguments = (ins
+    Ptr_PtrLikeType:$lhs, Ptr_PtrLikeType:$rhs,
+    DefaultValuedProp<EnumProp<Ptr_PtrDiffFlags>, "PtrDiffFlags::none">:$flags
+  );
+  let results = (outs Ptr_IntLikeType:$result);
+  let assemblyFormat = [{
+    ($flags^)? $lhs `,` $rhs attr-dict `:` type($lhs) `->` type($result)
+  }];
+  let extraClassDeclaration = [{
+    /// Returns the operand's ptr type.
+    ptr::PtrType getPtrType();
+    /// Returns the result's underlying int type.
+    Type getIntType();
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
 
