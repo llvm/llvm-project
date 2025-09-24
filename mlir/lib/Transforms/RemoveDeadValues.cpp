@@ -785,14 +785,11 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
           // AttrSizedOperandSegments).
           if (o.nonLive.any()) {
             // Map the argument logical index to the operand number(s) recorded.
-            SmallVector<OpOperand *> callOperands =
-                operandsToOpOperands(call.getArgOperands());
+            int operandOffset = call.getArgOperands().getBeginOperandIndex();
             for (int argIdx : deadArgIdxs.set_bits()) {
-              if (argIdx < static_cast<int>(callOperands.size())) {
-                unsigned operandNumber = callOperands[argIdx]->getOperandNumber();
-                if (operandNumber < o.nonLive.size())
-                  o.nonLive.reset(operandNumber);
-              }
+              int operandNumber = operandOffset + argIdx;
+              if (operandNumber < o.nonLive.size())
+                o.nonLive.reset(operandNumber);
             }
           }
         }
