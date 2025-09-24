@@ -75,9 +75,9 @@ class TBAAVerifier {
 public:
   TBAAVerifier(VerifierSupport *Diagnostic = nullptr)
       : Diagnostic(Diagnostic) {}
-  /// Visit an instruction and return true if it is valid, return false if an
-  /// invalid TBAA is attached.
-  LLVM_ABI bool visitTBAAMetadata(Instruction &I, const MDNode *MD);
+  /// Visit an instruction, or a TBAA node itself as part of a metadata, and
+  /// return true if it is valid, return false if an invalid TBAA is attached.
+  LLVM_ABI bool visitTBAAMetadata(Instruction *I, const MDNode *MD);
 };
 
 /// Check a function for errors, useful for use when debugging a
