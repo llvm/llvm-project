@@ -612,3 +612,10 @@ class ShouldFix {
 };
 
 } // namespace GH156295
+
+namespace GH160394 {
+struct A {
+    A(int i) : f((i & 0x1f) == 1) {}
+    bool f;
+};
+} // namespace GH160394
