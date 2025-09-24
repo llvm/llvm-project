@@ -1987,7 +1987,7 @@ func.func @test_maxsi2(%arg0 : i8) -> (i8, i8, i8, i8) {
 // CHECK-LABEL:   foldMaxsiMaxsi1
 // CHECK:           %[[MAXSI:.*]] = arith.maxsi %arg1, %arg0 : i32
 // CHECK:           return %[[MAXSI]] : i32
-func.func public @foldMaxsiMaxsi1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxsiMaxsi1(%arg0: i32, %arg1: i32) -> i32 {
   %max1 = arith.maxsi %arg1, %arg0 : i32
   %max2 = arith.maxsi %max1, %arg1 : i32
   func.return %max2 : i32
@@ -1996,7 +1996,7 @@ func.func public @foldMaxsiMaxsi1(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-LABEL:   foldMaxsiMaxsi2
 // CHECK:           %[[MAXSI:.*]] = arith.maxsi %arg1, %arg0 : i32
 // CHECK:           return %[[MAXSI]] : i32
-func.func public @foldMaxsiMaxsi2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxsiMaxsi2(%arg0: i32, %arg1: i32) -> i32 {
   %max1 = arith.maxsi %arg1, %arg0 : i32
   %max2 = arith.maxsi %arg1, %max1 : i32
   func.return %max2 : i32
@@ -2004,7 +2004,7 @@ func.func public @foldMaxsiMaxsi2(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMaxsiMinsi1
 // CHECK:           return %arg0 : i32
-func.func public @foldMaxsiMinsi1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxsiMinsi1(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minsi %arg1, %arg0 : i32
   %max2 = arith.maxsi %min1, %arg0 : i32
   func.return %max2 : i32
@@ -2012,7 +2012,7 @@ func.func public @foldMaxsiMinsi1(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMaxsiMinsi2
 // CHECK:           return %arg0 : i32
-func.func public @foldMaxsiMinsi2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxsiMinsi2(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minsi %arg1, %arg0 : i32
   %max2 = arith.maxsi %arg0, %min1 : i32
   func.return %max2 : i32
@@ -2055,7 +2055,7 @@ func.func @test_maxui2(%arg0 : i8) -> (i8, i8, i8, i8) {
 // CHECK-LABEL:   foldMaxuiMaxui1
 // CHECK:           %[[MAXUI:.*]] = arith.maxui %arg1, %arg0 : i32
 // CHECK:           return %[[MAXUI]] : i32
-func.func public @foldMaxuiMaxui1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxuiMaxui1(%arg0: i32, %arg1: i32) -> i32 {
   %max1 = arith.maxui %arg1, %arg0 : i32
   %max2 = arith.maxui %max1, %arg1 : i32
   func.return %max2 : i32
@@ -2064,7 +2064,7 @@ func.func public @foldMaxuiMaxui1(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-LABEL:   foldMaxuiMaxui2
 // CHECK:           %[[MAXUI:.*]] = arith.maxui %arg1, %arg0 : i32
 // CHECK:           return %[[MAXUI]] : i32
-func.func public @foldMaxuiMaxui2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxuiMaxui2(%arg0: i32, %arg1: i32) -> i32 {
   %max1 = arith.maxui %arg1, %arg0 : i32
   %max2 = arith.maxui %arg1, %max1 : i32
   func.return %max2 : i32
@@ -2072,7 +2072,7 @@ func.func public @foldMaxuiMaxui2(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMaxuiMinui1
 // CHECK:           return %arg0 : i32
-func.func public @foldMaxuiMinui1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxuiMinui1(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minui %arg1, %arg0 : i32
   %max2 = arith.maxui %min1, %arg0 : i32
   func.return %max2 : i32
@@ -2080,7 +2080,7 @@ func.func public @foldMaxuiMinui1(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMaxuiMinui2
 // CHECK:           return %arg0 : i32
-func.func public @foldMaxuiMinui2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMaxuiMinui2(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minui %arg1, %arg0 : i32
   %max2 = arith.maxui %arg0, %min1 : i32
   func.return %max2 : i32
@@ -2123,7 +2123,7 @@ func.func @test_minsi2(%arg0 : i8) -> (i8, i8, i8, i8) {
 // CHECK-LABEL:   foldMinsiMinsi1
 // CHECK:           %[[MINSI:.*]] = arith.minsi %arg1, %arg0 : i32
 // CHECK:           return %[[MINSI]] : i32
-func.func public @foldMinsiMinsi1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinsiMinsi1(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minsi %arg1, %arg0 : i32
   %min2 = arith.minsi %min1, %arg1 : i32
   func.return %min2 : i32
@@ -2132,7 +2132,7 @@ func.func public @foldMinsiMinsi1(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-LABEL:   foldMinsiMinsi2
 // CHECK:           %[[MINSI:.*]] = arith.minsi %arg1, %arg0 : i32
 // CHECK:           return %[[MINSI]] : i32
-func.func public @foldMinsiMinsi2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinsiMinsi2(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minsi %arg1, %arg0 : i32
   %min2 = arith.minsi %arg1, %min1 : i32
   func.return %min2 : i32
@@ -2140,7 +2140,7 @@ func.func public @foldMinsiMinsi2(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMinsiMaxsi1
 // CHECK:           return %arg0 : i32
-func.func public @foldMinsiMaxsi1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinsiMaxsi1(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.maxsi %arg1, %arg0 : i32
   %min2 = arith.minsi %min1, %arg0 : i32
   func.return %min2 : i32
@@ -2148,7 +2148,7 @@ func.func public @foldMinsiMaxsi1(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMinsiMaxsi2
 // CHECK:           return %arg0 : i32
-func.func public @foldMinsiMaxsi2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinsiMaxsi2(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.maxsi %arg1, %arg0 : i32
   %min2 = arith.minsi %arg0, %min1 : i32
   func.return %min2 : i32
@@ -2191,7 +2191,7 @@ func.func @test_minui2(%arg0 : i8) -> (i8, i8, i8, i8) {
 // CHECK-LABEL:   foldMinuiMinui1
 // CHECK:           %[[MINUI:.*]] = arith.minui %arg1, %arg0 : i32
 // CHECK:           return %[[MINUI]] : i32
-func.func public @foldMinuiMinui1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinuiMinui1(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minui %arg1, %arg0 : i32
   %min2 = arith.minui %min1, %arg1 : i32
   func.return %min2 : i32
@@ -2200,7 +2200,7 @@ func.func public @foldMinuiMinui1(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-LABEL:   foldMinuiMinui2
 // CHECK:           %[[MINUI:.*]] = arith.minui %arg1, %arg0 : i32
 // CHECK:           return %[[MINUI]] : i32
-func.func public @foldMinuiMinui2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinuiMinui2(%arg0: i32, %arg1: i32) -> i32 {
   %min1 = arith.minui %arg1, %arg0 : i32
   %min2 = arith.minui %arg1, %min1 : i32
   func.return %min2 : i32
@@ -2208,7 +2208,7 @@ func.func public @foldMinuiMinui2(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMinuiMaxui1
 // CHECK:           return %arg0 : i32
-func.func public @foldMinuiMaxui1(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinuiMaxui1(%arg0: i32, %arg1: i32) -> i32 {
   %max1 = arith.maxui %arg1, %arg0 : i32
   %min2 = arith.minui %max1, %arg0 : i32
   func.return %min2 : i32
@@ -2216,7 +2216,7 @@ func.func public @foldMinuiMaxui1(%arg0: i32, %arg1: i32) -> i32 {
 
 // CHECK-LABEL:   foldMinuiMaxui2
 // CHECK:           return %arg0 : i32
-func.func public @foldMinuiMaxui2(%arg0: i32, %arg1: i32) -> i32 {
+func.func @foldMinuiMaxui2(%arg0: i32, %arg1: i32) -> i32 {
   %max1 = arith.maxui %arg1, %arg0 : i32
   %min2 = arith.minui %arg0, %max1 : i32
   func.return %min2 : i32
