@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_RELOCATIONS_H
 #define LLD_ELF_RELOCATIONS_H
 
+#include "Symbols.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -18,7 +19,6 @@
 namespace lld::elf {
 struct Ctx;
 class Defined;
-class Symbol;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
@@ -359,6 +359,29 @@ inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
   return rels;
 }
 
+// Build a bitmask with one bit set for each 64 subset of RelExpr.
+constexpr uint64_t buildMask() { return 0; }
+
+template <typename... Tails>
+constexpr uint64_t buildMask(int head, Tails... tails) {
+  return (0 <= head && head < 64 ? uint64_t(1) << head : 0) |
+         buildMask(tails...);
+}
+
+// Return true if `Expr` is one of `Exprs`.
+// There are more than 64 but less than 128 RelExprs, so we divide the set of
+// exprs into [0, 64) and [64, 128) and represent each range as a constant
+// 64-bit mask. Then we decide which mask to test depending on the value of
+// expr and use a simple shift and bitwise-and to test for membership.
+template <RelExpr... Exprs> static bool oneof(RelExpr expr) {
+  assert(0 <= expr && (int)expr < 128 &&
+         "RelExpr is too large for 128-bit mask!");
+
+  if (expr >= 64)
+    return (uint64_t(1) << (expr - 64)) & buildMask((Exprs - 64)...);
+  return (uint64_t(1) << expr) & buildMask(Exprs...);
+}
+
 template <bool is64>
 inline Relocs<llvm::object::Elf_Crel_Impl<is64>>
 sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
@@ -371,7 +394,19 @@ RelocationBaseSection &getIRelativeSection(Ctx &ctx);
 // Returns true if Expr refers a GOT entry. Note that this function returns
 // false for TLS variables even though they need GOT, because TLS variables uses
 // GOT differently than the regular variables.
-bool needsGot(RelExpr expr);
+inline bool needsGot(RelExpr expr) {
+  return oneof<R_GOT, RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, R_GOT_OFF,
+               RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
+               RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC,
+               RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+               RE_AARCH64_GOT_PAGE, RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(
+      expr);
+}
+
+inline bool needsTls(Symbol &s, RelExpr expr) {
+  return s.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr);
+}
+
 } // namespace lld::elf
 
 #endif
