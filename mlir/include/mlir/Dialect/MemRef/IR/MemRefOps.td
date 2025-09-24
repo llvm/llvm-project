@@ -184,6 +184,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
 
 def DistinctObjectsOp : MemRef_Op<"distinct_objects", [
       Pure,
+      DistinctObjectsInterface,
       DeclareOpInterfaceMethods<InferTypeOpInterface>
       // ViewLikeOpInterface TODO: ViewLikeOpInterface only supports a single argument
     ]> {
