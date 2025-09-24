@@ -9,7 +9,7 @@
 ///  \file This file implements a clang-tidy tool.
 ///
 ///  This tool uses the Clang Tooling infrastructure, see
-///    http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+///    https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 ///  for details on setting it up with LLVM source tree.
 ///
 //===----------------------------------------------------------------------===//
@@ -53,10 +53,12 @@ LLVM_INSTANTIATE_REGISTRY(clang::tidy::ClangTidyModuleRegistry)
 
 namespace clang::tidy {
 
+#if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
 namespace custom {
-extern void registerCustomChecks(const ClangTidyOptions &O,
-                                 ClangTidyCheckFactories &Factories);
+void (*RegisterCustomChecks)(const ClangTidyOptions &O,
+                             ClangTidyCheckFactories &Factories) = nullptr;
 } // namespace custom
+#endif
 
 namespace {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -348,8 +350,8 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
     : Context(Context), OverlayFS(std::move(OverlayFS)),
       CheckFactories(new ClangTidyCheckFactories) {
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  if (Context.canExperimentalCustomChecks())
-    custom::registerCustomChecks(Context.getOptions(), *CheckFactories);
+  if (Context.canExperimentalCustomChecks() && custom::RegisterCustomChecks)
+    custom::RegisterCustomChecks(Context.getOptions(), *CheckFactories);
 #endif
   for (ClangTidyModuleRegistry::entry E : ClangTidyModuleRegistry::entries()) {
     std::unique_ptr<ClangTidyModule> Module = E.instantiate();
@@ -421,8 +423,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (WorkingDir)
     Context.setCurrentBuildDirectory(WorkingDir.get());
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  if (Context.canExperimentalCustomChecks())
-    custom::registerCustomChecks(Context.getOptions(), *CheckFactories);
+  if (Context.canExperimentalCustomChecks() && custom::RegisterCustomChecks)
+    custom::RegisterCustomChecks(Context.getOptions(), *CheckFactories);
 #endif
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecksForLanguage(&Context);
@@ -688,8 +690,8 @@ ChecksAndOptions getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers,
       AllowEnablingAnalyzerAlphaCheckers, false, ExperimentalCustomChecks);
   ClangTidyCheckFactories Factories;
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
-  if (ExperimentalCustomChecks)
-    custom::registerCustomChecks(Context.getOptions(), Factories);
+  if (ExperimentalCustomChecks && custom::RegisterCustomChecks)
+    custom::RegisterCustomChecks(Context.getOptions(), Factories);
 #endif
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries()) {

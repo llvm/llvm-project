@@ -29,18 +29,6 @@ private:
   const bool ArePtrs64bit;
 
 public:
-  enum class MipsPtrClass {
-    /// The default register class for integer values.
-    Default = 0,
-    /// The subset of registers permitted in certain microMIPS instructions
-    /// such as lw16.
-    GPR16MM = 1,
-    /// The stack pointer only.
-    StackPointer = 2,
-    /// The global pointer only.
-    GlobalPointer = 3,
-  };
-
   explicit MipsRegisterInfo(const MipsSubtarget &STI);
 
   /// Get PIC indirect call register

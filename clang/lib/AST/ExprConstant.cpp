@@ -12025,8 +12025,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
-  case Builtin::BI__builtin_elementwise_ctlz:
-  case Builtin::BI__builtin_elementwise_cttz: {
+  case Builtin::BI__builtin_elementwise_clzg:
+  case Builtin::BI__builtin_elementwise_ctzg: {
     APValue SourceLHS;
     std::optional<APValue> Fallback;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS))
@@ -12050,19 +12050,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         if (!Fallback) {
           Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
               << /*IsTrailing=*/(E->getBuiltinCallee() ==
-                                 Builtin::BI__builtin_elementwise_cttz);
+                                 Builtin::BI__builtin_elementwise_ctzg);
           return false;
         }
         ResultElements.push_back(Fallback->getVectorElt(EltNum));
         continue;
       }
       switch (E->getBuiltinCallee()) {
-      case Builtin::BI__builtin_elementwise_ctlz:
+      case Builtin::BI__builtin_elementwise_clzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countl_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
-      case Builtin::BI__builtin_elementwise_cttz:
+      case Builtin::BI__builtin_elementwise_ctzg:
         ResultElements.push_back(APValue(
             APSInt(APInt(Info.Ctx.getIntWidth(DestEltTy), LHS.countr_zero()),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
@@ -12124,6 +12124,51 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             APSInt(llvm::APIntOps::fshr(Hi, Lo, Shift), Hi.isUnsigned())));
         break;
       }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256: {
+    APValue SourceDst, SourceSub;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceDst) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceSub))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    assert(SourceDst.isVector() && SourceSub.isVector());
+    unsigned DstLen = SourceDst.getVectorLength();
+    unsigned SubLen = SourceSub.getVectorLength();
+    assert(SubLen != 0 && DstLen != 0 && (DstLen % SubLen) == 0);
+    unsigned NumLanes = DstLen / SubLen;
+    unsigned LaneIdx = (Imm.getZExtValue() % NumLanes) * SubLen;
+
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    for (unsigned EltNum = 0; EltNum < DstLen; ++EltNum) {
+      if (EltNum >= LaneIdx && EltNum < LaneIdx + SubLen)
+        ResultElements.push_back(SourceSub.getVectorElt(EltNum - LaneIdx));
+      else
+        ResultElements.push_back(SourceDst.getVectorElt(EltNum));
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
@@ -13543,6 +13588,20 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+
+  auto HandleMaskBinOp =
+      [&](llvm::function_ref<APSInt(const APSInt &, const APSInt &)> Fn)
+      -> bool {
+    APValue LHS, RHS;
+    if (!Evaluate(LHS, Info, E->getArg(0)) ||
+        !Evaluate(RHS, Info, E->getArg(1)))
+      return false;
+
+    APSInt ResultInt = Fn(LHS.getInt(), RHS.getInt());
+
+    return Success(APValue(ResultInt), E);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
@@ -13683,7 +13742,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clzg:
-  case Builtin::BI__builtin_elementwise_ctlz:
+  case Builtin::BI__builtin_elementwise_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -13699,7 +13758,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_clzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_clzg) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13718,7 +13777,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                              BuiltinOp != Builtin::BI__lzcnt &&
                              BuiltinOp != Builtin::BI__lzcnt64;
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctlz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_clzg) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/false;
       }
@@ -13778,7 +13837,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctzg:
-  case Builtin::BI__builtin_elementwise_cttz: {
+  case Builtin::BI__builtin_elementwise_ctzg: {
     APSInt Val;
     if (E->getArg(0)->getType()->isExtVectorBoolType()) {
       APValue Vec;
@@ -13791,7 +13850,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     std::optional<APSInt> Fallback;
     if ((BuiltinOp == Builtin::BI__builtin_ctzg ||
-         BuiltinOp == Builtin::BI__builtin_elementwise_cttz) &&
+         BuiltinOp == Builtin::BI__builtin_elementwise_ctzg) &&
         E->getNumArgs() > 1) {
       APSInt FallbackTemp;
       if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
@@ -13803,7 +13862,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Fallback)
         return Success(*Fallback, E);
 
-      if (BuiltinOp == Builtin::BI__builtin_elementwise_cttz) {
+      if (BuiltinOp == Builtin::BI__builtin_elementwise_ctzg) {
         Info.FFDiag(E, diag::note_constexpr_countzeroes_zero)
             << /*IsTrailing=*/true;
       }
@@ -14102,6 +14161,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(Result, E);
     }
     }
+    llvm_unreachable("Fully covered switch above");
   }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
@@ -14640,6 +14700,65 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (Msk[I])
         Result.setBitVal(P++, Val[I]);
     return Success(Result, E);
+  }
+
+  case X86::BI__builtin_ia32_kandqi:
+  case X86::BI__builtin_ia32_kandhi:
+  case X86::BI__builtin_ia32_kandsi:
+  case X86::BI__builtin_ia32_kanddi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS & RHS; });
+  }
+
+  case X86::BI__builtin_ia32_kandnqi:
+  case X86::BI__builtin_ia32_kandnhi:
+  case X86::BI__builtin_ia32_kandnsi:
+  case X86::BI__builtin_ia32_kandndi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return ~LHS & RHS; });
+  }
+
+  case X86::BI__builtin_ia32_korqi:
+  case X86::BI__builtin_ia32_korhi:
+  case X86::BI__builtin_ia32_korsi:
+  case X86::BI__builtin_ia32_kordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS | RHS; });
+  }
+
+  case X86::BI__builtin_ia32_kxnorqi:
+  case X86::BI__builtin_ia32_kxnorhi:
+  case X86::BI__builtin_ia32_kxnorsi:
+  case X86::BI__builtin_ia32_kxnordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return ~(LHS ^ RHS); });
+  }
+
+  case X86::BI__builtin_ia32_kxorqi:
+  case X86::BI__builtin_ia32_kxorhi:
+  case X86::BI__builtin_ia32_kxorsi:
+  case X86::BI__builtin_ia32_kxordi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS ^ RHS; });
+  }
+
+  case X86::BI__builtin_ia32_knotqi:
+  case X86::BI__builtin_ia32_knothi:
+  case X86::BI__builtin_ia32_knotsi:
+  case X86::BI__builtin_ia32_knotdi: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    APSInt Result = ~Val;
+    return Success(APValue(Result), E);
+  }
+
+  case X86::BI__builtin_ia32_kaddqi:
+  case X86::BI__builtin_ia32_kaddhi:
+  case X86::BI__builtin_ia32_kaddsi:
+  case X86::BI__builtin_ia32_kadddi: {
+    return HandleMaskBinOp(
+        [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
   }
 }
@@ -17865,14 +17984,12 @@ bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
          !hasUnacceptableSideEffect(Result, SEK);
 }
 
-APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
-                    SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
+APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
-  EVResult.Diag = Diag;
   EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 

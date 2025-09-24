@@ -2108,6 +2108,10 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSetPrioIncWgInst,
 ]>;
 
+def FeatureISAVersion12_51 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50.Features,
+  [FeatureDPALU_DPP])>;
+
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
     [FeatureRequiresCOV6])>;
