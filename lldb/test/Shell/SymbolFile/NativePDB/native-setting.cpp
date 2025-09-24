@@ -38,7 +38,7 @@
 // NO-ENV: Dumping debug symbols for 1 modules.
 // NO-ENV: SymbolFile native-pdb
 
-// ENV0: warning: The DIA PDB reader was explicitly requested, but LLDB was built without the DIA SDK. The native reader will be used instead.
+// ENV0: warning: the DIA PDB reader was explicitly requested, but LLDB was built without the DIA SDK. The native reader will be used instead
 // ENV0: (lldb) target modules dump symfile
 // ENV0: Dumping debug symbols for 1 modules.
 // ENV0: SymbolFile native-pdb
@@ -48,12 +48,12 @@
 // ENV1: Dumping debug symbols for 1 modules.
 // ENV1: SymbolFile native-pdb
 
-// ENV0-SET-DIA: warning: The DIA PDB reader was explicitly requested, but LLDB was built without the DIA SDK. The native reader will be used instead.
+// ENV0-SET-DIA: warning: the DIA PDB reader was explicitly requested, but LLDB was built without the DIA SDK. The native reader will be used instead
 // ENV0-SET-DIA: (lldb) target modules dump symfile
 // ENV0-SET-DIA: Dumping debug symbols for 1 modules.
 // ENV0-SET-DIA: SymbolFile native-pdb
 
-// ENV1-SET-DIA: warning: The DIA PDB reader was explicitly requested, but LLDB was built without the DIA SDK. The native reader will be used instead.
+// ENV1-SET-DIA: warning: the DIA PDB reader was explicitly requested, but LLDB was built without the DIA SDK. The native reader will be used instead
 // ENV1-SET-DIA: (lldb) target modules dump symfile
 // ENV1-SET-DIA: Dumping debug symbols for 1 modules.
 // ENV1-SET-DIA: SymbolFile native-pdb
