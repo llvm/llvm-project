@@ -1259,10 +1259,12 @@ public:
   ///
   /// TODO: We should use actual block probability here, if available.
   /// Currently, we always assume predicated blocks have a 50% chance of
-  /// executing.
+  /// executing, apart from blocks that are only predicated due to tail folding.
   inline unsigned
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           BasicBlock *BB) const {
+    // If a block wasn't originally predicated but was predicated due to
+    // e.g. tail folding, don't divide the cost.
     if (!Legal->blockNeedsPredication(BB))
       return 1;
     return CostKind == TTI::TCK_CodeSize ? 1 : 2;
@@ -5105,9 +5107,10 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // stores and instructions that may divide by zero) will now be
     // unconditionally executed. For the scalar case, we may not always execute
     // the predicated block, if it is an if-else block. Thus, scale the block's
-    // cost by the probability of executing it. blockNeedsPredication from
-    // Legal is used so as to not include all blocks in tail folded loops.
-    if (VF.isScalar() && Legal->blockNeedsPredication(BB))
+    // cost by the probability of executing it.
+    // getPredBlockCostDivisor won't include blocks that are only predicated due
+    // to tail folded loops
+    if (VF.isScalar())
       BlockCost /= getPredBlockCostDivisor(CostKind, BB);
 
     Cost += BlockCost;
