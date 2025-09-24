@@ -18,6 +18,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -243,6 +244,9 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
       return false;
 
     unsigned N = Ptr.getNumElems();

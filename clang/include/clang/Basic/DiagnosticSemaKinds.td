@@ -10456,6 +10456,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
   InGroup<Format>;
+def err_format_conversion_argument_type_mismatch : Error<
+  "format specifies type %0 but the argument has "
+  "%select{type|underlying type}2 %1">;
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
@@ -10505,6 +10508,8 @@ def warn_printf_asterisk_missing_arg : Warning<
 def warn_printf_asterisk_wrong_type : Warning<
   "field %select{width|precision}0 should have type %1, but argument has type %2">,
   InGroup<Format>;
+def err_printf_asterisk_wrong_type : Error<
+  "field %select{width|precision}0 should have type %1, but argument has type %2">;
 def warn_printf_nonsensical_optional_amount: Warning<
   "%select{field width|precision}0 used with '%1' conversion specifier, resulting in undefined behavior">,
   InGroup<Format>;

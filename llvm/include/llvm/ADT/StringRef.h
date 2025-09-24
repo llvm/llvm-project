@@ -717,8 +717,8 @@ namespace llvm {
     split(StringRef Separator) const {
       size_t Idx = find(Separator);
       if (Idx == npos)
-        return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
+        return {*this, StringRef()};
+      return {slice(0, Idx), substr(Idx + Separator.size())};
     }
 
     /// Split into two substrings around the last occurrence of a separator
@@ -735,8 +735,8 @@ namespace llvm {
     rsplit(StringRef Separator) const {
       size_t Idx = rfind(Separator);
       if (Idx == npos)
-        return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
+        return {*this, StringRef()};
+      return {slice(0, Idx), substr(Idx + Separator.size())};
     }
 
     /// Split into substrings around the occurrences of a separator string.

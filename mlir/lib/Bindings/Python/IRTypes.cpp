@@ -501,7 +501,7 @@ public:
         "Create a complex type");
     c.def_prop_ro(
         "element_type",
-        [](PyComplexType &self) {
+        [](PyComplexType &self) -> nb::typed<nb::object, PyType> {
           return PyType(self.getContext(), mlirComplexTypeGetElementType(self))
               .maybeDownCast();
         },
@@ -515,7 +515,7 @@ public:
 void mlir::PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
-      [](PyShapedType &self) {
+      [](PyShapedType &self) -> nb::typed<nb::object, PyType> {
         return PyType(self.getContext(), mlirShapedTypeGetElementType(self))
             .maybeDownCast();
       },
@@ -731,8 +731,7 @@ public:
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;
-          return nb::cast<nb::typed<nb::object, PyAttribute>>(
-              PyAttribute(self.getContext(), encoding).maybeDownCast());
+          return PyAttribute(self.getContext(), encoding).maybeDownCast();
         });
   }
 };
@@ -794,9 +793,9 @@ public:
         .def_prop_ro(
             "layout",
             [](PyMemRefType &self) -> nb::typed<nb::object, PyAttribute> {
-              return nb::cast<nb::typed<nb::object, PyAttribute>>(
-                  PyAttribute(self.getContext(), mlirMemRefTypeGetLayout(self))
-                      .maybeDownCast());
+              return PyAttribute(self.getContext(),
+                                 mlirMemRefTypeGetLayout(self))
+                  .maybeDownCast();
             },
             "The layout of the MemRef type.")
         .def(
@@ -825,8 +824,7 @@ public:
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return nb::cast<nb::typed<nb::object, PyAttribute>>(
-                  PyAttribute(self.getContext(), a).maybeDownCast());
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -867,8 +865,7 @@ public:
               MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return nb::cast<nb::typed<nb::object, PyAttribute>>(
-                  PyAttribute(self.getContext(), a).maybeDownCast());
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -912,7 +909,7 @@ public:
         "Create a tuple type");
     c.def(
         "get_type",
-        [](PyTupleType &self, intptr_t pos) {
+        [](PyTupleType &self, intptr_t pos) -> nb::typed<nb::object, PyType> {
           return PyType(self.getContext(), mlirTupleTypeGetType(self, pos))
               .maybeDownCast();
         },

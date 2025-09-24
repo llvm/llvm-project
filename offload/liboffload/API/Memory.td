@@ -21,6 +21,9 @@ def ol_alloc_type_t : Enum {
 
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
+  let details = [
+      "All allocations through olMemAlloc regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,

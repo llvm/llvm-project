@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -27,6 +27,9 @@
   "categories": [
     "Debuggers"
   ],
+  "dependencies": {
+    "chokidar": "^4.0.3"
+  },
   "devDependencies": {
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
@@ -348,6 +351,9 @@
         "language": "objective-c"
       },
       {
+        "language": "objective-cpp"
+      },
+      {
         "language": "objectpascal"
       },
       {
@@ -375,6 +381,7 @@
           "fortran-modern",
           "nim",
           "objective-c",
+          "objective-cpp",
           "objectpascal",
           "pascal",
           "rust",

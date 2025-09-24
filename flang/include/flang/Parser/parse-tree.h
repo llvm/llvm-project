@@ -4953,20 +4953,18 @@ struct OpenMPDeclareTargetConstruct {
 // OMP v5.2: 5.8.8
 //  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
 struct OpenMPDeclareMapperConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareMapperConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpMapperSpecifier, OmpClauseList> t;
 };
 
 // ref: 5.2: Section 5.5.11 139-141
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
 struct OpenMPDeclareReductionConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPDeclareReductionConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
-      std::optional<OmpClauseList>>
-      t;
 };
 
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]
