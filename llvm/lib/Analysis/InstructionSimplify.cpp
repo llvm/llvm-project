@@ -6479,7 +6479,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return ConstantInt::getFalse(ReturnType);
 
     const Function *F = Call->getFunction();
-    auto ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
+    auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
       std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
