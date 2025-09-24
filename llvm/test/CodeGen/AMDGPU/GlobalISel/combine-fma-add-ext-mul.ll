@@ -49,21 +49,16 @@ define amdgpu_vs <5 x float> @test_5xf16_5xf32_add_ext_mul(<5 x half> inreg %x, 
 ; GFX9-FAST-DENORM-LABEL: test_5xf16_5xf32_add_ext_mul:
 ; GFX9-FAST-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v1, s4
-; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v2, s5
-; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v0, s0, v0
-; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v1, s1, v1
-; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v2, s2, v2
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_sdwa v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v5, v1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_sdwa v6, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v7, v2
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v0, s6, v3
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v1, s7, v4
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v2, s8, v5
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v3, s9, v6
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v4, s10, v7
+; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v1, s0, v0
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v3, s1, v0
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s5
+; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v4, s2, v0
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v0, v1, 1, s6 op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v1, v1, 1, s7 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v2, v3, 1, s8 op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v3, v3, 1, s9 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v4, v4, 1, s10 op_sel_hi:[1,0,0]
 ; GFX9-FAST-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-FAST-DENORM-LABEL: test_5xf16_5xf32_add_ext_mul:
@@ -94,23 +89,17 @@ define amdgpu_vs <6 x float> @test_6xf16_6xf32_add_ext_mul_rhs(<6 x half> inreg 
 ; GFX9-FAST-DENORM-LABEL: test_6xf16_6xf32_add_ext_mul_rhs:
 ; GFX9-FAST-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v1, s4
-; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v2, s5
-; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v0, s0, v0
-; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v1, s1, v1
-; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v2, s2, v2
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v3, v0
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_sdwa v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v5, v1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_sdwa v6, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_e32 v7, v2
-; GFX9-FAST-DENORM-NEXT:    v_cvt_f32_f16_sdwa v8, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v0, s6, v3
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v1, s7, v4
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v2, s8, v5
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v3, s9, v6
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v4, s10, v7
-; GFX9-FAST-DENORM-NEXT:    v_add_f32_e32 v5, s11, v8
+; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v1, s0, v0
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v3, s1, v0
+; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s5
+; GFX9-FAST-DENORM-NEXT:    v_pk_mul_f16 v5, s2, v0
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v0, v1, 1, s6 op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v1, v1, 1, s7 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v2, v3, 1, s8 op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v3, v3, 1, s9 op_sel:[1,0,0] op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v4, v5, 1, s10 op_sel_hi:[1,0,0]
+; GFX9-FAST-DENORM-NEXT:    v_mad_mix_f32 v5, v5, 1, s11 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX9-FAST-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-FAST-DENORM-LABEL: test_6xf16_6xf32_add_ext_mul_rhs:
