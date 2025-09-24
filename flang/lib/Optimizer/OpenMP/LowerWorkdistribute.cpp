@@ -12,11 +12,11 @@
 // Fortran array statements are lowered to fir as fir.do_loop unordered.
 // lower-workdistribute pass works mainly on identifying fir.do_loop unordered
 // that is nested in target{teams{workdistribute{fir.do_loop unordered}}} and
-// lowers it to target{teams{parallel{wsloop{loop_nest}}}}.
+// lowers it to target{teams{parallel{distribute{wsloop{loop_nest}}}}}.
 // It hoists all the other ops outside target region.
 // Relaces heap allocation on target with omp.target_allocmem and
 // deallocation with omp.target_freemem from host. Also replaces
-// runtime function "Assign" with omp.target_memcpy.
+// runtime function "Assign" with omp_target_memcpy.
 //
 //===----------------------------------------------------------------------===//
 
@@ -319,13 +319,14 @@ static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
 // Then, its lowered to
 //
 // omp.teams {
-//   omp.parallel {
-//     omp.distribute {
-//     omp.wsloop {
-//       omp.loop_nest
-//         ...
-//       }
-//     }
+//    omp.parallel {
+//      omp.distribute {
+//        omp.wsloop {
+//          omp.loop_nest
+//            ...
+//          }
+//        }
+//      }
 //   }
 // }
 
@@ -345,6 +346,7 @@ WorkdistributeDoLower(omp::WorkdistributeOp workdistribute,
         targetOpsToProcess.insert(targetOp);
       }
     }
+    // Generate the nested parallel, distribute, wsloop and loop_nest ops.
     genParallelOp(wdLoc, rewriter, true);
     genDistributeOp(wdLoc, rewriter, true);
     mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -584,6 +586,7 @@ WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
       }
     }
   }
+  // Erase the runtime calls that have been replaced.
   for (auto *op : opsToErase) {
     op->erase();
   }
@@ -772,6 +775,7 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
   Value alloc;
   Type allocType;
   auto llvmPtrTy = LLVM::LLVMPointerType::get(&ctx);
+  // Get the appropriate type for allocation
   if (isPtr(ty)) {
     Type intTy = rewriter.getI32Type();
     auto one = rewriter.create<LLVM::ConstantOp>(loc, intTy, 1);
@@ -782,6 +786,7 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
     allocType = ty;
     alloc = rewriter.create<fir::AllocaOp>(loc, allocType);
   }
+  // Lambda to create mapinfo ops
   auto getMapInfo = [&](uint64_t mappingFlags, const char *name) {
     return rewriter.create<omp::MapInfoOp>(
         loc, alloc.getType(), alloc, TypeAttr::get(allocType),
@@ -796,6 +801,7 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
         /*mapperId=*/mlir::FlatSymbolRefAttr(),
         /*name=*/rewriter.getStringAttr(name), rewriter.getBoolAttr(false));
   };
+  // Create mapinfo ops.
   uint64_t mapFrom =
       static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
@@ -847,14 +853,17 @@ static void collectNonRecomputableDeps(Value &v, omp::TargetOp targetOp,
                                        SetVector<Operation *> &toCache,
                                        SetVector<Operation *> &toRecompute) {
   Operation *op = v.getDefiningOp();
+  // If v is a block argument, it must be from the targetOp.
   if (!op) {
     assert(cast<BlockArgument>(v).getOwner()->getParentOp() == targetOp);
     return;
   }
+  // If the op is in the nonRecomputable set, add it to toCache and return.
   if (nonRecomputable.contains(op)) {
     toCache.insert(op);
     return;
   }
+  // Add the op to toRecompute.
   toRecompute.insert(op);
   for (auto opr : op->getOperands())
     collectNonRecomputableDeps(opr, targetOp, nonRecomputable, toCache,
@@ -939,6 +948,8 @@ static void reloadCacheAndRecompute(
     Value newArg =
         newTargetBlock->getArgument(hostEvalVarsSize + originalMapVarsSize + i);
     Value restored;
+    // If the original value is a pointer or reference, load and convert if
+    // necessary.
     if (isPtr(original.getType())) {
       restored = rewriter.create<LLVM::LoadOp>(loc, llvmPtrTy, newArg);
       if (!isa<LLVM::LLVMPointerType>(original.getType()))
@@ -967,6 +978,7 @@ static mlir::omp::LoopNestOp getLoopNestFromTeams(mlir::omp::TeamsOp teamsOp) {
     return nullptr;
   // Find parallel op inside teams
   mlir::omp::ParallelOp parallelOp = nullptr;
+  // Look for the parallel op in the teams region
   for (auto &op : teamsOp.getRegion().front()) {
     if (auto parallel = dyn_cast<mlir::omp::ParallelOp>(op)) {
       parallelOp = parallel;
@@ -1218,6 +1230,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
   assert(targetBlock == &targetOp.getRegion().back());
   IRMapping mapping;
 
+  // Get the parent target_data op
   auto targetDataOp = cast<omp::TargetDataOp>(targetOp->getParentOp());
   if (!targetDataOp) {
     llvm_unreachable("Expected target op to be inside target_data op");
@@ -1255,6 +1268,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
   SmallVector<Operation *> opsToReplace;
   Value device = targetOp.getDevice();
 
+  // If device is not specified, default to device 0.
   if (!device) {
     device = genI32Constant(targetOp.getLoc(), rewriter, 0);
   }
@@ -1508,15 +1522,12 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
   SmallVector<Value> isolatedHostEvalVars{targetOp.getHostEvalVars()};
   // update the hostEvalVars of isolatedTargetOp
   if (!hostEvalVars.lbs.empty() && !isTargetDevice) {
-    for (size_t i = 0; i < hostEvalVars.lbs.size(); ++i) {
-      isolatedHostEvalVars.push_back(hostEvalVars.lbs[i]);
-    }
-    for (size_t i = 0; i < hostEvalVars.ubs.size(); ++i) {
-      isolatedHostEvalVars.push_back(hostEvalVars.ubs[i]);
-    }
-    for (size_t i = 0; i < hostEvalVars.steps.size(); ++i) {
-      isolatedHostEvalVars.push_back(hostEvalVars.steps[i]);
-    }
+    isolatedHostEvalVars.append(hostEvalVars.lbs.begin(),
+                                hostEvalVars.lbs.end());
+    isolatedHostEvalVars.append(hostEvalVars.ubs.begin(),
+                                hostEvalVars.ubs.end());
+    isolatedHostEvalVars.append(hostEvalVars.steps.begin(),
+                                hostEvalVars.steps.end());
   }
   // Create the isolated target op
   omp::TargetOp isolatedTargetOp = rewriter.create<omp::TargetOp>(
@@ -1708,13 +1719,14 @@ static void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter,
   Operation *toIsolate = std::get<0>(*tuple);
   bool splitBefore = !std::get<1>(*tuple);
   bool splitAfter = !std::get<2>(*tuple);
-
+  // Recursively isolate the target op.
   if (splitBefore && splitAfter) {
     auto res =
         isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
     fissionTarget(res.postTargetOp, rewriter, module, isTargetDevice);
     return;
   }
+  // Isolate only before the op.
   if (splitBefore) {
     isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
     return;
