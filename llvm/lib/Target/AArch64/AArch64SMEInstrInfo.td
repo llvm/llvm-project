@@ -48,6 +48,17 @@ let usesCustomInserter = 1 in {
 }
 def : Pat<(i64 (AArch64EntryPStateSM)), (EntryPStateSM)>;
 
+// Pseudo-instruction that compares the current SVE vector length (VL) with the
+// streaming vector length (SVL). If the two lengths do not match, the check
+// lowers to a `brk`, causing a trap.
+let hasSideEffects = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def CHECK_MATCHING_VL_PSEUDO : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+def AArch64_check_matching_vl
+  : SDNode<"AArch64ISD::CHECK_MATCHING_VL", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_check_matching_vl), (CHECK_MATCHING_VL_PSEUDO)>;
+
 //===----------------------------------------------------------------------===//
 // Old SME ABI lowering ISD nodes/pseudos (deprecated)
 //===----------------------------------------------------------------------===//

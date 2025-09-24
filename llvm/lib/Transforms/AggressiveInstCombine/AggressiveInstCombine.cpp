@@ -1288,7 +1288,12 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
       BranchInst *CondBrInst = B.CreateCondBr(
           B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
           BBSubs[i + 1]);
-      setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
+
+      Function *F = CI->getFunction();
+      assert(F && "Instruction does not belong to a function!");
+      std::optional<Function::ProfileCount> EC = F->getEntryCount();
+      if (EC && EC->getCount() > 0)
+        setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
     } else {
       B.CreateBr(BBNE);
     }
