@@ -5675,6 +5675,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   default:
     break;
   case Intrinsic::assume: {
+    if (Call.hasOperandBundles()) {
+      auto *Cond = dyn_cast<ConstantInt>(Call.getArgOperand(0));
+      Check(Cond && Cond->isOne(),
+            "assume with operand bundles must have i1 true condition", Call);
+    }
     for (auto &Elem : Call.bundle_op_infos()) {
       unsigned ArgCount = Elem.End - Elem.Begin;
       // Separate storage assumptions are special insofar as they're the only
