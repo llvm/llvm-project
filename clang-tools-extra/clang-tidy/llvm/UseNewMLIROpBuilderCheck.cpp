@@ -124,12 +124,13 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
                         "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
   auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
-  ast_matchers::internal::Matcher<Stmt> Base = cxxMemberCallExpr(
-      on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
-             .bind("builder")),
-      callee(expr().bind("call")),
-      callee(cxxMethodDecl(hasTemplateArgument(0, templateArgument()),
-                           hasName("create"))));
+  ast_matchers::internal::Matcher<Stmt> Base = =
+      cxxMemberCallExpr(
+          on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
+                 .bind("builder")),
+          callee(cxxMethodDecl(hasTemplateArgument(0, templateArgument()),
+                               hasName("create"))))
+          .bind("call");
   return applyFirst(
       //  Attempt rewrite given an lvalue builder, else just warn.
       {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), Base),
