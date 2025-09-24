@@ -31,6 +31,14 @@ add_mlir_upstream_c_api_library(MLIRCAPIAsync
   MLIRPass
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIBuiltin
+  Builtin.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIControlFlow
   ControlFlow.cpp
 
