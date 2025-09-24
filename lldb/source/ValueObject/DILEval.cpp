@@ -672,10 +672,8 @@ llvm::Expected<CompilerType> Interpreter::VerifyCStyleCastType(
       uint64_t type_byte_size = 0;
       uint64_t rhs_type_byte_size = 0;
       if (auto temp = target_type.GetByteSize(m_exe_ctx_scope.get()))
-        // type_byte_size = temp.value();
         type_byte_size = *temp;
       if (auto temp = op_type.GetByteSize(m_exe_ctx_scope.get()))
-        // rhs_type_byte_size = temp.value();
         rhs_type_byte_size = *temp;
       if (!target_type.IsBoolean() && type_byte_size < rhs_type_byte_size) {
         std::string errMsg = llvm::formatv(
@@ -784,30 +782,15 @@ Interpreter::Visit(const CStyleCastNode *node) {
 
   switch (cast_kind) {
   case CStyleCastKind::eEnumeration: {
-    if (!target_type.IsEnumerationType()) {
-      std::string errMsg = "invalid ast: target type should be an enumeration.";
-      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                  node->GetLocation());
-    }
-    if (op_type.IsFloat())
-      return operand->CastToEnumType(target_type);
-
-    if (op_type.IsInteger() || op_type.IsEnumerationType())
+    if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
 
     std::string errMsg =
         "invalid ast: operand is not convertible to enumeration type";
     return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
                                                 node->GetLocation());
-    // return error.ToError();
   }
   case CStyleCastKind::eNullptr: {
-    if (target_type.GetCanonicalType().GetBasicTypeEnumeration() !=
-        lldb::eBasicTypeNullPtr) {
-      std::string errMsg = "invalid ast: target type should be a nullptr_t.";
-      return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                  node->GetLocation());
-    }
     return ValueObject::CreateValueObjectFromNullptr(m_target, target_type,
                                                      "result");
   }
@@ -820,33 +803,17 @@ Interpreter::Visit(const CStyleCastNode *node) {
   case CStyleCastKind::eNone: {
     switch (promo_kind) {
     case CastPromoKind::eArithmetic: {
-      if (target_type.GetCanonicalType().GetBasicTypeEnumeration() ==
-          lldb::eBasicTypeInvalid) {
-        std::string errMsg = "invalid ast: target type should be a basic type.";
-        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                    node->GetLocation());
-      }
-      // Pick an appropriate cast.
-      if (op_type.IsPointerType() || op_type.IsNullPtrType()) {
+      if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
+          op_type.IsScalarType() || op_type.IsEnumerationType()) {
         return operand->CastToBasicType(target_type);
       }
-      if (op_type.IsScalarType()) {
-        return operand->CastToBasicType(target_type);
-      }
-      if (op_type.IsEnumerationType()) {
-        return operand->CastToBasicType(target_type);
-      }
+
       std::string errMsg =
           "invalid ast: operand is not convertible to arithmetic type";
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
                                                   node->GetLocation());
     }
     case CastPromoKind::ePointer: {
-      if (!target_type.IsPointerType()) {
-        std::string errMsg = "invalid ast: target type should be a pointer";
-        return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                                    node->GetLocation());
-      }
       uint64_t addr =
           op_type.IsArrayType()
               ? operand->GetLoadAddress()
