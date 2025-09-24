@@ -19,6 +19,7 @@
 
 namespace llvm {
 class FunctionPass;
+class ModulePass;
 class InstructionSelector;
 class PassRegistry;
 class RISCVRegisterBankInfo;
@@ -110,6 +111,8 @@ void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
 
 FunctionPass *createRISCVPreLegalizerCombiner();
 void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
+
+ModulePass *createRISCVPromoteConstantPass();
 
 FunctionPass *createRISCVVLOptimizerPass();
 void initializeRISCVVLOptimizerPass(PassRegistry &);
