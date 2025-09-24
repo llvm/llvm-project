@@ -5680,32 +5680,33 @@ static std::pair<Expr *, int>
 makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
                        const unsigned Idx) {
   if (S.DiagnoseUnexpandedParameterPack(E))
-    return {nullptr, 0};
+    return {};
 
   // Accept template arguments for now as they depend on something else.
   // We'll get to check them when they eventually get instantiated.
   if (E->isInstantiationDependent())
-    return {E, 1};
+    return {};
 
   std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(S.Context);
   if (!I) {
     S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
-    return {nullptr, 0};
+    return {};
   }
   // Make sure we can fit it in 4 bits.
   if (!I->isIntN(4)) {
     S.Diag(E->getExprLoc(), diag::err_ice_too_large)
-        << toString(*I, 10, false) << 4 << /* Unsigned */ 1;
-    return {nullptr, 0};
+        << toString(*I, 10, false) << 4 << /*Unsigned=*/1;
+    return {};
   }
-  if (*I < 0)
+  if (*I < 0) {
     S.Diag(E->getExprLoc(), diag::warn_attribute_argument_n_negative)
         << &AL << Idx << E->getSourceRange();
+  }
 
   // We may need to perform implicit conversion of the argument.
   InitializedEntity Entity = InitializedEntity::InitializeParameter(
-      S.Context, S.Context.getConstType(S.Context.IntTy), /*consume*/ false);
+      S.Context, S.Context.getConstType(S.Context.IntTy), /*consume=*/false);
   ExprResult ValArg = S.PerformCopyInitialization(Entity, SourceLocation(), E);
   assert(!ValArg.isInvalid() &&
          "Unexpected PerformCopyInitialization() failure.");
