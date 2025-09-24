@@ -4,24 +4,24 @@
   .option exact
 
   qc.e.bgeui s0, 20, TARGET
-# CHECK: unknown vendor-specific relocation (193) in vendor namespace "QUALCOMM" against symbol TARGET
+# CHECK: error: {{.*}} unknown vendor-specific relocation (193) in vendor namespace "QUALCOMM" against symbol TARGET
 
   .global QUALCOMM
 QUALCOMM:
   nop
 
   qc.e.bgeui s0, 20, TARGET
-# CHECK: unknown vendor-specific relocation (193) in vendor namespace "QUALCOMM" against symbol TARGET
+# CHECK: error: {{.*}} unknown vendor-specific relocation (193) in vendor namespace "QUALCOMM" against symbol TARGET
 
   nds.bbc t0, 7, TARGET
-# CHECK: unknown vendor-specific relocation (241) in vendor namespace "ANDES" against symbol TARGET
+# CHECK: error: {{.*}} unknown vendor-specific relocation (241) in vendor namespace "ANDES" against symbol TARGET
 
   .global ANDES
 ANDES:
   nop
 
   nds.bbs t0, 7, TARGET
-# CHECK: unknown vendor-specific relocation (241) in vendor namespace "ANDES" against symbol TARGET
+# CHECK: error: {{.*}} unknown vendor-specific relocation (241) in vendor namespace "ANDES" against symbol TARGET
 
   .global TARGET
 TARGET:

@@ -457,7 +457,7 @@ private:
   Ctx &ctx;
   InputSectionBase *sec;
   OffsetGetter getter;
-  StringRef rv_vendor = "";
+  StringRef rvVendor;
 
   // End of relocations, used by Mips/PPC64.
   const void *end = nullptr;
@@ -1514,7 +1514,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
 
   // Stash the RISCV vendor namespace for the subsequent relocation.
   if (LLVM_UNLIKELY(ctx.arg.emachine == EM_RISCV && type == R_RISCV_VENDOR)) {
-    rv_vendor = sym.getName();
+    rvVendor = sym.getName();
     return;
   }
 
@@ -1524,11 +1524,11 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     return;
 
   RelExpr expr;
-  if (LLVM_LIKELY(rv_vendor.empty())) {
+  if (LLVM_LIKELY(rvVendor.empty())) {
     expr = ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
   } else {
     expr = ctx.target->getVendorRelExpr(
-        type, sym, sec->content().data() + offset, rv_vendor);
+        type, sym, sec->content().data() + offset, rvVendor);
   }
   int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
@@ -1540,7 +1540,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
     addend += getPPC64TocBase(ctx);
 
   // A RISCV vendor namespace only applies to a single relocation.
-  rv_vendor = "";
+  rvVendor = "";
 
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
