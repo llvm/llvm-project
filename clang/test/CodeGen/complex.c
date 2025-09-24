@@ -113,3 +113,12 @@ void t92(void) {
   (0 ? (_Complex double) 2.0f : 2.0f);
 }
 
+void real_on_scalar_with_type_promotion() {
+  _Float16 _Complex a;
+  _Float16 b = __real__(__real__ a);
+}
+
+void imag_on_scalar_with_type_promotion() {
+  _Float16 _Complex a;
+  _Float16 b = __real__(__imag__ a);
+}
