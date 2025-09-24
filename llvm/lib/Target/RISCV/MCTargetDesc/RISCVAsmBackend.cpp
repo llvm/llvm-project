@@ -959,9 +959,8 @@ RISCVAsmBackend::createObjectTargetWriter() const {
 class DarwinRISCVAsmBackend : public RISCVAsmBackend {
 public:
   DarwinRISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-			bool IsLittleEndian,
-                        const MCTargetOptions &Options)
-    : RISCVAsmBackend(STI, OSABI, Is64Bit, IsLittleEndian, Options) {}
+                        bool IsLittleEndian, const MCTargetOptions &Options)
+      : RISCVAsmBackend(STI, OSABI, Is64Bit, IsLittleEndian, Options) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -979,8 +978,8 @@ MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   if (TT.isOSBinFormatMachO())
-    return new DarwinRISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
-				     Options);
+    return new DarwinRISCVAsmBackend(STI, OSABI, TT.isArch64Bit(),
+                                     TT.isLittleEndian(), Options);
   return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
-			     Options);
+                             Options);
 }
