@@ -594,10 +594,8 @@ public:
       DenseSet<GlobalVariable *> &ModuleScopeVariables,
       DenseSet<GlobalVariable *> &TableLookupVariables,
       DenseSet<GlobalVariable *> &KernelAccessVariables,
-      DenseSet<GlobalVariable *> &DynamicVariables) {
-
-    if (TM.getOptLevel() == CodeGenOptLevel::None)
-      LoweringKindLoc = LoweringKind::table;
+      DenseSet<GlobalVariable *> &DynamicVariables,
+      uint64_t MaybeModuleScopeStructSimSize = 0) {
 
     GlobalVariable *HybridModuleRoot =
         LoweringKindLoc != LoweringKind::hybrid
@@ -651,7 +649,19 @@ public:
         } else if (K.second.size() == 1) {
           KernelAccessVariables.insert(GV);
         } else if (set_is_subset(K.second, HybridModuleRootKernels)) {
-          ModuleScopeVariables.insert(GV);
+          uint64_t LocalMemLimit = 0;
+          for (Function &F : M) {
+            if (!F.isDeclaration()) {
+              const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+              LocalMemLimit = ST.getAddressableLocalMemorySize();
+              break;
+            }
+          }
+          if (MaybeModuleScopeStructSimSize <= LocalMemLimit)
+            ModuleScopeVariables.insert(GV);
+          else {
+            TableLookupVariables.insert(GV);
+          }
         } else {
           TableLookupVariables.insert(GV);
         }
@@ -1074,6 +1084,20 @@ public:
     }
 
     // Partition variables accessed indirectly into the different strategies
+    DenseSet<GlobalVariable *> ModuleScopeVariablesSim;
+    DenseSet<GlobalVariable *> TableLookupVariablesSim;
+    DenseSet<GlobalVariable *> KernelAccessVariablesSim;
+    DenseSet<GlobalVariable *> DynamicVariablesSim;
+    partitionVariablesIntoIndirectStrategies(
+        M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly,
+        ModuleScopeVariablesSim, TableLookupVariablesSim,
+        KernelAccessVariablesSim, DynamicVariablesSim);
+    uint64_t MaybeModuleScopeStructSimSize = 0;
+    if (!ModuleScopeVariablesSim.empty())
+      MaybeModuleScopeStructSimSize = getLDSStructSize(
+          M, "llvm.amdgcn.module.lds.sim", ModuleScopeVariablesSim);
+
+    // Partition variables accessed indirectly into the different strategies
     DenseSet<GlobalVariable *> ModuleScopeVariables;
     DenseSet<GlobalVariable *> TableLookupVariables;
     DenseSet<GlobalVariable *> KernelAccessVariables;
@@ -1081,7 +1105,7 @@ public:
     partitionVariablesIntoIndirectStrategies(
         M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly,
         ModuleScopeVariables, TableLookupVariables, KernelAccessVariables,
-        DynamicVariables);
+        DynamicVariables, MaybeModuleScopeStructSimSize);
 
     // If the kernel accesses a variable that is going to be stored in the
     // module instance through a call then that kernel needs to allocate the
@@ -1186,13 +1210,14 @@ public:
             KernelToCreatedDynamicLDS.contains(&Func);
 
         uint32_t Offset = 0;
+        LLVM_DEBUG(dbgs() << "Function - " << Func.getName()
+                          << " - amdgpu-lds-size" << '\n');
 
         if (AllocateModuleScopeStruct) {
           // Allocated at zero, recorded once on construction, not once per
           // kernel
           Offset += DL.getTypeAllocSize(MaybeModuleScopeStruct->getValueType());
-          LLVM_DEBUG(dbgs() << "amdgpu-lds-size after ModuleScopeStruct"
-                            << Offset << "\n");
+          LLVM_DEBUG(dbgs() << "after ModuleScopeStruct - " << Offset << '\n');
         }
 
         if (AllocateKernelScopeStruct) {
@@ -1200,8 +1225,7 @@ public:
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
           Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
-          LLVM_DEBUG(dbgs()
-                     << "amdgpu-lds-size after KernelStruct" << Offset << "\n");
+          LLVM_DEBUG(dbgs() << "after KernelScopeStruct - " << Offset << '\n');
         }
 
         // If there is dynamic allocation, the alignment needed is included in
@@ -1212,8 +1236,7 @@ public:
           GlobalVariable *DynamicVariable = KernelToCreatedDynamicLDS[&Func];
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, DynamicVariable));
           recordLDSAbsoluteAddress(&M, DynamicVariable, Offset);
-          LLVM_DEBUG(dbgs() << "amdgpu-lds-size after DynamicVariable" << Offset
-                            << "\n");
+          LLVM_DEBUG(dbgs() << "after DynamicVariable - " << Offset << '\n');
         }
 
         if (Offset != 0) {
@@ -1295,6 +1318,76 @@ private:
       }
     }
     return Changed;
+  }
+
+  static uint64_t
+  getLDSStructSize(Module &M, std::string VarName,
+                   DenseSet<GlobalVariable *> const &LDSVarsToTransform,
+                   Function *F = nullptr) {
+
+    LLVMContext &Ctx = M.getContext();
+    const DataLayout &DL = M.getDataLayout();
+    assert(!LDSVarsToTransform.empty());
+
+    SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
+    LayoutFields.reserve(LDSVarsToTransform.size());
+    {
+      auto Sorted = sortByName(std::vector<GlobalVariable *>(
+          LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
+
+      for (GlobalVariable *GV : Sorted) {
+        OptimizedStructLayoutField F(GV,
+                                     DL.getTypeAllocSize(GV->getValueType()),
+                                     AMDGPU::getAlign(DL, GV));
+        LayoutFields.emplace_back(F);
+      }
+    }
+
+    performOptimizedStructLayout(LayoutFields);
+
+    std::vector<GlobalVariable *> LocalVars;
+    BitVector IsPaddingField;
+    LocalVars.reserve(LDSVarsToTransform.size()); // will be at least this large
+    IsPaddingField.reserve(LDSVarsToTransform.size());
+    {
+      uint64_t CurrentOffset = 0;
+      for (auto &F : LayoutFields) {
+        GlobalVariable *FGV =
+            static_cast<GlobalVariable *>(const_cast<void *>(F.Id));
+        Align DataAlign = F.Alignment;
+
+        uint64_t DataAlignV = DataAlign.value();
+        if (uint64_t Rem = CurrentOffset % DataAlignV) {
+          uint64_t Padding = DataAlignV - Rem;
+
+          // Append an array of padding bytes to meet alignment requested
+          // Note (o +      (a - (o % a)) ) % a == 0
+          //      (offset + Padding       ) % align == 0
+          Type *ATy = ArrayType::get(Type::getInt8Ty(Ctx), Padding);
+          LocalVars.push_back(new GlobalVariable(
+              M, ATy, false, GlobalValue::InternalLinkage,
+              PoisonValue::get(ATy), "", nullptr, GlobalValue::NotThreadLocal,
+              AMDGPUAS::LOCAL_ADDRESS, false));
+          IsPaddingField.push_back(true);
+          CurrentOffset += Padding;
+        }
+
+        LocalVars.push_back(FGV);
+        IsPaddingField.push_back(false);
+        CurrentOffset += F.Size;
+      }
+    }
+
+    std::vector<Type *> LocalVarTypes;
+    LocalVarTypes.reserve(LocalVars.size());
+    std::transform(
+        LocalVars.cbegin(), LocalVars.cend(), std::back_inserter(LocalVarTypes),
+        [](const GlobalVariable *V) -> Type * { return V->getValueType(); });
+
+    StructType *LDSTy = StructType::create(Ctx, LocalVarTypes, VarName + ".t");
+    Align StructAlign = AMDGPU::getAlign(DL, LocalVars[0]);
+    uint64_t AllocSize = DL.getTypeAllocSize(LDSTy);
+    return alignTo(AllocSize, StructAlign);
   }
 
   static LDSVariableReplacement createLDSVariableReplacement(
