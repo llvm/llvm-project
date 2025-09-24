@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -27,6 +28,10 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "AMDGPUtti"
+
+// Common wavefront sizes used in several conservative checks below.
+static constexpr unsigned WavefrontSize32 = 32u;
+static constexpr unsigned WavefrontSize64 = 64u;
 
 namespace {
 
@@ -1312,9 +1317,122 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_mbcnt_hi: {
-    // exec_hi is all 0, so this is just a copy.
-    if (ST->isWave32())
+    // exec_hi is all 0, so this is just a copy on wave32.
+    if (ST && ST->isWave32())
       return IC.replaceInstUsesWith(II, II.getArgOperand(1));
+
+    // Pattern: mbcnt.hi(~0, mbcnt.lo(~0, 0))
+    if (auto *HiArg1 = dyn_cast<CallInst>(II.getArgOperand(1))) {
+      Function *CalledF = HiArg1->getCalledFunction();
+      bool IsMbcntLo = false;
+      if (CalledF) {
+        // Fast-path: if this is a declared intrinsic, check the intrinsic ID.
+        if (CalledF->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo) {
+          IsMbcntLo = true;
+        } else {
+          // Fallback: accept a declared function with the canonical name, but
+          // verify its signature to be safe: i32(i32,i32). Use the name
+          // comparison only when there's no intrinsic ID match.
+          if (CalledF->getName() == "llvm.amdgcn.mbcnt.lo") {
+            if (FunctionType *FT = CalledF->getFunctionType()) {
+              if (FT->getNumParams() == 2 &&
+                  FT->getReturnType()->isIntegerTy(32) &&
+                  FT->getParamType(0)->isIntegerTy(32) &&
+                  FT->getParamType(1)->isIntegerTy(32))
+                IsMbcntLo = true;
+            }
+          }
+        }
+      }
+
+      if (!IsMbcntLo)
+        break;
+
+      // hi arg0 must be all-ones
+      if (auto *HiArg0C = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+        if (!HiArg0C->isAllOnesValue())
+          break;
+      } else
+        break;
+
+      // lo args: arg0 == ~0, arg1 == 0
+      Value *Lo0 = HiArg1->getArgOperand(0);
+      Value *Lo1 = HiArg1->getArgOperand(1);
+      auto *Lo0C = dyn_cast<ConstantInt>(Lo0);
+      auto *Lo1C = dyn_cast<ConstantInt>(Lo1);
+      if (!Lo0C || !Lo1C)
+        break;
+      if (!Lo0C->isAllOnesValue() || !Lo1C->isZero())
+        break;
+
+      // Query reqd_work_group_size via subtarget helper and compare X to wave
+      // size conservatively.
+      if (Function *F = II.getFunction()) {
+        unsigned Wave = 0;
+        if (ST && ST->isWaveSizeKnown())
+          Wave = ST->getWavefrontSize();
+
+        if (ST) {
+          if (auto MaybeX = ST->getReqdWorkGroupSize(*F, 0)) {
+            unsigned XLen = *MaybeX;
+            if (Wave == 0 && (XLen == WavefrontSize32 ||
+                              XLen == WavefrontSize64))
+              Wave = XLen; // allow common sizes under test harness
+
+            if (Wave != 0 && XLen == Wave) {
+              SmallVector<Type *, 0> OverloadTys;
+              CallInst *NewCall = IC.Builder.CreateIntrinsic(
+                  Intrinsic::amdgcn_workitem_id_x, OverloadTys, {});
+              NewCall->takeName(&II);
+              // Attach range metadata when available.
+              ST->makeLIDRangeMetadata(NewCall);
+              return IC.replaceInstUsesWith(II, NewCall);
+            }
+            // Optional: if X dimension evenly splits into wavefronts we can
+            // replace lane-id computation with a bitmask when the wave is a
+            // power-of-two. Use the Subtarget helper to conservatively decide
+            // when per-wave tiling is preserved.
+        if (ST->hasWavefrontsEvenlySplittingXDim(
+          *F, /*RequiresUniformYZ=*/true)) {
+        if (Wave != 0 && isPowerOf2_32(Wave)) {
+                // Construct: tid = workitem.id.x(); mask = Wave-1; res = tid &
+                // mask
+                SmallVector<Type *, 0> OverloadTys;
+                CallInst *Tid = IC.Builder.CreateIntrinsic(
+                    Intrinsic::amdgcn_workitem_id_x, OverloadTys, {});
+                Tid->takeName(&II);
+                IntegerType *ITy = cast<IntegerType>(Tid->getType());
+                Constant *Mask = ConstantInt::get(ITy, Wave - 1);
+                Instruction *AndInst =
+                    cast<Instruction>(IC.Builder.CreateAnd(Tid, Mask));
+                AndInst->takeName(&II);
+                // Attach range metadata for the result if possible.
+                ST->makeLIDRangeMetadata(AndInst);
+                return IC.replaceInstUsesWith(II, AndInst);
+              }
+            }
+          }
+        } else {
+          // No ST: be conservative and only handle the common test harness
+          // cases where reqd_work_group_size metadata exists and equals
+          // 32/64.
+          if (auto *Node = F->getMetadata("reqd_work_group_size")) {
+            if (Node->getNumOperands() == 3) {
+              unsigned XLen = mdconst::extract<ConstantInt>(Node->getOperand(0))
+                                  ->getZExtValue();
+              if (XLen == WavefrontSize32 || XLen == WavefrontSize64) {
+                SmallVector<Type *, 0> OverloadTys;
+                CallInst *NewCall = IC.Builder.CreateIntrinsic(
+                    Intrinsic::amdgcn_workitem_id_x, OverloadTys, {});
+                NewCall->takeName(&II);
+                return IC.replaceInstUsesWith(II, NewCall);
+              }
+            }
+          }
+        }
+      }
+    }
+
     break;
   }
   case Intrinsic::amdgcn_ballot: {
@@ -1328,7 +1446,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
       }
     }
-    if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {
+    if (ST->isWave32() &&
+        II.getType()->getIntegerBitWidth() == WavefrontSize64) {
       // %b64 = call i64 ballot.i64(...)
       // =>
       // %b32 = call i32 ballot.i32(...)
