@@ -51,8 +51,12 @@ struct olMemcpyRectTest : OffloadQueueTest {
   }
 
   void TearDown() override {
-    ASSERT_SUCCESS(olMemFree(HostPtr));
-    ASSERT_SUCCESS(olMemFree(DevicePtr));
+    if (HostPtr)
+      ASSERT_SUCCESS(olMemFree(HostPtr));
+    if (DevicePtr)
+      ASSERT_SUCCESS(olMemFree(DevicePtr));
+    if (DevicePtr2)
+      ASSERT_SUCCESS(olMemFree(DevicePtr2));
   }
 
   void checkPattern(void *CheckBuffer, const char *Template) {
