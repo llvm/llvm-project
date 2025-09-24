@@ -375,10 +375,10 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   return true;
 }
 
-// Recursively handle DILocations in followup metadata etc.
+/// Recursively handle DILocations in followup metadata etc.
 static Metadata *updateLoopMetadataDebugLocationsRecursive(
     Metadata *MetadataIn, function_ref<Metadata *(Metadata *)> Updater) {
-  const MDNode *M = dyn_cast_or_null<MDNode>(MetadataIn);
+  const MDTuple *M = dyn_cast_or_null<MDTuple>(MetadataIn);
   // The loop metadata options should start with a MDString.
   if (!M || M->getNumOperands() < 1 || !isa<MDString>(M->getOperand(0)))
     return nullptr;
@@ -398,6 +398,7 @@ static Metadata *updateLoopMetadataDebugLocationsRecursive(
     }
   }
 
+  assert(!M->isDistinct() && "Assuming that M isn't distinct.");
   return Updated ? MDNode::get(M->getContext(), MDs) : nullptr;
 }
 
