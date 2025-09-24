@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   size_t Length = strlen(Buffer);
   size_t Bytes = WriteFileCustom(FD, Buffer, Length);
   if (Bytes != Length) {
-    fail("Write failed with ret %d", Bytes);
+    fail("Write failed with ret %zu", Bytes);
   }
 
   amd_comgr_data_t DataObject;
