@@ -3597,5 +3597,126 @@ define <4 x i32> @buildvec_vredmax_slideup(<8 x i32> %arg0, <8 x i32> %arg1, <8 
   ret <4 x i32> %255
 }
 
+define <2 x i16> @buildvec_slideup_different_elttype() {
+; RV32-ONLY-LABEL: buildvec_slideup_different_elttype:
+; RV32-ONLY:       # %bb.0:
+; RV32-ONLY-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-ONLY-NEXT:    vmv.s.x v10, zero
+; RV32-ONLY-NEXT:    vmv.v.i v8, 0
+; RV32-ONLY-NEXT:    vredsum.vs v9, v8, v10
+; RV32-ONLY-NEXT:    vmv.x.s a0, v9
+; RV32-ONLY-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-ONLY-NEXT:    vslide1up.vx v8, v9, a0
+; RV32-ONLY-NEXT:    ret
+;
+; RV32VB-LABEL: buildvec_slideup_different_elttype:
+; RV32VB:       # %bb.0:
+; RV32VB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32VB-NEXT:    vmv.s.x v10, zero
+; RV32VB-NEXT:    vmv.v.i v8, 0
+; RV32VB-NEXT:    vredsum.vs v8, v8, v10
+; RV32VB-NEXT:    vmv.s.x v9, zero
+; RV32VB-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32VB-NEXT:    vmv.v.i v10, 0
+; RV32VB-NEXT:    vredsum.vs v9, v10, v9
+; RV32VB-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32VB-NEXT:    vmv.x.s a0, v8
+; RV32VB-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32VB-NEXT:    vmv.x.s a1, v9
+; RV32VB-NEXT:    slli a0, a0, 16
+; RV32VB-NEXT:    zext.h a1, a1
+; RV32VB-NEXT:    or a0, a1, a0
+; RV32VB-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32VB-NEXT:    vmv.s.x v8, a0
+; RV32VB-NEXT:    ret
+;
+; RV32VB-PACK-LABEL: buildvec_slideup_different_elttype:
+; RV32VB-PACK:       # %bb.0:
+; RV32VB-PACK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32VB-PACK-NEXT:    vmv.s.x v10, zero
+; RV32VB-PACK-NEXT:    vmv.v.i v8, 0
+; RV32VB-PACK-NEXT:    vredsum.vs v8, v8, v10
+; RV32VB-PACK-NEXT:    vmv.s.x v9, zero
+; RV32VB-PACK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32VB-PACK-NEXT:    vmv.v.i v10, 0
+; RV32VB-PACK-NEXT:    vredsum.vs v9, v10, v9
+; RV32VB-PACK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32VB-PACK-NEXT:    vmv.x.s a0, v8
+; RV32VB-PACK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32VB-PACK-NEXT:    vmv.x.s a1, v9
+; RV32VB-PACK-NEXT:    pack a0, a1, a0
+; RV32VB-PACK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32VB-PACK-NEXT:    vmv.s.x v8, a0
+; RV32VB-PACK-NEXT:    ret
+;
+; RV64V-ONLY-LABEL: buildvec_slideup_different_elttype:
+; RV64V-ONLY:       # %bb.0:
+; RV64V-ONLY-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64V-ONLY-NEXT:    vmv.s.x v10, zero
+; RV64V-ONLY-NEXT:    vmv.v.i v8, 0
+; RV64V-ONLY-NEXT:    vredsum.vs v9, v8, v10
+; RV64V-ONLY-NEXT:    vmv.x.s a0, v9
+; RV64V-ONLY-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64V-ONLY-NEXT:    vslide1up.vx v8, v9, a0
+; RV64V-ONLY-NEXT:    ret
+;
+; RVA22U64-LABEL: buildvec_slideup_different_elttype:
+; RVA22U64:       # %bb.0:
+; RVA22U64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RVA22U64-NEXT:    vmv.s.x v10, zero
+; RVA22U64-NEXT:    vmv.v.i v8, 0
+; RVA22U64-NEXT:    vredsum.vs v8, v8, v10
+; RVA22U64-NEXT:    vmv.s.x v9, zero
+; RVA22U64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RVA22U64-NEXT:    vmv.v.i v10, 0
+; RVA22U64-NEXT:    vredsum.vs v9, v10, v9
+; RVA22U64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RVA22U64-NEXT:    vmv.x.s a0, v8
+; RVA22U64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RVA22U64-NEXT:    vmv.x.s a1, v9
+; RVA22U64-NEXT:    slli a0, a0, 16
+; RVA22U64-NEXT:    zext.h a1, a1
+; RVA22U64-NEXT:    or a0, a0, a1
+; RVA22U64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RVA22U64-NEXT:    vmv.s.x v8, a0
+; RVA22U64-NEXT:    ret
+;
+; RVA22U64-PACK-LABEL: buildvec_slideup_different_elttype:
+; RVA22U64-PACK:       # %bb.0:
+; RVA22U64-PACK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RVA22U64-PACK-NEXT:    vmv.s.x v10, zero
+; RVA22U64-PACK-NEXT:    vmv.v.i v8, 0
+; RVA22U64-PACK-NEXT:    vredsum.vs v8, v8, v10
+; RVA22U64-PACK-NEXT:    vmv.s.x v9, zero
+; RVA22U64-PACK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RVA22U64-PACK-NEXT:    vmv.v.i v10, 0
+; RVA22U64-PACK-NEXT:    vredsum.vs v9, v10, v9
+; RVA22U64-PACK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RVA22U64-PACK-NEXT:    vmv.x.s a0, v8
+; RVA22U64-PACK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RVA22U64-PACK-NEXT:    vmv.x.s a1, v9
+; RVA22U64-PACK-NEXT:    packw a0, a1, a0
+; RVA22U64-PACK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RVA22U64-PACK-NEXT:    vmv.s.x v8, a0
+; RVA22U64-PACK-NEXT:    ret
+;
+; RV64ZVE32-LABEL: buildvec_slideup_different_elttype:
+; RV64ZVE32:       # %bb.0:
+; RV64ZVE32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32-NEXT:    vmv.s.x v10, zero
+; RV64ZVE32-NEXT:    vmv.v.i v8, 0
+; RV64ZVE32-NEXT:    vredsum.vs v9, v8, v10
+; RV64ZVE32-NEXT:    vmv.x.s a0, v9
+; RV64ZVE32-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; RV64ZVE32-NEXT:    vslide1up.vx v8, v9, a0
+; RV64ZVE32-NEXT:    ret
+  %1 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> zeroinitializer)
+  %2 = trunc i32 %1 to i16
+  %3 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> zeroinitializer)
+  %4 = insertelement <2 x i16> zeroinitializer, i16 %3, i64 0
+  %5 = insertelement <2 x i16> %4, i16 %2, i64 1
+  ret <2 x i16> %5
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV64: {{.*}}

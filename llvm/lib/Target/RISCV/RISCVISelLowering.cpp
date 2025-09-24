@@ -4566,22 +4566,25 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   if (SlideUp) {
     MVT EVecContainerVT = EVec.getSimpleValueType();
-    // Make sure the original vector has scalable vector type.
-    if (EVecContainerVT.isFixedLengthVector()) {
-      EVecContainerVT =
-          getContainerForFixedLengthVector(DAG, EVecContainerVT, Subtarget);
-      EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
+    if (EVecContainerVT.getVectorElementType() ==
+        ContainerVT.getVectorElementType()) {
+      // Make sure the original vector has scalable vector type.
+      if (EVecContainerVT.isFixedLengthVector()) {
+        EVecContainerVT =
+            getContainerForFixedLengthVector(DAG, EVecContainerVT, Subtarget);
+        EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
+      }
+
+      // Adapt EVec's type into ContainerVT.
+      if (EVecContainerVT.getVectorMinNumElements() <
+          ContainerVT.getVectorMinNumElements())
+        EVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), EVec, 0);
+      else
+        EVec = DAG.getExtractSubvector(DL, ContainerVT, EVec, 0);
+
+      // Reverse the elements as we're going to slide up from the last element.
+      std::reverse(Operands.begin(), Operands.end());
     }
-
-    // Adapt EVec's type into ContainerVT.
-    if (EVecContainerVT.getVectorMinNumElements() <
-        ContainerVT.getVectorMinNumElements())
-      EVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), EVec, 0);
-    else
-      EVec = DAG.getExtractSubvector(DL, ContainerVT, EVec, 0);
-
-    // Reverse the elements as we're going to slide up from the last element.
-    std::reverse(Operands.begin(), Operands.end());
   }
 
   SDValue Vec;
