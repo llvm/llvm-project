@@ -699,6 +699,60 @@ Error olMemFree_impl(void *Address) {
   return Error::success();
 }
 
+Error olGetMemInfoImplDetail(const void *Ptr, ol_mem_info_t PropName,
+                             size_t PropSize, void *PropValue,
+                             size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+  std::lock_guard<std::mutex> Lock(OffloadContext::get().AllocInfoMapMutex);
+
+  auto &AllocBases = OffloadContext::get().AllocBases;
+  auto &AllocInfoMap = OffloadContext::get().AllocInfoMap;
+  const AllocInfo *Alloc = nullptr;
+  if (AllocInfoMap.contains(Ptr)) {
+    // Fast case, we have been given the base pointer directly
+    Alloc = &AllocInfoMap.at(Ptr);
+  } else {
+    // Slower case, we need to look up the base pointer first
+    // Find the first memory allocation whose end is after the target pointer,
+    // and then check to see if it is in range
+    auto Loc = std::lower_bound(AllocBases.begin(), AllocBases.end(), Ptr,
+                                [&](const void *Iter, const void *Val) {
+                                  return AllocInfoMap.at(Iter).End <= Val;
+                                });
+    if (Loc == AllocBases.end() || Ptr < AllocInfoMap.at(*Loc).Start)
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "allocated memory information not found");
+    Alloc = &AllocInfoMap.at(*Loc);
+  }
+
+  switch (PropName) {
+  case OL_MEM_INFO_DEVICE:
+    return Info.write<ol_device_handle_t>(Alloc->Device);
+  case OL_MEM_INFO_BASE:
+    return Info.write<void *>(Alloc->Start);
+  case OL_MEM_INFO_SIZE:
+    return Info.write<size_t>(static_cast<char *>(Alloc->End) -
+                              static_cast<char *>(Alloc->Start));
+  case OL_MEM_INFO_TYPE:
+    return Info.write<ol_alloc_type_t>(Alloc->Type);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetMemInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetMemInfo_impl(const void *Ptr, ol_mem_info_t PropName,
+                        size_t PropSize, void *PropValue) {
+  return olGetMemInfoImplDetail(Ptr, PropName, PropSize, PropValue, nullptr);
+}
+
+Error olGetMemInfoSize_impl(const void *Ptr, ol_mem_info_t PropName,
+                            size_t *PropSizeRet) {
+  return olGetMemInfoImplDetail(Ptr, PropName, 0, nullptr, PropSizeRet);
+}
+
 Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
   auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
 
