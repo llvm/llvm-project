@@ -1386,7 +1386,7 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
 
   // FIXME: This is miscounting the costs with subregisters. In particular, this
   // should support recognizing SplitKit formed copy bundles instead of direct
-  // copy instructions.
+  // copy instructions, which will appear in the same block.
   for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
     const MachineInstr &Instr = *Opnd.getParent();
     if (!Instr.isCopy() || Opnd.isImplicit())
