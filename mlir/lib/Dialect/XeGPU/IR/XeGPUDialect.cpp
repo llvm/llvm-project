@@ -36,14 +36,6 @@ void XeGPUDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrs.cpp.inc>
       >();
-
-  // Populate the uArchMap with the supported target devices
-  auto pvcuArch =
-      std::make_shared<mlir::xegpu::uArch::Xe2Plus::PVCuArch::PVCuArch>();
-  mlir::xegpu::uArch::uArchMap::instance().insert("pvc", pvcuArch);
-  auto bmguArch =
-      std::make_shared<mlir::xegpu::uArch::Xe2Plus::BMGuArch::BMGuArch>();
-  mlir::xegpu::uArch::uArchMap::instance().insert("bmg", bmguArch);
 }
 
 /// Generates instructions to compute offsets for a subgroup identified by
