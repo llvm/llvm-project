@@ -124,7 +124,7 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
                         "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
   auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
-  ast_matchers::internal::Matcher<Stmt> Base = =
+  ast_matchers::internal::Matcher<Stmt> Base =
       cxxMemberCallExpr(
           on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
                  .bind("builder")),
