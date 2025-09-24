@@ -8804,6 +8804,7 @@ SmallVector<SDValue, 4> static simplifyAssumingCCVal(SDValue &Val, SDValue &CC,
   default:
     return {};
   case ISD::Constant:
+  case ISD::CopyFromReg:
     return {Val, Val, Val, Val};
   case SystemZISD::IPM: {
     SDValue IPMOp0 = Val.getOperand(0);
@@ -9040,10 +9041,6 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
   SDValue FalseVal = N->getOperand(1);
   const auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CCReg, DAG);
   const auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CCReg, DAG);
-  // There might be cases where TrueSDVals and FalseSDVals are empty as
-  // TrueVal and FalseVal both are non-constant, and they have already been
-  // optimized by combineCCMask, we can not take early exit here, just bypass it
-  // and directly create a new SELECT_CCMASK.
   if (!TrueSDVals.empty() && !FalseSDVals.empty()) {
     SmallSet<SDValue, 4> MergedSDValsSet;
     // Ignoring CC values outside CCValiid.

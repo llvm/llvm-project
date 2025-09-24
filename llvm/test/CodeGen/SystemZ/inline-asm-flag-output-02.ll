@@ -217,24 +217,15 @@ entry:
 }
 
 ; Check (cc == 0|3).
-define i64 @f2_0_03(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_0_03(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_0_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jo .LBB10_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    je .LBB10_4
-; CHECK-NEXT:  .LBB10_2: # %entry
-; CHECK-NEXT:    lgr %r2, %r3
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB10_3: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    jne .LBB10_2
-; CHECK-NEXT:  .LBB10_4: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
+; CHECK-NEXT:    blhr %r14
+; CHECK-NEXT:  .LBB10_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -249,17 +240,15 @@ entry:
 }
 
 ; Check (cc == 1|2).
-define i64 @f2_0_12(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_0_12(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_0_12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jnlh .LBB11_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB11_2: # %entry
+; CHECK-NEXT:    bnlhr %r14
+; CHECK-NEXT:  .LBB11_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -273,17 +262,15 @@ entry:
 }
 
 ; Check (cc == 1|3).
-define i64 @f2_0_13(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_0_13(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_0_13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jhe .LBB12_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB12_2: # %entry
+; CHECK-NEXT:    bher %r14
+; CHECK-NEXT:  .LBB12_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -366,17 +353,15 @@ entry:
 }
 
 ; Check 'add' for (cc == 1|2).
-define i64 @f2_1_3(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_1_3(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_1_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jnlh .LBB16_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB16_2: # %entry
+; CHECK-NEXT:    bnlhr %r14
+; CHECK-NEXT:  .LBB16_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -390,24 +375,15 @@ entry:
 }
 
 ; Check 'and' with one operand cc and other select_ccmask(cc !=1).
-define i64 @f2_2_1(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_2_1(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_2_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jhe .LBB17_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    jo .LBB17_4
-; CHECK-NEXT:  .LBB17_2: # %entry
-; CHECK-NEXT:    lgr %r2, %r3
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB17_3: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    jno .LBB17_2
-; CHECK-NEXT:  .LBB17_4: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
+; CHECK-NEXT:    blr %r14
+; CHECK-NEXT:  .LBB17_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -423,24 +399,15 @@ entry:
 }
 
 ; Check 'and' with both operands select_ccmask(cc != 2).
-define i64 @f2_2_2(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_2_2(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_2_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jo .LBB18_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    jle .LBB18_4
-; CHECK-NEXT:  .LBB18_2: # %entry
-; CHECK-NEXT:    lgr %r2, %r3
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB18_3: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:    jnle .LBB18_2
-; CHECK-NEXT:  .LBB18_4: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
+; CHECK-NEXT:    bhr %r14
+; CHECK-NEXT:  .LBB18_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -477,17 +444,15 @@ entry:
 }
 
 ; Check  'and/tm' for (cc == 1|3).
-define i64 @f2_2_4(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_2_4(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_2_4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jhe .LBB20_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB20_2: # %entry
+; CHECK-NEXT:    bher %r14
+; CHECK-NEXT:  .LBB20_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -525,17 +490,15 @@ entry:
 
 
 ; Check nested 'xor' cc with select_ccmask(cc != 1).
-define i64 @f2_3_1(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_3_1(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_3_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jl .LBB22_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB22_2: # %entry
+; CHECK-NEXT:    blr %r14
+; CHECK-NEXT:  .LBB22_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -553,17 +516,15 @@ entry:
 
 ; Check branching on 'tm' and 'xor' with one operand cc and the other
 ; select_ccmask(cc !=1).
-define i64 @f2_3_2(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_3_2(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_3_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jl .LBB23_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB23_2: # %entry
+; CHECK-NEXT:    blr %r14
+; CHECK-NEXT:  .LBB23_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -579,17 +540,15 @@ entry:
 
 ; Check branching on 'tm' and 'xor' with one operand cc and the other
 ; select_ccmask(cc !=2).
-define i64 @f2_3_3(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_3_3(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_3_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jh .LBB24_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB24_2: # %entry
+; CHECK-NEXT:    bhr %r14
+; CHECK-NEXT:  .LBB24_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -604,25 +563,15 @@ entry:
 }
 
 ; Check 'or' with both operands select_ccmask with TM and ICMP(cc == 1).
-define i64 @f2_4_1(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_4_1(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_4_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r3
-; CHECK-NEXT:    jnhe .LBB25_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    jno .LBB25_4
-; CHECK-NEXT:  .LBB25_2: # %entry
-; CHECK-NEXT:    lgr %r2, %r3
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB25_3: # %entry
-; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    jo .LBB25_2
-; CHECK-NEXT:  .LBB25_4: # %entry
-; CHECK-NEXT:    lgr %r3, %r0
+; CHECK-NEXT:    bnlr %r14
+; CHECK-NEXT:  .LBB25_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -638,17 +587,15 @@ entry:
 }
 
 ; Check 'or' for (cc == 0|1).
-define i64 @f2_4_2(i64 %x, i64 %y, ptr %a) {
+define i64 @f2_4_2(i64 %y, i64 %x, ptr %a) {
 ; CHECK-LABEL: f2_4_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r4), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jnle .LBB26_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r3, %r2
-; CHECK-NEXT:  .LBB26_2: # %entry
+; CHECK-NEXT:    bnler %r14
+; CHECK-NEXT:  .LBB26_1: # %entry
 ; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
@@ -732,18 +679,17 @@ entry:
 }
 
 ; Check 'add' for (cc == 1|2).
-define i64 @f3_1_3(i64 %x, ptr %a) {
+define i64 @f3_1_3(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_1_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
 ; CHECK-NEXT:    bnlhr %r14
 ; CHECK-NEXT:  .LBB30_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -756,26 +702,17 @@ entry:
 }
 
 ; Check 'and' with one operand cc and other select_ccmask(cc !=1).
-define i64 @f3_2_1(i64 %x, ptr %a) {
+define i64 @f3_2_1(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_2_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lghi %r0, 5
-; CHECK-NEXT:    jhe .LBB31_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    jo .LBB31_4
-; CHECK-NEXT:  .LBB31_2: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB31_3: # %entry
-; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    jno .LBB31_2
-; CHECK-NEXT:  .LBB31_4: # %entry
-; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lghi %r2, 5
+; CHECK-NEXT:    blr %r14
+; CHECK-NEXT:  .LBB31_1: # %entry
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -790,26 +727,17 @@ entry:
 }
 
 ; Check 'and' with both operands select_ccmask(cc != 2).
-define i64 @f3_2_2(i64 %x, ptr %a) {
+define i64 @f3_2_2(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_2_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lghi %r0, 5
-; CHECK-NEXT:    jo .LBB32_3
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    jle .LBB32_4
-; CHECK-NEXT:  .LBB32_2: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
-; CHECK-NEXT:    br %r14
-; CHECK-NEXT:  .LBB32_3: # %entry
-; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    jnle .LBB32_2
-; CHECK-NEXT:  .LBB32_4: # %entry
-; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lghi %r2, 5
+; CHECK-NEXT:    bhr %r14
+; CHECK-NEXT:  .LBB32_1: # %entry
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -845,18 +773,17 @@ entry:
 }
 
 ; Check  'and/tm' for (cc == 1|3).
-define i64 @f3_2_4(i64 %x, ptr %a) {
+define i64 @f3_2_4(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_2_4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
 ; CHECK-NEXT:    bher %r14
 ; CHECK-NEXT:  .LBB34_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -893,18 +820,17 @@ entry:
 
 
 ; Check nested 'xor' cc with select_ccmask(cc != 1).
-define i64 @f3_3_1(i64 %x, ptr %a) {
+define i64 @f3_3_1(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_3_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
 ; CHECK-NEXT:    blr %r14
 ; CHECK-NEXT:  .LBB36_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -921,18 +847,17 @@ entry:
 
 ; Check branching on 'tm' and 'xor' with one operand cc and the other
 ; select_ccmask(cc !=1).
-define i64 @f3_3_2(i64 %x, ptr %a) {
+define i64 @f3_3_2(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_3_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
 ; CHECK-NEXT:    blr %r14
 ; CHECK-NEXT:  .LBB37_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -947,18 +872,17 @@ entry:
 
 ; Check branching on 'tm' and 'xor' with one operand cc and the other
 ; select_ccmask(cc !=2).
-define i64 @f3_3_3(i64 %x, ptr %a) {
+define i64 @f3_3_3(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_3_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
 ; CHECK-NEXT:    bhr %r14
 ; CHECK-NEXT:  .LBB38_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -972,23 +896,17 @@ entry:
 }
 
 ; Check 'or' with both operands select_ccmask with TM and ICMP(cc == 1).
-define i64 @f3_4_1(i64 %x, ptr %a) {
+define i64 @f3_4_1(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_4_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
-; CHECK-NEXT:    lghi %r1, 5
-; CHECK-NEXT:    jhe .LBB39_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lgr %r1, %r0
-; CHECK-NEXT:  .LBB39_2: # %entry
-; CHECK-NEXT:    bor %r14
-; CHECK-NEXT:  .LBB39_3: # %entry
-; CHECK-NEXT:    lgr %r2, %r1
+; CHECK-NEXT:    bnlr %r14
+; CHECK-NEXT:  .LBB39_1: # %entry
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1003,18 +921,17 @@ entry:
 }
 
 ; Check 'or' for (cc == 0|1).
-define i64 @f3_4_2(i64 %x, ptr %a) {
+define i64 @f3_4_2(ptr %a, i64 %x) {
 ; CHECK-LABEL: f3_4_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 5
 ; CHECK-NEXT:    bnler %r14
 ; CHECK-NEXT:  .LBB40_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1054,18 +971,17 @@ entry:
 ; Binary Ops.
 
 ; Check 'add' for (cc != 0).
-define i64 @f4_1_1(i64 %y, ptr %a) {
+define i64 @f4_1_1(ptr %a, i64 %y) {
 ; CHECK-LABEL: f4_1_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    bner %r14
 ; CHECK-NEXT:  .LBB42_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1078,18 +994,17 @@ entry:
 }
 
 ; Check 'add' for (cc == 1|2).
-define i64 @f4_1_2(i64 %y, ptr %a) {
+define i64 @f4_1_2(ptr %a, i64 %y) {
 ; CHECK-LABEL: f4_1_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    blhr %r14
 ; CHECK-NEXT:  .LBB43_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1131,12 +1046,8 @@ define i64 @f4_2_1(i64 %y, ptr %a) {
 ; CHECK-NEXT:    alsi 0(%r3), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jnhe .LBB45_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lghi %r2, 15
-; CHECK-NEXT:  .LBB45_2: # %entry
-; CHECK-NEXT:    bnor %r14
-; CHECK-NEXT:  .LBB45_3: # %entry
+; CHECK-NEXT:    blr %r14
+; CHECK-NEXT:  .LBB45_1: # %entry
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    br %r14
 entry:
@@ -1159,12 +1070,8 @@ define i64 @f4_2_2(i64 %y, ptr %a) {
 ; CHECK-NEXT:    alsi 0(%r3), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jno .LBB46_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lghi %r2, 15
-; CHECK-NEXT:  .LBB46_2: # %entry
-; CHECK-NEXT:    bnler %r14
-; CHECK-NEXT:  .LBB46_3: # %entry
+; CHECK-NEXT:    bhr %r14
+; CHECK-NEXT:  .LBB46_1: # %entry
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    br %r14
 entry:
@@ -1179,18 +1086,17 @@ entry:
 }
 
 ; Check 'and/tm' for (cc == 0|2).
-define i64 @f4_2_3(i64 %y, ptr %a) {
+define i64 @f4_2_3(ptr %a, i64 %y) {
 ; CHECK-LABEL: f4_2_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    bher %r14
 ; CHECK-NEXT:  .LBB47_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1225,18 +1131,17 @@ entry:
 }
 
 ; Check 'icmp' with one operand 'and' and other 'select_ccmask'(cc != 1).
-define i64 @f4_2_5(i64 %y, ptr %a) {
+define i64 @f4_2_5(ptr %a, i64 %y) {
 ; CHECK-LABEL: f4_2_5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    bnlr %r14
 ; CHECK-NEXT:  .LBB49_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1324,21 +1229,16 @@ entry:
 }
 
 ; Check 'or' with both operands select_ccmask with TM and ICMP(cc == 1).
-define i64 @f4_4_1(i64 %y, ptr %a) {
+define i64 @f4_4_1(i64 %y,ptr %a) {
 ; CHECK-LABEL: f4_4_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    alsi 0(%r3), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    jhe .LBB53_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    lghi %r0, 15
-; CHECK-NEXT:  .LBB53_2: # %entry
-; CHECK-NEXT:    bor %r14
-; CHECK-NEXT:  .LBB53_3: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    bnlr %r14
+; CHECK-NEXT:  .LBB53_1: # %entry
+; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
@@ -1375,18 +1275,17 @@ entry:
 }
 
 ; Check 'or' for (cc == 0|1).
-define i64 @f4_4_3(i64 %y, ptr %a) {
+define i64 @f4_4_3(ptr %a, i64 %y) {
 ; CHECK-LABEL: f4_4_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    alsi 0(%r3), -1
+; CHECK-NEXT:    alsi 0(%r2), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    lghi %r2, 15
 ; CHECK-NEXT:    bler %r14
 ; CHECK-NEXT:  .LBB55_1: # %entry
-; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    lgr %r2, %r3
 ; CHECK-NEXT:    br %r14
 entry:
   %cc = tail call i32 asm sideeffect "alsi $1,-1\0A", "={@cc},=*QS,*QS,~{memory}"(ptr  elementtype(i32) %a,  ptr elementtype(i32) %a)
