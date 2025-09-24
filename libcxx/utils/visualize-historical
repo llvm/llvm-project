@@ -10,7 +10,9 @@ import subprocess
 import sys
 import tempfile
 
+import pandas
 import plotly
+import plotly.express
 import tqdm
 
 @functools.total_ordering
@@ -48,6 +50,7 @@ class Commit:
         """
         return hash(self.fullrev)
 
+    @functools.cache
     def show(self, include_diff=False):
         """
         Return the commit information equivalent to `git show` associated to this commit.
@@ -78,8 +81,9 @@ class Commit:
         This makes it possible to control when time is spent recovering that information from Git for
         e.g. better reporting to the user.
         """
-        self.shortrev
         self.fullrev
+        self.shortrev
+        self.show()
 
     def __str__(self):
         return self._sha
@@ -97,25 +101,20 @@ def truncate_lines(string, n, marker=None):
     assert len(truncated) <= n, "broken post-condition"
     return '\n'.join(truncated)
 
-def create_plot(commits, benchmarks, data):
+def create_plot(data, metric):
     """
-    Create a plot object showing the evolution of each benchmark throughout the given commits.
+    Create a plot object showing the evolution of each benchmark throughout the given commits for
+    the given metric.
     """
-    figure = plotly.graph_objects.Figure(layout_title_text=f'{commits[0].shortrev} to {commits[-1].shortrev}')
-
-    # Create the X axis and the hover information
-    x_axis = [commit.shortrev for commit in commits]
-    hover_info = [truncate_lines(commit.show(), 30, marker='...').replace('\n', '<br>') for commit in commits]
-
-    # For each benchmark, get the metric for that benchmark for each commit.
-    #
-    # Some commits may not have any data associated to a benchmark (e.g. runtime or compilation error).
-    # Use None, which is handled properly by plotly.
-    for benchmark in benchmarks:
-        series = [commit_data.get(benchmark, None) for commit_data in data]
-        scatter = plotly.graph_objects.Scatter(x=x_axis, y=series, text=hover_info, name=benchmark)
-        figure.add_trace(scatter)
-
+    data = data.sort_values(by='revlist_order')
+    revlist = pandas.unique(data['commit']) # list of all commits in chronological order
+    hover_info = {c: truncate_lines(c.show(), 30, marker='...').replace('\n', '<br>') for c in revlist}
+    figure = plotly.express.scatter(data, title=f"{revlist[0].shortrev} to {revlist[-1].shortrev}",
+                                          x='revlist_order', y=metric,
+                                          symbol='benchmark',
+                                          color='benchmark',
+                                          hover_name=[hover_info[c] for c in data['commit']],
+                                          trendline="ols")
     return figure
 
 def directory_path(string):
@@ -124,63 +123,60 @@ def directory_path(string):
     else:
         raise NotADirectoryError(string)
 
-def parse_lnt(lines):
+def parse_lnt(lines, aggregate=statistics.median):
     """
-    Parse lines in LNT format and return a dictionnary of the form:
+    Parse lines in LNT format and return a list of dictionnaries of the form:
 
-        {
-            'benchmark1': {
-                'metric1': [float],
-                'metric2': [float],
+        [
+            {
+                'benchmark': <benchmark1>,
+                <metric1>: float,
+                <metric2>: float,
                 ...
             },
-            'benchmark2': {
-                'metric1': [float],
-                'metric2': [float],
+            {
+                'benchmark': <benchmark2>,
+                <metric1>: float,
+                <metric2>: float,
                 ...
             },
             ...
-        }
+        ]
 
-    Each metric may have multiple values.
+    If a metric has multiple values associated to it, they are aggregated into a single
+    value using the provided aggregation function.
     """
-    results = {}
+    results = []
     for line in lines:
         line = line.strip()
         if not line:
             continue
 
         (identifier, value) = line.split(' ')
-        (name, metric) = identifier.split('.')
-        if name not in results:
-            results[name] = {}
-        if metric not in results[name]:
-            results[name][metric] = []
-        results[name][metric].append(float(value))
+        (benchmark, metric) = identifier.split('.')
+        if not any(x['benchmark'] == benchmark for x in results):
+            results.append({'benchmark': benchmark})
+
+        entry = next(x for x in results if x['benchmark'] == benchmark)
+        if metric not in entry:
+            entry[metric] = []
+        entry[metric].append(float(value))
+
+    for entry in results:
+        for metric in entry:
+            if isinstance(entry[metric], list):
+                entry[metric] = aggregate(entry[metric])
+
     return results
 
-def find_outliers(xs, ys, threshold):
+def sorted_revlist(git_repo, commits):
     """
-    Given a list of x coordinates and a list of y coordinates, find (x, y) pairs where the y
-    value differs from the previous y value by more than the given relative difference.
-
-    The threshold is given as a floating point representing a percentage, e.g. 0.25 will result in
-    detecting points that differ from their previous value by more than 25%. The difference is in
-    absolute value, i.e. both positive and negative spikes are detected.
+    Return the list of commits sorted by their chronological order (from oldest to newest) in the
+    provided Git repository. Items earlier in the list are older than items later in the list.
     """
-    outliers = []
-    previous = None
-    for (x, y) in zip(xs, ys):
-        if y is None: # skip data points that don't contain values
-            continue
-
-        if previous is not None:
-            diff = y - previous
-            if (diff / previous) > threshold:
-                outliers.append((x, y))
-        previous = y
-    return outliers
-
+    revlist_cmd = ['git', '-C', git_repo, 'rev-list', '--no-walk'] + list(commits)
+    revlist = subprocess.check_output(revlist_cmd, text=True).strip().splitlines()
+    return list(reversed(revlist))
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -206,7 +202,7 @@ def main(argv):
              'and to then filter them in the browser, but in some cases producing a chart with a reduced '
              'number of data series is useful.')
     parser.add_argument('--find-outliers', metavar='FLOAT', type=float, required=False,
-        help='When building the chart, detect commits that show a large spike (more than the given relative threshold) '
+        help='Instead of building a chart, detect commits that show a large spike (more than the given relative threshold) '
              'with the previous result and print those to standard output. This can be used to generate a list of '
              'potential outliers that we might want to re-generate the data for. The threshold is expressed as a '
              'floating point number, e.g. 0.25 will detect points that differ by more than 25%% from their previous '
@@ -220,50 +216,45 @@ def main(argv):
              'the resulting benchmark is opened automatically by default.')
     args = parser.parse_args(argv)
 
-    # Extract benchmark data from the directory and keep only the metric we're interested in.
-    #
-    # Some data points may have multiple values associated to the metric (e.g. if we performed
-    # multiple runs to reduce noise), in which case we aggregate them using a median.
-    historical_data = []
+    # Extract benchmark data from the directory.
+    data = []
     files = [f for f in args.directory.glob('*.lnt')]
     for file in tqdm.tqdm(files, desc='Parsing LNT files'):
         (commit, _) = os.path.splitext(os.path.basename(file))
         commit = Commit(args.git_repo, commit)
         with open(file, 'r') as f:
-            lnt_data = parse_lnt(f.readlines())
-            commit_data = {}
-            for (bm, metrics) in lnt_data.items():
-                commit_data[bm] = statistics.median(metrics[args.metric]) if args.metric in metrics else None
-        historical_data.append((commit, commit_data))
+            rows = parse_lnt(f.readlines())
+        data.extend((commit, row) for row in rows)
 
     # Obtain commit information which is then cached throughout the program. Do this
     # eagerly so we can provide a progress bar.
-    for (commit, _) in tqdm.tqdm(historical_data, desc='Prefetching Git information'):
+    for (commit, _) in tqdm.tqdm(data, desc='Prefetching Git information'):
         commit.prefetch()
 
-    # Sort the data based on the ordering of commits inside the provided Git repository
-    historical_data.sort(key=lambda x: x[0])
+    # Create a dataframe from the raw data and add some columns to it:
+    # - 'commit' represents the Commit object associated to the results in that row
+    # - `revlist_order` represents the order of the commit within the Git repository.
+    data = pandas.DataFrame([row | {'commit': commit} for (commit, row) in data])
+    revlist = sorted_revlist(args.git_repo, [c.fullrev for c in set(data['commit'])])
+    data = data.join(pandas.DataFrame([{'revlist_order': revlist.index(c.fullrev)} for c in data['commit']]))
 
-    # Filter the benchmarks if needed
-    benchmarks = {b for (_, commit_data) in historical_data for b in commit_data.keys()}
+    # Filter the benchmarks if needed.
     if args.filter is not None:
-        regex = re.compile(args.filter)
-        benchmarks = {b for b in benchmarks if regex.search(b)}
+        keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
+        data = data[data['benchmark'].isin(keeplist)]
 
-    # If requested, perform a basic pass to detect outliers
+    # If requested, perform a basic pass to detect outliers.
+    # Note that we consider a commit to be an outlier if any of the benchmarks for that commit is an outlier.
     if args.find_outliers is not None:
         threshold = args.find_outliers
         outliers = set()
-        for benchmark in benchmarks:
-            commits = [commit for (commit, _) in historical_data]
-            series = [commit_data.get(benchmark, None) for (_, commit_data) in historical_data]
-            outliers |= set(commit for (commit, _) in find_outliers(commits, series, threshold=threshold))
-        print(f'Outliers (more than {threshold * 100}%): {" ".join(str(x) for x in outliers)}')
+        for (benchmark, series) in data.sort_values(by='revlist_order').groupby('benchmark'):
+            outliers |= set(series[series[args.metric].pct_change() > threshold]['commit'])
+        print(f'Outliers (more than {threshold * 100}%): {" ".join(c.shortrev for c in outliers)}')
+        return
 
-    # Plot the data for all the required benchmarks
-    figure = create_plot([commit for (commit, _) in historical_data],
-                         sorted(list(benchmarks)),
-                         [commit_data for (_, commit_data) in historical_data])
+    # Plot the data for all the required benchmarks.
+    figure = create_plot(data, args.metric)
     do_open = args.output is None or args.open
     output = args.output if args.output is not None else tempfile.NamedTemporaryFile(suffix='.html').name
     plotly.io.write_html(figure, file=output, auto_open=do_open)

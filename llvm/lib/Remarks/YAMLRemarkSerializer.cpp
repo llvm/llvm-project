@@ -114,11 +114,15 @@ template <> struct MappingTraits<Argument> {
   static void mapping(IO &io, Argument &A) {
     assert(io.outputting() && "input not yet implemented");
 
+    // A.Key.data() is not necessarily null-terminated, so we must make a copy,
+    // otherwise we potentially read out of bounds.
+    // FIXME: Add support for StringRef Keys in YAML IO.
+    std::string Key(A.Key);
     if (StringRef(A.Val).count('\n') > 1) {
       StringBlockVal S(A.Val);
-      io.mapRequired(A.Key.data(), S);
+      io.mapRequired(Key.c_str(), S);
     } else {
-      io.mapRequired(A.Key.data(), A.Val);
+      io.mapRequired(Key.c_str(), A.Val);
     }
     io.mapOptional("DebugLoc", A.Loc);
   }
