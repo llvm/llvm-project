@@ -56,7 +56,7 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
 void AssumptionCache::findValuesAffectedByOperandBundle(
     OperandBundleUse Bundle, function_ref<void(Value *)> InsertAffected) {
   auto AddAffectedVal = [&](Value *V) {
-    if (isa<Argument>(V) || isa<GlobalValue>(V) || isa<Instruction>(V))
+    if (isa<Argument, GlobalValue, Instruction>(V))
       InsertAffected(V);
   };
 

@@ -16,8 +16,7 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-static bool
-affectedValuesAreEphemeral(const SmallPtrSetImpl<Value *> &Affected) {
+static bool affectedValuesAreEphemeral(ArrayRef<Value *> Affected) {
   // If all the affected uses have only one use (part of the assume), then
   // the assume does not provide useful information. Note that additional
   // users may appear as a result of inlining and CSE, so we should only
@@ -53,9 +52,9 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
           if (Bundle.Inputs.empty())
             return false;
 
-          SmallPtrSet<Value *, 8> Affected;
+          SmallVector<Value *> Affected;
           AssumptionCache::findValuesAffectedByOperandBundle(
-              Bundle, [&](Value *A) { Affected.insert(A); });
+              Bundle, [&](Value *A) { Affected.push_back(A); });
 
           return affectedValuesAreEphemeral(Affected);
         };
@@ -90,9 +89,9 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (match(Cond, m_Intrinsic<Intrinsic::type_test>()))
       continue;
 
-    SmallPtrSet<Value *, 8> Affected;
+    SmallVector<Value *> Affected;
     findValuesAffectedByCondition(Cond, /*IsAssume=*/true,
-                                  [&](Value *A) { Affected.insert(A); });
+                                  [&](Value *A) { Affected.push_back(A); });
 
     if (!affectedValuesAreEphemeral(Affected))
       continue;
