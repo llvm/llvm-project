@@ -196,7 +196,7 @@ protected:
     assert(getKind() != ConstraintKind::Compound);
     assert(Indexes.count() == Args.size());
     assert(IndexesForSubsumption.size() == Indexes.size());
-    assert((Indexes & IndexesForSubsumption) == Indexes);
+    assert((Indexes | IndexesForSubsumption) == Indexes);
 
     Atomic.IndexesForSubsumption = std::move(IndexesForSubsumption);
     Atomic.Indexes = std::move(Indexes);

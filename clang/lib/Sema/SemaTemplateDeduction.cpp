@@ -7182,7 +7182,6 @@ void Sema::MarkUsedTemplateParametersForSubsumptionParameterMapping(
     const Expr *E, unsigned Depth, llvm::SmallBitVector &Used) {
   MarkUsedTemplateParameterVisitor(Used, Depth, /*VisitDeclRefTypes=*/false)
       .TraverseStmt(const_cast<Expr *>(E));
-  return;
 }
 
 void
