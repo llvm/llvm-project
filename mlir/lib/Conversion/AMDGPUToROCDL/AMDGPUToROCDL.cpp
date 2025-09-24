@@ -57,8 +57,7 @@ static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
-  Type i32 = rewriter.getI32Type();
-  return LLVM::ConstantOp::create(rewriter, loc, i32, value);
+  return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), value);
 }
 
 /// Convert an unsigned number `val` to i64.
@@ -76,8 +75,7 @@ static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
 
 static Value createI64Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int64_t value) {
-  Type i64 = rewriter.getI64Type();
-  return LLVM::ConstantOp::create(rewriter, loc, i64, value);
+  return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), value);
 }
 
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
@@ -122,7 +120,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
     for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
       size = std::max(shape[i] * strides[i], size);
     size = size * elementByteWidth;
-    return createI64Constant(rewriter, loc, static_cast<int32_t>(size));
+    return createI64Constant(rewriter, loc, size);
   }
   Value maxIndex;
   for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
