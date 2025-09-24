@@ -401,7 +401,7 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
   // Compute the new signature.
   SmallVector<Type> newTypes;
   for (BlockArgument &bbArg : block->getArguments()) {
-    auto tensorType = dyn_cast<TensorType>(bbArg.getType());
+    auto tensorType = dyn_cast<TensorLikeType>(bbArg.getType());
     if (!tensorType) {
       newTypes.push_back(bbArg.getType());
       continue;

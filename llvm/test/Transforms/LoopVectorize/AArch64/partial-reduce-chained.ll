@@ -1381,8 +1381,8 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !loop !1
 }
 
-define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
-; CHECK-NEON-LABEL: define i32 @red_extended_add_chain(
+define i32 @red_extended_add_incomplete_chain(ptr %start, ptr %end, i32 %offset) {
+; CHECK-NEON-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-NEON-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEON-NEXT:  entry:
 ; CHECK-NEON-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
@@ -1404,7 +1404,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-NEON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP3]])
+; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE:%.*]] = add <16 x i32> [[VEC_PHI]], [[TMP3]]
 ; CHECK-NEON-NEXT:    [[TMP4]] = add <16 x i32> [[PARTIAL_REDUCE]], [[BROADCAST_SPLAT]]
 ; CHECK-NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1415,7 +1415,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-NEON:       scalar.ph:
 ;
-; CHECK-SVE-LABEL: define i32 @red_extended_add_chain(
+; CHECK-SVE-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-SVE-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-SVE-NEXT:  entry:
 ; CHECK-SVE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
@@ -1452,7 +1452,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-SVE:       scalar.ph:
 ;
-; CHECK-SVE-MAXBW-LABEL: define i32 @red_extended_add_chain(
+; CHECK-SVE-MAXBW-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-SVE-MAXBW-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-SVE-MAXBW-NEXT:  entry:
 ; CHECK-SVE-MAXBW-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
@@ -1478,7 +1478,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-SVE-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
-; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 8 x i32> @llvm.vector.partial.reduce.add.nxv8i32.nxv8i32(<vscale x 8 x i32> [[VEC_PHI]], <vscale x 8 x i32> [[TMP7]])
+; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = add <vscale x 8 x i32> [[VEC_PHI]], [[TMP7]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP8]] = add <vscale x 8 x i32> [[PARTIAL_REDUCE]], [[BROADCAST_SPLAT]]
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
