@@ -199,6 +199,49 @@ protected:
   // @TODO: Add more fields as needed (e.g., latency, throughput, bandwidth)
 };
 
+//===----------------------------------------------------------------------===//
+// Interfaces
+//===----------------------------------------------------------------------===//
+enum class MMAOpndKind { MatrixA, MatrixB, MatrixC, MatrixD };
+struct MMAInstructionInterface {
+  // Get supported Matrix shapes
+  virtual std::vector<std::pair<uint32_t, uint32_t>>
+  getSupportedShapes(Type dataType, MMAOpndKind matrixType) = 0;
+  // @TODO: This method takes an context object as a parameter, this is to
+  // create the Type objects from the same context. Since type objects are
+  // uniqued in a specific context, to do things like "aType == bType" (where
+  // aType and bType are both same type) kind of checks, the both types should
+  // be from the same context.
+  //
+  // One alternative to this is to create enum to represent each types, but this
+  // adds an extra burden to user to convert these enums to specific types. In
+  // fact the utility that would convert enumToType() and vice versa would still
+  // have to use the context object.
+  //
+  // Untill we have a better solution, we stick to passing context object to
+  // this method.
+  virtual std::vector<Type> getSupportedTypes(MLIRContext &context,
+                                              MMAOpndKind matrixType) = 0;
+  virtual bool
+  checkSupportedShapesAndTypes(std::pair<uint32_t, uint32_t> AShape,
+                               std::pair<uint32_t, uint32_t> BShape,
+                               std::pair<uint32_t, uint32_t> CShape,
+                               std::pair<uint32_t, uint32_t> DShape, Type AType,
+                               Type BType, Type CType, Type DType) = 0;
+  virtual bool checkSupportedTypes(Type AType, Type BType, Type CType,
+                                   Type DType) = 0;
+  virtual bool validate(std::pair<uint32_t, uint32_t> AShape,
+                        std::pair<uint32_t, uint32_t> BShape,
+                        std::pair<uint32_t, uint32_t> CShape,
+                        std::pair<uint32_t, uint32_t> DShape, Type AType,
+                        Type BType, Type CType, Type DType) = 0;
+  virtual std::vector<uint32_t> getSupportedM(Type type) = 0;
+  virtual std::vector<uint32_t> getSupportedK(Type type) = 0;
+  virtual std::vector<uint32_t> getSupportedN(Type type) = 0;
+
+  virtual ~MMAInstructionInterface() = default;
+};
+
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir
