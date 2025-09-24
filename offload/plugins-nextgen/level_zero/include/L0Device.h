@@ -309,9 +309,6 @@ public:
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
     return static_cast<L0DeviceTy &>(Device);
   }
-  static L0DeviceTy &makeL0Device(ompt_device_t *Device) {
-    return *static_cast<L0DeviceTy *>(Device);
-  }
 
   auto &getPlugin() { return (LevelZeroPluginTy &)Plugin; }
   L0DeviceTLSTy &getTLS();
