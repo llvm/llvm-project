@@ -3534,6 +3534,9 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
+  if (!ElementDesc)
+    return false;
+
   SizeT NumElements = S.Stk.pop<SizeT>();
   if (!CheckArraySize(S, OpPC, &NumElements, ElementDesc->getSize(),
                       IsNoThrow)) {
