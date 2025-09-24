@@ -20370,7 +20370,7 @@ static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
 }
 
 static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
-                        AArch64CC::CondCode Cond);
+                        AArch64CC::CondCode Cond, bool EmitCSel = true);
 
 static bool isPredicateCCSettingOp(SDValue N) {
   if ((N.getOpcode() == ISD::SETCC) ||
@@ -20495,6 +20495,7 @@ static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+
   if (SDValue Res = performFirstTrueTestVectorCombine(N, DCI, Subtarget))
     return Res;
   if (SDValue Res = performLastTrueTestVectorCombine(N, DCI, Subtarget))
@@ -22535,7 +22536,7 @@ static SDValue tryConvertSVEWideCompare(SDNode *N, ISD::CondCode CC,
 }
 
 static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
-                        AArch64CC::CondCode Cond) {
+                        AArch64CC::CondCode Cond, bool EmitCSel) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   SDLoc DL(Op);
@@ -22568,6 +22569,8 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
 
   // Set condition code (CC) flags.
   SDValue Test = DAG.getNode(PTest, DL, MVT::i32, Pg, Op);
+  if (!EmitCSel)
+    return Test;
 
   // Convert CC to integer based on requested condition.
   // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.
@@ -27519,6 +27522,37 @@ static SDValue performMULLCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performPTestFirstCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDLoc DL(N);
+  auto Mask = N->getOperand(0);
+  auto Pred = N->getOperand(1);
+
+  if (Mask->getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    Mask = Mask->getOperand(0);
+
+  if (Pred->getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    Pred = Pred->getOperand(0);
+
+  if (Pred->getValueType(0).getVectorElementType() != MVT::i1 ||
+      !isAllActivePredicate(DAG, Mask))
+    return SDValue();
+
+  if (Pred->getOpcode() == ISD::CONCAT_VECTORS) {
+    Pred = Pred->getOperand(0);
+    SDValue Mask = DAG.getSplatVector(Pred->getValueType(0), DL,
+                                      DAG.getAllOnesConstant(DL, MVT::i64));
+    return getPTest(DAG, N->getValueType(0), Mask, Pred,
+                    AArch64CC::FIRST_ACTIVE, /* EmitCSel */ false);
+  }
+
+  return SDValue();
+}
+
 static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
@@ -27875,6 +27909,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::UMULL:
   case AArch64ISD::PMULL:
     return performMULLCombine(N, DCI, DAG);
+  case AArch64ISD::PTEST_FIRST:
+    return performPTestFirstCombine(N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (N->getConstantOperandVal(1)) {
