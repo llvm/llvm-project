@@ -127,7 +127,7 @@ struct KernelLaunchParamsTy {
   void **Ptrs = nullptr;
 };
 
-/// Rectangular range for rect memcpies. Should be the same layout as
+/// Rectangular range for rect memcopies. Should be the same layout as
 /// liboffload's `ol_memcpy_rect_t`.
 struct MemcpyRectTy {
   void *Base;
