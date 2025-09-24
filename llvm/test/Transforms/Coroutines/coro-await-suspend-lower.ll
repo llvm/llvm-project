@@ -65,7 +65,7 @@ cleanup:
   br label %ret
 
 ret:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret void
 }
 
@@ -89,7 +89,7 @@ declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.await.suspend.void(ptr, ptr, ptr)
 declare i1 @llvm.coro.await.suspend.bool(ptr, ptr, ptr)
 declare void @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare void @free(ptr)

@@ -15,14 +15,14 @@ entry:
   %sum4 = call i32 @add(i32 %sum3, i32 %value1)
   %sum5 = call i32 @add(i32 %sum4, i32 %value2)
   call void @print(i32 %sum5)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i32 @llvm.coro.suspend.retcon.i32(...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare ptr @prototype(ptr, i32)

@@ -75,6 +75,10 @@ int main(int, char**)
         const optional<X> opt;
         assert(opt.value_or(Y(3)) == 4);
     }
+    {
+      const optional<X> opt;
+      assert(opt.value_or({Y(3)}) == 4);
+    }
 
   return 0;
 }
