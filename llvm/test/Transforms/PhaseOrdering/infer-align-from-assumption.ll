@@ -7,7 +7,7 @@ declare void @llvm.assume(i1 noundef)
 
 define i32 @entry(ptr %0) {
 ; CHECK-LABEL: define i32 @entry(
-; CHECK-SAME: ptr nocapture [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD_I_I_I:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -31,7 +31,7 @@ define i32 @entry(ptr %0) {
 
 define i32 @fn1(ptr %0) {
 ; CHECK-LABEL: define i32 @fn1(
-; CHECK-SAME: ptr nocapture [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD_I_I:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -47,7 +47,7 @@ define i32 @fn1(ptr %0) {
 
 define i32 @fn2(ptr %0) {
 ; CHECK-LABEL: define i32 @fn2(
-; CHECK-SAME: ptr nocapture [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr captures(none) [[TMP0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD_I:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -67,7 +67,7 @@ define i32 @fn2(ptr %0) {
 
 define i32 @load_assume_aligned(ptr %0) {
 ; CHECK-LABEL: define i32 @load_assume_aligned(
-; CHECK-SAME: ptr [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4) ]
 ; CHECK-NEXT:    [[DOT0_COPYLOAD:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @swap(i32 [[DOT0_COPYLOAD]])
