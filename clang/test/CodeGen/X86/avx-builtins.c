@@ -1071,11 +1071,17 @@ __m128d test_mm256_extractf128_pd(__m256d A) {
   return _mm256_extractf128_pd(A, 1);
 }
 
+TEST_CONSTEXPR(match_m128d(_mm256_extractf128_pd(((__m256d){0.0, 1.0, 2.0, 3.0}), 1),
+              2.0, 3.0));
+
 __m128 test_mm256_extractf128_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_extractf128_ps
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   return _mm256_extractf128_ps(A, 1);
 }
+
+TEST_CONSTEXPR(match_m128(_mm256_extractf128_ps(((__m256){0,1,2,3,4,5,6,7}), 1),
+             4.0f, 5.0f, 6.0f, 7.0f));
 
 __m128i test_mm256_extractf128_si256(__m256i A) {
   // CHECK-LABEL: test_mm256_extractf128_si256
@@ -1083,6 +1089,9 @@ __m128i test_mm256_extractf128_si256(__m256i A) {
   return _mm256_extractf128_si256(A, 1);
 }
 
+TEST_CONSTEXPR(match_m128i(_mm256_extractf128_si256(((__m256i){0,1,2,3,4,5,6,7}), 1),
+              4, 5, 6, 7));
+  
 __m256d test_mm256_floor_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_floor_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 1)
