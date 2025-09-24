@@ -2621,9 +2621,8 @@ interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
   const ASTContext &ASTCtx = S.getASTContext();
   const unsigned SrcBits = ASTCtx.getIntWidth(VT0->getElementType());
   const unsigned LHSVecLen = VT0->getNumElements();
-  const unsigned VectorBits = LHSVecLen * SrcBits;
-  const unsigned SrcPerLane = VectorBits >= 128 ? (128 / SrcBits) : LHSVecLen;
-  const unsigned Lanes = VectorBits >= 128 ? (VectorBits / 128) : 1;
+  const unsigned SrcPerLane = 128 / SrcBits;
+  const unsigned Lanes = LHSVecLen * SrcBits / 128;
 
   PrimType SrcT = *S.getContext().classify(VT0->getElementType());
   PrimType DstT = *S.getContext().classify(getElemType(Dst));

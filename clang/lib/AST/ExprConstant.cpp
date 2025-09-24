@@ -55,7 +55,6 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -11596,9 +11595,8 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   QualType DstElemTy = DstVT->getElementType();
   const bool DstIsUnsigned = DstElemTy->isUnsignedIntegerType();
 
-  const unsigned VectorBits = LHSVecLen * SrcBits;
-  const unsigned srcPerLane = VectorBits >= 128 ? 128 / SrcBits : LHSVecLen;
-  const unsigned lanes = VectorBits >= 128 ? VectorBits / 128 : 1;
+  const unsigned srcPerLane = 128 / SrcBits;
+  const unsigned lanes = LHSVecLen * SrcBits / 128;
 
   SmallVector<APValue, 64> Out;
   Out.reserve(LHSVecLen + RHSVecLen);
