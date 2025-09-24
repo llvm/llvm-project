@@ -109,6 +109,29 @@ struct OuterGeneric<T> {
   }
 }
 
+struct TypeAliases {
+  struct Q<T> { let t: T }
+   
+  struct S<T> {
+    typealias A1 = Q<T>
+    typealias A2<R> = Q<R>
+    struct R<U, V> {
+      typealias A3 = Q<T> // Q<tau_0_0>
+      typealias A4 = Q<U> // Q<tau_1_0>
+      typealias A5 = Q<V> // Q<tau_1_1>
+      typealias A6<R> = Q<(R, V, T)>
+      let a3 : A3
+      let a4 : A4
+      let a5 : A5
+      let a6 : A6<T>
+    }
+    let r : R<T, (T, T)>
+    let q1 : A2<T>
+    let q2 : A2<(T, T)>
+  }
+  typealias A7 = Q<Int>
+}
+
 func g() {
   struct FunctionType {
     let funcField = 67
@@ -120,6 +143,18 @@ func g() {
 
     let varB = B()
     let tuple = (A(), B())
+    let alias1 = TypeAliases.A7(t: 1)
+    let alias2 = TypeAliases.S<Int>.R<Int, (Int, Int)>(
+      a3: TypeAliases.Q(t: 3),
+      a4: TypeAliases.Q(t: 4),
+      a5: TypeAliases.Q(t: (5, 6)),
+      a6: TypeAliases.Q(t: (7, (8, 9), 10))
+    )
+    let alias3 = TypeAliases.S<Int>(r: alias2,
+      q1: TypeAliases.Q(t: 11),
+      q2: TypeAliases.Q(t: (12, 13))
+    )
+    let array : [Int] = [1, 2, 3, 4]
     let trivial = TrivialEnum.theCase
     let nonPayload1 = NonPayloadEnum.one
     let nonPayload2 = NonPayloadEnum.two
@@ -158,13 +193,11 @@ func g() {
     let genericInner = OuterGeneric<Int>.GenericInner(t: 647, u: 674.5)
     let functionType = FunctionType()
     let innerFunctionType = InnerFunctionType()
+    var inlineArray: InlineArray<4, Int> = [1, 2, 3, 4]
 
-    var array: InlineArray<4, Int> = [1, 2, 3, 4]
-
-    // Dummy statement to set breakpoint print can't be used in embedded Swift for now.
-    let dummy = A() // break here
+    let dummy = A() 
     let string = StaticString("Hello") 
-    print(string) 
+    print(string) // break here
   }
   f()
 }

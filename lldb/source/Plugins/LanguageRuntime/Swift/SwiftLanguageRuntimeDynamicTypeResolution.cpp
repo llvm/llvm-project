@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBMemoryReader.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntime.h"
 #include "SwiftMetadataCache.h"
@@ -607,13 +608,14 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
 namespace {
 
 CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
-                                const swift::reflection::TypeRef *type_ref) {
+                                const swift::reflection::TypeRef *type_ref,
+                                swift::Mangle::ManglingFlavor flavor) {
   if (!type_ref)
     return {};
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = type_ref->getDemangling(dem);
   // TODO: the mangling flavor should come from the TypeRef.
-  return ts.RemangleAsType(dem, node, ts.GetManglingFlavor());
+  return ts.RemangleAsType(dem, node, flavor);
 }
 
 struct ExistentialSyntheticChild {
@@ -627,7 +629,8 @@ struct ExistentialSyntheticChild {
 llvm::SmallVector<ExistentialSyntheticChild, 4>
 GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
                                 const swift::reflection::TypeRef *tr,
-                                const swift::reflection::TypeInfo *ti) {
+                                const swift::reflection::TypeInfo *ti,
+                                swift::Mangle::ManglingFlavor flavor) {
   llvm::SmallVector<ExistentialSyntheticChild, 4> children;
   auto *protocol_composition_tr =
       llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
@@ -641,7 +644,8 @@ GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
     children.push_back({"object", [=]() {
                           if (auto *super_class_tr =
                                   protocol_composition_tr->getSuperclass())
-                            return GetTypeFromTypeRef(*ts_sp, super_class_tr);
+                            return GetTypeFromTypeRef(*ts_sp, super_class_tr,
+                                                      flavor);
                           else
                             return rti ? ts_sp->GetBuiltinUnknownObjectType()
                                        : ts_sp->GetBuiltinRawPointerType();
@@ -652,9 +656,9 @@ GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
       for (unsigned i = 1; i < fields.size(); ++i) {
         TypeSystemSwiftTypeRefSP ts_sp = ts.GetTypeSystemSwiftTypeRef();
         auto *type_ref = fields[i].TR;
-        children.push_back({fields[i].Name, [=]() {
-                              return GetTypeFromTypeRef(*ts_sp, type_ref);
-                            }});
+        children.push_back(
+            {fields[i].Name,
+             [=]() { return GetTypeFromTypeRef(*ts_sp, type_ref, flavor); }});
       }
     }
   }
@@ -702,11 +706,19 @@ CompilerType GetTypedefedTypeRecursive(CompilerType type) {
 class SwiftRuntimeTypeVisitor {
   SwiftLanguageRuntime &m_runtime;
   ExecutionContext m_exe_ctx;
+  swift::Mangle::ManglingFlavor m_flavor =
+      swift::Mangle::ManglingFlavor::Default;
   CompilerType m_type;
   ValueObject *m_valobj = nullptr;
   bool m_hide_superclass = false;
   bool m_include_clang_types = false;
   bool m_visit_superclass = false;
+
+  void SetFlavor() {
+    if (auto ts_sp =
+            m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>())
+      m_flavor = ts_sp->GetManglingFlavor(&m_exe_ctx);
+  }
 
 public:
   struct ChildInfo {
@@ -732,6 +744,7 @@ public:
       : m_runtime(runtime), m_type(type), m_valobj(valobj) {
     if (valobj)
       m_exe_ctx = valobj->GetExecutionContextRef();
+    SetFlavor();
   }
   SwiftRuntimeTypeVisitor(SwiftLanguageRuntime &runtime, CompilerType type,
                           ExecutionContextScope *exe_scope,
@@ -740,6 +753,7 @@ public:
         m_include_clang_types(include_clang_types) {
     if (exe_scope)
       exe_scope->CalculateExecutionContext(m_exe_ctx);
+    SetFlavor();
   }
   SwiftRuntimeTypeVisitor(SwiftLanguageRuntime &runtime, CompilerType type,
                           ExecutionContext *exe_ctx, bool hide_superclass,
@@ -749,6 +763,7 @@ public:
         m_visit_superclass(visit_superclass) {
     if (exe_ctx)
       m_exe_ctx = *exe_ctx;
+    SetFlavor();
   }
   llvm::Error VisitAllChildren(VisitCallback callback) {
     return VisitImpl({}, callback).takeError();
@@ -871,7 +886,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       field_type = tuple->element_type;
     else {
       if (!field_type)
-        field_type = GetTypeFromTypeRef(ts, field.TR);
+        field_type = GetTypeFromTypeRef(ts, field.TR, m_flavor);
     }
     auto get_info = [&]() -> llvm::Expected<ChildInfo> {
       ChildInfo child;
@@ -968,7 +983,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     if (rti->getRecordKind() ==
         swift::reflection::RecordKind::ClassExistential) {
       // Compatibility with SwiftASTContext.
-      auto children = GetExistentialSyntheticChildren(ts, tr, ti);
+      auto children = GetExistentialSyntheticChildren(ts, tr, ti, m_flavor);
       if (count_only)
         return children.size();
       auto visit_existential = [&](ExistentialSyntheticChild c, unsigned idx) {
@@ -1019,7 +1034,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
           llvm::dyn_cast_or_null<swift::reflection::ReferenceTypeInfo>(ti)) {
     // Is this an Existential?
     unsigned i = 0;
-    auto children = GetExistentialSyntheticChildren(ts, tr, ti);
+    auto children = GetExistentialSyntheticChildren(ts, tr, ti, m_flavor);
     if (children.size()) {
       if (count_only)
         return children.size();
@@ -1109,7 +1124,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
                 if (auto *super_tr = reflection_ctx->LookupSuperclass(
                         *tr, ts.GetDescriptorFinder()))
                   if (auto error = visit_callback(
-                          GetTypeFromTypeRef(ts, super_tr), depth,
+                          GetTypeFromTypeRef(ts, super_tr, m_flavor), depth,
                           []() -> std::string { return "<base class>"; },
                           []() -> llvm::Expected<ChildInfo> {
                             return ChildInfo();
@@ -1143,8 +1158,9 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
             return ChildInfo();
           };
 
-          if (auto error = visit_callback(GetTypeFromTypeRef(ts, super_tr), 0,
-                                          get_name, get_info))
+          if (auto error =
+                  visit_callback(GetTypeFromTypeRef(ts, super_tr, m_flavor), 0,
+                                 get_name, get_info))
             return error;
         }
 
@@ -1263,7 +1279,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
               return success;
           }
 
-          CompilerType super_type = GetTypeFromTypeRef(ts, type_ref);
+          CompilerType super_type = GetTypeFromTypeRef(ts, type_ref, m_flavor);
           auto get_name = [&]() -> std::string {
             auto child_name = super_type.GetTypeName().GetStringRef().str();
             // FIXME: This should be fixed in GetDisplayTypeName instead!
@@ -1471,6 +1487,8 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
   if (!ti_or_err)
     return ti_or_err.takeError();
   auto *ti = &*ti_or_err;
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(enum_type.GetMangledTypeName());
 
   auto project_indirect_enum =
       [&](uint64_t offset, std::string name) -> llvm::Expected<ValueObjectSP> {
@@ -1496,13 +1514,14 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
         auto &field = rti->getFields()[0];
         auto *type_ref = field.TR;
         payload += field.Offset;
-        payload_type = GetTypeFromTypeRef(ts, type_ref);
+        payload_type = GetTypeFromTypeRef(ts, type_ref, flavor);
         break;
       }
       case swift::reflection::RecordKind::Tuple: {
         std::vector<TypeSystemSwift::TupleElement> elts;
         for (auto &field : rti->getFields())
-          elts.emplace_back(ConstString(), GetTypeFromTypeRef(ts, field.TR));
+          elts.emplace_back(ConstString(),
+                            GetTypeFromTypeRef(ts, field.TR, flavor));
         payload_type = ts.CreateTupleType(elts);
         break;
       }
@@ -1570,7 +1589,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
   if (is_indirect_enum)
     return project_indirect_enum(field_info.Offset, field_info.Name);
 
-  CompilerType projected_type = GetTypeFromTypeRef(ts, field_info.TR);
+  CompilerType projected_type = GetTypeFromTypeRef(ts, field_info.TR, flavor);
   if (field_info.Offset != 0) {
     assert(false);
     return llvm::createStringError("enum with unexpected offset");
@@ -1678,7 +1697,9 @@ CompilerType SwiftLanguageRuntime::GetBaseClass(CompilerType class_ty) {
   }
   auto *super_tr = reflection_ctx->LookupSuperclass(
       *type_ref_or_err, tr_ts->GetDescriptorFinder());
-  return GetTypeFromTypeRef(*tr_ts, super_tr);
+  auto flavor =
+      SwiftLanguageRuntime::GetManglingFlavor(class_ty.GetMangledTypeName());
+  return GetTypeFromTypeRef(*tr_ts, super_tr, flavor);
 }
 
 bool SwiftLanguageRuntime::ForEachSuperClassType(
@@ -3393,9 +3414,9 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch
   // context.
+  ExecutionContext exe_ctx;
   if (exe_scope)
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
-      ExecutionContext exe_ctx;
       frame->CalculateExecutionContext(exe_ctx);
       auto bound_type_or_err = BindGenericTypeParameters(*frame, type);
       if (!bound_type_or_err)
@@ -3416,6 +3437,30 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
+
+  // The TypeSystemSwiftTypeRefForExpressions doesn't ve a SymbolFile,
+  // so any DWARF lookups for Embedded Swift fail.
+  //
+  // FIXME: It's unclear whether this is safe to do in a non-LTO Swift program.
+  if (llvm::isa<TypeSystemSwiftTypeRefForExpressions>(tr_ts.get()) &&
+      tr_ts->GetManglingFlavor(&exe_ctx) ==
+          swift::Mangle::ManglingFlavor::Embedded) {
+    if (auto frame_sp = exe_ctx.GetFrameSP()) {
+      auto &sc = frame_sp->GetSymbolContext(eSymbolContextModule);
+      if (sc.module_sp) {
+        auto ts_or_err =
+            sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeSwift);
+        if (!ts_or_err)
+          return ts_or_err.takeError();
+        if (auto *tr_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+                ts_or_err->get())) {
+          LLDBTypeInfoProvider provider(*this, *tr_ts);
+          return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
+                                             tr_ts->GetDescriptorFinder());
+        }
+      }
+    }
+  }
 
   LLDBTypeInfoProvider provider(*this, ts);
   return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
@@ -3555,7 +3600,7 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
       type_ref = &*type_ref_or_err;
     }
 
-    CompilerType resolved = GetTypeFromTypeRef(*tr_ts, type_ref);
+    CompilerType resolved = GetTypeFromTypeRef(*tr_ts, type_ref, flavor);
     LLDB_LOG(GetLog(LLDBLog::Types),
              "Resolved type alias {0} = {1} using reflection metadata.",
              alias.GetMangledTypeName(), resolved.GetMangledTypeName());

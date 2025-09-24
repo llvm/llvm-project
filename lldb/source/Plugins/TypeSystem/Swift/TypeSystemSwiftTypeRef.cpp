@@ -38,6 +38,7 @@
 #include "lldb/Utility/Timer.h"
 
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Demangling/Demangle.h"
@@ -366,12 +367,29 @@ TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
     }
     return {};
   }
+  case Node::Kind::TypeAlias: {
+    if (node->getNumChildren() != 2)
+      return {};
+    NodePointer ident = node->getChild(1);
+    if (ident && ident->hasText())
+      return ident->getText();
+    return {};
+  }
   default:
     // Visit the child nodes.
     for (NodePointer child : *node)
       return GetBaseName(child);
     return {};
   }
+}
+
+std::string
+TypeSystemSwiftTypeRef::GetBaseName(lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node =
+      swift_demangle::GetDemangledTypeMangling(dem, AsMangledName(type));
+  return GetBaseName(node).str();
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
@@ -1053,7 +1071,22 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     }
   }
 
-  if (prefer_clang_types || !results.Done(query)) {
+  TypeSP type;
+  if (results.Done(query))
+    type = results.GetFirstType();
+
+  // Find the type by declcontext (-gdwarf-types).
+  if (!type) {
+    auto resolved = DWARFASTParserSwift::ResolveTypeAlias(
+        GetTypeFromMangledTypename(mangled));
+    if (resolved.second) {
+      NodePointer n =
+          GetDemangledType(dem, resolved.second.GetMangledTypeName());
+      return {n, {}};
+    }
+  }
+
+  if (prefer_clang_types || !type) {
     // No Swift type found -- this could be a Clang typedef.  This
     // check is not done earlier because a Clang typedef that points
     // to a builtin type, e.g., "typedef unsigned uint32_t", could
@@ -1066,7 +1099,6 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     return {{}, clang_type};
   }
 
-  TypeSP type = results.GetFirstType();
   if (!type) {
     LLDB_LOGF(GetLog(LLDBLog::Types), "Found empty type alias %s",
               mangled.AsCString());
@@ -1095,6 +1127,151 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     return {{}, {}};
   }
   return {n, {}};
+}
+
+static swift::Demangle::NodePointer
+GetParentNode(swift::Demangle::NodePointer node) {
+  if (!node || !node->hasChildren())
+    return {};
+  if (node->getKind() == Node::Kind::Type)
+    node = node->getChild(0);
+  if (!node || !node->hasChildren())
+    return {};
+  NodePointer parent_node = nullptr;
+  switch (node->getKind()) {
+  case Node::Kind::Class:
+  case Node::Kind::Enum:
+  case Node::Kind::Structure:
+  case Node::Kind::TypeAlias:
+    parent_node = node->getChild(0);
+    break;
+  case Node::Kind::BoundGenericClass:
+  case Node::Kind::BoundGenericEnum:
+  case Node::Kind::BoundGenericStructure:
+  case Node::Kind::BoundGenericTypeAlias: {
+    NodePointer ty = swift_demangle::ChildAtPath(node, {Node::Kind::Type});
+    if (!ty || ty->getNumChildren() != 1)
+      return {};
+
+    NodePointer inner = ty->getChild(0);
+    if (!inner || !inner->hasChildren())
+      return {};
+    parent_node = inner->getChild(0);
+    break;
+  }
+  default:
+    break;
+  }
+  return parent_node;
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetParentType(lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  const char *mangled_typename = AsMangledName(type);
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_typename);
+  NodePointer node =
+      swift_demangle::GetDemangledTypeMangling(dem, mangled_typename);
+  NodePointer parent_node = GetParentNode(node);
+  if (!parent_node) {
+    LLDB_LOGF(GetLog(LLDBLog::Types), "Could not determine declcontext of %s.",
+              mangled_typename);
+    return {};
+  }
+  if (parent_node->getKind() == Node::Kind::Module)
+    return {};
+  NodePointer type_node = dem.createNode(Node::Kind::Type);
+  type_node->addChild(parent_node, dem);
+  return RemangleAsType(dem, type_node, flavor);
+}
+
+std::vector<std::vector<CompilerType>>
+TypeSystemSwiftTypeRef::GetSubstitutions(lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  const char *mangled_typename = AsMangledName(type);
+
+  std::vector<std::vector<CompilerType>> all_subs;
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_typename);
+  NodePointer type_node =
+      swift_demangle::GetDemangledTypeMangling(dem, mangled_typename);
+  if (!type_node || type_node->getKind() != Node::Kind::Type ||
+      !type_node->hasChildren())
+    return all_subs;
+
+  for (NodePointer node = type_node->getChild(0); node;
+       node = GetParentNode(node)) {
+    switch (node->getKind()) {
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::BoundGenericEnum:
+    case Node::Kind::BoundGenericStructure:
+    case Node::Kind::BoundGenericTypeAlias: {
+      auto &subs = all_subs.emplace_back();
+      if (node->getNumChildren() == 2) {
+        if (NodePointer params = node->getChild(1))
+          for (NodePointer t : *params) {
+            subs.push_back(RemangleAsType(dem, t, flavor));
+          }
+      }
+      break;
+    }
+    default:
+      break;
+    }
+  }
+  std::reverse(all_subs.begin(), all_subs.end());
+  return all_subs;
+}
+
+CompilerType TypeSystemSwiftTypeRef::ApplySubstitutions(
+    lldb::opaque_compiler_type_t type,
+    std::vector<std::vector<CompilerType>> subs) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  const char *mangled_typename = AsMangledName(type);
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_typename);
+  NodePointer node =
+      swift_demangle::GetDemangledTypeMangling(dem, mangled_typename);
+
+  node = Transform(dem, node, [&](NodePointer node) {
+    if (!node || node->getKind() != Node::Kind::DependentGenericParamType ||
+        node->getNumChildren() != 2)
+      return node;
+    NodePointer depth_node = node->getChild(0);
+    NodePointer index_node = node->getChild(1);
+    if (!depth_node->hasIndex() || !index_node->hasIndex())
+      return node;
+    unsigned depth = depth_node->getIndex();
+    unsigned index = index_node->getIndex();
+    if (depth >= subs.size())
+      return node;
+    if (index >= subs[depth].size())
+      return node;
+    CompilerType sub = subs[depth][index];
+    return swift_demangle::GetDemangledTypeMangling(dem,
+                                                    sub.GetMangledTypeName());
+  });
+
+  NodePointer type_node = dem.createNode(Node::Kind::Type);
+  type_node->addChild(node, dem);
+  return RemangleAsType(dem, type_node, flavor);
+}
+
+bool TypeSystemSwiftTypeRef::IsBoundGenericAliasType(
+    lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  const char *mangled_typename = AsMangledName(type);
+
+  NodePointer node =
+      swift_demangle::GetDemangledTypeMangling(dem, mangled_typename);
+  if (!node || node->getKind() != Node::Kind::Type || !node->hasChildren())
+    return false;
+  node = node->getChild(0);
+  if (!node)
+    return false;
+  return node->getKind() == Node::Kind::BoundGenericTypeAlias;
 }
 
 std::optional<TypeSystemSwift::TupleElement>
@@ -4282,8 +4459,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     }
 
   LLDB_LOGF(GetLog(LLDBLog::Types),
-            "Using SwiftASTContext::GetIndexOfChildMemberWithName fallback for "
-            "type %s",
+            "GetIndexOfChildMemberWithName failed for type %s",
             AsMangledName(type));
 
   // Runtime failed, fallback to SwiftASTContext.
@@ -5473,7 +5649,7 @@ TypeSystemSwiftTypeRef::GetDependentGenericParamListForType(
 }
 
 swift::Mangle::ManglingFlavor
-TypeSystemSwiftTypeRef::GetManglingFlavor(ExecutionContext *exe_ctx) {
+TypeSystemSwiftTypeRef::GetManglingFlavor(const ExecutionContext *exe_ctx) {
   auto sc = GetSymbolContext(exe_ctx);
   auto *cu = sc.comp_unit;
   // Cache the result for the last recently used CU.

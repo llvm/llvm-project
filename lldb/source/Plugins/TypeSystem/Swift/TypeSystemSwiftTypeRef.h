@@ -19,6 +19,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ThreadSafeDenseMap.h"
 #include "lldb/Utility/ThreadSafeStringMap.h"
+#include "lldb/lldb-types.h"
 #include "swift/Demangling/ManglingFlavor.h"
 
 // FIXME: needed only for the DenseMap.
@@ -136,6 +137,12 @@ public:
       return true;
     return false;
   }
+
+  CompilerType GetParentType(lldb::opaque_compiler_type_t type);
+  std::vector<std::vector<CompilerType>>
+  GetSubstitutions(lldb::opaque_compiler_type_t type);
+  CompilerType ApplySubstitutions(lldb::opaque_compiler_type_t type,
+                                  std::vector<std::vector<CompilerType>> subs);
 
   Module *GetModule() const { return m_module; }
 
@@ -358,6 +365,7 @@ public:
   CompilerType GetRawPointerType();
   /// Determine whether \p type is a protocol.
   bool IsExistentialType(lldb::opaque_compiler_type_t type);
+  bool IsBoundGenericAliasType(lldb::opaque_compiler_type_t type);
 
   /// Recursively transform the demangle tree starting a \p node by
   /// doing a post-order traversal and replacing each node with
@@ -416,6 +424,7 @@ public:
                            llvm::StringRef mangled_name);
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
+  static std::string GetBaseName(lldb::opaque_compiler_type_t type);
 
   /// Given a mangled name that mangles a "type metadata for Type", return a
   /// CompilerType with that Type.
@@ -457,7 +466,7 @@ public:
   /// Returns the mangling flavor associated with the ASTContext corresponding
   /// with this TypeSystem.
   swift::Mangle::ManglingFlavor
-  GetManglingFlavor(ExecutionContext *exe_ctx = nullptr);
+  GetManglingFlavor(const ExecutionContext *exe_ctx = nullptr);
 
 protected:
   /// Determine whether the fallback is enabled via setting.

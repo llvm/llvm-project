@@ -37,6 +37,8 @@ public:
 
   virtual ~DWARFASTParserSwift();
 
+  static std::pair<lldb::TypeSP, lldb_private::CompilerType>
+  ResolveTypeAlias(lldb_private::CompilerType alias);
   lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                                   const DWARFDIE &die,
                                   bool *type_is_new_ptr) override;

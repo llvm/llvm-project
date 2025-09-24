@@ -55,6 +55,87 @@ findUnsubstitutedGenericTypeAndDIE(TypeSystemSwiftTypeRef &ts,
       ts.GetTypeFromMangledTypename(ConstString(mangled_name));
   return {{unsubstituted_type, unsubstituted_die}};
 }
+
+lldb_private::CompilerType static MapTypeIntoContext(
+    TypeSystemSwiftTypeRef &ts, lldb_private::CompilerType context,
+    lldb_private::CompilerType type) {
+  return ts.ApplySubstitutions(
+      type.GetOpaqueQualType(),
+      ts.GetSubstitutions(context.GetOpaqueQualType()));
+}
+
+std::pair<lldb::TypeSP, lldb_private::CompilerType>
+DWARFASTParserSwift::ResolveTypeAlias(lldb_private::CompilerType alias) {
+  if (!alias)
+    return {};
+  auto ts_sp = alias.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts_sp)
+    return {};
+  auto &ts = *ts_sp;
+  auto *dwarf = llvm::dyn_cast_or_null<SymbolFileDWARF>(ts.GetSymbolFile());
+  if (!dwarf)
+    return {};
+
+  // Type aliases are (for LLVM implementation reasons) using the
+  // DW_AT_name as linkage name, so they can't be looked up by base
+  // name. This should be fixed.
+  // Meanwhile, instead find them inside their parent type.
+  CompilerType parent_ctx = ts.GetParentType(alias.GetOpaqueQualType());
+  if (!parent_ctx)
+    return {};
+
+  DWARFDIE parent_die;
+  if (TypeSP parent_type =
+          ts.FindTypeInModule(parent_ctx.GetOpaqueQualType())) {
+    parent_die = dwarf->GetDIE(parent_type->GetID());
+    auto unsubstituted_pair =
+        findUnsubstitutedGenericTypeAndDIE(ts, parent_die);
+    if (unsubstituted_pair)
+      parent_die = unsubstituted_pair->second;
+  }
+  if (!parent_die)
+    return {};
+  std::string alias_name = ts.GetBaseName(alias.GetOpaqueQualType());
+  for (DWARFDIE child_die : parent_die.children()) {
+    auto tag = child_die.Tag();
+    if (tag == DW_TAG_member)
+      continue;
+    std::string base_name;
+    const auto *name =
+        child_die.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
+    if (name && *name == '$') {
+      CompilerType candidate = ts.GetTypeFromMangledTypename(ConstString(name));
+      base_name = ts.GetBaseName(candidate.GetOpaqueQualType());
+    } else {
+      base_name = name;
+    }
+    if (base_name != alias_name)
+      continue;
+
+    // Follow the typedef.
+    auto *dwarf_parser = ts.GetDWARFParser();
+    if (!dwarf_parser)
+      return {};
+    Type *t = dwarf_parser->GetTypeForDIE(child_die);
+    if (!t)
+      return {};
+    CompilerType cty = t->GetForwardCompilerType();
+    if (ts.IsMeaninglessWithoutDynamicResolution(cty.GetOpaqueQualType())) {
+      // Substitute the parameters in the LHS of the BGTAT.
+      if (ts.IsBoundGenericAliasType(alias.GetOpaqueQualType())) {
+        auto subs = ts.GetSubstitutions(alias.GetOpaqueQualType());
+        while (subs.size() > 1)
+          subs.erase(subs.begin());
+        cty = ts.ApplySubstitutions(cty.GetOpaqueQualType(), subs);
+      }
+      // Substitute the parameters of the RHS of the (BGT)AT.
+      return {t->shared_from_this(), MapTypeIntoContext(ts, parent_ctx, cty)};
+    }
+    return {t->shared_from_this(), cty};
+  }
+  return {};
+}
+
 /// Given a type system and a typeref, return the compiler type and die of the
 /// type that matches that mangled name, looking up the in the type system's
 /// module's debug information.
@@ -78,10 +159,17 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
   auto *dwarf = llvm::cast_or_null<SymbolFileDWARF>(ts.GetSymbolFile());
   if (!dwarf)
     return {};
-  auto lldb_type = ts.FindTypeInModule(type.GetOpaqueQualType());
+  TypeSP lldb_type = ts.FindTypeInModule(type.GetOpaqueQualType());
   if (!lldb_type) {
-    // TODO: for embedded Swift this is fine but consult other modules here for
-    // general case?
+    std::tie(lldb_type, type) = DWARFASTParserSwift::ResolveTypeAlias(type);
+    if (lldb_type) {
+      auto die = dwarf->GetDIE(lldb_type->GetID());
+      return {{type, die}};
+    }
+  }
+  if (!lldb_type) {
+    // TODO: for embedded Swift this is fine but consult other modules
+    // here for general case?
     LLDB_LOGV(GetLog(LLDBLog::Types), "Could not find type {0} in module",
               type.GetMangledTypeName());
     return {};
@@ -373,7 +461,6 @@ DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
                  .GetSwiftEnableFullDwarfDebugging() !=
              lldb_private::AutoBool::False &&
          "Full DWARF debugging for Swift is disabled!");
-
 
   auto pair = getTypeAndDie(m_swift_typesystem, TR);
   if (!pair)
