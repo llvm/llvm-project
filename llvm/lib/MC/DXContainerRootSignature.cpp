@@ -32,12 +32,12 @@ static uint32_t rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 
 size_t RootSignatureDesc::getSize() const {
   uint32_t StaticSamplersOffset = computeStaticSamplersOffset();
-  size_t StaticSamplersSize =
-      (Version > 2 ? sizeof(dxbc::RTS0::v3::StaticSampler)
-                   : sizeof(dxbc::RTS0::v1::StaticSampler)) *
-      StaticSamplers.size();
+  size_t StaticSamplersSize = sizeof(dxbc::RTS0::v1::StaticSampler);
+  if (Version > 2)
+    StaticSamplersSize = sizeof(dxbc::RTS0::v3::StaticSampler);
 
-  return size_t(StaticSamplersOffset) + StaticSamplersSize;
+  return size_t(StaticSamplersOffset) +
+         (StaticSamplersSize * StaticSamplers.size());
 }
 
 uint32_t RootSignatureDesc::computeRootParametersOffset() const {
