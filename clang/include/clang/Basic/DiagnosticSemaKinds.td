@@ -1777,7 +1777,8 @@ def note_unsatisfied_trait
            "%Empty{empty}|"
            "%StandardLayout{standard-layout}|"
            "%Aggregate{aggregate}|"
-           "%Final{final}"
+           "%Final{final}|"
+           "%Abstract{abstract}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1827,7 +1828,12 @@ def note_unsatisfied_trait_reason
            "%PrivateProtectedDirectDataMember{has a %select{private|protected}1 direct data member}|"
            "%PrivateProtectedDirectBase{has a %select{private|protected}1 direct base}|"
            "%NotClassOrUnion{is not a class or union type}|"
-           "%NotMarkedFinal{is not marked 'final'}"
+           "%NotMarkedFinal{is not marked 'final'}|"
+           "%PointerType{is a pointer type}|"
+           "%ArrayType{is an array type}|"
+           "%UnionType{is a union type}|"
+           "%NotStructOrClass{is not a struct or class type}|"
+           "%OverridesAllPureVirtual{overrides all pure virtual functions from base class %1}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -10456,6 +10462,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
   InGroup<Format>;
+def err_format_conversion_argument_type_mismatch : Error<
+  "format specifies type %0 but the argument has "
+  "%select{type|underlying type}2 %1">;
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
@@ -10505,6 +10514,8 @@ def warn_printf_asterisk_missing_arg : Warning<
 def warn_printf_asterisk_wrong_type : Warning<
   "field %select{width|precision}0 should have type %1, but argument has type %2">,
   InGroup<Format>;
+def err_printf_asterisk_wrong_type : Error<
+  "field %select{width|precision}0 should have type %1, but argument has type %2">;
 def warn_printf_nonsensical_optional_amount: Warning<
   "%select{field width|precision}0 used with '%1' conversion specifier, resulting in undefined behavior">,
   InGroup<Format>;

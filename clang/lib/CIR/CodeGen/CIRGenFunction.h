@@ -1274,6 +1274,8 @@ public:
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
 
+  void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
+
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
@@ -1292,6 +1294,9 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
+                                  CallArgList &callArgs);
 
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
@@ -1354,6 +1359,9 @@ public:
 
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
+
+  void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
+  void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
@@ -1715,8 +1723,15 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    // The type of the original variable reference: that is, after 'bounds' have
+    // removed pointers/array types/etc. So in the case of int arr[5], and a
+    // private(arr[1]), 'origType' is 'int', but 'baseType' is 'int[5]'.
+    QualType origType;
     QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
+    // The list of types that we found when going through the bounds, which we
+    // can use to properly set the alloca section.
+    llvm::SmallVector<QualType> boundTypes;
   };
   // Gets the collection of info required to lower and OpenACC clause or cache
   // construct variable reference.
