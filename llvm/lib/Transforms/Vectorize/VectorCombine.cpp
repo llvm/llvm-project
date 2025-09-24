@@ -4433,7 +4433,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 
   // Create new mask using difference of the two incoming masks.
   int MaskOffset = NewMask[0u];
-  unsigned Index = (InputNumElements - MaskOffset) % InputNumElements;
+  unsigned Index = (InputNumElements + MaskOffset) % InputNumElements;
   NewMask.clear();
 
   for (unsigned I = 0u; I < InputNumElements; ++I) {
