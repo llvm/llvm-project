@@ -2601,7 +2601,62 @@ static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ia32_pmadd(InterpState &S, CodePtr OpPC,
                                       const CallExpr *Call,
                                       unsigned BuiltinID) {
-  return true; // TODO: Implement the builtin.
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+                                    
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+
+  PrimType DstElemT = *S.getContext().classify(
+      Call->getType()->castAs<VectorType>()->getElementType());
+  unsigned DstElem = 0;
+  for (unsigned I = 0; I < NumElems; I += 2) {
+    APInt U_LHS0;
+    APInt U_LHS1;
+    APSInt LHS0;
+    APSInt LHS1;
+    APSInt RHS0;
+    APSInt RHS1;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      U_LHS0 = LHS.elem<T>(I).toAPSInt();
+      U_LHS1 = LHS.elem<T>(I+1).toAPSInt();
+      LHS0 = LHS.elem<T>(I).toAPSInt();
+      LHS1 = LHS.elem<T>(I+1).toAPSInt();
+      RHS0 = RHS.elem<T>(I).toAPSInt();
+      RHS1 = RHS.elem<T>(I+1).toAPSInt();
+    });
+
+    APSInt Mul0;
+    APSInt Mul1;
+    APSInt Result;
+    unsigned BitWidth = LHS0.getBitWidth();
+    switch (BuiltinID) {
+    case clang::X86::BI__builtin_ia32_pmaddubsw128:
+    case clang::X86::BI__builtin_ia32_pmaddubsw256:
+    case clang::X86::BI__builtin_ia32_pmaddubsw512:
+      Mul0 = APSInt(U_LHS0.zext(BitWidth) * RHS0.sext(BitWidth));
+      Mul1 = APSInt(U_LHS1.zext(BitWidth) * RHS1.sext(BitWidth));
+      Result = APSInt(Mul0.sadd_sat(Mul1));
+      break;
+    case clang::X86::BI__builtin_ia32_pmaddwd128:
+    case clang::X86::BI__builtin_ia32_pmaddwd256:
+    case clang::X86::BI__builtin_ia32_pmaddwd512:
+      Mul0 = APSInt(LHS0.sext(BitWidth) * RHS0.sext(BitWidth));
+      Mul1 = APSInt(LHS1.sext(BitWidth) * RHS1.sext(BitWidth));
+      Result = APSInt(Mul0 + Mul1);
+      break;
+    }
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                            { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
+  }
+
+  Dst.initializeAllElements();
+  return true;
 }
 
 static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
@@ -3373,12 +3428,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pmaddubsw128:
   case clang::X86::BI__builtin_ia32_pmaddubsw256:
   case clang::X86::BI__builtin_ia32_pmaddubsw512:
-    return true; // TODO: Use interp__builtin_i32_pmadd.
+    return interp__builtin_ia32_pmadd(S, OpPC, Call, BuiltinID);
   
   case clang::X86::BI__builtin_ia32_pmaddwd128:
   case clang::X86::BI__builtin_ia32_pmaddwd256:
   case clang::X86::BI__builtin_ia32_pmaddwd512:
-    return true; // TODO: Use interp__builtin_i32_pmadd.
+    return interp__builtin_ia32_pmadd(S, OpPC, Call, BuiltinID);
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
   case clang::X86::BI__builtin_ia32_pmulhuw256:
