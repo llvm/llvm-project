@@ -137,7 +137,7 @@ If you want to use CUDA libraries and have access to a GPU on your machine,
 you should choose nvidia-cuda-based image and use `nvidia-docker
 <https://github.com/NVIDIA/nvidia-docker>`_ to run your docker containers. Note
 that you don't need nvidia-docker to build the images, but you need it in order
-to have access to GPU from a docker container that is running the built
+to have access to a GPU from a docker container that is running the built
 image.
 
 If you have a different use-case, you could create your own image based on
