@@ -12580,7 +12580,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.AMDGPUBufferRsrcTy;
       break;
     }
-    case 'c': {
+    case 't': {
       Type = Context.AMDGPUImageDescRsrcTy;
       break;
     }
