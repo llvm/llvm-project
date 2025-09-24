@@ -549,3 +549,58 @@ define i64 @orr_32_eor_64() nounwind {
 ; CHECK-NEXT:    ret
   ret i64 18446604367017541391
 }
+
+;==--------------------------------------------------------------------------==
+; Tests for EOR / EON with MOVN.
+;==--------------------------------------------------------------------------==
+
+define i64 @movn_0_eon() {
+; CHECK-LABEL: movn_0_eon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #43690 // =0xaaaa
+; CHECK-NEXT:    movk x0, #21845, lsl #32
+; CHECK-NEXT:    movk x0, #65535, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0xffff55550000aaaa
+}
+
+define i64 @movn_1_eon() {
+; CHECK-LABEL: movn_1_eon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #2863267840 // =0xaaaa0000
+; CHECK-NEXT:    movk x0, #65535, lsl #32
+; CHECK-NEXT:    movk x0, #21845, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x5555ffffaaaa0000
+}
+
+define i64 @movn_0_eor() {
+; CHECK-LABEL: movn_0_eor:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #21845 // =0x5555
+; CHECK-NEXT:    movk x0, #65535, lsl #16
+; CHECK-NEXT:    movk x0, #43690, lsl #32
+; CHECK-NEXT:    ret
+  ret i64 u0x0000aaaaffff5555
+}
+
+define i64 @movn_1_eor() {
+; CHECK-LABEL: movn_1_eor:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #65535 // =0xffff
+; CHECK-NEXT:    movk x0, #21845, lsl #16
+; CHECK-NEXT:    movk x0, #43690, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0xaaaa00005555ffff
+}
+
+define i64 @movn_movk_eor() {
+; CHECK-LABEL: movn_movk_eor:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #43690 // =0xaaaa
+; CHECK-NEXT:    movk x0, #52428, lsl #16
+; CHECK-NEXT:    movk x0, #21845, lsl #32
+; CHECK-NEXT:    movk x0, #13107, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x33335555ccccaaaa
+}
