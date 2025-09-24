@@ -105,8 +105,8 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
 
   // Check if FCMP is a comparison between a dot product and 0.
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if ((DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
-       cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot)) {
+  if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
+      cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot) {
     Register DotOperand1, DotOperand2;
     // Check for scalar dot product.
     if (!mi_match(DotReg, MRI,
@@ -121,16 +121,29 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
     return false;
 
   // Check if select's false operand is the negation of the true operand.
+  auto AreNegatedConstants = [&](Register TrueReg, Register FalseReg) {
+    const ConstantFP *TrueVal, *FalseVal;
+    if (!mi_match(TrueReg, MRI, m_GFCst(TrueVal)) ||
+        !mi_match(FalseReg, MRI, m_GFCst(FalseVal)))
+      return false;
+    APFloat TrueValNegated = TrueVal->getValue();
+    TrueValNegated.changeSign();
+    return FalseVal->getValue().compare(TrueValNegated) == APFloat::cmpEqual;
+  };
+
   if (!mi_match(FalseReg, MRI, m_GFNeg(m_SpecificReg(TrueReg))) &&
       !mi_match(TrueReg, MRI, m_GFNeg(m_SpecificReg(FalseReg)))) {
     // Check if they're constant opposites.
-    std::optional<FPValueAndVReg> TrueVal, FalseVal;
-    if (!mi_match(TrueReg, MRI, m_GFCstOrSplat(TrueVal)) ||
-        !mi_match(FalseReg, MRI, m_GFCstOrSplat(FalseVal)))
-      return false;
-    APFloat TrueValNegated = TrueVal->Value;
-    TrueValNegated.changeSign();
-    if (FalseVal->Value.compare(TrueValNegated) != APFloat::cmpEqual)
+    MachineInstr *TrueInstr = MRI.getVRegDef(TrueReg);
+    MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
+    if (TrueInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+        FalseInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+        TrueInstr->getNumOperands() == FalseInstr->getNumOperands()) {
+      for (unsigned I = 1; I < TrueInstr->getNumOperands(); ++I)
+        if (!AreNegatedConstants(TrueInstr->getOperand(I).getReg(),
+                                 FalseInstr->getOperand(I).getReg()))
+          return false;
+    } else if (!AreNegatedConstants(TrueReg, FalseReg))
       return false;
   }
 
