@@ -7745,6 +7745,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 
+  // Temporarily disable this for LTO if it's not explicitly enabled.
+  // TODO: enable it by default for LTO also.
+  if (Args.hasFlag(options::OPT_fdevirtualize_speculatively,
+                   options::OPT_fno_devirtualize_speculatively,
+                   /*Default value*/ false))
+    CmdArgs.push_back("-fdevirtualize-speculatively");
+
   bool VirtualFunctionElimination =
       Args.hasFlag(options::OPT_fvirtual_function_elimination,
                    options::OPT_fno_virtual_function_elimination, false);

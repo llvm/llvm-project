@@ -2328,6 +2328,13 @@ are listed below.
    This enables better devirtualization. Turned off by default, because it is
    still experimental.
 
+.. option:: -fdevirtualize-speculatively
+
+   Enable speculative devirtualization optimization, such as single-implementation
+   devirtualization. This optimization is used out of LTO mode for now.
+   Turned off by default.
+   TODO: Enable for LTO mode.
+
 .. option:: -fwhole-program-vtables
 
    Enable whole-program vtable optimizations, such as single-implementation
@@ -5216,6 +5223,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fstandalone-debug      Emit full debug info for all types used by the program
       -fstrict-aliasing	      Enable optimizations based on strict aliasing rules
       -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
+      -fdevirtualize-speculatively
+                              Enables speculative devirtualization optimization.
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information

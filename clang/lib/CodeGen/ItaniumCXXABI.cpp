@@ -717,9 +717,10 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
                            CGM.HasHiddenLTOVisibility(RD);
   bool ShouldEmitWPDInfo =
-      CGM.getCodeGenOpts().WholeProgramVTables &&
-      // Don't insert type tests if we are forcing public visibility.
-      !CGM.AlwaysHasLTOVisibilityPublic(RD);
+      (CGM.getCodeGenOpts().WholeProgramVTables &&
+       // Don't insert type tests if we are forcing public visibility.
+       !CGM.AlwaysHasLTOVisibilityPublic(RD)) ||
+      CGM.getCodeGenOpts().DevirtualizeSpeculatively;
   llvm::Value *VirtualFn = nullptr;
 
   {
@@ -2114,13 +2115,15 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
   // definitions to ensure we associate derived classes with base classes
   // defined in headers but with a strong definition only in a shared library.
   if (!VTable->isDeclarationForLinker() ||
-      CGM.getCodeGenOpts().WholeProgramVTables) {
+      CGM.getCodeGenOpts().WholeProgramVTables ||
+      CGM.getCodeGenOpts().DevirtualizeSpeculatively) {
     CGM.EmitVTableTypeMetadata(RD, VTable, VTLayout);
     // For available_externally definitions, add the vtable to
     // @llvm.compiler.used so that it isn't deleted before whole program
     // analysis.
     if (VTable->isDeclarationForLinker()) {
-      assert(CGM.getCodeGenOpts().WholeProgramVTables);
+      assert(CGM.getCodeGenOpts().WholeProgramVTables ||
+             CGM.getCodeGenOpts().DevirtualizeSpeculatively);
       CGM.addCompilerUsedGlobal(VTable);
     }
   }

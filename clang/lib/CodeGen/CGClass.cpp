@@ -2827,10 +2827,11 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
                                                    SourceLocation Loc) {
   if (SanOpts.has(SanitizerKind::CFIVCall))
     EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
-  else if (CGM.getCodeGenOpts().WholeProgramVTables &&
-           // Don't insert type test assumes if we are forcing public
-           // visibility.
-           !CGM.AlwaysHasLTOVisibilityPublic(RD)) {
+  else if ((CGM.getCodeGenOpts().WholeProgramVTables &&
+            // Don't insert type test assumes if we are forcing public
+            // visibility.
+            !CGM.AlwaysHasLTOVisibilityPublic(RD)) ||
+           CGM.getCodeGenOpts().DevirtualizeSpeculatively) {
     CanQualType Ty = CGM.getContext().getCanonicalTagType(RD);
     llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(Ty);
     llvm::Value *TypeId =
@@ -2988,8 +2989,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
-  if (!CGM.getCodeGenOpts().WholeProgramVTables ||
-      !CGM.HasHiddenLTOVisibility(RD))
+  if ((!CGM.getCodeGenOpts().WholeProgramVTables ||
+       !CGM.HasHiddenLTOVisibility(RD)) &&
+      !CGM.getCodeGenOpts().DevirtualizeSpeculatively)
     return false;
 
   if (CGM.getCodeGenOpts().VirtualFunctionElimination)
