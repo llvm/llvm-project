@@ -4020,7 +4020,10 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
 
   // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to
   // check this with the legacy encoding, VEX/EVEX/XOP don't use REX.
-  if ((TSFlags & X86II::EncodingMask) == 0) {
+  const unsigned Enc = TSFlags & X86II::EncodingMask;
+  const bool UsesEvex = (Enc == X86II::EVEX);
+  const bool UsesRex2 = (ForcedOpcodePrefix == OpcodePrefix_REX2);
+  if (Enc == 0 || UsesEvex || UsesRex2) {
     MCRegister HReg;
     bool UsesRex = TSFlags & X86II::REX_W;
     unsigned NumOps = Inst.getNumOperands();
@@ -4031,33 +4034,23 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
       MCRegister Reg = MO.getReg();
       if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH || Reg == X86::DH)
         HReg = Reg;
-      if (X86II::isX86_64NonExtLowByteReg(Reg) ||
-          X86II::isX86_64ExtendedReg(Reg))
+      if (Enc == 0 && (X86II::isX86_64NonExtLowByteReg(Reg) ||
+                       X86II::isX86_64ExtendedReg(Reg)))
         UsesRex = true;
     }
 
-    if (UsesRex && HReg) {
+    if (Enc == 0 && UsesRex && HReg) {
       StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
       return Error(Ops[0]->getStartLoc(),
-                   "can't encode '" + RegName + "' in an instruction requiring "
-                   "REX prefix");
+                   "can't encode '" + RegName +
+                       "' in an instruction requiring REX prefix");
     }
-  }
 
-  if ((TSFlags & X86II::EncodingMask) == X86II::EVEX) {
-    unsigned NumOps = Inst.getNumOperands();
-    for (unsigned i = 0; i != NumOps; ++i) {
-      const MCOperand &MO = Inst.getOperand(i);
-      if (!MO.isReg())
-        continue;
-      MCRegister Reg = MO.getReg();
-      if (Reg == X86::AH || Reg == X86::BH || Reg == X86::CH ||
-          Reg == X86::DH) {
-        StringRef RegName = X86IntelInstPrinter::getRegisterName(Reg);
-        return Error(Ops[0]->getStartLoc(),
-                     "can't encode '" + RegName +
-                         "' in a EVEX-prefixed instruction");
-      }
+    if ((UsesEvex || UsesRex2) && HReg) {
+      StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
+      return Error(Ops[0]->getStartLoc(),
+                   "can't encode '" + RegName.str() +
+                       "' in an instruction requiring EVEX/REX2 prefix");
     }
   }
 

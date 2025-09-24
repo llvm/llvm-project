@@ -1,4 +1,5 @@
 // RUN: not llvm-mc -triple x86_64-unknown-unknown --show-encoding %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple x86_64-unknown-unknown --show-encoding -x86-asm-syntax=intel %s 2>&1 | FileCheck %s --check-prefix=CHECK-INTEL
 
 // CHECK: error: can't encode 'dh' in an instruction requiring REX prefix
 movzx %dh, %rsi
@@ -14,3 +15,21 @@ mov %ch, (%r8)
 
 // CHECK: error: can't encode 'dh' in an instruction requiring REX prefix
 mov %dh, (%rax,%r8)
+
+// CHECK-INTEL: error: can't encode 'ah' in an instruction requiring EVEX/REX2 prefix
+add ah, ah, ah
+
+// CHECK-INTEL: error: can't encode 'ah' in an instruction requiring EVEX/REX2 prefix
+and ah, byte ptr [-13426159], ah
+
+// CHECK-INTEL: error: can't encode 'ah' in an instruction requiring EVEX/REX2 prefix
+ccmpa {dfv=of,cf} byte ptr [r8 + 4*rax + 291], ah
+
+// CHECK-INTEL: error: can't encode 'ah' in an instruction requiring EVEX/REX2 prefix
+ccmpae {dfv=of,cf} byte ptr [r8 + 4*rax + 291], ah
+
+// CHECK-INTEL: error: can't encode 'ah' in an instruction requiring EVEX/REX2 prefix
+sar ah, byte ptr [-13426159]
+
+// CHECK-INTEL: error: can't encode 'ah' in an instruction requiring EVEX/REX2 prefix
+{rex2} add ah, al
