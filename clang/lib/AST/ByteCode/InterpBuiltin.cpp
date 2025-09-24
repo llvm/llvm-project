@@ -2853,9 +2853,9 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_test_op(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<bool(const APSInt &A, const APSInt &B)> Fn) {
-  const Pointer &LHS = S.Stk.pop<Pointer>();
+    llvm::function_ref<bool(const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen)> Fn) {
   const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
 
   assert(LHS.getNumElems() == RHS.getNumElems());
   assert(LHS.getFieldDesc()->isPrimitiveArray() &&
@@ -2865,23 +2865,11 @@ static bool interp__builtin_test_op(
                                                 getElemType(RHS)))
     return false;
 
-  unsigned SourceLen = LHS.getNumElems();
+  const unsigned SourceLen = LHS.getNumElems();
   const QualType ElemQT = getElemType(LHS);
   const OptPrimType ElemPT = S.getContext().classify(ElemQT);
 
-  bool Flag = true;
-  INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
-    for (unsigned I = 0; I < SourceLen; ++I) {
-      const APSInt A = LHS.elem<T>(I).toAPSInt();
-      const APSInt B = RHS.elem<T>(I).toAPSInt();
-      if (!Fn(A, B)) {
-        Flag = false;
-        break;
-      }
-    }
-  });
-
-  pushInteger(S, Flag ? 1 : 0, Call->getType());
+  pushInteger(S, Fn(LHS, RHS, ElemPT, SourceLen) ? 1 : 0, Call->getType());
   return true;
 }
 
@@ -3619,32 +3607,123 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_ptestz256:
     return interp__builtin_test_op(
         S, OpPC, Call,
-        [](const APSInt &A, const APSInt &B) { return (A & B) == 0; });
+        [](const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen) { 
+          INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+            for (unsigned I = 0; I < SourceLen; ++I) {
+              const APSInt A = LHS.elem<T>(I).toAPSInt();
+              const APSInt B = RHS.elem<T>(I).toAPSInt();
+              if (!((A & B) == 0)) {
+                return false;
+              }
+            }
+          });
+          return true;
+        });
 
-    // case X86::BI__builtin_ia32_ptestc128:
-    // case X86::BI__builtin_ia32_ptestc256:
+  case X86::BI__builtin_ia32_ptestc128:
+  case X86::BI__builtin_ia32_ptestc256:
+        return interp__builtin_test_op(
+        S, OpPC, Call,
+        [](const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen) { 
+          INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+            for (unsigned I = 0; I < SourceLen; ++I) {
+              const APSInt A = LHS.elem<T>(I).toAPSInt();
+              const APSInt B = RHS.elem<T>(I).toAPSInt();
+              if (!((~A & B) == 0)) {
+                return false;
+              }
+            }
+          });
+          return true;
+        });
 
-    // case X86::BI__builtin_ia32_ptestnzc128:
-    // case X86::BI__builtin_ia32_ptestnzc256:
+  case X86::BI__builtin_ia32_ptestnzc128:
+  case X86::BI__builtin_ia32_ptestnzc256:
+        return interp__builtin_test_op(
+        S, OpPC, Call,
+        [](const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen) { 
+          INT_TYPE_SWITCH_NO_BOOL(*ElemPT, {
+            bool Flag1 = false;
+            bool Flag2 = false;
+            for (unsigned I = 0; I < SourceLen; ++I) {
+              const APSInt A = LHS.elem<T>(I).toAPSInt();
+              const APSInt B = RHS.elem<T>(I).toAPSInt();
+              if ((A & B) != 0) {
+                Flag1 = true;
+              }
+              if ((~A & B) != 0) {
+                Flag2 = true;
+              }
+            }
+            return Flag1 && Flag2;
+          });
+        });
 
-    // case X86::BI__builtin_ia32_vtestzps:
-    // case X86::BI__builtin_ia32_vtestzps256:
-
-    // case X86::BI__builtin_ia32_vtestcps:
-    // case X86::BI__builtin_ia32_vtestcps256:
-
-    // case X86::BI__builtin_ia32_vtestnzcps:
-    // case X86::BI__builtin_ia32_vtestnzcps256:
-
-    // case X86::BI__builtin_ia32_vtestzpd:
-    // case X86::BI__builtin_ia32_vtestzpd256:
-
-    // case X86::BI__builtin_ia32_vtestcpd:
-    // case X86::BI__builtin_ia32_vtestcpd256:
-
-    // case X86::BI__builtin_ia32_vtestnzcpd:
-    // case X86::BI__builtin_ia32_vtestnzcpd256:
-
+  case X86::BI__builtin_ia32_vtestzps:
+  case X86::BI__builtin_ia32_vtestzps256:
+    case X86::BI__builtin_ia32_vtestzpd:
+  case X86::BI__builtin_ia32_vtestzpd256:
+    return interp__builtin_test_op(
+        S, OpPC, Call,
+        [](const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen) { 
+            for (unsigned I = 0; I < SourceLen; ++I) {
+              using T = PrimConv<PT_Float>::T;
+              const APInt A = LHS.elem<T>(I).getAPFloat().bitcastToAPInt();
+              const APInt B = RHS.elem<T>(I).getAPFloat().bitcastToAPInt();
+              const unsigned SignBit = A.getBitWidth() - 1;
+              const bool ASigned = A[SignBit];
+              const bool BSigned = B[SignBit];
+              if (!((ASigned && BSigned) == 0)) {
+                return false;
+              }
+            }
+            return true;
+        });
+  case X86::BI__builtin_ia32_vtestcps:
+  case X86::BI__builtin_ia32_vtestcps256:
+    case X86::BI__builtin_ia32_vtestcpd:
+  case X86::BI__builtin_ia32_vtestcpd256:
+    return interp__builtin_test_op(
+        S, OpPC, Call,
+        [](const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen) { 
+            for (unsigned I = 0; I < SourceLen; ++I) {
+              using T = PrimConv<PT_Float>::T;
+              const APInt A = LHS.elem<T>(I).getAPFloat().bitcastToAPInt();
+              const APInt B = RHS.elem<T>(I).getAPFloat().bitcastToAPInt();
+              const unsigned SignBit = A.getBitWidth() - 1;
+              const bool ASigned = A[SignBit];
+              const bool BSigned = B[SignBit];
+              if (!((!ASigned && BSigned) == 0)) {
+                return false;
+              }
+            }
+            return true;
+        });
+  case X86::BI__builtin_ia32_vtestnzcps:
+  case X86::BI__builtin_ia32_vtestnzcps256:
+    case X86::BI__builtin_ia32_vtestnzcpd:
+  case X86::BI__builtin_ia32_vtestnzcpd256:
+    return interp__builtin_test_op(
+        S, OpPC, Call,
+        [](const Pointer &LHS, const Pointer &RHS, const OptPrimType ElemPT, const unsigned SourceLen) { 
+          bool Flag1 = false;
+          bool Flag2 = false;
+            for (unsigned I = 0; I < SourceLen; ++I) {
+              using T = PrimConv<PT_Float>::T;
+              const APInt A = LHS.elem<T>(I).getAPFloat().bitcastToAPInt();
+              const APInt B = RHS.elem<T>(I).getAPFloat().bitcastToAPInt();
+              const unsigned SignBit = A.getBitWidth() - 1;
+              const bool ASigned = A[SignBit];
+              const bool BSigned = B[SignBit];
+              if ((ASigned && BSigned) != 0) {
+                Flag1 = true;
+              }
+              if ((!ASigned && BSigned) != 0) {
+                Flag2 = true;
+              }
+            }
+            return Flag1 && Flag2;
+        });
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
