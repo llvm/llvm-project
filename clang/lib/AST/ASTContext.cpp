@@ -1712,6 +1712,11 @@ ASTContext::findPointerAuthContent(QualType T) const {
 
   if (T.hasAddressDiscriminatedPointerAuth())
     return PointerAuthContent::AddressDiscriminatedData;
+
+  T = getBaseElementType(T).getCanonicalType();
+  if (T.hasAddressDiscriminatedPointerAuth())
+    return PointerAuthContent::AddressDiscriminatedData;
+
   const RecordDecl *RD = T->getAsRecordDecl();
   if (!RD)
     return PointerAuthContent::None;
