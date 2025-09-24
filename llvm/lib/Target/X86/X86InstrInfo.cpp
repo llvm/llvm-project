@@ -952,12 +952,12 @@ bool X86InstrInfo::expandCtSelectI386(MachineInstr &MI) const {
   // 8-instruction sequence for constant-time selection:
   // result = (true_val & mask) | (false_val & ~mask)
 
-  auto BundleStart = MI.getIterator();
 
   // Step 1: Create condition byte using SETCC (opposite condition)
-  BuildMI(*MBB, MI, DL, get(SetCCOp), TmpByteReg)
+  auto I1 = BuildMI(*MBB, MI, DL, get(SetCCOp), TmpByteReg)
       .addImm(OppCC)
       .setMIFlag(MachineInstr::MIFlag::NoMerge);
+  auto BundleStart = I1->getIterator();
 
   // Step 2: Zero-extend condition to register width (0 or 1)
   BuildMI(*MBB, MI, DL, get(MovZXOp), TmpMaskReg)
@@ -991,22 +991,20 @@ bool X86InstrInfo::expandCtSelectI386(MachineInstr &MI) const {
       .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Step 8: Final result: (src1 & mask) | (src2 & ~mask)
-  BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
+  auto LI = BuildMI(*MBB, MI, DL, get(OrOp), DstReg)
       .addReg(DstReg)
       .addReg(TmpMaskReg)
       .setMIFlag(MachineInstr::MIFlag::NoMerge);
 
-  // Remove the original pseudo instruction
-  MI.eraseFromParent();
-
-  // Bundle all generated instructions for atomic execution
-  auto BundleEnd = MI.getIterator();
+  // Bundle all generated instructions for atomic execution before removing MI
+  auto BundleEnd = std::next(LI->getIterator());
   if (BundleStart != BundleEnd) {
     // Only bundle if we have multiple instructions
-    MachineInstr *BundleHeader =
-        BuildMI(*MBB, BundleStart, DL, get(TargetOpcode::BUNDLE));
-    finalizeBundle(*MBB, BundleHeader->getIterator(), std::next(BundleEnd));
+    finalizeBundle(*MBB, BundleStart, BundleEnd);
   }
+
+  // Remove the original pseudo instruction
+  MI.eraseFromParent();
   return true;
 }
 
