@@ -112,7 +112,7 @@ namespace ptr_to_ptr_to_retained {
   dispatch_queue_t dispatch;
   // expected-warning@-1{{Instance variable 'dispatch' in 'AnotherObject' is a retainable type 'dispatch_queue_t'}}
 }
-@property(nonatomic, strong) NSString *prop_string;
+@property(nonatomic, readonly, strong) NSString *prop_string;
 // expected-warning@-1{{Property 'prop_string' in 'AnotherObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
 @property(nonatomic, readonly) NSString *prop_safe;
 @end
@@ -123,13 +123,31 @@ namespace ptr_to_ptr_to_retained {
 }
 @end
 
+@interface DerivedObject : AnotherObject {
+  NSNumber *ns_number;
+  // expected-warning@-1{{Instance variable 'ns_number' in 'DerivedObject' is a raw pointer to retainable type 'NSNumber'}}
+  CGImageRef cg_image;
+  // expected-warning@-1{{Instance variable 'cg_image' in 'DerivedObject' is a retainable type 'CGImageRef'}}
+  dispatch_queue_t os_dispatch;
+  // expected-warning@-1{{Instance variable 'os_dispatch' in 'DerivedObject' is a retainable type 'dispatch_queue_t'}}
+}
+@property(nonatomic, strong) NSNumber *prop_number;
+// expected-warning@-1{{Property 'prop_number' in 'DerivedObject' is a raw pointer to retainable type 'NSNumber'; member variables must be a RetainPtr}}
+@property(nonatomic, readonly) NSString *prop_string;
+@end
+
+@implementation DerivedObject
+- (NSString *)prop_string {
+  return nil;
+}
+@end
+
 // No warnings for @interface declaration itself. 
 @interface InterfaceOnlyObject : NSObject
 @property(nonatomic, strong) NSString *prop_string1;
 @property(nonatomic, assign) NSString *prop_string2;
 @property(nonatomic, unsafe_unretained) NSString *prop_string3;
 @property(nonatomic, readonly) NSString *prop_string4;
-
 @end
 
 NS_REQUIRES_PROPERTY_DEFINITIONS
