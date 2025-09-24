@@ -6102,81 +6102,34 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned SelectOpc =
         (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
     unsigned AddcSubbOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-    unsigned AddSubOpc = IsAdd ? AMDGPU::S_ADD_I32 : AMDGPU::S_SUB_I32;
-    //  Lowering for:
-    //
-    //    S_UADDO_PSEUDO|S_ADD_CO_PSEUDO
-    //    <no SCC def code>
-    //    S_ADD_CO_PSEUDO
-    //
-    //  produces:
-    //
-    //    S_ADD_I32|S_ADDC_U32                  ; lowered from S_UADDO_PSEUDO
-    //    SREG = S_CSELECT_B32|64 [1,-1], 0     ; lowered from S_UADDO_PSEUDO
-    //    <no SCC def code>
-    //    S_CMP32|64 SREG, 0                    ; lowered from S_ADD_CO_PSEUDO
-    //    S_ADDC_U32                            ; lowered from S_ADD_CO_PSEUDO
-    //
-    //  At this point before generating the S_CMP check if it is redundant.  If
-    //  so do not recalculate it.  Subsequent optimizations will also delete the
-    //  dead S_CSELECT*.
 
-    bool RecalculateSCC{true};
-    MachineInstr *SelectDef = MRI.getVRegDef(Src2.getReg());
-    if (SelectDef && SelectDef->getParent() == BB &&
-        SelectDef->getOpcode() == SelectOpc &&
-        SelectDef->getOperand(1).isImm() &&
-        SelectDef->getOperand(1).getImm() != 0 &&
-        SelectDef->getOperand(2).isImm() &&
-        SelectDef->getOperand(2).getImm() == 0) {
-      auto I1 = std::next(MachineBasicBlock::reverse_iterator(SelectDef));
-      if (I1 != BB->rend() &&
-          (I1->getOpcode() == AddSubOpc || I1->getOpcode() == AddcSubbOpc)) {
-        // Ensure there are no intervening definitions of SCC between ADDs/SUBs
-        const unsigned SearchLimit = 6;
-        unsigned Count = 0;
-        for (auto I2 = std::next(MachineBasicBlock::reverse_iterator(MI));
-             Count < SearchLimit; I2++, Count++) {
-          if (I2 == I1) {
-            RecalculateSCC = false;
-            break;
-          }
-          if (I2->definesRegister(AMDGPU::SCC, TRI))
-            break;
-        }
+    if (WaveSize == 64) {
+      if (ST.hasScalarCompareEq64()) {
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
+            .addReg(Src2.getReg())
+            .addImm(0);
+      } else {
+        const TargetRegisterClass *SubRC =
+            TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
+        MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
+            MII, MRI, Src2, Src2RC, AMDGPU::sub0, SubRC);
+        MachineOperand Src2Sub1 = TII->buildExtractSubRegOrImm(
+            MII, MRI, Src2, Src2RC, AMDGPU::sub1, SubRC);
+        Register Src2_32 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_OR_B32), Src2_32)
+            .add(Src2Sub0)
+            .add(Src2Sub1);
+
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+            .addReg(Src2_32, RegState::Kill)
+            .addImm(0);
       }
-    }
-
-    if (RecalculateSCC) {
-      if (WaveSize == 64) {
-        if (ST.hasScalarCompareEq64()) {
-          BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
-              .addReg(Src2.getReg())
-              .addImm(0);
-        } else {
-          const TargetRegisterClass *SubRC =
-              TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
-          MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
-              MII, MRI, Src2, Src2RC, AMDGPU::sub0, SubRC);
-          MachineOperand Src2Sub1 = TII->buildExtractSubRegOrImm(
-              MII, MRI, Src2, Src2RC, AMDGPU::sub1, SubRC);
-          Register Src2_32 =
-              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-          BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_OR_B32), Src2_32)
-              .add(Src2Sub0)
-              .add(Src2Sub1);
-
-          BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-              .addReg(Src2_32, RegState::Kill)
-              .addImm(0);
-        }
       } else {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
             .addReg(Src2.getReg())
             .addImm(0);
       }
-    }
 
     BuildMI(*BB, MII, DL, TII->get(AddcSubbOpc), Dest.getReg())
         .add(Src0)
