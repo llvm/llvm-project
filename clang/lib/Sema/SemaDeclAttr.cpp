@@ -5685,7 +5685,7 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
   // Accept template arguments for now as they depend on something else.
   // We'll get to check them when they eventually get instantiated.
   if (E->isInstantiationDependent())
-    return {};
+    return {E, 1};
 
   std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(S.Context);
   if (!I) {
@@ -5704,14 +5704,8 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
         << &AL << Idx << E->getSourceRange();
   }
 
-  // We may need to perform implicit conversion of the argument.
-  InitializedEntity Entity = InitializedEntity::InitializeParameter(
-      S.Context, S.Context.getConstType(S.Context.IntTy), /*consume=*/false);
-  ExprResult ValArg = S.PerformCopyInitialization(Entity, SourceLocation(), E);
-  assert(!ValArg.isInvalid() &&
-         "Unexpected PerformCopyInitialization() failure.");
-
-  return {ValArg.getAs<Expr>(), I->getZExtValue()};
+  return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),
+          I->getZExtValue()};
 }
 
 CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
