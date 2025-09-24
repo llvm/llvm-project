@@ -8183,8 +8183,11 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr)) {
+    if (auto PartialRed =
+            tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value()))
+      return PartialRed;
+  }
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8217,6 +8220,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
   if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
+
+  if (ScaleFactor !=
+      vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()))
+    return nullptr;
 
   unsigned ReductionOpcode = Reduction->getOpcode();
   if (ReductionOpcode == Instruction::Sub) {
