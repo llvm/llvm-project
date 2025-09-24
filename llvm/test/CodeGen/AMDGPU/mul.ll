@@ -3221,7 +3221,7 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX1250-NEXT:    s_load_b128 s[12:15], s[4:5], 0x4c
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_mov_b64 s[4:5], lit64(0xffffffff)
+; GFX1250-NEXT:    s_mov_b64 s[4:5], 0xffffffff
 ; GFX1250-NEXT:    s_mov_b32 s3, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_mov_b32 s7, s3

@@ -111,7 +111,7 @@ template <typename Alloc> class AllocatorHolder : Alloc {
 public:
   AllocatorHolder() = default;
   AllocatorHolder(const Alloc &A) : Alloc(A) {}
-  AllocatorHolder(Alloc &&A) : Alloc(static_cast<Alloc &&>(A)) {}
+  AllocatorHolder(Alloc &&A) : Alloc(std::move(A)) {}
   Alloc &getAllocator() { return *this; }
   const Alloc &getAllocator() const { return *this; }
 };

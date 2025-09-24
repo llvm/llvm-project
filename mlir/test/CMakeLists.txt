@@ -84,6 +84,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_CUDA_SM80_TESTS
   MLIR_RUN_CUDA_SM80_LT_TESTS
   MLIR_RUN_CUDA_SM90_TESTS
+  BUILD_SHARED_LIBS
   )
 
 configure_lit_site_cfg(

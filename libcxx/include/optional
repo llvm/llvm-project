@@ -119,7 +119,7 @@ namespace std {
       constexpr explicit optional(in_place_t, Args &&...);
     template<class U, class... Args>
       constexpr explicit optional(in_place_t, initializer_list<U>, Args &&...);
-    template<class U = T>
+    template<class U = remove_cv_t<T>>
       constexpr explicit(see-below) optional(U &&);
     template<class U>
       explicit(see-below) optional(const optional<U> &);                          // constexpr in C++20
@@ -133,7 +133,7 @@ namespace std {
     optional &operator=(nullopt_t) noexcept;                                      // constexpr in C++20
     constexpr optional &operator=(const optional &);
     constexpr optional &operator=(optional &&) noexcept(see below);
-    template<class U = T> optional &operator=(U &&);                              // constexpr in C++20
+    template<class U = remove_cv_t<T>> optional &operator=(U &&);                              // constexpr in C++20
     template<class U> optional &operator=(const optional<U> &);                   // constexpr in C++20
     template<class U> optional &operator=(optional<U> &&);                        // constexpr in C++20
     template<class... Args> T& emplace(Args &&...);                               // constexpr in C++20
@@ -161,8 +161,8 @@ namespace std {
     constexpr T &value() &;
     constexpr T &&value() &&;
     constexpr const T &&value() const &&;
-    template<class U> constexpr T value_or(U &&) const &;
-    template<class U> constexpr T value_or(U &&) &&;
+    template<class U = remove_cv_t<T>> constexpr T value_or(U &&) const &;
+    template<class U = remove_cv_t<T>> constexpr T value_or(U &&) &&;
 
     // [optional.monadic], monadic operations
     template<class F> constexpr auto and_then(F&& f) &;         // since C++23
@@ -730,7 +730,8 @@ public:
             enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr optional(_Up&& __v) : __base(in_place, std::forward<_Up>(__v)) {}
 
-  template <class _Up, enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(), int> = 0>
+  template <class _Up                                                                        = remove_cv_t<_Tp>,
+            enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_Up&& __v) : __base(in_place, std::forward<_Up>(__v)) {}
 
   // LWG2756: conditionally explicit conversion from const optional<_Up>&
@@ -771,7 +772,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(optional&&)      = default;
 
   // LWG2756
-  template <class _Up        = value_type,
+  template <class _Up        = remove_cv_t<value_type>,
             enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Up>, optional>,
                              _Or<_IsNotSame<__remove_cvref_t<_Up>, value_type>, _Not<is_scalar<value_type>>>,
                              is_constructible<value_type, _Up>,
@@ -919,14 +920,14 @@ public:
     return std::move(this->__get());
   }
 
-  template <class _Up>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr value_type value_or(_Up&& __v) const& {
     static_assert(is_copy_constructible_v<value_type>, "optional<T>::value_or: T must be copy constructible");
     static_assert(is_convertible_v<_Up, value_type>, "optional<T>::value_or: U must be convertible to T");
     return this->has_value() ? this->__get() : static_cast<value_type>(std::forward<_Up>(__v));
   }
 
-  template <class _Up>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr value_type value_or(_Up&& __v) && {
     static_assert(is_move_constructible_v<value_type>, "optional<T>::value_or: T must be move constructible");
     static_assert(is_convertible_v<_Up, value_type>, "optional<T>::value_or: U must be convertible to T");

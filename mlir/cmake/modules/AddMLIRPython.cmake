@@ -113,11 +113,12 @@ endfunction()
 #   DEPENDS_TARGET_SRC_DEPS: List of cpp sources for extension library (for generating a DEPFILE).
 #   IMPORT_PATHS: List of paths to add to PYTHONPATH for stubgen.
 #   PATTERN_FILE: (Optional) Pattern file (see https://nanobind.readthedocs.io/en/latest/typing.html#pattern-files).
+#   VERBOSE: Emit logging/status messages during stub generation (default: OFF).
 # Outputs:
 #   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
 function(mlir_generate_type_stubs)
   cmake_parse_arguments(ARG
-    ""
+    "VERBOSE"
     "MODULE_NAME;OUTPUT_DIR;PATTERN_FILE"
     "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
     ${ARGN})
@@ -152,6 +153,9 @@ function(mlir_generate_type_stubs)
       --include-private
       --output-dir
       "${ARG_OUTPUT_DIR}")
+  if(NOT ARG_VERBOSE)
+    list(APPEND _nb_stubgen_cmd "--quiet")
+  endif()
   if(ARG_PATTERN_FILE)
     list(APPEND _nb_stubgen_cmd "-p;${ARG_PATTERN_FILE}")
     list(APPEND ARG_DEPENDS_TARGETS "${ARG_PATTERN_FILE}")
@@ -166,7 +170,9 @@ function(mlir_generate_type_stubs)
     file(GENERATE OUTPUT "${_depfile}" CONTENT "${_depfiles}")
   endif()
 
-  message(DEBUG "Generating type-stubs outputs ${_generated_type_stubs}")
+  if(ARG_VERBOSE)
+    message(STATUS "Generating type-stubs outputs ${_generated_type_stubs}")
+  endif()
   add_custom_command(
     OUTPUT ${_generated_type_stubs}
     COMMAND ${_nb_stubgen_cmd}

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import pathlib
 import re
 import statistics
 import sys
+import tempfile
 
 import plotly
 import tabulate
@@ -89,18 +91,26 @@ def main(argv):
         help='Path to a LNT format file containing the benchmark results for the baseline.')
     parser.add_argument('candidate', type=argparse.FileType('r'),
         help='Path to a LNT format file containing the benchmark results for the candidate.')
-    parser.add_argument('--output', '-o', type=argparse.FileType('w'), default=sys.stdout,
-        help='Path of a file where to output the resulting comparison. Default to stdout.')
+    parser.add_argument('--output', '-o', type=pathlib.Path, required=False,
+        help='Path of a file where to output the resulting comparison. If the output format is `text`, '
+             'default to stdout. If the output format is `chart`, default to a temporary file which is '
+             'opened automatically once generated, but not removed after creation.')
     parser.add_argument('--metric', type=str, default='execution_time',
         help='The metric to compare. LNT data may contain multiple metrics (e.g. code size, execution time, etc) -- '
-             'this option allows selecting which metric is being analyzed. The default is "execution_time".')
+             'this option allows selecting which metric is being analyzed. The default is `execution_time`.')
     parser.add_argument('--filter', type=str, required=False,
         help='An optional regular expression used to filter the benchmarks included in the comparison. '
              'Only benchmarks whose names match the regular expression will be included.')
     parser.add_argument('--format', type=str, choices=['text', 'chart'], default='text',
-        help='Select the output format. "text" generates a plain-text comparison in tabular form, and "chart" '
-             'generates a self-contained HTML graph that can be opened in a browser. The default is text.')
+        help='Select the output format. `text` generates a plain-text comparison in tabular form, and `chart` '
+             'generates a self-contained HTML graph that can be opened in a browser. The default is `text`.')
+    parser.add_argument('--open', action='store_true',
+        help='Whether to automatically open the generated HTML file when finished. This option only makes sense '
+             'when the output format is `chart`.')
     args = parser.parse_args(argv)
+
+    if args.format == 'text' and args.open:
+        parser.error('Passing --open makes no sense with --format=text')
 
     baseline = parse_lnt(args.baseline.readlines())
     candidate = parse_lnt(args.candidate.readlines())
@@ -114,11 +124,17 @@ def main(argv):
 
     if args.format == 'chart':
         figure = create_chart(benchmarks, baseline_series, candidate_series)
-        plotly.io.write_html(figure, file=args.output)
+        do_open = args.output is None or args.open
+        output = args.output or tempfile.NamedTemporaryFile(suffix='.html').name
+        plotly.io.write_html(figure, file=output, auto_open=do_open)
     else:
         diff = plain_text_comparison(benchmarks, baseline_series, candidate_series)
-        args.output.write(diff)
-        args.output.write('\n')
+        diff += '\n'
+        if args.output is not None:
+            with open(args.output, 'w') as out:
+                out.write(diff)
+        else:
+            sys.stdout.write(diff)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

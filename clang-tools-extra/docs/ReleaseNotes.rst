@@ -301,6 +301,10 @@ Changes in existing checks
   uses of non-standard ``enable_if`` with a signature different from
   ``std::enable_if`` (such as ``boost::enable_if``).
 
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check to
+  enhance the robustness of the member initializer detection.
+
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
