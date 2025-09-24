@@ -1530,10 +1530,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // Try to extend the entire expression tree to the wide destination type.
   bool shouldExtendExpression = true;
   Value *Trunc = nullptr;
-  // Do not extend expression in the trunc + sext pattern when destination type
-  // is narrower than original (pre-trunc) type: modern architectures typically
-  // provide efficient sign-extend instruction, so preserving the sext is
-  // preferable here.
+  // It is not desirable to extend expression in the trunc + sext pattern when
+  // destination type is narrower than original (pre-trunc) type.
   if (match(Src, m_Trunc(m_Value(Trunc))))
     if (Trunc->getType()->getScalarSizeInBits() > DestBitSize)
       shouldExtendExpression = false;
