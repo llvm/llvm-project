@@ -35,9 +35,8 @@ defm decomp_decl : CXX17Compat<"decomposition declarations are">;
 defm inline_variable : CXX17Compat<"inline variables are">;
 
 // C++20 compatibility with C++17 and earlier.
-defm decomp_decl_spec : CXX20Compat<
-  "decomposition declaration declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0 is">;
+defm decomp_decl_spec
+    : CXX20Compat<"decomposition declaration declared '%0' is">;
 defm constexpr_local_var_no_init : CXX20Compat<
   "uninitialized variable in a constexpr %select{function|constructor}0 is">;
 defm constexpr_function_try_block : CXX20Compat<
@@ -593,9 +592,8 @@ def warn_modifying_shadowing_decl :
 // C++ decomposition declarations
 def err_decomp_decl_context : Error<
   "decomposition declaration not permitted in this context">;
-def err_decomp_decl_spec : Error<
-  "decomposition declaration cannot be declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0">;
+def err_decomp_decl_spec
+    : Error<"decomposition declaration cannot be declared '%0'">;
 def err_decomp_decl_type : Error<
   "decomposition declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
