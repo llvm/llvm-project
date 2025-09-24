@@ -1332,8 +1332,8 @@ template <class _InputIterator,
           class _Compare   = less<__iter_key_type<_InputIterator>>,
           class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 map(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
     -> map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare, _Allocator>;
 
@@ -1341,8 +1341,8 @@ map(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocat
 template <ranges::input_range _Range,
           class _Compare   = less<__range_key_type<_Range>>,
           class _Allocator = allocator<__range_to_alloc_type<_Range>>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
     -> map<__range_key_type<_Range>, __range_mapped_type<_Range>, _Compare, _Allocator>;
 #    endif
@@ -1351,15 +1351,15 @@ template <class _Key,
           class _Tp,
           class _Compare   = less<remove_const_t<_Key>>,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
     -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 map(_InputIterator, _InputIterator, _Allocator)
     -> map<__iter_key_type<_InputIterator>,
            __iter_mapped_type<_InputIterator>,
@@ -1367,12 +1367,12 @@ map(_InputIterator, _InputIterator, _Allocator)
            _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 map(from_range_t, _Range&&, _Allocator)
     -> map<__range_key_type<_Range>, __range_mapped_type<_Range>, less<__range_key_type<_Range>>, _Allocator>;
 #    endif
 
-template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 map(initializer_list<pair<_Key, _Tp>>, _Allocator)
     -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #  endif
@@ -1889,8 +1889,8 @@ template <class _InputIterator,
           class _Compare   = less<__iter_key_type<_InputIterator>>,
           class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
     -> multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare, _Allocator>;
 
@@ -1898,8 +1898,8 @@ multimap(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Al
 template <ranges::input_range _Range,
           class _Compare   = less<__range_key_type<_Range>>,
           class _Allocator = allocator<__range_to_alloc_type<_Range>>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
     -> multimap<__range_key_type<_Range>, __range_mapped_type<_Range>, _Compare, _Allocator>;
 #    endif
@@ -1908,15 +1908,15 @@ template <class _Key,
           class _Tp,
           class _Compare   = less<remove_const_t<_Key>>,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
     -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(_InputIterator, _InputIterator, _Allocator)
     -> multimap<__iter_key_type<_InputIterator>,
                 __iter_mapped_type<_InputIterator>,
@@ -1924,12 +1924,12 @@ multimap(_InputIterator, _InputIterator, _Allocator)
                 _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(from_range_t, _Range&&, _Allocator)
     -> multimap<__range_key_type<_Range>, __range_mapped_type<_Range>, less<__range_key_type<_Range>>, _Allocator>;
 #    endif
 
-template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
     -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #  endif
