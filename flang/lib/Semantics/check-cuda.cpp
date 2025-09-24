@@ -777,7 +777,8 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
 void CUDAChecker::Enter(const parser::PrintStmt &x) {
   CHECK(context_.location());
   const Scope &scope{context_.FindScope(*context_.location())};
-  if (IsCUDADeviceContext(&scope) || deviceConstructDepth_ > 0) {
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
     return;
   }
 
