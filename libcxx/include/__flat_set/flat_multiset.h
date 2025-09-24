@@ -689,7 +689,7 @@ private:
 };
 
 template <class _KeyContainer, class _Compare = less<typename _KeyContainer::value_type>>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -697,12 +697,12 @@ flat_multiset(_KeyContainer, _Compare = _Compare())
     -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _KeyContainer, class _Allocator>
-  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator<_KeyContainer>::value)
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator_v<_KeyContainer>)
 flat_multiset(_KeyContainer, _Allocator)
     -> flat_multiset<typename _KeyContainer::value_type, less<typename _KeyContainer::value_type>, _KeyContainer>;
 
 template <class _KeyContainer, class _Compare, class _Allocator>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            uses_allocator_v<_KeyContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
@@ -711,7 +711,7 @@ flat_multiset(_KeyContainer, _Compare, _Allocator)
     -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _KeyContainer, class _Compare = less<typename _KeyContainer::value_type>>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -719,12 +719,12 @@ flat_multiset(sorted_equivalent_t, _KeyContainer, _Compare = _Compare())
     -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _KeyContainer, class _Allocator>
-  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator<_KeyContainer>::value)
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator_v<_KeyContainer>)
 flat_multiset(sorted_equivalent_t, _KeyContainer, _Allocator)
     -> flat_multiset<typename _KeyContainer::value_type, less<typename _KeyContainer::value_type>, _KeyContainer>;
 
 template <class _KeyContainer, class _Compare, class _Allocator>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            uses_allocator_v<_KeyContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
@@ -733,36 +733,36 @@ flat_multiset(sorted_equivalent_t, _KeyContainer, _Compare, _Allocator)
     -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
-  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_multiset(_InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_multiset<__iter_value_type<_InputIterator>, _Compare>;
 
 template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
-  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_multiset(sorted_equivalent_t, _InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_multiset<__iter_value_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
           class _Compare   = less<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
+          class            = __enable_if_t<!__is_allocator_v<_Compare> && __is_allocator_v<_Allocator>>>
 flat_multiset(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_multiset<
     ranges::range_value_t<_Range>,
     _Compare,
     vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, ranges::range_value_t<_Range>>>>;
 
-template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator_v<_Allocator>>>
 flat_multiset(from_range_t, _Range&&, _Allocator) -> flat_multiset<
     ranges::range_value_t<_Range>,
     less<ranges::range_value_t<_Range>>,
     vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, ranges::range_value_t<_Range>>>>;
 
 template <class _Key, class _Compare = less<_Key>>
-  requires(!__is_allocator<_Compare>::value)
+  requires(!__is_allocator_v<_Compare>)
 flat_multiset(initializer_list<_Key>, _Compare = _Compare()) -> flat_multiset<_Key, _Compare>;
 
 template <class _Key, class _Compare = less<_Key>>
-  requires(!__is_allocator<_Compare>::value)
+  requires(!__is_allocator_v<_Compare>)
 flat_multiset(sorted_equivalent_t, initializer_list<_Key>, _Compare = _Compare()) -> flat_multiset<_Key, _Compare>;
 
 template <class _Key, class _Compare, class _KeyContainer, class _Allocator>
