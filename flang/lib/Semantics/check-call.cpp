@@ -1538,6 +1538,10 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
             evaluate::SayWithDeclaration(messages, *wholeSymbol,
                 "Whole assumed-size array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
                 wholeSymbol->name());
+          } else if (IsAssumedRank(*wholeSymbol)) {
+            evaluate::SayWithDeclaration(messages, *wholeSymbol,
+                "Assumed-rank array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
+                wholeSymbol->name());
           }
         }
         if (auto argShape{evaluate::GetShape(context, *expr)}) {

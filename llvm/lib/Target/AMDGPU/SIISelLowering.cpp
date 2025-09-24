@@ -7540,16 +7540,29 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   SDNode *BR = nullptr;
   SDNode *SetCC = nullptr;
 
-  if (Intr->getOpcode() == ISD::SETCC) {
+  switch (Intr->getOpcode()) {
+  case ISD::SETCC: {
     // As long as we negate the condition everything is fine
     SetCC = Intr;
     Intr = SetCC->getOperand(0).getNode();
-
-  } else {
+    break;
+  }
+  case ISD::XOR: {
+    // Similar to SETCC, if we have (xor c, -1), we will be fine.
+    SDValue LHS = Intr->getOperand(0);
+    SDValue RHS = Intr->getOperand(1);
+    if (auto *C = dyn_cast<ConstantSDNode>(RHS); C && C->getZExtValue()) {
+      Intr = LHS.getNode();
+      break;
+    }
+    [[fallthrough]];
+  }
+  default: {
     // Get the target from BR if we don't negate the condition
     BR = findUser(BRCOND, ISD::BR);
     assert(BR && "brcond missing unconditional branch user");
     Target = BR->getOperand(1);
+  }
   }
 
   unsigned CFNode = isCFIntrinsic(Intr);

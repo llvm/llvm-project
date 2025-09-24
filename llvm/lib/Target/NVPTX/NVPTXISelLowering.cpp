@@ -1134,6 +1134,34 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X)
     MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y)
     MAKE_CASE(NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
+    MAKE_CASE(
+        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
+    MAKE_CASE(
+        NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1)
+    MAKE_CASE(NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2)
+    MAKE_CASE(
+        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT)
+    MAKE_CASE(
+        NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT)
   }
   return nullptr;
 
@@ -2602,6 +2630,95 @@ static SDValue LowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
   return Tcgen05StNode;
 }
 
+static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
+  switch (IID) {
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT;
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_SP_SHARED_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_SP_SHARED_SCALE_D_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
+    return NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG1_ASHIFT;
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
+    return NVPTXISD::TCGEN05_MMA_SP_TENSOR_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
+    return NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1;
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
+    return NVPTXISD::TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2;
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
+    return NVPTXISD::
+        TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG1_ASHIFT;
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+    return NVPTXISD::
+        TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  };
+  llvm_unreachable("unhandled tcgen05.mma.disable_output_lane intrinsic");
+}
+
+static SDValue LowerTcgen05MMADisableOutputLane(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+
+  SmallVector<SDValue, 16> Ops;
+  // split the vector argument
+  for (size_t I = 0; I < N->getNumOperands(); I++) {
+    if (I == 1)
+      continue; // skip IID
+    SDValue Val = N->getOperand(I);
+    EVT ValVT = Val.getValueType();
+    if (ValVT.isVector()) {
+      EVT EltVT = ValVT.getVectorElementType();
+      for (unsigned J = 0, NElts = ValVT.getVectorNumElements(); J < NElts; J++)
+        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                                  DAG.getIntPtrConstant(J, DL)));
+    } else
+      Ops.push_back(Val);
+  }
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue Tcgen05MMANode = DAG.getMemIntrinsicNode(
+      getTcgen05MMADisableOutputLane(IID), DL, N->getVTList(), Ops,
+      MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  return Tcgen05MMANode;
+}
+
 static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
@@ -2649,6 +2766,35 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
     return LowerTcgen05St(Op, DAG);
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+    return LowerTcgen05MMADisableOutputLane(Op, DAG);
   }
   return Op;
 }
@@ -4723,6 +4869,53 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align.reset();
+    return true;
+  }
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift: {
+    // We are reading and writing back to TMem
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.align = Align(16);
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift: {
+    // We are reading and writing back to TMem
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.align = Align(16);
     return true;
   }
   }
