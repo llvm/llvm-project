@@ -405,16 +405,10 @@ define <2 x i64> @fcvtzs_2d_intrinsic(<2 x double> %A) nounwind {
 }
 
 define <1 x i64> @fcvtzs_1d_intrinsic(<1 x double> %A) nounwind {
-; CHECK-SD-LABEL: fcvtzs_1d_intrinsic:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzs d0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcvtzs_1d_intrinsic:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcvtzs x8, d0
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fcvtzs_1d_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    ret
 	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> %A)
 	ret <1 x i64> %tmp3
 }
@@ -490,16 +484,10 @@ define <2 x i64> @fcvtzu_2d_intrinsic(<2 x double> %A) nounwind {
 }
 
 define <1 x i64> @fcvtzu_1d_intrinsic(<1 x double> %A) nounwind {
-; CHECK-SD-LABEL: fcvtzu_1d_intrinsic:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fcvtzu d0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcvtzu_1d_intrinsic:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fcvtzu x8, d0
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fcvtzu_1d_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    ret
 	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> %A)
 	ret <1 x i64> %tmp3
 }
