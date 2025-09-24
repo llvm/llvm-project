@@ -7076,9 +7076,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain::RTTIMode RTTIMode = TC.getRTTIMode();
 
-  if (KernelOrKext || (types::isCXX(InputType) &&
-                       (RTTIMode == ToolChain::RM_Disabled)))
+  if (KernelOrKext ||
+      (types::isCXX(InputType) && (RTTIMode == ToolChain::RM_Disabled))) {
     CmdArgs.push_back("-fno-rtti");
+    RTTIMode = ToolChain::RM_Disabled;
+  } else {
+    RTTIMode = ToolChain::RM_Enabled;
+  }
 
   // -fshort-enums=0 is default for all architectures except Hexagon and z/OS.
   if (Args.hasFlag(options::OPT_fshort_enums, options::OPT_fno_short_enums,
@@ -7330,6 +7334,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool EH = false;
   if (!C.getDriver().IsCLMode())
     EH = addExceptionArgs(Args, InputType, TC, KernelOrKext, Runtime, CmdArgs);
+
+  // Warn if exceptions are enabled without enabling RTTI on Darwin as the
+  // configuration is known to cause runtime issues in some cases.
+  if (RawTriple.isOSDarwin() && EH && RTTIMode == ToolChain::RM_Disabled)
+    D.Diag(diag::warn_drv_exception_without_rtti);
 
   // Handle exception personalities
   Arg *A = Args.getLastArg(
