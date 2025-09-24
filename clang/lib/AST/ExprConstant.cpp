@@ -13588,8 +13588,6 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
-
-
   auto EvalTestOp =
       [&](llvm::function_ref<bool(const APValue &, const APValue &,
                                   const unsigned SourceLen)>
