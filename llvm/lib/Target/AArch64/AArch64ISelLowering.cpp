@@ -12564,6 +12564,17 @@ bool AArch64TargetLowering::isOffsetFoldingLegal(
 
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                          bool OptForSize) const {
+  // If the constant to be materialized is scalar, it maybe efficient to use
+  // sequence of 'mov + fmov' rather than 'adrp + ldr' on specified CPU's.
+  // However, when materializing vector of constants, there are two things to
+  // note:
+  // 1. Throughput of fmov instruction is very low.
+  // 2. ldr instruction can load multiple constants in one go. Also, it's
+  // throughput is higher as compared to fmov.
+  if (!VT.isVector() && (Subtarget->getCPU() == "neoverse-v2" ||
+                         Subtarget->getCPU() == "olympus"))
+    return true;
+
   bool IsLegal = false;
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit, 32-bit cases, and
   // 16-bit case when target has full fp16 support.
