@@ -93,6 +93,15 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
   return EdgeIt->second;
 }
 
+std::pair<bool, FunctionPathAndClusterInfo>
+BasicBlockSectionsProfileReader::getFunctionPathAndClusterInfo(
+    StringRef FuncName) const {
+  auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+  return R != ProgramPathAndClusterInfo.end()
+             ? std::pair(true, R->second)
+             : std::pair(false, FunctionPathAndClusterInfo());
+}
+
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
@@ -512,6 +521,12 @@ uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(
     StringRef FuncName, const UniqueBBID &SrcBBID,
     const UniqueBBID &SinkBBID) const {
   return BBSPR.getEdgeCount(FuncName, SrcBBID, SinkBBID);
+}
+
+std::pair<bool, FunctionPathAndClusterInfo>
+BasicBlockSectionsProfileReaderWrapperPass::getFunctionPathAndClusterInfo(
+    StringRef FuncName) const {
+  return BBSPR.getFunctionPathAndClusterInfo(FuncName);
 }
 
 BasicBlockSectionsProfileReader &
