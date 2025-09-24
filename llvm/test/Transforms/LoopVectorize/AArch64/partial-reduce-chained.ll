@@ -1381,8 +1381,8 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !loop !1
 }
 
-define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
-; CHECK-NEON-LABEL: define i32 @red_extended_add_chain(
+define i32 @red_extended_add_incomplete_chain(ptr %start, ptr %end, i32 %offset) {
+; CHECK-NEON-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-NEON-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEON-NEXT:  entry:
 ; CHECK-NEON-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
@@ -1415,7 +1415,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-NEON:       scalar.ph:
 ;
-; CHECK-SVE-LABEL: define i32 @red_extended_add_chain(
+; CHECK-SVE-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-SVE-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-SVE-NEXT:  entry:
 ; CHECK-SVE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
@@ -1452,7 +1452,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-SVE:       scalar.ph:
 ;
-; CHECK-SVE-MAXBW-LABEL: define i32 @red_extended_add_chain(
+; CHECK-SVE-MAXBW-LABEL: define i32 @red_extended_add_incomplete_chain(
 ; CHECK-SVE-MAXBW-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-SVE-MAXBW-NEXT:  entry:
 ; CHECK-SVE-MAXBW-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
