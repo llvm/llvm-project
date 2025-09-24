@@ -1975,7 +1975,10 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
       }
     }
   }
+
+  // Must be done before iv privatization
   CheckPerfectNestAndRectangularLoop(x);
+
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
   ordCollapseLevel = GetNumAffectedLoopsFromLoopConstruct(x) + 1;
   return true;
@@ -2172,37 +2175,29 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
 }
 
 void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
-    const parser::OpenMPLoopConstruct
-        &x) { // GetAssociatedLoopLevelFromClauses(clauseList);
-  auto &&dirContext = GetContext();
+    const parser::OpenMPLoopConstruct &x) {
+  auto &dirContext = GetContext();
   std::int64_t dirDepth{dirContext.associatedLoopLevel};
   if (dirDepth <= 0)
     return;
-
-  Symbol::Flag ivDSA;
-  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
-    ivDSA = Symbol::Flag::OmpPrivate;
-  } else if (dirDepth == 1) {
-    ivDSA = Symbol::Flag::OmpLinear;
-  } else {
-    ivDSA = Symbol::Flag::OmpLastPrivate;
-  }
 
   auto checkExprHasSymbols = [&](llvm::SmallVector<Symbol *> &ivs,
                                  const parser::ScalarExpr *bound) {
     if (ivs.empty())
       return;
-
-    if (auto boundExpr{semantics::AnalyzeExpr(context_, *bound)}) {
-      semantics::UnorderedSymbolSet boundSyms =
-          evaluate::CollectSymbols(*boundExpr);
-      for (auto iv : ivs) {
-        if (boundSyms.count(*iv) != 0) {
-          // TODO: Point to occurence of iv in boundExpr, directiveSource as a
-          // note
-          context_.Say(dirContext.directiveSource,
-              "Trip count must be computable and invariant"_err_en_US);
-        }
+    auto boundExpr{semantics::AnalyzeExpr(context_, *bound)};
+    if (!boundExpr)
+      return;
+    semantics::UnorderedSymbolSet boundSyms =
+        evaluate::CollectSymbols(*boundExpr);
+    if (boundSyms.empty())
+      return;
+    for (Symbol *iv : ivs) {
+      if (boundSyms.count(*iv) != 0) {
+        // TODO: Point to occurence of iv in boundExpr, directiveSource as a
+        //       note
+        context_.Say(dirContext.directiveSource,
+            "Trip count must be computable and invariant"_err_en_US);
       }
     }
   };
@@ -2217,8 +2212,9 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
             std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
                 innerMostNest)}) {
       innerMostLoop = &(innerLoop->value());
-    } else
+    } else {
       break;
+    }
   }
 
   if (!innerMostNest)
@@ -2228,7 +2224,7 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
     return;
 
   llvm::SmallVector<Symbol *> ivs;
-  int curLevel = 0;
+  int curLevel{0};
   const parser::DoConstruct *loop{outer};
   while (true) {
     auto [iv, lb, ub, step] = GetLoopBounds(*loop);
@@ -2240,7 +2236,7 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
     if (step)
       checkExprHasSymbols(ivs, step);
     if (iv) {
-      if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())})
+      if (auto *symbol{currScope().FindSymbol(iv->source)})
         ivs.push_back(symbol);
     }
 
