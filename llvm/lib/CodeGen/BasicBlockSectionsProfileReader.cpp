@@ -77,7 +77,8 @@ BasicBlockSectionsProfileReader::getClonePathsForFunction(
 }
 
 uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
-    StringRef FuncName, const UniqueBBID &SrcBBID, const UniqueBBID &SinkBBID) const {
+    StringRef FuncName, const UniqueBBID &SrcBBID,
+    const UniqueBBID &SinkBBID) const {
   auto It = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
   if (It == ProgramPathAndClusterInfo.end())
     return 0;
