@@ -3300,6 +3300,9 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
   Value result = getResult();
   auto [newCli, gen, cons] = decodeCli(result);
 
+  // Structured binding `gen` cannot be captured in lambdas before C++20
+  OpOperand *generator = gen;
+
   // Derive the CLI variable name from its generator:
   //  * "canonloop" for omp.canonical_loop
   //  * custom name for loop transformation generatees
@@ -3324,7 +3327,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               unsigned firstGrid = generateesFirst;
               unsigned firstIntratile = generateesFirst + generateesCount / 2;
               unsigned end = generateesFirst + generateesCount;
-              unsigned opnum = gen->getOperandNumber();
+              unsigned opnum = generator->getOperandNumber();
               // In the OpenMP apply and looprange clauses, indices are 1-based
               if (firstGrid <= opnum && opnum < firstIntratile) {
                 unsigned gridnum = opnum - firstGrid + 1;
