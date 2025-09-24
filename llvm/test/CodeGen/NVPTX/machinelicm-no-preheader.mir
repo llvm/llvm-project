@@ -22,13 +22,14 @@ registers:
   - { id: 9, class: b64, preferred-register: '', flags: [  ] }
   - { id: 10, class: b32, preferred-register: '', flags: [  ] }
   - { id: 11, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 12, class: b32, preferred-register: '', flags: [  ] }
-  - { id: 13, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 12, class: b64, preferred-register: '', flags: [  ] }
+  - { id: 13, class: b32, preferred-register: '', flags: [  ] }
   - { id: 14, class: b64, preferred-register: '', flags: [  ] }
   - { id: 15, class: b64, preferred-register: '', flags: [  ] }
-  - { id: 16, class: b1, preferred-register: '', flags: [  ] }
+  - { id: 16, class: b64, preferred-register: '', flags: [  ] }
   - { id: 17, class: b1, preferred-register: '', flags: [  ] }
   - { id: 18, class: b32, preferred-register: '', flags: [  ] }
+  - { id: 19, class: b1, preferred-register: '', flags: [  ] }
 body:             |
   bb.0.entry:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
@@ -38,14 +39,15 @@ body:             |
     %9:b64 = LD_i64 0, 0, 101, 3, 64, &test_hoist_param_0, 0 :: (dereferenceable invariant load (s64), addrspace 101)
     %10:b32 = INT_PTX_SREG_CTAID_x
     %11:b32 = INT_PTX_SREG_NTID_x
-    %12:b32 = INT_PTX_SREG_TID_x
-    %13:b64 = CVT_u64_u32 killed %12, 0
-    %14:b64 = nuw MAD_WIDE_U32rrr killed %11, killed %10, killed %13
-    %15:b64 = nuw nsw SHL64_ri killed %14, 2
-    %0:b64 = nuw ADD64rr killed %9, killed %15
+    %12:b64 = MUL_WIDEu32_rr killed %11, killed %10
+    %13:b32 = INT_PTX_SREG_TID_x
+    %14:b64 = CVT_u64_u32 killed %13, 0
+    %15:b64 = nuw ADD64rr killed %12, killed %14
+    %16:b64 = nuw nsw SHL64_ri killed %15, 2
+    %0:b64 = nuw ADD64rr killed %9, killed %16
     %1:b32 = LD_i32 0, 0, 1, 3, 32, %0, 0
-    %16:b1 = SETP_i32ri %8, 0, 0
-    CBranch killed %16, %bb.2
+    %17:b1 = SETP_i32ri %8, 0, 0
+    CBranch killed %17, %bb.2
     GOTO %bb.1
 
   ; CHECK: bb.3:
@@ -61,8 +63,8 @@ body:             |
     %18:b32 = ADD32ri %7, -1
     %4:b32 = SREM32rr %3, %18
     %5:b32 = ADD32ri %2, -1
-    %17:b1 = SETP_i32ri %5, 0, 1
-    CBranch killed %17, %bb.1
+    %19:b1 = SETP_i32ri %5, 0, 1
+    CBranch killed %19, %bb.1
     GOTO %bb.2
 
   bb.2:
