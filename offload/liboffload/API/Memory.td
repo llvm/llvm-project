@@ -76,7 +76,7 @@ def olGetMemInfo : Function {
       "`PropSize == 0`",
       "If `PropSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by this platform"]>
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by liboffload"]>
   ];
 }
 
@@ -91,7 +91,7 @@ def olGetMemInfoSize : Function {
     Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
   ];
   let returns = [
-    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by this platform"]>
+    Return<"OL_ERRC_NOT_FOUND", ["memory was not allocated by liboffload"]>
   ];
 }
 
