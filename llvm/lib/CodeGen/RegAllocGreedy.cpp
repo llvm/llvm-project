@@ -1401,11 +1401,13 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
       continue;
 
     unsigned SubReg = Opnd.getSubReg();
-    if (!IsDef) {
-      // Check if VirtReg interferes with OtherReg after this COPY instruction.
-      if (VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
-        continue;
-    }
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+      continue;
+
+    // Check if VirtReg interferes with OtherReg after this COPY instruction.
+    if (!IsDef && VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
+      continue;
 
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
