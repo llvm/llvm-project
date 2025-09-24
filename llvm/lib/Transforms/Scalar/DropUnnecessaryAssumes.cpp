@@ -67,7 +67,7 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       }
 
       if (KeptBundles.size() != NumBundles) {
-        if (KeptBundles.size() == 0) {
+        if (KeptBundles.empty()) {
           // All operand bundles are dead, remove the whole assume.
           Assume->eraseFromParent();
         } else {
