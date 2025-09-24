@@ -1046,7 +1046,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   lw    $29, (4 * 29)($4)
   // load new pc into ra
   lw    $31, (4 * 32)($4)
-  //allow for load delay, so that ra address is new value when jumping
+  // MIPS 1 has load delay slot. Ensure lw $31 and jr are separated by an instruction.
   lw    $30, (4 * 30)($4)
   // jump to ra, load a0 in the delay slot
   jr    $31
@@ -1087,9 +1087,9 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
     ld $\i, (8 * \i)($4)
   .endr
   // load new pc into ra
-  ld    $31, (4 * 32)($4)
-  //allow for load delay, so that ra address is new value when jumping
-  ld    $30, (4 * 30)($4)
+  ld    $31, (8 * 32)($4)
+  // MIPS 1 has load delay slot. Ensure lw $31 and jr are separated by an instruction.
+  ld    $30, (8 * 30)($4)
   // jump to ra, load a0 in the delay slot
   jr    $31
   ld    $4, (8 * 4)($4)
