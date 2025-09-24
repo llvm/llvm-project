@@ -6,7 +6,7 @@
 
 #if defined(CRT_HAS_TF_MODE)
 
-#include "int_lib.h"
+#  include "int_lib.h"
 
 // Returns: convert a to a unsigned long long, rounding toward zero.
 //          Negative values all become zero.
@@ -36,77 +36,77 @@ char assumption_3[sizeof(long double)*CHAR_BIT == 128] = {0};
 int main()
 {
 #if defined(CRT_HAS_TF_MODE)
-    if (test__fixunstfdi(0.0, 0))
-        return 1;
+  if (test__fixunstfdi(0.0, 0))
+    return 1;
 
-    if (test__fixunstfdi(0.5, 0))
-        return 1;
-    if (test__fixunstfdi(0.99, 0))
-        return 1;
-    if (test__fixunstfdi(1.0, 1))
-        return 1;
-    if (test__fixunstfdi(1.5, 1))
-        return 1;
-    if (test__fixunstfdi(1.99, 1))
-        return 1;
-    if (test__fixunstfdi(2.0, 2))
-        return 1;
-    if (test__fixunstfdi(2.01, 2))
-        return 1;
-    if (test__fixunstfdi(-0.5, 0))
-        return 1;
-    if (test__fixunstfdi(-0.99, 0))
-        return 1;
-    if (test__fixunstfdi(-1.0, 0))
-        return 1;
-    if (test__fixunstfdi(-1.5, 0))
-        return 1;
-    if (test__fixunstfdi(-1.99, 0))
-        return 1;
-    if (test__fixunstfdi(-2.0, 0))
-        return 1;
-    if (test__fixunstfdi(-2.01, 0))
-        return 1;
+  if (test__fixunstfdi(0.5, 0))
+    return 1;
+  if (test__fixunstfdi(0.99, 0))
+    return 1;
+  if (test__fixunstfdi(1.0, 1))
+    return 1;
+  if (test__fixunstfdi(1.5, 1))
+    return 1;
+  if (test__fixunstfdi(1.99, 1))
+    return 1;
+  if (test__fixunstfdi(2.0, 2))
+    return 1;
+  if (test__fixunstfdi(2.01, 2))
+    return 1;
+  if (test__fixunstfdi(-0.5, 0))
+    return 1;
+  if (test__fixunstfdi(-0.99, 0))
+    return 1;
+  if (test__fixunstfdi(-1.0, 0))
+    return 1;
+  if (test__fixunstfdi(-1.5, 0))
+    return 1;
+  if (test__fixunstfdi(-1.99, 0))
+    return 1;
+  if (test__fixunstfdi(-2.0, 0))
+    return 1;
+  if (test__fixunstfdi(-2.01, 0))
+    return 1;
 
-    if (test__fixunstfdi(0x1.FFFFFEp+62, 0x7FFFFF8000000000LL))
-        return 1;
-    if (test__fixunstfdi(0x1.FFFFFCp+62, 0x7FFFFF0000000000LL))
-        return 1;
+  if (test__fixunstfdi(0x1.FFFFFEp+62, 0x7FFFFF8000000000LL))
+    return 1;
+  if (test__fixunstfdi(0x1.FFFFFCp+62, 0x7FFFFF0000000000LL))
+    return 1;
 
-    if (test__fixunstfdi(-0x1.FFFFFEp+62, 0))
-        return 1;
-    if (test__fixunstfdi(-0x1.FFFFFCp+62, 0))
-        return 1;
+  if (test__fixunstfdi(-0x1.FFFFFEp+62, 0))
+    return 1;
+  if (test__fixunstfdi(-0x1.FFFFFCp+62, 0))
+    return 1;
 
-    if (test__fixunstfdi(0x1.FFFFFFFFFFFFFp+62, 0x7FFFFFFFFFFFFC00LL))
-        return 1;
-    if (test__fixunstfdi(0x1.FFFFFFFFFFFFEp+62, 0x7FFFFFFFFFFFF800LL))
-        return 1;
+  if (test__fixunstfdi(0x1.FFFFFFFFFFFFFp+62, 0x7FFFFFFFFFFFFC00LL))
+    return 1;
+  if (test__fixunstfdi(0x1.FFFFFFFFFFFFEp+62, 0x7FFFFFFFFFFFF800LL))
+    return 1;
 
-    if (test__fixunstfdi(-0x1.FFFFFFFFFFFFFp+62, 0))
-        return 1;
-    if (test__fixunstfdi(-0x1.FFFFFFFFFFFFEp+62, 0))
-        return 1;
+  if (test__fixunstfdi(-0x1.FFFFFFFFFFFFFp+62, 0))
+    return 1;
+  if (test__fixunstfdi(-0x1.FFFFFFFFFFFFEp+62, 0))
+    return 1;
 
-    if (test__fixunstfdi(0x1.FFFFFFFFFFFFFFFEp+63L, 0xFFFFFFFFFFFFFFFFLL))
-        return 1;
-    if (test__fixunstfdi(0x1.0000000000000002p+63L, 0x8000000000000001LL))
-        return 1;
-    if (test__fixunstfdi(0x1.0000000000000000p+63L, 0x8000000000000000LL))
-        return 1;
-    if (test__fixunstfdi(0x1.FFFFFFFFFFFFFFFCp+62L, 0x7FFFFFFFFFFFFFFFLL))
-        return 1;
-    if (test__fixunstfdi(0x1.FFFFFFFFFFFFFFF8p+62L, 0x7FFFFFFFFFFFFFFELL))
-        return 1;
-    if (test__fixunstfdi(0x1.p+64L, 0xFFFFFFFFFFFFFFFFLL))
-        return 1;
+  if (test__fixunstfdi(0x1.FFFFFFFFFFFFFFFEp+63L, 0xFFFFFFFFFFFFFFFFLL))
+    return 1;
+  if (test__fixunstfdi(0x1.0000000000000002p+63L, 0x8000000000000001LL))
+    return 1;
+  if (test__fixunstfdi(0x1.0000000000000000p+63L, 0x8000000000000000LL))
+    return 1;
+  if (test__fixunstfdi(0x1.FFFFFFFFFFFFFFFCp+62L, 0x7FFFFFFFFFFFFFFFLL))
+    return 1;
+  if (test__fixunstfdi(0x1.FFFFFFFFFFFFFFF8p+62L, 0x7FFFFFFFFFFFFFFELL))
+    return 1;
+  if (test__fixunstfdi(0x1.p+64L, 0xFFFFFFFFFFFFFFFFLL))
+    return 1;
 
-    if (test__fixunstfdi(-0x1.0000000000000000p+63L, 0))
-        return 1;
-    if (test__fixunstfdi(-0x1.FFFFFFFFFFFFFFFCp+62L, 0))
-        return 1;
-    if (test__fixunstfdi(-0x1.FFFFFFFFFFFFFFF8p+62L, 0))
-        return 1;
+  if (test__fixunstfdi(-0x1.0000000000000000p+63L, 0))
+    return 1;
+  if (test__fixunstfdi(-0x1.FFFFFFFFFFFFFFFCp+62L, 0))
+    return 1;
+  if (test__fixunstfdi(-0x1.FFFFFFFFFFFFFFF8p+62L, 0))
+    return 1;
 
 #else
     printf("skipped\n");

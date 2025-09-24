@@ -6,9 +6,9 @@
 
 #if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
 
-#include "int_lib.h"
-#include <math.h>
-#include <complex.h>
+#  include "int_lib.h"
+#  include <math.h>
+#  include <complex.h>
 
 // Returns: the product of a + ib and c + id
 
@@ -349,16 +349,14 @@ long double x[][2] =
 int main()
 {
 #if defined(CRT_HAS_128BIT) && defined(CRT_HAS_F128)
-    const unsigned N = sizeof(x) / sizeof(x[0]);
-    unsigned i, j;
-    for (i = 0; i < N; ++i)
-    {
-        for (j = 0; j < N; ++j)
-        {
-            if (test__multc3(x[i][0], x[i][1], x[j][0], x[j][1]))
-                return 1;
-        }
+  const unsigned N = sizeof(x) / sizeof(x[0]);
+  unsigned i, j;
+  for (i = 0; i < N; ++i) {
+    for (j = 0; j < N; ++j) {
+      if (test__multc3(x[i][0], x[i][1], x[j][0], x[j][1]))
+        return 1;
     }
+  }
 #else
     printf("skipped\n");
 #endif
