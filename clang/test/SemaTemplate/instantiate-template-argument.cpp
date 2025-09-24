@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify=expected,cxx20
+// RUN: %clang_cc1 -std=c++2c -x c++ %s -verify
+
 
 template<auto T, decltype(T) U>
 concept C1 = sizeof(U) >= 4;
@@ -59,19 +61,22 @@ static_assert(foo<int, 'a'>() == 2);
 
 namespace packs {
 
-template<auto T, decltype(T)... U>
-concept C1 = (sizeof(U) && ...) >= 4;
+template<auto T, decltype(T) U>
+concept C1 = sizeof(U) >= 4;
 
-template<typename Y, char... V>
-concept C2 = (C1<Y{}, V> && ...);
+template<typename Y, char V>
+concept C2 = C1<Y{}, V>;
 
 template<char... W>
-constexpr int foo() requires (C2<int, W> && ...) { return 1; }
+constexpr int foo() requires (C2<int, W> && ...) { return 1; } // #packs-cand1
 
 template<char... X>
-constexpr int foo() requires (C1<1, X> && ...) && true { return 2; }
+constexpr int foo() requires (C1<1, X> && ...) && true { return 2; } // #packs-cand2
 
 static_assert(foo<'a'>() == 2);
+// cxx20-error@-1{{call to 'foo' is ambiguous}}
+// cxx20-note@#packs-cand1 {{candidate function}}
+// cxx20-note@#packs-cand2 {{candidate function}}
 
 }
 
