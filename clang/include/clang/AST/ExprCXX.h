@@ -2343,7 +2343,7 @@ struct ImplicitDeallocationParameters {
 };
 
 /// The parameters to pass to a usual operator delete.
-struct DeleteParamInfo {
+struct UsualDeleteParams {
   TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
   bool DestroyingDelete = false;
   bool Size = false;

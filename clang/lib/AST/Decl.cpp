@@ -3552,8 +3552,8 @@ void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
   getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
 }
 
-DeleteParamInfo FunctionDecl::getDeleteParamInfo() const {
-  DeleteParamInfo Params;
+UsualDeleteParams FunctionDecl::getUsualDeleteParams() const {
+  UsualDeleteParams Params;
 
   // This function should only be called for operator delete declarations.
   assert(getDeclName().isAnyOperatorDelete());

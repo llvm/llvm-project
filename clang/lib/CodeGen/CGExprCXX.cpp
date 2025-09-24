@@ -1442,7 +1442,7 @@ namespace {
       DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(FirstNonTypeArg));
 
       // Figure out what other parameters we should be implicitly passing.
-      DeleteParamInfo Params;
+      UsualDeleteParams Params;
       if (NumPlacementArgs) {
         // A placement deallocation function is implicitly passed an alignment
         // if the placement allocation function was, but is never passed a size.
@@ -1453,7 +1453,7 @@ namespace {
       } else {
         // For a non-placement new-expression, 'operator delete' can take a
         // size and/or an alignment if it has the right parameters.
-        Params = OperatorDelete->getDeleteParamInfo();
+        Params = OperatorDelete->getUsualDeleteParams();
       }
 
       assert(!Params.DestroyingDelete &&
@@ -1786,7 +1786,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   const auto *DeleteFTy = DeleteFD->getType()->castAs<FunctionProtoType>();
   CallArgList DeleteArgs;
 
-  auto Params = DeleteFD->getDeleteParamInfo();
+  auto Params = DeleteFD->getUsualDeleteParams();
   auto ParamTypeIt = DeleteFTy->param_type_begin();
 
   std::optional<llvm::AllocaInst *> TagAlloca;
