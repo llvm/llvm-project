@@ -3051,7 +3051,7 @@ SPELLING_CACHE = {
 }
 
 
-def _kind_to_old_name(kind: BaseEnumeration):
+def _convert_screaming_caps_to_pascal_case(kind: BaseEnumeration):
     """
     Converting the new enum names (full upper-case, underscore separated)
     to the old ones (separated by capitalization), e.g. RESULT_TYPE -> ResultType
