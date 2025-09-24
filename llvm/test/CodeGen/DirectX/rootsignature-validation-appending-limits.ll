@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; This is correct according to DXC: https://hlsl.godbolt.org/z/KPG5o74KE
+; A descriptor range can be placed at UINT_MAX, matching DXC's behaviour  
 ; CHECK-NOT: error:
 
 define void @CSMain() "hlsl.shader"="compute" {

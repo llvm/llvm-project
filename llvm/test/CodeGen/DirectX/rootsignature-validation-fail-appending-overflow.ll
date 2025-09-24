@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; This test check if a resource is implicitly overflowing. That means, it is appending a resource after an unbounded range.
+; This test checks if a resource is implicitly overflowing. That means, it is appending a resource after an unbounded range.  
 
 ; CHECK: error: Range UAV(register=0, space=0) cannot be appended after an unbounded range
 

@@ -56,12 +56,13 @@ public:
   uint32_t Space;
 
   OffsetAppendAfterOverflow(dxil::ResourceClass Type, uint32_t Register,
-                      uint32_t Space)
+                            uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Range " << getResourceClassName(Type) << "(register=" << Register
-       << ", space=" << Space << ") " << "cannot be appended after an unbounded range ";
+       << ", space=" << Space << ") "
+       << "cannot be appended after an unbounded range ";
   }
 
   std::error_code convertToErrorCode() const override {
@@ -91,8 +92,7 @@ public:
   }
 };
 
-class OffsetOverflowError
-    : public ErrorInfo<OffsetOverflowError> {
+class OffsetOverflowError : public ErrorInfo<OffsetOverflowError> {
 public:
   static char ID;
   dxil::ResourceClass Type;
@@ -100,7 +100,7 @@ public:
   uint32_t Space;
 
   OffsetOverflowError(dxil::ResourceClass Type, uint32_t Register,
-                               uint32_t Space)
+                      uint32_t Space)
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
