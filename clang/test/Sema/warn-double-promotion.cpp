@@ -108,6 +108,12 @@ void AssignmentWithExtraParens(float f, double d, long double ld) {
   ld = LongDouble((d));
 }
 
+void AssignmentWithExtraBraces(float f, double d, long double ld) {
+  d = double{{f}};  // expected-warning{{too many braces around scalar initializer}}
+  ld = LongDouble{{f}};  // expected-warning{{too many braces around scalar initializer}}
+  ld = LongDouble{{d}};  // expected-warning{{too many braces around scalar initializer}}
+}
+
 extern void DoubleParameter(double);
 extern void LongDoubleParameter(long double);
 
