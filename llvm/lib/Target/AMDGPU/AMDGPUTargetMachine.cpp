@@ -1787,12 +1787,12 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createWWMRegAllocPass(false));
 
   addPass(&SILowerWWMCopiesLegacyID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
-  if (!WaveTransformCF) {
-    addPass(&AMDGPUReserveWWMRegsLegacyID);
-    // For allocating regular VGPRs.
+  // For allocating regular VGPRs.
+  if (!WaveTransformCF)
     addPass(createVGPRAllocPass(false));
-  }
+
   // TODO-WAVETRANSFORM:
   // else {
   //   We still require some code here from AMDGPUReserveWWMRegs pass at the end
@@ -1862,10 +1862,9 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(WaveTransformCF));
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   if (!WaveTransformCF) {
-    addPass(&AMDGPUReserveWWMRegsLegacyID);
-
     // For allocating regular VGPRs.
     addPass(createVGPRAllocPass(true));
 
