@@ -10,9 +10,9 @@
 @a = global i32 1
 @b = global i32 2
 @c = global i32 3, section "custom_section_c"
-@d = global i32 4, !associated !0
-@e = constant i32 5, !associated !1, !associated !2
-@f = global i32 6, section "custom_section_f", !associated !1
+@d = global i32 4, !ref !0
+@e = constant i32 5, !ref !1, !ref!2
+@f = global i32 6, section "custom_section_f", !ref !1
 
 
 !0 = !{ptr @a}
