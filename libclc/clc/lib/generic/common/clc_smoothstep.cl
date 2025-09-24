@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 #include <clc/shared/clc_clamp.h>
 

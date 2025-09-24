@@ -431,7 +431,7 @@ define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, -32
 ; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    slti a1, a1, 0
+; CHECK-NEXT:    srli a1, a1, 31
 ; CHECK-NEXT:    sll a0, a2, a0
 ; CHECK-NEXT:    neg a2, a1
 ; CHECK-NEXT:    addi a1, a1, -1

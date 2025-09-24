@@ -498,7 +498,7 @@ bool LibCallsShrinkWrap::perform(CallInst *CI) {
 
 static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
                     DominatorTree *DT) {
-  if (F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.hasOptSize())
     return false;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   LibCallsShrinkWrap CCDCE(TLI, DTU);

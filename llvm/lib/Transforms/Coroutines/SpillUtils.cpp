@@ -183,6 +183,16 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(I);
   }
 
+  void visitInsertElementInst(InsertElementInst &I) {
+    enqueueUsers(I);
+    handleAlias(I);
+  }
+
+  void visitInsertValueInst(InsertValueInst &I) {
+    enqueueUsers(I);
+    handleAlias(I);
+  }
+
   void visitStoreInst(StoreInst &SI) {
     // Regardless whether the alias of the alloca is the value operand or the
     // pointer operand, we need to assume the alloca is been written.
@@ -264,11 +274,6 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   }
 
   void visitIntrinsicInst(IntrinsicInst &II) {
-    // When we found the lifetime markers refers to a
-    // subrange of the original alloca, ignore the lifetime
-    // markers to avoid misleading the analysis.
-    if (!IsOffsetKnown || !Offset.isZero())
-      return Base::visitIntrinsicInst(II);
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);
@@ -519,10 +524,8 @@ void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
   // We would handle the dbg.values for allocas specially
   for (auto &Iter : Spills) {
     auto *V = Iter.first;
-    SmallVector<DbgValueInst *, 16> DVIs;
     SmallVector<DbgVariableRecord *, 16> DVRs;
-    findDbgValues(DVIs, V, &DVRs);
-    assert(DVIs.empty());
+    findDbgValues(V, DVRs);
     // Add the instructions which carry debug info that is in the frame.
     for (DbgVariableRecord *DVR : DVRs)
       if (Checker.isDefinitionAcrossSuspend(*V, DVR->Marker->MarkedInstr))

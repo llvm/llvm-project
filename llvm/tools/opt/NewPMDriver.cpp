@@ -40,6 +40,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 
 using namespace llvm;
 using namespace opt_tool;
@@ -59,6 +60,9 @@ cl::opt<bool> VerifyEachDebugInfoPreserve(
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
+                                      cl::Hidden,
+                                      cl::desc("Enable the LoopFuse Pass"));
 cl::opt<std::string>
     VerifyDIPreserveExport("verify-di-preserve-export",
                    cl::desc("Export debug info preservation failures into "
@@ -356,7 +360,7 @@ bool llvm::runPassPipeline(
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO) {
+    bool EnableProfcheck, bool UnifiedLTO) {
   auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
@@ -445,6 +449,7 @@ bool llvm::runPassPipeline(
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
+  PTO.LoopFusion = EnableLoopFusion;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
@@ -487,7 +492,8 @@ bool llvm::runPassPipeline(
   if (VerifyDIPreserve)
     MPM.addPass(NewPMDebugifyPass(DebugifyMode::OriginalDebugInfo, "",
                                   &DebugInfoBeforePass));
-
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
   // Add passes according to the -passes options.
   if (!PassPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
@@ -504,6 +510,8 @@ bool llvm::runPassPipeline(
     MPM.addPass(NewPMCheckDebugifyPass(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {

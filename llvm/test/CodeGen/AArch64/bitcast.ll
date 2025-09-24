@@ -617,6 +617,31 @@ define <8 x i64> @bitcast_v16i32_v8i64(<16 x i32> %a, <16 x i32> %b){
   ret <8 x i64> %d
 }
 
+define <8 x i32> @scalar_i128(<2 x i128> %a) {
+; CHECK-SD-LABEL: scalar_i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d1, x2
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    mov v1.d[1], x3
+; CHECK-SD-NEXT:    mov v0.d[1], x1
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    add v1.4s, v1.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: scalar_i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov v0.d[0], x0
+; CHECK-GI-NEXT:    mov v1.d[0], x2
+; CHECK-GI-NEXT:    mov v0.d[1], x1
+; CHECK-GI-NEXT:    mov v1.d[1], x3
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    add v1.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    ret
+  %c = bitcast <2 x i128> %a to <8 x i32>
+  %d = add <8 x i32> %c, %c
+  ret <8 x i32> %d
+}
+
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <6 x i16> @bitcast_v3i32_v6i16(<3 x i32> %a, <3 x i32> %b){

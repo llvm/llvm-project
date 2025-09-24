@@ -38,11 +38,11 @@
 #ifndef HEADER
 #define HEADER
 
-void foo_v1(float *AAA, float *BBB, int *I) {return;}
-void foo_v2(float *AAA, float *BBB, int *I) {return;}
-void foo_v3(float *AAA, float *BBB, int *I) {return;}
+void foo_v1(float *AAA, float *BBB, int &CCC, int *I) {return;}
+void foo_v2(float *AAA, float *BBB, int &CCC, int *I) {return;}
+void foo_v3(float *AAA, float *BBB, int &CCC, int *I) {return;}
 
-//DUMP: FunctionDecl{{.*}} foo 'void (float *, float *, int *)'
+//DUMP: FunctionDecl{{.*}} foo 'void (float *, float *, int &, int *)'
 //DUMP: OMPDeclareVariantAttr{{.*}}device={arch(x86, x86_64)}
 //DUMP: DeclRefExpr{{.*}}Function{{.*}}foo_v3
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'I'
@@ -54,9 +54,9 @@ void foo_v3(float *AAA, float *BBB, int *I) {return;}
 //DUMP: DeclRefExpr{{.*}}Function{{.*}}foo_v1
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'AAA'
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'BBB'
-//PRINT: #pragma omp declare variant(foo_v3) match(construct={dispatch}, device={arch(x86, x86_64)}) adjust_args(nothing:I) adjust_args(need_device_ptr:BBB) adjust_args(need_device_addr:AAA)
+//PRINT: #pragma omp declare variant(foo_v3) match(construct={dispatch}, device={arch(x86, x86_64)}) adjust_args(nothing:I) adjust_args(need_device_ptr:BBB) adjust_args(need_device_addr:CCC)
 
-//PRINT: #pragma omp declare variant(foo_v2) match(construct={dispatch}, device={arch(ppc)}) adjust_args(need_device_ptr:AAA) adjust_args(need_device_addr:BBB)
+//PRINT: #pragma omp declare variant(foo_v2) match(construct={dispatch}, device={arch(ppc)}) adjust_args(need_device_ptr:AAA) adjust_args(need_device_addr:CCC)
 
 //PRINT: omp declare variant(foo_v1) match(construct={dispatch}, device={arch(arm)}) adjust_args(need_device_ptr:AAA,BBB)
 
@@ -67,33 +67,33 @@ void foo_v3(float *AAA, float *BBB, int *I) {return;}
 #pragma omp declare variant(foo_v2)                        \
    match(construct={dispatch}, device={arch(ppc)}),        \
    adjust_args(need_device_ptr:AAA)                        \
-   adjust_args(need_device_addr:BBB)
+   adjust_args(need_device_addr:CCC)
 
 #pragma omp declare variant(foo_v3)                        \
    adjust_args(need_device_ptr:BBB) adjust_args(nothing:I) \
-   adjust_args(need_device_addr:AAA)                      \
+   adjust_args(need_device_addr:CCC)                       \
    match(construct={dispatch}, device={arch(x86,x86_64)})
 
-void foo(float *AAA, float *BBB, int *I) {return;}
+void foo(float *AAA, float *BBB, int &CCC, int *I) {return;}
 
-void Foo_Var(float *AAA, float *BBB, float *CCC) {return;}
+void Foo_Var(float *AAA, float *BBB, float *&CCC) {return;}
 
 #pragma omp declare variant(Foo_Var) \
    match(construct={dispatch}, device={arch(x86_64)}) \
    adjust_args(need_device_ptr:AAA) adjust_args(nothing:BBB) \
    adjust_args(need_device_addr:CCC)
 template<typename T>
-void Foo(T *AAA, T *BBB, T *CCC) {return;}
+void Foo(T *AAA, T *BBB, T *&CCC) {return;}
 
 //PRINT: #pragma omp declare variant(Foo_Var) match(construct={dispatch}, device={arch(x86_64)}) adjust_args(nothing:BBB) adjust_args(need_device_ptr:AAA) adjust_args(need_device_addr:CCC)
-//DUMP: FunctionDecl{{.*}} Foo 'void (T *, T *, T *)'
+//DUMP: FunctionDecl{{.*}} Foo 'void (T *, T *, T *&)'
 //DUMP: OMPDeclareVariantAttr{{.*}}device={arch(x86_64)}
 //DUMP: DeclRefExpr{{.*}}Function{{.*}}Foo_Var
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'BBB'
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'AAA'
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'CCC'
 //
-//DUMP: FunctionDecl{{.*}} Foo 'void (float *, float *, float *)'
+//DUMP: FunctionDecl{{.*}} Foo 'void (float *, float *, float *&)'
 //DUMP: OMPDeclareVariantAttr{{.*}}device={arch(x86_64)}
 //DUMP: DeclRefExpr{{.*}}Function{{.*}}Foo_Var
 //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'BBB'

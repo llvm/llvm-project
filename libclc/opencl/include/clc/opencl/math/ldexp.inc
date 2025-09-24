@@ -8,6 +8,6 @@
 
 #ifndef __CLC_SCALAR
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE ldexp(__CLC_GENTYPE x, int n);
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_GENTYPE ldexp(__CLC_GENTYPE x, int n);
 
 #endif

@@ -126,3 +126,20 @@
 // CHECK-PIE1: -fpie
 // CHECK-ROPI: -fropi
 // CHECK-RWPI: -frwpi
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -Os | FileCheck --check-prefix=CHECK-OPT-OS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -Oz | FileCheck --check-prefix=CHECK-OPT-OZ %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a     | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -O1 | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -O2 | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -march=armv7a -O3 | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-eabi -Os           | FileCheck --check-prefix=CHECK-OPT-OS %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-eabi -Oz           | FileCheck --check-prefix=CHECK-OPT-OZ %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-eabi               | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-eabi -O1           | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-eabi -O2           | FileCheck --check-prefix=CHECK-OPT %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-eabi -O3           | FileCheck --check-prefix=CHECK-OPT %s
+// CHECK-OPT-OZ: -Oz
+// CHECK-OPT-OS: -Os
+// CHECK-OPT-NOT: -Oz
+// CHECK-OPT-NOT: -Os

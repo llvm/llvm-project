@@ -47,6 +47,15 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
+enum class Tcgen05MMAKind : uint8_t { F16 = 0, TF32 = 1, F8F6F4 = 2, I8 = 3 };
+
+enum class Tcgen05CollectorUsageOp : uint8_t {
+  DISCARD = 0,
+  LASTUSE = 1,
+  FILL = 2,
+  USE = 3,
+};
+
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_f2i_rm_ftz:
@@ -408,10 +417,182 @@ inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
   llvm_unreachable("Checking rounding mode for invalid rcp intrinsic");
 }
 
-inline DenormalMode GetNVVMDenromMode(bool ShouldFTZ) {
+inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
   if (ShouldFTZ)
     return DenormalMode::getPreserveSign();
   return DenormalMode::getIEEE();
+}
+
+inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_add_rm_ftz_f:
+  case Intrinsic::nvvm_add_rn_ftz_f:
+  case Intrinsic::nvvm_add_rp_ftz_f:
+  case Intrinsic::nvvm_add_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_add_rm_f:
+  case Intrinsic::nvvm_add_rn_f:
+  case Intrinsic::nvvm_add_rp_f:
+  case Intrinsic::nvvm_add_rz_f:
+  case Intrinsic::nvvm_add_rm_d:
+  case Intrinsic::nvvm_add_rn_d:
+  case Intrinsic::nvvm_add_rp_d:
+  case Intrinsic::nvvm_add_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM add intrinsic");
+}
+
+inline APFloat::roundingMode GetFAddRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_add_rm_f:
+  case Intrinsic::nvvm_add_rm_d:
+  case Intrinsic::nvvm_add_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_add_rn_f:
+  case Intrinsic::nvvm_add_rn_d:
+  case Intrinsic::nvvm_add_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_add_rp_f:
+  case Intrinsic::nvvm_add_rp_d:
+  case Intrinsic::nvvm_add_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_add_rz_f:
+  case Intrinsic::nvvm_add_rz_d:
+  case Intrinsic::nvvm_add_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM add");
+}
+
+inline bool FMulShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_mul_rm_ftz_f:
+  case Intrinsic::nvvm_mul_rn_ftz_f:
+  case Intrinsic::nvvm_mul_rp_ftz_f:
+  case Intrinsic::nvvm_mul_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_mul_rm_f:
+  case Intrinsic::nvvm_mul_rn_f:
+  case Intrinsic::nvvm_mul_rp_f:
+  case Intrinsic::nvvm_mul_rz_f:
+  case Intrinsic::nvvm_mul_rm_d:
+  case Intrinsic::nvvm_mul_rn_d:
+  case Intrinsic::nvvm_mul_rp_d:
+  case Intrinsic::nvvm_mul_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM mul intrinsic");
+}
+
+inline APFloat::roundingMode GetFMulRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_mul_rm_f:
+  case Intrinsic::nvvm_mul_rm_d:
+  case Intrinsic::nvvm_mul_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_mul_rn_f:
+  case Intrinsic::nvvm_mul_rn_d:
+  case Intrinsic::nvvm_mul_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_mul_rp_f:
+  case Intrinsic::nvvm_mul_rp_d:
+  case Intrinsic::nvvm_mul_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_mul_rz_f:
+  case Intrinsic::nvvm_mul_rz_d:
+  case Intrinsic::nvvm_mul_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM mul");
+}
+
+inline bool FDivShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_div_rm_ftz_f:
+  case Intrinsic::nvvm_div_rn_ftz_f:
+  case Intrinsic::nvvm_div_rp_ftz_f:
+  case Intrinsic::nvvm_div_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_div_rm_f:
+  case Intrinsic::nvvm_div_rn_f:
+  case Intrinsic::nvvm_div_rp_f:
+  case Intrinsic::nvvm_div_rz_f:
+  case Intrinsic::nvvm_div_rm_d:
+  case Intrinsic::nvvm_div_rn_d:
+  case Intrinsic::nvvm_div_rp_d:
+  case Intrinsic::nvvm_div_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM div intrinsic");
+}
+
+inline APFloat::roundingMode GetFDivRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_div_rm_f:
+  case Intrinsic::nvvm_div_rm_d:
+  case Intrinsic::nvvm_div_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_div_rn_f:
+  case Intrinsic::nvvm_div_rn_d:
+  case Intrinsic::nvvm_div_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_div_rp_f:
+  case Intrinsic::nvvm_div_rp_d:
+  case Intrinsic::nvvm_div_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_div_rz_f:
+  case Intrinsic::nvvm_div_rz_d:
+  case Intrinsic::nvvm_div_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM div");
+}
+
+inline bool FMAShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fma_rm_ftz_f:
+  case Intrinsic::nvvm_fma_rn_ftz_f:
+  case Intrinsic::nvvm_fma_rp_ftz_f:
+  case Intrinsic::nvvm_fma_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_fma_rm_f:
+  case Intrinsic::nvvm_fma_rn_f:
+  case Intrinsic::nvvm_fma_rp_f:
+  case Intrinsic::nvvm_fma_rz_f:
+  case Intrinsic::nvvm_fma_rm_d:
+  case Intrinsic::nvvm_fma_rn_d:
+  case Intrinsic::nvvm_fma_rp_d:
+  case Intrinsic::nvvm_fma_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM fma intrinsic");
+}
+
+inline APFloat::roundingMode GetFMARoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fma_rm_f:
+  case Intrinsic::nvvm_fma_rm_d:
+  case Intrinsic::nvvm_fma_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_fma_rn_f:
+  case Intrinsic::nvvm_fma_rn_d:
+  case Intrinsic::nvvm_fma_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_fma_rp_f:
+  case Intrinsic::nvvm_fma_rp_d:
+  case Intrinsic::nvvm_fma_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_fma_rz_f:
+  case Intrinsic::nvvm_fma_rz_d:
+  case Intrinsic::nvvm_fma_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM fma");
 }
 
 } // namespace nvvm

@@ -55,7 +55,7 @@ std::optional<AArch64::FMVInfo> lookupFMVByID(AArch64::ArchExtKind ExtID) {
   return {};
 }
 
-uint64_t AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
+APInt AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
   // Transitively enable the Arch Extensions which correspond to each feature.
   ExtensionSet FeatureBits;
   for (const StringRef Feature : Features) {
@@ -69,15 +69,15 @@ uint64_t AArch64::getFMVPriority(ArrayRef<StringRef> Features) {
   }
 
   // Construct a bitmask for all the transitively enabled Arch Extensions.
-  uint64_t PriorityMask = 0;
+  APInt PriorityMask = APInt::getZero(128);
   for (const FMVInfo &Info : getFMVInfo())
     if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
-      PriorityMask |= (1ULL << Info.PriorityBit);
+      PriorityMask.setBit(Info.PriorityBit);
 
   return PriorityMask;
 }
 
-uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
+APInt AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
   // Transitively enable the Arch Extensions which correspond to each feature.
   ExtensionSet FeatureBits;
   for (const StringRef Feature : Features)
@@ -86,10 +86,10 @@ uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> Features) {
         FeatureBits.enable(*Info->ID);
 
   // Construct a bitmask for all the transitively enabled Arch Extensions.
-  uint64_t FeaturesMask = 0;
+  APInt FeaturesMask = APInt::getZero(128);
   for (const FMVInfo &Info : getFMVInfo())
     if (Info.ID && FeatureBits.Enabled.test(*Info.ID))
-      FeaturesMask |= (1ULL << Info.FeatureBit);
+      FeaturesMask.setBit(Info.FeatureBit);
 
   return FeaturesMask;
 }

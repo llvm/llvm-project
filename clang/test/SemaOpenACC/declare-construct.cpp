@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 %s -fopenacc -verify
+// RUN: %clang_cc1 %s -fopenacc -verify -Wopenacc-extension
 
 int *Global;
 int GlobalArray[5];
+int GlobalArray2[5];
 // expected-error@+1{{no valid clauses specified in OpenACC 'declare' directive}}
 #pragma acc declare
 namespace NS {
@@ -265,8 +266,8 @@ void use() {
 
 // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
 #pragma acc declare create(GlobalArray[0])
-// expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
-#pragma acc declare create(GlobalArray[0: 1])
+// expected-warning@+1{{sub-array as a variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare create(GlobalArray[0: 1]) // #GLOBALARRAYREF
 
 struct S { int I; };
 // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
@@ -288,8 +289,12 @@ void ExternVar() {
 #pragma acc declare copy(I) copyin(I2), copyout(I3), create(I4), present(I5), deviceptr(I6), device_resident(I7), link(I8)
 }
 
+// expected-error@+2{{variable referenced in 'link' clause of OpenACC 'declare' directive was already referenced}}
+// expected-note@#GLOBALARRAYREF{{previous reference is here}}
+#pragma acc declare link(GlobalArray)
+
 // Link can only have global, namespace, or extern vars.
-#pragma acc declare link(Global, GlobalArray)
+#pragma acc declare link(Global, GlobalArray2)
 
 struct Struct2 {
   static const int StaticMem = 5;

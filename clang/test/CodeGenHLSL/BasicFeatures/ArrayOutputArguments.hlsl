@@ -11,7 +11,7 @@ void increment(inout int Arr[2]) {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @{{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: call void @{{.*}}increment{{.*}}(ptr noalias noundef byval([2 x i32]) align 4 [[Tmp]])
+// CHECK-NEXT: call void @{{.*}}increment{{.*}}(ptr noalias noundef align 4 [[Tmp]])
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 [[Tmp]], i32 8, i1 false)
 // CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT: [[B:%.*]] = load i32, ptr [[Idx]], align 4
@@ -32,7 +32,7 @@ void fn2(out int Arr[2]) {
 // CHECK: [[A:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @{{.*}}, i32 8, i1 false)
-// CHECK-NEXT: call void @{{.*}}fn2{{.*}}(ptr noalias noundef byval([2 x i32]) align 4 [[Tmp]])
+// CHECK-NEXT: call void @{{.*}}fn2{{.*}}(ptr noalias noundef align 4 [[Tmp]])
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 [[Tmp]], i32 8, i1 false)
 // CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT: [[B:%.*]] = load i32, ptr [[Idx]], align 4
@@ -56,7 +56,7 @@ void nestedCall(inout int Arr[2], uint index) {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @{{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: call void @{{.*}}nestedCall{{.*}}(ptr noalias noundef byval([2 x i32]) align 4 [[Tmp]], i32 noundef 0)
+// CHECK-NEXT: call void @{{.*}}nestedCall{{.*}}(ptr noalias noundef align 4 [[Tmp]], i32 noundef 0)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 [[Tmp]], i32 8, i1 false)
 // CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i32 0, i32 1
 // CHECK-NEXT: [[B:%.*]] = load i32, ptr [[Idx]], align 4
@@ -70,7 +70,7 @@ export int arrayCall3() {
 // CHECK-LABEL: outerCall
 // CHECK: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 %{{.*}}, i32 8, i1 false)
-// CHECK-NEXT: call void {{.*}}increment{{.*}}(ptr noalias noundef byval([2 x i32]) align 4 [[Tmp]])
+// CHECK-NEXT: call void {{.*}}increment{{.*}}(ptr noalias noundef align 4 [[Tmp]])
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 {{.*}}, ptr align 4 [[Tmp]], i32 8, i1 false)
 // CHECK-NEXT: ret void
 void outerCall(inout int Arr[2]) {
@@ -82,7 +82,7 @@ void outerCall(inout int Arr[2]) {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @{{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: call void @{{.*}}outerCall{{.*}}(ptr noalias noundef byval([2 x i32]) align 4 [[Tmp]])
+// CHECK-NEXT: call void @{{.*}}outerCall{{.*}}(ptr noalias noundef align 4 [[Tmp]])
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 [[Tmp]], i32 8, i1 false)
 // CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT: [[B:%.*]] = load i32, ptr [[Idx]], align 4
@@ -110,7 +110,7 @@ void outerCall2(inout int Arr[2]) {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @{{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
-// CHECK-NEXT: call void @{{.*}}outerCall2{{.*}}(ptr noalias noundef byval([2 x i32]) align 4 [[Tmp]])
+// CHECK-NEXT: call void @{{.*}}outerCall2{{.*}}(ptr noalias noundef align 4 [[Tmp]])
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 [[Tmp]], i32 8, i1 false)
 // CHECK-NEXT: [[Idx:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT: [[B:%.*]] = load i32, ptr [[Idx]], align 4

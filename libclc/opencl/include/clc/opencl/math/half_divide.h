@@ -10,10 +10,10 @@
 #define __CLC_OPENCL_MATH_HALF_DIVIDE_H__
 
 #define __CLC_BODY <clc/shared/binary_decl.inc>
-#define FUNCTION half_divide
+#define __CLC_FUNCTION half_divide
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_HALF_DIVIDE_H__

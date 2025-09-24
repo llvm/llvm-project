@@ -23,9 +23,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cstdint>
+#include <memory>
 
-namespace clang {
-namespace {
+namespace clang::lifetimes {
+namespace internal {
 
 /// Represents the storage location being borrowed, e.g., a specific stack
 /// variable.
@@ -36,32 +37,6 @@ struct AccessPath {
   AccessPath(const clang::ValueDecl *D) : D(D) {}
 };
 
-/// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
-/// Used for giving ID to loans and origins.
-template <typename Tag> struct ID {
-  uint32_t Value = 0;
-
-  bool operator==(const ID<Tag> &Other) const { return Value == Other.Value; }
-  bool operator!=(const ID<Tag> &Other) const { return !(*this == Other); }
-  bool operator<(const ID<Tag> &Other) const { return Value < Other.Value; }
-  ID<Tag> operator++(int) {
-    ID<Tag> Tmp = *this;
-    ++Value;
-    return Tmp;
-  }
-  void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
-    IDBuilder.AddInteger(Value);
-  }
-};
-
-template <typename Tag>
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ID<Tag> ID) {
-  return OS << ID.Value;
-}
-
-using LoanID = ID<struct LoanTag>;
-using OriginID = ID<struct OriginTag>;
-
 /// Information about a single borrow, or "Loan". A loan is created when a
 /// reference or pointer is created.
 struct Loan {
@@ -70,10 +45,16 @@ struct Loan {
   /// is represented as empty LoanSet
   LoanID ID;
   AccessPath Path;
-  SourceLocation IssueLoc;
+  /// The expression that creates the loan, e.g., &x.
+  const Expr *IssueExpr;
 
-  Loan(LoanID id, AccessPath path, SourceLocation loc)
-      : ID(id), Path(path), IssueLoc(loc) {}
+  Loan(LoanID id, AccessPath path, const Expr *IssueExpr)
+      : ID(id), Path(path), IssueExpr(IssueExpr) {}
+
+  void dump(llvm::raw_ostream &OS) const {
+    OS << ID << " (Path: ";
+    OS << Path.D->getNameAsString() << ")";
+  }
 };
 
 /// An Origin is a symbolic identifier that represents the set of possible
@@ -107,8 +88,8 @@ class LoanManager {
 public:
   LoanManager() = default;
 
-  Loan &addLoan(AccessPath Path, SourceLocation Loc) {
-    AllLoans.emplace_back(getNextLoanID(), Path, Loc);
+  Loan &addLoan(AccessPath Path, const Expr *IssueExpr) {
+    AllLoans.emplace_back(getNextLoanID(), Path, IssueExpr);
     return AllLoans.back();
   }
 
@@ -142,18 +123,21 @@ public:
     return AllOrigins.back();
   }
 
+  // TODO: Mark this method as const once we remove the call to getOrCreate.
   OriginID get(const Expr &E) {
-    // Origin of DeclRefExpr is that of the declaration it refers to.
+    auto It = ExprToOriginID.find(&E);
+    if (It != ExprToOriginID.end())
+      return It->second;
+    // If the expression itself has no specific origin, and it's a reference
+    // to a declaration, its origin is that of the declaration it refers to.
+    // For pointer types, where we don't pre-emptively create an origin for the
+    // DeclRefExpr itself.
     if (const auto *DRE = dyn_cast<DeclRefExpr>(&E))
       return get(*DRE->getDecl());
-    auto It = ExprToOriginID.find(&E);
     // TODO: This should be an assert(It != ExprToOriginID.end()). The current
     // implementation falls back to getOrCreate to avoid crashing on
     // yet-unhandled pointer expressions, creating an empty origin for them.
-    if (It == ExprToOriginID.end())
-      return getOrCreate(E);
-
-    return It->second;
+    return getOrCreate(E);
   }
 
   OriginID get(const ValueDecl &D) {
@@ -172,10 +156,6 @@ public:
     if (It != ExprToOriginID.end())
       return It->second;
 
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(&E)) {
-      // Origin of DeclRefExpr is that of the declaration it refers to.
-      return getOrCreate(*DRE->getDecl());
-    }
     OriginID NewID = getNextOriginID();
     addOrigin(NewID, E);
     ExprToOriginID[&E] = NewID;
@@ -197,6 +177,18 @@ public:
     addOrigin(NewID, D);
     DeclToOriginID[&D] = NewID;
     return NewID;
+  }
+
+  void dump(OriginID OID, llvm::raw_ostream &OS) const {
+    OS << OID << " (";
+    Origin O = getOrigin(OID);
+    if (const ValueDecl *VD = O.getDecl())
+      OS << "Decl: " << VD->getNameAsString();
+    else if (const Expr *E = O.getExpr())
+      OS << "Expr: " << E->getStmtClassName();
+    else
+      OS << "Unknown";
+    OS << ")";
   }
 
 private:
@@ -223,7 +215,11 @@ public:
     /// An origin is propagated from a source to a destination (e.g., p = q).
     AssignOrigin,
     /// An origin escapes the function by flowing into the return value.
-    ReturnOfOrigin
+    ReturnOfOrigin,
+    /// An origin is used (eg. dereferencing a pointer).
+    Use,
+    /// A marker for a specific point in the code, for testing.
+    TestPoint,
   };
 
 private:
@@ -242,7 +238,8 @@ public:
     return nullptr;
   }
 
-  virtual void dump(llvm::raw_ostream &OS) const {
+  virtual void dump(llvm::raw_ostream &OS, const LoanManager &,
+                    const OriginManager &) const {
     OS << "Fact (Kind: " << static_cast<int>(K) << ")\n";
   }
 };
@@ -257,22 +254,34 @@ public:
   IssueFact(LoanID LID, OriginID OID) : Fact(Kind::Issue), LID(LID), OID(OID) {}
   LoanID getLoanID() const { return LID; }
   OriginID getOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "Issue (LoanID: " << getLoanID() << ", OriginID: " << getOriginID()
-       << ")\n";
+  void dump(llvm::raw_ostream &OS, const LoanManager &LM,
+            const OriginManager &OM) const override {
+    OS << "Issue (";
+    LM.getLoan(getLoanID()).dump(OS);
+    OS << ", ToOrigin: ";
+    OM.dump(getOriginID(), OS);
+    OS << ")\n";
   }
 };
 
 class ExpireFact : public Fact {
   LoanID LID;
+  SourceLocation ExpiryLoc;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID) : Fact(Kind::Expire), LID(LID) {}
+  ExpireFact(LoanID LID, SourceLocation ExpiryLoc)
+      : Fact(Kind::Expire), LID(LID), ExpiryLoc(ExpiryLoc) {}
+
   LoanID getLoanID() const { return LID; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "Expire (LoanID: " << getLoanID() << ")\n";
+  SourceLocation getExpiryLoc() const { return ExpiryLoc; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &LM,
+            const OriginManager &) const override {
+    OS << "Expire (";
+    LM.getLoan(getLoanID()).dump(OS);
+    OS << ")\n";
   }
 };
 
@@ -289,9 +298,13 @@ public:
       : Fact(Kind::AssignOrigin), OIDDest(OIDDest), OIDSrc(OIDSrc) {}
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "AssignOrigin (DestID: " << getDestOriginID()
-       << ", SrcID: " << getSrcOriginID() << ")\n";
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override {
+    OS << "AssignOrigin (Dest: ";
+    OM.dump(getDestOriginID(), OS);
+    OS << ", Src: ";
+    OM.dump(getSrcOriginID(), OS);
+    OS << ")\n";
   }
 };
 
@@ -305,8 +318,57 @@ public:
 
   ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
   OriginID getReturnedOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS) const override {
-    OS << "ReturnOfOrigin (OriginID: " << getReturnedOriginID() << ")\n";
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override {
+    OS << "ReturnOfOrigin (";
+    OM.dump(getReturnedOriginID(), OS);
+    OS << ")\n";
+  }
+};
+
+class UseFact : public Fact {
+  const Expr *UseExpr;
+  // True if this use is a write operation (e.g., left-hand side of assignment).
+  // Write operations are exempted from use-after-free checks.
+  bool IsWritten = false;
+
+public:
+  static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
+
+  UseFact(const Expr *UseExpr) : Fact(Kind::Use), UseExpr(UseExpr) {}
+
+  OriginID getUsedOrigin(const OriginManager &OM) const {
+    // TODO: Remove const cast and make OriginManager::get as const.
+    return const_cast<OriginManager &>(OM).get(*UseExpr);
+  }
+  const Expr *getUseExpr() const { return UseExpr; }
+  void markAsWritten() { IsWritten = true; }
+  bool isWritten() const { return IsWritten; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override {
+    OS << "Use (";
+    OM.dump(getUsedOrigin(OM), OS);
+    OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
+  }
+};
+
+/// A dummy-fact used to mark a specific point in the code for testing.
+/// It is generated by recognizing a `void("__lifetime_test_point_...")` cast.
+class TestPointFact : public Fact {
+  StringRef Annotation;
+
+public:
+  static bool classof(const Fact *F) { return F->getKind() == Kind::TestPoint; }
+
+  explicit TestPointFact(StringRef Annotation)
+      : Fact(Kind::TestPoint), Annotation(Annotation) {}
+
+  StringRef getAnnotation() const { return Annotation; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &) const override {
+    OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
   }
 };
 
@@ -344,7 +406,7 @@ public:
       if (It != BlockToFactsMap.end()) {
         for (const Fact *F : It->second) {
           llvm::dbgs() << "    ";
-          F->dump(llvm::dbgs());
+          F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
         }
       }
       llvm::dbgs() << "  End of Block\n";
@@ -363,6 +425,7 @@ private:
 };
 
 class FactGenerator : public ConstStmtVisitor<FactGenerator> {
+  using Base = ConstStmtVisitor<FactGenerator>;
 
 public:
   FactGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
@@ -389,9 +452,49 @@ public:
   void VisitDeclStmt(const DeclStmt *DS) {
     for (const Decl *D : DS->decls())
       if (const auto *VD = dyn_cast<VarDecl>(D))
-        if (hasOrigin(VD->getType()))
+        if (hasOrigin(VD))
           if (const Expr *InitExpr = VD->getInit())
             addAssignOriginFact(*VD, *InitExpr);
+  }
+
+  void VisitDeclRefExpr(const DeclRefExpr *DRE) {
+    handleUse(DRE);
+    // For non-pointer/non-view types, a reference to the variable's storage
+    // is a borrow. We create a loan for it.
+    // For pointer/view types, we stick to the existing model for now and do
+    // not create an extra origin for the l-value expression itself.
+
+    // TODO: A single origin for a `DeclRefExpr` for a pointer or view type is
+    // not sufficient to model the different levels of indirection. The current
+    // single-origin model cannot distinguish between a loan to the variable's
+    // storage and a loan to what it points to. A multi-origin model would be
+    // required for this.
+    if (!isPointerType(DRE->getType())) {
+      if (const Loan *L = createLoan(DRE)) {
+        OriginID ExprOID = FactMgr.getOriginMgr().getOrCreate(*DRE);
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<IssueFact>(L->ID, ExprOID));
+      }
+    }
+  }
+
+  void VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
+    if (isGslPointerType(CCE->getType())) {
+      handleGSLPointerConstruction(CCE);
+      return;
+    }
+  }
+
+  void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+    // Specifically for conversion operators,
+    // like `std::string_view p = std::string{};`
+    if (isGslPointerType(MCE->getType()) &&
+        isa<CXXConversionDecl>(MCE->getCalleeDecl())) {
+      // The argument is the implicit object itself.
+      handleFunctionCall(MCE, MCE->getMethodDecl(),
+                         {MCE->getImplicitObjectArgument()});
+    }
+    // FIXME: A more general VisitCallExpr could also be used here.
   }
 
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N) {
@@ -401,39 +504,31 @@ public:
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
-    if (!hasOrigin(ICE->getType()))
+    if (!hasOrigin(ICE))
       return;
-    Visit(ICE->getSubExpr());
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
-    // TODO: Consider if this is actually useful in practice. Alternatively, we
-    // could directly use the sub-expression's OriginID instead of creating a
-    // new one.
     addAssignOriginFact(*ICE, *ICE->getSubExpr());
   }
 
   void VisitUnaryOperator(const UnaryOperator *UO) {
     if (UO->getOpcode() == UO_AddrOf) {
       const Expr *SubExpr = UO->getSubExpr();
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
-        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-          // Check if it's a local variable.
-          if (VD->hasLocalStorage()) {
-            OriginID OID = FactMgr.getOriginMgr().getOrCreate(*UO);
-            AccessPath AddrOfLocalVarPath(VD);
-            const Loan &L = FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath,
-                                                         UO->getOperatorLoc());
-            CurrentBlockFacts.push_back(
-                FactMgr.createFact<IssueFact>(L.ID, OID));
-          }
-        }
-      }
+      // Taking address of a pointer-type expression is not yet supported and
+      // will be supported in multi-origin model.
+      if (isPointerType(SubExpr->getType()))
+        return;
+      // The origin of an address-of expression (e.g., &x) is the origin of
+      // its sub-expression (x). This fact will cause the dataflow analysis
+      // to propagate any loans held by the sub-expression's origin to the
+      // origin of this UnaryOperator expression.
+      addAssignOriginFact(*UO, *SubExpr);
     }
   }
 
   void VisitReturnStmt(const ReturnStmt *RS) {
     if (const Expr *RetExpr = RS->getRetValue()) {
-      if (hasOrigin(RetExpr->getType())) {
+      if (hasOrigin(RetExpr)) {
         OriginID OID = FactMgr.getOriginMgr().getOrCreate(*RetExpr);
         CurrentBlockFacts.push_back(
             FactMgr.createFact<ReturnOfOriginFact>(OID));
@@ -442,32 +537,39 @@ public:
   }
 
   void VisitBinaryOperator(const BinaryOperator *BO) {
-    if (BO->isAssignmentOp()) {
-      const Expr *LHSExpr = BO->getLHS();
-      const Expr *RHSExpr = BO->getRHS();
-
-      // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`
-      // LHS must be a pointer/reference type that can be an origin.
-      // RHS must also represent an origin (either another pointer/ref or an
-      // address-of).
-      if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-        if (const auto *VD_LHS =
-                dyn_cast<ValueDecl>(DRE_LHS->getDecl()->getCanonicalDecl());
-            VD_LHS && hasOrigin(VD_LHS->getType()))
-          addAssignOriginFact(*VD_LHS, *RHSExpr);
-    }
+    if (BO->isAssignmentOp())
+      handleAssignment(BO->getLHS(), BO->getRHS());
   }
 
-private:
-  // Check if a type has an origin.
-  bool hasOrigin(QualType QT) { return QT->isPointerOrReferenceType(); }
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (OCE->isAssignmentOp() && OCE->getNumArgs() == 2)
+      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+  }
 
-  template <typename Destination, typename Source>
-  void addAssignOriginFact(const Destination &D, const Source &S) {
-    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
-    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
+  void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE) {
+    // Check if this is a test point marker. If so, we are done with this
+    // expression.
+    if (handleTestPoint(FCE))
+      return;
+    if (isGslPointerType(FCE->getType()))
+      addAssignOriginFact(*FCE, *FCE->getSubExpr());
+  }
+
+  void VisitInitListExpr(const InitListExpr *ILE) {
+    if (!hasOrigin(ILE))
+      return;
+    // For list initialization with a single element, like `View{...}`, the
+    // origin of the list itself is the origin of its single element.
+    if (ILE->getNumInits() == 1)
+      addAssignOriginFact(*ILE, *ILE->getInit(0));
+  }
+
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE) {
+    if (!hasOrigin(MTE))
+      return;
+    // A temporary object's origin is the same as the origin of the
+    // expression that initializes it.
+    addAssignOriginFact(*MTE, *MTE->getSubExpr());
   }
 
   void handleDestructor(const CFGAutomaticObjDtor &DtorOpt) {
@@ -487,13 +589,157 @@ private:
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
       if (LoanPath.D == DestructedVD)
-        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(L.ID));
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            L.ID, DtorOpt.getTriggerStmt()->getEndLoc()));
     }
+  }
+
+private:
+  static bool isGslPointerType(QualType QT) {
+    if (const auto *RD = QT->getAsCXXRecordDecl()) {
+      // We need to check the template definition for specializations.
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+        return CTSD->getSpecializedTemplate()
+            ->getTemplatedDecl()
+            ->hasAttr<PointerAttr>();
+      return RD->hasAttr<PointerAttr>();
+    }
+    return false;
+  }
+
+  static bool isPointerType(QualType QT) {
+    return QT->isPointerOrReferenceType() || isGslPointerType(QT);
+  }
+  // Check if a type has an origin.
+  static bool hasOrigin(const Expr *E) {
+    return E->isGLValue() || isPointerType(E->getType());
+  }
+
+  static bool hasOrigin(const VarDecl *VD) {
+    return isPointerType(VD->getType());
+  }
+
+  void handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
+    assert(isGslPointerType(CCE->getType()));
+    if (CCE->getNumArgs() != 1)
+      return;
+    if (hasOrigin(CCE->getArg(0)))
+      addAssignOriginFact(*CCE, *CCE->getArg(0));
+    else
+      // This could be a new borrow.
+      handleFunctionCall(CCE, CCE->getConstructor(),
+                         {CCE->getArgs(), CCE->getNumArgs()});
+  }
+
+  /// Checks if a call-like expression creates a borrow by passing a value to a
+  /// reference parameter, creating an IssueFact if it does.
+  void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
+                          ArrayRef<const Expr *> Args) {
+    if (!FD)
+      return;
+    // TODO: Handle more than one arguments.
+    for (unsigned I = 0; I <= 0 /*Args.size()*/; ++I) {
+      const Expr *ArgExpr = Args[I];
+
+      // Propagate origins for CXX this.
+      if (FD->isCXXClassMember() && I == 0) {
+        addAssignOriginFact(*Call, *ArgExpr);
+        continue;
+      }
+      // The parameter is a pointer, reference, or gsl::Pointer.
+      // This is a borrow. We propagate the origin from the argument expression
+      // at the call site to the parameter declaration in the callee.
+      if (hasOrigin(ArgExpr))
+        addAssignOriginFact(*Call, *ArgExpr);
+    }
+  }
+
+  /// Creates a loan for the storage path of a given declaration reference.
+  /// This function should be called whenever a DeclRefExpr represents a borrow.
+  /// \param DRE The declaration reference expression that initiates the borrow.
+  /// \return The new Loan on success, nullptr otherwise.
+  const Loan *createLoan(const DeclRefExpr *DRE) {
+    if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
+      AccessPath Path(VD);
+      // The loan is created at the location of the DeclRefExpr.
+      return &FactMgr.getLoanMgr().addLoan(Path, DRE);
+    }
+    return nullptr;
+  }
+
+  template <typename Destination, typename Source>
+  void addAssignOriginFact(const Destination &D, const Source &S) {
+    OriginID DestOID = FactMgr.getOriginMgr().getOrCreate(D);
+    OriginID SrcOID = FactMgr.getOriginMgr().get(S);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<AssignOriginFact>(DestOID, SrcOID));
+  }
+
+  /// Checks if the expression is a `void("__lifetime_test_point_...")` cast.
+  /// If so, creates a `TestPointFact` and returns true.
+  bool handleTestPoint(const CXXFunctionalCastExpr *FCE) {
+    if (!FCE->getType()->isVoidType())
+      return false;
+
+    const auto *SubExpr = FCE->getSubExpr()->IgnoreParenImpCasts();
+    if (const auto *SL = dyn_cast<StringLiteral>(SubExpr)) {
+      llvm::StringRef LiteralValue = SL->getString();
+      const std::string Prefix = "__lifetime_test_point_";
+
+      if (LiteralValue.starts_with(Prefix)) {
+        StringRef Annotation = LiteralValue.drop_front(Prefix.length());
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<TestPointFact>(Annotation));
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr) {
+    if (!hasOrigin(LHSExpr))
+      return;
+    // Find the underlying variable declaration for the left-hand side.
+    if (const auto *DRE_LHS =
+            dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenImpCasts())) {
+      markUseAsWrite(DRE_LHS);
+      if (const auto *VD_LHS = dyn_cast<ValueDecl>(DRE_LHS->getDecl()))
+        // We are interested in assignments like `ptr1 = ptr2` or `ptr = &var`.
+        // LHS must be a pointer/reference type that can be an origin. RHS must
+        // also represent an origin (either another pointer/ref or an
+        // address-of).
+        addAssignOriginFact(*VD_LHS, *RHSExpr);
+    }
+  }
+
+  // A DeclRefExpr will be treated as a use of the referenced decl. It will be
+  // checked for use-after-free unless it is later marked as being written to
+  // (e.g. on the left-hand side of an assignment).
+  void handleUse(const DeclRefExpr *DRE) {
+    if (isPointerType(DRE->getType())) {
+      UseFact *UF = FactMgr.createFact<UseFact>(DRE);
+      CurrentBlockFacts.push_back(UF);
+      assert(!UseFacts.contains(DRE));
+      UseFacts[DRE] = UF;
+    }
+  }
+
+  void markUseAsWrite(const DeclRefExpr *DRE) {
+    if (!isPointerType(DRE->getType()))
+      return;
+    assert(UseFacts.contains(DRE));
+    UseFacts[DRE]->markAsWritten();
   }
 
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
+  // To distinguish between reads and writes for use-after-free checks, this map
+  // stores the `UseFact` for each `DeclRefExpr`. We initially identify all
+  // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
+  // corresponding to the left-hand side is updated to be a "write", thereby
+  // exempting it from the check.
+  llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
 };
 
 // ========================================================================= //
@@ -501,6 +747,13 @@ private:
 // ========================================================================= //
 
 enum class Direction { Forward, Backward };
+
+/// A `ProgramPoint` identifies a location in the CFG by pointing to a specific
+/// `Fact`. identified by a lifetime-related event (`Fact`).
+///
+/// A `ProgramPoint` has "after" semantics: it represents the location
+/// immediately after its corresponding `Fact`.
+using ProgramPoint = const Fact *;
 
 /// A generic, policy-based driver for dataflow analyses. It combines
 /// the dataflow runner and the transferer logic into a single class hierarchy.
@@ -524,14 +777,20 @@ template <typename Derived, typename LatticeType, Direction Dir>
 class DataflowAnalysis {
 public:
   using Lattice = LatticeType;
-  using Base = DataflowAnalysis<Derived, LatticeType, Dir>;
+  using Base = DataflowAnalysis<Derived, Lattice, Dir>;
 
 private:
   const CFG &Cfg;
   AnalysisDeclContext &AC;
 
+  /// The dataflow state before a basic block is processed.
   llvm::DenseMap<const CFGBlock *, Lattice> InStates;
+  /// The dataflow state after a basic block is processed.
   llvm::DenseMap<const CFGBlock *, Lattice> OutStates;
+  /// The dataflow state at a Program Point.
+  /// In a forward analysis, this is the state after the Fact at that point has
+  /// been applied, while in a backward analysis, it is the state before.
+  llvm::DenseMap<ProgramPoint, Lattice> PerPointStates;
 
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
@@ -564,6 +823,8 @@ public:
       OutStates[B] = StateOut;
       Visited.set(B->getBlockID());
       for (const CFGBlock *AdjacentB : isForward() ? B->succs() : B->preds()) {
+        if (!AdjacentB)
+          continue;
         Lattice OldInState = getInState(AdjacentB);
         Lattice NewInState = D.join(OldInState, StateOut);
         // Enqueue the adjacent block if its in-state has changed or if we have
@@ -576,6 +837,9 @@ public:
       }
     }
   }
+
+protected:
+  Lattice getState(ProgramPoint P) const { return PerPointStates.lookup(P); }
 
   Lattice getInState(const CFGBlock *B) const { return InStates.lookup(B); }
 
@@ -590,18 +854,23 @@ public:
     getOutState(&B).dump(llvm::dbgs());
   }
 
+private:
   /// Computes the state at one end of a block by applying all its facts
   /// sequentially to a given state from the other end.
-  /// TODO: We might need to store intermediate states per-fact in the block for
-  /// later analysis.
   Lattice transferBlock(const CFGBlock *Block, Lattice State) {
     auto Facts = AllFacts.getFacts(Block);
-    if constexpr (isForward())
-      for (const Fact *F : Facts)
+    if constexpr (isForward()) {
+      for (const Fact *F : Facts) {
         State = transferFact(State, F);
-    else
-      for (const Fact *F : llvm::reverse(Facts))
+        PerPointStates[F] = State;
+      }
+    } else {
+      for (const Fact *F : llvm::reverse(Facts)) {
+        // In backward analysis, capture the state before applying the fact.
+        PerPointStates[F] = State;
         State = transferFact(State, F);
+      }
+    }
     return State;
   }
 
@@ -617,6 +886,10 @@ public:
       return D->transfer(In, *F->getAs<AssignOriginFact>());
     case Fact::Kind::ReturnOfOrigin:
       return D->transfer(In, *F->getAs<ReturnOfOriginFact>());
+    case Fact::Kind::Use:
+      return D->transfer(In, *F->getAs<UseFact>());
+    case Fact::Kind::TestPoint:
+      return D->transfer(In, *F->getAs<TestPointFact>());
     }
     llvm_unreachable("Unknown fact kind");
   }
@@ -626,19 +899,39 @@ public:
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const AssignOriginFact &) { return In; }
   Lattice transfer(Lattice In, const ReturnOfOriginFact &) { return In; }
+  Lattice transfer(Lattice In, const UseFact &) { return In; }
+  Lattice transfer(Lattice In, const TestPointFact &) { return In; }
 };
 
 namespace utils {
 
 /// Computes the union of two ImmutableSets.
 template <typename T>
-llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A, llvm::ImmutableSet<T> B,
-                           typename llvm::ImmutableSet<T>::Factory &F) {
+static llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A,
+                                  llvm::ImmutableSet<T> B,
+                                  typename llvm::ImmutableSet<T>::Factory &F) {
+  if (A == B)
+    return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
   for (const T &E : B)
-    A = F.add(A, E);
+    if (!A.contains(E))
+      A = F.add(A, E);
   return A;
+}
+
+/// Checks if set A is a subset of set B.
+template <typename T>
+static bool isSubsetOf(const llvm::ImmutableSet<T> &A,
+                       const llvm::ImmutableSet<T> &B) {
+  // Empty set is a subset of all sets.
+  if (A.isEmpty())
+    return true;
+
+  for (const T &Elem : A)
+    if (!B.contains(Elem))
+      return false;
+  return true;
 }
 
 /// Computes the key-wise union of two ImmutableMaps.
@@ -646,9 +939,9 @@ llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A, llvm::ImmutableSet<T> B,
 // efficient merge could be implemented using a Patricia Trie or HAMT
 // instead of the current AVL-tree-based ImmutableMap.
 template <typename K, typename V, typename Joiner>
-llvm::ImmutableMap<K, V>
+static llvm::ImmutableMap<K, V>
 join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
-     typename llvm::ImmutableMap<K, V>::Factory &F, Joiner joinValues) {
+     typename llvm::ImmutableMap<K, V>::Factory &F, Joiner JoinValues) {
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
 
@@ -657,10 +950,11 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
   for (const auto &Entry : B) {
     const K &Key = Entry.first;
     const V &ValB = Entry.second;
-    if (const V *ValA = A.lookup(Key))
-      A = F.add(A, Key, joinValues(*ValA, ValB));
-    else
+    const V *ValA = A.lookup(Key);
+    if (!ValA)
       A = F.add(A, Key, ValB);
+    else if (*ValA != ValB)
+      A = F.add(A, Key, JoinValues(*ValA, ValB));
   }
   return A;
 }
@@ -670,22 +964,15 @@ join(llvm::ImmutableMap<K, V> A, llvm::ImmutableMap<K, V> B,
 //                          Loan Propagation Analysis
 // ========================================================================= //
 
-// Using LLVM's immutable collections is efficient for dataflow analysis
-// as it avoids deep copies during state transitions.
-// TODO(opt): Consider using a bitset to represent the set of loans.
-using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
+using ExpiredLoanMap = llvm::ImmutableMap<LoanID, const ExpireFact *>;
 
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
   OriginLoanMap::Factory OriginMapFactory;
   LoanSet::Factory LoanSetFactory;
-
-  /// Creates a singleton set containing only the given loan ID.
-  LoanSet createLoanSet(LoanID LID) {
-    return LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID);
-  }
+  ExpiredLoanMap::Factory ExpiredLoanMapFactory;
 };
 
 /// Represents the dataflow lattice for loan propagation.
@@ -726,13 +1013,15 @@ struct LoanPropagationLattice {
 class LoanPropagationAnalysis
     : public DataflowAnalysis<LoanPropagationAnalysis, LoanPropagationLattice,
                               Direction::Forward> {
-
-  LifetimeFactory &Factory;
+  OriginLoanMap::Factory &OriginLoanMapFactory;
+  LoanSet::Factory &LoanSetFactory;
 
 public:
   LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
-                          LifetimeFactory &Factory)
-      : DataflowAnalysis(C, AC, F), Factory(Factory) {}
+                          LifetimeFactory &LFactory)
+      : DataflowAnalysis(C, AC, F),
+        OriginLoanMapFactory(LFactory.OriginMapFactory),
+        LoanSetFactory(LFactory.LoanSetFactory) {}
 
   using Base::transfer;
 
@@ -744,9 +1033,9 @@ public:
   // TODO(opt): Keep the state small by removing origins which become dead.
   Lattice join(Lattice A, Lattice B) {
     OriginLoanMap JoinedOrigins =
-        utils::join(A.Origins, B.Origins, Factory.OriginMapFactory,
-                    [this](LoanSet S1, LoanSet S2) {
-                      return utils::join(S1, S2, Factory.LoanSetFactory);
+        utils::join(A.Origins, B.Origins, OriginLoanMapFactory,
+                    [&](LoanSet S1, LoanSet S2) {
+                      return utils::join(S1, S2, LoanSetFactory);
                     });
     return Lattice(JoinedOrigins);
   }
@@ -755,8 +1044,9 @@ public:
   Lattice transfer(Lattice In, const IssueFact &F) {
     OriginID OID = F.getOriginID();
     LoanID LID = F.getLoanID();
-    return LoanPropagationLattice(Factory.OriginMapFactory.add(
-        In.Origins, OID, Factory.createLoanSet(LID)));
+    return LoanPropagationLattice(OriginLoanMapFactory.add(
+        In.Origins, OID,
+        LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID)));
   }
 
   /// The destination origin's loan set is replaced by the source's.
@@ -766,35 +1056,243 @@ public:
     OriginID SrcOID = F.getSrcOriginID();
     LoanSet SrcLoans = getLoans(In, SrcOID);
     return LoanPropagationLattice(
-        Factory.OriginMapFactory.add(In.Origins, DestOID, SrcLoans));
+        OriginLoanMapFactory.add(In.Origins, DestOID, SrcLoans));
+  }
+
+  LoanSet getLoans(OriginID OID, ProgramPoint P) {
+    return getLoans(getState(P), OID);
   }
 
 private:
   LoanSet getLoans(Lattice L, OriginID OID) {
     if (auto *Loans = L.Origins.lookup(OID))
       return *Loans;
-    return Factory.LoanSetFactory.getEmptySet();
+    return LoanSetFactory.getEmptySet();
   }
 };
 
 // ========================================================================= //
-//  TODO:
-// - Modifying loan propagation to answer `LoanSet getLoans(Origin O, Point P)`
-// - Modify loan expiry analysis to answer `bool isExpired(Loan L, Point P)`
-// - Modify origin liveness analysis to answer `bool isLive(Origin O, Point P)`
-// - Using the above three to perform the final error reporting.
+//                         Expired Loans Analysis
 // ========================================================================= //
-} // anonymous namespace
 
-void runLifetimeSafetyAnalysis(const DeclContext &DC, const CFG &Cfg,
-                               AnalysisDeclContext &AC) {
+/// The dataflow lattice for tracking the set of expired loans.
+struct ExpiredLattice {
+  /// Map from an expired `LoanID` to the `ExpireFact` that made it expire.
+  ExpiredLoanMap Expired;
+
+  ExpiredLattice() : Expired(nullptr) {};
+  explicit ExpiredLattice(ExpiredLoanMap M) : Expired(M) {}
+
+  bool operator==(const ExpiredLattice &Other) const {
+    return Expired == Other.Expired;
+  }
+  bool operator!=(const ExpiredLattice &Other) const {
+    return !(*this == Other);
+  }
+
+  void dump(llvm::raw_ostream &OS) const {
+    OS << "ExpiredLattice State:\n";
+    if (Expired.isEmpty())
+      OS << "  <empty>\n";
+    for (const auto &[ID, _] : Expired)
+      OS << "  Loan " << ID << " is expired\n";
+  }
+};
+
+/// The analysis that tracks which loans have expired.
+class ExpiredLoansAnalysis
+    : public DataflowAnalysis<ExpiredLoansAnalysis, ExpiredLattice,
+                              Direction::Forward> {
+
+  ExpiredLoanMap::Factory &Factory;
+
+public:
+  ExpiredLoansAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
+                       LifetimeFactory &Factory)
+      : DataflowAnalysis(C, AC, F), Factory(Factory.ExpiredLoanMapFactory) {}
+
+  using Base::transfer;
+
+  StringRef getAnalysisName() const { return "ExpiredLoans"; }
+
+  Lattice getInitialState() { return Lattice(Factory.getEmptyMap()); }
+
+  /// Merges two lattices by taking the union of the two expired loans.
+  Lattice join(Lattice L1, Lattice L2) {
+    return Lattice(
+        utils::join(L1.Expired, L2.Expired, Factory,
+                    // Take the last expiry fact to make this hermetic.
+                    [](const ExpireFact *F1, const ExpireFact *F2) {
+                      return F1->getExpiryLoc() > F2->getExpiryLoc() ? F1 : F2;
+                    }));
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    return Lattice(Factory.add(In.Expired, F.getLoanID(), &F));
+  }
+
+  // Removes the loan from the set of expired loans.
+  //
+  // When a loan is re-issued (e.g., in a loop), it is no longer considered
+  // expired. A loan can be in the expired set at the point of issue due to
+  // the dataflow state from a previous loop iteration being propagated along
+  // a backedge in the CFG.
+  //
+  // Note: This has a subtle false-negative though where a loan from previous
+  // iteration is not overwritten by a reissue. This needs careful tracking
+  // of loans "across iterations" which can be considered for future
+  // enhancements.
+  //
+  //    void foo(int safe) {
+  //      int* p = &safe;
+  //      int* q = &safe;
+  //      while (condition()) {
+  //        int x = 1;
+  //        p = &x;    // A loan to 'x' is issued to 'p' in every iteration.
+  //        if (condition()) {
+  //          q = p;
+  //        }
+  //        (void)*p; // OK  — 'p' points to 'x' from new iteration.
+  //        (void)*q; // UaF - 'q' still points to 'x' from previous iteration
+  //                  // which is now destroyed.
+  //      }
+  // }
+  Lattice transfer(Lattice In, const IssueFact &F) {
+    return Lattice(Factory.remove(In.Expired, F.getLoanID()));
+  }
+
+  ExpiredLoanMap getExpiredLoans(ProgramPoint P) { return getState(P).Expired; }
+};
+
+// ========================================================================= //
+//                       Lifetime checker and Error reporter
+// ========================================================================= //
+
+/// Struct to store the complete context for a potential lifetime violation.
+struct PendingWarning {
+  SourceLocation ExpiryLoc; // Where the loan expired.
+  const Expr *UseExpr;      // Where the origin holding this loan was used.
+  Confidence ConfidenceLevel;
+};
+
+class LifetimeChecker {
+private:
+  llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  LoanPropagationAnalysis &LoanPropagation;
+  ExpiredLoansAnalysis &ExpiredLoans;
+  FactManager &FactMgr;
+  AnalysisDeclContext &ADC;
+  LifetimeSafetyReporter *Reporter;
+
+public:
+  LifetimeChecker(LoanPropagationAnalysis &LPA, ExpiredLoansAnalysis &ELA,
+                  FactManager &FM, AnalysisDeclContext &ADC,
+                  LifetimeSafetyReporter *Reporter)
+      : LoanPropagation(LPA), ExpiredLoans(ELA), FactMgr(FM), ADC(ADC),
+        Reporter(Reporter) {}
+
+  void run() {
+    llvm::TimeTraceScope TimeProfile("LifetimeChecker");
+    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
+      for (const Fact *F : FactMgr.getFacts(B))
+        if (const auto *UF = F->getAs<UseFact>())
+          checkUse(UF);
+    issuePendingWarnings();
+  }
+
+  /// Checks for use-after-free errors for a given use of an Origin.
+  ///
+  /// This method is called for each 'UseFact' identified in the control flow
+  /// graph. It determines if the loans held by the used origin have expired
+  /// at the point of use.
+  void checkUse(const UseFact *UF) {
+    if (UF->isWritten())
+      return;
+    OriginID O = UF->getUsedOrigin(FactMgr.getOriginMgr());
+
+    // Get the set of loans that the origin might hold at this program point.
+    LoanSet HeldLoans = LoanPropagation.getLoans(O, UF);
+
+    // Get the set of all loans that have expired at this program point.
+    ExpiredLoanMap AllExpiredLoans = ExpiredLoans.getExpiredLoans(UF);
+
+    // If the pointer holds no loans or no loans have expired, there's nothing
+    // to check.
+    if (HeldLoans.isEmpty() || AllExpiredLoans.isEmpty())
+      return;
+
+    // Identify loans that which have expired but are held by the pointer. Using
+    // them is a use-after-free.
+    llvm::SmallVector<LoanID> DefaultedLoans;
+    // A definite UaF error occurs if all loans the origin might hold have
+    // expired.
+    bool IsDefiniteError = true;
+    for (LoanID L : HeldLoans) {
+      if (AllExpiredLoans.contains(L))
+        DefaultedLoans.push_back(L);
+      else
+        // If at least one loan is not expired, this use is not a definite UaF.
+        IsDefiniteError = false;
+    }
+    // If there are no defaulted loans, the use is safe.
+    if (DefaultedLoans.empty())
+      return;
+
+    // Determine the confidence level of the error (definite or maybe).
+    Confidence CurrentConfidence =
+        IsDefiniteError ? Confidence::Definite : Confidence::Maybe;
+
+    // For each expired loan, create a pending warning.
+    for (LoanID DefaultedLoan : DefaultedLoans) {
+      // If we already have a warning for this loan with a higher or equal
+      // confidence, skip this one.
+      if (FinalWarningsMap.count(DefaultedLoan) &&
+          CurrentConfidence <= FinalWarningsMap[DefaultedLoan].ConfidenceLevel)
+        continue;
+
+      auto *EF = AllExpiredLoans.lookup(DefaultedLoan);
+      assert(EF && "Could not find ExpireFact for an expired loan.");
+
+      FinalWarningsMap[DefaultedLoan] = {/*ExpiryLoc=*/(*EF)->getExpiryLoc(),
+                                         /*UseExpr=*/UF->getUseExpr(),
+                                         /*ConfidenceLevel=*/CurrentConfidence};
+    }
+  }
+
+  void issuePendingWarnings() {
+    if (!Reporter)
+      return;
+    for (const auto &[LID, Warning] : FinalWarningsMap) {
+      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
+      const Expr *IssueExpr = L.IssueExpr;
+      Reporter->reportUseAfterFree(IssueExpr, Warning.UseExpr,
+                                   Warning.ExpiryLoc, Warning.ConfidenceLevel);
+    }
+  }
+};
+
+// ========================================================================= //
+//                  LifetimeSafetyAnalysis Class Implementation
+// ========================================================================= //
+
+// We need this here for unique_ptr with forward declared class.
+LifetimeSafetyAnalysis::~LifetimeSafetyAnalysis() = default;
+
+LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                                               LifetimeSafetyReporter *Reporter)
+    : AC(AC), Reporter(Reporter), Factory(std::make_unique<LifetimeFactory>()),
+      FactMgr(std::make_unique<FactManager>()) {}
+
+void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
+
+  const CFG &Cfg = *AC.getCFG();
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
-  FactManager FactMgr;
-  FactGenerator FactGen(FactMgr, AC);
+
+  FactGenerator FactGen(*FactMgr, AC);
   FactGen.run();
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
+  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -805,9 +1303,76 @@ void runLifetimeSafetyAnalysis(const DeclContext &DC, const CFG &Cfg,
   ///    blocks; only Decls are visible.  Therefore, loans in a block that
   ///    never reach an Origin associated with a Decl can be safely dropped by
   ///    the analysis.
-  LifetimeFactory Factory;
-  LoanPropagationAnalysis LoanPropagation(Cfg, AC, FactMgr, Factory);
-  LoanPropagation.run();
-  DEBUG_WITH_TYPE("LifetimeLoanPropagation", LoanPropagation.dump());
+  /// 3. Collapse ExpireFacts belonging to same source location into a single
+  ///    Fact.
+  LoanPropagation =
+      std::make_unique<LoanPropagationAnalysis>(Cfg, AC, *FactMgr, *Factory);
+  LoanPropagation->run();
+
+  ExpiredLoans =
+      std::make_unique<ExpiredLoansAnalysis>(Cfg, AC, *FactMgr, *Factory);
+  ExpiredLoans->run();
+
+  LifetimeChecker Checker(*LoanPropagation, *ExpiredLoans, *FactMgr, AC,
+                          Reporter);
+  Checker.run();
 }
-} // namespace clang
+
+LoanSet LifetimeSafetyAnalysis::getLoansAtPoint(OriginID OID,
+                                                ProgramPoint PP) const {
+  assert(LoanPropagation && "Analysis has not been run.");
+  return LoanPropagation->getLoans(OID, PP);
+}
+
+std::vector<LoanID>
+LifetimeSafetyAnalysis::getExpiredLoansAtPoint(ProgramPoint PP) const {
+  assert(ExpiredLoans && "ExpiredLoansAnalysis has not been run.");
+  std::vector<LoanID> Result;
+  for (const auto &pair : ExpiredLoans->getExpiredLoans(PP))
+    Result.push_back(pair.first);
+  return Result;
+}
+
+std::optional<OriginID>
+LifetimeSafetyAnalysis::getOriginIDForDecl(const ValueDecl *D) const {
+  assert(FactMgr && "FactManager not initialized");
+  // This assumes the OriginManager's `get` can find an existing origin.
+  // We might need a `find` method on OriginManager to avoid `getOrCreate` logic
+  // in a const-query context if that becomes an issue.
+  return FactMgr->getOriginMgr().get(*D);
+}
+
+std::vector<LoanID>
+LifetimeSafetyAnalysis::getLoanIDForVar(const VarDecl *VD) const {
+  assert(FactMgr && "FactManager not initialized");
+  std::vector<LoanID> Result;
+  for (const Loan &L : FactMgr->getLoanMgr().getLoans())
+    if (L.Path.D == VD)
+      Result.push_back(L.ID);
+  return Result;
+}
+
+llvm::StringMap<ProgramPoint> LifetimeSafetyAnalysis::getTestPoints() const {
+  assert(FactMgr && "FactManager not initialized");
+  llvm::StringMap<ProgramPoint> AnnotationToPointMap;
+  for (const CFGBlock *Block : *AC.getCFG()) {
+    for (const Fact *F : FactMgr->getFacts(Block)) {
+      if (const auto *TPF = F->getAs<TestPointFact>()) {
+        StringRef PointName = TPF->getAnnotation();
+        assert(AnnotationToPointMap.find(PointName) ==
+                   AnnotationToPointMap.end() &&
+               "more than one test points with the same name");
+        AnnotationToPointMap[PointName] = F;
+      }
+    }
+  }
+  return AnnotationToPointMap;
+}
+} // namespace internal
+
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
+  Analysis.run();
+}
+} // namespace clang::lifetimes

@@ -266,8 +266,7 @@ define float @reduce_fadd3(float %x, <4 x float> %v, ptr %rdxptr) {
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    fadd.s fa0, fa5, fa0
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %v)

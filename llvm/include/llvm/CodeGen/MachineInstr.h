@@ -122,7 +122,9 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
-    SameSign = 1 << 21       // Both operands have the same sign.
+    SameSign = 1 << 21,      // Both operands have the same sign.
+    InBounds = 1 << 22       // Pointer arithmetic remains inbounds.
+                             // Implies NoUSWrap.
   };
 
 private:
@@ -1227,7 +1229,7 @@ public:
 
   /// Returns true if this instruction is a candidate for remat.
   /// This flag is deprecated, please don't use it anymore.  If this
-  /// flag is set, the isReallyTriviallyReMaterializable() method is called to
+  /// flag is set, the isReMaterializableImpl() method is called to
   /// verify the instruction is really rematerializable.
   bool isRematerializable(QueryType Type = AllInBundle) const {
     // It's only possible to re-mat a bundle if all bundled instructions are

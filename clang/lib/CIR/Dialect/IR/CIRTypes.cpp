@@ -283,6 +283,16 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
       });
 }
 
+bool RecordType::isLayoutIdentical(const RecordType &other) {
+  if (getImpl() == other.getImpl())
+    return true;
+
+  if (getPacked() != other.getPacked())
+    return false;
+
+  return getMembers() == other.getMembers();
+}
+
 //===----------------------------------------------------------------------===//
 // Data Layout information for types
 //===----------------------------------------------------------------------===//
@@ -695,6 +705,23 @@ uint64_t
 BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                           ::mlir::DataLayoutEntryListRef params) const {
   return 1;
+}
+
+//===----------------------------------------------------------------------===//
+//  VPtrType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+VPtrType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider size differences under different ABIs
+  return llvm::TypeSize::getFixed(64);
+}
+
+uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                   mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  return 8;
 }
 
 //===----------------------------------------------------------------------===//

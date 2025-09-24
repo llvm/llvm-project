@@ -50,6 +50,27 @@ enum CheckSubobjectKind {
   CSK_VectorElement
 };
 
+enum class EvaluationMode {
+  /// Evaluate as a constant expression. Stop if we find that the expression
+  /// is not a constant expression.
+  ConstantExpression,
+
+  /// Evaluate as a constant expression. Stop if we find that the expression
+  /// is not a constant expression. Some expressions can be retried in the
+  /// optimizer if we don't constant fold them here, but in an unevaluated
+  /// context we try to fold them immediately since the optimizer never
+  /// gets a chance to look at it.
+  ConstantExpressionUnevaluated,
+
+  /// Fold the expression to a constant. Stop if we hit a side-effect that
+  /// we can't model.
+  ConstantFold,
+
+  /// Evaluate in any way we know how. Don't worry about side-effects that
+  /// can't be modeled.
+  IgnoreSideEffects,
+};
+
 namespace interp {
 class Frame;
 class SourceInfo;
@@ -59,8 +80,6 @@ class State {
 public:
   virtual ~State();
 
-  virtual bool checkingForUndefinedBehavior() const = 0;
-  virtual bool checkingPotentialConstantExpression() const = 0;
   virtual bool noteUndefinedBehavior() = 0;
   virtual bool keepEvaluatingAfterFailure() const = 0;
   virtual bool keepEvaluatingAfterSideEffect() const = 0;
@@ -74,6 +93,16 @@ public:
   virtual bool hasPriorDiagnostic() = 0;
   virtual unsigned getCallStackDepth() = 0;
   virtual bool noteSideEffect() = 0;
+
+  /// Are we checking whether the expression is a potential constant
+  /// expression?
+  bool checkingPotentialConstantExpression() const {
+    return CheckingPotentialConstantExpression;
+  }
+  /// Are we checking an expression for overflow?
+  bool checkingForUndefinedBehavior() const {
+    return CheckingForUndefinedBehavior;
+  }
 
 public:
   State() = default;
@@ -122,11 +151,24 @@ public:
   /// Directly reports a diagnostic message.
   DiagnosticBuilder report(SourceLocation Loc, diag::kind DiagId);
 
-  const LangOptions &getLangOpts() const;
-
   /// Whether or not we're in a context where the front end requires a
   /// constant value.
   bool InConstantContext = false;
+
+  /// Whether we're checking that an expression is a potential constant
+  /// expression. If so, do not fail on constructs that could become constant
+  /// later on (such as a use of an undefined global).
+  bool CheckingPotentialConstantExpression = false;
+
+  /// Whether we're checking for an expression that has undefined behavior.
+  /// If so, we will produce warnings if we encounter an operation that is
+  /// always undefined.
+  ///
+  /// Note that we still need to evaluate the expression normally when this
+  /// is set; this is used when evaluating ICEs in C.
+  bool CheckingForUndefinedBehavior = false;
+
+  EvaluationMode EvalMode;
 
 private:
   void addCallStack(unsigned Limit);

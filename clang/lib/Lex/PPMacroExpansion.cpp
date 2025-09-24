@@ -1282,11 +1282,13 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   SmallString<128> FilenameBuffer;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
+  if (Filename.empty())
+    return EmbedResult::Empty;
+
   bool isAngled =
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
   const FileEntry *LookupFromFile =
       this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
                                   : static_cast<FileEntry *>(nullptr);
@@ -1760,7 +1762,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               Tok, *this, diag::err_feature_check_malformed);
           if (!II)
             return false;
-          else if (II->getBuiltinID() != 0) {
+          unsigned BuiltinID = II->getBuiltinID();
+          if (BuiltinID != 0) {
             switch (II->getBuiltinID()) {
             case Builtin::BI__builtin_cpu_is:
               return getTargetInfo().supportsCpuIs();
@@ -1774,8 +1777,11 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               // usual allocation and deallocation functions. Required by libc++
               return 201802;
             default:
+              // __has_builtin should return false for aux builtins.
+              if (getBuiltinInfo().isAuxBuiltinID(BuiltinID))
+                return false;
               return Builtin::evaluateRequiredTargetFeatures(
-                  getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
+                  getBuiltinInfo().getRequiredFeatures(BuiltinID),
                   getTargetInfo().getTargetOpts().FeatureMap);
             }
             return true;

@@ -8,6 +8,8 @@
 // Note: #gpu.address_space<global> is hardcoded to `1` here because the
 // test pass doesn't set up the GPU address space conversions.
 
+// CHECK: #[[$MMRA_TAG:.+]] = #llvm.mmra_tag<"amdgpu-synchronize-as":"local">
+
 #gpu_global_addrspace = 1
 
 // CHECK-LABEL: func @fat_raw_buffer_cast
@@ -68,7 +70,7 @@ func.func @fat_raw_buffer_cast_dyn_size_offset(%buf: memref<?xi32, strided<[1], 
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_reset_offset
-func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace>) -> memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace>) -> memref<?xi32, #amdgpu.address_space<fat_raw_buffer>> {
   // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<?xi32, strided<[1], offset: ?>, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK-DAG: %[[memRefPtr:.*]] = llvm.extractvalue %[[desc]][1]
   // CHECK-DAG: %[[memRefOff:.*]] = llvm.extractvalue %[[desc]][2]
@@ -77,8 +79,8 @@ func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], off
   // CHECK: %[[fatBuf:.*]] = rocdl.make.buffer.rsrc %[[basePtr]], %{{.*}}, %{{.*}}, %{{.*}}
   // CHECK: llvm.insertvalue %[[fatBuf]], %{{.*}}[1]
   // CHECK: llvm.insertvalue %[[zeroOff]], %{{.*}}[2]
-  %ret = amdgpu.fat_raw_buffer_cast %buf resetOffset : memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace> to memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
-  return %ret : memref<?xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf resetOffset : memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace> to memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
+  return %ret : memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_valid_bytes
@@ -414,19 +416,16 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_v2f16(%src : vector<2xf16>, %cmp : v
 
 // CHECK-LABEL: func @lds_barrier
 func.func @lds_barrier() {
+  // CHECK: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
   // GFX908: llvm.inline_asm has_side_effects asm_dialect = att
-  // GFX908-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
-  // GFX90A: rocdl.s.waitcnt -7937
+  // GFX908-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_barrier"
   // GFX90A-NEXT: rocdl.s.barrier
-  // GFX942: rocdl.s.waitcnt -7937
   // GFX942-NEXT: rocdl.s.barrier
-  // GFX10:  rocdl.s.waitcnt -16129
   // GFX10-NEXT: rocdl.s.barrier
-  // GFX11:  llvm.inline_asm has_side_effects asm_dialect = att
-  // GFX11-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
-  // GFX12:  rocdl.s.wait.dscnt 0
+  // GFX11-NEXT: rocdl.s.barrier
   // GFX12-NEXT: rocdl.s.barrier.signal -1
   // GFX12-NEXT: rocdl.s.barrier.wait -1
+  // CHECK-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
   amdgpu.lds_barrier
   func.return
 }

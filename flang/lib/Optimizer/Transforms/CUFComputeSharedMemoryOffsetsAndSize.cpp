@@ -38,6 +38,15 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
+static bool isAssumedSize(mlir::ValueRange shape) {
+  if (shape.size() != 1)
+    return false;
+  std::optional<std::int64_t> val = fir::getIntIfConstant(shape[0]);
+  if (val && *val == -1)
+    return true;
+  return false;
+}
+
 struct CUFComputeSharedMemoryOffsetsAndSize
     : public fir::impl::CUFComputeSharedMemoryOffsetsAndSizeBase<
           CUFComputeSharedMemoryOffsetsAndSize> {
@@ -82,21 +91,22 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           alignment = std::max(alignment, align);
           uint64_t tySize = dl->getTypeSize(ty);
           ++nbDynamicSharedVariables;
-          if (crtDynOffset) {
-            sharedOp.getOffsetMutable().assign(
-                builder.createConvert(loc, i32Ty, crtDynOffset));
-          } else {
+          if (isAssumedSize(sharedOp.getShape()) || !crtDynOffset) {
             mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
             sharedOp.getOffsetMutable().assign(zero);
+          } else {
+            sharedOp.getOffsetMutable().assign(
+                builder.createConvert(loc, i32Ty, crtDynOffset));
           }
 
           mlir::Value dynSize =
               builder.createIntegerConstant(loc, idxTy, tySize);
           for (auto extent : sharedOp.getShape())
-            dynSize = builder.create<mlir::arith::MulIOp>(loc, dynSize, extent);
+            dynSize =
+                mlir::arith::MulIOp::create(builder, loc, dynSize, extent);
           if (crtDynOffset)
-            crtDynOffset =
-                builder.create<mlir::arith::AddIOp>(loc, crtDynOffset, dynSize);
+            crtDynOffset = mlir::arith::AddIOp::create(builder, loc,
+                                                       crtDynOffset, dynSize);
           else
             crtDynOffset = dynSize;
 
@@ -142,9 +152,9 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           fir::GlobalOp::getDataAttrAttrName(globalOpName),
           cuf::DataAttributeAttr::get(gpuMod.getContext(),
                                       cuf::DataAttribute::Shared)));
-      auto sharedMem = builder.create<fir::GlobalOp>(
-          funcOp.getLoc(), sharedMemGlobalName, false, false, sharedMemType,
-          init, linkage, attrs);
+      auto sharedMem = fir::GlobalOp::create(
+          builder, funcOp.getLoc(), sharedMemGlobalName, false, false,
+          sharedMemType, init, linkage, attrs);
       sharedMem.setAlignment(alignment);
     }
   }

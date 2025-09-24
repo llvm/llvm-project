@@ -551,6 +551,7 @@ std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

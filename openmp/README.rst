@@ -121,7 +121,7 @@ Options for all Libraries
 
 **OPENMP_TEST_Fortran_COMPILER** = ``${CMAKE_Fortran_COMPILER}``
   Compiler to use for testing. Defaults to the compiler that was also used for
-  building. Will default to flang if build is in-tree.
+  building.
 
 **OPENMP_LLVM_TOOLS_DIR** = ``/path/to/built/llvm/tools``
   Additional path to search for LLVM tools needed by tests.
@@ -369,6 +369,7 @@ There are following check-* make targets for tests.
 
 - ``check-ompt`` (ompt tests under runtime/test/ompt)
 - ``check-ompt-multiplex`` (ompt multiplex tests under tools/multiplex/tests)
+- ``check-ompt-omptest`` (ompt omptest tests under tools/omptest/tests)
 - ``check-libarcher`` (libarcher tests under tools/archer/tests)
 - ``check-libomp`` (libomp tests under runtime/test. This includes check-ompt tests too)
 - ``check-libomptarget-*`` (libomptarget tests for specific target under libomptarget/test)

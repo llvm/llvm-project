@@ -175,7 +175,7 @@ subroutine simd_with_collapse_clause(n)
   ! CHECK-NEXT: omp.loop_nest (%[[ARG_0:.*]], %[[ARG_1:.*]]) : i32 = (
   ! CHECK-SAME:                %[[LOWER_I]], %[[LOWER_J]]) to (
   ! CHECK-SAME:                %[[UPPER_I]], %[[UPPER_J]]) inclusive step (
-  ! CHECK-SAME:                %[[STEP_I]], %[[STEP_J]]) {
+  ! CHECK-SAME:                %[[STEP_I]], %[[STEP_J]]) collapse(2) {
   !$OMP SIMD COLLAPSE(2)
   do i = 1, n
     do j = 1, n
@@ -221,6 +221,23 @@ subroutine simdloop_aligned_allocatable()
 !CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !CHECK: omp.simd aligned(%[[A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> 256 : i64)
   !$OMP SIMD ALIGNED(A:256)
+  do i = 1, 10
+    A(i) = i
+  end do
+end subroutine
+
+subroutine aligned_non_power_of_two()
+  integer :: i
+  integer, allocatable :: A(:)
+  allocate(A(10))
+!CHECK: %[[A_PTR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a",
+!CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"}
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A_PTR]] {fortran_attrs = #fir.var_attrs<allocatable>,
+!CHECK-SAME: uniq_name = "_QFaligned_non_power_of_twoEa"} :
+!CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) ->
+!CHECK-SAME: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!CHECK: omp.simd private
+  !$OMP SIMD ALIGNED(A:257)
   do i = 1, 10
     A(i) = i
   end do

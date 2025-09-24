@@ -247,7 +247,8 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
   // Check for writes to __stack_pointer global.
   if ((MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 ||
        MI.getOpcode() == WebAssembly::GLOBAL_SET_I64) &&
-      strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer") == 0)
+      MI.getOperand(0).isSymbol() &&
+      !strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer"))
     StackPointer = true;
 
   // Analyze calls.
@@ -259,7 +260,10 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
 // Test whether Def is safe and profitable to rematerialize.
 static bool shouldRematerialize(const MachineInstr &Def,
                                 const WebAssemblyInstrInfo *TII) {
-  return Def.isAsCheapAsAMove() && TII->isTriviallyReMaterializable(Def);
+  return Def.isAsCheapAsAMove() && TII->isTriviallyReMaterializable(Def) &&
+         llvm::all_of(Def.all_uses(), [](const MachineOperand &MO) {
+           return MO.getReg().isVirtual();
+         });
 }
 
 // Identify the definition for this register at this point. This is a

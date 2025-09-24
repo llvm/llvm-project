@@ -262,7 +262,7 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
       return true;
   }
 
-  const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
+  auto Len = MI->getLengthInBytes();
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len) return false;
   return IsAccessSafe(U, Len->getZExtValue(), AllocaPtr, AllocaSize);
@@ -613,6 +613,13 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     while (!AI->use_empty()) {
       Use &U = *AI->use_begin();
       Instruction *User = cast<Instruction>(U.getUser());
+
+      // Drop lifetime markers now that this is no longer an alloca.
+      // SafeStack has already performed its own stack coloring.
+      if (User->isLifetimeStartOrEnd()) {
+        User->eraseFromParent();
+        continue;
+      }
 
       Instruction *InsertBefore;
       if (auto *PHI = dyn_cast<PHINode>(User))

@@ -135,7 +135,7 @@ Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
     // it is, find the target section unique id.
     const coff_aux_section_definition *SD = SymRef.getSectionDefinition();
     const coff_aux_weak_external *WE = SymRef.getWeakExternal();
-    if (SD && SD->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+    if (SD && SD->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE && !Obj.IsPE) {
       int32_t Index = SD->getNumber(IsBigObj);
       if (Index <= 0 || static_cast<uint32_t>(Index - 1) >= Sections.size())
         return createStringError(object_error::parse_failed,

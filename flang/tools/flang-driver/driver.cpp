@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "flang/Config/config.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
@@ -123,21 +124,21 @@ int main(int argc, const char **argv) {
   // Create DiagnosticsEngine for the compiler driver
   std::unique_ptr<clang::DiagnosticOptions> diagOpts =
       createAndPopulateDiagOpts(args);
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
-      new clang::DiagnosticIDs());
   Fortran::frontend::TextDiagnosticPrinter *diagClient =
       new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), *diagOpts);
 
   diagClient->setPrefix(
       std::string(llvm::sys::path::stem(getExecutablePath(args[0]))));
 
-  clang::DiagnosticsEngine diags(diagID, *diagOpts, diagClient);
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), *diagOpts,
+                                 diagClient);
 
   // Prepare the driver
   clang::driver::Driver theDriver(driverPath,
                                   llvm::sys::getDefaultTargetTriple(), diags,
                                   "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
+  theDriver.setPreferredLinker(FLANG_DEFAULT_LINKER);
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
   theDriver.setFlangF128MathLibrary(FLANG_RUNTIME_F128_MATH_LIB);
 #endif

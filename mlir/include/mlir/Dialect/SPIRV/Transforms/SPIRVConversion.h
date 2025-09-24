@@ -39,6 +39,10 @@ struct SPIRVConversionOptions {
   /// The number of bits to store a boolean value.
   unsigned boolNumBits{8};
 
+  /// Whether to emulate unsupported floats with integer types of same bit
+  /// width.
+  bool emulateUnsupportedFloatTypes{true};
+
   /// How sub-byte values are storaged in memory.
   SPIRVSubByteTypeStorage subByteTypeStorage{SPIRVSubByteTypeStorage::Packed};
 

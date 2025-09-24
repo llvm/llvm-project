@@ -2,10 +2,11 @@ Test that unwind plans use the frame pointer register correctly.
 
 REQUIRES: arm
 
-RUN: yaml2obj %S/Inputs/arm-fp-unwind.exe.yaml -o %T/arm-fp-unwind.exe
-RUN: yaml2obj %S/Inputs/arm-fp-unwind.dmp.yaml -o %T/arm-fp-unwind.dmp
-RUN: %lldb -O "settings set target.exec-search-paths %T" \
-RUN:   -c %T/arm-fp-unwind.dmp -o "image show-unwind -a 0x00c71010" -b \
+RUN: mkdir -p %t.dir
+RUN: yaml2obj %S/Inputs/arm-fp-unwind.exe.yaml -o %t.dir/arm-fp-unwind.exe
+RUN: yaml2obj %S/Inputs/arm-fp-unwind.dmp.yaml -o %t.dir/arm-fp-unwind.dmp
+RUN: %lldb -O "settings set target.exec-search-paths %t.dir" \
+RUN:   -c %t.dir/arm-fp-unwind.dmp -o "image show-unwind -a 0x00c71010" -b \
 RUN:   | FileCheck %s
 
 CHECK: Assembly language inspection UnwindPlan:

@@ -8,8 +8,8 @@
 
 #include <clc/atomic/clc_atomic_load.h>
 
-#define FUNCTION __clc_atomic_load
-#define __IMPL_FUNCTION __scoped_atomic_load_n
+#define __CLC_FUNCTION __clc_atomic_load
+#define __CLC_IMPL_FUNCTION __scoped_atomic_load_n
 #define __CLC_NO_VALUE_ARG
 
 #define __CLC_BODY <clc_atomic_def.inc>

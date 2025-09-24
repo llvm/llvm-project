@@ -4,17 +4,24 @@
 # RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/foo.s -o %t.foo.obj
 # RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/qux.s -o %t.qux.obj
 # RUN: lld-link %t.qux.obj %t.foo.obj -out:%t.dll -dll
+# RUN: lld-link %t.foo.obj %t.qux.obj -out:%t.dll -dll
 #
 #--- foo.s
 .text
 bar:
   ret
 
-.weak foo
-.set foo, bar
+.weak a
+.weak b
+.weak c
+.set a, bar
+.set b, bar
+.set c, bar
 #--- qux.s
 .text
 .global _DllMainCRTStartup
 _DllMainCRTStartup:
-  call *__imp_foo(%rip)
+  call *__imp_a(%rip)
+  call *__imp_b(%rip)
+  call *__imp_c(%rip)
   ret

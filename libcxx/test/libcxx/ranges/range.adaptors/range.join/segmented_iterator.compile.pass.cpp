@@ -14,4 +14,4 @@
 
 using JoinView = decltype(std::views::join(std::declval<std::vector<std::vector<int>>&>()));
 using JoinIter = std::ranges::iterator_t<JoinView>;
-static_assert(std::__is_segmented_iterator<JoinIter>::value);
+static_assert(std::__is_segmented_iterator_v<JoinIter>);

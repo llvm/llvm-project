@@ -36,34 +36,34 @@ struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
     Location loc = op.getLoc();
     Value n = adaptor.getLhs();
     Value m = adaptor.getRhs();
-    Value zero = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), 0);
-    Value posOne = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), 1);
-    Value negOne = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), -1);
+    Value zero = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 0);
+    Value posOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
+    Value negOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), -1);
 
     // Compute `x`.
     Value mPos =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::sgt, m, zero);
-    Value x = rewriter.create<LLVM::SelectOp>(loc, mPos, negOne, posOne);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, m, zero);
+    Value x = LLVM::SelectOp::create(rewriter, loc, mPos, negOne, posOne);
 
     // Compute the positive result.
-    Value nPlusX = rewriter.create<LLVM::AddOp>(loc, n, x);
-    Value nPlusXDivM = rewriter.create<LLVM::SDivOp>(loc, nPlusX, m);
-    Value posRes = rewriter.create<LLVM::AddOp>(loc, nPlusXDivM, posOne);
+    Value nPlusX = LLVM::AddOp::create(rewriter, loc, n, x);
+    Value nPlusXDivM = LLVM::SDivOp::create(rewriter, loc, nPlusX, m);
+    Value posRes = LLVM::AddOp::create(rewriter, loc, nPlusXDivM, posOne);
 
     // Compute the negative result.
-    Value negN = rewriter.create<LLVM::SubOp>(loc, zero, n);
-    Value negNDivM = rewriter.create<LLVM::SDivOp>(loc, negN, m);
-    Value negRes = rewriter.create<LLVM::SubOp>(loc, zero, negNDivM);
+    Value negN = LLVM::SubOp::create(rewriter, loc, zero, n);
+    Value negNDivM = LLVM::SDivOp::create(rewriter, loc, negN, m);
+    Value negRes = LLVM::SubOp::create(rewriter, loc, zero, negNDivM);
 
     // Pick the positive result if `n` and `m` have the same sign and `n` is
     // non-zero, i.e. `(n > 0) == (m > 0) && n != 0`.
     Value nPos =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::sgt, n, zero);
-    Value sameSign =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, nPos, mPos);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, n, zero);
+    Value sameSign = LLVM::ICmpOp::create(rewriter, loc,
+                                          LLVM::ICmpPredicate::eq, nPos, mPos);
     Value nNonZero =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::ne, n, zero);
-    Value cmp = rewriter.create<LLVM::AndOp>(loc, sameSign, nNonZero);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
+    Value cmp = LLVM::AndOp::create(rewriter, loc, sameSign, nNonZero);
     rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, posRes, negRes);
     return success();
   }
@@ -83,17 +83,17 @@ struct ConvertIndexCeilDivU : mlir::ConvertOpToLLVMPattern<CeilDivUOp> {
     Location loc = op.getLoc();
     Value n = adaptor.getLhs();
     Value m = adaptor.getRhs();
-    Value zero = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), 0);
-    Value one = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), 1);
+    Value zero = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 0);
+    Value one = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
 
     // Compute the non-zero result.
-    Value minusOne = rewriter.create<LLVM::SubOp>(loc, n, one);
-    Value quotient = rewriter.create<LLVM::UDivOp>(loc, minusOne, m);
-    Value plusOne = rewriter.create<LLVM::AddOp>(loc, quotient, one);
+    Value minusOne = LLVM::SubOp::create(rewriter, loc, n, one);
+    Value quotient = LLVM::UDivOp::create(rewriter, loc, minusOne, m);
+    Value plusOne = LLVM::AddOp::create(rewriter, loc, quotient, one);
 
     // Pick the result.
     Value cmp =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, n, zero);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, n, zero);
     rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, zero, plusOne);
     return success();
   }
@@ -114,32 +114,32 @@ struct ConvertIndexFloorDivS : mlir::ConvertOpToLLVMPattern<FloorDivSOp> {
     Location loc = op.getLoc();
     Value n = adaptor.getLhs();
     Value m = adaptor.getRhs();
-    Value zero = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), 0);
-    Value posOne = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), 1);
-    Value negOne = rewriter.create<LLVM::ConstantOp>(loc, n.getType(), -1);
+    Value zero = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 0);
+    Value posOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
+    Value negOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), -1);
 
     // Compute `x`.
     Value mNeg =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::slt, m, zero);
-    Value x = rewriter.create<LLVM::SelectOp>(loc, mNeg, posOne, negOne);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, m, zero);
+    Value x = LLVM::SelectOp::create(rewriter, loc, mNeg, posOne, negOne);
 
     // Compute the negative result.
-    Value xMinusN = rewriter.create<LLVM::SubOp>(loc, x, n);
-    Value xMinusNDivM = rewriter.create<LLVM::SDivOp>(loc, xMinusN, m);
-    Value negRes = rewriter.create<LLVM::SubOp>(loc, negOne, xMinusNDivM);
+    Value xMinusN = LLVM::SubOp::create(rewriter, loc, x, n);
+    Value xMinusNDivM = LLVM::SDivOp::create(rewriter, loc, xMinusN, m);
+    Value negRes = LLVM::SubOp::create(rewriter, loc, negOne, xMinusNDivM);
 
     // Compute the positive result.
-    Value posRes = rewriter.create<LLVM::SDivOp>(loc, n, m);
+    Value posRes = LLVM::SDivOp::create(rewriter, loc, n, m);
 
     // Pick the negative result if `n` and `m` have different signs and `n` is
     // non-zero, i.e. `(n < 0) != (m < 0) && n != 0`.
     Value nNeg =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::slt, n, zero);
-    Value diffSign =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::ne, nNeg, mNeg);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, n, zero);
+    Value diffSign = LLVM::ICmpOp::create(rewriter, loc,
+                                          LLVM::ICmpPredicate::ne, nNeg, mNeg);
     Value nNonZero =
-        rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::ne, n, zero);
-    Value cmp = rewriter.create<LLVM::AndOp>(loc, diffSign, nNonZero);
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
+    Value cmp = LLVM::AndOp::create(rewriter, loc, diffSign, nNonZero);
     rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, negRes, posRes);
     return success();
   }

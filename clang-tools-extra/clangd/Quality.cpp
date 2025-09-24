@@ -143,6 +143,9 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::Parameter:
   case index::SymbolKind::NonTypeTemplateParm:
     return SymbolQualitySignals::Variable;
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case index::SymbolKind::IncludeDirective:
   case index::SymbolKind::Using:
   case index::SymbolKind::Module:
   case index::SymbolKind::Unknown:

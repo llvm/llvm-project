@@ -630,8 +630,7 @@ define dso_local void @tlsle_control_flow_with_mem_access() nounwind {
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_a32+4)
 ; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_a32+4)
 ; LA32-NEXT:    ld.w $a1, $a0, %le_lo12_r(g_a32+4)
-; LA32-NEXT:    ori $a2, $zero, 1
-; LA32-NEXT:    blt $a1, $a2, .LBB25_2
+; LA32-NEXT:    blez $a1, .LBB25_2
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ori $a1, $zero, 10
 ; LA32-NEXT:    st.w $a1, $a0, %le_lo12_r(g_a32+4)
@@ -643,8 +642,7 @@ define dso_local void @tlsle_control_flow_with_mem_access() nounwind {
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a32+4)
 ; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a32+4)
 ; LA64-NEXT:    ld.w $a1, $a0, %le_lo12_r(g_a32+4)
-; LA64-NEXT:    ori $a2, $zero, 1
-; LA64-NEXT:    blt $a1, $a2, .LBB25_2
+; LA64-NEXT:    blez $a1, .LBB25_2
 ; LA64-NEXT:  # %bb.1: # %if.then
 ; LA64-NEXT:    ori $a1, $zero, 10
 ; LA64-NEXT:    st.w $a1, $a0, %le_lo12_r(g_a32+4)

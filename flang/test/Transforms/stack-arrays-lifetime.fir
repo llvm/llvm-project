@@ -39,15 +39,15 @@ func.func @_QPcst_alloca(%arg0: !fir.ref<!fir.array<100000xf32>> {fir.bindc_name
 // CHECK-DAG:           %[[VAL_0:.*]] = fir.alloca !fir.array<100000xf32> {bindc_name = ".tmp.array", fir.has_lifetime}
 // CHECK-DAG:           %[[VAL_2:.*]] = fir.alloca !fir.array<100000xi32> {bindc_name = ".tmp.array", fir.has_lifetime}
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<100000xf32>>) -> !llvm.ptr
-// CHECK:           llvm.intr.lifetime.start 400000, %[[VAL_9]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.start %[[VAL_9]] : !llvm.ptr
 // CHECK:           fir.do_loop
 // CHECK:           fir.call @_QPbar(
-// CHECK:           llvm.intr.lifetime.end 400000, %[[VAL_9]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.end %[[VAL_9]] : !llvm.ptr
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<100000xi32>>) -> !llvm.ptr
-// CHECK:           llvm.intr.lifetime.start 400000, %[[VAL_17]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.start %[[VAL_17]] : !llvm.ptr
 // CHECK:           fir.do_loop
 // CHECK:           fir.call @_QPibar(
-// CHECK:           llvm.intr.lifetime.end 400000, %[[VAL_17]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.end %[[VAL_17]] : !llvm.ptr
 
 
 func.func @_QPdyn_alloca(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i64> {fir.bindc_name = "n"}) {

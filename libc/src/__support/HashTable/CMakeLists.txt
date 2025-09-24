@@ -5,6 +5,7 @@ add_header_library(
   FLAGS
     EXPLICIT_SIMD_OPT
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.macros.properties.cpu_features
@@ -26,6 +27,7 @@ add_header_library(
     table.h
   DEPENDS
     .bitmask
+    libc.hdr.stdint_proxy
     libc.hdr.types.ENTRY
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new

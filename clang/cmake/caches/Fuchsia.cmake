@@ -76,6 +76,9 @@ foreach(variable ${_FUCHSIA_BOOTSTRAP_PASSTHROUGH})
     get_property(value CACHE ${variable} PROPERTY VALUE)
     get_property(type CACHE ${variable} PROPERTY TYPE)
     set(BOOTSTRAP_${variable} "${value}" CACHE ${type} "")
+    if(FUCHSIA_ENABLE_PGO)
+      set(BOOTSTRAP_BOOTSTRAP_${variable} "${value}" CACHE ${type} "")
+    endif()
   endif()
 endforeach()
 
@@ -176,7 +179,7 @@ set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 
 if(FUCHSIA_ENABLE_PGO)
-  set(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED ON CACHE BOOL "")
+  set(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED IR CACHE BOOL "")
 
   set(_FUCHSIA_BOOTSTRAP_TARGETS
     generate-profdata

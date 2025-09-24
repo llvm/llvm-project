@@ -230,7 +230,7 @@ void DIEHash::hashBlockData(const DIE::const_value_range &Values) {
              "Base types referenced from DW_OP_convert should have a name");
       hashNestedType(C, Name);
     } else
-      Hash.update((uint64_t)V.getDIEInteger().getValue());
+      Hash.update(V.getDIEInteger().getValue());
 }
 
 // Hash the contents of a loclistptr class.

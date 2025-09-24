@@ -19,7 +19,7 @@ func.func @expvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @exp(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
   %2 = spirv.GL.Exp %arg0 : i32
   return
 }
@@ -27,7 +27,7 @@ func.func @exp(%arg0 : i32) -> () {
 // -----
 
 func.func @exp(%arg0 : vector<5xf32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values of length 2/3/4}}
   %2 = spirv.GL.Exp %arg0 : vector<5xf32>
   return
 }
@@ -51,7 +51,7 @@ func.func @exp(%arg0 : i32) -> () {
 // -----
 
 func.func @exp_bf16(%arg0 : bf16) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values of length 2/3/4}}
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values of length 2/3/4}}
   %2 = spirv.GL.Exp %arg0 : bf16
   return
 }
@@ -101,7 +101,7 @@ func.func @iminmax(%arg0: i32, %arg1: i32) {
 // -----
 
 func.func @fmaxminbf16vec(%arg0 : vector<3xbf16>, %arg1 : vector<3xbf16>) {
-  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %1 = spirv.GL.FMax %arg0, %arg1 : vector<3xbf16>
   %2 = spirv.GL.FMin %arg0, %arg1 : vector<3xbf16>
   return
@@ -499,7 +499,7 @@ func.func @frexp_struct_mismatch_type(%arg0 : f32) -> () {
 // -----
 
 func.func @frexp_struct_wrong_type(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %2 = spirv.GL.FrexpStruct %arg0 : i32 -> !spirv.struct<(i32, i32)>
   return
 }
@@ -614,7 +614,7 @@ func.func @findimsb_vector_i64(%arg0 : vector<3xi64>) -> () {
 // -----
 
 func.func @findimsb_error_scalar_float(%arg0 : f32) -> () {
-  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values of length 2/3/4/8/1}}
+  // expected-error @+1 {{operand #0 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/1}}
   %2 = spirv.GL.FindILsb %arg0 : f32
   return
 }
@@ -640,7 +640,7 @@ func.func @findsmsb_vector(%arg0 : vector<3xi32>) -> () {
 // -----
 
 func.func @findsmsb_error_scalar_i64(%arg0 : i64) -> () {
-  // expected-error @+1 {{operand #0 must be Int32 or vector of Int32}}
+  // expected-error @+1 {{operand #0 must be Int32 or fixed-length vector of Int32}}
   %2 = spirv.GL.FindSMsb %arg0 : i64
   return
 }
@@ -666,7 +666,7 @@ func.func @findumsb_vector(%arg0 : vector<3xi32>) -> () {
 // -----
 
 func.func @findumsb(%arg0 : i64) -> () {
-  // expected-error @+1 {{operand #0 must be Int32 or vector of Int32}}
+  // expected-error @+1 {{operand #0 must be Int32 or fixed-length vector of Int32}}
   %2 = spirv.GL.FindUMsb %arg0 : i64
   return
 }
@@ -692,7 +692,7 @@ func.func @distance_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 // -----
 
 func.func @distance_invalid_type(%arg0 : i32, %arg1 : i32) {
-  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16}}
   %0 = spirv.GL.Distance %arg0, %arg1 : i32, i32 -> f32
   return
 }
@@ -708,7 +708,7 @@ func.func @distance_arg_mismatch(%arg0 : vector<3xf32>, %arg1 : vector<4xf32>) {
 // -----
 
 func.func @distance_invalid_vector_size(%arg0 : vector<5xf32>, %arg1 : vector<5xf32>) {
-  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16}}
   %0 = spirv.GL.Distance %arg0, %arg1 : vector<5xf32>, vector<5xf32> -> f32
   return
 }
@@ -736,7 +736,7 @@ func.func @cross(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 // -----
 
 func.func @cross_invalid_type(%arg0 : vector<3xi32>, %arg1 : vector<3xi32>) {
-  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
   %0 = spirv.GL.Cross %arg0, %arg1 : vector<3xi32>
   return
 }
@@ -762,7 +762,7 @@ func.func @normalize_vector(%arg0 : vector<3xf32>) {
 // -----
 
 func.func @normalize_invalid_type(%arg0 : i32) {
-  // expected-error @+1 {{'spirv.GL.Normalize' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{'spirv.GL.Normalize' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %0 = spirv.GL.Normalize %arg0 : i32
   return
 }
@@ -788,7 +788,7 @@ func.func @reflect_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 // -----
 
 func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
-  // expected-error @+1 {{'spirv.GL.Reflect' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{'spirv.GL.Reflect' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %0 = spirv.GL.Reflect %arg0, %arg1 : i32
   return
 }
@@ -814,7 +814,7 @@ func.func @fractvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @fract_invalid_type(%arg0 : i32) {
-  // expected-error @+1 {{'spirv.GL.Fract' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  // expected-error @+1 {{'spirv.GL.Fract' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values}}
   %0 = spirv.GL.Fract %arg0 : i32
   return
 }
@@ -840,7 +840,7 @@ func.func @log2vec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @log2_invalid_type(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
   %0 = spirv.GL.Log2 %arg0 : i32
   return
 }
@@ -866,7 +866,7 @@ func.func @tanhvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @tanh_invalid_type(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
   %0 = spirv.GL.Tanh %arg0 : i32
   return
 }
@@ -892,7 +892,7 @@ func.func @exp2vec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 func.func @exp2_invalid_type(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values}}
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
   %0 = spirv.GL.Exp2 %arg0 : i32
   return
 }
@@ -1022,7 +1022,7 @@ func.func @lengthvec(%arg0 : vector<3xf32>) -> () {
 // -----
 
 func.func @length_i32_in(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'i32'}}
   %0 = spirv.GL.Length %arg0 : i32 -> f32
   return
 }
@@ -1038,7 +1038,7 @@ func.func @length_f16_in(%arg0 : f16) -> () {
 // -----
 
 func.func @length_i32vec_in(%arg0 : vector<3xi32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
   %0 = spirv.GL.Length %arg0 : vector<3xi32> -> f32
   return
 }

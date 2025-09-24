@@ -581,13 +581,11 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // statement if return_twice functions are called.
     bool StandardLifetime =
         !SInfo.CallsReturnTwice &&
-        SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    ClMaxLifetimes);
     if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
-      uint64_t Size =
-          cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
       tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 
@@ -615,11 +613,6 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
     memtag::annotateDebugRecords(Info, Tag);
   }
-
-  // If we have instrumented at least one alloca, all unrecognized lifetime
-  // intrinsics have to go.
-  for (auto *I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
 
   return true;
 }

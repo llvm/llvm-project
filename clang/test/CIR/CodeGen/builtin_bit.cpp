@@ -216,6 +216,78 @@ int test_builtin_clzg(unsigned x) {
 // OGCG-LABEL: _Z17test_builtin_clzgj
 // OGCG:         %{{.+}} = call i32 @llvm.ctlz.i32(i32 %{{.+}}, i1 true)
 
+int test_builtin_ffs(int x) {
+  return __builtin_ffs(x);
+}
+
+// CIR-LABEL: _Z16test_builtin_ffsi
+// CIR:         %{{.+}} = cir.ffs %{{.+}} : !s32i
+// CIR:       }
+
+// LLVM-LABEL: _Z16test_builtin_ffsi
+// LLVM:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[CTZ:.+]] = call i32 @llvm.cttz.i32(i32 %[[INPUT]], i1 true)
+// LLVM-NEXT:    %[[R1:.+]] = add i32 %[[CTZ]], 1
+// LLVM-NEXT:    %[[IS_ZERO:.+]] = icmp eq i32 %[[INPUT]], 0
+// LLVM-NEXT:    %{{.+}} = select i1 %[[IS_ZERO]], i32 0, i32 %[[R1]]
+// LLVM:       }
+
+// OGCG-LABEL: _Z16test_builtin_ffsi
+// OGCG:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
+// OGCG-NEXT:    %[[CTZ:.+]] = call i32 @llvm.cttz.i32(i32 %[[INPUT]], i1 true)
+// OGCG-NEXT:    %[[R1:.+]] = add i32 %[[CTZ]], 1
+// OGCG-NEXT:    %[[IS_ZERO:.+]] = icmp eq i32 %[[INPUT]], 0
+// OGCG-NEXT:    %{{.+}} = select i1 %[[IS_ZERO]], i32 0, i32 %[[R1]]
+// OGCG:       }
+
+int test_builtin_ffsl(long x) {
+  return __builtin_ffsl(x);
+}
+
+// CIR-LABEL: _Z17test_builtin_ffsll
+// CIR:         %{{.+}} = cir.ffs %{{.+}} : !s64i
+// CIR:       }
+
+// LLVM-LABEL: _Z17test_builtin_ffsll
+// LLVM:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// LLVM-NEXT:    %[[CTZ:.+]] = call i64 @llvm.cttz.i64(i64 %[[INPUT]], i1 true)
+// LLVM-NEXT:    %[[R1:.+]] = add i64 %[[CTZ]], 1
+// LLVM-NEXT:    %[[IS_ZERO:.+]] = icmp eq i64 %[[INPUT]], 0
+// LLVM-NEXT:    %{{.+}} = select i1 %[[IS_ZERO]], i64 0, i64 %[[R1]]
+// LLVM:       }
+
+// OGCG-LABEL: _Z17test_builtin_ffsll
+// OGCG:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// OGCG-NEXT:    %[[CTZ:.+]] = call i64 @llvm.cttz.i64(i64 %[[INPUT]], i1 true)
+// OGCG-NEXT:    %[[R1:.+]] = add i64 %[[CTZ]], 1
+// OGCG-NEXT:    %[[IS_ZERO:.+]] = icmp eq i64 %[[INPUT]], 0
+// OGCG-NEXT:    %{{.+}} = select i1 %[[IS_ZERO]], i64 0, i64 %[[R1]]
+// OGCG:       }
+
+int test_builtin_ffsll(long long x) {
+  return __builtin_ffsll(x);
+}
+
+// CIR-LABEL: _Z18test_builtin_ffsllx
+// CIR:         %{{.+}} = cir.ffs %{{.+}} : !s64i
+// CIR:       }
+
+// LLVM-LABEL: _Z18test_builtin_ffsllx
+// LLVM:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// LLVM-NEXT:    %[[CTZ:.+]] = call i64 @llvm.cttz.i64(i64 %[[INPUT]], i1 true)
+// LLVM-NEXT:    %[[R1:.+]] = add i64 %[[CTZ]], 1
+// LLVM-NEXT:    %[[IS_ZERO:.+]] = icmp eq i64 %[[INPUT]], 0
+// LLVM-NEXT:    %{{.+}} = select i1 %[[IS_ZERO]], i64 0, i64 %[[R1]]
+// LLVM:       }
+
+// OGCG-LABEL: _Z18test_builtin_ffsllx
+// OGCG:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
+// OGCG-NEXT:    %[[CTZ:.+]] = call i64 @llvm.cttz.i64(i64 %[[INPUT]], i1 true)
+// OGCG-NEXT:    %[[R1:.+]] = add i64 %[[CTZ]], 1
+// OGCG-NEXT:    %[[IS_ZERO:.+]] = icmp eq i64 %[[INPUT]], 0
+// OGCG-NEXT:    %{{.+}} = select i1 %[[IS_ZERO]], i64 0, i64 %[[R1]]
+// OGCG:       }
+
 int test_builtin_parity(unsigned x) {
   return __builtin_parity(x);
 }

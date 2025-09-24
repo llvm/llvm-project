@@ -359,13 +359,8 @@ define void @test_aliasing_store(i16 %x, ptr %p, ptr %p2) {
 define void @test_non_aliasing_store(i16 %x, ptr noalias %p, ptr noalias %p2) {
 ; CHECK-LABEL: define void @test_non_aliasing_store(
 ; CHECK-SAME: i16 [[X:%.*]], ptr noalias [[P:%.*]], ptr noalias [[P2:%.*]]) {
-; CHECK-NEXT:    [[X_0:%.*]] = trunc i16 [[X]] to i8
-; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
+; CHECK-NEXT:    store i16 [[X]], ptr [[P]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[P2]], align 1
-; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i16 [[X]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i16 [[SHR_1]] to i8
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %x.0 = trunc i16 %x to i8
@@ -403,13 +398,8 @@ define i8 @test_aliasing_load(i16 %x, ptr %p, ptr %p2) {
 define i8 @test_non_aliasing_load(i16 %x, ptr noalias %p, ptr noalias %p2) {
 ; CHECK-LABEL: define i8 @test_non_aliasing_load(
 ; CHECK-SAME: i16 [[X:%.*]], ptr noalias [[P:%.*]], ptr noalias [[P2:%.*]]) {
-; CHECK-NEXT:    [[X_0:%.*]] = trunc i16 [[X]] to i8
-; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
+; CHECK-NEXT:    store i16 [[X]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i16 [[X]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i16 [[SHR_1]] to i8
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
   %x.0 = trunc i16 %x to i8
@@ -789,6 +779,105 @@ define void @test_i32_tbaa(i32 %x, ptr %p) {
   %x.1 = trunc i32 %shr.1 to i16
   %gep.1 = getelementptr i8, ptr %p, i64 2
   store i16 %x.1, ptr %gep.1, !tbaa !6
+  ret void
+}
+
+define void @test_multiple_parts_with_gap1(i32 %x, ptr %p) {
+; CHECK-LABEL: define void @test_multiple_parts_with_gap1(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    [[SHR_3:%.*]] = lshr i32 [[X]], 24
+; CHECK-NEXT:    [[X_3:%.*]] = trunc i32 [[SHR_3]] to i8
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; CHECK-NEXT:    store i8 [[X_3]], ptr [[GEP_3]], align 1
+; CHECK-NEXT:    ret void
+;
+  %x.0 = trunc i32 %x to i8
+  store i8 %x.0, ptr %p
+  %shr.1 = lshr i32 %x, 8
+  %x.1 = trunc i32 %shr.1 to i8
+  %gep.1 = getelementptr i8, ptr %p, i64 1
+  store i8 %x.1, ptr %gep.1
+  %shr.3 = lshr i32 %x, 24
+  %x.3 = trunc i32 %shr.3 to i8
+  %gep.3 = getelementptr i8, ptr %p, i64 3
+  store i8 %x.3, ptr %gep.3
+  ret void
+}
+
+define void @test_multiple_parts_with_gap2(i32 %x, ptr %p) {
+; CHECK-LABEL: define void @test_multiple_parts_with_gap2(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[X_0:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[GEP_2]], align 1
+; CHECK-NEXT:    ret void
+;
+  %x.0 = trunc i32 %x to i8
+  store i8 %x.0, ptr %p
+  %shr.2 = lshr i32 %x, 16
+  %x.2 = trunc i32 %shr.2 to i8
+  %gep.2 = getelementptr i8, ptr %p, i64 1
+  store i8 %x.2, ptr %gep.2
+  %shr.3 = lshr i32 %x, 24
+  %x.3 = trunc i32 %shr.3 to i8
+  %gep.3 = getelementptr i8, ptr %p, i64 2
+  store i8 %x.3, ptr %gep.3
+  ret void
+}
+
+define void @test_multiple_parts_with_gap3(i64 %x, ptr %p) {
+; CHECK-LABEL: define void @test_multiple_parts_with_gap3(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i16
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[X]], 24
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i16
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[GEP_3]], align 1
+; CHECK-NEXT:    ret void
+;
+  %x.0 = trunc i64 %x to i8
+  store i8 %x.0, ptr %p
+  %shr.1 = lshr i64 %x, 8
+  %x.1 = trunc i64 %shr.1 to i8
+  %gep.1 = getelementptr i8, ptr %p, i64 1
+  store i8 %x.1, ptr %gep.1
+  %shr.3 = lshr i64 %x, 24
+  %x.3 = trunc i64 %shr.3 to i8
+  %gep.3 = getelementptr i8, ptr %p, i64 3
+  store i8 %x.3, ptr %gep.3
+  %shr.4 = lshr i64 %x, 32
+  %x.4 = trunc i64 %shr.4 to i8
+  %gep.4 = getelementptr i8, ptr %p, i64 4
+  store i8 %x.4, ptr %gep.4
+  ret void
+}
+
+define void @test_store_same_parts_twice(i32 %x, ptr %p) {
+; CHECK-LABEL: define void @test_store_same_parts_twice(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[GEP_2]], align 1
+; CHECK-NEXT:    ret void
+;
+  %x.0 = trunc i32 %x to i8
+  store i8 %x.0, ptr %p
+  %shr.1 = lshr i32 %x, 8
+  %x.1 = trunc i32 %shr.1 to i8
+  %gep.1 = getelementptr i8, ptr %p, i64 1
+  store i8 %x.1, ptr %gep.1
+  %gep.2 = getelementptr i8, ptr %p, i64 2
+  store i8 %x.0, ptr %gep.2
+  %gep.3 = getelementptr i8, ptr %p, i64 3
+  store i8 %x.1, ptr %gep.3
   ret void
 }
 

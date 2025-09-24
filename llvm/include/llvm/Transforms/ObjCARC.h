@@ -35,10 +35,6 @@ struct ObjCARCContractPass : public PassInfoMixin<ObjCARCContractPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct ObjCARCAPElimPass : public PassInfoMixin<ObjCARCAPElimPass> {
-  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
-
 struct ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
   LLVM_ABI PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
 };
