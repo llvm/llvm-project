@@ -2498,8 +2498,10 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
+    MCRegister CurrPhys = VRM->getPhys(Reg);
+
     // This may be a skipped register.
-    if (!VRM->hasPhys(Reg)) {
+    if (!CurrPhys) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");
       continue;
@@ -2508,7 +2510,6 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
-    MCRegister CurrPhys = VRM->getPhys(Reg);
     // Check that the new color matches the register class constraints and
     // that it is free for this live range.
     if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||
