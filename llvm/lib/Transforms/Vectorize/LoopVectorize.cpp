@@ -1539,7 +1539,7 @@ class GeneratedRTChecks {
   /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
-  bool AllCheckHoisted = false;
+  bool AllChecksHoisted = false;
 
   DominatorTree *DT;
   LoopInfo *LI;
@@ -1640,7 +1640,8 @@ public:
       } else {
         MemRuntimeCheckCond = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
-            MemCheckExp, VectorizerParams::HoistRuntimeChecks, AllCheckHoisted);
+            MemCheckExp, VectorizerParams::HoistRuntimeChecks,
+            AllChecksHoisted);
       }
       assert(MemRuntimeCheckCond &&
              "no RT checks generated although RtPtrChecking "
@@ -1683,7 +1684,6 @@ public:
       DT->eraseNode(SCEVCheckBlock);
       LI->removeBlock(SCEVCheckBlock);
     }
-
   }
 
   InstructionCost getCost() {
@@ -1725,7 +1725,7 @@ public:
         // individual memory check, since there could be a mixture of loop
         // variant and invariant checks that mean the final condition is
         // variant.
-        if (AllCheckHoisted) {
+        if (AllChecksHoisted) {
           // It seems reasonable to assume that we can reduce the effective
           // cost of the checks even when we know nothing about the trip
           // count. Assume that the outer loop executes at least twice.
