@@ -3855,6 +3855,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // If the call requires a streaming-mode change and has scalable vector
     // arguments or return values, then warn the user that the streaming and
     // non-streaming vector lengths may be different.
+    // When both streaming and non-streaming vector lengths are defined and
+    // mismatched, produce an error.
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
     if (CallerFD && (!FD || !FD->getBuiltinID()) &&
         (IsScalableArg || IsScalableRet)) {
@@ -3867,12 +3869,30 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (!IsCalleeStreamingCompatible &&
           (CallerFnType == SemaARM::ArmStreamingCompatible ||
            ((CallerFnType == SemaARM::ArmStreaming) ^ IsCalleeStreaming))) {
+        const LangOptions &LO = getLangOpts();
+        unsigned VL = LO.VScaleMin * 128;
+        unsigned SVL = LO.VScaleStreamingMin * 128;
+        bool IsVLMismatch = VL && SVL && VL != SVL;
+
+        auto EmitDiag = [&](bool IsArg) {
+          if (IsVLMismatch) {
+            if (CallerFnType == SemaARM::ArmStreamingCompatible)
+              // Emit warning for streaming-compatible callers
+              Diag(Loc, diag::warn_sme_streaming_compatible_vl_mismatch)
+                  << IsArg << IsCalleeStreaming << SVL << VL;
+            else
+              // Emit error otherwise
+              Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
+                  << IsArg << SVL << VL;
+          } else
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+                << IsArg;
+        };
+
         if (IsScalableArg)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/true;
+          EmitDiag(true);
         if (IsScalableRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/false;
+          EmitDiag(false);
       }
     }
 
@@ -7653,6 +7673,14 @@ void CheckPrintfHandler::handleInvalidMaskType(StringRef MaskType) {
   S.Diag(getLocationOfByte(MaskType.data()), diag::err_invalid_mask_type_size);
 }
 
+// Error out if struct or complex type argments are passed to os_log.
+static bool isInvalidOSLogArgTypeForCodeGen(FormatStringType FSType,
+                                            QualType T) {
+  if (FSType != FormatStringType::OSLog)
+    return false;
+  return T->isRecordType() || T->isComplexType();
+}
+
 bool CheckPrintfHandler::HandleAmount(
     const analyze_format_string::OptionalAmount &Amt, unsigned k,
     const char *startSpecifier, unsigned specifierLen) {
@@ -7685,11 +7713,14 @@ bool CheckPrintfHandler::HandleAmount(
       assert(AT.isValid());
 
       if (!AT.matchesType(S.Context, T)) {
-        EmitFormatDiagnostic(S.PDiag(diag::warn_printf_asterisk_wrong_type)
-                               << k << AT.getRepresentativeTypeName(S.Context)
-                               << T << Arg->getSourceRange(),
+        unsigned DiagID = isInvalidOSLogArgTypeForCodeGen(FSType, T)
+                              ? diag::err_printf_asterisk_wrong_type
+                              : diag::warn_printf_asterisk_wrong_type;
+        EmitFormatDiagnostic(S.PDiag(DiagID)
+                                 << k << AT.getRepresentativeTypeName(S.Context)
+                                 << T << Arg->getSourceRange(),
                              getLocationOfByte(Amt.getStart()),
-                             /*IsStringLocation*/true,
+                             /*IsStringLocation*/ true,
                              getSpecifierRange(startSpecifier, specifierLen));
         // Don't do any more checking.  We will just emit
         // spurious errors.
@@ -8744,7 +8775,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         Diag = diag::warn_format_conversion_argument_type_mismatch_confusion;
         break;
       case ArgType::NoMatch:
-        Diag = diag::warn_format_conversion_argument_type_mismatch;
+        Diag = isInvalidOSLogArgTypeForCodeGen(FSType, ExprTy)
+                   ? diag::err_format_conversion_argument_type_mismatch
+                   : diag::warn_format_conversion_argument_type_mismatch;
         break;
       }
 

@@ -3983,6 +3983,14 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
   " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def warn_sme_streaming_compatible_vl_mismatch : Warning<
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a %select{non-streaming|streaming}1"
+  " function is undefined behaviour when the streaming-compatible caller is%select{| not}1 in streaming"
+  " mode, because the streaming vector length (%2 bit) and non-streaming vector length (%3 bit) differ">,
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def err_sme_streaming_transition_vl_mismatch : Error<
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is undefined behaviour because the streaming vector length (%1 bit) and non-streaming vector length (%2 bit) differ">;
 def err_conflicting_attributes_arm_agnostic : Error<
   "__arm_agnostic(\"sme_za_state\") cannot share ZA state with its caller">;
 def err_conflicting_attributes_arm_state : Error<
@@ -10448,6 +10456,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
   InGroup<Format>;
+def err_format_conversion_argument_type_mismatch : Error<
+  "format specifies type %0 but the argument has "
+  "%select{type|underlying type}2 %1">;
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
@@ -10497,6 +10508,8 @@ def warn_printf_asterisk_missing_arg : Warning<
 def warn_printf_asterisk_wrong_type : Warning<
   "field %select{width|precision}0 should have type %1, but argument has type %2">,
   InGroup<Format>;
+def err_printf_asterisk_wrong_type : Error<
+  "field %select{width|precision}0 should have type %1, but argument has type %2">;
 def warn_printf_nonsensical_optional_amount: Warning<
   "%select{field width|precision}0 used with '%1' conversion specifier, resulting in undefined behavior">,
   InGroup<Format>;

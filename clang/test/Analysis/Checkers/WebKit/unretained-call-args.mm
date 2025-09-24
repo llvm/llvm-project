@@ -390,17 +390,20 @@ namespace call_with_adopt_ref {
   }
 }
 
-#define YES 1
+#define YES __objc_yes
+#define NO 0
 
 namespace call_with_cf_constant {
   void bar(const NSArray *);
   void baz(const NSDictionary *);
   void boo(NSNumber *);
+  void boo(CFTypeRef);
   void foo() {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
     boo(@YES);
+    boo(@NO);
   }
 }
 
