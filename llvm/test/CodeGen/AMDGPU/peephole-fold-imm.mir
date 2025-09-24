@@ -425,7 +425,7 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: fold_v_mov_b64_64_to_unaligned
     ; GCN: [[V_MOV_B64_e32_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e32 1311768467750121200, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
     ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B]]
     %0:vreg_64_align2 = V_MOV_B64_e32 1311768467750121200, implicit $exec
     %1:vreg_64 = COPY killed %0
@@ -437,7 +437,8 @@ name:            fold_v_mov_b64_pseudo_64_to_unaligned
 body:             |
   bb.0:
     ; GCN-LABEL: name: fold_v_mov_b64_pseudo_64_to_unaligned
-    ; GCN: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
+    ; GCN: [[V_MOV_B64_PSEUDO:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
     ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B]]
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
     %1:vreg_64 = COPY killed %0
