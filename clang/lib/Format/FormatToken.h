@@ -136,6 +136,7 @@ namespace format {
   TYPE(PointerOrReference)                                                     \
   TYPE(ProtoExtensionLSquare)                                                  \
   TYPE(PureVirtualSpecifier)                                                   \
+  TYPE(QtProperty)                                                             \
   TYPE(RangeBasedForLoopColon)                                                 \
   TYPE(RecordLBrace)                                                           \
   TYPE(RecordRBrace)                                                           \
@@ -703,6 +704,7 @@ public:
            isAttribute();
   }
 
+  [[nodiscard]] bool isQtProperty() const;
   [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
