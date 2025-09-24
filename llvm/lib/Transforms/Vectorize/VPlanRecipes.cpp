@@ -2893,7 +2893,6 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
   }
-  }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
 
