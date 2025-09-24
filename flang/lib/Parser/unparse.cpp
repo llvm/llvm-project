@@ -2492,9 +2492,6 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpDeclareTargetWithList &x) {
-    Put("("), Walk(x.v), Put(")");
-  }
   void Unparse(const OmpInitializerProc &x) {
     Walk(std::get<ProcedureDesignator>(x.t));
     Put("(");
