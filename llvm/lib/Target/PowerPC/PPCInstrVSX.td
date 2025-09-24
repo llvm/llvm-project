@@ -116,20 +116,6 @@ def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
 def PPCxxperm : SDNode<"PPCISD::XXPERM", SDT_PPCxxperm, []>;
-//-------------------------- Predicate definitions ---------------------------//
-def HasVSX : Predicate<"Subtarget->hasVSX()">;
-def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
-def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
-def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
-def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
-def NoP8Vector : Predicate<"!Subtarget->hasP8Vector()">;
-def HasP8Vector : Predicate<"Subtarget->hasP8Vector()">;
-def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
-def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
-def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
-def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
-def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
-def HasP10Vector: Predicate<"Subtarget->hasP10Vector()">;
 
 def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
