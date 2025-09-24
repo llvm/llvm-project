@@ -407,6 +407,7 @@ public:
     auto StepBack = [&]() {
       while (It != BB.begin()) {
         --It;
+        // Skip any CFI instructions, but no other pseudos are expected here.
         if (!isCFI(*It))
           return true;
       }
@@ -446,8 +447,8 @@ public:
     }
 
     if (matchInst(*It, AArch64::TBZX, ScratchReg, Imm(62) /*, .Lon_success*/)) {
-      if (!StepBack() || !matchInst(*It, AArch64::EORXrs, Reg(ScratchReg),
-                                    TestedReg, TestedReg, Imm(1)))
+      if (!StepBack() || !matchInst(*It, AArch64::EORXrs, ScratchReg, TestedReg,
+                                    TestedReg, Imm(1)))
         return std::nullopt;
 
       return std::make_pair(TestedReg.get(), &*It);
