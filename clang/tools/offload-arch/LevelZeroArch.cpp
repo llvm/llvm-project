@@ -11,17 +11,71 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HAVE_LEVEL_ZERO_HEADERS
-
-int printGPUsByLevelZero() { return 0; }
-
-#else
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include <cstdio>
-#include <level_zero/ze_api.h>
+
+#define ZE_MAX_DEVICE_NAME 256
+#define ZE_MAX_DEVICE_UUID_SIZE 16
+
+typedef void *ze_driver_handle_t;
+typedef void *ze_device_handle_t;
+
+enum ze_result_t {
+  ZE_RESULT_SUCCESS = 0,
+  ZE_RESULT_ERROR_UNKNOWN = 0x7ffffffe
+};
+
+enum ze_structure_type_t {
+  ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC = 0x00020021,
+  ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
+};
+
+enum ze_init_driver_type_flags_t { ZE_INIT_DRIVER_TYPE_FLAG_GPU = 1 };
+
+typedef uint32_t ze_device_type_t;
+typedef uint32_t ze_device_property_flags_t;
+
+struct ze_init_driver_type_desc_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  ze_init_driver_type_flags_t flags;
+};
+
+typedef struct _ze_device_uuid_t {
+  uint8_t id[ZE_MAX_DEVICE_UUID_SIZE];
+} ze_device_uuid_t;
+
+typedef struct _ze_device_properties_t {
+  ze_structure_type_t stype;
+  void *pNext;
+  ze_device_type_t type;
+  uint32_t vendorId;
+  uint32_t deviceId;
+  ze_device_property_flags_t flags;
+  uint32_t subdeviceId;
+  uint32_t coreClockRate;
+  uint64_t maxMemAllocSize;
+  uint32_t maxHardwareContexts;
+  uint32_t maxCommandQueuePriority;
+  uint32_t numThreadsPerEU;
+  uint32_t physicalEUSimdWidth;
+  uint32_t numEUsPerSubslice;
+  uint32_t numSubslicesPerSlice;
+  uint32_t numSlices;
+  uint64_t timerResolution;
+  uint32_t timestampValidBits;
+  uint32_t kernelTimestampValidBits;
+  ze_device_uuid_t uuid;
+  char name[ZE_MAX_DEVICE_NAME];
+} ze_device_properties_t;
+
+ze_result_t zeInitDrivers(uint32_t *pCount, ze_driver_handle_t *phDrivers,
+                          ze_init_driver_type_desc_t *desc);
+ze_result_t zeDeviceGet(ze_driver_handle_t hDriver, uint32_t *pCount,
+                        void *phDevices);
+ze_result_t zeDeviceGetProperties(void *hDevice, void *pProperties);
 
 using namespace llvm;
 extern cl::opt<bool> Verbose;
@@ -122,5 +176,3 @@ int printGPUsByLevelZero() {
 
   return 0;
 }
-
-#endif // HAVE_LEVEL_ZERO_HEADERS
