@@ -504,9 +504,6 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
           loadOp,
           "xegpu::LoadNdOp require chip information to determine transpose "
           "requirement");
-    // int64_t offsetSize = static_cast<int64_t>(loadOp.getOffsets().size());
-    // if ((offsetSize != 0) || loadOp.getConstOffsetsAttr())
-    //   return failure();
     // Expecting offsets to be present.
     SmallVector<OpFoldResult> offsets = loadOp.getMixedOffsets();
     if (offsets.empty())
