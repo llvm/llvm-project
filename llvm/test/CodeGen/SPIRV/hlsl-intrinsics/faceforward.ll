@@ -81,6 +81,32 @@ entry:
   ret <4 x float> %select
  }
 
+define internal noundef float @faceforward_instcombine_float_constants(float noundef %a, float noundef %b, float noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] FaceForward %[[#]] %[[#arg1]] %[[#arg2]]
+  %fmul = fmul float %b, %c
+  %fcmp = fcmp olt float %fmul, 0.000000e+00
+  %select = select i1 %fcmp, float 1.000000e+00, float -1.000000e+00
+  ret float %select
+}
+
+define internal noundef <4 x float> @faceforward_instcombine_float4_constants(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] FaceForward %[[#]] %[[#arg1]] %[[#arg2]]
+  %spv.fdot = call float @llvm.spv.fdot.v4f32(<4 x float> %b, <4 x float> %c)
+  %fcmp = fcmp olt float %spv.fdot, 0.000000e+00
+  %select = select i1 %fcmp, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+  ret <4 x float> %select
+}
+
 ; The other fucntions are the test, but a entry point is required to have a valid SPIR-V module.
 define void @main() #1 {
 entry:
