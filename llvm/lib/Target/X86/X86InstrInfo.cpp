@@ -1027,10 +1027,11 @@ bool X86InstrInfo::expandCtSelectIntWithoutCMOV(MachineInstr &MI) const {
   auto BundleEnd = MI.getIterator();
   if (BundleStart != BundleEnd) {
     // Only bundle if we have multiple instructions
-    MachineInstr *BundleHeader =
-        BuildMI(*MBB, BundleStart, DL, get(TargetOpcode::BUNDLE));
-    finalizeBundle(*MBB, BundleHeader->getIterator(), std::next(BundleEnd));
+    finalizeBundle(*MBB, BundleStart, BundleEnd);
   }
+
+  // Remove the original pseudo instruction
+  MI.eraseFromParent();
   return true;
 }
 
