@@ -268,7 +268,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
         SmallVector<StringRef, 4> NodeEdgeCounts;
         BasicBlockEdgeProfile.split(NodeEdgeCounts, ',');
         UniqueBBID SrcBBID;
-        for (int i = 0; i < NodeEdgeCounts.size(); ++i) {
+        for (size_t i = 0; i < NodeEdgeCounts.size(); ++i) {
           auto [BBIDStr, CountStr] = NodeEdgeCounts[i].split(':');
           auto BBID = parseUniqueBBID(BBIDStr);
           if (!BBID)
