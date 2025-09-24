@@ -3808,6 +3808,7 @@ class AMDGPUCooperativeAtomicLoad<LLVMType Ty> : Intrinsic <
   [SDNPMemOperand, SDNPMayLoad]
 >;
 
+// TODO: We may want to drop _relaxed and use an atomic ordering operand instead.
 def int_amdgcn_cooperative_atomic_load_32x4B : AMDGPUCooperativeAtomicLoad<llvm_i32_ty>;
 def int_amdgcn_cooperative_atomic_store_32x4B : AMDGPUCooperativeAtomicStore<llvm_i32_ty>;
 def int_amdgcn_cooperative_atomic_load_16x8B : AMDGPUCooperativeAtomicLoad<llvm_v2i32_ty>;
