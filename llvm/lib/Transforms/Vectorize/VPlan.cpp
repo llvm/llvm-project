@@ -1758,10 +1758,9 @@ VPCostContext::getOperandInfo(VPValue *V) const {
   return TTI::getOperandInfo(V->getLiveInIRValue());
 }
 
-InstructionCost
-VPCostContext::getScalarizationOverhead(Type *ResultTy,
-                                        ArrayRef<const VPValue *> Operands,
-                                        ElementCount VF, bool Skip) {
+InstructionCost VPCostContext::getScalarizationOverhead(
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+    bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
 
@@ -1782,9 +1781,8 @@ VPCostContext::getScalarizationOverhead(Type *ResultTy,
   SmallVector<Type *> Tys;
   for (auto *Op : Operands) {
     if (Op->isLiveIn() ||
-        (!Skip && isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
-        (isa<VPReplicateRecipe>(Op) &&
-         cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
+        (!AlwaysIncludeReplicatingR &&
+         isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op)) ||
         !UniqueOperands.insert(Op).second)
       continue;
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));

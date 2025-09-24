@@ -3069,7 +3069,7 @@ bool VPReplicateRecipe::shouldPack() const {
 }
 
 /// Returns true if \p Ptr is a pointer computation for which the legacy cost
-/// model computes a SCEV expression when comping the address cost.
+/// model computes a SCEV expression when computing the address cost.
 static bool shouldUseAddressAccessSCEV(VPValue *Ptr) {
   auto *PtrR = Ptr->getDefiningRecipe();
   if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
@@ -3078,12 +3078,12 @@ static bool shouldUseAddressAccessSCEV(VPValue *Ptr) {
                  isa<VPWidenGEPRecipe>(PtrR)))
     return false;
 
-  // We are looking for a gep with all loop invariant indices except for one
+  // We are looking for a GEP with all loop invariant indices except for one
   // which should be an induction variable.
   unsigned NumOperands = PtrR->getNumOperands();
   for (unsigned Idx = 1; Idx < NumOperands; ++Idx) {
     VPValue *Opd = PtrR->getOperand(Idx);
-    if (!(Opd->isDefinedOutsideLoopRegions()) &&
+    if (!Opd->isDefinedOutsideLoopRegions() &&
         !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
       return false;
   }
@@ -3091,7 +3091,7 @@ static bool shouldUseAddressAccessSCEV(VPValue *Ptr) {
   return true;
 }
 
-/// Returns true of \p V is used as part of the address of another load or
+/// Returns true if \p V is used as part of the address of another load or
 /// store.
 static bool isUsedByLoadStoreAddress(const VPUser *V) {
   SmallPtrSet<const VPUser *, 4> Seen;
@@ -3103,7 +3103,7 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
       continue;
 
     for (VPUser *U : Cur->users()) {
-      if (auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(U))
+      if (auto *InterleaveR = dyn_cast<VPInterleaveBase>(U))
         if (InterleaveR->getAddr() == Cur)
           return true;
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(U)) {
@@ -3237,7 +3237,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
-    if (getParent()->getParent() && getParent()->getParent()->isReplicator())
+    const VPRegionBlock *ParentRegion = getParent()->getParent();
+    if (ParentRegion && ParentRegion->isReplicator())
       break;
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
@@ -3263,18 +3264,20 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       return ScalarCost;
 
     SmallVector<const VPValue *> OpsToScalarize;
-    Type *ResultTy = Type::getVoidTy(getParent()->getPlan()->getContext());
+    Type *ResultTy = Type::getVoidTy(PtrTy->getContext());
     // Set ResultTy and OpsToScalarize, if scalarization is needed. Currently we
     // don't assign scalarization overhead in general, if the target prefers
     // vectorized addressing or the loaded value is used as part of an address
     // of another load or store.
-    if (Ctx.TTI.prefersVectorizedAddressing() ||
-        !isUsedByLoadStoreAddress(this)) {
-      if (!(IsLoad && !Ctx.TTI.prefersVectorizedAddressing()) &&
-          !(!IsLoad && Ctx.TTI.supportsEfficientVectorElementLoadStore()))
+    bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
+    if (PreferVectorizedAddressing || !isUsedByLoadStoreAddress(this)) {
+      bool EfficientVectorLoadStore =
+          Ctx.TTI.supportsEfficientVectorElementLoadStore();
+      if (!(IsLoad && !PreferVectorizedAddressing) &&
+          !(!IsLoad && EfficientVectorLoadStore))
         append_range(OpsToScalarize, operands());
 
-      if (!Ctx.TTI.supportsEfficientVectorElementLoadStore())
+      if (!EfficientVectorLoadStore)
         ResultTy = Ctx.Types.inferScalarType(this);
     }
 
