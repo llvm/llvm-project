@@ -29,6 +29,7 @@ enum ze_result_t {
 
 enum ze_structure_type_t {
   ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC = 0x00020021,
+  ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES = 0x3,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 };
 
@@ -83,7 +84,7 @@ extern cl::opt<bool> Verbose;
 #define DEFINE_WRAPPER(NAME)                                                   \
   using NAME##_ty = decltype(NAME);                                            \
   void *NAME##Ptr = nullptr;                                                   \
-  template <class... Ts> ze_result_t NAME##_wrap(Ts... args) {                 \
+  template <class... Ts> ze_result_t NAME##Wrapper(Ts... args) {               \
     if (!NAME##Ptr) {                                                          \
       return ZE_RESULT_ERROR_UNKNOWN;                                          \
     }                                                                          \
@@ -110,23 +111,23 @@ static bool loadLevelZero() {
   }
 
   constexpr struct {
-    const char *name;
-    void **fptr;
-  } dlwrap[] = {
+    const char *Name;
+    void **FuncPtr;
+  } Wrappers [] = {
       {"zeInitDrivers", &zeInitDriversPtr},
       {"zeDeviceGet", &zeDeviceGetPtr},
       {"zeDeviceGetProperties", &zeDeviceGetPropertiesPtr},
   };
 
-  for (auto entry : dlwrap) {
-    void *P = DynlibHandle->getAddressOfSymbol(entry.name);
+  for (auto Entry : Wrappers) {
+    void *P = DynlibHandle->getAddressOfSymbol(Entry.Name);
     if (P == nullptr) {
       if (Verbose)
-        llvm::errs() << "Unable to find '" << entry.name << "' in '"
+        llvm::errs() << "Unable to find '" << Entry.Name << "' in '"
                      << L0Library << "'\n";
       return false;
     }
-    *(entry.fptr) = P;
+    *(Entry.FuncPtr) = P;
   }
 
   return true;
@@ -134,7 +135,7 @@ static bool loadLevelZero() {
 
 #define CALL_ZE_AND_CHECK(Fn, ...)                                             \
   do {                                                                         \
-    ze_result_t Rc = Fn##_wrap(__VA_ARGS__);                                   \
+    ze_result_t Rc = Fn##Wrapper(__VA_ARGS__);                                 \
     if (Rc != ZE_RESULT_SUCCESS) {                                             \
       if (Verbose)                                                             \
         llvm::errs() << "Error: " << __func__ << ":" << #Fn                    \
@@ -147,30 +148,31 @@ int printGPUsByLevelZero() {
   if (!loadLevelZero())
     return 1;
 
-  ze_init_driver_type_desc_t driver_type = {};
-  driver_type.stype = ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC;
-  driver_type.flags = ZE_INIT_DRIVER_TYPE_FLAG_GPU;
-  driver_type.pNext = nullptr;
-  uint32_t driverCount{0};
+  ze_init_driver_type_desc_t DriverType = {};
+  DriverType.stype = ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC;
+  DriverType.flags = ZE_INIT_DRIVER_TYPE_FLAG_GPU;
+  DriverType.pNext = nullptr;
+  uint32_t DriverCount{0};
 
   // Initialize and find all drivers
-  CALL_ZE_AND_CHECK(zeInitDrivers, &driverCount, nullptr, &driver_type);
+  CALL_ZE_AND_CHECK(zeInitDrivers, &DriverCount, nullptr, &DriverType);
 
-  llvm::SmallVector<ze_driver_handle_t> drivers(driverCount);
-  CALL_ZE_AND_CHECK(zeInitDrivers, &driverCount, drivers.data(), &driver_type);
+  llvm::SmallVector<ze_driver_handle_t> Drivers(DriverCount);
+  CALL_ZE_AND_CHECK(zeInitDrivers, &DriverCount, Drivers.data(), &DriverType);
 
-  for (auto driver : drivers) {
+  for (auto Driver : Drivers) {
     // Discover all the devices for a given driver
-    uint32_t deviceCount = 0;
-    CALL_ZE_AND_CHECK(zeDeviceGet, driver, &deviceCount, nullptr);
+    uint32_t DeviceCount = 0;
+    CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, nullptr);
 
-    llvm::SmallVector<ze_device_handle_t> devices(deviceCount);
-    CALL_ZE_AND_CHECK(zeDeviceGet, driver, &deviceCount, devices.data());
+    llvm::SmallVector<ze_device_handle_t> Devices(DeviceCount);
+    CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, Devices.data());
 
-    for (auto device : devices) {
-      ze_device_properties_t deviceProperties;
-      CALL_ZE_AND_CHECK(zeDeviceGetProperties, device, &deviceProperties);
-      llvm::outs() << deviceProperties.name << '\n';
+    for (auto device : Devices) {
+      ze_device_properties_t DeviceProperties{
+          ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
+      CALL_ZE_AND_CHECK(zeDeviceGetProperties, device, &DeviceProperties);
+      llvm::outs() << DeviceProperties.name << '\n';
     }
   }
 

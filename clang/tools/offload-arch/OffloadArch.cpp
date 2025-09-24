@@ -56,11 +56,8 @@ static int printAMD() {
 static int printNVIDIA() { return printGPUsByCUDA(); }
 static int printIntel() { return printGPUsByLevelZero(); }
 
-struct vendor_entry_t {
-  VendorName name;
-  function_ref<int()> printFunc;
-};
-std::array<vendor_entry_t, 3> VendorTable{{{VendorName::amdgpu, printAMD},
+const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{{
+                                           {VendorName::amdgpu, printAMD},
                                            {VendorName::nvptx, printNVIDIA},
                                            {VendorName::intel, printIntel}}};
 
@@ -86,12 +83,11 @@ int main(int argc, char *argv[]) {
   if (sys::path::stem(argv[0]).starts_with("nvptx-arch"))
     Only = VendorName::nvptx;
 
-  llvm::SmallVector<int> results(VendorTable.size());
-  llvm::transform(VendorTable, results.begin(), [&](const auto &entry) {
-    if (Only == VendorName::all || Only == entry.name)
-      return entry.printFunc();
-    return 0;
-  });
+  int Result = 1;
+  for (auto [Name, Func] : VendorTable) {
+    if (Only == VendorName::all || Only == Name)
+      Result &= Func();
+  }
 
-  return llvm::all_of(results, [](int r) { return r == 1; });
+  return Result;
 }
