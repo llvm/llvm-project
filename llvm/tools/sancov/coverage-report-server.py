@@ -162,8 +162,15 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(response.encode("UTF-8", "replace"))
         elif self.symcov_data.has_file(norm_path):
             filename = norm_path
-            filepath = os.path.join(self.src_path, filename)
-            if not os.path.exists(filepath):
+            # Construct the full file path, normalizing it to avoid traversal
+            abs_src_path = os.path.realpath(self.src_path)
+            abs_file_path = os.path.realpath(os.path.join(self.src_path, filename))
+            # Check containment: file must reside within src_path
+            if not abs_file_path.startswith(abs_src_path + os.sep):
+                self.send_response(403)
+                self.end_headers()
+                return
+            if not os.path.exists(abs_file_path):
                 self.send_response(404)
                 self.end_headers()
                 return
@@ -174,7 +181,7 @@ class ServerHandler(http.server.BaseHTTPRequestHandler):
 
             linemap = self.symcov_data.compute_linemap(filename)
 
-            with open(filepath, "r", encoding="utf8") as f:
+            with open(abs_file_path, "r", encoding="utf8") as f:
                 content = "\n".join(
                     [
                         "<span class='{cls}'>{line}&nbsp;</span>".format(
