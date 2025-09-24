@@ -3816,29 +3816,72 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Cpp11BracedListStyle:
 
-**Cpp11BracedListStyle** (``Boolean``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
-  If ``true``, format braced lists as best suited for C++11 braced
-  lists.
+**Cpp11BracedListStyle** (``CppBracedListStyleStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
+  The style to handle braced lists.
 
-  Important differences:
+  Possible values:
 
-  * No spaces inside the braced list.
-  * No line break before the closing brace.
-  * Indentation with the continuation indent, not with the block indent.
+  * ``CBLSS_Block`` (in configuration: ``Block``)
+    Best suited for pre C++11 braced lists.
 
-  Fundamentally, C++11 braced lists are formatted exactly like function
-  calls would be formatted in their place. If the braced list follows a name
-  (e.g. a type or variable name), clang-format formats as if the ``{}`` were
-  the parentheses of a function call with that name. If there is no name,
-  a zero-length name is assumed.
+    * Spaces inside the braced list.
+    * Line break before the closing brace.
+    * Indentation with the block indent.
 
-  .. code-block:: c++
 
-     true:                                  false:
-     vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
-     vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
-     f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
-     new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
+    .. code-block:: c++
+
+       vector<int> x{ 1, 2, 3, 4 };
+       vector<T> x{ {}, {}, {}, {} };
+       f(MyMap[{ composite, key }]);
+       new int[3]{ 1, 2, 3 };
+       Type name{ //Comment
+                  value
+       };
+
+  * ``CBLSS_FunctionCall`` (in configuration: ``FunctionCall``)
+    Best suited for C++11 braced lists.
+
+    * No spaces inside the braced list.
+    * No line break before the closing brace.
+    * Indentation with the continuation indent.
+
+    Fundamentally, C++11 braced lists are formatted exactly like function
+    calls would be formatted in their place. If the braced list follows a
+    name (e.g. a type or variable name), clang-format formats as if the
+    ``{}`` were the parentheses of a function call with that name. If there
+    is no name, a zero-length name is assumed.
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{ //Comment
+           value};
+
+  * ``CBLSS_ToBeNamed`` (in configuration: ``ToBeNamed``)
+    Same as ``FunctionCall``, except for the handling of a comment at the
+    begin, it then aligns everything following with the comment.
+
+    * No spaces inside the braced list. (Even for a comment at the first
+      position.)
+    * No line break before the closing brace.
+    * Indentation with the continuation indent, except when followed by a
+      line comment, then it uses the block indent.
+
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{//Comment
+                 value};
+
+
 
 .. _DeriveLineEnding:
 

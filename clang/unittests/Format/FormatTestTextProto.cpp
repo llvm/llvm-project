@@ -514,7 +514,7 @@ TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {
                "key: value");
 
   auto Style = getDefaultStyle();
-  Style.Cpp11BracedListStyle = true;
+  Style.Cpp11BracedListStyle = FormatStyle::CBLSS_ToBeNamed;
   verifyFormat("keys: [1]", Style);
 }
 
