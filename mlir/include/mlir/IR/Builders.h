@@ -513,6 +513,9 @@ public:
   /// Create an operation of specific op type at the current insertion point,
   /// and immediately try to fold it. This functions populates 'results' with
   /// the results of the operation.
+  ///
+  /// Note: This performs opportunistic eager folding during IR construction,
+  /// attempting optimization only once without iterative refinement.
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
