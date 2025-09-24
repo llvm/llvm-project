@@ -14889,6 +14889,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
 }
+}
 
 /// Determine whether this is a pointer past the end of the complete
 /// object referred to by the lvalue.
