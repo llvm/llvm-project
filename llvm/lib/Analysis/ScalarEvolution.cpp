@@ -15093,15 +15093,20 @@ void SCEVUnionPredicate::add(const SCEVPredicate *N, ScalarEvolution &SE) {
     return;
   }
 
+  // Implication checks are quadratic in the number of predicates. Stop doing
+  // them if there are many predicates, as they should be too expensive to use
+  // anyway at that point.
+  bool CheckImplies = Preds.size() < 16;
+
   // Only add predicate if it is not already implied by this union predicate.
-  if (implies(N, SE))
+  if (CheckImplies && implies(N, SE))
     return;
 
   // Build a new vector containing the current predicates, except the ones that
   // are implied by the new predicate N.
   SmallVector<const SCEVPredicate *> PrunedPreds;
   for (auto *P : Preds) {
-    if (N->implies(P, SE))
+    if (CheckImplies && N->implies(P, SE))
       continue;
     PrunedPreds.push_back(P);
   }
