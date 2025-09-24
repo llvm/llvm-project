@@ -180,7 +180,6 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(unsigned long long*)vp", type="unsigned long long *")
         self.expect_var_path("(unsigned short int*)vp", type="unsigned short *")
 
-
         if Is32Bit:
             self.expect_var_path("(void*)0", type="void *", value="0x00000000")
             self.expect_var_path("(void*)1", type="void *", value="0x00000001")
