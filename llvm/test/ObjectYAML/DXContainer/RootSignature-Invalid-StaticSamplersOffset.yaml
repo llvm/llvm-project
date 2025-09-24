@@ -21,8 +21,8 @@ Parts:
       NumStaticSamplers: 0
       StaticSamplersOffset: 0
       Parameters:
-      - ParameterType: 2
-        ShaderVisibility: 3
+      - ParameterType: SRV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32

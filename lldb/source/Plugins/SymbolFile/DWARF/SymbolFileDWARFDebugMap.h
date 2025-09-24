@@ -129,7 +129,8 @@ public:
   std::vector<std::unique_ptr<CallEdge>>
   ParseCallEdgesInFunction(UserID func_id) override;
 
-  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
 
   /// List separate oso files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,

@@ -62,17 +62,19 @@ class SplitFileTarget:
 
     @staticmethod
     def get_target_dir(commands, test_path):
+        # posix=True breaks Windows paths because \ is treated as an escaping character
         for cmd in commands:
-            split = shlex.split(cmd)
+            split = shlex.split(cmd, posix=False)
             if "split-file" not in split:
                 continue
             start_idx = split.index("split-file")
             split = split[start_idx:]
             if len(split) < 3:
                 continue
-            if split[1].strip() != test_path:
+            p = unquote(split[1].strip())
+            if not test_path.samefile(p):
                 continue
-            return split[2].strip()
+            return unquote(split[2].strip())
         return None
 
     @staticmethod
@@ -102,6 +104,12 @@ class SplitFileTarget:
         else:
             return None
         return l.rstrip()
+
+
+def unquote(s):
+    if len(s) > 1 and s[0] == s[-1] and (s[0] == '"' or s[0] == "'"):
+        return s[1:-1]
+    return s
 
 
 def get_source_and_target(a, b, test_path, commands):
@@ -145,7 +153,7 @@ def diff_test_updater(result, test, commands):
     [cmd, a, b] = args
     if cmd != "diff":
         return None
-    res = get_source_and_target(a, b, test.getFilePath(), commands)
+    res = get_source_and_target(a, b, pathlib.Path(test.getFilePath()), commands)
     if not res:
         return f"update-diff-test: could not deduce source and target from {a} and {b}"
     source, target = res
