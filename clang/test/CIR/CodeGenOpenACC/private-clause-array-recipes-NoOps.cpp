@@ -2,6 +2,7 @@
 
 struct NoOps { int i = 0; };
 
+// NoOps[5][5][5]
 // CHECK: acc.private.recipe @privatization__ZTSA5_A5_A5_5NoOps : !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>> {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>>, ["openacc.private.init", init] {alignment = 16 : i64}
@@ -26,18 +27,21 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
 //
+// NoOps[5][5][5] with 2 bounds (Arr[A][B])
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_A5_5NoOps : !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
 //
+// NoOps[5][5][5] with 3 bounds (Arr[A][B][C])
 // CHECK-NEXT:acc.private.recipe @privatization__Bcnt3__ZTSA5_A5_A5_5NoOps : !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.array<!cir.array<!rec_NoOps x 5> x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND3:.*]]: !acc.data_bounds_ty {{.*}}):
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
 //
+// NoOps[5][5]
 // CHECK-NEXT: acc.private.recipe @privatization__ZTSA5_A5_5NoOps : !cir.ptr<!cir.array<!cir.array<!rec_NoOps x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!cir.array<!rec_NoOps x 5> x 5>> {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!cir.array<!rec_NoOps x 5> x 5>, !cir.ptr<!cir.array<!cir.array<!rec_NoOps x 5> x 5>>, ["openacc.private.init", init] {alignment = 16 : i64}
@@ -62,12 +66,14 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
 //
+// NoOps[5][5] with 2 bounds (Arr[A][B])
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt2__ZTSA5_A5_5NoOps : !cir.ptr<!cir.array<!cir.array<!rec_NoOps x 5> x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!cir.array<!rec_NoOps x 5> x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}, %[[BOUND2:.*]]: !acc.data_bounds_ty {{.*}}):
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
 //
+// NoOps[5]
 // CHECK-NEXT: acc.private.recipe @privatization__ZTSA5_5NoOps : !cir.ptr<!cir.array<!rec_NoOps x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!rec_NoOps x 5>> {{.*}}):
 // CHECK-NEXT: %[[TL_ALLOCA:.*]] = cir.alloca !cir.array<!rec_NoOps x 5>, !cir.ptr<!cir.array<!rec_NoOps x 5>>, ["openacc.private.init", init] {alignment = 16 : i64}
@@ -91,6 +97,7 @@ struct NoOps { int i = 0; };
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT:}
 //
+// NoOps[5] with 1 bound
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_5NoOps : !cir.ptr<!cir.array<!rec_NoOps x 5>> init {
 // CHECK-NEXT: ^bb0(%arg0: !cir.ptr<!cir.array<!rec_NoOps x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
 // TODO: Add Init here.
