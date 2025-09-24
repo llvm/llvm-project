@@ -894,3 +894,37 @@ void pointer_exception_can_not_escape_with_void_handler() noexcept {
   } catch (void *) {
   }
 }
+
+void throw_in_uninvoked_lambda() noexcept {
+  [] { throw 42; };
+}
+
+void throw_in_lambda() noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda' which should not throw exceptions
+  [] { throw 42; }();
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:19: note: frame #1: function 'throw_in_lambda' calls function 'operator()' here
+}
+
+struct copy_constructor_throws {
+  copy_constructor_throws(const copy_constructor_throws&) { throw 42; }
+};
+
+void throw_in_lambda_default_by_value_capture(const copy_constructor_throws& a) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda_default_by_value_capture' which should not throw exceptions
+  [=] { a; };
+  // CHECK-MESSAGES: :[[@LINE-6]]:61: note: frame #0: unhandled exception of type 'int' may be thrown in function 'copy_constructor_throws' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:4: note: frame #1: function 'throw_in_lambda_default_by_value_capture' calls function 'copy_constructor_throws' here
+}
+
+void throw_in_lambda_explicit_by_value_capture(const copy_constructor_throws& a) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_lambda_explicit_by_value_capture' which should not throw exceptions
+  [a] {};
+  // CHECK-MESSAGES: :[[@LINE-13]]:61: note: frame #0: unhandled exception of type 'int' may be thrown in function 'copy_constructor_throws' here
+  // CHECK-MESSAGES: :[[@LINE-2]]:4: note: frame #1: function 'throw_in_lambda_explicit_by_value_capture' calls function 'copy_constructor_throws' here
+}
+
+void no_throw_in_lambda_by_reference_capture(const copy_constructor_throws& a) noexcept {
+  [&] { a; };
+  [&a] {};
+}
