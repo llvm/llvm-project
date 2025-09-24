@@ -2919,7 +2919,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   bool IsPreLdSt = isPreLdSt(MI);
 
   // If this is a volatile load/store, don't mess with it.
-  if (MI.hasOrderedMemoryRef())
+  if (MI.hasDifferentAddressOrderedMemoryRef())
     return false;
 
   // Make sure this is a reg/fi+imm (as opposed to an address reloc).

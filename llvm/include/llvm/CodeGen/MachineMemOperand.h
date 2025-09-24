@@ -318,6 +318,16 @@ public:
            !isVolatile();
   }
 
+  // Return true if the only ordering constraint on this operation is
+  // same-address ordering -- basically the same as isUnordered(), but allow
+  // Monotonic as well.
+  bool isDifferentAddressUnordered() const {
+    return (getSuccessOrdering() == AtomicOrdering::NotAtomic ||
+            getSuccessOrdering() == AtomicOrdering::Unordered ||
+            getSuccessOrdering() == AtomicOrdering::Monotonic) &&
+           !isVolatile();
+  }
+
   /// Update this MachineMemOperand to reflect the alignment of MMO, if it has a
   /// greater alignment. This must only be used when the new alignment applies
   /// to all users of this MachineMemOperand.

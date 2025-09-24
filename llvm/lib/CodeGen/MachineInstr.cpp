@@ -1587,6 +1587,24 @@ bool MachineInstr::hasOrderedMemoryRef() const {
   });
 }
 
+/// hasDifferentAddressOrderedMemoryRef - Like hasOrderedMemoryRef, but allows
+/// same address orderings.
+bool MachineInstr::hasDifferentAddressOrderedMemoryRef() const {
+  // An instruction known never to access memory won't have a volatile access.
+  if (!mayStore() && !mayLoad() && !isCall() && !hasUnmodeledSideEffects())
+    return false;
+
+  // Otherwise, if the instruction has no memory reference information,
+  // conservatively assume it wasn't preserved.
+  if (memoperands_empty())
+    return true;
+
+  // Check if any of our memory operands are ordered.
+  return llvm::any_of(memoperands(), [](const MachineMemOperand *MMO) {
+    return !MMO->isDifferentAddressUnordered();
+  });
+}
+
 /// isDereferenceableInvariantLoad - Return true if this instruction will never
 /// trap and is loading from a location whose value is invariant across a run of
 /// this function.

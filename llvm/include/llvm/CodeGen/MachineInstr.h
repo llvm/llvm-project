@@ -1774,6 +1774,9 @@ public:
   /// ordered or volatile memory references.
   LLVM_ABI bool hasOrderedMemoryRef() const;
 
+  /// Like hasOrderedMemoryRef, but allows for same-address ordering.
+  LLVM_ABI bool hasDifferentAddressOrderedMemoryRef() const;
+
   /// Return true if this load instruction never traps and points to a memory
   /// location whose value doesn't change during the execution of this function.
   ///
