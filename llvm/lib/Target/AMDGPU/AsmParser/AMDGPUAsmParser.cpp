@@ -1592,9 +1592,7 @@ public:
   }
 
   const MCRegisterInfo *getMRI() const {
-    // We need this const_cast because for some reason getContext() is not const
-    // in MCAsmParser.
-    return const_cast<AMDGPUAsmParser*>(this)->getContext().getRegisterInfo();
+    return getContext().getRegisterInfo();
   }
 
   const MCInstrInfo *getMII() const {

@@ -162,6 +162,7 @@ public:
   virtual void addAliasForDirective(StringRef Directive, StringRef Alias) = 0;
 
   MCContext &getContext() { return Ctx; }
+  const MCContext &getContext() const { return Ctx; }
   MCStreamer &getStreamer() { return Out; }
   SourceMgr &getSourceManager() { return SrcMgr; }
   AsmLexer &getLexer() { return Lexer; }

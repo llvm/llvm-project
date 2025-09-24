@@ -53,6 +53,7 @@ public:
   /// @{
 
   MCContext &getContext() { return getParser().getContext(); }
+  const MCContext &getContext() const { return getParser().getContext(); }
 
   AsmLexer &getLexer() { return getParser().getLexer(); }
   const AsmLexer &getLexer() const {
