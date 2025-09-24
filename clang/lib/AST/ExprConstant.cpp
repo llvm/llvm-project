@@ -13590,7 +13590,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
 
   auto EvalTestOp =
-      [&](llvm::function_ref<bool(const APValue &, const APValue &, const unsigned SourceLen)> Fn) {
+      [&](llvm::function_ref<bool(const APValue &, const APValue &,
+                                  const unsigned SourceLen)>
+              Fn) {
         APValue SourceLHS, SourceRHS;
         if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
             !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
@@ -13600,7 +13602,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         unsigned BitWidth = Info.Ctx.getIntWidth(ResultType);
         bool ResultSigned = ResultType->isUnsignedIntegerOrEnumerationType();
         unsigned SourceLen = SourceLHS.getVectorLength();
-        APSInt Result(APInt(BitWidth, Fn(SourceLHS, SourceRHS, SourceLen)), ResultSigned);
+        APSInt Result(APInt(BitWidth, Fn(SourceLHS, SourceRHS, SourceLen)),
+                      ResultSigned);
         return Success(Result, E);
       };
   switch (BuiltinOp) {
@@ -14704,111 +14707,111 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
   case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256: {
-    return EvalTestOp(
-        [](const APValue &SourceLHS, const APValue &SourceRHS, const unsigned SourceLen) {
-          for (unsigned I = 0; I < SourceLen; ++I) {
-            const APInt &A = SourceLHS.getVectorElt(I).getInt();
-            const APInt &B = SourceRHS.getVectorElt(I).getInt();
-            if (!((A & B) == 0)) {
-              return false;
-            }
-          }
-          return true;
-       });
+    return EvalTestOp([](const APValue &SourceLHS, const APValue &SourceRHS,
+                         const unsigned SourceLen) {
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APInt &A = SourceLHS.getVectorElt(I).getInt();
+        const APInt &B = SourceRHS.getVectorElt(I).getInt();
+        if (!((A & B) == 0)) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
   case X86::BI__builtin_ia32_ptestc128:
   case X86::BI__builtin_ia32_ptestc256: {
-    return EvalTestOp(
-        [](const APValue &SourceLHS, const APValue &SourceRHS, const unsigned SourceLen) {
-          for (unsigned I = 0; I < SourceLen; ++I) {
-            const APInt &A = SourceLHS.getVectorElt(I).getInt();
-            const APInt &B = SourceRHS.getVectorElt(I).getInt();
-            if (!((~A & B) == 0)) {
-              return false;
-            }
-          }
-          return true;
-       });
+    return EvalTestOp([](const APValue &SourceLHS, const APValue &SourceRHS,
+                         const unsigned SourceLen) {
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APInt &A = SourceLHS.getVectorElt(I).getInt();
+        const APInt &B = SourceRHS.getVectorElt(I).getInt();
+        if (!((~A & B) == 0)) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
   case X86::BI__builtin_ia32_ptestnzc128:
   case X86::BI__builtin_ia32_ptestnzc256: {
-        return EvalTestOp(
-        [](const APValue &SourceLHS, const APValue &SourceRHS, const unsigned SourceLen) {
-          int Flag1 = false, Flag2 = false;
-          for (unsigned I = 0; I < SourceLen; ++I) {
-            const APInt &A = SourceLHS.getVectorElt(I).getInt();
-            const APInt &B = SourceRHS.getVectorElt(I).getInt();
-            if ((A & B) != 0) {
-              Flag1 = true;
-            }
-            if ((~A & B) != 0) {
-              Flag2 = true;
-            }
-          }
-          return Flag1 && Flag2;
-       });
+    return EvalTestOp([](const APValue &SourceLHS, const APValue &SourceRHS,
+                         const unsigned SourceLen) {
+      int Flag1 = false, Flag2 = false;
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APInt &A = SourceLHS.getVectorElt(I).getInt();
+        const APInt &B = SourceRHS.getVectorElt(I).getInt();
+        if ((A & B) != 0) {
+          Flag1 = true;
+        }
+        if ((~A & B) != 0) {
+          Flag2 = true;
+        }
+      }
+      return Flag1 && Flag2;
+    });
   }
   case X86::BI__builtin_ia32_vtestzps:
   case X86::BI__builtin_ia32_vtestzps256:
-      case X86::BI__builtin_ia32_vtestzpd:
-    case X86::BI__builtin_ia32_vtestzpd256: {
-    return EvalTestOp(
-        [](const APValue &SourceLHS, const APValue &SourceRHS, const unsigned SourceLen) {
-          for (unsigned I = 0; I < SourceLen; ++I) {
-            const APInt &A = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const APInt &B = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const unsigned SignBit = A.getBitWidth() - 1;
-            const bool ASigned = A[SignBit];
-            const bool BSigned = B[SignBit];
-            if (!((ASigned && BSigned) == 0)) {
-              return false;
-            }
-          }
-          return true;
-       });
+  case X86::BI__builtin_ia32_vtestzpd:
+  case X86::BI__builtin_ia32_vtestzpd256: {
+    return EvalTestOp([](const APValue &SourceLHS, const APValue &SourceRHS,
+                         const unsigned SourceLen) {
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APInt &A = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
+        const APInt &B = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
+        const unsigned SignBit = A.getBitWidth() - 1;
+        const bool ASigned = A[SignBit];
+        const bool BSigned = B[SignBit];
+        if (!((ASigned && BSigned) == 0)) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
   case X86::BI__builtin_ia32_vtestcps:
-  case X86::BI__builtin_ia32_vtestcps256: 
-      case X86::BI__builtin_ia32_vtestcpd:
-    case X86::BI__builtin_ia32_vtestcpd256:{
-        return EvalTestOp(
-        [](const APValue &SourceLHS, const APValue &SourceRHS, const unsigned SourceLen) {
-          for (unsigned I = 0; I < SourceLen; ++I) {
-            const APInt &A = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const APInt &B = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const unsigned SignBit = A.getBitWidth() - 1;
-            const bool ASigned = A[SignBit];
-            const bool BSigned = B[SignBit];
-            if (!((!ASigned && BSigned) == 0)) {
-              return false;
-            }
-          }
-          return true;
-       });
+  case X86::BI__builtin_ia32_vtestcps256:
+  case X86::BI__builtin_ia32_vtestcpd:
+  case X86::BI__builtin_ia32_vtestcpd256: {
+    return EvalTestOp([](const APValue &SourceLHS, const APValue &SourceRHS,
+                         const unsigned SourceLen) {
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APInt &A = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
+        const APInt &B = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
+        const unsigned SignBit = A.getBitWidth() - 1;
+        const bool ASigned = A[SignBit];
+        const bool BSigned = B[SignBit];
+        if (!((!ASigned && BSigned) == 0)) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
   case X86::BI__builtin_ia32_vtestnzcps:
   case X86::BI__builtin_ia32_vtestnzcps256:
-      case X86::BI__builtin_ia32_vtestnzcpd:
-    case X86::BI__builtin_ia32_vtestnzcpd256: {
-            return EvalTestOp(
-        [](const APValue &SourceLHS, const APValue &SourceRHS, const unsigned SourceLen) {
-          bool Flag1 = false;
-          bool Flag2 = false;
-          for (unsigned I = 0; I < SourceLen; ++I) {
-            const APInt &A = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const APInt &B = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
-            const unsigned SignBit = A.getBitWidth() - 1;
-            const bool ASigned = A[SignBit];
-            const bool BSigned = B[SignBit];
-            if ((ASigned && BSigned) != 0) {
-              Flag1 = true;
-            }
-            if ((!ASigned && BSigned) != 0) {
-              Flag2 = true;
-            }
-          }
-          return Flag1 && Flag2;
-       });
+  case X86::BI__builtin_ia32_vtestnzcpd:
+  case X86::BI__builtin_ia32_vtestnzcpd256: {
+    return EvalTestOp([](const APValue &SourceLHS, const APValue &SourceRHS,
+                         const unsigned SourceLen) {
+      bool Flag1 = false;
+      bool Flag2 = false;
+      for (unsigned I = 0; I < SourceLen; ++I) {
+        const APInt &A = SourceLHS.getVectorElt(I).getFloat().bitcastToAPInt();
+        const APInt &B = SourceRHS.getVectorElt(I).getFloat().bitcastToAPInt();
+        const unsigned SignBit = A.getBitWidth() - 1;
+        const bool ASigned = A[SignBit];
+        const bool BSigned = B[SignBit];
+        if ((ASigned && BSigned) != 0) {
+          Flag1 = true;
+        }
+        if ((!ASigned && BSigned) != 0) {
+          Flag2 = true;
+        }
+      }
+      return Flag1 && Flag2;
+    });
   }
   }
 }
