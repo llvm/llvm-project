@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
@@ -47,7 +48,6 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
                   ConversionPatternRewriter &rewriter) const override {
     // TODO: OCL doesn't provide native int intrinsics, but check what happens
     // when IGC receives a native_exp on ints anyway
-    // TODO: what about vectorization?
     if (!isSPIRVCompatibleFloatOrVec(op.getType()))
       return failure();
 
@@ -56,7 +56,7 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       return failure();
 
     // FIXME: Implement handling for vector sizes/dimensions that are not
-    // supported by SPIRV
+    // supported by SPIRV.
     SmallVector<Type, 1> operandTypes;
     for (auto operand : adaptor.getOperands()) {
       if (!isSPIRVCompatibleFloatOrVec(operand.getType()))
@@ -64,8 +64,11 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
       operandTypes.push_back(operand.getType());
     }
     LLVM::LLVMFuncOp funcOp = appendOrGetFuncOp(op, operandTypes);
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, funcOp,
+    auto callOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, funcOp,
                                               adaptor.getOperands());
+    arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
+    mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
+    callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
     return success();
   }
 
@@ -139,6 +142,26 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
 void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns) {
   patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_exp");
+  patterns.add<ConvertNativeFuncPattern<math::CosOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_cos");
+  patterns.add<ConvertNativeFuncPattern<math::Exp2Op>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_exp2");
+  patterns.add<ConvertNativeFuncPattern<math::LogOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_log");
+  patterns.add<ConvertNativeFuncPattern<math::Log2Op>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_log2");
+  patterns.add<ConvertNativeFuncPattern<math::Log10Op>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_log10");
+  patterns.add<ConvertNativeFuncPattern<math::PowFOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_powr");
+  patterns.add<ConvertNativeFuncPattern<math::RsqrtOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_rsqrt");
+  patterns.add<ConvertNativeFuncPattern<math::SinOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_sin");
+  patterns.add<ConvertNativeFuncPattern<math::SqrtOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_sqrt");
+  patterns.add<ConvertNativeFuncPattern<math::TanOp>>(patterns.getContext(),
+                                                      "__spirv_ocl_native_tan");
 }
 
 namespace {

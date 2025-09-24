@@ -57,6 +57,19 @@ module @test_ocl_intrinsics attributes {gpu.container_module} {
       // CHECK: %{{.+}} = OpExtInst %[[V16F16T]] %{{.+}} native_exp %[[V16_ZERO_F16]]
       %exp_v16_f16 = llvm.call @_Z22__spirv_ocl_native_expDv16_f16(%v16_c0_f16) : (vector<16xf16>) -> vector<16xf16>
 
+
+      // SPIRV backend does not currently handle fastmath flags: The SPIRV
+      // backend would need to generate OpDecorate calls to decorate math ops
+      // with FPFastMathMode/FPFastMathModeINTEL decorations.
+      //
+      // FIXME: When support for fastmath flags in the SPIRV backend is added, 
+      // add tests here to ensure fastmath flags are converted to the correct
+      // OpDecorate calls.
+      // 
+      // See:
+      // - https://registry.khronos.org/SPIR-V/specs/unified1/OpenCL.ExtendedInstructionSet.100.html#_math_extended_instructions
+      // - https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpDecorate
+
       llvm.return
     }
     llvm.func @_Z22__spirv_ocl_native_expDh(f16) -> f16
