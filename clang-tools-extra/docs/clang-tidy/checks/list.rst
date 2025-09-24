@@ -91,7 +91,6 @@ Clang-Tidy Checks
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
-   :doc:`bugprone-default-lambda-capture <bugprone/default-lambda-capture>`,
    :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
@@ -378,6 +377,7 @@ Clang-Tidy Checks
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
    :doc:`readability-container-size-empty <readability/container-size-empty>`, "Yes"
    :doc:`readability-convert-member-functions-to-static <readability/convert-member-functions-to-static>`, "Yes"
+   :doc:`readability-default-lambda-capture <readability/default-lambda-capture>`,
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"

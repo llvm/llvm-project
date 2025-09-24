@@ -11,7 +11,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::bugprone {
+namespace clang::tidy::readability {
 
 namespace {
 AST_MATCHER(LambdaExpr, hasDefaultCapture) {
@@ -36,4 +36,4 @@ void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
                           "prefer to capture specific variables explicitly");
 }
 
-} // namespace clang::tidy::bugprone
+} // namespace clang::tidy::readability

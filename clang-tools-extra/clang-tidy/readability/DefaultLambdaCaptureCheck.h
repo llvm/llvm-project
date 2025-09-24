@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTLAMBDACAPTURECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTLAMBDACAPTURECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DEFAULTLAMBDACAPTURECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DEFAULTLAMBDACAPTURECHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::bugprone {
+namespace clang::tidy::readability {
 
 /** Flags lambdas that use default capture modes
  *
  * For the user-facing documentation see:
- * https://clang.llvm.org/extra/clang-tidy/checks/bugprone/default-lambda-capture.html
+ * https://clang.llvm.org/extra/clang-tidy/checks/readability/default-lambda-capture.html
  */
 class DefaultLambdaCaptureCheck : public ClangTidyCheck {
 public:
@@ -29,6 +29,6 @@ public:
   }
 };
 
-} // namespace clang::tidy::bugprone
+} // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTLAMBDACAPTURECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DEFAULTLAMBDACAPTURECHECK_H

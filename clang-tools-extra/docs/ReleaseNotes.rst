@@ -167,11 +167,6 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
-- New :doc:`bugprone-default-lambda-capture
-  <clang-tidy/checks/bugprone/default-lambda-capture>` check.
-
-  Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
-
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
@@ -355,6 +350,11 @@ Changes in existing checks
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
+
+- New :doc:`readability-default-lambda-capture
+  <clang-tidy/checks/readability/default-lambda-capture>` check.
+
+  Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
 
 Removed checks
 ^^^^^^^^^^^^^^

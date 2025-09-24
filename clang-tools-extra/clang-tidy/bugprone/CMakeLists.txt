@@ -19,7 +19,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   CopyConstructorInitCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
-  DefaultLambdaCaptureCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
