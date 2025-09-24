@@ -239,6 +239,57 @@ static bool trySequenceOfOnes(uint64_t UImm,
   return true;
 }
 
+// Attempt to expand 64-bit immediate values whose negated upper half match
+// the lower half (for example, 0x1234'5678'edcb'a987).
+// Immediates of this form can generally be expanded via a sequence of
+// MOVN+MOVK to expand the lower half, followed by an EOR to shift and negate
+// the result to the upper half, e.g.:
+//   mov  x0, #-22137          // =0xffffffffffffa987
+//   movk x0, #60875, lsl #16  // =0xffffffffedcba987
+//   eor  x0, x0, x0, lsl #32  // =0xffffffffedcba987 ^ 0xedcba98700000000
+//                                =0x12345678edcba987.
+// When the lower half contains a 16-bit chunk of ones, such as
+// 0x0000'5678'ffff'a987, the intermediate MOVK is redundant.
+// Similarly, when it contains a 16-bit chunk of zeros, such as
+// 0xffff'5678'0000'a987, the expansion can instead be effected by expanding
+// the negation of the lower half and negating the result with an EON, e.g.:
+//   mov  x0, #-43400          // =0xffffffffffff5678
+//   eon  x0, x0, x0, lsl #32  // =0xffffffffffff5678 ^ ~0xffff567800000000
+//                                =0xffffffffffff5678 ^  0x0000a987ffffffff
+//                                =0xffff56780000a987.
+// In any of these cases, the expansion with EOR/EON saves an instruction
+// compared to the default expansion based on MOV and MOVKs.
+static bool tryCopyWithNegation(uint64_t Imm,
+                                SmallVectorImpl<ImmInsnModel> &Insn) {
+  // We need the negation of the upper half of Imm to match the lower half.
+  // Degenerate cases where Imm is a run of ones should be handled separately.
+  if ((~Imm >> 32) != (Imm & 0xffffffffULL) || llvm::isShiftedMask_64(Imm))
+    return false;
+
+  const unsigned Mask = 0xffff;
+  unsigned Opc = AArch64::EORXrs;
+
+  // If we have a chunk of all zeros in the lower half, we can save a MOVK by
+  // materialising the negated immediate and negating the result with an EON.
+  if ((Imm & Mask) == 0 || ((Imm >> 16) & Mask) == 0) {
+    Opc = AArch64::EONXrs;
+    Imm = ~Imm;
+  }
+
+  unsigned Imm0 = Imm & Mask;
+  unsigned Imm16 = (Imm >> 16) & Mask;
+  if (Imm0 != Mask) {
+    Insn.push_back({AArch64::MOVNXi, Imm0 ^ Mask, 0});
+    if (Imm16 != Mask)
+      Insn.push_back({AArch64::MOVKXi, Imm16, 16});
+  } else {
+    Insn.push_back({AArch64::MOVNXi, Imm16 ^ Mask, 16});
+  }
+
+  Insn.push_back({Opc, 0, 32});
+  return true;
+}
+
 static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
   uint64_t NumOnes = llvm::countr_one(V >> StartPosition);
 
@@ -619,7 +670,12 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // FIXME: Add more two-instruction sequences.
 
   // Three instruction sequences.
-  //
+
+  // Attempt to use a sequence of MOVN+MOVK+EOR/EON (shifted register).
+  // The MOVK can be avoided if Imm contains a zero / one chunk.
+  if (tryCopyWithNegation(Imm, Insn))
+    return;
+
   // Prefer MOVZ/MOVN followed by two MOVK; it's more readable, and possibly
   // the fastest sequence with fast literal generation. (If neither MOVK is
   // part of a fast literal generation pair, it could be slower than the
