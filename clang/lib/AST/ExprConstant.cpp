@@ -11595,20 +11595,20 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   QualType DstElemTy = DstVT->getElementType();
   const bool DstIsUnsigned = DstElemTy->isUnsignedIntegerType();
 
-  const unsigned srcPerLane = 128 / SrcBits;
-  const unsigned lanes = LHSVecLen * SrcBits / 128;
+  const unsigned SrcPerLane = 128 / SrcBits;
+  const unsigned Lanes = LHSVecLen * SrcBits / 128;
 
   SmallVector<APValue, 64> Out;
   Out.reserve(LHSVecLen + RHSVecLen);
 
-  for (unsigned lane = 0; lane != lanes; ++lane) {
-    unsigned base = lane * srcPerLane;
-    for (unsigned i = 0; i != srcPerLane; ++i)
+  for (unsigned Lane = 0; Lane != Lanes; ++Lane) {
+    unsigned base = Lane * SrcPerLane;
+    for (unsigned I = 0; I != SrcPerLane; ++I)
       Out.emplace_back(APValue(
-          APSInt(PackFn(LHS.getVectorElt(base + i).getInt()), DstIsUnsigned)));
-    for (unsigned i = 0; i != srcPerLane; ++i)
+          APSInt(PackFn(LHS.getVectorElt(base + I).getInt()), DstIsUnsigned)));
+    for (unsigned I = 0; I != SrcPerLane; ++I)
       Out.emplace_back(APValue(
-          APSInt(PackFn(RHS.getVectorElt(base + i).getInt()), DstIsUnsigned)));
+          APSInt(PackFn(RHS.getVectorElt(base + I).getInt()), DstIsUnsigned)));
   }
 
   Result = APValue(Out.data(), Out.size());
