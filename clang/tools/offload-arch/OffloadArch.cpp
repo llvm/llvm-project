@@ -58,14 +58,11 @@ static int printIntel() { return printGPUsByLevelZero(); }
 
 struct vendor_entry_t {
   VendorName name;
-  llvm::StringRef alias;
-  int (*printFunc)();
-  bool onlyThis;
+  function_ref<int()> printFunc;
 };
-std::array<vendor_entry_t, 3> VendorTable{
-    {{VendorName::amdgpu, "amdgpu-arch", printAMD, false},
-     {VendorName::nvptx, "nvptx-arch", printNVIDIA, false},
-     {VendorName::intel, "intelgpu-arch", printIntel, false}}};
+std::array<vendor_entry_t, 3> VendorTable{{{VendorName::amdgpu, printAMD},
+                                           {VendorName::nvptx, printNVIDIA},
+                                           {VendorName::intel, printIntel}}};
 
 int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(OffloadArchCategory);
@@ -83,17 +80,15 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  bool All = true;
-  llvm::for_each(VendorTable, [&](auto &entry) {
-    entry.onlyThis =
-        entry.name == Only || sys::path::stem(argv[0]).starts_with(entry.alias);
-    if (entry.onlyThis)
-      All = false;
-  });
+  // Support legacy binaries
+  if (sys::path::stem(argv[0]).starts_with("amdgpu-arch"))
+    Only = VendorName::amdgpu;
+  if (sys::path::stem(argv[0]).starts_with("nvptx-arch"))
+    Only = VendorName::nvptx;
 
   llvm::SmallVector<int> results(VendorTable.size());
   llvm::transform(VendorTable, results.begin(), [&](const auto &entry) {
-    if (entry.onlyThis || All)
+    if (Only == VendorName::all || Only == entry.name)
       return entry.printFunc();
     return 0;
   });
