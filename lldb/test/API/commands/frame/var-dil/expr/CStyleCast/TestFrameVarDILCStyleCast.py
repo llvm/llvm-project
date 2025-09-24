@@ -12,15 +12,6 @@ import shutil
 import time
 
 class TestFrameVarDILCStyleCast(TestBase):
-    NO_DEBUG_INFO_TESTCASE = True
-
-    def expect_var_path(self, expr, compare_to_framevar=False, value=None, type=None):
-        value_dil = super().expect_var_path(expr, value=value, type=type)
-        if compare_to_framevar:
-            self.runCmd("settings set target.experimental.use-DIL false")
-            value_frv = super().expect_var_path(expr, value=value, type=type)
-            self.runCmd("settings set target.experimental.use-DIL true")
-            self.assertEqual(value_dil.GetValue(), value_frv.GetValue())
 
     def test_type_cast(self):
         self.build()
@@ -36,18 +27,29 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(long long)1", value="1", type="long long")
         self.expect_var_path("(unsigned long)1", value="1", type="unsigned long")
         self.expect_var_path("(char*)1", value="0x0000000000000001", type="char *")
-        self.expect_var_path("(long long**)1", value="0x0000000000000001", type="long long **")
+        self.expect_var_path(
+            "(long long**)1", value="0x0000000000000001", type="long long **"
+        )
 
-        self.expect("frame variable '(long&*)1'", error=True,
-                    substrs=["'type name' declared as a pointer to a reference"
-                             " of type 'long &'"])
+        self.expect(
+            "frame variable '(long&*)1'",
+            error=True,
+            substrs=[
+                "'type name' declared as a pointer to a reference of type 'long &'"
+            ],
+        )
 
-        self.expect("frame variable '(long& &)1'", error=True,
-                    substrs=["type name declared as a reference to a reference"])
+        self.expect(
+            "frame variable '(long& &)1'",
+            error=True,
+            substrs=["type name declared as a reference to a reference"],
+        )
 
-        self.expect("frame variable '(long 1)1'", error=True,
-                    substrs=["expected 'r_paren', got: <'1' "
-                             "(integer_constant)>"])
+        self.expect(
+            "frame variable '(long 1)1'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'1' (integer_constant)>"],
+        )
 
         # TestCStyleCastBasicType
 
@@ -55,16 +57,21 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(char)1", type="char", value="'\\x01'")
         self.expect_var_path("(long long)1", type="long long", value="1")
         self.expect_var_path("(short)65534", type="short", value="-2")
-        self.expect_var_path("(unsigned short)100000",
-                    type="unsigned short", value="34464")
+        self.expect_var_path(
+            "(unsigned short)100000", type="unsigned short", value="34464"
+        )
+        self.expect_var_path("(int)false", type="int", value="0")
+        self.expect_var_path("(int)true", type="int", value="1")
         self.expect_var_path("(float)1", type="float", value="1")
         self.expect_var_path("(float)1.1", type="float", value="1.10000002")
         self.expect_var_path("(float)1.1f", type="float", value="1.10000002")
+        self.expect_var_path("(float)false", type="float", value="0")
+        self.expect_var_path("(float)true", type="float", value="1")
         self.expect_var_path("(double)1", type="double", value="1")
-        self.expect_var_path("(double)1.1",
-                    type="double", value="1.1000000000000001")
-        self.expect_var_path("(double)1.1f",
-                    type="double", value="1.1000000238418579")
+        self.expect_var_path("(double)1.1", type="double", value="1.1000000000000001")
+        self.expect_var_path("(double)1.1f", type="double", value="1.1000000238418579")
+        self.expect_var_path("(double)false", type="double", value="0")
+        self.expect_var_path("(double)true", type="double", value="1")
         self.expect_var_path("(int)1.1", type="int", value="1")
         self.expect_var_path("(int)1.1f", type="int", value="1")
         self.expect_var_path("(long)1.1", type="long", value="1")
@@ -73,8 +80,11 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(bool)0.0f", type="bool", value="false")
         self.expect_var_path("(bool)3", type="bool", value="true")
 
-        self.expect("frame variable '&(int)1'", error=True,
-                    substrs=["'result' doesn't have a valid address"])
+        self.expect(
+            "frame variable '&(int)1'",
+            error=True,
+            substrs=["'result' doesn't have a valid address"],
+        )
 
         # Test with variables.
         self.expect_var_path("(char)a", type="char", value="'\\x01'")
@@ -83,8 +93,7 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(long long)a", type="long long", value="1")
         self.expect_var_path("(float)a", type="float", value="1")
         self.expect_var_path("(float)f", type="float", value="1.10000002")
-        self.expect_var_path("(double)f",
-                    type="double", value="1.1000000238418579")
+        self.expect_var_path("(double)f", type="double", value="1.1000000238418579")
         self.expect_var_path("(int)f", type="int", value="1")
         self.expect_var_path("(long)f", type="long", value="1")
         self.expect_var_path("(bool)finf", type="bool", value="true")
@@ -92,9 +101,13 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(bool)fsnan", type="bool", value="true")
         self.expect_var_path("(bool)fmax", type="bool", value="true")
         self.expect_var_path("(bool)fdenorm", type="bool", value="true")
-        self.expect("frame variable '(int)ns_foo_'", error=True,
-                    substrs=["cannot convert 'ns::Foo' to 'int' without a "
-                             "conversion operator"])
+        self.expect(
+            "frame variable '(int)ns_foo_'",
+            error=True,
+            substrs=[
+                "cannot convert 'ns::Foo' to 'int' without a conversion operator"
+            ],
+        )
 
         # Test with typedefs and namespaces.
         self.expect_var_path("(myint)1", type="myint", value="1")
@@ -109,46 +122,59 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect_var_path("(long long)ns_myint_", type="long long", value="2")
         self.expect_var_path("(::ns::myint)myint_", type="ns::myint", value="1")
 
-        self.expect_var_path("(ns::inner::mydouble)1", type="ns::inner::mydouble", value="1")
-        self.expect_var_path("(::ns::inner::mydouble)1.2",
-                    type="ns::inner::mydouble", value="1.2")
-        self.expect_var_path("(ns::inner::mydouble)myint_",
-                    type="ns::inner::mydouble", value="1")
-        self.expect_var_path("(::ns::inner::mydouble)ns_inner_mydouble_",
-                    type="ns::inner::mydouble", value="1.2")
-        self.expect_var_path("(myint)ns_inner_mydouble_",
-                    type="myint", value="1")
+        self.expect_var_path(
+            "(ns::inner::mydouble)1", type="ns::inner::mydouble", value="1"
+        )
+        self.expect_var_path(
+            "(::ns::inner::mydouble)1.2", type="ns::inner::mydouble", value="1.2"
+        )
+        self.expect_var_path(
+            "(ns::inner::mydouble)myint_", type="ns::inner::mydouble", value="1"
+        )
+        self.expect_var_path(
+            "(::ns::inner::mydouble)ns_inner_mydouble_",
+            type="ns::inner::mydouble",
+            value="1.2",
+        )
+        self.expect_var_path("(myint)ns_inner_mydouble_", type="myint", value="1")
 
         # Test with pointers and arrays.
         self.expect_var_path("(long long)ap", type="long long")
         self.expect_var_path("(unsigned long long)vp", type="unsigned long long")
         self.expect_var_path("(long long)arr", type="long long")
         self.expect_var_path("(bool)ap", type="bool", value="true")
-        self.expect_var_path("(bool)(int*)0x00000000",
-                    type="bool", value="false")
+        self.expect_var_path("(bool)(int*)0x00000000", type="bool", value="false")
         self.expect_var_path("(bool)arr", type="bool", value="true")
-        self.expect("frame variable '(char)ap'", error=True,
-                    substrs=["cast from pointer to smaller type 'char' loses "
-                             "information"])
+        self.expect(
+            "frame variable '(char)ap'",
+            error=True,
+            substrs=["cast from pointer to smaller type 'char' loses information"],
+        )
         Is32Bit = False
         if self.target().GetAddressByteSize() == 4:
-          Is32Bit = True;
+            Is32Bit = True;
 
         if Is32Bit:
-          self.expect("frame variable '(int)arr'", error=True,
-                      substrs=["cast from pointer to smaller type 'int' loses"
-                               " information"])
+            self.expect("frame variable '(int)arr'", type="int")
         else:
-          self.expect("frame variable '(int)arr'", error=True,
-                      substrs=["cast from pointer to smaller type 'int' loses"
-                               " information"])
+            self.expect(
+                "frame variable '(int)arr'",
+                error=True,
+                substrs=[
+                    "cast from pointer to smaller type 'int' loses information"
+                ],
+            )
 
-        self.expect("frame variable '(float)ap'", error=True,
-                    substrs=["C-style cast from 'int *' to 'float' is not "
-                             "allowed"])
-        self.expect("frame variable '(float)arr'", error=True,
-                    substrs=["C-style cast from 'int *' to 'float' is not "
-                             "allowed"])
+        self.expect(
+            "frame variable '(float)ap'",
+            error=True,
+            substrs=["C-style cast from 'int *' to 'float' is not allowed"],
+        )
+        self.expect(
+            "frame variable '(float)arr'",
+            error=True,
+            substrs=["C-style cast from 'int *' to 'float' is not allowed"],
+        )
 
         # TestCStyleCastPointer
         self.expect_var_path("(void*)&a", type="void *")
@@ -160,56 +186,49 @@ class TestFrameVarDILCStyleCast(TestBase):
 
 
         if Is32Bit:
-          self.expect_var_path("(void*)0",
-                      type="void *", value="0x00000000")
-          self.expect_var_path("(void*)1",
-                      type="void *", value="0x00000001")
-          self.expect_var_path("(void*)a",
-                      type="void *", value="0x00000001")
-          self.expect_var_path("(void*)na",
-                      type="void *", value="0xffffffff")
+          self.expect_var_path("(void*)0", type="void *", value="0x00000000")
+          self.expect_var_path("(void*)1", type="void *", value="0x00000001")
+          self.expect_var_path("(void*)a", type="void *", value="0x00000001")
+          self.expect_var_path("(void*)na", type="void *", value="0xffffffff")
         else:
-          self.expect_var_path("(void*)0",
-                      type="void *", value="0x0000000000000000")
-          self.expect_var_path("(void*)1",
-                      type="void *", value="0x0000000000000001")
-          self.expect_var_path("(void*)a",
-                      type="void *", value="0x0000000000000001")
-          self.expect_var_path("(void*)na",
-                      type="void *", value="0xffffffffffffffff")
+          self.expect_var_path("(void*)0", type="void *", value="0x0000000000000000")
+          self.expect_var_path("(void*)1", type="void *", value="0x0000000000000001")
+          self.expect_var_path("(void*)a", type="void *", value="0x0000000000000001")
+          self.expect_var_path("(void*)na", type="void *", value="0xffffffffffffffff")
 
         self.expect_var_path("(int*&)ap", type="int *")
 
-        self.expect("frame variable '(char*) 1.0'", error=True,
-                    substrs=["cannot cast from type 'double' to pointer type"
-                             " 'char *'"])
+        self.expect(
+            "frame variable '(char*) 1.0'",
+            error=True,
+            substrs=["cannot cast from type 'double' to pointer type 'char *'"],
+        )
 
         self.expect_var_path("*(int*)(void*)ap", type="int", value="1")
 
         self.expect_var_path("(ns::Foo*)ns_inner_foo_ptr_", type="ns::Foo *")
         self.expect_var_path("(ns::inner::Foo*)ns_foo_ptr_", type="ns::inner::Foo *")
 
-        self.expect("frame variable '(int& &)ap'", error=True,
-                    substrs=["type name declared as a reference to a "
-                             "reference"])
-        self.expect("frame variable '(int&*)ap'", error=True,
-                    substrs=["'type name' declared as a pointer "
-                             "to a reference of type 'int &'"])
+        self.expect(
+            "frame variable '(int& &)ap'",
+            error=True,
+            substrs=["type name declared as a reference to a reference"],
+        )
+        self.expect(
+            "frame variable '(int&*)ap'",
+            error=True,
+            substrs=[
+                "'type name' declared as a pointer to a reference of type 'int &'"
+            ],
+        )
 
         if Is32Bit:
-          self.expect_var_path("(void *)0", type="void *", value="0x00000000")
+            self.expect_var_path("(void *)0", type="void *", value="0x00000000")
         else:
-          self.expect_var_path("(void *)0", type="void *", value="0x0000000000000000")
+            self.expect_var_path("(void *)0", type="void *", value="0x0000000000000000")
 
 
         # TestCStyleCastArray
-
-        threads = lldbutil.continue_to_source_breakpoint(
-            self, process,"Set a breakpoint here", lldb.SBFileSpec("main.cpp")
-        )
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at our breakpoint"
-        )
 
         self.expect_var_path("(int*)arr_1d", type="int *")
         self.expect_var_path("(char*)arr_1d", type="char *")

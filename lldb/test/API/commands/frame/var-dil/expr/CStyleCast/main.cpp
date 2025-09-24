@@ -57,13 +57,6 @@ int main(int argc, char **argv) {
   float fmax = std::numeric_limits<float>::max();
   float fdenorm = std::numeric_limits<float>::denorm_min();
 
-  // TestCStyleCastBuiltins
-  // TestCStyleCastBasicType
-  // TestCStyleCastPointer
-  // TestCStyleCastNullptrType
-  if (false) { // Set a breakpoint here
-  }
-
   struct InnerFoo {
     int a;
     int b;
@@ -75,7 +68,5 @@ int main(int argc, char **argv) {
   int arr_1d[] = {1, 2, 3, 4};
   int arr_2d[2][3] = {{1, 2, 3}, {4, 5, 6}};
 
-  // TestCStyleCastArray
-  // TestCStyleCastReference
   return 0; // Set a breakpoint here
 }

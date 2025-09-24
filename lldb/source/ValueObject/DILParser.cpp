@@ -697,7 +697,6 @@ std::string DILParser::ParseUnqualifiedId() {
   return identifier;
 }
 
-
 CompilerType
 DILParser::ResolveTypeDeclarators(CompilerType type,
                                   const std::vector<Token> &ptr_operators) {
@@ -1025,7 +1024,6 @@ void DILParser::ExpectOneOf(std::vector<Token::Kind> kinds_vec) {
             CurToken().GetLocation(), CurToken().GetSpelling().length());
   }
 }
-
 
 lldb::BasicType TypeDeclaration::GetBasicType() const {
   if (!m_is_builtin)
