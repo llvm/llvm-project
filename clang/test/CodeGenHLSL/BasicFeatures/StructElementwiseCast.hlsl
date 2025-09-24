@@ -32,7 +32,7 @@ export void call0() {
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x i32> [[L]], i64 0
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
 // CHECK-NEXT: [[VL2:%.*]] = extractelement <2 x i32> [[L]], i64 1
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL2]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL2]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call1() {
   int2 A = {1,2};
@@ -54,7 +54,7 @@ export void call1() {
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L4]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L4]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call2() {
   int A[2] = {1,2};
@@ -104,7 +104,7 @@ export void call6() {
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L4]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L4]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call7() {
   int A[2] = {1,2};
@@ -132,7 +132,7 @@ struct T {
 // CHECK-NEXT: %load = load i32, ptr %gep2, align 4
 // CHECK-NEXT: store i32 %load, ptr %gep, align 4
 // CHECK-NEXT: %load5 = load i32, ptr %gep3, align 4
-// CHECK-NEXT: %conv = sitofp i32 %load5 to float
+// CHECK-NEXT: %conv = sitofp reassoc nnan ninf nsz arcp afn i32 %load5 to float
 // CHECK-NEXT: store float %conv, ptr %gep1, align 4
 export void call8() {
   T t = {1,2,3};

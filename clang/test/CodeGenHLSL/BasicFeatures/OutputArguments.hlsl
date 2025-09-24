@@ -13,14 +13,14 @@ void trunc_Param(inout int X) {}
 // CHECK: [[F:%.*]] = alloca float
 // CHECK: [[ArgTmp:%.*]] = alloca i32
 // CHECK: [[FVal:%.*]] = load float, ptr {{.*}}
-// CHECK: [[IVal:%.*]] = fptosi float [[FVal]] to i32
+// CHECK: [[IVal:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float [[FVal]] to i32
 // CHECK: store i32 [[IVal]], ptr [[ArgTmp]]
 // CHECK: call void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[ArgTmp]])
 // CHECK: [[IRet:%.*]] = load i32, ptr [[ArgTmp]]
-// CHECK: [[FRet:%.*]] = sitofp i32 [[IRet]] to float
+// CHECK: [[FRet:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[IRet]] to float
 // CHECK: store float [[FRet]], ptr [[F]]
-// OPT: [[IVal:%.*]] = fptosi float {{.*}} to i32
-// OPT: [[FVal:%.*]] = sitofp i32 [[IVal]] to float
+// OPT: [[IVal:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float {{.*}} to i32
+// OPT: [[FVal:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[IVal]] to float
 // OPT: ret float [[FVal]]
 export float case1(float F) {
   trunc_Param(F);
@@ -202,15 +202,15 @@ void trunc_vec(inout int3 V) {}
 // CHECK: [[V:%.*]] = alloca <3 x float>
 // CHECK: [[Tmp:%.*]] = alloca <3 x i32>
 // CHECK: [[FVal:%.*]] = load <3 x float>, ptr [[V]]
-// CHECK: [[IVal:%.*]] = fptosi <3 x float> [[FVal]] to <3 x i32>
+// CHECK: [[IVal:%.*]] = fptosi reassoc nnan ninf nsz arcp afn <3 x float> [[FVal]] to <3 x i32>
 // CHECK: store <3 x i32> [[IVal]], ptr [[Tmp]]
 // CHECK: call void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[Tmp]])
 // CHECK: [[IRet:%.*]] = load <3 x i32>, ptr [[Tmp]]
-// CHECK: [[FRet:%.*]] = sitofp <3 x i32> [[IRet]] to <3 x float>
+// CHECK: [[FRet:%.*]] = sitofp reassoc nnan ninf nsz arcp afn <3 x i32> [[IRet]] to <3 x float>
 // CHECK: store <3 x float> [[FRet]], ptr [[V]]
 
-// OPT: [[IVal:%.*]] = fptosi <3 x float> {{.*}} to <3 x i32>
-// OPT: [[FVal:%.*]] = sitofp <3 x i32> [[IVal]] to <3 x float>
+// OPT: [[IVal:%.*]] = fptosi reassoc nnan ninf nsz arcp afn <3 x float> {{.*}} to <3 x i32>
+// OPT: [[FVal:%.*]] = sitofp reassoc nnan ninf nsz arcp afn <3 x i32> [[IVal]] to <3 x float>
 // OPT: ret <3 x float> [[FVal]]
 
 export float3 case8(float3 V) {

@@ -4060,7 +4060,8 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
-:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
+:ref:`fpext <i_fpext>`), :ref:`fptoui <i_fptoui>`, :ref:`fptosi <i_fptosi>`,
+:ref:`sitofp <i_sitofp>`, and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
 :ref:`call <i_call>` instructions that return floating-point types may use the
 following flags to enable otherwise unsafe floating-point transformations.
 
@@ -12389,6 +12390,8 @@ Example:
       %X = fpext float 3.125 to double         ; yields double:3.125000e+00
       %Y = fpext double %X to fp128            ; yields fp128:0xL00000000000000004000900000000000
 
+.. _i_fptoui:
+
 '``fptoui .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -12430,6 +12433,8 @@ Example:
       %X = fptoui double 123.0 to i32      ; yields i32:123
       %Y = fptoui float 1.0E+300 to i1     ; yields undefined:1
       %Z = fptoui float 1.04E+17 to i8     ; yields undefined:1
+
+.. _i_fptosi:
 
 '``fptosi .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12524,6 +12529,8 @@ Example:
 
       %a = uitofp nneg i32 256 to i32      ; yields float:256.0
       %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
+
+.. _i_sitofp:
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

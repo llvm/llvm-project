@@ -273,7 +273,7 @@ define float @same_exit_block_pre_inc_use1_iv64_endf32() {
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP6]], i1 true)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX1]], [[FIRST_ACTIVE_LANE]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[TMP10]] to float
+; CHECK-NEXT:    [[DOTCAST:%.*]] = sitofp fast i64 [[TMP10]] to float
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float 1.000000e+00, [[DOTCAST]]
 ; CHECK-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = fadd fast float 9.000000e+00, [[TMP11]]
 ; CHECK-NEXT:    br label [[LOOP_END]]

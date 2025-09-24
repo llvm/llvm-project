@@ -40,7 +40,7 @@ struct S {
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G1]], align 4
 // CHECK-NEXT: [[C:%.*]] = insertelement <2 x i32> [[B]], i32 [[L]], i64 0
 // CHECK-NEXT: [[L2:%.*]] = load float, ptr [[G2]], align 4
-// CHECK-NEXT: [[D:%.*]] = fptosi float [[L2]] to i32
+// CHECK-NEXT: [[D:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float [[L2]] to i32
 // CHECK-NEXT: [[E:%.*]] = insertelement <2 x i32> [[C]], i32 [[D]], i64 1
 // CHECK-NEXT: store <2 x i32> [[E]], ptr [[A]], align 8
 export void call3() {

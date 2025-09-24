@@ -46,7 +46,7 @@ export void call1() {
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x float], ptr [[B]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [1 x i32], ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G2]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G1]], align 4
 export void call2() {
   int A[1] = {0};
@@ -63,7 +63,7 @@ export void call2() {
 // CHECK-NEXT: [[C:%.*]] = load <1 x float>, ptr [[A]], align 4
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x i32], ptr [[B]], i32 0, i32 0
 // CHECK-NEXT: [[V:%.*]] = extractelement <1 x float> [[C]], i64 0
-// CHECK-NEXT: [[C:%.*]] = fptosi float [[V]] to i32
+// CHECK-NEXT: [[C:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float [[V]] to i32
 // CHECK-NEXT: store i32 [[C]], ptr [[G1]], align 4
 export void call3() {
   float1 A = {1.2};
@@ -84,11 +84,11 @@ export void call3() {
 // CHECK-NEXT: [[VG:%.*]] = getelementptr inbounds [1 x <2 x float>], ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[L:%.*]] = load <2 x float>, ptr [[VG]], align 8
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x float> [[L]], i32 0
-// CHECK-NEXT: [[C:%.*]] = fptosi float [[VL]] to i32
+// CHECK-NEXT: [[C:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float [[VL]] to i32
 // CHECK-NEXT: store i32 [[C]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load <2 x float>, ptr [[VG]], align 8
 // CHECK-NEXT: [[VL5:%.*]] = extractelement <2 x float> [[L4]], i32 1
-// CHECK-NEXT: [[C6:%.*]] = fptosi float [[VL5]] to i32
+// CHECK-NEXT: [[C6:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float [[VL5]] to i32
 // CHECK-NEXT: store i32 [[C6]], ptr [[G2]], align 4
 export void call5() {
   float2 A[1] = {{1.2,3.4}};

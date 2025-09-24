@@ -7319,13 +7319,13 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_sext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
-  case lltok::kw_sitofp:
-  case lltok::kw_fptoui:
-  case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
   case lltok::kw_ptrtoaddr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
+  case lltok::kw_sitofp:
+  case lltok::kw_fptoui:
+  case lltok::kw_fptosi:
   case lltok::kw_fptrunc:
   case lltok::kw_fpext: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
