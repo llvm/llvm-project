@@ -56,6 +56,17 @@ static int printAMD() {
 static int printNVIDIA() { return printGPUsByCUDA(); }
 static int printIntel() { return printGPUsByLevelZero(); }
 
+struct vendor_entry_t {
+  VendorName name;
+  llvm::StringRef alias;
+  int (*printFunc)();
+  bool onlyThis;
+};
+std::array<vendor_entry_t, 3> VendorTable{
+    {{VendorName::amdgpu, "amdgpu-arch", printAMD, false},
+     {VendorName::nvptx, "nvptx-arch", printNVIDIA, false},
+     {VendorName::intel, "intelgpu-arch", printIntel, false}}};
+
 int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(OffloadArchCategory);
 
@@ -72,27 +83,20 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  // If this was invoked from the legacy symlinks provide the same behavior.
-  bool AMDGPUOnly = Only == VendorName::amdgpu ||
-                    sys::path::stem(argv[0]).starts_with("amdgpu-arch");
-  bool NVIDIAOnly = Only == VendorName::nvptx ||
-                    sys::path::stem(argv[0]).starts_with("nvptx-arch");
-  bool IntelOnly = Only == VendorName::intel ||
-                   sys::path::stem(argv[0]).starts_with("intelgpu-arch");
-  bool All = !AMDGPUOnly && !NVIDIAOnly && !IntelOnly;
+  bool All = true;
+  llvm::for_each(VendorTable, [&](auto &entry) {
+    entry.onlyThis =
+        entry.name == Only || sys::path::stem(argv[0]).starts_with(entry.alias);
+    if (entry.onlyThis)
+      All = false;
+  });
 
-  int NVIDIAResult = 0;
-  if (NVIDIAOnly || All)
-    NVIDIAResult = printNVIDIA();
+  llvm::SmallVector<int> results(VendorTable.size());
+  llvm::transform(VendorTable, results.begin(), [&](const auto &entry) {
+    if (entry.onlyThis || All)
+      return entry.printFunc();
+    return 0;
+  });
 
-  int AMDResult = 0;
-  if (AMDGPUOnly || All)
-    AMDResult = printAMD();
-
-  int IntelResult = 0;
-  if (IntelOnly || All)
-    IntelResult = printIntel();
-
-  // We only failed if all cases returned an error.
-  return AMDResult && NVIDIAResult && IntelResult;
+  return llvm::all_of(results, [](int r) { return r == 1; });
 }

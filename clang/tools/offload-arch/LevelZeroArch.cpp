@@ -41,7 +41,7 @@ DEFINE_WRAPPER(zeDeviceGet)
 DEFINE_WRAPPER(zeDeviceGetProperties)
 
 static bool loadLevelZero() {
-  const char *L0Library = "libze_loader.so";
+  constexpr const char *L0Library = "libze_loader.so";
   std::string ErrMsg;
 
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
@@ -114,10 +114,8 @@ int printGPUsByLevelZero() {
     CALL_ZE_AND_CHECK(zeDeviceGet, driver, &deviceCount, devices.data());
 
     for (auto device : devices) {
-      // Get device properties
       ze_device_properties_t deviceProperties;
       CALL_ZE_AND_CHECK(zeDeviceGetProperties, device, &deviceProperties);
-      // Print device name
       llvm::outs() << deviceProperties.name << '\n';
     }
   }
