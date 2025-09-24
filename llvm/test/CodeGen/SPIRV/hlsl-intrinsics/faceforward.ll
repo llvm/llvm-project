@@ -103,7 +103,7 @@ entry:
   ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] FaceForward %[[#]] %[[#arg1]] %[[#arg2]]
   %spv.fdot = call float @llvm.spv.fdot.v4f32(<4 x float> %b, <4 x float> %c)
   %fcmp = fcmp olt float %spv.fdot, 0.000000e+00
-  %select = select i1 %fcmp, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+  %select = select i1 %fcmp, <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, <4 x float> <float -1.000000e+00, float -2.000000e+00, float -3.000000e+00, float -4.000000e+00>
   ret <4 x float> %select
 }
 
