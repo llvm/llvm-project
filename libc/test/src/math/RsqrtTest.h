@@ -54,7 +54,7 @@ public:
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits(v);
       InType x = x_bits.get_val();
-      if (x_bits.is_nan() || (x < static_cast<InType>(0)))
+      if (x_bits.is_nan() || x_bits.is_neg())
         continue;
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Rsqrt, x, func(x), 0.5);
     }

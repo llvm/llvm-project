@@ -996,7 +996,6 @@ add_entrypoint_object(
     ../rsqrtf.h
   DEPENDS
     libc.src.__support.math.rsqrtf
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

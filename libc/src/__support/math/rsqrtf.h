@@ -1,4 +1,4 @@
-//===-- Implementation header for rsqrtf ----------------------*- C++ -*-===//
+//===-- Implementation header for rsqrtf ------------------------*- C++ -*-===//  
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_RSQRTF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_RSQRTF_H
 
-#include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/FPUtil/cast.h"
-#include "src/__support/FPUtil/multiply_add.h"
+#include "hdr/errno_macros.h"  
+#include "hdr/fenv_macros.h"  
+#include "src/__support/FPUtil/FEnvImpl.h"  
+#include "src/__support/FPUtil/FPBits.h"  
+#include "src/__support/FPUtil/cast.h"  
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
 
@@ -27,12 +27,12 @@ LIBC_INLINE static constexpr float rsqrtf(float x) {
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
-  constexpr uint32_t INF_BIT = FPBits::inf().uintval();
+  constexpr uint32_t INF_BITS = FPBits::inf().uintval();
 
   // x is 0, inf/nan, or negative.
-  if (LIBC_UNLIKELY(x_u == 0 || x_u >= INF_BIT)) {
+  if (LIBC_UNLIKELY(x_u == 0 || x_u >= INF_BITS)) {
     // x is NaN
-    if (x_abs > INF_BIT) {
+    if (x_abs > INF_BITS) {
       if (xbits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
         return FPBits::quiet_nan().get_val();
@@ -55,7 +55,7 @@ LIBC_INLINE static constexpr float rsqrtf(float x) {
     }
 
     // x = +inf => rsqrt(x) = 0
-    return FPBits::zero().get_val();
+    return FPBits::zero(xbits.sign()).get_val();
   }
 
   // TODO: add float based approximation when

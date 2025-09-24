@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"  
+#include "hdr/errno_macros.h" 
 #include "src/math/rsqrtf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"

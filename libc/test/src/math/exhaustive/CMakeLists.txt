@@ -37,7 +37,6 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.rsqrtf
-    libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
 )
