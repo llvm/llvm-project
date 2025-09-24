@@ -55,8 +55,6 @@ class AMDGPUAsmParser;
 
 enum RegisterKind { IS_UNKNOWN, IS_VGPR, IS_SGPR, IS_AGPR, IS_TTMP, IS_SPECIAL };
 
-enum class LitModifier { None, Lit, Lit64 };
-
 //===----------------------------------------------------------------------===//
 // Operand
 //===----------------------------------------------------------------------===//
@@ -1591,10 +1589,14 @@ public:
     return static_cast<AMDGPUTargetStreamer &>(TS);
   }
 
-  const MCRegisterInfo *getMRI() const {
+  MCContext &getContext() const {
     // We need this const_cast because for some reason getContext() is not const
     // in MCAsmParser.
-    return const_cast<AMDGPUAsmParser*>(this)->getContext().getRegisterInfo();
+    return const_cast<AMDGPUAsmParser *>(this)->MCTargetAsmParser::getContext();
+  }
+
+  const MCRegisterInfo *getMRI() const {
+    return getContext().getRegisterInfo();
   }
 
   const MCInstrInfo *getMII() const {
@@ -2313,6 +2315,11 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   APInt Literal(64, Val);
   uint8_t OpTy = InstDesc.operands()[OpNum].OperandType;
 
+  bool CanUse64BitLiterals =
+      AsmParser->has64BitLiterals() &&
+      !(InstDesc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
+  MCContext &Ctx = AsmParser->getContext();
+
   if (Imm.IsFPImm) { // We got fp literal token
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2342,7 +2349,15 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
           Val &= 0xffffffff00000000u;
         }
 
-        Inst.addOperand(MCOperand::createImm(Val));
+        if ((OpTy == AMDGPU::OPERAND_REG_IMM_FP64 ||
+             OpTy == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
+             OpTy == AMDGPU::OPERAND_REG_INLINE_AC_FP64) &&
+            CanUse64BitLiterals && Lo_32(Val) != 0) {
+          Inst.addOperand(MCOperand::createExpr(
+              AMDGPUMCExpr::createLit(LitModifier::Lit64, Val, Ctx)));
+        } else {
+          Inst.addOperand(MCOperand::createImm(Val));
+        }
         return;
       }
 
@@ -2352,7 +2367,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       llvm_unreachable("fp literal in 64-bit integer instruction.");
 
     case AMDGPU::OPERAND_KIMM64:
-      Inst.addOperand(MCOperand::createImm(Val));
+      if (CanUse64BitLiterals && Lo_32(Val) != 0) {
+        Inst.addOperand(MCOperand::createExpr(
+            AMDGPUMCExpr::createLit(LitModifier::Lit64, Val, Ctx)));
+      } else {
+        Inst.addOperand(MCOperand::createImm(Val));
+      }
       return;
 
     case AMDGPU::OPERAND_REG_IMM_BF16:
@@ -2442,7 +2462,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
         getModifiers().Lit == LitModifier::Lit)
       Val = Lo_32(Val);
 
-    Inst.addOperand(MCOperand::createImm(Val));
+    if (CanUse64BitLiterals && (!isInt<32>(Val) || !isUInt<32>(Val))) {
+      Inst.addOperand(MCOperand::createExpr(
+          AMDGPUMCExpr::createLit(LitModifier::Lit64, Val, Ctx)));
+    } else {
+      Inst.addOperand(MCOperand::createImm(Val));
+    }
     return;
 
   case AMDGPU::OPERAND_REG_IMM_FP64:
@@ -2469,7 +2494,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
         Val = static_cast<uint64_t>(Val) << 32;
     }
 
-    Inst.addOperand(MCOperand::createImm(Val));
+    if (CanUse64BitLiterals && Lo_32(Val) != 0) {
+      Inst.addOperand(MCOperand::createExpr(
+          AMDGPUMCExpr::createLit(LitModifier::Lit64, Val, Ctx)));
+    } else {
+      Inst.addOperand(MCOperand::createImm(Val));
+    }
     return;
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -2491,7 +2521,12 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
         getModifiers().Lit != LitModifier::Lit64)
       Val <<= 32;
 
-    Inst.addOperand(MCOperand::createImm(Val));
+    if (CanUse64BitLiterals && Lo_32(Val) != 0) {
+      Inst.addOperand(MCOperand::createExpr(
+          AMDGPUMCExpr::createLit(LitModifier::Lit64, Val, Ctx)));
+    } else {
+      Inst.addOperand(MCOperand::createImm(Val));
+    }
     return;
 
   default:
@@ -3640,7 +3675,7 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
 
   const MCOperand &MO = Inst.getOperand(OpIdx);
 
-  int64_t Val = MO.getImm();
+  int64_t Val = MO.isImm() ? MO.getImm() : getLitValue(MO.getExpr());
   auto OpSize = AMDGPU::getOperandSize(Desc, OpIdx);
 
   switch (OpSize) { // expected operand size
@@ -4768,16 +4803,26 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst,
     const MCOperand &MO = Inst.getOperand(OpIdx);
     // Exclude special imm operands (like that used by s_set_gpr_idx_on)
     if (AMDGPU::isSISrcOperand(Desc, OpIdx)) {
-      if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
+      std::optional<int64_t> Imm;
+      if (MO.isImm()) {
+        Imm = MO.getImm();
+      } else if (MO.isExpr()) {
+        if (isLitExpr(MO.getExpr()))
+          Imm = getLitValue(MO.getExpr());
+      } else {
+        continue;
+      }
+
+      if (!Imm.has_value()) {
+        ++NumExprs;
+      } else if (!isInlineConstant(Inst, OpIdx)) {
         auto OpType = static_cast<AMDGPU::OperandType>(
             Desc.operands()[OpIdx].OperandType);
-        int64_t Value = encode32BitLiteral(MO.getImm(), OpType);
+        int64_t Value = encode32BitLiteral(*Imm, OpType);
         if (NumLiterals == 0 || LiteralValue != Value) {
           LiteralValue = Value;
           ++NumLiterals;
         }
-      } else if (MO.isExpr()) {
-        ++NumExprs;
       }
     }
   }
@@ -5010,9 +5055,18 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
     if (!isSISrcOperand(Desc, OpIdx))
       continue;
 
+    std::optional<int64_t> Imm;
+    if (MO.isImm())
+      Imm = MO.getImm();
+    else if (MO.isExpr() && isLitExpr(MO.getExpr()))
+      Imm = getLitValue(MO.getExpr());
+
     bool IsAnotherLiteral = false;
-    if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
-      uint64_t Value = static_cast<uint64_t>(MO.getImm());
+    if (!Imm.has_value()) {
+      // Literal value not known, so we conservately assume it's different.
+      IsAnotherLiteral = true;
+    } else if (!isInlineConstant(Inst, OpIdx)) {
+      uint64_t Value = *Imm;
       bool IsForcedFP64 =
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
           (Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_REG_IMM_FP64 &&
@@ -5033,9 +5087,6 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
       IsAnotherLiteral = !LiteralValue || *LiteralValue != Value;
       LiteralValue = Value;
-    } else if (MO.isExpr()) {
-      // Literal value not known, so we conservately assume it's different.
-      IsAnotherLiteral = true;
     }
 
     if (IsAnotherLiteral && !HasMandatoryLiteral &&
