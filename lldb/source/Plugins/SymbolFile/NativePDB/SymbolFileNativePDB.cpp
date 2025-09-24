@@ -501,7 +501,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     return nullptr;
 
   PdbTypeSymId sig_id(proc.FunctionType, false);
-  auto mangled_opt =
+  std::optional<llvm::StringRef> mangled_opt =
       FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
   Mangled mangled(mangled_opt.value_or(proc.Name));
   FunctionSP func_sp = std::make_shared<Function>(
