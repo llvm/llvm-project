@@ -88,6 +88,7 @@ struct FunctionToCleanUp {
 struct OperationToCleanup {
   Operation *op;
   BitVector nonLive;
+  Operation *callee = nullptr; // Optional: For CallOpInterface ops, stores the callee function
 };
 
 struct BlockArgsToCleanup {
@@ -316,7 +317,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
     // Push an empty operand cleanup entry so that call-site specific logic in
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
-    cl.operands.push_back({callOp, BitVector(callOp->getNumOperands(), false)});
+    // Store the funcOp as the callee to avoid expensive symbol lookup later.
+    cl.operands.push_back({callOp, BitVector(callOp->getNumOperands(), false), funcOp.getOperation()});
   }
 
   // Do (3).
@@ -768,9 +770,9 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
     if (auto call = dyn_cast<CallOpInterface>(o.op)) {
-      if (SymbolRefAttr sym = call.getCallableForCallee().dyn_cast<SymbolRefAttr>()) {
-        Operation *callee = SymbolTable::lookupNearestSymbolFrom(o.op, sym);
-        auto it = erasedFuncArgs.find(callee);
+      // Use the stored callee reference if available, avoiding expensive symbol lookup
+      if (o.callee) {
+        auto it = erasedFuncArgs.find(o.callee);
         if (it != erasedFuncArgs.end()) {
           const BitVector &deadArgIdxs = it->second;
           MutableOperandRange args = call.getArgOperandsMutable();
@@ -788,7 +790,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
             int operandOffset = call.getArgOperands().getBeginOperandIndex();
             for (int argIdx : deadArgIdxs.set_bits()) {
               int operandNumber = operandOffset + argIdx;
-              if (operandNumber < o.nonLive.size())
+              if (operandNumber < static_cast<int>(o.nonLive.size()))
                 o.nonLive.reset(operandNumber);
             }
           }
