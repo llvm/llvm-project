@@ -1,2 +1,2 @@
 junitparser==3.2.0
-google-cloud-storage==3.3.0
+google-cloud-storage==3.4.0

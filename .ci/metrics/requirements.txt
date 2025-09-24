@@ -1,2 +1,2 @@
-pygithub==2.5.0
+pygithub==2.8.1
 python-dateutil==2.9.0.post0
