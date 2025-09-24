@@ -3051,9 +3051,11 @@ SPELLING_CACHE = {
 }
 
 
-# Converting the new enum names (full upper-case, underscore separated)
-# to the old ones (separated by capitalization), e.g. RESULT_TYPE -> ResultType
 def _kind_to_old_name(kind: BaseEnumeration):
+    """
+    Converting the new enum names (full upper-case, underscore separated)
+    to the old ones (separated by capitalization), e.g. RESULT_TYPE -> ResultType
+    """
     # Remove underscores
     components = kind.name.split("_")
     # Upper-camel case each split component
