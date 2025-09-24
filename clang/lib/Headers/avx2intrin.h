@@ -165,9 +165,8 @@ _mm256_abs_epi32(__m256i __a) {
 ///    A 256-bit vector of [16 x i16] used to generate result[127:64] and
 ///    result[255:192].
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packs_epi16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_packs_epi16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_packsswb256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -197,9 +196,8 @@ _mm256_packs_epi16(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [8 x i32] used to generate result[127:64] and
 ///    result[255:192].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packs_epi32(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_packs_epi32(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_packssdw256((__v8si)__a, (__v8si)__b);
 }
 
@@ -228,9 +226,8 @@ _mm256_packs_epi32(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [16 x i16] used to generate result[127:64] and
 ///    result[255:192].
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packus_epi16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_packus_epi16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_ia32_packuswb256((__v16hi)__a, (__v16hi)__b);
 }
 
@@ -260,9 +257,8 @@ _mm256_packus_epi16(__m256i __a, __m256i __b)
 ///    A 256-bit vector of [8 x i32] used to generate result[127:64] and
 ///    result[255:192].
 /// \returns A 256-bit vector of [16 x i16] containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_packus_epi32(__m256i __V1, __m256i __V2)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_packus_epi32(__m256i __V1, __m256i __V2) {
   return (__m256i) __builtin_ia32_packusdw256((__v8si)__V1, (__v8si)__V2);
 }
 

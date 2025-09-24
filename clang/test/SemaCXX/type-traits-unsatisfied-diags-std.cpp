@@ -66,6 +66,13 @@ struct is_final {
 template <typename T>
 constexpr bool is_final_v = __is_final(T);
 
+template <typename T>
+struct is_abstract {
+    static constexpr bool value = __is_abstract(T);
+};
+template <typename T>
+constexpr bool is_abstract_v = __is_abstract(T);
+
 #endif
 
 #ifdef STD2
@@ -151,6 +158,15 @@ using is_final = __details_is_final<T>;
 template <typename T>
 constexpr bool is_final_v = __is_final(T);
 
+template <typename T>
+struct __details_is_abstract {
+    static constexpr bool value = __is_abstract(T);
+};
+template <typename T>
+using is_abstract = __details_is_abstract<T>;
+template <typename T>
+constexpr bool is_abstract_v = __is_abstract(T);
+
 #endif
 
 
@@ -228,6 +244,13 @@ template <typename T>
 using is_final = __details_is_final<T>;
 template <typename T>
 constexpr bool is_final_v = is_final<T>::value;
+
+template <typename T>
+struct __details_is_abstract : bool_constant<__is_abstract(T)> {};
+template <typename T>
+using is_abstract = __details_is_abstract<T>;
+template <typename T>
+constexpr bool is_abstract_v = is_abstract<T>::value;
 
 #endif
 }
@@ -336,6 +359,22 @@ static_assert(std::is_aggregate_v<void>);
 // expected-note@-1 {{'void' is not aggregate}} \
 // expected-note@-1 {{because it is a cv void type}}
 
+
+static_assert(!std::is_abstract<int>::value);
+
+static_assert(std::is_abstract<int&>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_abstract<int &>::value'}} \
+// expected-note@-1 {{'int &' is not abstract}} \
+// expected-note@-1 {{because it is a reference type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+static_assert(std::is_abstract_v<int&>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_abstract_v<int &>'}} \
+// expected-note@-1 {{'int &' is not abstract}} \
+// expected-note@-1 {{because it is a reference type}} \
+// expected-note@-1 {{because it is not a struct or class type}}
+
+
 namespace test_namespace {
     using namespace std;
     static_assert(is_trivially_relocatable<int&>::value);
@@ -388,7 +427,7 @@ namespace test_namespace {
     static_assert(is_constructible_v<void>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_constructible_v<void>'}} \
     // expected-note@-1 {{because it is a cv void type}}
-    
+
     static_assert(std::is_aggregate<void>::value);
     // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_aggregate<void>::value'}} \
     // expected-note@-1 {{'void' is not aggregate}} \
@@ -422,6 +461,18 @@ namespace test_namespace {
     // expected-note@-1 {{'Fn' (aka 'void ()') is not final}} \
     // expected-note@-1 {{because it is a function type}} \
     // expected-note@-1 {{because it is not a class or union type}}
+
+    static_assert(is_abstract<int&>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_abstract<int &>::value'}} \
+    // expected-note@-1 {{'int &' is not abstract}} \
+    // expected-note@-1 {{because it is a reference type}} \
+    // expected-note@-1 {{because it is not a struct or class type}}
+
+    static_assert(is_abstract_v<int&>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_abstract_v<int &>'}} \
+    // expected-note@-1 {{'int &' is not abstract}} \
+    // expected-note@-1 {{because it is a reference type}} \
+    // expected-note@-1 {{because it is not a struct or class type}}
 }
 
 

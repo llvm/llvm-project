@@ -4159,8 +4159,8 @@ void _mm_mfence(void);
 ///   A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///   written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packs_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_packsswb128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -4182,8 +4182,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi16(__m128i __a,
 ///    A 128-bit integer vector of [4 x i32]. The converted [4 x i16] values
 ///    are written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packs_epi32(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_packssdw128((__v4si)__a, (__v4si)__b);
 }
 
@@ -4205,8 +4205,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi32(__m128i __a,
 ///    A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
-                                                              __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packus_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_packuswb128((__v8hi)__a, (__v8hi)__b);
 }
 

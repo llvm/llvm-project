@@ -448,18 +448,21 @@ __m64 test_mm_packs_pi16(__m64 a, __m64 b) {
   // CHECK: call <16 x i8> @llvm.x86.sse2.packsswb.128(
   return _mm_packs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_packs_pi16((__m64)(__v4hi){130, -200, 127, -128}, (__m64)(__v4hi){0, 1, -1, 255}), 127, -128, 127, -128, 0, 1, -1, 127));
 
 __m64 test_mm_packs_pi32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_packs_pi32
   // CHECK: call <8 x i16> @llvm.x86.sse2.packssdw.128(
   return _mm_packs_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_packs_pi32((__m64)(__v2si){40000, -50000}, (__m64)(__v2si){0, 70000}), 32767, -32768, 0, 32767));
 
 __m64 test_mm_packs_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_packs_pu16
   // CHECK: call <16 x i8> @llvm.x86.sse2.packuswb.128(
   return _mm_packs_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_packs_pu16((__m64)(__v4hi){-1, 0, 128, 300}, (__m64)(__v4hi){255, -200, 42, -42}), 0, 0, -128, -1, -1, 0, 42, 0));
 
 __m64 test_mm_sad_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sad_pu8

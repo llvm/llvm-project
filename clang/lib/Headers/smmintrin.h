@@ -1466,8 +1466,8 @@ _mm_cvtepu32_epi64(__m128i __V) {
 ///    A 128-bit vector of [4 x i32]. The converted [4 x i16] values are
 ///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi32(__m128i __V1,
-                                                              __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packus_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_ia32_packusdw128((__v4si)__V1, (__v4si)__V2);
 }
 
