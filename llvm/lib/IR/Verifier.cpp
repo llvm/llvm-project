@@ -740,36 +740,25 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         "Global is external, but doesn't have external or weak linkage!", &GV);
 
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(&GV)) {
-    if (GO->hasMetadata(LLVMContext::MD_associated)) {
-      SmallVector<MDNode *, 1> MDs;
-      GO->getMetadata(LLVMContext::MD_associated, MDs);
+    if (const MDNode *Associated =
+            GO->getMetadata(LLVMContext::MD_associated)) {
+      Check(Associated->getNumOperands() == 1,
+            "associated metadata must have one operand", &GV, Associated);
+      const Metadata *Op = Associated->getOperand(0).get();
+      Check(Op, "associated metadata must have a global value", GO, Associated);
 
-      if (TT.isOSBinFormatELF())
-        Check(MDs.size() == 1, "only a single associated metadata is supported",
-              &GV);
+      const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+      Check(VM, "associated metadata must be ValueAsMetadata", GO, Associated);
+      if (VM) {
+        Check(isa<PointerType>(VM->getValue()->getType()),
+              "associated value must be pointer typed", GV, Associated);
 
-      for (const MDNode *Associated : MDs) {
-        Check(Associated->getNumOperands() == 1,
-              "associated metadata must have one operand", &GV, Associated);
-        const Metadata *Op = Associated->getOperand(0).get();
-        Check(Op, "associated metadata must have a global value", GO,
+        const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
+        Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
+              "associated metadata must point to a GlobalObject", GO, Stripped);
+        Check(Stripped != GO,
+              "global values should not associate to themselves", GO,
               Associated);
-
-        const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
-        Check(VM, "associated metadata must be ValueAsMetadata", GO,
-              Associated);
-        if (VM) {
-          Check(isa<PointerType>(VM->getValue()->getType()),
-                "associated value must be pointer typed", GV, Associated);
-
-          const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
-          Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
-                "associated metadata must point to a GlobalObject", GO,
-                Stripped);
-          Check(Stripped != GO,
-                "global values should not associate to themselves", GO,
-                Associated);
-        }
       }
     }
 
@@ -779,6 +768,30 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
       verifyRangeLikeMetadata(*GO, AbsoluteSymbol,
                               DL.getIntPtrType(GO->getType()),
                               RangeLikeMetadataKind::AbsoluteSymbol);
+    }
+
+    if (GO->hasMetadata(LLVMContext::MD_ref)) {
+      SmallVector<MDNode *> MDs;
+      GO->getMetadata(LLVMContext::MD_ref, MDs);
+      for (const MDNode *MD : MDs) {
+        Check(MD->getNumOperands() == 1, "ref metadata must have one operand",
+              &GV, MD);
+        const Metadata *Op = MD->getOperand(0).get();
+        Check(Op, "ref metadata must have a global value", GO, MD);
+
+        const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+        Check(VM, "ref metadata must be ValueAsMetadata", GO, MD);
+        if (VM) {
+          Check(isa<PointerType>(VM->getValue()->getType()),
+                "ref value must be pointer typed", GV, MD);
+
+          const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
+          Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
+                "ref metadata must point to a GlobalObject", GO, Stripped);
+          Check(Stripped != GO, "values should not reference themselves", GO,
+                MD);
+        }
+      }
     }
   }
 

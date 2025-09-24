@@ -8344,13 +8344,6 @@ See :doc:`CalleeTypeMetadata`.
 
 The ``associated`` metadata may be attached to a global variable definition with
 a single argument that references a global object (optionally through an alias).
-The metadata is often used with an explicit section consisting of valid C
-identifiers so that the runtime can find the metadata section with
-linker-defined encapsulation symbols ``__start_<section_name>`` and
-``__stop_<section_name>``.
-
-ELF Targets
-"""""""""""
 
 This metadata lowers to the ELF section flag ``SHF_LINK_ORDER`` which prevents
 discarding of the global variable in linker GC unless the referenced object is
@@ -8368,6 +8361,12 @@ alive, but this many-to-one relationship is not representable. Moreover, if the
 metadata is retained while the function is discarded, the linker will report an
 error of a relocation referencing a discarded section.
 
+The metadata is often used with an explicit section consisting of valid C
+identifiers so that the runtime can find the metadata section with
+linker-defined encapsulation symbols ``__start_<section_name>`` and
+``__stop_<section_name>``.
+
+It does not have any effect on non-ELF targets.
 
 Example:
 
@@ -8378,23 +8377,6 @@ Example:
     @b = internal global i32 2, comdat $a, section "abc", !associated !0
     !0 = !{ptr @a}
 
-XCOFF Targets
-"""""""""""""
-
-This metadata lowers to the .ref assembly directive which will add a relocation
-representing an implicit reference from the section the global belongs to, to
-the associated symbol. This link will keep the associated symbol alive if the
-section is not garbage collected. More than one associated node can be attached
-to the same global variable.
-
-Example:
-.. code-block:: text
-
-    @a = global i32 1
-    @b = global i32 2
-    @c = global i32 3, section "abc", !associated !0, !associated !1
-    !0 = !{ptr @a}
-    !1 = !{ptr @b}
 
 '``prof``' Metadata
 ^^^^^^^^^^^^^^^^^^^
@@ -8711,6 +8693,36 @@ of requiring a stack protector.
    %a = alloca [1000 x i8], align 1, !stack-protector !0
 
   !0 = !{i32 0}
+
+'``ref``' Metadata
+^^^^^^^^^^^^^^^^^^
+
+The ``ref`` metadata may be attached to a global variable definition with a
+single argument that references a global object. The metadata is lowered to a
+.ref directive which will emit a relocation introducing an explicit dependence
+to the referenced symbol. This is typically used when there is some implicit
+dependence between the symbols that is otherwise opaque to the linker. One such
+example is metadata which is accessed by a runtime with associated
+``__start_<section_name>`` and ``__stop_<section_name>`` symbols.
+
+This metadata lowers to the .ref assembly directive which will add a relocation
+representing an implicit reference from the section the global belongs to, to
+the associated symbol. This link will keep the associated symbol alive if the
+section is not garbage collected. More than one associated node can be attached
+to the same global variable.
+
+It does not have any effect on non-XCOFF targets.
+
+Example:
+
+.. code-block:: text
+
+    @a = global i32 1
+    @b = global i32 2
+    @c = global i32 3, section "abc", !ref !0, !ref !1
+    !0 = !{ptr @a}
+    !1 = !{ptr @b}
+
 
 Module Flags Metadata
 =====================

@@ -306,7 +306,7 @@ public:
 
   void emitModuleCommandLines(Module &M) override;
 
-  void emitAssociatedMetadata(const GlobalObject *);
+  void emitRefMetadata(const GlobalObject *);
 };
 
 } // end anonymous namespace
@@ -2803,8 +2803,8 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Switch to the containing csect.
   OutStreamer->switchSection(Csect);
 
-  if (GV->hasMetadata(LLVMContext::MD_associated)) {
-    emitAssociatedMetadata(GV);
+  if (GV->hasMetadata(LLVMContext::MD_ref)) {
+    emitRefMetadata(GV);
   }
 
   const DataLayout &DL = GV->getDataLayout();
@@ -3342,15 +3342,15 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
     OutStreamer->emitIntValue(0, GetSizeOfEncodedValue(Encoding));
 }
 
-void PPCAIXAsmPrinter::emitAssociatedMetadata(const GlobalObject *GO) {
+void PPCAIXAsmPrinter::emitRefMetadata(const GlobalObject *GO) {
   SmallVector<MDNode *> MDs;
-  GO->getMetadata(LLVMContext::MD_associated, MDs);
+  GO->getMetadata(LLVMContext::MD_ref, MDs);
   assert(MDs.size() && "Expected asscoiated metadata nodes");
 
   for (const MDNode *MD : MDs) {
     const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
-    const GlobalValue *Associated = cast<GlobalValue>(VAM->getValue());
-    MCSymbol *Referenced = TM.getSymbol(Associated);
+    const GlobalValue *GV = cast<GlobalValue>(VAM->getValue());
+    MCSymbol *Referenced = TM.getSymbol(GV);
     OutStreamer->emitXCOFFRefDirective(Referenced);
   }
 }
