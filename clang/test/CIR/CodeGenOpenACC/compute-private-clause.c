@@ -2,9 +2,30 @@
 
 struct NoCopyConstruct {};
 
-// NoCopyConstruct[5] with 1 'bound'
-// CHECK: acc.private.recipe @privatization__Bcnt1__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
+// int
+// CHECK: acc.private.recipe @privatization__ZTSi : !cir.ptr<!s32i> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
+// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.private.init"]
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: }
+//
+// float
+// CHECK-NEXT: acc.private.recipe @privatization__ZTSf : !cir.ptr<!cir.float> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.float> {{.*}}):
+// CHECK-NEXT: cir.alloca !cir.float, !cir.ptr<!cir.float>, ["openacc.private.init"]
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: }
+//
+// NoCopyConstruct
+// CHECK-NEXT: acc.private.recipe @privatization__ZTS15NoCopyConstruct : !cir.ptr<!rec_NoCopyConstruct> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
+// CHECK-NEXT: cir.alloca !rec_NoCopyConstruct, !cir.ptr<!rec_NoCopyConstruct>, ["openacc.private.init"]
+// CHECK-NEXT: acc.yield
+// CHECK-NEXT: }
+//
+// int[5] with 1 'bound'
+// CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
 // TODO: Add Init here.
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -16,31 +37,10 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
-// int[5] with 1 'bound'
-// CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
+// NoCopyConstruct[5] with 1 'bound'
+// CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
 // TODO: Add Init here.
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: }
-//
-// NoCopyConstruct
-// CHECK-NEXT: acc.private.recipe @privatization__ZTS15NoCopyConstruct : !cir.ptr<!rec_NoCopyConstruct> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NoCopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_NoCopyConstruct, !cir.ptr<!rec_NoCopyConstruct>, ["openacc.private.init"]
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: }
-//
-// float
-// CHECK-NEXT: acc.private.recipe @privatization__ZTSf : !cir.ptr<!cir.float> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.float> {{.*}}):
-// CHECK-NEXT: cir.alloca !cir.float, !cir.ptr<!cir.float>, ["openacc.private.init"]
-// CHECK-NEXT: acc.yield
-// CHECK-NEXT: }
-//
-// init
-// CHECK-NEXT: acc.private.recipe @privatization__ZTSi : !cir.ptr<!s32i> init {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.private.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 

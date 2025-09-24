@@ -1716,6 +1716,10 @@ private:
     ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
   };
 
+  // Keep track of the last place we inserted a 'recipe' so that we can insert
+  // the next one in lexical order.
+  mlir::OpBuilder::InsertPoint lastRecipeLocation;
+
 public:
   // Helper type used to store the list of important information for a 'data'
   // clause variable, or a 'cache' variable reference.
@@ -1733,6 +1737,7 @@ public:
     // can use to properly set the alloca section.
     llvm::SmallVector<QualType> boundTypes;
   };
+
   // Gets the collection of info required to lower and OpenACC clause or cache
   // construct variable reference.
   OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);

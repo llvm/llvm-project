@@ -469,9 +469,10 @@ public:
   OpenACCRecipeBuilder(CIRGen::CIRGenFunction &cgf,
                        CIRGen::CIRGenBuilderTy &builder)
       : cgf(cgf), builder(builder) {}
-  RecipeTy getOrCreateRecipe(ASTContext &astCtx, const Expr *varRef,
-                             const VarDecl *varRecipe, const Expr *initExpr,
-                             const VarDecl *temporary,
+  RecipeTy getOrCreateRecipe(ASTContext &astCtx,
+                             mlir::OpBuilder::InsertPoint &insertLocation,
+                             const Expr *varRef, const VarDecl *varRecipe,
+                             const Expr *initExpr, const VarDecl *temporary,
                              OpenACCReductionOperator reductionOp,
                              DeclContext *dc, QualType origType,
                              size_t numBounds,
@@ -507,6 +508,8 @@ public:
     mlir::Location locEnd = cgf.cgm.getLoc(varRef->getEndLoc());
 
     mlir::OpBuilder modBuilder(mod.getBodyRegion());
+    if (insertLocation.isSet())
+      modBuilder.restoreInsertionPoint(insertLocation);
     RecipeTy recipe;
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
@@ -515,6 +518,7 @@ public:
     } else {
       recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
     }
+    insertLocation = modBuilder.saveInsertionPoint();
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
       createPrivateInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
