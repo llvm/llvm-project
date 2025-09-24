@@ -637,6 +637,8 @@ public:
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
 
+  bool insertBarrierStart(MachineBasicBlock::iterator &MI) const override;
+
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
                              SIAtomicAddrSpace AddrSpace) const override {
@@ -2174,17 +2176,19 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
 
 bool SIGfx10CacheControl::insertBarrierStart(
     MachineBasicBlock::iterator &MI) const {
-  // We need to wait on vm_vsrc so barriers can pair with fences in GFX10+ CU
-  // mode. This is because a CU mode release fence does not emit any wait, which
-  // is fine when only dealing with vmem, but isn't sufficient in the presence
-  // of barriers which do not go through vmem.
-  // GFX12.5 does not require this additional wait.
-  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
+  if (!ST.isCuModeEnabled())
     return false;
 
+  // GFX10/11 CU MODE Workgroup fences do not emit anything.
+  // In the presence of barriers, we want to make sure previous memory
+  // operations are actually visible and can be released at a wider scope by
+  // another thread upon exiting the barrier. To make this possible, we must
+  // wait on previous stores.
+
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-          TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
+          TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
+      .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+      .addImm(0);
   return true;
 }
 
@@ -2568,6 +2572,23 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                         IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release);
 
   return Changed;
+}
+
+bool SIGfx12CacheControl::insertBarrierStart(
+    MachineBasicBlock::iterator &MI) const {
+  if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts())
+    return false;
+
+  // GFX12 CU MODE Workgroup fences do not emit anything (except in GFX12.5).
+  // In the presence of barriers, we want to make sure previous memory
+  // operations are actually visible and can be released at a wider scope by
+  // another thread upon exiting the barrier. To make this possible, we must
+  // wait on previous stores.
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII->get(AMDGPU::S_WAIT_STORECNT_soft))
+      .addImm(0);
+  return true;
 }
 
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
