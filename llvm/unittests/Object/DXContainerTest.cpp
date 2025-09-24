@@ -1201,8 +1201,8 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(Sampler.ShaderVisibility, 7u);
   }
   {
-    // this is testing static sampler parsing for root signature version 1.2, 
-    // it changes: the version number, the size of root signature being emitted 
+    // this is testing static sampler parsing for root signature version 1.2,
+    // it changes: the version number, the size of root signature being emitted
     // and the values for flag fields.
     uint8_t Buffer[] = {
         0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
