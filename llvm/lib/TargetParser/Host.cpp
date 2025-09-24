@@ -2335,7 +2335,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
       IsProcessorFeaturePresent(PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE);
   Features["dotprod"] =
       IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE);
-  Features["jscvt"] =
+  Features["jsconv"] =
       IsProcessorFeaturePresent(PF_ARM_V83_JSCVT_INSTRUCTIONS_AVAILABLE);
   Features["rcpc"] =
       IsProcessorFeaturePresent(PF_ARM_V83_LRCPC_INSTRUCTIONS_AVAILABLE);
