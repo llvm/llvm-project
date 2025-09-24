@@ -22,15 +22,16 @@ body:             |
 
     ; CHECK-LABEL: name: test_groups
     ; CHECK: liveins: $d0, $r0, $r1, $r2, $r3, $r4
-    ; CHECK: renamable $d0 = VADDD killed renamable $d0, renamable $d0, 14 /* CC::al */, $noreg
-    ; CHECK: renamable $r3 = t2ADDrr killed renamable $r3, renamable $r3, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: renamable $s2 = VLDRS killed renamable $r0, 0, 14 /* CC::al */, $noreg
-    ; CHECK: VSTRS killed renamable $s2, killed renamable $r1, 0, 14 /* CC::al */, $noreg
-    ; CHECK: t2STRi12 killed renamable $r3, killed renamable $r2, 0, 14 /* CC::al */, $noreg
-    ; CHECK: renamable $r4 = t2ADDrr killed renamable $r4, renamable $r4, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit killed $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $s2 = VLDRS killed renamable $r0, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: renamable $r3 = t2ADDrr killed renamable $r3, renamable $r3, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: renamable $d0 = VADDD killed renamable $d0, renamable $d0, 14 /* CC::al */, $noreg, implicit $fpscr_rm
+    ; CHECK-NEXT: renamable $r4 = t2ADDrr killed renamable $r4, renamable $r4, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: VSTRS killed renamable $s2, killed renamable $r1, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: t2STRi12 killed renamable $r3, killed renamable $r2, 0, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit killed $d0
     renamable $s2 = VLDRS killed renamable $r0, 0, 14 /* CC::al */, $noreg
-    renamable $d0 = VADDD killed renamable $d0, renamable $d0, 14 /* CC::al */, $noreg
+    renamable $d0 = VADDD killed renamable $d0, renamable $d0, 14 /* CC::al */, $noreg, implicit $fpscr_rm
     VSTRS killed renamable $s2, killed renamable $r1, 0, 14 /* CC::al */, $noreg
     renamable $r3 = t2ADDrr killed renamable $r3, renamable $r3, 14 /* CC::al */, $noreg, $noreg
     t2STRi12 killed renamable $r3, killed renamable $r2, 0, 14 /* CC::al */, $noreg
