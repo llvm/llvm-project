@@ -18,7 +18,7 @@ namespace clang::tidy::portability {
 /// Find SIMD intrinsics calls and suggest std::experimental::simd alternatives.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/simd-intrinsics.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/simd-intrinsics.html
 class SIMDIntrinsicsCheck : public ClangTidyCheck {
 public:
   SIMDIntrinsicsCheck(StringRef Name, ClangTidyContext *Context);

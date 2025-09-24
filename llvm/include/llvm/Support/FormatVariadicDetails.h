@@ -78,15 +78,14 @@ public:
   using ConstRefT = const std::decay_t<T> &;
 
   template <typename U>
-  static char test(std::enable_if_t<
-                   std::is_same_v<decltype(std::declval<llvm::raw_ostream &>()
-                                           << std::declval<U>()),
-                                  llvm::raw_ostream &>,
-                   int *>);
+  static auto test(int)
+      -> std::is_same<decltype(std::declval<llvm::raw_ostream &>()
+                               << std::declval<U>()),
+                      llvm::raw_ostream &>;
 
-  template <typename U> static double test(...);
+  template <typename U> static auto test(...) -> std::false_type;
 
-  static bool const value = (sizeof(test<ConstRefT>(nullptr)) == 1);
+  static constexpr bool value = decltype(test<ConstRefT>(0))::value;
 };
 
 // Simple template that decides whether a type T should use the member-function

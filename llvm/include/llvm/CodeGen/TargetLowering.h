@@ -480,7 +480,7 @@ public:
     return true;
   }
 
-  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
+  /// Return true if the @llvm.vector.partial.reduce.* intrinsic
   /// should be expanded using generic code in SelectionDAGBuilder.
   virtual bool
   shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
@@ -3515,6 +3515,13 @@ public:
   /// selection, and can fallback to regular arithmetic.
   /// This should be removed when PTRADD nodes are widely supported by backends.
   virtual bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const {
+    return false;
+  }
+
+  /// True if the target allows transformations of in-bounds pointer
+  /// arithmetic that cause out-of-bounds intermediate results.
+  virtual bool canTransformPtrArithOutOfBounds(const Function &F,
+                                               EVT PtrVT) const {
     return false;
   }
 
