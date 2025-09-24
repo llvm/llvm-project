@@ -46,6 +46,7 @@
 #include "AMDGPU.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -65,6 +66,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/IR/ValueHandle.h"
 #include <atomic>
 #include <cstdlib>
 
@@ -215,6 +217,127 @@ struct AMDGPUVectorIdiomImpl {
 
   AMDGPUVectorIdiomImpl(unsigned MaxBytes) : MaxBytes(MaxBytes) {}
 
+  // Returns true if the given intrinsic is an allowed lifetime marker.
+  static bool isAllowedLifetimeIntrinsic(Instruction *I) {
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      return II->getIntrinsicID() == Intrinsic::lifetime_start ||
+             II->getIntrinsicID() == Intrinsic::lifetime_end;
+    }
+    return false;
+  }
+
+  // Explore pointer casts/GEPs reachable from BasePtr, collecting all
+  // derived pointers. This is a small, bounded exploration since we only
+  // follow casts/GEPs.
+  static void collectDerivedPointers(Value *BasePtr,
+                                     SmallVectorImpl<Value *> &Derived) {
+    SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 32> Visited;
+    Worklist.push_back(BasePtr);
+
+    while (!Worklist.empty()) {
+      Value *Cur = Worklist.pop_back_val();
+      if (!Visited.insert(Cur).second)
+        continue;
+      Derived.push_back(Cur);
+
+      for (User *U : Cur->users()) {
+        if (auto *BC = dyn_cast<BitCastInst>(U)) {
+          Worklist.push_back(BC);
+          continue;
+        }
+        if (auto *ASC = dyn_cast<AddrSpaceCastInst>(U)) {
+          Worklist.push_back(ASC);
+          continue;
+        }
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+          // Only consider in-bounds GEPs to be conservative.
+          if (GEP->isInBounds())
+            Worklist.push_back(GEP);
+          continue;
+        }
+      }
+    }
+  }
+
+  // Attempts to find a simple memcpy chain where this memcpy (Producer) writes
+  // to a temporary (TmpPtr), and a later memcpy (Consumer) immediately copies
+  // from the same temporary to some final destination. The chain is considered
+  // simple if all uses of TmpPtr (and its derived bitcasts/GEPs) are limited to
+  // exactly these two memcpy operations (the Producer writing TmpPtr, and a
+  // single Consumer reading TmpPtr), plus optional lifetime intrinsics and
+  // further pointer casts/GEPs. If found and Producer dominates Consumer, the
+  // Consumer is returned. Otherwise returns null.
+  MemCpyInst *findMemcpyChainConsumer(MemCpyInst &Producer, Value *TmpPtr,
+                                      uint64_t N,
+                                      const DominatorTree *DT) {
+    Value *Base = TmpPtr->stripPointerCasts();
+    SmallVector<Value *, 16> Ptrs;
+    collectDerivedPointers(Base, Ptrs);
+
+    SmallVector<MemCpyInst *, 2> MemCpyUsers;
+    for (Value *P : Ptrs) {
+      for (User *U : P->users()) {
+        if (auto *I = dyn_cast<Instruction>(U)) {
+          if (isAllowedLifetimeIntrinsic(I))
+            continue;
+        }
+
+        if (auto *MC = dyn_cast<MemCpyInst>(U)) {
+          MemCpyUsers.push_back(MC);
+          continue;
+        }
+
+        if (isa<BitCastInst>(U) || isa<AddrSpaceCastInst>(U) || isa<GetElementPtrInst>(U))
+          continue; // Covered by Derived pointers
+
+        // Any other use (loads/stores/calls/etc.) makes the chain non-simple.
+        return nullptr;
+      }
+    }
+
+    // We expect exactly two memcpys in the simple chain: the producer 'Producer'
+    // that writes TmpPtr, and a consumer that reads TmpPtr.
+    MemCpyInst *Consumer = nullptr;
+    for (MemCpyInst *MC : MemCpyUsers) {
+      // Length must be constant and match N to be a simple forward copy.
+      auto *LenCI = dyn_cast<ConstantInt>(MC->getLength());
+      if (!LenCI || LenCI->getLimitedValue() != N)
+        return nullptr;
+
+      Value *SrcMC = MC->getRawSource();
+      Value *DstMC = MC->getRawDest();
+
+      bool SrcFromTmp = SrcMC->stripPointerCasts() == Base;
+      bool DstIsTmp = DstMC->stripPointerCasts() == Base;
+
+      if (MC == &Producer) {
+        // Producer must be the one writing to TmpPtr.
+        if (!DstIsTmp)
+          return nullptr;
+        continue;
+      }
+
+      // Any other memcpy must be the consumer reading from TmpPtr.
+      if (!SrcFromTmp)
+        return nullptr;
+
+      if (Consumer)
+        return nullptr; // More than one consumer
+      Consumer = MC;
+    }
+
+    if (!Consumer)
+      return nullptr;
+
+    // Producer must dominate Consumer so that values computed at Producer
+    // (loads/select) can be used at the Consumer insertion point.
+    if (DT && !DT->dominates(&Producer, Consumer))
+      return nullptr;
+
+    return Consumer;
+  }
+
   // Rewrites memcpy when the source is a select of pointers. Prefers a
   // value-level select (two loads + select + one store) if speculative loads
   // are safe. Otherwise, falls back to a guarded CFG split with two memcpy
@@ -306,6 +429,47 @@ struct AMDGPUVectorIdiomImpl {
           bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
 
     if (CanSpeculate) {
+      // First, check if this memcpy writes to a temporary that is immediately
+      // copied again by a following memcpy to the final destination. If so,
+      // form the value at the current location (to preserve load timing) and
+      // emit a single store at the consumer location, erasing both memcpys.
+      if (hasAllocaUnderlyingObject(Dst)) {
+        if (MemCpyInst *Consumer =
+                findMemcpyChainConsumer(MT, Dst, N, DT)) {
+          Align ConsumerDstAlign =
+              MaybeAlign(Consumer->getDestAlign()).valueOrOne();
+          Align MinAlign = std::min(AlignAB, ConsumerDstAlign);
+
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Folding memcpy chain: "
+                            << "memcpy(tmp <- select), memcpy(dst <- tmp). "
+                            << "Emitting value-select and single store to final dst; "
+                            << "N=" << N << " minAlign=" << MinAlign.value()
+                            << '\n');
+
+          // Compute the selected value at the original memcpy to preserve
+          // the timing of the loads from A/B.
+          Type *Ty = getIntOrVecTypeForSize(N, B.getContext(), MinAlign);
+          LoadInst *LA = B.CreateAlignedLoad(Ty, A, MinAlign);
+          LoadInst *LB = B.CreateAlignedLoad(Ty, Bv, MinAlign);
+          Value *V = B.CreateSelect(Sel.getCondition(), LA, LB);
+
+          // Insert the final store right before the consumer memcpy.
+          IRBuilder<> BC(Consumer);
+          (void)BC.CreateAlignedStore(V, Consumer->getRawDest(),
+                                      ConsumerDstAlign);
+
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Erasing memcpy chain: \n  - "
+                            << MT << "\n  - " << *Consumer << '\n');
+
+          incrementTransformationCounter();
+          Consumer->eraseFromParent();
+          MT.eraseFromParent();
+          return true;
+        }
+      }
+
+      // No chain detected. Do the normal value-level select and store directly
+      // to the memcpy destination.
       Align MinAlign = std::min(AlignAB, DstAlign);
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-src) "
                         << "with value-level select; N=" << N
@@ -440,18 +604,29 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
     }
   });
 
-  SmallVector<MemCpyInst *, 8> Worklist;
+  SmallVector<WeakTrackingVH, 8> Worklist;
   for (Instruction &I : instructions(F)) {
     if (auto *MC = dyn_cast<MemCpyInst>(&I))
-      Worklist.push_back(MC);
+      Worklist.emplace_back(MC);
   }
 
   bool Changed = false;
   AMDGPUVectorIdiomImpl Impl(MaxBytes);
 
-  for (MemCpyInst *MT : Worklist) {
+  for (WeakTrackingVH &WH : Worklist) {
+    auto *MT = dyn_cast_or_null<MemCpyInst>(WH);
+    if (!MT)
+      continue; // Was deleted by a previous transform
+    
     Value *Dst = MT->getRawDest();
     Value *Src = MT->getRawSource();
+    
+    // Add null checks for safety
+    if (!Dst || !Src) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: null dst or src\n");
+      continue;
+    }
+    
     if (!isa<SelectInst>(Src) && !isa<SelectInst>(Dst))
       continue;
 
@@ -532,8 +707,15 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
       continue;
     }
 
-    unsigned DstAS = cast<PointerType>(Dst->getType())->getAddressSpace();
-    unsigned SrcAS = cast<PointerType>(Src->getType())->getAddressSpace();
+    auto *DstPTy = dyn_cast<PointerType>(Dst->getType());
+    auto *SrcPTy = dyn_cast<PointerType>(Src->getType());
+    if (!DstPTy || !SrcPTy) {
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: non-pointer dst or src\n");
+      continue;
+    }
+    
+    unsigned DstAS = DstPTy->getAddressSpace();
+    unsigned SrcAS = SrcPTy->getAddressSpace();
     if (DstAS != SrcAS) {
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: address space mismatch "
                         << "(dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n");
