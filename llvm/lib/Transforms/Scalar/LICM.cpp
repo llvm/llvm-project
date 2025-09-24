@@ -38,6 +38,7 @@
 
 #include "llvm/Transforms/Scalar/LICM.h"
 #include "llvm/ADT/PriorityWorklist.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -212,6 +213,10 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
 static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   ICFLoopSafetyInfo &SafetyInfo,
                                   MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
+
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
 
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
@@ -546,6 +551,12 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
 
   if (Changed && SE)
     SE->forgetLoopDispositions();
+
+  // sink pre-header defs that are unused in-loop into the unique exit to reduce
+  // pressure.
+  Changed |=
+      sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU, SE);
+
   return Changed;
 }
 
@@ -1467,6 +1478,104 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                       MemorySSA::BeforeTerminator);
   if (SE)
     SE->forgetBlockAndLoopDispositions(&I);
+}
+
+// If there's a single exit block, sink any loop-invariant values that were
+// defined in the preheader but not used inside the loop into the exit block
+// to reduce register pressure in the loop.
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE) {
+  BasicBlock *ExitBlock = L->getExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  bool MadeAnyChanges = false;
+
+  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+
+    // Skip terminator.
+    if (Preheader->getTerminator() == &I)
+      continue;
+
+    // New instructions were inserted at the end of the preheader.
+    if (isa<PHINode>(I))
+      break;
+
+    // Don't move instructions which might have side effects, since the side
+    // effects need to complete before instructions inside the loop. Note that
+    // it's okay if the instruction might have undefined behavior: LoopSimplify
+    // guarantees that the preheader dominates the exit block.
+    if (I.mayHaveSideEffects())
+      continue;
+
+    // Don't sink reads unless MemorySSA says the location is not clobbered
+    // within the loop.
+    if (I.mayReadFromMemory()) {
+      auto *LI = dyn_cast<LoadInst>(&I);
+      // Only handle loads here; be conservative for other memory-reading ops.
+      if (!LI)
+        continue;
+      // Do not move volatile or ordered/atomic loads.
+      if (!LI->isUnordered() || LI->isAtomic())
+        continue;
+
+      MemorySSA *MSSA = MSSAU.getMemorySSA();
+      auto *MU = dyn_cast_or_null<MemoryUse>(MSSA->getMemoryAccess(LI));
+      if (!MU)
+        // Conservatively skip if MSSA has no use for this load.
+        continue;
+
+      SinkAndHoistLICMFlags Flags(SetLicmMssaOptCap,
+                                  SetLicmMssaNoAccForPromotionCap,
+                                  /*IsSink=*/true, *L, *MSSA);
+      bool InvariantGroup = LI->hasMetadata(LLVMContext::MD_invariant_group);
+
+      // If the pointer could be invalidated in the loop, do not sink.
+      if (pointerInvalidatedByLoop(MSSA, MU, L, I, Flags, InvariantGroup))
+        continue;
+    }
+
+    // Skip debug/pseudo and EH pad.
+    if (I.isDebugOrPseudoInst() || I.isEHPad())
+      continue;
+
+    // Don't sink alloca: we never want to sink static alloca's out of the
+    // entry block, and correctly sinking dynamic alloca's requires
+    // checks for stacksave/stackrestore intrinsics.
+    // FIXME: Refactor this check somehow?
+    if (isa<AllocaInst>(&I))
+      continue;
+
+    // Determine if there is a use in or before the loop (direct or
+    // otherwise).
+    bool UsedInLoopOrPreheader = false;
+    for (Use &U : I.uses()) {
+      auto *UserI = cast<Instruction>(U.getUser());
+      BasicBlock *UseBB = UserI->getParent();
+      if (auto *PN = dyn_cast<PHINode>(UserI)) {
+        unsigned OpIdx =
+            PHINode::getIncomingValueNumForOperand(U.getOperandNo());
+        UseBB = PN->getIncomingBlock(OpIdx);
+      }
+      if (UseBB == Preheader || L->contains(UseBB)) {
+        UsedInLoopOrPreheader = true;
+        break;
+      }
+    }
+    if (UsedInLoopOrPreheader)
+      continue;
+
+    moveInstructionBefore(I, ExitBlock->getFirstInsertionPt(), *SafetyInfo,
+                          MSSAU, SE);
+    MadeAnyChanges = true;
+  }
+
+  return MadeAnyChanges;
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(
