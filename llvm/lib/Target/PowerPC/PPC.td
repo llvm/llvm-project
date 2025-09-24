@@ -365,7 +365,6 @@ def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
 def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
 def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
 def IsBookE  : Predicate<"Subtarget->isBookE()">;
 def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
 def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
@@ -426,7 +425,7 @@ def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
 //===----------------------------------------------------------------------===//
 
 defvar PPC32 = DefaultMode;
-def PPC64 : HwMode<[In64BitMode]>;
+def PPC64 : HwMode<[IsPPC64]>;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors

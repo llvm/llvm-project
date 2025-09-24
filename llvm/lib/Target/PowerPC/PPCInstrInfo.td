@@ -5142,7 +5142,7 @@ def RotateInsertByte1 {
 }
 
 // Clear the upper half of the register when in 64-bit mode
-let Predicates = [In64BitMode] in
+let Predicates = [IsPPC64] in
 def : Pat<(i32 (bitreverse i32:$A)), (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
 let Predicates = [IsPPC32] in
 def : Pat<(i32 (bitreverse i32:$A)), RotateInsertByte1.Left>;
