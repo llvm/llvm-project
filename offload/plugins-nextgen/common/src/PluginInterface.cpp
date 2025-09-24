@@ -1714,7 +1714,8 @@ int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
+    DP("Failure to check validity of image %p: %s", Image.data(),
+       ErrStr.c_str());
     return false;
   };
   switch (identify_magic(Image)) {
@@ -1742,7 +1743,8 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
 int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   auto HandleError = [&](Error Err) -> bool {
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
+    DP("Failure to check validity of image %p: %s", Image.data(),
+       ErrStr.c_str());
     return false;
   };
   switch (identify_magic(Image)) {

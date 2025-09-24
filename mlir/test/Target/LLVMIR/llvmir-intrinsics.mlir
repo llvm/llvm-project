@@ -460,10 +460,11 @@ llvm.func @assume_without_opbundles(%cond: i1) {
 }
 
 // CHECK-LABEL: @assume_with_opbundles
-llvm.func @assume_with_opbundles(%cond: i1, %p: !llvm.ptr) {
+llvm.func @assume_with_opbundles(%p: !llvm.ptr) {
+  %true = llvm.mlir.constant(true) : i1
   %0 = llvm.mlir.constant(8 : i32) : i32
-  // CHECK: call void @llvm.assume(i1 %{{.+}}) [ "align"(ptr %{{.+}}, i32 8) ]
-  llvm.intr.assume %cond ["align"(%p, %0 : !llvm.ptr, i32)] : i1
+  // CHECK: call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i32 8) ]
+  llvm.intr.assume %true ["align"(%p, %0 : !llvm.ptr, i32)] : i1
   llvm.return
 }
 

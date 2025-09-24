@@ -287,8 +287,9 @@ indirectgoto:
 define float @lower_constantpool(float %a) nounwind {
 ; RV32F-SMALL-LABEL: lower_constantpool:
 ; RV32F-SMALL:       # %bb.0:
-; RV32F-SMALL-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV32F-SMALL-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; RV32F-SMALL-NEXT:    lui a0, 260097
+; RV32F-SMALL-NEXT:    addi a0, a0, -2048
+; RV32F-SMALL-NEXT:    fmv.w.x fa5, a0
 ; RV32F-SMALL-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32F-SMALL-NEXT:    ret
 ;
@@ -301,32 +302,33 @@ define float @lower_constantpool(float %a) nounwind {
 ;
 ; RV32F-MEDIUM-LABEL: lower_constantpool:
 ; RV32F-MEDIUM:       # %bb.0:
-; RV32F-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV32F-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV32F-MEDIUM-NEXT:    flw fa5, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV32F-MEDIUM-NEXT:    lui a0, 260097
+; RV32F-MEDIUM-NEXT:    addi a0, a0, -2048
+; RV32F-MEDIUM-NEXT:    fmv.w.x fa5, a0
 ; RV32F-MEDIUM-NEXT:    fadd.s fa0, fa0, fa5
 ; RV32F-MEDIUM-NEXT:    ret
 ;
 ; RV64F-SMALL-LABEL: lower_constantpool:
 ; RV64F-SMALL:       # %bb.0:
-; RV64F-SMALL-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV64F-SMALL-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; RV64F-SMALL-NEXT:    lui a0, 260097
+; RV64F-SMALL-NEXT:    addi a0, a0, -2048
+; RV64F-SMALL-NEXT:    fmv.w.x fa5, a0
 ; RV64F-SMALL-NEXT:    fadd.s fa0, fa0, fa5
 ; RV64F-SMALL-NEXT:    ret
 ;
 ; RV64F-MEDIUM-LABEL: lower_constantpool:
 ; RV64F-MEDIUM:       # %bb.0:
-; RV64F-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV64F-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV64F-MEDIUM-NEXT:    flw fa5, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV64F-MEDIUM-NEXT:    lui a0, 260097
+; RV64F-MEDIUM-NEXT:    addi a0, a0, -2048
+; RV64F-MEDIUM-NEXT:    fmv.w.x fa5, a0
 ; RV64F-MEDIUM-NEXT:    fadd.s fa0, fa0, fa5
 ; RV64F-MEDIUM-NEXT:    ret
 ;
 ; RV64F-LARGE-LABEL: lower_constantpool:
 ; RV64F-LARGE:       # %bb.0:
-; RV64F-LARGE-NEXT:  .Lpcrel_hi3:
-; RV64F-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
-; RV64F-LARGE-NEXT:    flw fa5, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV64F-LARGE-NEXT:    lui a0, 260097
+; RV64F-LARGE-NEXT:    addi a0, a0, -2048
+; RV64F-LARGE-NEXT:    fmv.w.x fa5, a0
 ; RV64F-LARGE-NEXT:    fadd.s fa0, fa0, fa5
 ; RV64F-LARGE-NEXT:    ret
 ;
@@ -390,13 +392,13 @@ define i32 @lower_extern_weak(i32 %a) nounwind {
 ; RV32IXQCILI-SMALL-NEXT:    lw a0, 0(a0)
 ; RV32IXQCILI-SMALL-NEXT:    ret
 ;
-; RV32F-MEDIUM-LABEL: lower_extern_weak:
-; RV32F-MEDIUM:       # %bb.0:
-; RV32F-MEDIUM-NEXT:  .Lpcrel_hi4:
-; RV32F-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
-; RV32F-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi4)(a0)
-; RV32F-MEDIUM-NEXT:    lw a0, 0(a0)
-; RV32F-MEDIUM-NEXT:    ret
+; RV32I-MEDIUM-LABEL: lower_extern_weak:
+; RV32I-MEDIUM:       # %bb.0:
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
+; RV32I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
+; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
+; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: lower_extern_weak:
 ; RV64I-SMALL:       # %bb.0:
@@ -404,45 +406,21 @@ define i32 @lower_extern_weak(i32 %a) nounwind {
 ; RV64I-SMALL-NEXT:    lw a0, %lo(W)(a0)
 ; RV64I-SMALL-NEXT:    ret
 ;
-; RV64F-MEDIUM-LABEL: lower_extern_weak:
-; RV64F-MEDIUM:       # %bb.0:
-; RV64F-MEDIUM-NEXT:  .Lpcrel_hi4:
-; RV64F-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
-; RV64F-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
-; RV64F-MEDIUM-NEXT:    lw a0, 0(a0)
-; RV64F-MEDIUM-NEXT:    ret
+; RV64I-MEDIUM-LABEL: lower_extern_weak:
+; RV64I-MEDIUM:       # %bb.0:
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi3:
+; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
+; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV64I-MEDIUM-NEXT:    lw a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ret
 ;
-; RV64F-LARGE-LABEL: lower_extern_weak:
-; RV64F-LARGE:       # %bb.0:
-; RV64F-LARGE-NEXT:  .Lpcrel_hi4:
-; RV64F-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI4_0)
-; RV64F-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
-; RV64F-LARGE-NEXT:    lw a0, 0(a0)
-; RV64F-LARGE-NEXT:    ret
-;
-; RV32FINX-MEDIUM-LABEL: lower_extern_weak:
-; RV32FINX-MEDIUM:       # %bb.0:
-; RV32FINX-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV32FINX-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
-; RV32FINX-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi3)(a0)
-; RV32FINX-MEDIUM-NEXT:    lw a0, 0(a0)
-; RV32FINX-MEDIUM-NEXT:    ret
-;
-; RV64FINX-MEDIUM-LABEL: lower_extern_weak:
-; RV64FINX-MEDIUM:       # %bb.0:
-; RV64FINX-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV64FINX-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
-; RV64FINX-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
-; RV64FINX-MEDIUM-NEXT:    lw a0, 0(a0)
-; RV64FINX-MEDIUM-NEXT:    ret
-;
-; RV64FINX-LARGE-LABEL: lower_extern_weak:
-; RV64FINX-LARGE:       # %bb.0:
-; RV64FINX-LARGE-NEXT:  .Lpcrel_hi3:
-; RV64FINX-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI4_0)
-; RV64FINX-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
-; RV64FINX-LARGE-NEXT:    lw a0, 0(a0)
-; RV64FINX-LARGE-NEXT:    ret
+; RV64I-LARGE-LABEL: lower_extern_weak:
+; RV64I-LARGE:       # %bb.0:
+; RV64I-LARGE-NEXT:  .Lpcrel_hi3:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI4_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV64I-LARGE-NEXT:    lw a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
   %1 = load volatile i32, ptr @W
   ret i32 %1
 }
@@ -466,9 +444,9 @@ define half @lower_global_half(half %a) nounwind {
 ;
 ; RV32F-MEDIUM-LABEL: lower_global_half:
 ; RV32F-MEDIUM:       # %bb.0:
-; RV32F-MEDIUM-NEXT:  .Lpcrel_hi5:
+; RV32F-MEDIUM-NEXT:  .Lpcrel_hi4:
 ; RV32F-MEDIUM-NEXT:    auipc a0, %pcrel_hi(X)
-; RV32F-MEDIUM-NEXT:    flh fa5, %pcrel_lo(.Lpcrel_hi5)(a0)
+; RV32F-MEDIUM-NEXT:    flh fa5, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; RV32F-MEDIUM-NEXT:    fadd.h fa0, fa0, fa5
 ; RV32F-MEDIUM-NEXT:    ret
 ;
@@ -481,17 +459,17 @@ define half @lower_global_half(half %a) nounwind {
 ;
 ; RV64F-MEDIUM-LABEL: lower_global_half:
 ; RV64F-MEDIUM:       # %bb.0:
-; RV64F-MEDIUM-NEXT:  .Lpcrel_hi5:
+; RV64F-MEDIUM-NEXT:  .Lpcrel_hi4:
 ; RV64F-MEDIUM-NEXT:    auipc a0, %pcrel_hi(X)
-; RV64F-MEDIUM-NEXT:    flh fa5, %pcrel_lo(.Lpcrel_hi5)(a0)
+; RV64F-MEDIUM-NEXT:    flh fa5, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; RV64F-MEDIUM-NEXT:    fadd.h fa0, fa0, fa5
 ; RV64F-MEDIUM-NEXT:    ret
 ;
 ; RV64F-LARGE-LABEL: lower_global_half:
 ; RV64F-LARGE:       # %bb.0:
-; RV64F-LARGE-NEXT:  .Lpcrel_hi5:
+; RV64F-LARGE-NEXT:  .Lpcrel_hi4:
 ; RV64F-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI5_0)
-; RV64F-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
+; RV64F-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; RV64F-LARGE-NEXT:    flh fa5, 0(a0)
 ; RV64F-LARGE-NEXT:    fadd.h fa0, fa0, fa5
 ; RV64F-LARGE-NEXT:    ret

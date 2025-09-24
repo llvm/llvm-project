@@ -79,7 +79,7 @@ static cl::opt<int>
     FPImmCost(DEBUG_TYPE "-fpimm-cost", cl::Hidden,
               cl::desc("Give the maximum number of instructions that we will "
                        "use for creating a floating-point immediate value"),
-              cl::init(2));
+              cl::init(3));
 
 static cl::opt<bool>
     ReassocShlAddiAdd("reassoc-shl-addi-add", cl::Hidden,

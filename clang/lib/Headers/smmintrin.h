@@ -1534,8 +1534,15 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
    so we'll do the same.  */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 /* These specify the type of data that we're comparing.  */
 #define _SIDD_UBYTE_OPS 0x00
