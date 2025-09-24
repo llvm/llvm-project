@@ -15,12 +15,12 @@
 ; Test single pass selection: run only pass 5
 ; RUN: opt -passes='annotation2metadata,forceattrs,inferattrs,function(lower-expect),function(simplifycfg),function(sroa),function(early-cse),openmp-opt' \
 ; RUN:   -opt-bisect=5 %s 2>&1 | FileCheck %s --check-prefix=CHECK-SINGLE-INTERVAL
-; CHECK-SINGLE: BISECT: NOT running pass (1) annotation2metadata on [module]
-; CHECK-SINGLE: BISECT: NOT running pass (2) forceattrs on [module]
-; CHECK-SINGLE: BISECT: NOT running pass (3) inferattrs on [module]
-; CHECK-SINGLE: BISECT: NOT running pass (4) lower-expect on foo
-; CHECK-SINGLE: BISECT: running pass (5) simplifycfg on foo
-; CHECK-SINGLE: BISECT: NOT running pass (6) sroa on foo
+; CHECK-SINGLE-INTERVAL: BISECT: NOT running pass (1) annotation2metadata on [module]
+; CHECK-SINGLE-INTERVAL: BISECT: NOT running pass (2) forceattrs on [module]
+; CHECK-SINGLE-INTERVAL: BISECT: NOT running pass (3) inferattrs on [module]
+; CHECK-SINGLE-INTERVAL: BISECT: NOT running pass (4) lower-expect on foo
+; CHECK-SINGLE-INTERVAL: BISECT: running pass (5) simplifycfg on foo
+; CHECK-SINGLE-INTERVAL: BISECT: NOT running pass (6) sroa on foo
 
 ; Test running no passes
 ; RUN: opt -passes='annotation2metadata,forceattrs,inferattrs,function(lower-expect),function(simplifycfg),function(sroa),function(early-cse),openmp-opt' \
