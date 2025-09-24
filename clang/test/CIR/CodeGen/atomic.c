@@ -415,3 +415,102 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired) {
   // OGCG-NEXT:    %[[SUCCESS_2:.+]] = zext i1 %[[SUCCESS]] to i8
   // OGCG-NEXT:    store i8 %[[SUCCESS_2]], ptr %{{.+}}, align 1
 }
+
+void c11_atomic_exchange(_Atomic(int) *ptr, int value) {
+  // CIR-LABEL: @c11_atomic_exchange
+  // LLVM-LABEL: @c11_atomic_exchange
+  // OGCG-LABEL: @c11_atomic_exchange
+
+  __c11_atomic_exchange(ptr, value, __ATOMIC_RELAXED);
+  __c11_atomic_exchange(ptr, value, __ATOMIC_CONSUME);
+  __c11_atomic_exchange(ptr, value, __ATOMIC_ACQUIRE);
+  __c11_atomic_exchange(ptr, value, __ATOMIC_RELEASE);
+  __c11_atomic_exchange(ptr, value, __ATOMIC_ACQ_REL);
+  __c11_atomic_exchange(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} release, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} release, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+}
+
+void atomic_exchange(int *ptr, int *value, int *old) {
+  // CIR-LABEL: @atomic_exchange
+  // LLVM-LABEL: @atomic_exchange
+  // OGCG-LABEL: @atomic_exchange
+
+  __atomic_exchange(ptr, value, old, __ATOMIC_RELAXED);
+  __atomic_exchange(ptr, value, old, __ATOMIC_CONSUME);
+  __atomic_exchange(ptr, value, old, __ATOMIC_ACQUIRE);
+  __atomic_exchange(ptr, value, old, __ATOMIC_RELEASE);
+  __atomic_exchange(ptr, value, old, __ATOMIC_ACQ_REL);
+  __atomic_exchange(ptr, value, old, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} release, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} release, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+}
+
+void atomic_exchange_n(int *ptr, int value) {
+  // CIR-LABEL: @atomic_exchange_n
+  // LLVM-LABEL: @atomic_exchange_n
+  // OGCG-LABEL: @atomic_exchange_n
+
+  __atomic_exchange_n(ptr, value, __ATOMIC_RELAXED);
+  __atomic_exchange_n(ptr, value, __ATOMIC_CONSUME);
+  __atomic_exchange_n(ptr, value, __ATOMIC_ACQUIRE);
+  __atomic_exchange_n(ptr, value, __ATOMIC_RELEASE);
+  __atomic_exchange_n(ptr, value, __ATOMIC_ACQ_REL);
+  __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : !cir.ptr<!s32i> -> !s32i
+
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} release, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} release, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+}

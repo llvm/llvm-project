@@ -1103,6 +1103,12 @@ public:
     return getArch() == Triple::x86 || getArch() == Triple::x86_64;
   }
 
+  /// Tests whether the target is x86 (32-bit).
+  bool isX86_32() const { return getArch() == Triple::x86; }
+
+  /// Tests whether the target is x86 (64-bit).
+  bool isX86_64() const { return getArch() == Triple::x86_64; }
+
   /// Tests whether the target is VE
   bool isVE() const {
     return getArch() == Triple::ve;

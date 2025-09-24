@@ -698,13 +698,14 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>, %unsigned: tensor<1xui32>, %uns
   // CHECK: linalg.generic
   // CHECK: arith.constant 1
   // CHECK: arith.constant 0
+  // CHECK: arith.constant false
   // CHECK: arith.constant true
   // CHECK: arith.cmpi
   // CHECK: arith.subi
   // CHECK: arith.shrsi
   // CHECK: arith.trunci
   // CHECK: and
-  // CHECK: and
+  // CHECK: arith.select
   // CHECK: arith.extui
   // CHECK: arith.addi
   %12 = tosa.arithmetic_right_shift %arg0, %arg0 {round = 1 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
@@ -899,6 +900,39 @@ func.func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_negate_no_const_1
+func.func @test_negate_no_const_1(%arg0: tensor<50x42xf16> ,%arg1: tensor<1xf16> , %arg2: tensor<1xf16> ) -> tensor<*xf16> {
+  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK:   ^bb0([[ARG0:%.*]]: f16, [[ARG1:%.*]]: f16, [[ARG2:%.*]]: f16, [[OUT:%.*]]: f16)
+  // CHECK:   [[ELEMENT:%.*]] = arith.negf [[ARG0]] : f16
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<50x42xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<50x42xf16>
+  %cast = tensor.cast %0 : tensor<50x42xf16> to tensor<*xf16>
+  return %cast : tensor<*xf16>
+}
+
+// -----
+
+// CHECK-LABEL: @test_negate_no_const_2
+func.func @test_negate_no_const_2(%arg0: tensor<50x42xi16> ,%arg1: tensor<1xi16> , %arg2: tensor<1xi16> ) -> tensor<*xi16> {
+  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK:   ^bb0([[ARG0:%.*]]: i16, [[ARG1:%.*]]: i16, [[ARG2:%.*]]: i16, [[OUT:%.*]]: i16)
+  // CHECK:   [[EXTSI1:%.*]] = arith.extsi [[ARG1]] : i16 to i64
+  // CHECK:   [[EXTSI2:%.*]] = arith.extsi [[ARG2]] : i16 to i64
+  // CHECK:   [[SUM:%.*]] = arith.addi [[EXTSI1]], [[EXTSI2]] : i64
+  // CHECK:   [[EXTSI0:%.*]] = arith.extsi [[ARG0]] : i16 to i64
+  // CHECK:   [[SUB:%.*]] = arith.subi [[SUM]], [[EXTSI0]] : i64
+  // CHECK:   [[C_32768:%.*]] = arith.constant -32768 : i64
+  // CHECK:   [[C32767:%.*]] = arith.constant 32767 : i64
+  // CHECK:   [[MAX:%.*]] = arith.maxsi [[C_32768]], [[SUB]] : i64
+  // CHECK:   [[MIN:%.*]] = arith.minsi [[C32767]], [[MAX]] : i64
+  // CHECK:   [[TRUNC:%.*]] = arith.trunci [[MIN]] : i64 to i16
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<50x42xi16>, tensor<1xi16>, tensor<1xi16>) -> tensor<50x42xi16>
+  %cast = tensor.cast %0 : tensor<50x42xi16> to tensor<*xi16>
+  return %cast : tensor<*xi16>
+}
+
+// -----
+
 // CHECK-LABEL: @test_identity
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<1xf32>,
 // CHECK-SAME: %[[ARG1:[0-9a-zA-Z_]*]]: tensor<1xi32>
@@ -908,6 +942,32 @@ func.func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<
 
   // CHECK: return %[[ARG0]], %[[ARG1]]
   return %0, %1 : tensor<1xf32>, tensor<1xi32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-LABEL: @reduce_bf16
+// CHECK-SAME: [[ARG0:%.+]]: tensor<5x4xbf16>
+func.func @reduce_bf16(%arg0: tensor<5x4xbf16>) -> () {
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<4xf32>
+  // CHECK: [[CST0:%.+]] = arith.constant 0.0
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
+  // CHECK: [[REDUCE:%.+]] = linalg.reduce ins([[ARG0]] : tensor<5x4xbf16>) outs([[FILL]] : tensor<4xf32>) dimensions = [0]
+  // CHECK:  (%[[ARG1:.*]]: bf16, %[[ARG2:.*]]: f32) {
+  // CHECK:   [[EXTF:%.+]] = arith.extf %[[ARG1]] : bf16 to f32
+  // CHECK:   [[ACC:%.+]] = arith.addf [[EXTF]], %[[ARG2]] : f32
+  // CHECK:   linalg.yield [[ACC]] : f32
+  // CHECK:  }
+  // CHECK: [[INIT_RES:%.+]] = tensor.empty() : tensor<4xbf16>
+  // CHECK: [[RES:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[REDUCE]] : tensor<4xf32>) outs([[INIT_RES]] : tensor<4xbf16>)
+  // CHECK:  ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: bf16):
+  // CHECK:   [[TRUNCF:%.+]] = arith.truncf %[[IN]] : f32 to bf16
+  // CHECK:   linalg.yield [[TRUNCF]] : bf16
+  // CHECK:  }
+  // CHECK: tensor.expand_shape [[RES]] {{\[}}[0, 1]] output_shape [1, 4] : tensor<4xbf16> into tensor<1x4xbf16>
+  %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<5x4xbf16>) -> tensor<1x4xbf16>
+  return
 }
 
 // -----

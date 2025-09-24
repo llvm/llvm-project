@@ -872,12 +872,12 @@ def CheckNull : Opcode;
 
 def BitCastTypeClass : TypeClass {
   let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64,
-               IntAP, IntAPS, Bool, Float, Ptr];
+               IntAP, IntAPS, Bool, Float, Ptr, MemberPtr];
 }
 
 def BitCastPrim : Opcode {
   let Types = [BitCastTypeClass];
-  let Args = [ArgBool, ArgUint32, ArgFltSemantics];
+  let Args = [ArgBool, ArgUint32, ArgFltSemantics, ArgTypePtr];
   let HasGroup = 1;
 }
 
