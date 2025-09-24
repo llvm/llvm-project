@@ -77,7 +77,7 @@ struct FormatStyle {
   ///   replaced with ``true`` and with setting of new style options using
   ///   ``BreakAfterOpenBracketBracedList``, ``BreakAfterOpenBracketFunction``,
   ///   ``BreakAfterOpenBracketIf``, ``BreakBeforeCloseBracketBracedList``,
-  ///   ``BreakBeforeCloseBracketFunction``, and ``BreakAfterOpenBracketIf``.
+  ///   ``BreakBeforeCloseBracketFunction``, and ``BreakBeforeCloseBracketIf``.
   /// \endnote
   ///
   /// This applies to round brackets (parentheses), angle brackets and square
