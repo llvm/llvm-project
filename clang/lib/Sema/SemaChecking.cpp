@@ -5882,19 +5882,8 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
   if (checkArgCountRange(TheCall, 2, 3))
     return true;
 
-  unsigned NumArgs = TheCall->getNumArgs();
-  Expr *FirstArg = TheCall->getArg(0);
-
-  {
-    ExprResult FirstArgResult =
-        DefaultFunctionArrayLvalueConversion(FirstArg);
-    if (!FirstArgResult.get()->getType()->isPointerType()) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_assume_aligned_invalid_arg)
-          << TheCall->getSourceRange();
-      return true;
-    }
-    TheCall->setArg(0, FirstArgResult.get());
-  }
+  if (checkBuiltinArgument(*this, TheCall, 0))
+    return true;
 
   // The alignment must be a constant integer.
   Expr *SecondArg = TheCall->getArg(1);
@@ -5914,7 +5903,7 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
           << SecondArg->getSourceRange() << Sema::MaximumAlignment;
   }
 
-  if (NumArgs > 2) {
+  if (TheCall->getNumArgs() > 2) {
     Expr *ThirdArg = TheCall->getArg(2);
     if (convertArgumentToType(*this, ThirdArg, Context.getSizeType()))
       return true;
