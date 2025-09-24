@@ -2640,16 +2640,13 @@ static bool OptimizeNonTrivialIFuncs(
         // of the features which we already know are unavailable on this
         // target, then we can skip over those versions/candidates).
         if (CallerIsFMV) {
-          // Discard feature bits that are known to be available
-          // in the current iteration.
-          for (APInt &Version : KnownBits)
-            if (CallerBits.isSubsetOf(Version))
-              Version &= ~CallerBits;
           // Keep advancing the candidate index as long as the unavailable
           // features are a subset of the current candidate's.
           unsigned J = 0;
           while (J < KnownBits.size()) {
-            APInt Version = KnownBits[J];
+            // Discard feature bits that are known to be available
+            // in the current iteration.
+            APInt Version = KnownBits[J] & ~CallerBits;
             if (Version.isSubsetOf(CalleeBits)) {
               if (++I == Callees.size())
                 break;
