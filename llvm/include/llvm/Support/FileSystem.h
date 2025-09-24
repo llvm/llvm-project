@@ -1292,7 +1292,7 @@ private:
   size_t Size = 0;
   void *Mapping = nullptr;
 #ifdef _WIN32
-  sys::fs::file_t FileHandle = nullptr;
+  sys::fs::file_t FileHandle;
 #endif
   mapmode Mode = readonly;
 

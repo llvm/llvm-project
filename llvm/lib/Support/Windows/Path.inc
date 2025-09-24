@@ -942,14 +942,16 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
   // are closed and the file is deleted, which may cause invalid data to be read
   // from the file.
   ::CloseHandle(FileMappingHandle);
+  HANDLE NewFileHandle;
   if (!::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle.get(),
-                         ::GetCurrentProcess(), &FileHandle, 0, 0,
+                         ::GetCurrentProcess(), &NewFileHandle, 0, 0,
                          DUPLICATE_SAME_ACCESS)) {
     std::error_code ec = mapWindowsError(GetLastError());
     ::UnmapViewOfFile(Mapping);
     return ec;
   }
 
+  FileHandle = file_t(NewFileHandle);
   return std::error_code();
 }
 

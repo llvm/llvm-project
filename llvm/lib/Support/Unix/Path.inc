@@ -120,6 +120,8 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
+const file_t::value_type file_t::Invalid = -1;
+
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
