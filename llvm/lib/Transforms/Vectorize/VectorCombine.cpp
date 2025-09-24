@@ -2499,6 +2499,12 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
 
   Instruction::CastOps Opcode = C0->getOpcode();
 
+  // If this is allowed, foldShuffleOfCastops can get stuck in a loop
+  // with foldBitcastOfShuffle. Reject in favor of foldBitcastOfShuffle.
+  if (!IsBinaryShuffle && Opcode == Instruction::BitCast) {
+    return false;
+  }
+
   if (IsBinaryShuffle) {
     if (C0->getSrcTy() != C1->getSrcTy())
       return false;
