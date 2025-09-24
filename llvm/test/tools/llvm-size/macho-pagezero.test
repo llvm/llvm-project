@@ -1,18 +1,16 @@
-# Test the -z option to skip __PAGEZERO segment in Mach-O files
+## Test the --exclude-pagezero option to skip __PAGEZERO segment in Mach-O files.
 
 # RUN: yaml2obj %s --docnum=1 -o %t-pagezero.o
 # RUN: llvm-size %t-pagezero.o | \
-# RUN:   FileCheck %s --check-prefix=NORMAL --match-full-lines \
-# RUN:                --strict-whitespace --implicit-check-not={{.}}
-# RUN: llvm-size -z %t-pagezero.o | \
-# RUN:   FileCheck %s --check-prefix=SKIP --match-full-lines \
-# RUN:                --strict-whitespace --implicit-check-not={{.}}
+# RUN:   FileCheck %s --check-prefix=NORMAL --match-full-lines
+# RUN: llvm-size --exclude-pagezero %t-pagezero.o | \
+# RUN:   FileCheck %s --check-prefix=SKIP --match-full-lines
 
 # NORMAL:__TEXT	__DATA	__OBJC	others	dec	hex
-# NORMAL-NEXT:20	100	0	4096	4216	1078	
+# NORMAL-NEXT:20	100	0	4096	4216	1078
 
 # SKIP:__TEXT	__DATA	__OBJC	others	dec	hex
-# SKIP-NEXT:20	100	0	0	120	78	
+# SKIP-NEXT:20	100	0	0	120	78
 
 --- !mach-o
 FileHeader:
