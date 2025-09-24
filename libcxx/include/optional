@@ -629,8 +629,8 @@ public:
   // [optional.iterators], iterator support
   _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
     auto& __derived_self = static_cast<optional<_Tp>&>(*this);
-    auto __ptr = [&__derived_self]() {
-      if constexpr (is_lvalue_reference_v<_Tp>) {        
+    auto __ptr           = [&__derived_self]() {
+      if constexpr (is_lvalue_reference_v<_Tp>) {
         return __derived_self.has_value() ? std::addressof(__derived_self.__get()) : nullptr;
       }
       return std::addressof(__derived_self.__get());

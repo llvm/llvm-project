@@ -306,7 +306,6 @@ constexpr bool test_ref() {
   }
   // Test && overload
   {
-
     //With & qualifier on F's operator()
     {
       int j = 42;

@@ -42,7 +42,7 @@ int main(int, char**)
     std::optional<const          std::in_place_t> o2; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
     std::optional<      volatile std::in_place_t> o3; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
     std::optional<const volatile std::in_place_t> o4; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with in_place_t is ill-formed}}
-    }
+  }
 
     {
     std::optional<               std::nullopt_t> o1; // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
