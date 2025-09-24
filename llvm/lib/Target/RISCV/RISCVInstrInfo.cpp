@@ -1023,6 +1023,37 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
+static unsigned getReverseOpcode(unsigned Opcode){
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected Opcode");
+  case RISCV::QC_MVEQ:
+    return RISCV::QC_MVNE;
+  case RISCV::QC_MVNE:
+    return RISCV::QC_MVEQ;
+  case RISCV::QC_MVLT:
+    return RISCV::QC_MVGE;
+  case RISCV::QC_MVGE:
+    return RISCV::QC_MVLT;
+  case RISCV::QC_MVLTU:
+    return RISCV::QC_MVGEU;
+  case RISCV::QC_MVGEU:
+    return RISCV::QC_MVLTU;
+  case RISCV::QC_MVEQI:
+    return RISCV::QC_MVNEI;
+  case RISCV::QC_MVNEI:
+    return RISCV::QC_MVEQI;
+  case RISCV::QC_MVLTI:
+    return RISCV::QC_MVGEI;
+  case RISCV::QC_MVGEI:
+    return RISCV::QC_MVLTI;
+  case RISCV::QC_MVLTUI:
+    return RISCV::QC_MVGEUI;
+  case RISCV::QC_MVGEUI:
+    return RISCV::QC_MVLTUI;
+  }
+}
+
 unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   switch (SelectOpc) {
   default:
@@ -3988,50 +4019,19 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                    OpIdx2);
   }
   case RISCV::QC_MVEQ:
-  case RISCV::QC_MVNE: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVEQ ? RISCV::QC_MVNE
-                                                           : RISCV::QC_MVEQ));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
+  case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:
-  case RISCV::QC_MVGE: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVLT ? RISCV::QC_MVGE
-                                                           : RISCV::QC_MVLT));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
+  case RISCV::QC_MVGE:
   case RISCV::QC_MVLTU:
-  case RISCV::QC_MVGEU: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVLTU ? RISCV::QC_MVGEU
-                                                           : RISCV::QC_MVLTU));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
+  case RISCV::QC_MVGEU:
   case RISCV::QC_MVEQI:
-  case RISCV::QC_MVNEI: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVEQI ? RISCV::QC_MVNEI
-                                                           : RISCV::QC_MVEQI));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
+  case RISCV::QC_MVNEI:
   case RISCV::QC_MVLTI:
-  case RISCV::QC_MVGEI: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVLTI ? RISCV::QC_MVGEI
-                                                           : RISCV::QC_MVLTI));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
+  case RISCV::QC_MVGEI:
   case RISCV::QC_MVLTUI:
   case RISCV::QC_MVGEUI: {
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == RISCV::QC_MVLTUI ? RISCV::QC_MVGEUI
-                                                           : RISCV::QC_MVLTUI));
+    WorkingMI.setDesc(get(getReverseOpcode(MI.getOpcode())));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
