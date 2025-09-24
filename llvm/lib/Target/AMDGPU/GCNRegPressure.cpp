@@ -615,6 +615,8 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
       continue;
     if (MO.isUse() && !MO.readsReg())
       continue;
+    if (MO.isUse() && MO.getParent()->getOpcode() == AMDGPU::PHI)
+      continue;
     if (!UseInternalIterator && MO.isDef())
       continue;
     if (!SeenRegs.insert(MO.getReg()).second)
