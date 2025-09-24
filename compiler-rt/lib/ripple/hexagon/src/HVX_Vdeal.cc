@@ -17,7 +17,6 @@
 
 // _______________________________ vdeal / vshuff ______________________________
 
-
 extern "C" {
 
 #define __decl_hvx_vdeal(N_ELEM, T)                                            \
@@ -46,6 +45,15 @@ __decl_hvx_vdeal(128, u16);
 __decl_hvx_vdeal(64, u32);
 __decl_hvx_vdeal(32, u64);
 
+__decl_hvx_vdeal(32, f64);
+__decl_hvx_vdeal(64, f32);
+#if __has_bf16__
+__decl_hvx_vdeal(128, bf16);
+#endif
+#if __has_Float16__
+__decl_hvx_vdeal(128, f16);
+#endif
+
 __decl_hvx_vshuff(256, i8);
 __decl_hvx_vshuff(128, i16);
 __decl_hvx_vshuff(64, i32);
@@ -55,4 +63,16 @@ __decl_hvx_vshuff(256, u8);
 __decl_hvx_vshuff(128, u16);
 __decl_hvx_vshuff(64, u32);
 __decl_hvx_vshuff(32, u64);
+
+__decl_hvx_vshuff(32, f64);
+__decl_hvx_vshuff(64, f32);
+#if __has_bf16__
+__decl_hvx_vshuff(128, bf16);
+#endif
+#if __has_Float16__
+__decl_hvx_vshuff(128, f16);
+#endif
+
+#undef __decl_hvx_vdeal
+#undef __decl_hvx_vshuff
 }

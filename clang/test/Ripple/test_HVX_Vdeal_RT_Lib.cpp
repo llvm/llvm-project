@@ -16,11 +16,17 @@
 #define HVX_32_u32 64
 #define HVX_16_u64 32
 
+#define HVX_16_f64 32
+#define HVX_32_f32 64
+#define HVX_64_bf16 128
+#define HVX_64_f16 128
+
 #define __gen_vdeal_test(CT, T, N)                                             \
     void Ripple_vdeal_##T(size_t length, CT *dest,                             \
         CT *src, size_t chunk_size) {                                          \
       ripple_block_t BS = ripple_set_block_shape(0, HVX_##N##_##T);            \
       int v = ripple_id(BS, 0);                                                \
+      src[v] = src[v] + src[v];                                                \
       dest[v] = hvx_vdeal(src[v], chunk_size);                                 \
     }
 
@@ -29,6 +35,7 @@
         CT *src, size_t chunk_size) {                                          \
       ripple_block_t BS = ripple_set_block_shape(0, HVX_##N##_##T);            \
       int v = ripple_id(BS, 0);                                                \
+      src[v] = src[v] + src[v];                                                \
       dest[v] = hvx_vshuff(src[v], chunk_size);                                \
     }
 
@@ -68,6 +75,17 @@ __gen_vdeal_test(uint64_t, u64, 16);
 // CHECK: @Ripple_vdeal_u64
 // CHECK: call <32 x i64> @ripple_pure_hvx_vdeal_u64
 
+__gen_vdeal_test(double, f64, 16);
+// CHECK: @Ripple_vdeal_f64
+// CHECK: call <32 x double> @ripple_pure_hvx_vdeal_f64
+
+__gen_vdeal_test(float, f32, 32);
+// CHECK: @Ripple_vdeal_f32
+// CHECK: call <64 x float> @ripple_pure_hvx_vdeal_f32
+
+__gen_vdeal_test(_Float16, f16, 64);
+// CHECK: @Ripple_vdeal_f16
+// CHECK: call <128 x half> @ripple_pure_hvx_vdeal_f16
 
 // __________________________________ vshuff ___________________________________
 
@@ -102,5 +120,17 @@ __gen_vshuff_test(int64_t, i64, 16);
 __gen_vshuff_test(uint64_t, u64, 16);
 // CHECK: @Ripple_vshuff_u64
 // CHECK: call <32 x i64> @ripple_pure_hvx_vshuff_u64
+
+__gen_vshuff_test(double, f64, 16);
+// CHECK: @Ripple_vshuff_f64
+// CHECK: call <32 x double> @ripple_pure_hvx_vshuff_f64
+
+__gen_vshuff_test(float, f32, 32);
+// CHECK: @Ripple_vshuff_f32
+// CHECK: call <64 x float> @ripple_pure_hvx_vshuff_f32
+
+__gen_vshuff_test(_Float16, f16, 64);
+// CHECK: @Ripple_vshuff_f16
+// CHECK: call <128 x half> @ripple_pure_hvx_vshuff_f16
 
 }
