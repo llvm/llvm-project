@@ -991,6 +991,16 @@ TEST(MustachePartials, PaddingWhitespace) {
   EXPECT_EQ("|[]|", Out);
 }
 
+TEST(MustachePartials, StandaloneIndentation) {
+  Value D = Object{{"content", "<\n->"}};
+  auto T = Template("\\\n  {{>partial}}\n/\n");
+  T.registerPartial("partial", "|\n{{{content}}}\n|\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("\\\n  |\n  <\n  ->\n  |\n/\n", Out);
+}
+
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
   auto T = Template("Hello, {{lambda}}!");
