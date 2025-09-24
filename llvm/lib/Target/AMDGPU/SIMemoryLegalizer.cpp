@@ -106,6 +106,7 @@ private:
   bool IsLastUse = false;
   bool IsCooperative = false;
 
+  // TODO: Should we assume Cooperative=true if no MMO is present?
   SIMemOpInfo(
       const GCNSubtarget &ST,
       AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
@@ -338,6 +339,11 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
+  /// Add final touches to a `mayStore` instruction \p MI, which may be a
+  /// Store or RMW instruction.
+  /// FIXME: This takes a MI because iterators aren't handled properly. When
+  /// this is called, they often point to entirely different insts. Thus we back
+  /// up the inst early and pass it here instead.
   virtual bool finalizeStore(MachineInstr &MI, bool Atomic) const {
     return false;
   };
@@ -2381,7 +2387,10 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       //   which shares the same L0.
       //
       // GFX12.5:
-      //   TODO DOCS
+      //   CU$ has two ports. To ensure operations are visible at the workgroup
+      //   level, we need to ensure all operations in this port have completed
+      //   so the other SIMDs in the WG can see them. There is no ordering
+      //   guarantee between the ports.
       if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts()) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           LOADCnt |= true;
@@ -2496,8 +2505,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     //  Otherwise in CU mode all waves of a work-group are on the same CU, and
     //  so the L0 does not need to be invalidated.
     //
-    // GFX12.5
-    //   TODO DOCS
+    // GFX12.5 has a shared WGP$, so no invalidates are required.
     if (ST.isCuModeEnabled())
       return false;
 
@@ -2541,7 +2549,8 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       ++MI;
 
     // global_wb is only necessary at system scope for GFX12.0,
-    // they're also necessary at device scope for GFX12.5.
+    // they're also necessary at device scope for GFX12.5 as stores
+    // cannot report completion earlier than L2.
     //
     // Emitting it for lower scopes is a slow no-op, so we omit it
     // for performance.
@@ -2552,7 +2561,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::AGENT:
-      // TODO DOCS
+      // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
       if (ST.hasGFX1250Insts()) {
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
             .addImm(AMDGPU::CPol::SCOPE_DEV);
