@@ -27,19 +27,15 @@
 namespace mlir {
 namespace xegpu {
 namespace uArch {
-// Architecture HW component hierarchy to present thread, core, socket ...
-struct uArchHierarchyComponent {
-  std::string name = ""; // optional name of the hierarchy component
-  // no. of lower hierarchy component it contains, e.g., for PVC XeCore it
-  // contains 8 threads, so no_of_component=8
-  uint32_t no_of_component;
-  // Constructor
-  uArchHierarchyComponent(const std::string &name, uint32_t no_of_component)
-      : name(name), no_of_component(no_of_component) {}
-};
 
 // An enum class to represent the scope of an instruction
-enum class InstructionScopeEnum { WorkItem, Subgroup, Workgroup, Cluster };
+enum class InstructionScope { WorkItem, Subgroup, Workgroup, Cluster };
+
+enum class InstructionName {
+  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix multiply-add
+        // operation
+  // Add more instructions as needed
+};
 
 // A struct to represent basic information about an instruction
 // This struct is used to represent the information about an instruction in the
@@ -67,69 +63,62 @@ struct Instruction {
   // Get methods
   std::string getName() { return name; }
   std::string getDescription() { return description; }
-  InstructionScopeEnum getScope() { return scope; }
+  InstructionScope getScope() { return scope; }
 
 protected:
   std::string name;
   std::string description;
-  InstructionScopeEnum scope;
+  InstructionScope scope;
 };
+
+enum class RegisterFileMode : uint8_t { Small, Large };
+enum class RegisterFileType : uint8_t { GRF, ARF };
 
 // A struct to represent register file information
 struct RegisterFileInfo {
   // Constructor
   RegisterFileInfo() = default;
-  RegisterFileInfo(uint32_t size, const std::vector<std::string> &mode,
-                   const std::vector<uint32_t> &numRegs, uint32_t num_banks,
-                   uint32_t bank_size)
-      : size(size), mode(mode), num_regs_per_thread_per_mode(numRegs),
-        num_banks(num_banks), bank_size(bank_size) {}
+  RegisterFileInfo(uint32_t size, const std::vector<RegisterFileMode> &mode,
+                   const std::vector<uint32_t> &numRegs)
+      : size(size), mode(mode), numRegsPerThreadPerMode(numRegs) {}
 
-  // Get methods
   uint32_t getSize() const { return size; }
-
-  const std::vector<std::string> &getModes() const { return mode; }
-
+  const std::vector<RegisterFileMode> &getModes() const { return mode; }
   const std::vector<uint32_t> &getNumRegsPerThreadPerMode() const {
-    return num_regs_per_thread_per_mode;
+    return numRegsPerThreadPerMode;
   }
 
-  uint32_t getNumBanks() const { return num_banks; }
-
-  uint32_t getBankSize() const { return bank_size; }
-
 protected:
-  uint32_t size;                 // size per register in bits
-  std::vector<std::string> mode; // e.g., "small", "large" GRF modes
+  uint32_t size;                      // size per register in bits
+  std::vector<RegisterFileMode> mode; // e.g., "small", "large" GRF modes
   std::vector<uint32_t>
-      num_regs_per_thread_per_mode; // number of registers per thread per mode
-  uint32_t num_banks;
-  uint32_t bank_size;
+      numRegsPerThreadPerMode; // number of registers per thread per mode
+  // TODO: Add more fields as needed (e.g., num_banks, bank_size, num_ports,
+  // port_width, bank_conflicts)
 };
 
+enum class CacheHierarchyLevel { L1 = 1, L2 = 2, L3 = 3 };
 // A struct to represent cache information
-
 struct CacheInfo {
   // Constructor
   CacheInfo(uint32_t size, uint32_t line_size,
-            const uArchHierarchyComponent &component)
-      : size(size), line_size(line_size), component(component) {}
+            CacheHierarchyLevel hierarchy_level)
+      : size(size), line_size(line_size), hierarchy_level(hierarchy_level) {}
 
   virtual ~CacheInfo() = default;
 
   // Get methods
   uint32_t getSize() const { return size; }
   uint32_t getLineSize() const { return line_size; }
-  const uArchHierarchyComponent &getComponent() const { return component; }
+  CacheHierarchyLevel getHierarchyLevel() const { return hierarchy_level; }
 
 protected:
   uint32_t size;
   uint32_t line_size;
-  // At which component level the cache is shared
-  uArchHierarchyComponent component;
-
+  CacheHierarchyLevel hierarchy_level;
   // @TODO: Add more fields as needed (e.g., associativity, num_banks,
-  // bank_size, num_ports, port_width, bank_conflicts)
+  // bank_size, num_ports, port_width, bank_conflicts, hierarchy_level,
+  // latency, throughput, bandwidth)
 };
 
 // A struct to represent the uArch
@@ -145,13 +134,13 @@ struct uArch {
   // Constructor
   uArch() = default;
   uArch(const std::string &name, const std::string &description,
-        const std::vector<uArchHierarchyComponent> &uArch_hierarchy = {},
-        const std::map<std::string, RegisterFileInfo> &register_file_info = {},
+        const std::map<RegisterFileType, RegisterFileInfo> &register_file_info =
+            {},
         const std::vector<CacheInfo> &cache_info = {},
         const std::map<std::string, std::shared_ptr<Instruction>>
             &instructions = {})
-      : name(name), description(description), uArch_hierarchy(uArch_hierarchy),
-        register_file_info(register_file_info), cache_info(cache_info),
+      : name(name), description(description),
+        registerFileInfo(register_file_info), cacheInfo(cache_info),
         instructions(instructions) {}
 
   // Get methods
@@ -159,15 +148,12 @@ struct uArch {
 
   const std::string &getDescription() const { return description; }
 
-  const std::vector<uArchHierarchyComponent> &getHierarchy() const {
-    return uArch_hierarchy;
+  const std::map<RegisterFileType, RegisterFileInfo> &
+  getRegisterFileInfo() const {
+    return registerFileInfo;
   }
 
-  const std::map<std::string, RegisterFileInfo> &getRegisterFileInfo() const {
-    return register_file_info;
-  }
-
-  const std::vector<CacheInfo> &getCacheInfo() const { return cache_info; }
+  const std::vector<CacheInfo> &getCacheInfo() const { return cacheInfo; }
 
   const std::map<std::string, std::shared_ptr<Instruction>> &
   getInstructions() const {
@@ -192,9 +178,8 @@ struct uArch {
 protected:
   std::string name; // Similar to target triple
   std::string description;
-  std::vector<uArchHierarchyComponent> uArch_hierarchy;
-  std::map<std::string, RegisterFileInfo> register_file_info;
-  std::vector<CacheInfo> cache_info;
+  std::map<RegisterFileType, RegisterFileInfo> registerFileInfo;
+  std::vector<CacheInfo> cacheInfo;
   std::map<std::string, std::shared_ptr<Instruction>> instructions;
 };
 
