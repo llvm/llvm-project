@@ -11,8 +11,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -46,7 +46,7 @@ public:
 
   StringRef getPassName() const override { return "RISC-V Promote Constant"; }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesCFG();
   }
@@ -81,7 +81,8 @@ ModulePass *llvm::createRISCVPromoteConstantPass() {
   return new RISCVPromoteConstant();
 }
 
-bool RISCVPromoteConstant::runOnFunction(Function &F, const RISCVTargetLowering *TLI) {
+bool RISCVPromoteConstant::runOnFunction(Function &F,
+                                         const RISCVTargetLowering *TLI) {
   // Bail out and make no transformation if the target doesn't support
   // doubles, or if we're not targeting RV64 as we currently see some
   // regressions for those targets.
@@ -102,7 +103,8 @@ bool RISCVPromoteConstant::runOnFunction(Function &F, const RISCVTargetLowering 
     for (Use &U : I.operands()) {
       if (auto *C = dyn_cast<ConstantFP>(U.get())) {
         if (C->getType()->isDoubleTy()) {
-          if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64, /*ForCodeSize*/ false))
+          if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
+                                /*ForCodeSize*/ false))
             continue;
           UsesInFunc[C].push_back(&U);
           if (ConstantMap.find(C) == ConstantMap.end()) {
@@ -122,7 +124,8 @@ bool RISCVPromoteConstant::runOnFunction(Function &F, const RISCVTargetLowering 
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
         if (auto *C = dyn_cast<ConstantFP>(PN.getIncomingValue(i))) {
           if (C->getType()->isDoubleTy()) {
-            if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64, /*ForCodeSize*/ false))
+            if (TLI->isFPImmLegal(C->getValueAPF(), MVT::f64,
+                                  /*ForCodeSize*/ false))
               continue;
             UsesInFunc[C].push_back(&PN.getOperandUse(i));
             if (ConstantMap.find(C) == ConstantMap.end()) {
@@ -144,7 +147,8 @@ bool RISCVPromoteConstant::runOnFunction(Function &F, const RISCVTargetLowering 
   Module *M = F.getParent();
   Type *DoubleTy = Type::getDoubleTy(M->getContext());
   ArrayType *ArrayTy = ArrayType::get(DoubleTy, ConstantVector.size());
-  Constant *GlobalArrayInitializer = ConstantArray::get(ArrayTy, ConstantVector);
+  Constant *GlobalArrayInitializer =
+      ConstantArray::get(ArrayTy, ConstantVector);
 
   auto *GlobalArray = new GlobalVariable(
       *M, ArrayTy,
