@@ -1045,10 +1045,8 @@ struct WgToSgMultiDimReductionOp
     if (!dstType)
       return failure();
 
-    SmallVector<int64_t> srcShape(srcType.getShape().begin(),
-                                  srcType.getShape().end());
-    SmallVector<int64_t> dstShape(dstType.getShape().begin(),
-                                  dstType.getShape().end());
+    auto srcShape = srcType.getShape();
+    auto dstShape = dstType.getShape();
     if (srcShape.size() != 2 || dstShape.size() != 1)
       return failure();
 
@@ -1057,27 +1055,34 @@ struct WgToSgMultiDimReductionOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    SmallVector<int64_t> reductionDims(op.getReductionDims().begin(),
-                                       op.getReductionDims().end());
+    auto reductionDims = llvm::to_vector(op.getReductionDims());
     if (reductionDims.size() != 1)
       return failure();
 
     SmallVector<int64_t> sgLayout = llvm::cast<xegpu::SliceAttr>(layout)
                                         .getParent()
                                         .getEffectiveSgLayoutAsInt();
-    // Check that the sgLayout in the reduced dimension is 1.
-    if (sgLayout[reductionDims[0]] != 1)
-      return failure();
+    SmallVector<int64_t> sgData = llvm::cast<xegpu::SliceAttr>(layout)
+                                      .getParent()
+                                      .getEffectiveSgDataAsInt();
+
+    // Check that the sgLayout in the reduced dimension is 1 and
+    // each sg gets the entire slice to reduce.
+    if (sgLayout[reductionDims[0]] != 1 ||
+        sgData[reductionDims[0]] != srcShape[reductionDims[0]])
+      return rewriter.notifyMatchFailure(
+          op, "sgLayout in reduced dimension must be 1 and sgData in the "
+              "reduced dim must match srcShape in that dim");
+
     SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
 
     VectorType newDstType =
         VectorType::get({sgShape}, dstType.getElementType());
 
     SmallVector<Value> newReductions;
-    for (auto [sgSrc, sgAcc] :
-         llvm::zip(adaptor.getSource(), adaptor.getAcc())) {
-      auto newOp = vector::MultiDimReductionOp::create(
-          rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc, sgAcc,
+    for (auto sgSrc : adaptor.getSource()) {
+      auto newOp = rewriter.create<vector::MultiDimReductionOp>(
+          op.getLoc(), newDstType, op.getKind(), sgSrc, adaptor.getAcc()[0],
           op.getReductionDims());
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
@@ -1085,6 +1090,7 @@ struct WgToSgMultiDimReductionOp
                                        layout.dropSgLayoutAndData());
       newReductions.push_back(newOp.getResult());
     }
+
     rewriter.replaceOpWithMultiple(op, {newReductions});
     return success();
   }
