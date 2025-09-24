@@ -59,7 +59,7 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
 
 // Flattens an affine expression into a list of AffineDimExprs.
 struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
-  explicit AffineDimCollector(unsigned dimNum) : dims(dimNum){};
+  explicit AffineDimCollector(unsigned dimNum) : dims(dimNum) {};
   void visitDimExpr(AffineDimExpr expr) { dims.set(expr.getPosition()); }
   BitVector dims;
 };
@@ -67,7 +67,7 @@ struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
 // Flattens an affine expression into a list of AffineDimExprs.
 struct AffineExprAdmissibleVisitor
     : public AffineExprVisitor<AffineExprAdmissibleVisitor> {
-  explicit AffineExprAdmissibleVisitor(bool isOutput) : isOutput(isOutput){};
+  explicit AffineExprAdmissibleVisitor(bool isOutput) : isOutput(isOutput) {};
 
   // We only allow AffineDimExpr on output.
   void visitAddExpr(AffineBinaryOpExpr expr) {
@@ -407,9 +407,10 @@ public:
 };
 
 struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
-  GenericOpScheduler(MLIRContext *context, sparse_tensor::LoopOrderingStrategy strategy)
+  GenericOpScheduler(MLIRContext *context,
+                     sparse_tensor::LoopOrderingStrategy strategy)
       : OpRewritePattern<linalg::GenericOp>(context), strategy(strategy) {}
-  
+
   LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
                                 PatternRewriter &rewriter) const override {
     if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
@@ -792,9 +793,9 @@ struct ForeachOpDemapper
 
 } // namespace
 
-void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
-                                        ReinterpretMapScope scope,
-                                        sparse_tensor::LoopOrderingStrategy strategy) {
+void mlir::populateSparseReinterpretMap(
+    RewritePatternSet &patterns, ReinterpretMapScope scope,
+    sparse_tensor::LoopOrderingStrategy strategy) {
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kGenericOnly) {
     patterns.add<GenericOpReinterpretMap>(patterns.getContext());

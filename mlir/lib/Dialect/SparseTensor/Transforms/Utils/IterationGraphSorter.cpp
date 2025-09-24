@@ -100,7 +100,7 @@ AffineMap IterationGraphSorter::topoSort() {
     // We always prefer a parallel loop over a reduction loop because putting
     // a reduction loop early might make the loop sequence inadmissible.
     auto &it = !parIt.empty() ? parIt : redIt;
-    
+
     // Select loop based on strategy.
     unsigned src;
     switch (strategy) {
@@ -108,7 +108,7 @@ AffineMap IterationGraphSorter::topoSort() {
       src = it.back();
       break;
     }
-    
+
     loopOrder.push_back(src);
     it.pop_back();
     // Update in-degree, and push 0-degree node into worklist.
@@ -130,9 +130,8 @@ AffineMap IterationGraphSorter::topoSort() {
   return AffineMap();
 }
 
-IterationGraphSorter
-IterationGraphSorter::fromGenericOp(linalg::GenericOp genericOp, 
-                                   sparse_tensor::LoopOrderingStrategy strategy) {
+IterationGraphSorter IterationGraphSorter::fromGenericOp(
+    linalg::GenericOp genericOp, sparse_tensor::LoopOrderingStrategy strategy) {
   // Must be a demapped sparse kernel.
   assert(!hasAnyNonIdentityOperandsOrResults(genericOp) &&
          hasAnySparseOperandOrResult(genericOp) &&
@@ -157,7 +156,8 @@ IterationGraphSorter::IterationGraphSorter(
     AffineMap loop2OutLvl, SmallVector<utils::IteratorType> &&iterTypes,
     sparse_tensor::LoopOrderingStrategy strategy)
     : ins(std::move(ins)), loop2InsLvl(std::move(loop2InsLvl)), out(out),
-      loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypes)), strategy(strategy) {
+      loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypes)),
+      strategy(strategy) {
   // One map per tensor.
   assert(loop2InsLvl.size() == ins.size());
   // All the affine maps have the same number of dimensions (loops).

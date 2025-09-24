@@ -59,7 +59,8 @@ namespace sparse_tensor {
 
 /// Defines a strategy for loop ordering during sparse code generation.
 enum class LoopOrderingStrategy : unsigned {
-  kDefault, ///< Default strategy (eagerly selects last loop in topological sort).
+  kDefault, ///< Default strategy (eagerly selects last loop in topological
+            ///< sort).
 };
 
 } // namespace sparse_tensor
@@ -80,14 +81,16 @@ std::unique_ptr<Pass> createSparseAssembler(bool directOut);
 // The SparseReinterpretMap pass.
 //===----------------------------------------------------------------------===//
 
-void populateSparseReinterpretMap(RewritePatternSet &patterns,
-                                  ReinterpretMapScope scope,
-                                  sparse_tensor::LoopOrderingStrategy strategy = sparse_tensor::LoopOrderingStrategy::kDefault);
+void populateSparseReinterpretMap(
+    RewritePatternSet &patterns, ReinterpretMapScope scope,
+    sparse_tensor::LoopOrderingStrategy strategy =
+        sparse_tensor::LoopOrderingStrategy::kDefault);
 
 std::unique_ptr<Pass> createSparseReinterpretMapPass();
 std::unique_ptr<Pass> createSparseReinterpretMapPass(ReinterpretMapScope scope);
-std::unique_ptr<Pass> createSparseReinterpretMapPass(ReinterpretMapScope scope, 
-                                                     sparse_tensor::LoopOrderingStrategy strategy);
+std::unique_ptr<Pass>
+createSparseReinterpretMapPass(ReinterpretMapScope scope,
+                               sparse_tensor::LoopOrderingStrategy strategy);
 
 //===----------------------------------------------------------------------===//
 // The PreSparsificationRewriting pass.

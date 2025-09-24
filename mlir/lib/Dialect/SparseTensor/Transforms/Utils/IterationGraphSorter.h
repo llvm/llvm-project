@@ -13,8 +13,8 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_ITERATIONGRAPHSORTER_H_
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_ITERATIONGRAPHSORTER_H_
 
-#include "mlir/IR/AffineMap.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
+#include "mlir/IR/AffineMap.h"
 
 namespace mlir {
 
@@ -43,9 +43,11 @@ enum class SortMask : unsigned {
 class IterationGraphSorter {
 public:
   /// Factory method that constructs an iteration graph sorter
-  /// for the given linalg.generic operation with a specific loop ordering strategy.
-  static IterationGraphSorter fromGenericOp(linalg::GenericOp genericOp,
-                                           sparse_tensor::LoopOrderingStrategy strategy);
+  /// for the given linalg.generic operation with a specific loop ordering
+  /// strategy.
+  static IterationGraphSorter
+  fromGenericOp(linalg::GenericOp genericOp,
+                sparse_tensor::LoopOrderingStrategy strategy);
 
   /// Returns a permutation that represents the scheduled loop order.
   /// Note that the returned AffineMap could be null if the kernel
@@ -61,7 +63,8 @@ private:
                        SmallVector<AffineMap> &&loop2InsLvl, Value out,
                        AffineMap loop2OutLvl,
                        SmallVector<utils::IteratorType> &&iterTypes,
-                       sparse_tensor::LoopOrderingStrategy strategy = sparse_tensor::LoopOrderingStrategy::kDefault);
+                       sparse_tensor::LoopOrderingStrategy strategy =
+                           sparse_tensor::LoopOrderingStrategy::kDefault);
 
   // Adds all the constraints in the given loop to level map.
   void addConstraints(Value t, AffineMap loop2LvlMap);
