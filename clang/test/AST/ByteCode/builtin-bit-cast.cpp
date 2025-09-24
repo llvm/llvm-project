@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
-// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple powerpc64-unknown-unknown -mabi=ieeelongdouble %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -Wno-deprecate-lax-vec-conv-all %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu -Wno-deprecate-lax-vec-conv-all %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble -Wno-deprecate-lax-vec-conv-all %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++2a -fsyntax-only -triple powerpc64-unknown-unknown -mabi=ieeelongdouble -Wno-deprecate-lax-vec-conv-all %s
 
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter %s
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu -fexperimental-new-constant-interpreter %s
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble %s
-// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64-unknown-unknown -mabi=ieeelongdouble %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -Wno-deprecate-lax-vec-conv-all %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -triple aarch64_be-linux-gnu -fexperimental-new-constant-interpreter -Wno-deprecate-lax-vec-conv-all %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64le-unknown-unknown -mabi=ieeelongdouble -Wno-deprecate-lax-vec-conv-all %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++2a -fsyntax-only -fexperimental-new-constant-interpreter -triple powerpc64-unknown-unknown -mabi=ieeelongdouble -Wno-deprecate-lax-vec-conv-all %s
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #  define LITTLE_END 1
