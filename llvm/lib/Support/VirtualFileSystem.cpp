@@ -53,8 +53,8 @@
 using namespace llvm;
 using namespace llvm::vfs;
 
-using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_status;
+using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_type;
 using llvm::sys::fs::perms;
 using llvm::sys::fs::UniqueID;
