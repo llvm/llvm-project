@@ -2300,12 +2300,12 @@ libc_support_library(
     name = "__support_math_rsqrtf",
     hdrs = ["src/__support/math/rsqrtf.h"],
     deps = [
-        ":hdr_errno_macros",  
-        ":hdr_fenv_macros",  
-        ":__support_fputil_cast",  
-        ":__support_fputil_fenv_impl",  
-        ":__support_fputil_fp_bits",  
-        ":__support_macros_optimization",  
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_optimization",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
     ],
 )
 

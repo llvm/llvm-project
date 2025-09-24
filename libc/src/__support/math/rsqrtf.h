@@ -1,4 +1,4 @@
-//===-- Implementation header for rsqrtf ------------------------*- C++ -*-===//  
+//===-- Implementation header for rsqrtf ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_RSQRTF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_RSQRTF_H
 
-#include "hdr/errno_macros.h"  
-#include "hdr/fenv_macros.h"  
-#include "src/__support/FPUtil/FEnvImpl.h"  
-#include "src/__support/FPUtil/FPBits.h"  
-#include "src/__support/FPUtil/cast.h"  
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
 
