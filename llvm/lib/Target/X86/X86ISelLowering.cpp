@@ -25100,13 +25100,69 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
   // Handle floating point on i386 without SSE/CMOV (constant-time requirement)
   if (!Subtarget.hasSSE1() && VT.isFloatingPoint() && !VT.isVector()) {
     if (VT == MVT::f32) {
-      // Bitcast f32 to i32, use raw condition with ISD::CTSELECT (avoids EFLAGS redundancy)
+      // Optimize: if operands are memory loads, access raw bits directly
+      if (TrueOp.getOpcode() == ISD::LOAD && FalseOp.getOpcode() == ISD::LOAD) {
+        LoadSDNode *TrueLoad = cast<LoadSDNode>(TrueOp.getNode());
+        LoadSDNode *FalseLoad = cast<LoadSDNode>(FalseOp.getNode());
+
+        // Load the same memory addresses as i32 (raw f32 bits)
+        SDValue TrueI32 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
+                                      TrueLoad->getBasePtr(), TrueLoad->getPointerInfo());
+        SDValue FalseI32 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
+                                       FalseLoad->getBasePtr(), FalseLoad->getPointerInfo());
+
+        // Direct CTSELECT on raw bits
+        SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueI32, FalseI32);
+
+        // Store result and load back as f32
+        SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f32);
+        SDValue Store = DAG.getStore(DAG.getEntryNode(), DL, CtSelect, ResultSlot,
+                                     MachinePointerInfo());
+        return DAG.getLoad(MVT::f32, DL, Store, ResultSlot, MachinePointerInfo());
+      }
+
+      // Fallback: bitcast approach for register values
       TrueOp = DAG.getBitcast(MVT::i32, TrueOp);
       FalseOp = DAG.getBitcast(MVT::i32, FalseOp);
       SDValue CtSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueOp, FalseOp);
       return DAG.getBitcast(VT, CtSelect);
     } else if (VT == MVT::f64) {
-      // For f64 on i386, avoid all i64 operations by using memory to split/reassemble
+      // Optimize: if operands are memory loads, access raw bits directly
+      if (TrueOp.getOpcode() == ISD::LOAD && FalseOp.getOpcode() == ISD::LOAD) {
+        LoadSDNode *TrueLoad = cast<LoadSDNode>(TrueOp.getNode());
+        LoadSDNode *FalseLoad = cast<LoadSDNode>(FalseOp.getNode());
+
+        // Load i32 parts directly from memory (lo/hi 32-bit chunks)
+        SDValue TrueLo = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
+                                     TrueLoad->getBasePtr(), TrueLoad->getPointerInfo());
+        SDValue TrueHiPtr = DAG.getMemBasePlusOffset(TrueLoad->getBasePtr(),
+                                                     TypeSize::getFixed(4), DL);
+        SDValue TrueHi = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
+                                     TrueHiPtr, TrueLoad->getPointerInfo());
+
+        SDValue FalseLo = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
+                                      FalseLoad->getBasePtr(), FalseLoad->getPointerInfo());
+        SDValue FalseHiPtr = DAG.getMemBasePlusOffset(FalseLoad->getBasePtr(),
+                                                      TypeSize::getFixed(4), DL);
+        SDValue FalseHi = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
+                                      FalseHiPtr, FalseLoad->getPointerInfo());
+
+        // Direct CTSELECT on both i32 parts
+        SDValue LoSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueLo, FalseLo);
+        SDValue HiSelect = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TrueHi, FalseHi);
+
+        // Store result parts and load back as f64
+        SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f64);
+        SDValue Chain = DAG.getEntryNode();
+        SDValue StoreResLo = DAG.getStore(Chain, DL, LoSelect, ResultSlot,
+                                          MachinePointerInfo());
+        SDValue ResHiPtr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
+        SDValue StoreResHi = DAG.getStore(StoreResLo, DL, HiSelect, ResHiPtr,
+                                          MachinePointerInfo());
+        return DAG.getLoad(MVT::f64, DL, StoreResHi, ResultSlot, MachinePointerInfo());
+      }
+
+      // Fallback: memory-based approach for register values
       // TODO: Consider creating CTSELECT_I386_F64mm pseudo instruction
       // for single bundled 64-bit memory-based post-RA expansion
 
@@ -25150,7 +25206,54 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
       // Load complete f64 result from memory
       return DAG.getLoad(MVT::f64, DL, StoreResHi, ResultSlot, MachinePointerInfo());
     } else if (VT == MVT::f80) {
-      // For f80 on i386, use memory-based approach with 3×32-bit chunks
+      // Optimize: if operands are memory loads, access raw bits directly
+      if (TrueOp.getOpcode() == ISD::LOAD && FalseOp.getOpcode() == ISD::LOAD) {
+        LoadSDNode *TrueLoad = cast<LoadSDNode>(TrueOp.getNode());
+        LoadSDNode *FalseLoad = cast<LoadSDNode>(FalseOp.getNode());
+
+        // Load i32 parts directly from memory (3 chunks: [0-3], [4-7], [8-11] bytes)
+        SDValue TruePart0 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
+                                        TrueLoad->getBasePtr(), TrueLoad->getPointerInfo());
+        SDValue TruePart1Ptr = DAG.getMemBasePlusOffset(TrueLoad->getBasePtr(),
+                                                        TypeSize::getFixed(4), DL);
+        SDValue TruePart1 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
+                                        TruePart1Ptr, TrueLoad->getPointerInfo());
+        SDValue TruePart2Ptr = DAG.getMemBasePlusOffset(TrueLoad->getBasePtr(),
+                                                        TypeSize::getFixed(8), DL);
+        SDValue TruePart2 = DAG.getLoad(MVT::i32, DL, TrueLoad->getChain(),
+                                        TruePart2Ptr, TrueLoad->getPointerInfo());
+
+        SDValue FalsePart0 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
+                                         FalseLoad->getBasePtr(), FalseLoad->getPointerInfo());
+        SDValue FalsePart1Ptr = DAG.getMemBasePlusOffset(FalseLoad->getBasePtr(),
+                                                         TypeSize::getFixed(4), DL);
+        SDValue FalsePart1 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
+                                         FalsePart1Ptr, FalseLoad->getPointerInfo());
+        SDValue FalsePart2Ptr = DAG.getMemBasePlusOffset(FalseLoad->getBasePtr(),
+                                                         TypeSize::getFixed(8), DL);
+        SDValue FalsePart2 = DAG.getLoad(MVT::i32, DL, FalseLoad->getChain(),
+                                         FalsePart2Ptr, FalseLoad->getPointerInfo());
+
+        // Direct CTSELECT on all three i32 parts
+        SDValue Part0Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart0, FalsePart0);
+        SDValue Part1Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart1, FalsePart1);
+        SDValue Part2Select = DAG.getNode(ISD::CTSELECT, DL, MVT::i32, Cond, TruePart2, FalsePart2);
+
+        // Store result parts and load back as f80
+        SDValue ResultSlot = DAG.CreateStackTemporary(MVT::f80);
+        SDValue Chain = DAG.getEntryNode();
+        SDValue StorePart0 = DAG.getStore(Chain, DL, Part0Select, ResultSlot,
+                                          MachinePointerInfo());
+        SDValue ResPart1Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(4), DL);
+        SDValue StorePart1 = DAG.getStore(StorePart0, DL, Part1Select, ResPart1Ptr,
+                                          MachinePointerInfo());
+        SDValue ResPart2Ptr = DAG.getMemBasePlusOffset(ResultSlot, TypeSize::getFixed(8), DL);
+        SDValue StorePart2 = DAG.getStore(StorePart1, DL, Part2Select, ResPart2Ptr,
+                                          MachinePointerInfo());
+        return DAG.getLoad(MVT::f80, DL, StorePart2, ResultSlot, MachinePointerInfo());
+      }
+
+      // Fallback: memory-based approach for register values
       // f80 is stored as 96 bits (80 bits + 16 padding), handled as 3×i32
       // TODO: Consider creating CTSELECT_I386_F80mm pseudo instruction
       // for single bundled 80-bit memory-based post-RA expansion
