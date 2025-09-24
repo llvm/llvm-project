@@ -4991,9 +4991,8 @@ struct OpenMPGroupprivate {
 
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
 struct OpenMPRequiresConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPRequiresConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPRequiresConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
