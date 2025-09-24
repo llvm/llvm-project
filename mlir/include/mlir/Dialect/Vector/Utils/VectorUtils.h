@@ -250,6 +250,10 @@ LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
 /// create sub vectors.
 /// 5. Insert the sub vectors back into the final vector.
 /// 6. Replace the original op with the new result.
+///
+/// Expects the operation to be unrolled to have at most 1 result. When there's
+/// no result, expects the caller to pass in the `vectorTy` to be able to get
+/// the unroll factor.
 using UnrollVectorOpFn =
     function_ref<Value(PatternRewriter &, Location, VectorType, int64_t)>;
 

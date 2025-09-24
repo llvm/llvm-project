@@ -433,15 +433,12 @@ vector::unrollVectorValue(TypedValue<VectorType> vector,
 LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
                                      vector::UnrollVectorOpFn unrollFn,
                                      VectorType vectorTy) {
-  // If vector type is not provided, get it from the result
+  // If vector type is not provided, get it from the result.
   if (!vectorTy) {
-    if (op->getNumResults() != 1)
-      return rewriter.notifyMatchFailure(
-          op, "expected single result when vector type not provided");
-
+    assert(op->getNumResults() == 1 &&
+           "expected single result when vector type not provided");
     vectorTy = dyn_cast<VectorType>(op->getResult(0).getType());
-    if (!vectorTy)
-      return rewriter.notifyMatchFailure(op, "expected vector type");
+    assert(vectorTy && "expected result to have vector type");
   }
 
   if (vectorTy.getRank() < 2)
@@ -454,7 +451,7 @@ LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
 
   Location loc = op->getLoc();
 
-  // Only create result value if the operation produces results
+  // Only create result value if the operation produces results.
   Value result;
   if (op->getNumResults() > 0) {
     result = ub::PoisonOp::create(rewriter, loc, vectorTy);
@@ -465,7 +462,7 @@ LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
   for (int64_t i = 0, e = vectorTy.getShape().front(); i < e; ++i) {
     Value subVector = unrollFn(rewriter, loc, subTy, i);
 
-    // Only insert if we have a result to build
+    // Only insert if we have a result to build.
     if (op->getNumResults() > 0) {
       result = vector::InsertOp::create(rewriter, loc, subVector, result, i);
     }

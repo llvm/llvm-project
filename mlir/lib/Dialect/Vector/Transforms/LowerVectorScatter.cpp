@@ -65,7 +65,7 @@ struct UnrollScatter : OpRewritePattern<vector::ScatterOp> {
     Value maskVec = op.getMask();
     Value valueVec = op.getValueToStore();
 
-    // Get the vector type from one of the vector operands
+    // Get the vector type from one of the vector operands.
     VectorType vectorTy = dyn_cast<VectorType>(indexVec.getType());
     if (!vectorTy)
       return failure();
@@ -85,8 +85,8 @@ struct UnrollScatter : OpRewritePattern<vector::ScatterOp> {
                                          indexSubVec, maskSubVec, valueSubVec,
                                          op.getAlignmentAttr());
 
-      // Return a dummy value since unrollVectorOp expects a Value
-      return rewriter.create<ub::PoisonOp>(loc, subTy);
+      // Return a dummy value since unrollVectorOp expects a Value.
+      return Value();
     };
 
     return unrollVectorOp(op, rewriter, unrollScatterFn, vectorTy);
