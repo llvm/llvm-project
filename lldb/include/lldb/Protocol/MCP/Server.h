@@ -29,10 +29,11 @@
 namespace lldb_protocol::mcp {
 
 class Server : public MCPTransport::MessageHandler {
+  using ClosedCallback = llvm::unique_function<void()>;
+
 public:
-  Server(std::string name, std::string version,
-         std::unique_ptr<MCPTransport> transport_up,
-         lldb_private::MainLoop &loop);
+  Server(std::string name, std::string version, MCPTransport &client,
+         LogCallback log_callback = {}, ClosedCallback closed_callback = {});
   ~Server() = default;
 
   using NotificationHandler = std::function<void(const Notification &)>;
@@ -41,8 +42,6 @@ public:
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
   void AddNotificationHandler(llvm::StringRef method,
                               NotificationHandler handler);
-
-  llvm::Error Run();
 
 protected:
   ServerCapabilities GetCapabilities();
@@ -73,14 +72,16 @@ protected:
   void OnError(llvm::Error) override;
   void OnClosed() override;
 
-  void TerminateLoop();
+protected:
+  void Log(llvm::StringRef);
 
 private:
   const std::string m_name;
   const std::string m_version;
 
-  std::unique_ptr<MCPTransport> m_transport_up;
-  lldb_private::MainLoop &m_loop;
+  MCPTransport &m_client;
+  LogCallback m_log_callback;
+  ClosedCallback m_closed_callback;
 
   llvm::StringMap<std::unique_ptr<Tool>> m_tools;
   std::vector<std::unique_ptr<ResourceProvider>> m_resource_providers;
@@ -108,8 +109,7 @@ bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
 /// once it is no longer referenced.
 class ServerInfoHandle {
 public:
-  ServerInfoHandle();
-  explicit ServerInfoHandle(llvm::StringRef filename);
+  explicit ServerInfoHandle(llvm::StringRef filename = "");
   ~ServerInfoHandle();
 
   ServerInfoHandle(ServerInfoHandle &&other);
@@ -120,6 +120,9 @@ public:
   ServerInfoHandle(const ServerInfoHandle &) = delete;
   ServerInfoHandle &operator=(const ServerInfoHandle &) = delete;
   /// @}
+
+  /// Remove the file.
+  void Remove();
 
 private:
   llvm::SmallString<128> m_filename;

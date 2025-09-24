@@ -1385,12 +1385,31 @@ CollectNonTbpDefinedIoGenericInterfaces(
           if (const DeclTypeSpec *
               declType{GetDefinedIoSpecificArgType(*specific)}) {
             const DerivedTypeSpec &derived{DEREF(declType->AsDerived())};
-            if (const Symbol *
-                dtDesc{derived.scope()
-                        ? derived.scope()->runtimeDerivedTypeDescription()
+            const Scope *derivedScope{derived.scope()};
+            if (!declType->IsPolymorphic()) {
+              // A defined I/O subroutine with a monomorphic "dtv" dummy
+              // argument implies a non-extensible sequence or BIND(C) derived
+              // type.  Such types may be defined more than once in the program
+              // so long as they are structurally equivalent.  If the current
+              // scope has an equivalent type, use it for the table rather
+              // than the "dtv" argument's type.
+              if (const Symbol *inScope{scope.FindSymbol(derived.name())}) {
+                const Symbol &ultimate{inScope->GetUltimate()};
+                DerivedTypeSpec localDerivedType{inScope->name(), ultimate};
+                if (ultimate.has<DerivedTypeDetails>() &&
+                    evaluate::DynamicType{derived, /*isPolymorphic=*/false}
+                        .IsTkCompatibleWith(evaluate::DynamicType{
+                            localDerivedType, /*iP=*/false})) {
+                  derivedScope = ultimate.scope();
+                }
+              }
+            }
+            if (const Symbol *dtDesc{derivedScope
+                        ? derivedScope->runtimeDerivedTypeDescription()
                         : nullptr}) {
               if (useRuntimeTypeInfoEntries &&
-                  &derived.scope()->parent() == &generic->owner()) {
+                  derivedScope == derived.scope() &&
+                  &derivedScope->parent() == &generic->owner()) {
                 // This non-TBP defined I/O generic was defined in the
                 // same scope as the derived type, and it will be
                 // included in the derived type's special bindings
@@ -1454,7 +1473,8 @@ static const Symbol *FindSpecificDefinedIo(const Scope &scope,
       const Symbol &specific{*ref};
       if (const DeclTypeSpec *
           thisType{GetDefinedIoSpecificArgType(specific)}) {
-        if (evaluate::DynamicType{DEREF(thisType->AsDerived()), true}
+        if (evaluate::DynamicType{
+                DEREF(thisType->AsDerived()), thisType->IsPolymorphic()}
                 .IsTkCompatibleWith(derived)) {
           return &specific.GetUltimate();
         }

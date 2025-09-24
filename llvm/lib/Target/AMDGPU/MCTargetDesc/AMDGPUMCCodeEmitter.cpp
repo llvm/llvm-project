@@ -464,8 +464,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
       support::endian::write<uint64_t>(CB, Imm, llvm::endianness::little);
     } else {
-      if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
-        Imm = Hi_32(Imm);
+      auto OpType =
+          static_cast<AMDGPU::OperandType>(Desc.operands()[i].OperandType);
+      Imm = AMDGPU::encode32BitLiteral(Imm, OpType);
       support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
     }
 

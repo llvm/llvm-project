@@ -647,6 +647,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
+  if (!Subtarget->isThumb1Only())
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -5619,6 +5622,19 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return SDValue();
+}
+
+// Generate CMP + CMOV for integer abs.
+SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, MVT::i32);
+
+  // Generate CMP & CMOV.
+  SDValue Cmp = DAG.getNode(ARMISD::CMP, DL, FlagsVT, Op.getOperand(0),
+                            DAG.getConstant(0, DL, MVT::i32));
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
+                     DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -10703,6 +10719,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UCMP:
   case ISD::SCMP:
     return LowerCMP(Op, DAG);
+  case ISD::ABS:
+    return LowerABS(Op, DAG);
   }
 }
 
@@ -12288,89 +12306,6 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case ARM::Int_eh_sjlj_setup_dispatch:
     EmitSjLjDispatchBlock(MI, BB);
     return BB;
-
-  case ARM::ABS:
-  case ARM::t2ABS: {
-    // To insert an ABS instruction, we have to insert the
-    // diamond control-flow pattern.  The incoming instruction knows the
-    // source vreg to test against 0, the destination vreg to set,
-    // the condition code register to branch on, the
-    // true/false values to select between, and a branch opcode to use.
-    // It transforms
-    //     V1 = ABS V0
-    // into
-    //     V2 = MOVS V0
-    //     BCC                      (branch to SinkBB if V0 >= 0)
-    //     RSBBB: V3 = RSBri V2, 0  (compute ABS if V2 < 0)
-    //     SinkBB: V1 = PHI(V2, V3)
-    const BasicBlock *LLVM_BB = BB->getBasicBlock();
-    MachineFunction::iterator BBI = ++BB->getIterator();
-    MachineFunction *Fn = BB->getParent();
-    MachineBasicBlock *RSBBB = Fn->CreateMachineBasicBlock(LLVM_BB);
-    MachineBasicBlock *SinkBB  = Fn->CreateMachineBasicBlock(LLVM_BB);
-    Fn->insert(BBI, RSBBB);
-    Fn->insert(BBI, SinkBB);
-
-    // Set the call frame size on entry to the new basic blocks.
-    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
-    RSBBB->setCallFrameSize(CallFrameSize);
-    SinkBB->setCallFrameSize(CallFrameSize);
-
-    Register ABSSrcReg = MI.getOperand(1).getReg();
-    Register ABSDstReg = MI.getOperand(0).getReg();
-    bool ABSSrcKIll = MI.getOperand(1).isKill();
-    bool isThumb2 = Subtarget->isThumb2();
-    MachineRegisterInfo &MRI = Fn->getRegInfo();
-    // In Thumb mode S must not be specified if source register is the SP or
-    // PC and if destination register is the SP, so restrict register class
-    Register NewRsbDstReg = MRI.createVirtualRegister(
-        isThumb2 ? &ARM::rGPRRegClass : &ARM::GPRRegClass);
-
-    // Transfer the remainder of BB and its successor edges to sinkMBB.
-    SinkBB->splice(SinkBB->begin(), BB,
-                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
-    SinkBB->transferSuccessorsAndUpdatePHIs(BB);
-
-    BB->addSuccessor(RSBBB);
-    BB->addSuccessor(SinkBB);
-
-    // fall through to SinkMBB
-    RSBBB->addSuccessor(SinkBB);
-
-    // insert a cmp at the end of BB
-    BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
-        .addReg(ABSSrcReg)
-        .addImm(0)
-        .add(predOps(ARMCC::AL));
-
-    // insert a bcc with opposite CC to ARMCC::MI at the end of BB
-    BuildMI(BB, dl,
-      TII->get(isThumb2 ? ARM::t2Bcc : ARM::Bcc)).addMBB(SinkBB)
-      .addImm(ARMCC::getOppositeCondition(ARMCC::MI)).addReg(ARM::CPSR);
-
-    // insert rsbri in RSBBB
-    // Note: BCC and rsbri will be converted into predicated rsbmi
-    // by if-conversion pass
-    BuildMI(*RSBBB, RSBBB->begin(), dl,
-            TII->get(isThumb2 ? ARM::t2RSBri : ARM::RSBri), NewRsbDstReg)
-        .addReg(ABSSrcReg, ABSSrcKIll ? RegState::Kill : 0)
-        .addImm(0)
-        .add(predOps(ARMCC::AL))
-        .add(condCodeOp());
-
-    // insert PHI in SinkBB,
-    // reuse ABSDstReg to not change uses of ABS instruction
-    BuildMI(*SinkBB, SinkBB->begin(), dl,
-      TII->get(ARM::PHI), ABSDstReg)
-      .addReg(NewRsbDstReg).addMBB(RSBBB)
-      .addReg(ABSSrcReg).addMBB(BB);
-
-    // remove ABS instruction
-    MI.eraseFromParent();
-
-    // return last added BB
-    return SinkBB;
-  }
   case ARM::COPY_STRUCT_BYVAL_I32:
     ++NumLoopByVals;
     return EmitStructByval(MI, BB);
@@ -14082,6 +14017,41 @@ static SDValue PerformSubCSINCCombine(SDNode *N, SelectionDAG &DAG) {
                      CSINC.getOperand(3));
 }
 
+static bool isNegatedInteger(SDValue Op) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+}
+
+// Try to fold
+//
+// (neg (cmov X, Y)) -> (cmov (neg X), (neg Y))
+//
+// The folding helps cmov to be matched with csneg without generating
+// redundant neg instruction.
+static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
+  if (!isNegatedInteger(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue CMov = N->getOperand(1);
+  if (CMov.getOpcode() != ARMISD::CMOV || !CMov->hasOneUse())
+    return SDValue();
+
+  SDValue N0 = CMov.getOperand(0);
+  SDValue N1 = CMov.getOperand(1);
+
+  // If neither of them are negations, it's not worth the folding as it
+  // introduces two additional negations while reducing one negation.
+  if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = CMov.getValueType();
+
+  SDValue N0N = DAG.getNegative(N0, DL, VT);
+  SDValue N1N = DAG.getNegative(N1, DL, VT);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, N0N, N1N, CMov.getOperand(2),
+                     CMov.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -14097,6 +14067,9 @@ static SDValue PerformSUBCombine(SDNode *N,
 
   if (SDValue R = PerformSubCSINCCombine(N, DCI.DAG))
     return R;
+
+  if (SDValue Val = performNegCMovCombine(N, DCI.DAG))
+    return Val;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
