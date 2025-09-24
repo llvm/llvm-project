@@ -130,7 +130,6 @@ class IndVarSimplify {
   const DataLayout &DL;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
-  AliasAnalysis *AA;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
@@ -161,9 +160,8 @@ class IndVarSimplify {
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI, AliasAnalysis *AA, MemorySSA *MSSA,
-                 bool WidenIndVars)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI), AA(AA),
+                 TargetTransformInfo *TTI, MemorySSA *MSSA, bool WidenIndVars)
+      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
         WidenIndVars(WidenIndVars) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
@@ -1959,8 +1957,8 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
 
-  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, &AR.AA,
-                     AR.MSSA, WidenIndVars && AllowIVWidening);
+  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
+                     WidenIndVars && AllowIVWidening);
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 

@@ -38,7 +38,6 @@
 
 #include "llvm/Transforms/Scalar/LICM.h"
 #include "llvm/ADT/PriorityWorklist.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
