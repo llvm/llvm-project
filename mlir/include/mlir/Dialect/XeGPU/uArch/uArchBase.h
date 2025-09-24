@@ -199,51 +199,6 @@ protected:
   // @TODO: Add more fields as needed (e.g., latency, throughput, bandwidth)
 };
 
-struct uArchMap {
-public:
-  // Singleton instance
-  static uArchMap &instance() {
-    static uArchMap instance;
-    return instance;
-  }
-
-  // Insert or update a key-value pair
-  void insert(const std::string &key, std::shared_ptr<uArch> value) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    // map_[key] = std::move(value); // safe to overwrite
-    map_.emplace(key, std::move(value)); // safe to overwrite
-  }
-
-  // Get a value by key (concurrent safe read)
-  std::shared_ptr<uArch> get(const std::string &key) const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    auto it = map_.find(key);
-    if (it != map_.end())
-      return it->second;
-    return nullptr;
-  }
-
-  // Check if a key exists
-  bool contains(const std::string &key) const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    return map_.find(key) != map_.end();
-  }
-
-  // Remove a key
-  bool erase(const std::string &key) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    return map_.erase(key) > 0;
-  }
-
-private:
-  uArchMap() = default;
-  uArchMap(const uArchMap &) = delete;
-  uArchMap &operator=(const uArchMap &) = delete;
-
-  mutable std::shared_mutex mutex_;
-  std::map<std::string, std::shared_ptr<uArch>> map_;
-};
-
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir

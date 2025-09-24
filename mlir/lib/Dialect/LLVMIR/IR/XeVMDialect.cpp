@@ -381,14 +381,6 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
 }
 
 void XeVMDialect::initialize() {
-  // Populate the uArchMap with the supported target devices
-  auto pvcuArch =
-      std::make_shared<mlir::xegpu::uArch::Xe2Plus::PVCuArch::PVCuArch>();
-  mlir::xegpu::uArch::uArchMap::instance().insert("pvc", pvcuArch);
-  auto bmguArch =
-      std::make_shared<mlir::xegpu::uArch::Xe2Plus::BMGuArch::BMGuArch>();
-  mlir::xegpu::uArch::uArchMap::instance().insert("bmg", bmguArch);
-
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/XeVMOps.cpp.inc"
