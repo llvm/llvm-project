@@ -1061,9 +1061,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                                        ->getName(CallReg)))
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE =
-          CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
-                                       PCAddr, CallAddr, CallReg, AllocSiteTy);
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
+          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -2289,7 +2288,11 @@ findPrologueEndLoc(const MachineFunction *MF) {
       -> std::optional<std::pair<const MachineInstr *, bool>> {
     // Is this instruction trivial data shuffling or frame-setup?
     bool isCopy = (TII.isCopyInstr(MI) ? true : false);
-    bool isTrivRemat = TII.isTriviallyReMaterializable(MI);
+    bool isTrivRemat =
+        TII.isTriviallyReMaterializable(MI) &&
+        llvm::all_of(MI.all_uses(), [](const MachineOperand &MO) {
+          return MO.getReg().isVirtual();
+        });
     bool isFrameSetup = MI.getFlag(MachineInstr::FrameSetup);
 
     if (!isFrameSetup && MI.getDebugLoc()) {
@@ -2784,8 +2787,7 @@ void DwarfDebug::skippedNonDebugFunction() {
 
 // Gather and emit post-function debug information.
 void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
-  const Function &F = MF->getFunction();
-  const DISubprogram *SP = F.getSubprogram();
+  const DISubprogram *SP = MF->getFunction().getSubprogram();
 
   assert(CurFn == MF &&
       "endFunction should be called with the same function as beginFunction");
@@ -2854,12 +2856,11 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 
   ProcessedSPNodes.insert(SP);
   DIE &ScopeDIE =
-      TheCU.constructSubprogramScopeDIE(SP, F, FnScope, FunctionLineTableLabel);
+      TheCU.constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
-      SkelCU->constructSubprogramScopeDIE(SP, F, FnScope,
-                                          FunctionLineTableLabel);
+      SkelCU->constructSubprogramScopeDIE(SP, FnScope, FunctionLineTableLabel);
 
   FunctionLineTableLabel = nullptr;
 
