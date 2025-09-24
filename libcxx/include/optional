@@ -951,7 +951,7 @@ public:
     return std::move(this->__get());
   }
 
-  template <class _Up = remove_cv_t<_Tp> = remove_cv_t<_Tp>>
+  template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
     requires(!(is_lvalue_reference_v<_Tp> && is_function_v<__libcpp_remove_reference_t<_Tp>>) &&
              !(is_lvalue_reference_v<_Tp> && is_array_v<__libcpp_remove_reference_t<_Tp>>))
@@ -962,7 +962,7 @@ public:
     return this->has_value() ? this->__get() : static_cast<value_type>(std::forward<_Up>(__v));
   }
 
-  template <class _Up = remove_cv_t<_Tp> = remove_cv_t<_Tp>>
+  template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
     requires(!is_lvalue_reference_v<_Tp>)
 #    endif
