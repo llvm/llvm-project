@@ -56,8 +56,9 @@ protected:
   }
 
   SmallVector<Type> getUnrolledTypes(ShapedType type,
-                                     ArrayRef<int64_t> tileShape) const {
-    return options.getUnrolledTypes(type, tileShape);
+                                     ArrayRef<int64_t> tileShape,
+                                     bool returnSingleType = false) const {
+    return options.getUnrolledTypes(type, tileShape, returnSingleType);
   }
 
   /// Emulate the the unpack behavior using insert_strided_slice for VectorType
@@ -244,14 +245,8 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
     bool hasOffsets = (offsetSize != 0) || op.getConstOffsetsAttr();
 
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape);
-
-    if (hasOffsets) {
-      // only need one tdesc, tile offsets will be computed
-      // at the operation level
-      convertedTdescTypes.resize(1);
-    }
+    SmallVector<Type> convertedTdescTypes = getUnrolledTypes(
+        tdescTy, *targetShape, /*returnSingleType*/ hasOffsets);
 
     SmallVector<Value> convertedTdesc = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
@@ -297,14 +292,8 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     Type elemTy = tdescTy.getElementType();
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape);
-
-    if (hasOffsets) {
-      // only need one tdesc, tile offsets will be computed
-      // at the operation level
-      convertedTdescTypes.resize(1);
-    }
+    SmallVector<Type> convertedTdescTypes = getUnrolledTypes(
+        tdescTy, *targetShape, /*returnSingleType*/ hasOffsets);
 
     SmallVector<Value> convertedTdescs = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
@@ -351,14 +340,8 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape);
-
-    if (hasOffsets) {
-      // only need one tdesc, tile offsets will be computed
-      // at the operation level
-      convertedTdescTypes.resize(1);
-    }
+    SmallVector<Type> convertedTdescTypes = getUnrolledTypes(
+        tdescTy, *targetShape, /*returnSingleType*/ hasOffsets);
 
     SmallVector<Value> convertedTdescs = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
