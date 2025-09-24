@@ -2106,7 +2106,7 @@ public:
     Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpTypeNameList>(x.t));
-    Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
+    Walk(": ", std::get<std::optional<OmpReductionCombiner>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
@@ -2500,18 +2500,24 @@ public:
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
     if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
-      Walk(assignment->t, "=");
+      Walk(assignment->t, " = ");
+    } else {
+      Walk(x.u);
+    }
+  }
+  void Unparse(const OmpReductionCombiner &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, " = ");
     } else {
       Walk(x.u);
     }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE REDUCTION ");
-    Put("(");
-    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
-    Put(")");
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }

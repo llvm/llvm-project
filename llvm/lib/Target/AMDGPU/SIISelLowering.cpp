@@ -7540,16 +7540,29 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   SDNode *BR = nullptr;
   SDNode *SetCC = nullptr;
 
-  if (Intr->getOpcode() == ISD::SETCC) {
+  switch (Intr->getOpcode()) {
+  case ISD::SETCC: {
     // As long as we negate the condition everything is fine
     SetCC = Intr;
     Intr = SetCC->getOperand(0).getNode();
-
-  } else {
+    break;
+  }
+  case ISD::XOR: {
+    // Similar to SETCC, if we have (xor c, -1), we will be fine.
+    SDValue LHS = Intr->getOperand(0);
+    SDValue RHS = Intr->getOperand(1);
+    if (auto *C = dyn_cast<ConstantSDNode>(RHS); C && C->getZExtValue()) {
+      Intr = LHS.getNode();
+      break;
+    }
+    [[fallthrough]];
+  }
+  default: {
     // Get the target from BR if we don't negate the condition
     BR = findUser(BRCOND, ISD::BR);
     assert(BR && "brcond missing unconditional branch user");
     Target = BR->getOperand(1);
+  }
   }
 
   unsigned CFNode = isCFIntrinsic(Intr);
@@ -15198,36 +15211,13 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return V;
   }
 
-  // EXTRACT_VECTOR_ELT (v2i32 bitcast (i64/f64:k), Idx)
-  //   =>
-  // i32:Lo(k) if Idx == 0, or
-  // i32:Hi(k) if Idx == 1
-  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (Vec.getOpcode() == ISD::BITCAST && VecVT == MVT::v2i32 && Idx) {
-    SDLoc SL(N);
-    SDValue PeekThrough = Vec.getOperand(0);
-    auto *KImm = dyn_cast<ConstantSDNode>(PeekThrough);
-    if (KImm && KImm->getValueType(0).getSizeInBits() == 64) {
-      uint64_t KImmValue = KImm->getZExtValue();
-      return DAG.getConstant(
-          (KImmValue >> (32 * Idx->getZExtValue())) & 0xffffffff, SL, MVT::i32);
-    }
-    auto *KFPImm = dyn_cast<ConstantFPSDNode>(PeekThrough);
-    if (KFPImm && KFPImm->getValueType(0).getSizeInBits() == 64) {
-      uint64_t KFPImmValue =
-          KFPImm->getValueAPF().bitcastToAPInt().getZExtValue();
-      return DAG.getConstant((KFPImmValue >> (32 * Idx->getZExtValue())) &
-                                 0xffffffff,
-                             SL, MVT::i32);
-    }
-  }
-
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
       VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
