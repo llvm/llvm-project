@@ -309,7 +309,9 @@ public:
     /// Reads the next string pointer and the entry count for that string,
     /// populating `NumEntriesToCome`.
     /// If not possible (e.g. end of the section), becomes the end iterator.
-    /// Assumes `Offset` points to a string reference.
+    /// If `Offset` is zero, then the next valid string offset will be fetched
+    /// from the Offsets array, otherwise it will continue to parse the current
+    /// entry's strings.
     void prepareNextStringOrEnd();
 
   public:
