@@ -99,16 +99,6 @@ struct SegmentOffset {
   SegmentOffset(uint16_t s, uint32_t o) : segment(s), offset(o) {}
   uint16_t segment = 0;
   uint32_t offset = 0;
-
-  bool operator==(SegmentOffset rhs) const {
-    return segment == rhs.segment && offset == rhs.offset;
-  }
-
-  bool operator<(SegmentOffset rhs) const {
-    if (segment == rhs.segment)
-      return offset < rhs.offset;
-    return segment < rhs.segment;
-  }
 };
 
 struct SegmentOffsetLength {
