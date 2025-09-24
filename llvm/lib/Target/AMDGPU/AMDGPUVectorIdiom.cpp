@@ -213,9 +213,10 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
 
 struct AMDGPUVectorIdiomImpl {
   const unsigned MaxBytes;
+  const DataLayout *DL;
   bool CFGChanged = false;
 
-  AMDGPUVectorIdiomImpl(unsigned MaxBytes) : MaxBytes(MaxBytes) {}
+  AMDGPUVectorIdiomImpl(unsigned MaxBytes, const DataLayout *DL) : MaxBytes(MaxBytes), DL(DL) {}
 
   // Returns true if the given intrinsic is an allowed lifetime marker.
   static bool isAllowedLifetimeIntrinsic(Instruction *I) {
@@ -571,6 +572,447 @@ struct AMDGPUVectorIdiomImpl {
 
     MT.eraseFromParent();
   }
+
+  // Accumulator vectorization methods
+  
+  // Represents a group of consecutive memory operations that can be vectorized
+  struct AccumulatorGroup {
+    SmallVector<LoadInst*, 4> Loads;
+    SmallVector<StoreInst*, 4> Stores;
+    Value *BasePtr;
+    uint64_t StartOffset;
+    uint64_t EndOffset;
+    Align MinAlign;
+    
+    AccumulatorGroup(Value *Ptr, uint64_t Start, uint64_t End, Align Align)
+        : BasePtr(Ptr), StartOffset(Start), EndOffset(End), MinAlign(Align) {}
+  };
+  
+  // Check if a load/store instruction is part of an accumulator pattern
+  bool isAccumulatorAccess(Instruction *I, Value *&BasePtr, uint64_t &Offset) {
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (!LI->getType()->isFloatTy())
+        return false;
+      
+      Value *Ptr = LI->getPointerOperand();
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+        // Check for GEPs with multiple indices where the last index is constant
+        if (GEP->getNumIndices() >= 1 && isa<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))) {
+          BasePtr = GEP->getPointerOperand();
+          // Check if this is a byte offset GEP (i8 type)
+          if (GEP->getSourceElementType()->isIntegerTy(8)) {
+            // Byte offset GEP - use the offset directly
+            Offset = cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))->getZExtValue();
+          } else {
+            // Array index GEP - multiply by element size
+            Offset = cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))->getZExtValue() * 4; // float = 4 bytes
+          }
+          return true;
+        }
+      } else {
+        // Direct load from base pointer (offset 0)
+        BasePtr = Ptr;
+        Offset = 0;
+        return true;
+      }
+    } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+      if (!SI->getValueOperand()->getType()->isFloatTy())
+        return false;
+      
+      Value *Ptr = SI->getPointerOperand();
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+        // Check for GEPs with multiple indices where the last index is constant
+        if (GEP->getNumIndices() >= 1 && isa<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))) {
+          BasePtr = GEP->getPointerOperand();
+          // Check if this is a byte offset GEP (i8 type)
+          if (GEP->getSourceElementType()->isIntegerTy(8)) {
+            // Byte offset GEP - use the offset directly
+            Offset = cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))->getZExtValue();
+          } else {
+            // Array index GEP - multiply by element size
+            Offset = cast<ConstantInt>(GEP->getOperand(GEP->getNumOperands() - 1))->getZExtValue() * 4; // float = 4 bytes
+          }
+          return true;
+        }
+      } else {
+        // Direct store to base pointer (offset 0)
+        BasePtr = Ptr;
+        Offset = 0;
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Normalize base pointers across different instructions to find common groups
+  void normalizeBasePointers(SmallVectorImpl<std::pair<uint64_t, Instruction*>> &Ops, 
+                           DenseMap<Value*, SmallVector<std::pair<uint64_t, Instruction*>, 8>> &BaseToOps) {
+    // Find the most common GEP base that is used for byte-offset GEPs
+    DenseMap<Value*, unsigned> BaseFreq;
+    Value *CommonGEPBase = nullptr;
+    unsigned MaxFreq = 0;
+    
+    for (auto &Op : Ops) {
+      Value *BasePtr;
+      uint64_t Offset;
+      if (isAccumulatorAccess(Op.second, BasePtr, Offset)) {
+        // Look for GEP bases that are used in byte-offset patterns
+        bool HasByteOffsetUsers = false;
+        for (User *U : BasePtr->users()) {
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+            if (GEP->getSourceElementType()->isIntegerTy(8)) {
+              HasByteOffsetUsers = true;
+              break;
+            }
+          }
+        }
+        if (HasByteOffsetUsers) {
+          BaseFreq[BasePtr]++;
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Found potential common base: " 
+                            << *BasePtr << " (freq=" << BaseFreq[BasePtr] << ")\n");
+          if (BaseFreq[BasePtr] > MaxFreq) {
+            MaxFreq = BaseFreq[BasePtr];
+            CommonGEPBase = BasePtr;
+          }
+        }
+      }
+    }
+    
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Selected common GEP base: " 
+                      << (CommonGEPBase ? CommonGEPBase->getName().str() : "nullptr") 
+                      << " (freq=" << MaxFreq << ")\n");
+    
+    // Re-categorize all operations using the common GEP base
+    for (auto &Op : Ops) {
+      Value *BasePtr;
+      uint64_t Offset;
+      if (isAccumulatorAccess(Op.second, BasePtr, Offset)) {
+        if (CommonGEPBase) {
+          // All operations should use the common base, preserving their byte offsets
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Using common base: " 
+                            << *Op.second << " -> offset " << Offset << "\n");
+          BaseToOps[CommonGEPBase].push_back({Offset, Op.second});
+        } else {
+          // No common base found, use original grouping
+          LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Using original base for: " 
+                            << *Op.second << " -> base=" << *BasePtr << ", offset=" << Offset << "\n");
+          BaseToOps[BasePtr].push_back({Offset, Op.second});
+        }
+      }
+    }
+  }
+  
+  // Collect accumulator groups from a basic block
+  void collectAccumulatorGroups(BasicBlock *BB, SmallVectorImpl<AccumulatorGroup> &Groups) {
+    SmallVector<Instruction*, 32> AccumulatorOps;
+    
+    // Find all accumulator-related load/store instructions
+    for (Instruction &I : *BB) {
+      Value *BasePtr;
+      uint64_t Offset;
+      if (isAccumulatorAccess(&I, BasePtr, Offset)) {
+        LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Found accumulator access: " << I 
+                          << " (base=" << *BasePtr << ", offset=" << Offset << ")\n");
+        AccumulatorOps.push_back(&I);
+      }
+    }
+    
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Found " << AccumulatorOps.size() 
+                      << " accumulator operations in basic block\n");
+    
+    // Convert to operations with initial base/offset pairs
+    SmallVector<std::pair<uint64_t, Instruction*>, 32> InitialOps;
+    for (Instruction *I : AccumulatorOps) {
+      Value *BasePtr;
+      uint64_t Offset;
+      if (isAccumulatorAccess(I, BasePtr, Offset)) {
+        InitialOps.push_back({Offset, I});
+      }
+    }
+    
+    // Group operations by normalized base pointer
+    DenseMap<Value*, SmallVector<std::pair<uint64_t, Instruction*>, 8>> BaseToOps;
+    normalizeBasePointers(InitialOps, BaseToOps);
+    
+    // Create groups for each base pointer
+    for (auto &Pair : BaseToOps) {
+      Value *BasePtr = Pair.first;
+      auto &Ops = Pair.second;
+      
+      // Separate loads and stores first
+      SmallVector<std::pair<uint64_t, LoadInst*>, 8> Loads;
+      SmallVector<std::pair<uint64_t, StoreInst*>, 8> Stores;
+      
+      for (auto &Op : Ops) {
+        if (auto *LI = dyn_cast<LoadInst>(Op.second)) {
+          Loads.push_back({Op.first, LI});
+        } else if (auto *SI = dyn_cast<StoreInst>(Op.second)) {
+          Stores.push_back({Op.first, SI});
+        }
+      }
+      
+      // Sort loads and stores by offset
+      llvm::sort(Loads, [](const auto &A, const auto &B) {
+        return A.first < B.first;
+      });
+      llvm::sort(Stores, [](const auto &A, const auto &B) {
+        return A.first < B.first;
+      });
+      
+      // Group consecutive loads
+      for (size_t i = 0; i < Loads.size(); i++) {
+        uint64_t StartOffset = Loads[i].first;
+        
+        // Look for consecutive loads starting from this offset
+        SmallVector<LoadInst*, 4> ConsecutiveLoads;
+        uint64_t ExpectedOffset = StartOffset;
+        Align MinAlign = Align(4);
+        
+        for (size_t j = i; j < Loads.size() && ConsecutiveLoads.size() < 4; j++) {
+          if (Loads[j].first == ExpectedOffset) {
+            ConsecutiveLoads.push_back(Loads[j].second);
+            MinAlign = std::min(MinAlign, Loads[j].second->getAlign());
+            ExpectedOffset += 4;
+          } else {
+            break; // Not consecutive, stop here
+          }
+        }
+        
+        // Only create groups with at least 2 loads
+        if (ConsecutiveLoads.size() >= 2) {
+          AccumulatorGroup Group(BasePtr, StartOffset, ExpectedOffset, MinAlign);
+          Group.Loads = ConsecutiveLoads;
+          Groups.push_back(Group);
+          
+          // Skip the loads we've already grouped
+          i += ConsecutiveLoads.size() - 1;
+        }
+      }
+      
+      // Group consecutive stores
+      for (size_t i = 0; i < Stores.size(); i++) {
+        uint64_t StartOffset = Stores[i].first;
+        
+        // Look for consecutive stores starting from this offset
+        SmallVector<StoreInst*, 4> ConsecutiveStores;
+        uint64_t ExpectedOffset = StartOffset;
+        Align MinAlign = Align(4);
+        
+        for (size_t j = i; j < Stores.size() && ConsecutiveStores.size() < 4; j++) {
+          if (Stores[j].first == ExpectedOffset) {
+            ConsecutiveStores.push_back(Stores[j].second);
+            MinAlign = std::min(MinAlign, Stores[j].second->getAlign());
+            ExpectedOffset += 4;
+          } else {
+            break; // Not consecutive, stop here
+          }
+        }
+        
+        // Only create groups with at least 2 stores
+        if (ConsecutiveStores.size() >= 2) {
+          AccumulatorGroup Group(BasePtr, StartOffset, ExpectedOffset, MinAlign);
+          Group.Stores = ConsecutiveStores;
+          Groups.push_back(Group);
+          
+          // Skip the stores we've already grouped
+          i += ConsecutiveStores.size() - 1;
+        }
+      }
+    }
+  }
+  
+  // Vectorize an accumulator group
+  bool vectorizeAccumulatorGroup(AccumulatorGroup &Group, IRBuilder<> &B) {
+    if (!shouldPerformTransformation()) {
+      unsigned maxTransformations = getMaxTransformationsFromEnv();
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: transformation limit reached ("
+                        << TransformationCounter.load() << "/" 
+                        << maxTransformations << ")\n");
+      return false;
+    }
+    
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Vectorizing accumulator group with "
+                      << Group.Loads.size() << " loads and " << Group.Stores.size() 
+                      << " stores\n");
+    
+    bool Changed = false;
+    
+    // Vectorize loads
+    if (Group.Loads.size() >= 2) {
+      // Create vector load pointer accounting for start offset
+      Value *LoadPtr = Group.BasePtr;
+      if (Group.StartOffset > 0) {
+        // Try to reuse an existing GEP if possible
+        bool FoundExistingGEP = false;
+        for (auto *LI : Group.Loads) {
+          Value *Ptr = LI->getPointerOperand();
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+            if (GEP->getPointerOperand() == Group.BasePtr &&
+                GEP->getNumIndices() == 1 &&
+                GEP->getSourceElementType()->isIntegerTy(8)) {
+              if (auto *OffsetCI = dyn_cast<ConstantInt>(GEP->getOperand(1))) {
+                if (OffsetCI->getZExtValue() == Group.StartOffset) {
+                  LoadPtr = GEP;
+                  FoundExistingGEP = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (!FoundExistingGEP) {
+          LoadPtr = B.CreateGEP(B.getInt8Ty(), Group.BasePtr, B.getInt64(Group.StartOffset));
+        }
+      }
+
+      // Find the earliest load to position the vector load before it
+      LoadInst *EarliestLoad = Group.Loads[0];
+      for (auto *LI : Group.Loads) {
+        if (LI->comesBefore(EarliestLoad)) {
+          EarliestLoad = LI;
+        }
+      }
+
+      // Create vector load
+      Type *VecType = FixedVectorType::get(Type::getFloatTy(B.getContext()), Group.Loads.size());
+      // Use the alignment of the first load in the group (at StartOffset)
+      Align LoadAlign = Group.MinAlign;
+      if (Group.StartOffset == 0 && !Group.Loads.empty()) {
+        LoadAlign = Group.Loads[0]->getAlign();
+      }
+      Value *VecLoad = B.CreateAlignedLoad(VecType, LoadPtr, LoadAlign);
+      
+      // Move GEP and vector load to just before the earliest load
+      if (auto *LoadPtrInst = dyn_cast<Instruction>(LoadPtr)) {
+        LoadPtrInst->moveBefore(EarliestLoad);
+      }
+      cast<Instruction>(VecLoad)->moveBefore(EarliestLoad);
+
+      // Replace individual loads with extractelement
+      for (size_t i = 0; i < Group.Loads.size(); i++) {
+        Value *Extract = B.CreateExtractElement(VecLoad, B.getInt32(i));
+        // Move extractelement right after the vector load
+        cast<Instruction>(Extract)->moveAfter(cast<Instruction>(VecLoad));
+        Group.Loads[i]->replaceAllUsesWith(Extract);
+        if (!Group.Loads[i]->isTerminator()) {
+          Group.Loads[i]->eraseFromParent();
+          Changed = true;
+        }
+      }
+    }
+    
+    // Vectorize stores
+    if (Group.Stores.size() >= 2) {
+      // Create vector store pointer accounting for start offset
+      Value *StorePtr = Group.BasePtr;
+      if (Group.StartOffset > 0) {
+        // Try to reuse an existing GEP if possible
+        bool FoundExistingGEP = false;
+        for (auto *SI : Group.Stores) {
+          Value *Ptr = SI->getPointerOperand();
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+            if (GEP->getPointerOperand() == Group.BasePtr &&
+                GEP->getNumIndices() == 1 &&
+                GEP->getSourceElementType()->isIntegerTy(8)) {
+              if (auto *OffsetCI = dyn_cast<ConstantInt>(GEP->getOperand(1))) {
+                if (OffsetCI->getZExtValue() == Group.StartOffset) {
+                  StorePtr = GEP;
+                  FoundExistingGEP = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (!FoundExistingGEP) {
+          StorePtr = B.CreateGEP(B.getInt8Ty(), Group.BasePtr, B.getInt64(Group.StartOffset));
+        }
+      }
+
+      // Find the latest store to position the vector store after it
+      StoreInst *LatestStore = Group.Stores[0];
+      for (auto *SI : Group.Stores) {
+        if (LatestStore->comesBefore(SI)) {
+          LatestStore = SI;
+        }
+      }
+
+      // Collect store values
+      SmallVector<Value*, 4> StoreValues;
+      for (auto *SI : Group.Stores) {
+        StoreValues.push_back(SI->getValueOperand());
+      }
+
+      // Move the StorePtr GEP if it was created, right after the latest store
+      Instruction *PrevInst = LatestStore;
+      if (auto *StorePtrInst = dyn_cast<Instruction>(StorePtr)) {
+        StorePtrInst->moveAfter(LatestStore);
+        PrevInst = StorePtrInst;
+      }
+
+      // Create vector from individual values
+      Type *VecType = FixedVectorType::get(Type::getFloatTy(B.getContext()), StoreValues.size());
+      Value *VecValue = UndefValue::get(VecType);
+      for (size_t i = 0; i < StoreValues.size(); i++) {
+        VecValue = B.CreateInsertElement(VecValue, StoreValues[i], B.getInt32(i));
+        // Move insertElement after the previous instruction to maintain order
+        if (auto *InsertInst = dyn_cast<Instruction>(VecValue)) {
+          InsertInst->moveAfter(PrevInst);
+          PrevInst = InsertInst;
+        }
+      }
+
+      // Create vector store
+      Instruction *VecStore = B.CreateAlignedStore(VecValue, StorePtr, Group.MinAlign);
+      // Move vector store after the vector creation
+      VecStore->moveAfter(PrevInst);
+
+      // Remove individual stores (but not terminators)
+      for (auto *SI : Group.Stores) {
+        if (!SI->isTerminator()) {
+          SI->eraseFromParent();
+          Changed = true;
+        }
+      }
+    }
+    
+    if (Changed) {
+      incrementTransformationCounter();
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Successfully vectorized accumulator group\n");
+    }
+    
+    return Changed;
+  }
+  
+  // Main accumulator vectorization method
+  bool vectorizeAccumulators(Function &F) {
+    bool Changed = false;
+    
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Starting accumulator vectorization for function "
+                      << F.getName() << "\n");
+    
+    for (BasicBlock &BB : F) {
+      SmallVector<AccumulatorGroup, 8> Groups;
+      collectAccumulatorGroups(&BB, Groups);
+      
+      LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Found " << Groups.size() 
+                        << " accumulator groups in basic block\n");
+      
+      // Process groups from the end of the basic block to avoid ordering issues
+      // when instructions are erased
+      for (auto it = Groups.rbegin(); it != Groups.rend(); ++it) {
+        AccumulatorGroup &Group = *it;
+        // Create IRBuilder at the end of the basic block to avoid issues with instruction erasure
+        IRBuilder<> B(BB.getTerminator());
+        Changed |= vectorizeAccumulatorGroup(Group, B);
+      }
+    }
+    
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Accumulator vectorization completed for function "
+                      << F.getName() << " (changed=" << Changed << ")\n");
+    
+    return Changed;
+  }
 };
 
 } // end anonymous namespace
@@ -588,8 +1030,12 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
 
-  if (!AMDGPUVectorIdiomEnable)
+  LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Starting pass on function " << F.getName() << "\n");
+
+  if (!AMDGPUVectorIdiomEnable) {
+    LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Pass disabled, returning\n");
     return PreservedAnalyses::all();
+  }
 
   LLVM_DEBUG({
     unsigned currentCount = TransformationCounter.load();
@@ -611,7 +1057,15 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   }
 
   bool Changed = false;
-  AMDGPUVectorIdiomImpl Impl(MaxBytes);
+  AMDGPUVectorIdiomImpl Impl(MaxBytes, &DL);
+
+  // First, try accumulator vectorization
+  LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Calling accumulator vectorization for function "
+                    << F.getName() << "\n");
+  bool AccChanged = Impl.vectorizeAccumulators(F);
+  Changed |= AccChanged;
+  LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Accumulator vectorization result: " 
+                    << (AccChanged ? "changed" : "no change") << "\n");
 
   for (WeakTrackingVH &WH : Worklist) {
     auto *MT = dyn_cast_or_null<MemCpyInst>(WH);
@@ -723,12 +1177,10 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
     }
 
     // Check if we have select instructions and if their operands are alloca-based
-    bool ShouldTransform = false;
     if (auto *Sel = dyn_cast<SelectInst>(Src)) {
       bool TrueIsAlloca = hasAllocaUnderlyingObject(Sel->getTrueValue());
       bool FalseIsAlloca = hasAllocaUnderlyingObject(Sel->getFalseValue());
       if (TrueIsAlloca || FalseIsAlloca) {
-        ShouldTransform = true;
         Changed |= Impl.transformSelectMemcpySource(*MT, *Sel, DL, &DT, &AC);
       } else {
         LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: select source operands "
@@ -740,7 +1192,6 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
       bool TrueIsAlloca = hasAllocaUnderlyingObject(Sel->getTrueValue());
       bool FalseIsAlloca = hasAllocaUnderlyingObject(Sel->getFalseValue());
       if (TrueIsAlloca || FalseIsAlloca) {
-        ShouldTransform = true;
         Changed |= Impl.transformSelectMemcpyDest(*MT, *Sel);
       } else {
         LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Skip: select destination operands "
