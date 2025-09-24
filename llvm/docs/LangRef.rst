@@ -3013,6 +3013,8 @@ assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
 location. Operand bundles enable assumptions that are either hard or impossible
 to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
 
+Assumes with operand bundles must have ``i1 true`` as the condition operand.
+
 An assume operand bundle has the form:
 
 ::
@@ -3045,7 +3047,7 @@ allows the optimizer to assume that at location of call to
 
 .. code-block:: llvm
 
-      call void @llvm.assume(i1 %cond) ["cold"(), "nonnull"(ptr %val)]
+      call void @llvm.assume(i1 true) ["cold"(), "nonnull"(ptr %val)]
 
 allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
@@ -11398,11 +11400,9 @@ responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
 1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
-value higher than the size of the loaded type implies memory up to the
-alignment value bytes can be safely loaded without trapping in the default
-address space. Access of the high bytes can interfere with debugging tools, so
-should not be accessed if the function has the ``sanitize_thread`` or
-``sanitize_address`` attributes.
+value higher than the size of the loaded type does *not* imply (without target
+specific knowledge) that memory up to the alignment value bytes can be safely
+loaded without trapping.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
@@ -11538,12 +11538,10 @@ operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.
 Underestimating the alignment may produce less efficient code. An alignment of
-1 is always safe. The maximum possible alignment is ``1 << 32``. An alignment
-value higher than the size of the loaded type implies memory up to the
-alignment value bytes can be safely loaded without trapping in the default
-address space. Access of the high bytes can interfere with debugging tools, so
-should not be accessed if the function has the ``sanitize_thread`` or
-``sanitize_address`` attributes.
+1 is always safe. The maximum possible alignment is ``1 << 32``.  An alignment
+value higher than the size of the stored type does *not* imply (without target
+specific knowledge) that memory up to the alignment value bytes can be safely
+loaded without trapping.
 
 The alignment is only optional when parsing textual IR; for in-memory IR, it is
 always present. An omitted ``align`` argument means that the operation has the
