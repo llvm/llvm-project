@@ -45,11 +45,11 @@ def parse_lnt(lines):
         results[name][metric].append(float(value))
     return results
 
-def plain_text_comparison(benchmarks, baseline, candidate):
+def plain_text_comparison(benchmarks, baseline, candidate, baseline_name=None, candidate_name=None):
     """
     Create a tabulated comparison of the baseline and the candidate.
     """
-    headers = ['Benchmark', 'Baseline', 'Candidate', 'Difference', '% Difference']
+    headers = ['Benchmark', baseline_name, candidate_name, 'Difference', '% Difference']
     fmt = (None, '.2f', '.2f', '.2f', '.2f')
     table = []
     for (bm, base, cand) in zip(benchmarks, baseline, candidate):
@@ -59,13 +59,18 @@ def plain_text_comparison(benchmarks, baseline, candidate):
         table.append(row)
     return tabulate.tabulate(table, headers=headers, floatfmt=fmt, numalign='right')
 
-def create_chart(benchmarks, baseline, candidate):
+def create_chart(benchmarks, baseline, candidate, subtitle=None, baseline_name=None, candidate_name=None):
     """
     Create a bar chart comparing 'baseline' and 'candidate'.
     """
-    figure = plotly.graph_objects.Figure()
-    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=baseline, name='Baseline'))
-    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=candidate, name='Candidate'))
+    figure = plotly.graph_objects.Figure(layout={
+        'title': {
+            'text': f'{baseline_name} vs {candidate_name}',
+            'subtitle': {'text': subtitle}
+        }
+    })
+    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=baseline, name=baseline_name))
+    figure.add_trace(plotly.graph_objects.Bar(x=benchmarks, y=candidate, name=candidate_name))
     return figure
 
 def prepare_series(baseline, candidate, metric, aggregate=statistics.median):
@@ -107,7 +112,17 @@ def main(argv):
     parser.add_argument('--open', action='store_true',
         help='Whether to automatically open the generated HTML file when finished. This option only makes sense '
              'when the output format is `chart`.')
+    parser.add_argument('--baseline-name', type=str, default='Baseline',
+        help='Optional name to use for the "baseline" label.')
+    parser.add_argument('--candidate-name', type=str, default='Candidate',
+        help='Optional name to use for the "candidate" label.')
+    parser.add_argument('--subtitle', type=str, required=False,
+        help='Optional subtitle to use for the chart. This can be used to help identify the contents of the chart. '
+             'This option cannot be used with the plain text output.')
     args = parser.parse_args(argv)
+
+    if args.format == 'text' and args.subtitle is not None:
+        parser.error('Passing --subtitle makes no sense with --format=text')
 
     if args.format == 'text' and args.open:
         parser.error('Passing --open makes no sense with --format=text')
@@ -123,12 +138,15 @@ def main(argv):
     (benchmarks, baseline_series, candidate_series) = prepare_series(baseline, candidate, args.metric)
 
     if args.format == 'chart':
-        figure = create_chart(benchmarks, baseline_series, candidate_series)
+        figure = create_chart(benchmarks, baseline_series, candidate_series, subtitle=args.subtitle,
+                                                                             baseline_name=args.baseline_name,
+                                                                             candidate_name=args.candidate_name)
         do_open = args.output is None or args.open
         output = args.output or tempfile.NamedTemporaryFile(suffix='.html').name
         plotly.io.write_html(figure, file=output, auto_open=do_open)
     else:
-        diff = plain_text_comparison(benchmarks, baseline_series, candidate_series)
+        diff = plain_text_comparison(benchmarks, baseline_series, candidate_series, baseline_name=args.baseline_name,
+                                                                                    candidate_name=args.candidate_name)
         diff += '\n'
         if args.output is not None:
             with open(args.output, 'w') as out:
