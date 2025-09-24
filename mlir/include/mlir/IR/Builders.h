@@ -515,10 +515,10 @@ public:
   /// the results of the operation.
   ///
   /// Note: This performs opportunistic eager folding during IR construction.
-  /// The folders are designed to operate efficiently on canonical IR, which this
-  /// API does not enforce. Complete folding isn't only expected in the context
-  /// of canonicalization which intertwine folders with pattern rewrites until
-  /// fixed-point.
+  /// The folders are designed to operate efficiently on canonical IR, which 
+  /// this API does not enforce. Complete folding isn't only expected in the
+  /// context of canonicalization which intertwine folders with pattern 
+  /// rewrites until fixed-point.
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
