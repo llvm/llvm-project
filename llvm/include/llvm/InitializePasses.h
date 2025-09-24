@@ -292,6 +292,7 @@ LLVM_ABI void initializeReplaceWithVeclibLegacyPass(PassRegistry &);
 LLVM_ABI void initializeResetMachineFunctionPass(PassRegistry &);
 LLVM_ABI void initializeSCEVAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeSROALegacyPassPass(PassRegistry &);
+LLVM_ABI void initializeSSAMachineSchedulerPass(PassRegistry &);
 LLVM_ABI void initializeSafeStackLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeSafepointIRVerifierPass(PassRegistry &);
 LLVM_ABI void initializeSelectOptimizePass(PassRegistry &);

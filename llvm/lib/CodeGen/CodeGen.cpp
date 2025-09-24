@@ -123,6 +123,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRemoveLoadsIntoFakeUsesLegacyPass(Registry);
   initializeRemoveRedundantDebugValuesLegacyPass(Registry);
   initializeRenameIndependentSubregsLegacyPass(Registry);
+  initializeSSAMachineSchedulerPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeShadowStackGCLoweringPass(Registry);
