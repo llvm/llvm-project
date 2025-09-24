@@ -21,9 +21,12 @@ endif()
 if(LLVM_WINSYSROOT)
   set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
       "Path to the DIA SDK")
-else()
+elseif($ENV{VSINSTALLDIR})
   set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
       "Path to the DIA SDK")
+elseif(NOT DEFINED MSVC_DIA_SDK_DIR)
+  message(STATUS "MSVC_DIA_SDK_DIR not set, and could not be inferred. DIA SDK "
+                 "may not be found.")
 endif()
 
 find_path(DIASDK_INCLUDE_DIR
