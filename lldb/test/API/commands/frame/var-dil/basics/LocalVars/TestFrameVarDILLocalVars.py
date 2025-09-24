@@ -12,7 +12,6 @@ import shutil
 import time
 
 
-
 class TestFrameVarDILLocalVars(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for

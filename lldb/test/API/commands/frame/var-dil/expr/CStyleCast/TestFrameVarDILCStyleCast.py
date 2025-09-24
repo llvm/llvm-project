@@ -11,8 +11,8 @@ import os
 import shutil
 import time
 
-class TestFrameVarDILCStyleCast(TestBase):
 
+class TestFrameVarDILCStyleCast(TestBase):
     def test_type_cast(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -104,9 +104,7 @@ class TestFrameVarDILCStyleCast(TestBase):
         self.expect(
             "frame variable '(int)ns_foo_'",
             error=True,
-            substrs=[
-                "cannot convert 'ns::Foo' to 'int' without a conversion operator"
-            ],
+            substrs=["cannot convert 'ns::Foo' to 'int' without a conversion operator"],
         )
 
         # Test with typedefs and namespaces.
@@ -152,7 +150,7 @@ class TestFrameVarDILCStyleCast(TestBase):
         )
         Is32Bit = False
         if self.target().GetAddressByteSize() == 4:
-            Is32Bit = True;
+            Is32Bit = True
 
         if Is32Bit:
             self.expect("frame variable '(int)arr'", type="int")
@@ -160,9 +158,7 @@ class TestFrameVarDILCStyleCast(TestBase):
             self.expect(
                 "frame variable '(int)arr'",
                 error=True,
-                substrs=[
-                    "cast from pointer to smaller type 'int' loses information"
-                ],
+                substrs=["cast from pointer to smaller type 'int' loses information"],
             )
 
         self.expect(
@@ -186,15 +182,15 @@ class TestFrameVarDILCStyleCast(TestBase):
 
 
         if Is32Bit:
-          self.expect_var_path("(void*)0", type="void *", value="0x00000000")
-          self.expect_var_path("(void*)1", type="void *", value="0x00000001")
-          self.expect_var_path("(void*)a", type="void *", value="0x00000001")
-          self.expect_var_path("(void*)na", type="void *", value="0xffffffff")
+            self.expect_var_path("(void*)0", type="void *", value="0x00000000")
+            self.expect_var_path("(void*)1", type="void *", value="0x00000001")
+            self.expect_var_path("(void*)a", type="void *", value="0x00000001")
+            self.expect_var_path("(void*)na", type="void *", value="0xffffffff")
         else:
-          self.expect_var_path("(void*)0", type="void *", value="0x0000000000000000")
-          self.expect_var_path("(void*)1", type="void *", value="0x0000000000000001")
-          self.expect_var_path("(void*)a", type="void *", value="0x0000000000000001")
-          self.expect_var_path("(void*)na", type="void *", value="0xffffffffffffffff")
+            self.expect_var_path("(void*)0", type="void *", value="0x0000000000000000")
+            self.expect_var_path("(void*)1", type="void *", value="0x0000000000000001")
+            self.expect_var_path("(void*)a", type="void *", value="0x0000000000000001")
+            self.expect_var_path("(void*)na", type="void *", value="0xffffffffffffffff")
 
         self.expect_var_path("(int*&)ap", type="int *")
 
@@ -226,7 +222,6 @@ class TestFrameVarDILCStyleCast(TestBase):
             self.expect_var_path("(void *)0", type="void *", value="0x00000000")
         else:
             self.expect_var_path("(void *)0", type="void *", value="0x0000000000000000")
-
 
         # TestCStyleCastArray
 
