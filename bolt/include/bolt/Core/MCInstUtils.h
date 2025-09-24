@@ -184,7 +184,7 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
 /// operands.
 ///
 /// The goals of this DSL include
-/// * matching a single instruction against a template consisting of the
+/// * matching a single instruction against the template consisting of the
 ///   particular target-specific opcode and a pattern of operands
 /// * matching operands against the known values (such as 42, AArch64::X1 or
 ///   "the value of --brk-operand=N command line argument")
@@ -192,9 +192,9 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
 ///   register of AArch64::ADDXri instruction, store it to Xd variable to be
 ///   queried later")
 /// * expressing repeated operands of a single matched instruction (such as
-///   "ADDXri Xd, Xd, 42, 0" for an arbitrary register Xm) as well as across
-///   multiple calls to matchInst(), which is naturally achieved by combining
-///   capturing operands and matching against the known values
+///   "ADDXri Xd, Xd, 42, 0" for an arbitrary register Xd) as well as across
+///   multiple calls to matchInst(), which is naturally achieved by sequentially
+///   capturing the operands and matching operands against the known values
 /// * matching multi-instruction code patterns by sequentially calling
 ///   matchInst() while passing around already matched operands
 ///
@@ -203,10 +203,10 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
 /// * encapsulation of target-specific knowledge ("match an increment of Xm
 ///   by 42")
 ///
-/// Unlike MCPlusBuilder::MCInstMatcher, this matchInst() function focuses on
-/// the cases where a precise control over the instruction order is important.
-/// For example, one has to match two particular instructions against the
-/// following pattern (for two different registers Xm and Xn)
+/// Unlike MCPlusBuilder::MCInstMatcher, this DSL focuses on the use cases when
+/// the precise control over the instruction order is important. For example,
+/// let's consider a target-specific function that has to match two particular
+/// instructions against this pattern (for two different registers Xm and Xn)
 ///
 ///     ADDXrs Xm, Xn, Xm, #0
 ///     BR     Xm
@@ -225,7 +225,7 @@ static inline raw_ostream &operator<<(raw_ostream &OS,
 ///     // Match the 0th operand against Xm:
 ///     if (!matchInst(MaybeBr, AArch64::BR, Xm))
 ///       return AArch64::NoRegister;
-///     // Manually check that Xm and Xn did not match the same register.
+///     // Manually check that Xm and Xn did not match the same register:
 ///     if (Xm.get() == Xn.get())
 ///       return AArch64::NoRegister;
 ///     // Return the matched register:
