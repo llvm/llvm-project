@@ -195,6 +195,7 @@ extern NSApplication * NSApp;
 @end
 
 @interface SomeObj : NSObject
++ (SomeObj *)sharedInstance;
 - (instancetype)_init;
 - (SomeObj *)mutableCopy;
 - (SomeObj *)copyWithValue:(int)value;

@@ -445,6 +445,15 @@ namespace alloc_init_pair {
   void foo() {
     auto obj = adoptNS([[SomeObj alloc] init]);
     [obj doWork];
+    auto obj2 = adoptNS([[SomeObj alloc] _init]);
+    [obj2 doWork];
+  }
+
+  void bar(NSZone *zone) {
+    auto obj = adoptNS([[SomeObj allocWithZone:zone] init]);
+    [obj doWork];
+    auto obj2 = adoptNS([(SomeObj *)[SomeObj allocWithZone:zone] _init]);
+    [obj2 doWork];
   }
 }
 
@@ -582,6 +591,7 @@ void foo() {
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
 - (SomeObj *)getSomeObj;
++ (SomeObj *)sharedObj;
 @end
 
 @implementation TestObject
@@ -606,8 +616,15 @@ void foo() {
     return RetainPtr<SomeObj *>(provide()).autorelease();
 }
 
++ (SomeObj *)sharedObj
+{
+    return adoptNS([[SomeObj alloc] init]).autorelease();
+}
+
 - (void)doWorkOnSomeObj {
     [[self getSomeObj] doWork];
+    // expected-warning@-1{{Receiver is unretained and unsafe}}
+    [[TestObject sharedObj] doWork];
 }
 
 - (CGImageRef)createImage {

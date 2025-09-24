@@ -15,6 +15,7 @@ void basic_correct() {
   auto ns6 = retainPtr([ns3 next]);
   auto ns7 = retainPtr((SomeObj *)0);
   auto ns8 = adoptNS(nil);
+  auto ns9 = adoptNS([[SomeObj allocWithZone:nullptr] _init]);
   CFMutableArrayRef cf1 = adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, 10));
   auto cf2 = adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault));
   auto cf3 = adoptCF(checked_cf_cast<CFArrayRef>(CFCopyArray(cf1)));
@@ -28,6 +29,8 @@ void basic_wrong() {
   // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   auto ns2 = adoptNS([ns1.get() next]);
   // expected-warning@-1{{Incorrect use of adoptNS. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  RetainPtr<SomeObj> ns3 = [[SomeObj allocWithZone:nullptr] init];
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf1 = CFArrayCreateMutable(kCFAllocatorDefault, 10);
   // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf2 = adoptCF(provide_cf());
@@ -48,6 +51,10 @@ void basic_correct_arc() {
   NSNumber *_number;
   SomeObj *_next;
   SomeObj *_other;
+}
+
++ (SomeObj *)sharedInstance {
+  return nil;
 }
 
 - (instancetype)_init {
