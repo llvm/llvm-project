@@ -495,6 +495,30 @@ not_taken:
   ret i1 %rval.2
 }
 
+define i1 @nonnull3B(ptr %a, i1 %control) {
+; CHECK-LABEL: @nonnull3B(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    ret i1 true
+; CHECK:       not_taken:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %load)]
+  ret i1 %cmp
+not_taken:
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %load)]
+  ret i1 %control
+}
+
 declare i1 @tmp1(i1)
 
 define i1 @nonnull3C(ptr %a, i1 %control) {
