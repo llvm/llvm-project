@@ -661,7 +661,11 @@ Module::LookupInfo::LookupInfo(ConstString name,
     if (language != eLanguageTypeUnknown)
       lang_types.push_back(language);
     else
-      lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+      lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus,
+#ifdef LLDB_ENABLE_SWIFT
+                    eLanguageTypeSwift
+#endif
+      };
 
     for (LanguageType lang_type : lang_types) {
       if (Language *lang = Language::FindPlugin(lang_type))
