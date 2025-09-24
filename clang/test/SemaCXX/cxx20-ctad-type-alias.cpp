@@ -110,10 +110,10 @@ struct Foo {
 
 template <typename X, int Y>
 using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
-                               // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, Foo<X, sizeof(X)>) Bar(Foo<X, sizeof(X)>) -> Foo<X, sizeof(X)>'}} \
-                               // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, Foo<X, sizeof(X)>) Bar(const X (&)[sizeof(X)]) -> Foo<X, sizeof(X)>'}} \
+                               // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, test9::Foo<X, sizeof(X)>) Bar(test9::Foo<X, sizeof(X)>) -> test9::Foo<X, sizeof(X)>'}} \
+                               // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, test9::Foo<X, sizeof(X)>) Bar(const X (&)[sizeof(X)]) -> test9::Foo<X, sizeof(X)>'}} \
                                // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
-                               // expected-note {{cannot deduce template arguments for 'Bar' from 'Foo<int, 4UL>'}}
+                               // expected-note {{cannot deduce template arguments for 'test9::Bar' from 'test9::Foo<int, 4UL>'}}
 
 
 Bar s = {{1}}; // expected-error {{no viable constructor or deduction guide }}
@@ -138,13 +138,13 @@ namespace test11 {
 struct A {};
 template<class T> struct Foo { T c; };
 template<class X, class Y=A>
-using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'Foo<Y>' against 'int'}} \
-                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> requires __is_deducible(test11::AFoo, Foo<Y>) AFoo(Foo<Y>) -> Foo<Y>'}} \
+using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'test11::Foo<Y>' against 'int'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> requires __is_deducible(test11::AFoo, test11::Foo<Y>) AFoo(test11::Foo<Y>) -> test11::Foo<Y>'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied [with Y = int]}} \
-                    // expected-note {{cannot deduce template arguments for 'AFoo' from 'Foo<int>'}} \
-                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> requires __is_deducible(test11::AFoo, Foo<Y>) AFoo(Y) -> Foo<Y>'}} \
+                    // expected-note {{cannot deduce template arguments for 'test11::AFoo' from 'test11::Foo<int>'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> requires __is_deducible(test11::AFoo, test11::Foo<Y>) AFoo(Y) -> test11::Foo<Y>'}} \
                     // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}} \
-                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> requires __is_deducible(test11::AFoo, Foo<Y>) AFoo() -> Foo<Y>'}}
+                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> requires __is_deducible(test11::AFoo, test11::Foo<Y>) AFoo() -> test11::Foo<Y>'}}
 
 AFoo s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}}
 } // namespace test11
@@ -197,8 +197,8 @@ struct Foo {
 template <int K>
 using Bar = Foo<double, K>; // expected-note {{constraints not satisfied for class template 'Foo'}}
 // expected-note@-1 {{candidate template ignored: could not match}} expected-note@-1 {{candidate template ignored: constraints not satisfied}}
-// expected-note@-2 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, Foo<double, K>) Bar(Foo<double, K>) -> Foo<double, K>'}}
-// expected-note@-3 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, Foo<double, K>) Bar(const double (&)[K]) -> Foo<double, K>'}}
+// expected-note@-2 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, test14::Foo<double, K>) Bar(test14::Foo<double, K>) -> test14::Foo<double, K>'}}
+// expected-note@-3 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, test14::Foo<double, K>) Bar(const double (&)[K]) -> test14::Foo<double, K>'}}
 double abc[3];
 Bar s2 = {abc}; // expected-error {{no viable constructor or deduction guide for deduction }}
 } // namespace test14
@@ -212,9 +212,9 @@ template<False W>
 using BFoo = AFoo<W>; // expected-note {{candidate template ignored: constraints not satisfied [with W = int]}} \
                       // expected-note@-1 {{because 'int' does not satisfy 'False'}} \
                       // expected-note@#test15_False {{because 'false' evaluated to false}} \
-                      // expected-note {{implicit deduction guide declared as 'template <False<> W> requires __is_deducible(AFoo, Foo<W *>) && __is_deducible(test15::BFoo, Foo<W *>) BFoo(W *) -> Foo<W *>}} \
-                      // expected-note {{candidate template ignored: could not match 'Foo<W *>' against 'int *'}} \
-                      // expected-note {{template <False<> W> requires __is_deducible(AFoo, Foo<W *>) && __is_deducible(test15::BFoo, Foo<W *>) BFoo(Foo<W *>) -> Foo<W *>}}
+                      // expected-note {{implicit deduction guide declared as 'template <False<> W> requires __is_deducible(test15::AFoo, test15::Foo<W *>) && __is_deducible(test15::BFoo, test15::Foo<W *>) BFoo(W *) -> test15::Foo<W *>}} \
+                      // expected-note {{candidate template ignored: could not match 'test15::Foo<W *>' against 'int *'}} \
+                      // expected-note {{template <False<> W> requires __is_deducible(test15::AFoo, test15::Foo<W *>) && __is_deducible(test15::BFoo, test15::Foo<W *>) BFoo(test15::Foo<W *>) -> test15::Foo<W *>}}
 int i = 0;
 AFoo a1(&i); // OK, deduce Foo<int *>
 
@@ -276,12 +276,12 @@ template<typename T> requires False<T> // expected-note {{because 'int' does not
 Foo(T) -> Foo<int>;
 
 template <typename U>
-using Bar = Foo<U>; // expected-note {{could not match 'Foo<U>' against 'int'}} \
-                    // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<U>) Bar(Foo<U>) -> Foo<U>'}} \
+using Bar = Foo<U>; // expected-note {{could not match 'test18::Foo<U>' against 'int'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, test18::Foo<U>) Bar(test18::Foo<U>) -> test18::Foo<U>'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<T> && __is_deducible(test18::Bar, Foo<int>) Bar(T) -> Foo<int>'}} \
                     // expected-note {{candidate function template not viable}} \
-                    // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<U>) Bar() -> Foo<U>'}}
+                    // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, test18::Foo<U>) Bar() -> test18::Foo<U>'}}
 
 Bar s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 } // namespace test18
@@ -309,8 +309,8 @@ class Foo {};
 // Verify that template template type parameter TTP is referenced/used in the
 // template arguments of the RHS.
 template <template<typename> typename TTP>
-using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<TTP>>' against 'int'}} \
-                        // expected-note {{implicit deduction guide declared as 'template <template <typename> typename TTP> requires __is_deducible(test20::Bar, Foo<K<TTP>>) Bar(Foo<K<TTP>>) -> Foo<K<TTP>>'}}
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'test20::Foo<K<TTP>>' against 'int'}} \
+                        // expected-note {{implicit deduction guide declared as 'template <template <typename> typename TTP> requires __is_deducible(test20::Bar, test20::Foo<K<TTP>>) Bar(test20::Foo<K<TTP>>) -> test20::Foo<K<TTP>>'}}
 
 template <class T>
 class Container {};
@@ -463,7 +463,7 @@ static_assert(__is_same(decltype(a), A<int>));
 BB b{0, 1};
 // expected-error@-1 {{no viable}}
 // expected-note@#test25_BB 2{{not viable}}
-// expected-note@#test25_BB {{template <typename ...US, typename V> requires __is_same(V, int) && __is_deducible(AA, A<int, US...>) && __is_deducible(test25::BB, A<int, US...>) BB(V) -> A<int, US...>}}
+// expected-note@#test25_BB {{template <typename ...US, typename V> requires __is_same(V, int) && __is_deducible(test25::AA, test25::A<int, US...>) && __is_deducible(test25::BB, test25::A<int, US...>) BB(V) -> test25::A<int, US...>}}
 // expected-note@#test25_BB {{implicit deduction guide}}
 
 }

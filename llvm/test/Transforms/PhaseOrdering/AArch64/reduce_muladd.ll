@@ -68,7 +68,7 @@ define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1)
 declare void @llvm.lifetime.start.p0(ptr captures(none)) #1
 declare void @llvm.lifetime.end.p0(ptr captures(none)) #1
 
-attributes #0 = { nounwind uwtable "approx-func-fp-math"="true" "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
+attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nounwind }
 

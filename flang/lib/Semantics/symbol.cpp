@@ -330,8 +330,14 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
-            [&](const ProcEntityDetails &) { return has<EntityDetails>(); },
+            [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
+              if (const auto *oldProc{this->detailsIf<ProcEntityDetails>()}) {
+                // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
+                return oldProc->isDummy() && !oldProc->procInterface() &&
+                    attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
+                    !test(Flag::Subroutine);
+              }
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
@@ -342,11 +348,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
-            [&](const HostAssocDetails &) {
-              return this->has<HostAssocDetails>();
-            },
+            [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
             [&](const UserReductionDetails &) {
-              return this->has<UserReductionDetails>();
+              return has<UserReductionDetails>();
             },
             [](const auto &) { return false; },
         },
@@ -611,7 +615,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               sep = ',';
             }
           },
-          [](const HostAssocDetails &) {},
+          [&os](const HostAssocDetails &x) { os << " => " << x.symbol(); },
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());

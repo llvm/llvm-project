@@ -1,11 +1,23 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -DIS_DARWIN -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fsyntax-only -verify -fptrauth-intrinsics %s
 
-#if !__has_extension(ptrauth_qualifier)
+#if defined(IS_DARWIN) && !__has_extension(ptrauth_qualifier)
 // This error means that the __ptrauth qualifier availability test says  that it
 // is not available. This error is not expected in the output, if it is seen
 // there is a feature detection regression.
 #error __ptrauth qualifier not enabled
+#endif
+
+#if defined(IS_DARWIN) && !__has_feature(ptrauth_qualifier)
+// This error means that the __has_feature test for ptrauth_qualifier has
+// failed, despite it being expected on darwin.
+#error __ptrauth qualifier not enabled
+#elif !defined(IS_DARWIN) && (__has_feature(ptrauth_qualifier) || __has_extension(ptrauth_qualifier))
+#error ptrauth_qualifier labeled a feature on a non-darwin platform
+#endif
+
+#if !defined (__PTRAUTH__)
+#error __PTRAUTH__ test macro not defined when ptrauth is enabled
 #endif
 
 @interface Foo

@@ -106,7 +106,7 @@ protected:
     LongWidth = LongAlign = 64;
     AddrSpaceMap = &SPIRDefIsPrivMap;
     UseAddrSpaceMapMangling = true;
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     // Define available target features
     // These must be defined in sorted order!
@@ -219,8 +219,11 @@ public:
     setAddressSpaceMap(
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
         // The address mapping from HIP/CUDA language for device code is only
-        // defined for SPIR-V.
-        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
+        // defined for SPIR-V, and all Intel SPIR-V code should have the default
+        // AS as generic.
+        (getTriple().isSPIRV() &&
+         (Opts.CUDAIsDevice ||
+          getTriple().getVendor() == llvm::Triple::Intel)));
   }
 
   void setSupportedOpenCLOpts() override {
@@ -427,7 +430,7 @@ public:
     BFloat16Width = BFloat16Align = 16;
     BFloat16Format = &llvm::APFloat::BFloat();
 
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     HalfArgsAndReturns = true;
 
@@ -466,6 +469,17 @@ public:
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
 };
 
+class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final
+    : public SPIRV64TargetInfo {
+public:
+  SPIRV64IntelTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : SPIRV64TargetInfo(Triple, Opts) {
+    assert(Triple.getVendor() == llvm::Triple::VendorType::Intel &&
+           "64-bit Intel SPIR-V target must use Intel vendor");
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1-P9-A0");
+  }
+};
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H

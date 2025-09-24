@@ -802,10 +802,9 @@ static bool buildAtomicCompareExchangeInst(
     MRI->setRegClass(Tmp, GR->getRegClass(SpvDesiredTy));
   GR->assignSPIRVTypeToVReg(SpvDesiredTy, Tmp, MIRBuilder.getMF());
 
-  SPIRVType *IntTy = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
   MIRBuilder.buildInstr(Opcode)
       .addDef(Tmp)
-      .addUse(GR->getSPIRVTypeID(IntTy))
+      .addUse(GR->getSPIRVTypeID(SpvDesiredTy))
       .addUse(ObjectPtr)
       .addUse(ScopeReg)
       .addUse(MemSemEqualReg)
@@ -1779,7 +1778,7 @@ static bool generateDotOrFMulInst(const StringRef DemangledCall,
   // Add Packed Vector Format for Integer dot product builtins if arguments are
   // scalar
   if (!IsVec && OC != SPIRV::OpFMulS)
-    MIB.addImm(0);
+    MIB.addImm(SPIRV::PackedVectorFormat4x8Bit);
 
   return true;
 }

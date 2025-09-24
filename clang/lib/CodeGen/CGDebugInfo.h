@@ -899,6 +899,10 @@ private:
       std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
+
+  /// If one exists, returns the linkage name of the specified \
+  /// (non-null) \c Method. Returns empty string otherwise.
+  llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
 };
 
 /// A scoped helper to set the current debug location to the specified
@@ -977,6 +981,8 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+  ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
+  ApplyInlineDebugLocation &operator=(ApplyInlineDebugLocation &) = delete;
 };
 
 class SanitizerDebugLocation {
@@ -988,6 +994,8 @@ public:
                          ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                          SanitizerHandler Handler);
   ~SanitizerDebugLocation();
+  SanitizerDebugLocation(const SanitizerDebugLocation &) = delete;
+  SanitizerDebugLocation &operator=(SanitizerDebugLocation &) = delete;
 };
 
 } // namespace CodeGen

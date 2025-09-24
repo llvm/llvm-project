@@ -3880,7 +3880,7 @@ bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   return expr.isFunctionOfDim(bcastMap.getNumDims() - 1);
 }
 
-FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
+static FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
   if (parser.parseOptionalKeyword("indexing_maps"))
     return ArrayAttr{
         nullptr}; // Success in case indexing_maps was not provided.
@@ -5474,7 +5474,7 @@ PackOp PackOp::createTransposedClone(OpBuilder &b, Location loc,
 
 /// Returns true if the tiles and the tiled dims are constant.
 template <typename OpTy>
-bool areTilesAndTiledDimsAllConstant(OpTy op) {
+static bool areTilesAndTiledDimsAllConstant(OpTy op) {
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
                 "applies to only pack or unpack operations");
   ShapedType packedType = (std::is_same<OpTy, PackOp>::value)
@@ -5583,14 +5583,13 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
   // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
-    if (unPackOp.getSourceType() != packOp.getDestType())
-      return failure();
-    if (packOp.getPaddingValue() ||
-        !hasSameInnerOuterAttribute(packOp, unPackOp) ||
-        !haveSameTiles(packOp, unPackOp))
-      return failure();
-    rewriter.replaceOp(packOp, unPackOp.getSource());
-    return success();
+    if (unPackOp.getSourceType() == packOp.getDestType() &&
+        !packOp.getPaddingValue() &&
+        hasSameInnerOuterAttribute(packOp, unPackOp) &&
+        haveSameTiles(packOp, unPackOp)) {
+      rewriter.replaceOp(packOp, unPackOp.getSource());
+      return success();
+    }
   }
 
   // Fold optional PaddingValue operand away if padding is not needed.

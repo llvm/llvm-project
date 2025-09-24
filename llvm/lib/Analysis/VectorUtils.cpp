@@ -166,6 +166,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
+  case Intrinsic::vector_extract:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
@@ -200,6 +201,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::vp_llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::vector_extract:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:

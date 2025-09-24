@@ -35,10 +35,10 @@ enum class UnsignedEnumClass : unsigned int {};
 struct EmptyStruct {};
 struct IncompleteStruct;
 
-struct NoEligibleTrivialContructor {
-  NoEligibleTrivialContructor() {};
-  NoEligibleTrivialContructor(const NoEligibleTrivialContructor&) {}
-  NoEligibleTrivialContructor(NoEligibleTrivialContructor&&) {}
+struct NoEligibleTrivialConstructor {
+  NoEligibleTrivialConstructor() {};
+  NoEligibleTrivialConstructor(const NoEligibleTrivialConstructor&) {}
+  NoEligibleTrivialConstructor(NoEligibleTrivialConstructor&&) {}
 };
 
 struct OnlyDefaultConstructorIsTrivial {
@@ -47,22 +47,22 @@ struct OnlyDefaultConstructorIsTrivial {
   OnlyDefaultConstructorIsTrivial(OnlyDefaultConstructorIsTrivial&&) {}
 };
 
-struct AllContstructorsAreTrivial {
-  AllContstructorsAreTrivial()                                  = default;
-  AllContstructorsAreTrivial(const AllContstructorsAreTrivial&) = default;
-  AllContstructorsAreTrivial(AllContstructorsAreTrivial&&)      = default;
+struct AllConstructorsAreTrivial {
+  AllConstructorsAreTrivial()                                 = default;
+  AllConstructorsAreTrivial(const AllConstructorsAreTrivial&) = default;
+  AllConstructorsAreTrivial(AllConstructorsAreTrivial&&)      = default;
 };
 
-struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialContructor {
-  using NoEligibleTrivialContructor::NoEligibleTrivialContructor;
+struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialConstructor {
+  using NoEligibleTrivialConstructor::NoEligibleTrivialConstructor;
 };
 
 struct InheritedOnlyDefaultConstructorIsTrivial : OnlyDefaultConstructorIsTrivial {
   using OnlyDefaultConstructorIsTrivial::OnlyDefaultConstructorIsTrivial;
 };
 
-struct InheritedAllContstructorsAreTrivial : AllContstructorsAreTrivial {
-  using AllContstructorsAreTrivial::AllContstructorsAreTrivial;
+struct InheritedAllConstructorsAreTrivial : AllConstructorsAreTrivial {
+  using AllConstructorsAreTrivial::AllConstructorsAreTrivial;
 };
 
 struct UserDeclaredDestructor {
@@ -136,7 +136,7 @@ constexpr void test_is_implicit_lifetime() {
   test_is_implicit_lifetime<T[94], true>();
 }
 
-struct AritmeticTypesTest {
+struct ArithmeticTypesTest {
   template <class T>
   constexpr void operator()() {
     test_is_implicit_lifetime<T>();
@@ -152,7 +152,7 @@ constexpr bool test() {
   test_is_implicit_lifetime<const void, false>();
   test_is_implicit_lifetime<volatile void, false>();
 
-  types::for_each(types::arithmetic_types(), AritmeticTypesTest{});
+  types::for_each(types::arithmetic_types(), ArithmeticTypesTest{});
 
   test_is_implicit_lifetime<Enum>();
   test_is_implicit_lifetime<SignedEnum>();
@@ -184,17 +184,17 @@ constexpr bool test() {
 
   test_is_implicit_lifetime<UserProvidedDestructor, false>();
 
-  test_is_implicit_lifetime<NoEligibleTrivialContructor, false>();
+  test_is_implicit_lifetime<NoEligibleTrivialConstructor, false>();
 
   test_is_implicit_lifetime<OnlyDefaultConstructorIsTrivial, true>();
 
-  test_is_implicit_lifetime<AllContstructorsAreTrivial, true>();
+  test_is_implicit_lifetime<AllConstructorsAreTrivial, true>();
 
   test_is_implicit_lifetime<InheritedNoEligibleTrivialConstructor, false>();
 
   test_is_implicit_lifetime<InheritedOnlyDefaultConstructorIsTrivial, true>();
 
-  test_is_implicit_lifetime<InheritedAllContstructorsAreTrivial, true>();
+  test_is_implicit_lifetime<InheritedAllConstructorsAreTrivial, true>();
 
   test_is_implicit_lifetime<UserDeletedDestructorInAggregate, true>();
 

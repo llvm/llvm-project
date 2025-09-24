@@ -27,6 +27,7 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include <shellapi.h>
 #include <shlobj.h>
+#include <winioctl.h>
 
 #undef max
 
@@ -615,6 +616,22 @@ std::error_code resize_file(int FD, uint64_t Size) {
   errno_t error = ::_chsize(FD, Size);
 #endif
   return std::error_code(error, std::generic_category());
+}
+
+std::error_code resize_file_sparse(int FD, uint64_t Size) {
+  HANDLE hFile = reinterpret_cast<HANDLE>(::_get_osfhandle(FD));
+  DWORD temp;
+  if (!DeviceIoControl(hFile, FSCTL_SET_SPARSE, NULL, 0, NULL, 0, &temp,
+                       NULL)) {
+    return mapWindowsError(GetLastError());
+  }
+  LARGE_INTEGER liSize;
+  liSize.QuadPart = Size;
+  if (!SetFilePointerEx(hFile, liSize, NULL, FILE_BEGIN) ||
+      !SetEndOfFile(hFile)) {
+    return mapWindowsError(GetLastError());
+  }
+  return std::error_code();
 }
 
 std::error_code access(const Twine &Path, AccessMode Mode) {
@@ -1337,8 +1354,10 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
   return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY;
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
+  DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+  Flags |= LOCKFILE_FAIL_IMMEDIATELY;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   auto Start = std::chrono::steady_clock::now();
@@ -1348,6 +1367,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
       return std::error_code();
     DWORD Error = ::GetLastError();
     if (Error == ERROR_LOCK_VIOLATION) {
+      if (Timeout.count() == 0)
+        break;
       ::Sleep(1);
       continue;
     }
@@ -1356,8 +1377,8 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   return mapWindowsError(ERROR_LOCK_VIOLATION);
 }
 
-std::error_code lockFile(int FD) {
-  DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
+std::error_code lockFile(int FD, LockKind Kind) {
+  DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))

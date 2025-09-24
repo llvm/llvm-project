@@ -307,7 +307,8 @@ static UnsignedOrNone EvaluateFoldExpandedConstraintSize(
   UnsignedOrNone NumExpansions = FE->getNumExpansions();
   if (S.CheckParameterPacksForExpansion(
           FE->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded, MLTAL,
-          Expand, RetainExpansion, NumExpansions) ||
+          /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+          NumExpansions) ||
       !Expand || RetainExpansion)
     return std::nullopt;
 
@@ -1696,11 +1697,13 @@ bool FoldExpandedConstraint::AreCompatibleForSubsumption(
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(B.Pattern), BPacks);
 
   for (const UnexpandedParameterPack &APack : APacks) {
-    std::pair<unsigned, unsigned> DepthAndIndex = getDepthAndIndex(APack);
-    auto it = llvm::find_if(BPacks, [&](const UnexpandedParameterPack &BPack) {
-      return getDepthAndIndex(BPack) == DepthAndIndex;
+    auto ADI = getDepthAndIndex(APack);
+    if (!ADI)
+      continue;
+    auto It = llvm::find_if(BPacks, [&](const UnexpandedParameterPack &BPack) {
+      return getDepthAndIndex(BPack) == ADI;
     });
-    if (it != BPacks.end())
+    if (It != BPacks.end())
       return true;
   }
   return false;
@@ -1861,33 +1864,6 @@ NormalizedConstraint::getFoldExpandedConstraint() const {
 // ------------------------ Subsumption -----------------------------------
 //
 //
-
-template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-
-  static FoldingSetNodeID getEmptyKey() {
-    FoldingSetNodeID ID;
-    ID.AddInteger(std::numeric_limits<unsigned>::max());
-    return ID;
-  }
-
-  static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID ID;
-    for (unsigned I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
-      ID.AddInteger(std::numeric_limits<unsigned>::max());
-    }
-    return ID;
-  }
-
-  static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
-  }
-
-  static bool isEqual(const FoldingSetNodeID &LHS,
-                      const FoldingSetNodeID &RHS) {
-    return LHS == RHS;
-  }
-};
-
 SubsumptionChecker::SubsumptionChecker(Sema &SemaRef,
                                        SubsumptionCallable Callable)
     : SemaRef(SemaRef), Callable(Callable), NextID(1) {}

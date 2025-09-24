@@ -83,7 +83,8 @@ LLVMBool LLVMGetTargetFromTriple(const char* TripleStr, LLVMTargetRef *T,
                                  char **ErrorMessage) {
   std::string Error;
 
-  *T = wrap(TargetRegistry::lookupTarget(TripleStr, Error));
+  Triple TT(TripleStr);
+  *T = wrap(TargetRegistry::lookupTarget(TT, Error));
 
   if (!*T) {
     if (ErrorMessage)

@@ -271,8 +271,6 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             mlir::Value extent = val;
             mlir::Value upperbound =
                 mlir::arith::SubIOp::create(builder, loc, extent, one);
-            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
-                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;
@@ -366,6 +364,14 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // For coordinate operation which is applied on derived type
             // object, get the base object.
             return op.getRef();
+          })
+          .Case<fir::ConvertOp>([&](auto op) -> mlir::Value {
+            // Strip the conversion and recursively check the operand
+            if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
+                    mlir::TypedValue<mlir::acc::PointerLikeType>>(
+                    op.getValue()))
+              return getBaseRef(ptrLikeOperand);
+            return varPtr;
           })
           .Default([&](mlir::Operation *) { return varPtr; });
 
@@ -552,21 +558,10 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
 
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
-    return hlfir::DeclareOp::create(
-        firBuilder, loc, alloca, varName, /*shape=*/nullptr,
-        llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+    return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
   };
 
-  if (fir::isa_trivial(unwrappedTy)) {
-    auto declareOp = getDeclareOpForType(unwrappedTy);
-    if (initVal) {
-      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
-      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
-    }
-    retVal = declareOp.getBase();
-  } else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value shape;
       if (seqTy.hasDynamicExtents()) {
@@ -576,10 +571,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       }
       auto alloca = fir::AllocaOp::create(
           firBuilder, loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = hlfir::DeclareOp::create(
-          firBuilder, loc, alloca, varName, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto declareOp =
+          hlfir::DeclareOp::create(firBuilder, loc, alloca, varName, shape);
 
       if (initVal) {
         mlir::Type idxTy = firBuilder.getIndexType();
@@ -591,7 +584,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
           hlfir::AssignOp::create(firBuilder, loc, initVal,
                                   declareOp.getBase());
         } else {
-          for (auto ext : seqTy.getShape()) {
+          // Generate loop nest from slowest to fastest running dimension
+          for (auto ext : llvm::reverse(seqTy.getShape())) {
             auto lb = firBuilder.createIntegerConstant(loc, idxTy, 0);
             auto ub = firBuilder.createIntegerConstant(loc, idxTy, ext - 1);
             auto step = firBuilder.createIntegerConstant(loc, idxTy, 1);
@@ -601,6 +595,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
             loops.push_back(loop);
             ivs.push_back(loop.getInductionVar());
           }
+          // Reverse IVs to match CoordinateOp's canonical index order.
+          std::reverse(ivs.begin(), ivs.end());
           auto coord = fir::CoordinateOp::create(firBuilder, loc, refTy,
                                                  declareOp.getBase(), ivs);
           fir::StoreOp::create(firBuilder, loc, initVal, coord);
@@ -614,6 +610,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     if (fir::isa_trivial(innerTy)) {
       retVal = getDeclareOpForType(unwrappedTy).getBase();
+      mlir::Value allocatedScalar =
+          fir::AllocMemOp::create(builder, loc, innerTy);
+      mlir::Value firClass =
+          fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
+      fir::StoreOp::create(builder, loc, firClass, retVal);
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
       auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
@@ -641,6 +642,23 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     if (initVal) {
       hlfir::AssignOp::create(builder, loc, initVal, retVal);
     }
+  } else if (llvm::isa<fir::BoxCharType, fir::CharacterType>(unwrappedTy)) {
+    TODO(loc, "Character type for OpenACC private-like recipe");
+  } else {
+    assert((fir::isa_trivial(unwrappedTy) ||
+            llvm::isa<fir::RecordType>(unwrappedTy)) &&
+           "expected numerical, logical, and derived type without length "
+           "parameters");
+    auto declareOp = getDeclareOpForType(unwrappedTy);
+    if (initVal && fir::isa_trivial(unwrappedTy)) {
+      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
+      fir::StoreOp::create(firBuilder, loc, convert, declareOp.getBase());
+    } else if (initVal) {
+      // hlfir.assign with temporary LHS flag should just do it. Not implemented
+      // because not clear it is needed, so cannot be tested.
+      TODO(loc, "initial value for derived type in private-like recipe");
+    }
+    retVal = declareOp.getBase();
   }
   return retVal;
 }

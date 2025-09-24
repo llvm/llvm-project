@@ -68,6 +68,9 @@ void ExitOnErr(zx_status_t Status, const char *Syscall) {
 }
 
 void AlarmHandler(int Seconds) {
+  // Signal the alarm thread started.
+  ExitOnErr(_zx_object_signal(SignalHandlerEvent, 0, ZX_USER_SIGNAL_0),
+            "_zx_object_signal alarm");
   while (true) {
     SleepSeconds(Seconds);
     Fuzzer::StaticAlarmCallback();
@@ -282,6 +285,7 @@ void CrashHandler() {
                 Self, ZX_EXCEPTION_CHANNEL_DEBUGGER, &Channel.Handle),
             "_zx_task_create_exception_channel");
 
+  // Signal the crash thread started.
   ExitOnErr(_zx_object_signal(SignalHandlerEvent, 0, ZX_USER_SIGNAL_0),
             "_zx_object_signal");
 
@@ -385,10 +389,49 @@ void StopSignalHandler() {
   _zx_handle_close(SignalHandlerEvent);
 }
 
+void RssThread(Fuzzer *F, size_t RssLimitMb) {
+  // Signal the rss thread started.
+  //
+  // We must wait for this thread to start because we could accidentally suspend
+  // it while the crash handler is attempting to handle the
+  // ZX_EXCP_THREAD_STARTING exception. If the crash handler is suspended by the
+  // lsan machinery, then there's no way for this thread to indicate it's
+  // suspended because it's blocked on waiting for the exception to be handled.
+  ExitOnErr(_zx_object_signal(SignalHandlerEvent, 0, ZX_USER_SIGNAL_0),
+            "_zx_object_signal rss");
+  while (true) {
+    SleepSeconds(1);
+    size_t Peak = GetPeakRSSMb();
+    if (Peak > RssLimitMb)
+      F->RssLimitCallback();
+  }
+}
+
 } // namespace
+
+void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
+  // Set up the crash handler and wait until it is ready before proceeding.
+  assert(SignalHandlerEvent == ZX_HANDLE_INVALID);
+  ExitOnErr(_zx_event_create(0, &SignalHandlerEvent), "_zx_event_create");
+
+  if (!RssLimitMb)
+    return;
+  std::thread T(RssThread, F, RssLimitMb);
+  T.detach();
+
+  // Wait for the rss thread to start.
+  ExitOnErr(_zx_object_wait_one(SignalHandlerEvent, ZX_USER_SIGNAL_0,
+                                ZX_TIME_INFINITE, nullptr),
+            "_zx_object_wait_one rss");
+  ExitOnErr(_zx_object_signal(SignalHandlerEvent, ZX_USER_SIGNAL_0, 0),
+            "_zx_object_signal rss clear");
+}
 
 // Platform specific functions.
 void SetSignalHandler(const FuzzingOptions &Options) {
+  assert(SignalHandlerEvent != ZX_HANDLE_INVALID &&
+         "This should've been setup by StartRssThread.");
+
   // Make sure information from libFuzzer and the sanitizers are easy to
   // reassemble. `__sanitizer_log_write` has the added benefit of ensuring the
   // DSO map is always available for the symbolizer.
@@ -404,6 +447,20 @@ void SetSignalHandler(const FuzzingOptions &Options) {
   if (Options.HandleAlrm && Options.UnitTimeoutSec > 0) {
     std::thread T(AlarmHandler, Options.UnitTimeoutSec / 2 + 1);
     T.detach();
+
+    // Wait for the alarm thread to start.
+    //
+    // We must wait for this thread to start because we could accidentally
+    // suspend it while the crash handler is attempting to handle the
+    // ZX_EXCP_THREAD_STARTING exception. If the crash handler is suspended by
+    // the lsan machinery, then there's no way for this thread to indicate it's
+    // suspended because it's blocked on waiting for the exception to be
+    // handled.
+    ExitOnErr(_zx_object_wait_one(SignalHandlerEvent, ZX_USER_SIGNAL_0,
+                                  ZX_TIME_INFINITE, nullptr),
+              "_zx_object_wait_one alarm");
+    ExitOnErr(_zx_object_signal(SignalHandlerEvent, ZX_USER_SIGNAL_0, 0),
+              "_zx_object_signal alarm clear");
   }
 
   // Options.HandleInt and Options.HandleTerm are not supported on Fuchsia
@@ -412,9 +469,6 @@ void SetSignalHandler(const FuzzingOptions &Options) {
   if (!Options.HandleSegv && !Options.HandleBus && !Options.HandleIll &&
       !Options.HandleFpe && !Options.HandleAbrt && !Options.HandleTrap)
     return;
-
-  // Set up the crash handler and wait until it is ready before proceeding.
-  ExitOnErr(_zx_event_create(0, &SignalHandlerEvent), "_zx_event_create");
 
   SignalHandler = std::thread(CrashHandler);
   zx_status_t Status = _zx_object_wait_one(SignalHandlerEvent, ZX_USER_SIGNAL_0,

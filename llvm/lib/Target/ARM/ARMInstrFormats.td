@@ -160,7 +160,7 @@ def CondCodeOperand : AsmOperandClass {
   let DefaultMethod = "defaultCondCodeOp";
   let IsOptional = true;
 }
-def pred : PredicateOperand<OtherVT, (ops i32imm, i32imm),
+def pred : PredicateOperand<OtherVT, (ops i32imm, CCR),
                                      (ops (i32 14), (i32 zero_reg))> {
   let PrintMethod = "printPredicateOperand";
   let ParserMatchClass = CondCodeOperand;
@@ -1219,6 +1219,7 @@ class Thumb1sI<dag oops, dag iops, AddrMode am, int sz,
                InstrItinClass itin,
                string opc, string asm, string cstr, list<dag> pattern>
   : InstThumb<am, sz, IndexModeNone, ThumbFrm, GenericDomain, cstr, itin> {
+  bits<0> s;
   let OutOperandList = !con(oops, (outs s_cc_out:$s));
   let InOperandList = !con(iops, (ins pred:$p));
   let AsmString = !strconcat(opc, "${s}${p}", asm);

@@ -115,7 +115,7 @@ void same_rs_string_main() {}
   "DescriptorTable(Sampler(s0, numDescriptors = 4, space = 1))"
 
 // Ensure that when we define a different type root signature that it creates
-// a seperate decl and identifier to reference
+// a separate decl and identifier to reference
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[DIFF_RS_DECL:__hlsl_rootsig_decl_\d*]]
 // CHECK-V1_0: version: 1.0,

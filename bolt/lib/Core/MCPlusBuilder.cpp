@@ -31,6 +31,11 @@ using namespace MCPlus;
 
 namespace opts {
 cl::opt<bool>
+    TerminalHLT("terminal-x86-hlt",
+                cl::desc("Assume that execution stops at x86 HLT instruction"),
+                cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<bool>
     TerminalTrap("terminal-trap",
                  cl::desc("Assume that execution stops at trap instruction"),
                  cl::init(true), cl::Hidden, cl::cat(BoltCategory));
@@ -132,10 +137,13 @@ bool MCPlusBuilder::equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
 }
 
 bool MCPlusBuilder::isTerminator(const MCInst &Inst) const {
-  return (opts::TerminalTrap && Info->get(Inst.getOpcode()).isTrap()) ||
-                 Analysis->isTerminator(Inst)
-             ? !isX86HLT(Inst)
-             : false;
+  if (isX86HLT(Inst))
+    return opts::TerminalHLT;
+
+  if (Info->get(Inst.getOpcode()).isTrap())
+    return opts::TerminalTrap;
+
+  return Analysis->isTerminator(Inst);
 }
 
 void MCPlusBuilder::setTailCall(MCInst &Inst) const {
@@ -370,8 +378,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) const {
     setTailCall(Inst);
 }
 
-void MCPlusBuilder::printAnnotations(const MCInst &Inst,
-                                     raw_ostream &OS) const {
+void MCPlusBuilder::printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                                     bool PrintMemData) const {
   std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
   if (!FirstAnnotationOp)
     return;
@@ -382,7 +390,11 @@ void MCPlusBuilder::printAnnotations(const MCInst &Inst,
     const int64_t Value = extractAnnotationValue(Imm);
     const auto *Annotation = reinterpret_cast<const MCAnnotation *>(Value);
     if (Index >= MCAnnotation::kGeneric) {
-      OS << " # " << AnnotationNames[Index - MCAnnotation::kGeneric] << ": ";
+      std::string AnnotationName =
+          AnnotationNames[Index - MCAnnotation::kGeneric];
+      if (!PrintMemData && AnnotationName == "MemoryAccessProfile")
+        continue;
+      OS << " # " << AnnotationName << ": ";
       Annotation->print(OS);
     }
   }

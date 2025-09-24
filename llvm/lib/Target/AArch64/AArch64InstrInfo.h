@@ -172,6 +172,10 @@ enum AArch64MachineCombinerPattern : unsigned {
   FMULv8i16_indexed_OP2,
 
   FNMADD,
+
+  GATHER_LANE_i32,
+  GATHER_LANE_i16,
+  GATHER_LANE_i8
 };
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
@@ -642,8 +646,10 @@ bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
 MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
                               unsigned Reg, const StackOffset &Offset,
                               bool LastAdjustmentWasScalable = true);
-MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
-                                 const StackOffset &OffsetFromDefCFA);
+MCCFIInstruction
+createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
+                const StackOffset &OffsetFromDefCFA,
+                std::optional<int64_t> IncomingVGOffsetFromDefCFA);
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog

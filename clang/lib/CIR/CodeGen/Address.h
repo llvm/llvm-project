@@ -44,12 +44,12 @@ public:
           clang::CharUnits alignment)
       : pointerAndKnownNonNull(pointer, false), elementType(elementType),
         alignment(alignment) {
-    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
-           "Expected cir.ptr type");
-
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
+
+    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+           "Expected cir.ptr type");
 
     assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
            elementType);
@@ -66,6 +66,12 @@ public:
   static Address invalid() { return Address(nullptr); }
   bool isValid() const {
     return pointerAndKnownNonNull.getPointer() != nullptr;
+  }
+
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(mlir::Value newPtr) const {
+    return Address(newPtr, getElementType(), getAlignment());
   }
 
   /// Return address with different element type, a bitcast pointer, and

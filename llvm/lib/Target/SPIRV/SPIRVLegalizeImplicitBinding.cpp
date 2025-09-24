@@ -15,7 +15,6 @@
 
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"

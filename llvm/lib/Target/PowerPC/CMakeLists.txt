@@ -25,7 +25,6 @@ add_llvm_target(PowerPCCodeGen
   PPCBranchSelector.cpp
   PPCBranchCoalescing.cpp
   PPCCallingConv.cpp
-  PPCCCState.cpp
   PPCCTRLoops.cpp
   PPCCTRLoopsVerify.cpp
   PPCExpandAtomicPseudoInsts.cpp
@@ -50,7 +49,7 @@ add_llvm_target(PowerPCCodeGen
   PPCTargetTransformInfo.cpp
   PPCTOCRegDeps.cpp
   PPCTLSDynamicCall.cpp
-  PPCVSXCopy.cpp
+  PPCVSXWACCCopy.cpp
   PPCReduceCRLogicals.cpp
   PPCVSXFMAMutate.cpp
   PPCVSXSwapRemoval.cpp

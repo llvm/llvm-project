@@ -49,6 +49,9 @@ struct CIRGenTypeCache {
   cir::FP80Type FP80Ty;
   cir::FP128Type FP128Ty;
 
+  /// ClangIR char
+  mlir::Type UCharTy;
+
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
     mlir::Type UIntPtrTy;
