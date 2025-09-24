@@ -140,6 +140,35 @@ define ptr @operand_bundle_ignore(ptr %x) {
   ret ptr %x
 }
 
+define void @operand_bundle_separate_storage_both_dead(ptr %x, ptr %y) {
+; CHECK-LABEL: define void @operand_bundle_separate_storage_both_dead(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %x, ptr %y)]
+  ret void
+}
+
+define ptr @operand_bundle_separate_storage_one_live1(ptr %x, ptr %y) {
+; CHECK-LABEL: define ptr @operand_bundle_separate_storage_one_live1(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[X]], ptr [[Y]]) ]
+; CHECK-NEXT:    ret ptr [[Y]]
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %x, ptr %y)]
+  ret ptr %y
+}
+
+define ptr @operand_bundle_separate_storage_one_live2(ptr %x, ptr %y) {
+; CHECK-LABEL: define ptr @operand_bundle_separate_storage_one_live2(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[X]], ptr [[Y]]) ]
+; CHECK-NEXT:    ret ptr [[X]]
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %x, ptr %y)]
+  ret ptr %x
+}
+
 define void @type_test(ptr %x) {
 ; CHECK-LABEL: define void @type_test(
 ; CHECK-SAME: ptr [[X:%.*]]) {
