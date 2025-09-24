@@ -2,7 +2,7 @@ RUN: llvm-remarkutil filter %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
 RUN: llvm-remarkutil filter --rfunction=func %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
 RUN: llvm-remarkutil filter --rremark-name=Remark %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
 RUN: llvm-remarkutil filter --rpass-name=pass %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
-RUN: llvm-remarkutil filter --rfilter-arg-by=argval %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml - 
+RUN: llvm-remarkutil filter --rfilter-arg-by=argval %p/Inputs/filter.yaml | diff %p/Inputs/filter.yaml -
 
 RUN: llvm-remarkutil filter --rfunction=unc1 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK1
 RUN: llvm-remarkutil filter --rremark-name=ark3 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=REMARK3
