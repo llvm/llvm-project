@@ -3171,7 +3171,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   bool should_stop = false;
   bool requested_continue = false;
 
-  // A stop hook might get deleted while running stop hooks.  
+  // A stop hook might get deleted while running stop hooks.
   // We have to decide what that means.  We will follow the rule that deleting
   // a stop hook while processing these stop hooks will delete it for FUTURE
   // stops but not this stop.  The easiest way to do that is to copy the

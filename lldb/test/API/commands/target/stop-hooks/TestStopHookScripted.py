@@ -63,7 +63,7 @@ class TestStopHooks(TestBase):
         command = "target stop-hook add -P stop_hook.self_deleting_stop"
         self.interp.HandleCommand(command, result)
         self.assertCommandReturn(result, f"Added my stop hook: {result.GetError()}")
-        
+
         result_str = result.GetOutput()
         p = re.compile("Stop hook #([0-9]+) added.")
         m = p.match(result_str)
@@ -80,7 +80,7 @@ class TestStopHooks(TestBase):
         thread.StepOver()
         self.interp.HandleCommand("target stop-hook list", result)
         self.assertEqual(result.GetOutput().rstrip(), "No stop hooks.", "Deleted hook")
-        
+
     def test_stop_hooks_scripted(self):
         """Test that a scripted stop hook works with no specifiers"""
         self.stop_hooks_scripted(5, "-I false")
