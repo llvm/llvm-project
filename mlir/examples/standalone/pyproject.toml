@@ -30,21 +30,11 @@ requires = [
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
-# The metadata.version.provider stuff below requires a "plugin" and
-# experimental must be enabled currently to use plugins.
-experimental = true
-# This is all optional (i.e., if you want hardcode your own version string).
-metadata.version.provider = "version"
-metadata.version.provider-path = "."
-
 # This is the minimum version of scikit-build-core.
-minimum-version = "0.10"
+minimum-version = "0.10.7"
+# This pyproject.toml must be adjacent to the root CMakeLists.txt (wherever project(...) is specified).
 cmake.source-dir = "."
-# The conventional LLVM install distribution will have all of these directories; this excludes them
-# so they don't get included in the wheel file.
-wheel.exclude = ["bin", "include", "lib", "src", "share"]
 # This is for installing/distributing the python bindings target and only the python bindings target.
-# See LLVM_DISTRIBUTIONS below.
 build.targets = ["StandalonePythonModules"]
 install.components = ["StandalonePythonModules"]
 
@@ -54,27 +44,22 @@ CMAKE_C_COMPILER = { env = "CMAKE_C_COMPILER", default = "" }
 CMAKE_CXX_COMPILER = { env = "CMAKE_CXX_COMPILER", default = "" }
 CMAKE_C_COMPILER_LAUNCHER = { env = "CMAKE_C_COMPILER_LAUNCHER", default = "" }
 CMAKE_CXX_COMPILER_LAUNCHER = { env = "CMAKE_CXX_COMPILER_LAUNCHER", default = "" }
-CMAKE_GENERATOR = { env = "CMAKE_GENERATOR", default = "" }
-CMAKE_VERBOSE_MAKEFILE = "ON"
+CMAKE_GENERATOR = { env = "CMAKE_GENERATOR", default = "Ninja" }
 LLVM_USE_LINKER = { env = "LLVM_USE_LINKER", default = "" }
-# Optional but highly recommended.
+# Optional but highly recommended (this makes the bindings compatible with other bindings packages
+# by preventing symbol collisions).
 CMAKE_VISIBILITY_INLINES_HIDDEN = "ON"
 CMAKE_C_VISIBILITY_PRESET = "hidden"
 CMAKE_CXX_VISIBILITY_PRESET = "hidden"
 
-# Non-optinal (alternatively you could have CMAKE_PREFIX_PATH here).
+# Non-optional (alternatively you could use CMAKE_PREFIX_PATH here).
 MLIR_DIR = { env = "MLIR_DIR", default = "" }
-# Non-optinal
+# Non-optional
 CMAKE_BUILD_TYPE = { env = "CMAKE_BUILD_TYPE", default = "Release" }
 MLIR_ENABLE_BINDINGS_PYTHON = "ON"
 # Effectively non-optional (any downstream project should specify this).
 MLIR_PYTHON_PACKAGE_PREFIX = "mlir_standalone"
-
-# This is for installing/distributing the python bindings target and only the python bindings target.
-LLVM_DISTRIBUTIONS = "StandalonePython"
-LLVM_StandalonePython_DISTRIBUTION_COMPONENTS = "StandalonePythonModules"
-
-# This specifies the directory in the build directory where _mlir_libs, dialects, etc. are installed.
-# Thus, this will be the package (and the name of the package) that pip assumes is the package root.
-# Alternatively, you can use something like wheel.packages = ["python_packages/standalone/mlir_standalone"].
+# This specifies the directory in the install directory (i.e., /tmp/pip-wheel/platlib) where _mlir_libs, dialects, etc.
+# are installed. Thus, this will be the package location (and the name of the package) that pip assumes is
+# the root package.
 MLIR_BINDINGS_PYTHON_INSTALL_PREFIX = "mlir_standalone"
