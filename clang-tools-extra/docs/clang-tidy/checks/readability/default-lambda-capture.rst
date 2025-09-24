@@ -1,7 +1,7 @@
 .. title:: clang-tidy - readability-default-lambda-capture
 
 readability-default-lambda-capture
-===============================
+==================================
 
 Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
   
