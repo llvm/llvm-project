@@ -3268,7 +3268,9 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   // Otherwise, a phi node for the scalar value is needed.
   if (State.hasVectorValue(getOperand(0))) {
     auto *VecI = cast<Instruction>(State.get(getOperand(0)));
-    assert(isa<InsertElementInst>(VecI) || isa<InsertValueInst>(VecI));
+    assert(isa<InsertElementInst>(VecI) ||
+           isa<InsertValueInst>(VecI) &&
+               "Packed recipes must generate an insertelement or insertvalue");
 
     // If VectorI is a struct, it will be a sequence like:
     // %1       = insertvalue %unmodified, %x, 0
@@ -3277,7 +3279,7 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
     // To get the unmodified vector we need to look through the chain.
     if (auto *StructTy = dyn_cast<StructType>(VecI->getType()))
       for (unsigned I = 0; I < StructTy->getNumContainedTypes() - 1; I++)
-        VecI = cast<Instruction>(VecI->getOperand(0));
+        VecI = cast<InsertValueInst>(VecI->getOperand(0));
 
     PHINode *VPhi = State.Builder.CreatePHI(VecI->getType(), 2);
     VPhi->addIncoming(VecI->getOperand(0), PredicatingBB); // Unmodified vector.

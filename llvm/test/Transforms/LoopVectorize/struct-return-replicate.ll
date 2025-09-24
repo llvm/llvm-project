@@ -166,7 +166,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    store <4 x float> [[TMP42]], ptr [[TMP45]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ;
 ; VF2IC2-LABEL: define void @struct_return_2xf32_replicate(
@@ -233,7 +233,7 @@ define void @struct_return_2xf32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    store <2 x float> [[TMP44]], ptr [[TMP50]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF2IC2-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF2IC2-NEXT:    br i1 [[TMP51]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -336,7 +336,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF4-NEXT:    store <4 x i32> [[TMP63]], ptr [[TMP64]], align 4
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF4-NEXT:    br i1 [[TMP66]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP66]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ;
 ; VF2IC2-LABEL: define void @struct_return_3xi32_replicate(
@@ -425,7 +425,7 @@ define void @struct_return_3xi32_replicate(ptr noalias %in, ptr noalias writeonl
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP68]], ptr [[TMP71]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP72:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; VF2IC2-NEXT:    br i1 [[TMP72]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2IC2-NEXT:    br i1 [[TMP72]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ;
 entry:
@@ -454,9 +454,6 @@ exit:
 }
 
 define void @struct_return_2xf32_replicate_predicated(ptr %a) {
-; CHECK-LABEL: define void @scalarized_predicated_struct_return
-; CHECK:       vector.body:
-; CHECK:         [[WIDE_CALL:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @scalable_vec_masked_bar(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ; VF4-LABEL: define void @struct_return_2xf32_replicate_predicated(
 ; VF4-SAME: ptr [[A:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
