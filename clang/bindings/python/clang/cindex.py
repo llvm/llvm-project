@@ -3191,7 +3191,7 @@ class CompletionString(ClangObject):
             + " || Priority: "
             + str(self.priority)
             + " || Availability: "
-            + _kind_to_old_name(self.availability)
+            + _convert_screaming_caps_to_pascal_case(self.availability)
             + " || Brief comment: "
             + str(self.briefComment)
         )
