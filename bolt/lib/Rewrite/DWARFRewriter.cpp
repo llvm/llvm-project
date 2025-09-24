@@ -1831,6 +1831,8 @@ std::optional<StringRef> updateDebugData(
       errs() << "BOLT-WARNING: unsupported debug section: " << SectionName
              << "\n";
     if (StrWriter.isInitialized()) {
+      if (CUDWOEntry)
+        return StrWriter.bufferStr();
       OutputBuffer = StrWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1845,6 +1847,8 @@ std::optional<StringRef> updateDebugData(
   }
   case DWARFSectionKind::DW_SECT_STR_OFFSETS: {
     if (StrOffstsWriter.isFinalized()) {
+      if (CUDWOEntry)
+        return StrOffstsWriter.bufferStr();
       OutputBuffer = StrOffstsWriter.releaseBuffer();
       return StringRef(reinterpret_cast<const char *>(OutputBuffer->data()),
                        OutputBuffer->size());
@@ -1959,7 +1963,10 @@ void DWARFRewriter::writeDWOFiles(
     Expected<StringRef> ContentsExp = Section.getContents();
     assert(ContentsExp && "Invalid contents.");
     if (IsDWP && SectionName == "debug_str.dwo") {
-      StrDWOContent = *ContentsExp;
+      if (StrWriter.isInitialized())
+        StrDWOContent = StrWriter.bufferStr();
+      else
+        StrDWOContent = *ContentsExp;
       continue;
     }
     if (std::optional<StringRef> OutData = updateDebugData(
