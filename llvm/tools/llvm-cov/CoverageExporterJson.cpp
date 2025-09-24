@@ -21,7 +21,8 @@
 //         -- Branches: array => List of Branches in the file
 //           -- Branch: dict => Describes a branch of the file with counters
 //         -- MCDC Records: array => List of MCDC records in the file
-//           -- MCDC Values: array => List of T/F covered condition values and list of executed test vectors
+//           -- MCDC Values: array => List of T/F covered condition values and
+//           list of executed test vectors
 //         -- Segments: array => List of Segments contained in the file
 //           -- Segment: dict => Describes a segment of the file with a counter
 //         -- Expansions: array => List of expansion records
@@ -139,11 +140,11 @@ json::Array gatherTestVectors(coverage::MCDCRecord &Record) {
 json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
   const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
   const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
-  return json::Array({CMR.LineStart, CMR.ColumnStart, CMR.LineEnd,
-                      CMR.ColumnEnd, TrueDecisions, FalseDecisions,
-                      CMR.FileID, CMR.ExpandedFileID, int64_t(CMR.Kind),
-                      gatherConditions(Record),
-                      gatherTestVectors(const_cast<coverage::MCDCRecord &>(Record))});
+  return json::Array(
+      {CMR.LineStart, CMR.ColumnStart, CMR.LineEnd, CMR.ColumnEnd,
+       TrueDecisions, FalseDecisions, CMR.FileID, CMR.ExpandedFileID,
+       int64_t(CMR.Kind), gatherConditions(Record),
+       gatherTestVectors(const_cast<coverage::MCDCRecord &>(Record))});
 }
 
 json::Array renderRegions(ArrayRef<coverage::CountedRegion> Regions) {
