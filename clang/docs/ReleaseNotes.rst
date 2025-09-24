@@ -142,7 +142,7 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Started the implementation of `P2686R5 <https://wg21.link/P2686R5>`_ Constexpr structured bindings.
-  At this timem, references to constexpr and decomposition of _tuple-like_ types are not supported
+  At this timem, references to constexpr and decomposition of *tuple-like* types are not supported
   (only arrays and aggregates are).
 
 C++23 Feature Support
