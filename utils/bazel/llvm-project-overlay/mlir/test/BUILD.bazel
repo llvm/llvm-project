@@ -31,6 +31,7 @@ expand_template(
         "@LIT_SITE_CFG_IN_HEADER@": LIT_SITE_CFG_IN_HEADER,
         "@LLVM_TOOLS_DIR@": package_path("//llvm:BUILD"),
         "@ENABLE_SHARED@": "1",
+        "@BUILD_SHARED_LIBS@": "1",
         "@ENABLE_ASSERTIONS@": "1",
         "@MLIR_SOURCE_DIR@": package_path("//mlir:BUILD"),
         "@MLIR_TOOLS_DIR@": package_path("//mlir:BUILD"),
@@ -57,7 +58,7 @@ expand_template(
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM90_TESTS@": "0",
         "@MLIR_INCLUDE_INTEGRATION_TESTS@": "0",
-        "@SHLIBDIR@": package_path("//llvm:BUILD"),
+        "@SHLIBDIR@": package_path("//llvm:BUILD")
     },
     template = "lit.site.cfg.py.in",
 )
