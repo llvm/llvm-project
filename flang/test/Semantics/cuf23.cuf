@@ -46,3 +46,10 @@ attributes(device) subroutine device1()
   real, device :: a(10)
   print*, a ! ok
 end subroutine
+
+attributes(global) subroutine global_with_block()
+  block
+    real, device :: a(10)
+    print*, a ! ok
+  end block
+end subroutine
