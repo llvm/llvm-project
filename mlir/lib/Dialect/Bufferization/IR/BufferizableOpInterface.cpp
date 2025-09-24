@@ -350,7 +350,7 @@ defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
   // If not builtin, fallback to TensorLikeType::getBufferType()
   auto bufferType =
       type.getBufferType(options, [&]() { return funcOp->emitError(); });
-  assert(mlir::succeeded(bufferType) &&
+  assert(succeeded(bufferType) &&
          "a valid buffer is always expected at function boundary");
   return *bufferType;
 }
@@ -411,7 +411,7 @@ void BufferizationOptions::setFunctionBoundaryTypeConversion(
     // If not builtin, fallback to TensorLikeType::getBufferType()
     auto bufferType =
         type.getBufferType(options, [&]() { return funcOp->emitError(); });
-    assert(mlir::succeeded(bufferType) &&
+    assert(succeeded(bufferType) &&
            "a valid buffer is always expected at function boundary");
     return *bufferType;
   };
