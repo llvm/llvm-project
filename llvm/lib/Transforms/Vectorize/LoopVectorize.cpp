@@ -1763,6 +1763,8 @@ class GeneratedRTChecks {
   /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
+  bool AllCheckHoisted = false;
+
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
@@ -1849,16 +1851,11 @@ public:
       } else {
         MemRuntimeCheckCond = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
-            MemCheckExp, VectorizerParams::HoistRuntimeChecks);
+            MemCheckExp, VectorizerParams::HoistRuntimeChecks, AllCheckHoisted);
       }
       assert(MemRuntimeCheckCond &&
              "no RT checks generated although RtPtrChecking "
              "claimed checks are required");
-      // Compute SCEV while the block is reachable.
-      // After unlinking, SCEV returns unknown/poison (constant -> invariant),
-      // which makes getCost() wrongly discount hoisted checks.
-      if (OuterLoop)
-        PSE.getSE()->getSCEV(MemRuntimeCheckCond);
     }
 
     SCEVExp.eraseDeadInstructions(SCEVCheckCond);
@@ -1935,13 +1932,11 @@ public:
       // the checks will likely be hoisted out and so the effective cost will
       // reduce according to the outer loop trip count.
       if (OuterLoop) {
-        ScalarEvolution *SE = MemCheckExp.getSE();
         // TODO: If profitable, we could refine this further by analysing every
         // individual memory check, since there could be a mixture of loop
         // variant and invariant checks that mean the final condition is
         // variant.
-        const SCEV *Cond = SE->getSCEV(MemRuntimeCheckCond);
-        if (SE->isLoopInvariant(Cond, OuterLoop)) {
+        if (AllCheckHoisted) {
           // It seems reasonable to assume that we can reduce the effective
           // cost of the checks even when we know nothing about the trip
           // count. Assume that the outer loop executes at least twice.

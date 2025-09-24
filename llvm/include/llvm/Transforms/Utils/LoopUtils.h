@@ -578,7 +578,8 @@ LLVM_ABI Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
 LLVM_ABI Value *
 addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
-                 SCEVExpander &Expander, bool HoistRuntimeChecks = false);
+                 SCEVExpander &Expander, bool HoistRuntimeChecks,
+                 bool &AllChecksHoisted);
 
 LLVM_ABI Value *addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
