@@ -1616,6 +1616,11 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
+  /// \return The cost of vp intrinsic vp.load.ff.
+  LLVM_ABI InstructionCost getFaultOnlyFirstLoadCost(
+      Type *DataTy, Align Alignment,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
   /// A helper function to determine the type of reduction algorithm used
   /// for a given \p Opcode and set of FastMathFlags \p FMF.
   static bool requiresOrderedReduction(std::optional<FastMathFlags> FMF) {
