@@ -191,6 +191,7 @@ define i8 @cas_strong_i8_sc_sc(ptr %mem) {
 ; PPC64-NEXT:    and r8, r4, r6
 ; PPC64-NEXT:    or r8, r8, r7
 ; PPC64-NEXT:    stwcx. r8, 0, r5
+; PPC64-NEXT:    beq+ cr0, .LBB8_4
 ; PPC64-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; PPC64-NEXT:    #
 ; PPC64-NEXT:    lwarx r4, 0, r5
@@ -270,7 +271,7 @@ define i32 @cas_strong_i32_acqrel_acquire(ptr %mem) {
 ; CHECK-NEXT:  .LBB10_2: # %cmpxchg.trystore
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. r5, 0, r4
-; CHECK-NEXT:    beq cr0, .LBB10_4
+; CHECK-NEXT:    beq+ cr0, .LBB10_4
 ; CHECK-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx r3, 0, r4
