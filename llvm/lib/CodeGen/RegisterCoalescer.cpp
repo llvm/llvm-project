@@ -1474,11 +1474,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   //
   // The implicit-def of the super register may have been reduced to
   // subregisters depending on the uses.
-
-  TinyPtrVector<MachineOperand *> NewMIImpDefDestReg;
-  [[maybe_unused]] unsigned NewMIOpCount = NewMI.getNumOperands();
-
-  SmallVector<MCRegister, 4> NewMIImplDefs;
+  SmallVector<std::pair<unsigned, MCRegister>, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
        i != e; ++i) {
@@ -1486,9 +1482,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     if (MO.isReg() && MO.isDef()) {
       assert(MO.isImplicit());
       if (MO.getReg().isPhysical()) {
-        if (MO.getReg() == DstReg)
-          NewMIImpDefDestReg.push_back(&MO);
-
         assert(MO.isImplicit() && MO.getReg().isPhysical() &&
                (MO.isDead() ||
                 (DefSubIdx &&
@@ -1496,7 +1489,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
                    MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
                   TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
                                        MO.getReg())))));
-        NewMIImplDefs.push_back(MO.getReg().asMCReg());
+        NewMIImplDefs.push_back({i, MO.getReg().asMCReg()});
       } else {
         assert(MO.getReg() == NewMI.getOperand(0).getReg());
 
@@ -1649,27 +1642,22 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     NewMI.getOperand(0).setIsDead(true);
 
     bool HasDefMatchingCopy = false;
-    if (!NewMIImpDefDestReg.empty()) {
-      // Assert to check MachineOperand*s have not been invalidated.
-      assert(
-          NewMIOpCount == NewMI.getNumOperands() &&
-          "Expected NewMI operands not to be appended/removed at this point");
-      // If NewMI has an implicit-def of a super-register of the CopyDstReg,
-      // we must also mark that as dead since it is not going to used as a
-      // result of this remat.
-      for (MachineOperand *MO : NewMIImpDefDestReg) {
-        if (MO->getReg() != CopyDstReg)
-          MO->setIsDead(true);
-        else
-          HasDefMatchingCopy = true;
-      }
+    for (auto [OpIndex, Reg] : NewMIImplDefs) {
+      if (Reg != DstReg.asMCReg())
+        continue;
+      // Also, if CopyDstReg is a sub-register of DstReg (and it is defined), we
+      // must mark DstReg as dead since it is not going to used as a result of
+      // this remat.
+      if (DstReg != CopyDstReg)
+        NewMI.getOperand(OpIndex).setIsDead(true);
+      else
+        HasDefMatchingCopy = true;
     }
 
     // If NewMI does not already have an implicit-def CopyDstReg add one now.
-    if (!HasDefMatchingCopy) {
+    if (!HasDefMatchingCopy)
       NewMI.addOperand(MachineOperand::CreateReg(
           CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
-    }
 
     // Record small dead def live-ranges for all the subregisters
     // of the destination register.
@@ -1700,7 +1688,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     NewMI.addOperand(MO);
 
   SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
-  for (MCRegister Reg : NewMIImplDefs) {
+  for (MCRegister Reg : make_second_range(NewMIImplDefs)) {
     for (MCRegUnit Unit : TRI->regunits(Reg))
       if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
