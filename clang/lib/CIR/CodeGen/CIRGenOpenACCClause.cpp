@@ -988,20 +988,16 @@ public:
 
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
-          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
-          // this, and won't work when we get to bounds/etc. Do this for now to
-          // limit the scope of this refactor.
-          VarDecl *allocaDecl = varRecipe.AllocaDecl;
-          allocaDecl->setInit(varRecipe.InitExpr);
-          allocaDecl->setInitStyle(VarDecl::CallInit);
 
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
-                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
-                                     /*temporary=*/nullptr,
-                                     OpenACCReductionOperator::Invalid,
-                                     Decl::castToDeclContext(cgf.curFuncDecl),
-                                     opInfo.baseType, privateOp.getResult());
+                  .getOrCreateRecipe(
+                      cgf.getContext(), varExpr, varRecipe.AllocaDecl,
+                      varRecipe.InitExpr,
+                      /*temporary=*/nullptr, OpenACCReductionOperator::Invalid,
+                      Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
+                      opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
+                      privateOp.getResult());
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
           // probably need to change these here.
@@ -1042,12 +1038,13 @@ public:
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
                                                                     builder)
-                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
-                                     varRecipe.InitFromTemporary,
-                                     OpenACCReductionOperator::Invalid,
-                                     Decl::castToDeclContext(cgf.curFuncDecl),
-                                     opInfo.baseType,
-                                     firstPrivateOp.getResult());
+                  .getOrCreateRecipe(
+                      cgf.getContext(), varExpr, varRecipe.AllocaDecl,
+                      varRecipe.InitExpr, varRecipe.InitFromTemporary,
+                      OpenACCReductionOperator::Invalid,
+                      Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
+                      opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
+                      firstPrivateOp.getResult());
 
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
@@ -1089,11 +1086,13 @@ public:
 
           auto recipe =
               OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
-                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
-                                     /*temporary=*/nullptr,
-                                     clause.getReductionOp(),
-                                     Decl::castToDeclContext(cgf.curFuncDecl),
-                                     opInfo.baseType, reductionOp.getResult());
+                  .getOrCreateRecipe(
+                      cgf.getContext(), varExpr, varRecipe.AllocaDecl,
+                      varRecipe.InitExpr,
+                      /*temporary=*/nullptr, clause.getReductionOp(),
+                      Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
+                      opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
+                      reductionOp.getResult());
 
           operation.addReduction(builder.getContext(), reductionOp, recipe);
         }
