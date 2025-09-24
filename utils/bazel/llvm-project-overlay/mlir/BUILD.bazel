@@ -374,9 +374,9 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
-        "include/mlir/IR/PDLPatternMatch.h.inc",
     ],
     includes = ["include"],
     deps = [
