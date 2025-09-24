@@ -10,7 +10,7 @@
 
 # CHECK-LABEL: FAIL: shtest-readfile :: file-does-not-exist.txt ({{[^)]*}})
 # CHECK: # executed command: @echo 'echo %{readfile:/file/does/not/exist}'
-# CHECK: # | File specified in readfile substitution does not exist: /file/does/not/exist
+# CHECK: # | File specified in readfile substitution does not exist: {{.*}}/file/does/not/exist
 
 # CHECK-LABEL: FAIL: shtest-readfile :: relative-paths.txt ({{[^)]*}})
 # CHECK: echo hello
