@@ -30,6 +30,9 @@ declare_mlir_python_extension(StandalonePythonSources.Pybind11Extension
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIArith
+    MLIRCAPITransforms
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY pybind11
 )
@@ -42,6 +45,9 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIArith
+    MLIRCAPITransforms
     StandaloneCAPI
   PYTHON_BINDINGS_LIBRARY nanobind
 )
@@ -58,9 +64,6 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
   RELATIVE_INSTALL_ROOT "../../../.."
   DECLARED_SOURCES
     StandalonePythonSources
-    # TODO: Remove this in favor of showing fine grained registration once
-    # available.
-    MLIRPythonExtension.RegisterEverything
     MLIRPythonSources.Core
     MLIRPythonSources.Dialects.builtin
 )
@@ -130,9 +133,6 @@ declare_mlir_python_sources(
 )
 set(_declared_sources
   StandalonePythonSources
-  # TODO: Remove this in favor of showing fine grained registration once
-  # available.
-  MLIRPythonExtension.RegisterEverything
   MLIRPythonSources.Core
   MLIRPythonSources.Dialects.builtin
 )
