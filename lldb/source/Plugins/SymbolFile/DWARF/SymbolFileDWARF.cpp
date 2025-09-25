@@ -2502,6 +2502,7 @@ static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   case clang::CXXCtorType::Ctor_Comdat:
     llvm_unreachable("Unexpected constructor kind.");
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
@@ -2517,6 +2518,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Comdat:
     llvm_unreachable("Unexpected destructor kind.");
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 static llvm::StringRef
@@ -4325,7 +4327,8 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   m_index->Dump(s);
 }
 
-void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                   bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -4333,7 +4336,7 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->Dump(s.AsRawOstream(), filter);
+  clang->Dump(s.AsRawOstream(), filter, show_color);
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,

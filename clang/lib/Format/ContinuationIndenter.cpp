@@ -780,19 +780,21 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   // Indent preprocessor directives after the hash if required.
   int PPColumnCorrection = 0;
-  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash &&
-      Previous.is(tok::hash) && State.FirstIndent > 0 &&
-      &Previous == State.Line->First &&
+  if (&Previous == State.Line->First && Previous.is(tok::hash) &&
       (State.Line->Type == LT_PreprocessorDirective ||
        State.Line->Type == LT_ImportStatement)) {
-    Spaces += State.FirstIndent;
+    if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash) {
+      Spaces += State.FirstIndent;
 
-    // For preprocessor indent with tabs, State.Column will be 1 because of the
-    // hash. This causes second-level indents onward to have an extra space
-    // after the tabs. We avoid this misalignment by subtracting 1 from the
-    // column value passed to replaceWhitespace().
-    if (Style.UseTab != FormatStyle::UT_Never)
-      PPColumnCorrection = -1;
+      // For preprocessor indent with tabs, State.Column will be 1 because of
+      // the hash. This causes second-level indents onward to have an extra
+      // space after the tabs. We avoid this misalignment by subtracting 1 from
+      // the column value passed to replaceWhitespace().
+      if (Style.UseTab != FormatStyle::UT_Never)
+        PPColumnCorrection = -1;
+    } else if (Style.IndentPPDirectives == FormatStyle::PPDIS_Leave) {
+      Spaces += Current.OriginalColumn - Previous.OriginalColumn - 1;
+    }
   }
 
   if (!DryRun) {
