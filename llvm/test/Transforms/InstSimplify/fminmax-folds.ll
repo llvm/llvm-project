@@ -6,12 +6,12 @@
 ;###############################################################
 ; minnum(X, qnan) -> X
 ; maxnum(X, qnan) -> X
-; TODO: minnum(X, snan) -> qnan (currently we treat SNaN the same as QNaN)
-; TODO: maxnum(X, snan) -> qnan (currently we treat SNaN the same as QNaN)
+; minnum(X, snan) -> qnan
+; maxnum(X, snan) -> qnan
 ; minimum(X, nan) -> qnan
 ; maximum(X, nan) -> qnan
-; TODO: minimumnum(X, nan) -> X
-; TODO: maximumnum(X, nan) -> X
+; minimumnum(X, nan) -> X
+; maximumnum(X, nan) -> X
 
 define void @minmax_qnan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_qnan_f32(
@@ -40,7 +40,7 @@ define void @minmax_qnan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %mi
   ret void
 }
 
-; TODO currently snan is treated the same as qnan, but maxnum/minnum should really return qnan for these cases, not X
+; Note that maxnum/minnum return qnan here for snan inputs, unlike maximumnum/minimumnum
 define void @minmax_snan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_snan_f32(
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINIMUM_RES:%.*]], align 4
@@ -95,7 +95,7 @@ define void @minmax_qnan_nxv2f64_op0(<vscale x 2 x double> %x, ptr %minnum_res, 
   ret void
 }
 
-; TODO currently snan is treated the same as qnan, but maxnum/minnum should really return qnan for these cases, not X
+; Note that maxnum/minnum return qnan here for snan inputs, unlike maximumnum/minimumnum
 define void @minmax_snan_nxv2f64_op1(<vscale x 2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_snan_nxv2f64_op1(
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINIMUM_RES:%.*]], align 16
@@ -123,7 +123,8 @@ define void @minmax_snan_nxv2f64_op1(<vscale x 2 x double> %x, ptr %minnum_res, 
   ret void
 }
 
-; TODO Currently, we treat SNaN and QNaN the same. However, for maxnum and minnum, we should not optimize this, as we should return <%x0, QNaN> instead of <%x0, %x1>
+; For maxnum and minnum, we cannot optimize this in InstSimplify, as the result should
+; return <%x0, QNaN> and InstSimplify cannot create the extra instructions required to construct this.
 define void @minmax_mixed_snan_qnan_v2f64(<2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_mixed_snan_qnan_v2f64(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7FF400DEAD00DEAD, double 0x7FF8000FEED00000>, <2 x double> [[MINIMUMNUM:%.*]])
@@ -246,10 +247,10 @@ define void @minmax_poison_op1_nxv2f64(<vscale x 2 x double> %x, ptr %minnum_res
 ; minnum(X, +inf) -> X if nnan (ignoring NaN quieting)
 ; maximum(X, +inf) -> +inf if nnan
 ; minimum(X, +inf) -> X (ignoring NaN quieting)
-; TODO: maximumnum(X, +inf) -> +inf
-; TODO: minimumnum(X, +inf) -> X if nnan (ignoring NaN quieting)
+; maximumnum(X, +inf) -> +inf
+; minimumnum(X, +inf) -> X if nnan (ignoring NaN quieting)
 
-; Can only optimize maxnum and minimum without the nnan flag
+; Can only optimize maxnum, minimum, and maximumnum without the nnan flag
 define void @minmax_pos_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_pos_inf_f32(
 ; CHECK-NEXT:    [[MINNUM:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0x7FF0000000000000)
@@ -281,7 +282,6 @@ define void @minmax_pos_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr 
 }
 
 ; Can optimize all minmax variants if the nnan flag is set
-; TODO maximumnum/minimumnum
 define void @minmax_pos_inf_nnan_v2f32(<2 x float> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_pos_inf_nnan_v2f32(
 ; CHECK-NEXT:    store <2 x float> [[X:%.*]], ptr [[MINNUM_RES:%.*]], align 8
@@ -316,10 +316,10 @@ define void @minmax_pos_inf_nnan_v2f32(<2 x float> %x, ptr %minnum_res, ptr %max
 ; maxnum(X, -inf) -> X if nnan
 ; minimum(X, -inf) -> -inf if nnan
 ; maximum(X, -inf) -> X (Ignoring NaN quieting)
-; TODO: minimumnum(X, -inf) -> -inf
-; TODO: maximumnum(X, -inf) -> X if nnan
+; minimumnum(X, -inf) -> -inf
+; maximumnum(X, -inf) -> X if nnan
 
-; Can only optimize minnum and maximum without the nnan flag
+; Can only optimize minnum, maximum, and minimumnum without the nnan flag
 define void @minmax_neg_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_neg_inf_f32(
 ; CHECK-NEXT:    store float 0xFFF0000000000000, ptr [[MINNUM_RES:%.*]], align 4
@@ -351,7 +351,6 @@ define void @minmax_neg_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr 
 }
 
 ; Can optimize all minmax variants if the nnan flag is set
-; TODO maximumnum/minimumnum
 define void @minmax_neg_inf_nnan_v2f64(<2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_neg_inf_nnan_v2f64(
 ; CHECK-NEXT:    store <2 x double> splat (double 0xFFF0000000000000), ptr [[MINNUM_RES:%.*]], align 16
@@ -386,8 +385,8 @@ define void @minmax_neg_inf_nnan_v2f64(<2 x double> %x, ptr %minnum_res, ptr %ma
 ; minnum(X, +largest) -> X if ninf && nnan
 ; maximum(X, +largest) -> +largest if ninf && nnan
 ; minimum(X, +largest) -> X if ninf (ignoring quieting of sNaNs)
-; TODO: maximumnum(X, +largest) -> +largest if ninf && nnan
-; TODO: minimumnum(X, +largest) -> X if ninf && nnan
+; maximumnum(X, +largest) -> +largest if ninf
+; minimumnum(X, +largest) -> X if ninf && nnan
 
 ; None of these should be optimized away without the nnan/ninf flags
 define void @minmax_largest_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
@@ -423,7 +422,7 @@ define void @minmax_largest_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr 
   ret void
 }
 
-; We can optimize maxnum and minimum if we know ninf is set
+; We can optimize maxnum, minimum, and maximumnum if we know ninf is set
 define void @minmax_largest_f32_ninf(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_largest_f32_ninf(
 ; CHECK-NEXT:    [[MINNUM:%.*]] = call ninf float @llvm.minnum.f32(float [[X:%.*]], float 0x47EFFFFFE0000000)
@@ -455,7 +454,6 @@ define void @minmax_largest_f32_ninf(float %x, ptr %minnum_res, ptr %maxnum_res,
 }
 
 ; All can be optimized if both the ninf and nnan flags are set (ignoring SNaN propagation in minnum/maxnum)
-; TODO maximumnum/minimumnum
 define void @minmax_largest_v2f32_ninf_nnan(<2 x float> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_largest_v2f32_ninf_nnan(
 ; CHECK-NEXT:    store <2 x float> [[X:%.*]], ptr [[MINNUM_RES:%.*]], align 8
@@ -490,8 +488,8 @@ define void @minmax_largest_v2f32_ninf_nnan(<2 x float> %x, ptr %minnum_res, ptr
 ; minnum(X, -largest) -> -largest if ninf (ignoring SNaN -> QNaN propagation)
 ; maximum(X, -largest) -> X if ninf (ignoring quieting of sNaNs)
 ; minimum(X, -largest) -> -largest if ninf && nnan
-; TODO: maximumnum(X, -largest) -> X if ninf && nnan
-; TODO: minimumnum(X, -largest) -> -largest if ninf
+; maximumnum(X, -largest) -> X if ninf && nnan
+; minimumnum(X, -largest) -> -largest if ninf
 
 ; None of these should be optimized away without the nnan/ninf flags
 define void @minmax_neg_largest_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
@@ -527,7 +525,7 @@ define void @minmax_neg_largest_f32(float %x, ptr %minnum_res, ptr %maxnum_res, 
   ret void
 }
 
-; We can optimize minnum and maximum if we know ninf is set
+; We can optimize minnum, maximum, and minimumnum if we know ninf is set
 define void @minmax_neg_largest_f32_ninf(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_neg_largest_f32_ninf(
 ; CHECK-NEXT:    store float 0xC7EFFFFFE0000000, ptr [[MINNUM_RES:%.*]], align 4
@@ -559,7 +557,6 @@ define void @minmax_neg_largest_f32_ninf(float %x, ptr %minnum_res, ptr %maxnum_
 }
 
 ; All can be optimized if both the ninf and nnan flags are set (ignoring SNaN propagation in minnum/maxnum)
-; TODO maximumnum/minimumnum
 define void @minmax_neg_largest_nxv2f32_nnan_ninf(<vscale x 2 x float> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_neg_largest_nxv2f32_nnan_ninf(
 ; CHECK-NEXT:    store <vscale x 2 x float> splat (float 0xC7EFFFFFE0000000), ptr [[MINNUM_RES:%.*]], align 8
