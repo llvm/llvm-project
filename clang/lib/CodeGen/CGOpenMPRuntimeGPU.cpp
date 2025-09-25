@@ -904,6 +904,7 @@ llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
                                                    SourceLocation Loc) {
   CGM.getDiags().Report(Loc, diag::err_omp_gpu_unsupported_clause)
       << getOpenMPClauseName(OMPC_message);
+  return nullptr;
 }
 
 llvm::Value *
@@ -911,6 +912,7 @@ CGOpenMPRuntimeGPU::emitSeverityClause(OpenMPSeverityClauseKind Severity,
                                        SourceLocation Loc) {
   CGM.getDiags().Report(Loc, diag::err_omp_gpu_unsupported_clause)
       << getOpenMPClauseName(OMPC_severity);
+  return nullptr;
 }
 
 void CGOpenMPRuntimeGPU::emitNumThreadsClause(
