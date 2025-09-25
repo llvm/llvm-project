@@ -39,9 +39,16 @@ class CPUFeature:
         if err.Fail() or retcode != 0:
             return output, False
 
-        # FIXME: simple substring match, e.g., test for 'sme' will be true if
-        # 'sme2' or 'smefa64' is present
-        return None, (self.cpu_info_flag in output)
+        # Assume that every processor presents the same features.
+        # Look for the first "Features: ...." line.
+        for line in output.splitlines():
+            line = line.strip()
+            if line.startswith("Features"):
+                # Feature names are space separated.
+                features = line.split(":")[1].strip().split()
+                return None, (self.cpu_info_flag in features)
+
+        return f'No "Features:" line found in /proc/cpuinfo', False
 
     def _is_supported_darwin(self, cmd_runner):
         if not self.sysctl_key:
