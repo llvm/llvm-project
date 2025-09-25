@@ -218,6 +218,9 @@ template <class ToDuration, class Rep, class Period>
 template <class ToDuration, class Rep, class Period>
     constexpr ToDuration round(const duration<Rep, Period>& d);    // C++17
 
+template <class T> struct is_clock;                                // C++20
+template <class T> inline constexpr bool is_clock_v = is_clock<T>::value;                   // C++20
+
 // duration I/O
 template<class charT, class traits, class Rep, class Period>       // C++20
   basic_ostream<charT, traits>&

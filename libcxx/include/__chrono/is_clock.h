@@ -11,14 +11,13 @@
 #define _LIBCPP___CHRONO_IS_CLOCK_H
 
 #include <__config>
+#include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #if _LIBCPP_STD_VER >= 20
-
-#  include <__type_traits/integral_constant.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

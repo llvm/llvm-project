@@ -41,8 +41,6 @@ Implemented Papers
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
   is implemented in this release)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
-- P0355R7: ``std::chrono::is_clock`` and ``std::chrono::is_clock_v`` (`Github <https://llvm.org/PR160607>` __)
-  (The paper is partially implemented. ``is_clock`` and ``is_clock_v`` is implemented in this release)
 
 Improvements and New Features
 -----------------------------
