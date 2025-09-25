@@ -15270,6 +15270,27 @@ static SDValue NormalizeBuildVector(SDValue Op,
   return DAG.getBuildVector(VT, DL, Ops);
 }
 
+static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
+                             const AArch64Subtarget *ST, APInt &DefBits) {
+  EVT VT = Op.getValueType();
+  // TODO: We should be able to support 64-bit destinations too
+  if (!ST->hasSVE() || !VT.is128BitVector() ||
+      DefBits.getHiBits(64) != DefBits.getLoBits(64))
+    return SDValue();
+
+  // See if we can make use of the SVE dup instruction.
+  APInt Val64 = DefBits.trunc(64);
+  int32_t ImmVal, ShiftVal;
+  if (!AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal, ShiftVal))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue SplatVal = DAG.getSplatVector(MVT::nxv2i64, DL,
+                                        DAG.getConstant(Val64, DL, MVT::i64));
+  SDValue Res = convertFromScalableVector(DAG, MVT::v2i64, SplatVal);
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Res);
+}
+
 static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
                                    const AArch64Subtarget *ST) {
   EVT VT = Op.getValueType();
@@ -15307,6 +15328,10 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
     if (SDValue R = TryMOVIWithBits(DefBits))
       return R;
     if (SDValue R = TryMOVIWithBits(UndefBits))
+      return R;
+
+    // Try to materialise the constant using SVE when available.
+    if (SDValue R = trySVESplat64(Op, DAG, ST, DefBits))
       return R;
 
     // See if a fneg of the constant can be materialized with a MOVI, etc
