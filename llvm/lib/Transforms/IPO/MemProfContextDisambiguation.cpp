@@ -4529,12 +4529,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 //   For each call with graph Node having clones:
 //     If number func clones > number call's callsite Node clones:
 //        Record func CallInfo clones without Node clone in UnassignedCallClones
-//   For callsite Nodes in DFS order from allocations:
-//     If IsAllocation:
-//        Update allocation with alloc type
-//     Else:
-//        For Call, all MatchingCalls, and associated UnnassignedCallClones:
-//           Update call to call recorded callee clone
+// For callsite Nodes in DFS order from allocations:
+//   If IsAllocation:
+//     Update allocation with alloc type
+//   Else:
+//     For Call, all MatchingCalls, and associated UnnassignedCallClones:
+//       Update call to call recorded callee clone
 //
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
