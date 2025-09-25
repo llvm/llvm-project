@@ -1192,17 +1192,17 @@ TYPED_TEST(BitVectorTest, BidirectionalIterator) {
   --LastIt;
   EXPECT_EQ(*LastIt, 40U);
 
-  // Test post-decrement
+  // Test post-decrement.
   auto It = Vec.set_bits_end();
   auto PrevIt = It--;
   EXPECT_EQ(PrevIt, Vec.set_bits_end());
   EXPECT_EQ(*It, 40U);
 
-  // Test pre-decrement
+  // Test pre-decrement.
   --It;
   EXPECT_EQ(*It, 30U);
 
-  // Test full backward iteration
+  // Test full backward iteration.
   std::vector<unsigned> BackwardBits;
   for (auto RIt = Vec.set_bits_end(); RIt != Vec.set_bits_begin(); ) {
     --RIt;
@@ -1216,7 +1216,7 @@ TYPED_TEST(BitVectorTest, BidirectionalIterator) {
 }
 
 TYPED_TEST(BitVectorTest, ReverseIteration) {
-  // Test using llvm::reverse
+  // Test using llvm::reverse.
   TypeParam Vec(100, false);
   Vec.set(5);
   Vec.set(15);
@@ -1238,17 +1238,17 @@ TYPED_TEST(BitVectorTest, ReverseIteration) {
 }
 
 TYPED_TEST(BitVectorTest, BidirectionalIteratorEdgeCases) {
-  // Test empty BitVector
+  // Test empty BitVector.
   TypeParam Empty;
   EXPECT_EQ(Empty.set_bits_begin(), Empty.set_bits_end());
 
-  // Decrementing end() on empty should give -1 (no bits set)
+  // Decrementing end() on empty should give -1 (no bits set).
   auto EmptyEndIt = Empty.set_bits_end();
   --EmptyEndIt;
-  // After decrement on empty, iterator should still be at "no bit" position
+  // After decrement on empty, iterator should still be at "no bit" position.
   EXPECT_EQ(*EmptyEndIt, static_cast<unsigned>(-1));
 
-  // Test single bit
+  // Test single bit.
   TypeParam Single(10, false);
   Single.set(5);
 
@@ -1256,9 +1256,9 @@ TYPED_TEST(BitVectorTest, BidirectionalIteratorEdgeCases) {
   --SingleIt;
   EXPECT_EQ(*SingleIt, 5U);
   // After decrementing past the first element, the iterator is in an
-  // undefined state (before begin), so we don't test this case
+  // undefined state (before begin), so we don't test this case.
 
-  // Test all bits set
+  // Test all bits set.
   TypeParam AllSet(10, true);
   std::vector<unsigned> AllBitsReverse;
   for (unsigned Bit : llvm::reverse(AllSet.set_bits())) {
