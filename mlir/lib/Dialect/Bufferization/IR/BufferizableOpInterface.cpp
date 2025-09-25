@@ -119,6 +119,7 @@ bool AnalysisState::insideMutuallyExclusiveRegions(Operation *op0,
 void AnalysisState::resetCache() {
   enclosingRepetitiveRegionCache.clear();
   insideMutuallyExclusiveRegionsCache.clear();
+  aliasingOpOperandsCache.clear();
 }
 
 SymbolTableCollection &BufferizationState::getSymbolTables() {
@@ -413,12 +414,26 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
 /// Determine which OpOperand* will alias with `value` if the op is bufferized
 /// in place. Return all tensor OpOperand* if the op is not bufferizable.
 AliasingOpOperandList AnalysisState::getAliasingOpOperands(Value value) const {
+  // Check cache first
+  auto it = aliasingOpOperandsCache.find(value);
+  if (it != aliasingOpOperandsCache.end()) {
+    return it->second;
+  }
+
+  AliasingOpOperandList result;
   if (Operation *op = getOwnerOfValue(value))
     if (auto bufferizableOp = getOptions().dynCastBufferizableOp(op))
-      return bufferizableOp.getAliasingOpOperands(value, *this);
+      result = bufferizableOp.getAliasingOpOperands(value, *this);
+    else
+      // The op is not bufferizable.
+      result = detail::unknownGetAliasingOpOperands(value);
+  else
+    // The op is not bufferizable.
+    result = detail::unknownGetAliasingOpOperands(value);
 
-  // The op is not bufferizable.
-  return detail::unknownGetAliasingOpOperands(value);
+  // Cache the result
+  aliasingOpOperandsCache[value] = result;
+  return result;
 }
 
 /// Determine which Values will alias with `opOperand` if the op is bufferized

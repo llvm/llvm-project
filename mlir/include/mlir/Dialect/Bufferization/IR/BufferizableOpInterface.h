@@ -577,6 +577,9 @@ private:
   /// regions.
   DenseMap<std::pair<Operation *, Operation *>, bool>
       insideMutuallyExclusiveRegionsCache;
+
+  /// Cache for getAliasingOpOperands results to avoid expensive recomputation.
+  mutable DenseMap<Value, AliasingOpOperandList> aliasingOpOperandsCache;
 };
 
 /// BufferizationState provides information about the state of the IR during the
