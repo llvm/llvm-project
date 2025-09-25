@@ -3555,6 +3555,18 @@ struct OmpLocator {
 
 WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
 
+// Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
+//
+// Argument to DECLARE VARIANT with the base-name present. (When only
+// variant-name is present, it is a simple OmpObject).
+//
+// base-name-variant-name ->                        // since 4.5
+//    base-name : variant-name
+struct OmpBaseVariantNames {
+  TUPLE_CLASS_BOILERPLATE(OmpBaseVariantNames);
+  std::tuple<OmpObject, OmpObject> t;
+};
+
 // Ref: [5.0:326:10-16], [5.1:359:5-11], [5.2:163:2-7], [6.0:293:16-21]
 //
 // mapper-specifier ->
@@ -3584,6 +3596,7 @@ struct OmpArgument {
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpArgument);
   std::variant<OmpLocator, // {variable, extended, locator}-list-item
+      OmpBaseVariantNames, // base-name:variant-name
       OmpMapperSpecifier, OmpReductionSpecifier>
       u;
 };
