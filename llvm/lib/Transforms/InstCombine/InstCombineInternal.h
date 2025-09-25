@@ -475,7 +475,7 @@ private:
       InsertPosition InsertBefore = nullptr, Instruction *MDFrom = nullptr) {
     SelectInst *SI =
         SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
-    if (!SI) {
+    if (SI && !MDFrom) {
       assert(F && "provided parent function is nullptr!");
       setExplicitlyUnknownBranchWeightsIfProfiled(*SI, *F, DEBUG_TYPE);
     }
