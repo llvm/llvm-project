@@ -8,8 +8,8 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -1204,7 +1204,7 @@ TYPED_TEST(BitVectorTest, BidirectionalIterator) {
 
   // Test full backward iteration.
   std::vector<unsigned> BackwardBits;
-  for (auto RIt = Vec.set_bits_end(); RIt != Vec.set_bits_begin(); ) {
+  for (auto RIt = Vec.set_bits_end(); RIt != Vec.set_bits_begin();) {
     --RIt;
     BackwardBits.push_back(*RIt);
   }
