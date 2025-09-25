@@ -991,6 +991,16 @@ TEST(MustachePartials, PaddingWhitespace) {
   EXPECT_EQ("|[]|", Out);
 }
 
+TEST(MustachePartials, StandaloneIndentation) {
+  Value D = Object{{"content", "<\n->"}};
+  auto T = Template("\\\n  {{>partial}}\n/\n");
+  T.registerPartial("partial", "|\n{{{content}}}\n|\n");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_NE("\\\n  |\n  <\n  ->\n  |\n/\n", Out);
+}
+
 TEST(MustacheLambdas, BasicInterpolation) {
   Value D = Object{};
   auto T = Template("Hello, {{lambda}}!");
@@ -1235,7 +1245,7 @@ TEST(MustacheTripleMustache, Basic) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("Hello, <b>World</b>!", Out);
+  EXPECT_EQ("Hello, <b>World</b>!", Out);
 }
 
 TEST(MustacheTripleMustache, IntegerInterpolation) {
@@ -1244,7 +1254,7 @@ TEST(MustacheTripleMustache, IntegerInterpolation) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("85 miles an hour!", Out);
+  EXPECT_EQ("85 miles an hour!", Out);
 }
 
 TEST(MustacheTripleMustache, DecimalInterpolation) {
@@ -1253,7 +1263,7 @@ TEST(MustacheTripleMustache, DecimalInterpolation) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("1.21 jiggawatts!", Out);
+  EXPECT_EQ("1.21 jiggawatts!", Out);
 }
 
 TEST(MustacheTripleMustache, NullInterpolation) {
@@ -1262,7 +1272,7 @@ TEST(MustacheTripleMustache, NullInterpolation) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("I () be seen!", Out);
+  EXPECT_EQ("I () be seen!", Out);
 }
 
 TEST(MustacheTripleMustache, ContextMissInterpolation) {
@@ -1271,7 +1281,7 @@ TEST(MustacheTripleMustache, ContextMissInterpolation) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("I () be seen!", Out);
+  EXPECT_EQ("I () be seen!", Out);
 }
 
 TEST(MustacheTripleMustache, DottedNames) {
@@ -1280,7 +1290,7 @@ TEST(MustacheTripleMustache, DottedNames) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("<b>Joe</b>", Out);
+  EXPECT_EQ("<b>Joe</b>", Out);
 }
 
 TEST(MustacheTripleMustache, ImplicitIterator) {
@@ -1289,7 +1299,7 @@ TEST(MustacheTripleMustache, ImplicitIterator) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("(<a>)(<b>)", Out);
+  EXPECT_EQ("(<a>)(<b>)", Out);
 }
 
 TEST(MustacheTripleMustache, SurroundingWhitespace) {
@@ -1298,7 +1308,7 @@ TEST(MustacheTripleMustache, SurroundingWhitespace) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("| --- |", Out);
+  EXPECT_EQ("| --- |", Out);
 }
 
 TEST(MustacheTripleMustache, Standalone) {
@@ -1307,7 +1317,7 @@ TEST(MustacheTripleMustache, Standalone) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("  ---\n", Out);
+  EXPECT_EQ("  ---\n", Out);
 }
 
 TEST(MustacheTripleMustache, WithPadding) {
@@ -1316,5 +1326,5 @@ TEST(MustacheTripleMustache, WithPadding) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("|---|", Out);
+  EXPECT_EQ("|---|", Out);
 }

@@ -624,16 +624,6 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
     return false;
   }
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_mapper);
-    return false;
-  }
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source,
-        Directive::OMPD_declare_reduction);
-    return false;
-  }
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     checker_(
         std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_simd);
@@ -1603,13 +1593,25 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_declare_mapper);
-  const auto &spec{std::get<parser::OmpMapperSpecifier>(x.t)};
-  const auto &type = std::get<parser::TypeSpec>(spec.t);
-  if (!std::get_if<parser::DerivedTypeSpec>(&type.u)) {
-    context_.Say(dir.source, "Type is not a derived type"_err_en_US);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.size() != 1) {
+    context_.Say(args.source,
+        "DECLARE_MAPPER directive should have a single argument"_err_en_US);
+    return;
+  }
+
+  const parser::OmpArgument &arg{args.v.front()};
+  if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&arg.u)}) {
+    const auto &type = std::get<parser::TypeSpec>(spec->t);
+    if (!std::get_if<parser::DerivedTypeSpec>(&type.u)) {
+      context_.Say(arg.source, "Type is not a derived type"_err_en_US);
+    }
+  } else {
+    context_.Say(arg.source,
+        "The argument to the DECLARE_MAPPER directive should be a mapper-specifier"_err_en_US);
   }
 }
 
@@ -1619,9 +1621,21 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareMapperConstruct &) {
 
 void OmpStructureChecker::Enter(
     const parser::OpenMPDeclareReductionConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(
-      dir.source, llvm::omp::Directive::OMPD_declare_reduction);
+  const parser::OmpDirectiveName &dirName{x.v.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+
+  const parser::OmpArgumentList &args{x.v.Arguments()};
+  if (args.v.size() != 1) {
+    context_.Say(args.source,
+        "DECLARE_REDUCTION directive should have a single argument"_err_en_US);
+    return;
+  }
+
+  const parser::OmpArgument &arg{args.v.front()};
+  if (!std::holds_alternative<parser::OmpReductionSpecifier>(arg.u)) {
+    context_.Say(arg.source,
+        "The argument to the DECLARE_REDUCTION directive should be a reduction-specifier"_err_en_US);
+  }
 }
 
 void OmpStructureChecker::Leave(

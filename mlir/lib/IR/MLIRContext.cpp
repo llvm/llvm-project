@@ -278,6 +278,8 @@ public:
     }
   }
   ~MLIRContextImpl() {
+    // finalize remark engine before destroying anything else.
+    remarkEngine.reset();
     for (auto typeMapping : registeredTypes)
       typeMapping.second->~AbstractType();
     for (auto attrMapping : registeredAttributes)
