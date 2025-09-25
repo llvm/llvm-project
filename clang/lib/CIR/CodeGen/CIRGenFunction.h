@@ -98,8 +98,10 @@ public:
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
 
-  /// The function for which code is currently being generated.
-  cir::FuncOp curFn;
+  /// The current function or global initializer that is generated code for.
+  /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
+  /// global initializers.
+  mlir::Operation *curFn = nullptr;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -116,7 +118,11 @@ public:
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
 
-  mlir::Block *getCurFunctionEntryBlock() { return &curFn.getRegion().front(); }
+  mlir::Block *getCurFunctionEntryBlock() {
+    // We currently assume this isn't called for a global initializer.
+    auto fn = mlir::cast<cir::FuncOp>(curFn);
+    return &fn.getRegion().front();
+  }
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
