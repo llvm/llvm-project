@@ -1,4 +1,4 @@
-f//===- ParallelLoopMapper.cpp - Utilities for mapping parallel loops to GPU =//
+//===- ParallelLoopMapper.cpp - Utilities for mapping parallel loops to GPU =//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
