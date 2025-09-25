@@ -2223,9 +2223,6 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
         if (generic_regnum == LLDB_REGNUM_GENERIC_PC ||
             generic_regnum == LLDB_REGNUM_GENERIC_RA)
           value = abi_sp->FixCodeAddress(value);
-        if (generic_regnum == LLDB_REGNUM_GENERIC_SP ||
-            generic_regnum == LLDB_REGNUM_GENERIC_FP)
-          value = abi_sp->FixDataAddress(value);
       }
       return true;
     }

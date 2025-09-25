@@ -18,7 +18,7 @@ namespace clang::tidy::altera {
 /// kernels, which may be inefficient or cause an error.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera/single-work-item-barrier.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/altera/single-work-item-barrier.html
 class SingleWorkItemBarrierCheck : public ClangTidyCheck {
   const unsigned AOCVersion;
 

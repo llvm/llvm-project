@@ -276,6 +276,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       {G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO})
       .alwaysLegal();
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                allIntScalarsAndVectors);
+
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})
       .legalForCartesianProduct(allFloatScalarsAndVectors);

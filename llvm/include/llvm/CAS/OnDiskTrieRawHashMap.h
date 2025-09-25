@@ -59,9 +59,9 @@ private:
 ///     - "index" stores the root trie and subtries.
 ///     - "data" stores (most of) the entries, like a bump-ptr-allocator.
 ///     - Large entries are stored externally in a file named by the key.
-/// - Code is system-dependent (Windows not yet implemented), and binary format
-///   itself is not portable. These are not artifacts that can/should be moved
-///   between different systems; they are only appropriate for local storage.
+/// - Code is system-dependent and binary format itself is not portable. These
+///   are not artifacts that can/should be moved between different systems; they
+///   are only appropriate for local storage.
 class OnDiskTrieRawHashMap {
 public:
   LLVM_DUMP_METHOD void dump() const;
@@ -276,24 +276,11 @@ public:
     ValueProxy Value;
   };
 
-  // Look up the data stored at the given offset.
+  /// Look up the data stored at the given offset.
   const char *beginData(FileOffset Offset) const;
-  char *beginData(FileOffset Offset) {
-    return const_cast<char *>(
-        const_cast<const OnDiskDataAllocator *>(this)->beginData(Offset));
-  }
 
+  /// Allocate at least \p Size with 8-byte alignment.
   Expected<pointer> allocate(size_t Size);
-  Expected<pointer> save(ArrayRef<char> Data) {
-    auto P = allocate(Data.size());
-    if (LLVM_UNLIKELY(!P))
-      return P.takeError();
-    llvm::copy(Data, (*P)->begin());
-    return P;
-  }
-  Expected<pointer> save(StringRef Data) {
-    return save(ArrayRef<char>(Data.begin(), Data.size()));
-  }
 
   /// \returns the buffer that was allocated at \p create time, with size
   /// \p UserHeaderSize.

@@ -1528,40 +1528,34 @@ Expected<OnDiskTrieRawHashMap::pointer>
 OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
                                  LazyInsertOnConstructCB OnConstruct,
                                  LazyInsertOnLeakCB OnLeak) {
-  report_fatal_error("not supported");
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskTrieRawHashMap is not supported");
 }
 
 Expected<OnDiskTrieRawHashMap::const_pointer>
 OnDiskTrieRawHashMap::recoverFromFileOffset(FileOffset Offset) const {
-  report_fatal_error("not supported");
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskTrieRawHashMap is not supported");
 }
 
 OnDiskTrieRawHashMap::const_pointer
 OnDiskTrieRawHashMap::find(ArrayRef<uint8_t> Hash) const {
-  report_fatal_error("not supported");
+  return const_pointer();
 }
 
 void OnDiskTrieRawHashMap::print(
     raw_ostream &OS, function_ref<void(ArrayRef<char>)> PrintRecordData) const {
-  report_fatal_error("not supported");
 }
 
 Error OnDiskTrieRawHashMap::validate(
     function_ref<Error(FileOffset, OnDiskTrieRawHashMap::ConstValueProxy)>
         RecordVerifier) const {
-  report_fatal_error("not supported");
-}
-size_t OnDiskTrieRawHashMap::size() const {
-  report_fatal_error("not supported");
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskTrieRawHashMap is not supported");
 }
 
-size_t OnDiskTrieRawHashMap::capacity() const {
-  report_fatal_error("not supported");
-}
-
-size_t OnDiskDataAllocator::capacity() const {
-  report_fatal_error("not supported");
-}
+size_t OnDiskTrieRawHashMap::size() const { return 0; }
+size_t OnDiskTrieRawHashMap::capacity() const { return 0; }
 
 struct OnDiskDataAllocator::ImplType {};
 
@@ -1575,20 +1569,18 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
 
 Expected<OnDiskDataAllocator::pointer>
 OnDiskDataAllocator::allocate(size_t Size) {
-  report_fatal_error("not supported");
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "OnDiskDataAllocator is not supported");
 }
 
 const char *OnDiskDataAllocator::beginData(FileOffset Offset) const {
-  report_fatal_error("not supported");
+  return nullptr;
 }
 
-MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() {
-  report_fatal_error("not supported");
-}
+MutableArrayRef<uint8_t> OnDiskDataAllocator::getUserHeader() { return {}; }
 
-size_t OnDiskDataAllocator::size() const {
-  report_fatal_error("not supported");
-}
+size_t OnDiskDataAllocator::size() const { return 0; }
+size_t OnDiskDataAllocator::capacity() const { return 0; }
 
 #endif // LLVM_ENABLE_ONDISK_CAS
 

@@ -669,6 +669,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagClient->setPrefix("clang -cc1as");
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
+  auto VFS = vfs::getRealFileSystem();
+
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
   ScopedFatalErrorHandler FatalErrorHandler
@@ -707,7 +709,8 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
   }
 
   // Execute the invocation, unless there were parsing errors.
