@@ -528,14 +528,6 @@ public:
     return SCEVRewriteVisitor<SCEVAddRecForUniformityRewriter>::visit(S);
   }
 
-  const SCEV *visitUnknown(const SCEVUnknown *S) {
-    if (SE.isLoopInvariant(S, TheLoop))
-      return S;
-    // The value could vary across iterations.
-    CannotAnalyze = true;
-    return S;
-  }
-
   const SCEV *visitCouldNotCompute(const SCEVCouldNotCompute *S) {
     // Could not analyze the expression.
     CannotAnalyze = true;
