@@ -226,7 +226,6 @@ constexpr bool test() {
 
 #ifdef _LIBCPP_VERSION
   // These types should be implicit-lifetime, but they are not guaranteed to be so.
-  // Especially, MSVC STL has not made them implicit-lifetime yet. See https://github.com/microsoft/STL/issues/5667.
   test_is_implicit_lifetime<std::pair<int, float>>();
   test_is_implicit_lifetime<std::tuple<int, float>>();
 #endif
