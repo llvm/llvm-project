@@ -22,15 +22,65 @@
 
 namespace llvm {
 
+class TargetLowering;
 class AArch64Subtarget;
 class AArch64FunctionInfo;
 class AArch64FrameLowering;
+
+class AArch64PrologueEpilogueCommon {
+public:
+  AArch64PrologueEpilogueCommon(MachineFunction &MF, MachineBasicBlock &MBB,
+                                const AArch64FrameLowering &AFL);
+
+protected:
+  bool requiresGetVGCall() const;
+
+  bool isVGInstruction(MachineBasicBlock::iterator MBBI,
+                       const TargetLowering &TLI) const;
+
+  // Convert callee-save register save/restore instruction to do stack pointer
+  // decrement/increment to allocate/deallocate the callee-save stack area by
+  // converting store/load to use pre/post increment version.
+  MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
+      MachineBasicBlock::iterator MBBI, const DebugLoc &DL, int CSStackSizeInc,
+      bool EmitCFI, MachineInstr::MIFlag FrameFlag = MachineInstr::FrameSetup,
+      int CFAOffset = 0) const;
+
+  // Fixup callee-save register save/restore instructions to take into account
+  // combined SP bump by adding the local stack size to the stack offsets.
+  void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
+                                         uint64_t LocalStackSize) const;
+
+  bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
+
+  MachineFunction &MF;
+  MachineBasicBlock &MBB;
+
+  const MachineFrameInfo &MFI;
+  const AArch64Subtarget &Subtarget;
+  const AArch64FrameLowering &AFL;
+  const AArch64RegisterInfo &RegInfo;
+
+  // Common flags. These generally should not change outside of the (possibly
+  // derived) constructor.
+  bool HasFP = false;
+  bool EmitCFI = false;     // Note: Set in derived constructors.
+  bool IsFunclet = false;   // Note: Set in derived constructors.
+  bool NeedsWinCFI = false; // Note: Can be changed in emitFramePointerSetup.
+  bool HomPrologEpilog = false; // Note: Set in derived constructors.
+
+  // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
+  mutable bool HasWinCFI = false;
+
+  const TargetInstrInfo *TII = nullptr;
+  AArch64FunctionInfo *AFI = nullptr;
+};
 
 /// A helper class for emitting the prologue. Substantial new functionality
 /// should be factored into a new method. Where possible "emit*" methods should
 /// be const, and any flags that change how the prologue is emitted should be
 /// set in the constructor.
-class AArch64PrologueEmitter {
+class AArch64PrologueEmitter final : public AArch64PrologueEpilogueCommon {
 public:
   AArch64PrologueEmitter(MachineFunction &MF, MachineBasicBlock &MBB,
                          const AArch64FrameLowering &AFL);
@@ -46,6 +96,11 @@ public:
   }
 
 private:
+  void allocateStackSpace(MachineBasicBlock::iterator MBBI,
+                          int64_t RealignmentPadding, StackOffset AllocSize,
+                          bool EmitCFI, StackOffset InitialOffset,
+                          bool FollowupAllocs);
+
   void emitShadowCallStackPrologue(MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL) const;
 
@@ -71,14 +126,7 @@ private:
 
   void determineLocalsStackSize(uint64_t StackSize, uint64_t PrologueSaveSize);
 
-  MachineFunction &MF;
-  MachineBasicBlock &MBB;
-
   const Function &F;
-  const MachineFrameInfo &MFI;
-  const AArch64Subtarget &Subtarget;
-  const AArch64FrameLowering &AFL;
-  const AArch64RegisterInfo &RegInfo;
 
 #ifndef NDEBUG
   mutable LivePhysRegs LiveRegs{RegInfo};
@@ -89,29 +137,16 @@ private:
 #endif
 
   // Prologue flags. These generally should not change outside of the
-  // constructor. Two exceptions are "CombineSPBump" which is set in
-  // determineLocalsStackSize, and "NeedsWinCFI" which is set in
-  // emitFramePointerSetup.
-  bool EmitCFI = false;
+  // constructor.
   bool EmitAsyncCFI = false;
-  bool HasFP = false;
-  bool IsFunclet = false;
-  bool CombineSPBump = false;
-  bool HomPrologEpilog = false;
-  bool NeedsWinCFI = false;
-
-  // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
-  mutable bool HasWinCFI = false;
-
-  const TargetInstrInfo *TII = nullptr;
-  AArch64FunctionInfo *AFI = nullptr;
+  bool CombineSPBump = false; // Note: This is set in determineLocalsStackSize.
 };
 
 /// A helper class for emitting the epilogue. Substantial new functionality
 /// should be factored into a new method. Where possible "emit*" methods should
 /// be const, and any flags that change how the epilogue is emitted should be
 /// set in the constructor.
-class AArch64EpilogueEmitter {
+class AArch64EpilogueEmitter final : public AArch64PrologueEpilogueCommon {
 public:
   AArch64EpilogueEmitter(MachineFunction &MF, MachineBasicBlock &MBB,
                          const AArch64FrameLowering &AFL);
@@ -122,6 +157,8 @@ public:
   ~AArch64EpilogueEmitter() { finalizeEpilogue(); }
 
 private:
+  bool shouldCombineCSRLocalStackBump(uint64_t StackBumpBytes) const;
+
   void emitSwiftAsyncContextFramePointer(MachineBasicBlock::iterator MBBI,
                                          const DebugLoc &DL) const;
 
@@ -141,27 +178,8 @@ private:
 
   void finalizeEpilogue() const;
 
-  MachineFunction &MF;
-  MachineBasicBlock &MBB;
-
-  const MachineFrameInfo &MFI;
-  const AArch64Subtarget &Subtarget;
-  const AArch64FrameLowering &AFL;
-
-  // Epilogue flags. These generally should not change outside of the
-  // constructor (or early in emitEpilogue).
-  bool NeedsWinCFI = false;
-  bool EmitCFI = false;
-  bool IsFunclet = false;
-
-  // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
-  mutable bool HasWinCFI = false;
-
-  const TargetInstrInfo *TII = nullptr;
-  AArch64FunctionInfo *AFI = nullptr;
-
-  DebugLoc DL;
   MachineBasicBlock::iterator SEHEpilogueStartI;
+  DebugLoc DL;
 };
 
 } // namespace llvm

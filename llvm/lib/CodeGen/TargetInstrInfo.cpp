@@ -64,8 +64,11 @@ TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
-  short RegClass = MCID.operands()[OpNum].RegClass;
-  if (MCID.operands()[OpNum].isLookupPtrRegClass())
+  const MCOperandInfo &OpInfo = MCID.operands()[OpNum];
+  int16_t RegClass = getOpRegClassID(OpInfo);
+
+  // TODO: Remove isLookupPtrRegClass in favor of isLookupRegClassByHwMode
+  if (OpInfo.isLookupPtrRegClass())
     return TRI->getPointerRegClass(RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
@@ -1587,7 +1590,7 @@ MachineTraceStrategy TargetInstrInfo::getMachineCombinerTraceStrategy() const {
   return MachineTraceStrategy::TS_MinInstrCount;
 }
 
-bool TargetInstrInfo::isReallyTriviallyReMaterializable(
+bool TargetInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();

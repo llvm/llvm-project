@@ -21,12 +21,14 @@ end subroutine
 !CHECK-PARSE: | ExecutionPart -> Block
 !CHECK-PARSE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | OmpLoopDirective -> llvm::omp::Directive = do
+!CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | | OmpLoopDirective -> llvm::omp::Directive = unroll
+!CHECK-PARSE-NEXT: | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | | DoConstruct
 !CHECK-PARSE-NEXT: | | | | | NonLabelDoStmt
 !CHECK-PARSE-NEXT: | | | | | | LoopControl -> LoopBounds
@@ -53,11 +55,13 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | | | | | | LiteralConstant -> IntLiteralConstant = '5'
 !CHECK-PARSE-NEXT: | | | | | EndDoStmt ->
 !CHECK-PARSE-NEXT: | | | | OmpEndLoopDirective
-!CHECK-PARSE-NEXT: | | | | | OmpLoopDirective -> llvm::omp::Directive = unroll
+!CHECK-PARSE-NEXT: | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !CHECK-PARSE-NEXT: | | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | OmpEndLoopDirective
-!CHECK-PARSE-NEXT: | | | | OmpLoopDirective -> llvm::omp::Directive = do
+!CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | Flags = None
 
 !CHECK-UNPARSE: SUBROUTINE loop_transformation_construct
 !CHECK-UNPARSE-NEXT:  IMPLICIT NONE

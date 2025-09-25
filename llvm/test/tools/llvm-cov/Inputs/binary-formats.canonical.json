@@ -33,4 +33,4 @@ CHECK-SAME:     "mcdc":{"count":0,"covered":0,"notcovered":0,"percent":0},
 CHECK-SAME:     "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
 CHECK-SAME: ],
 CHECK-SAME: "type":"llvm.coverage.json.export"
-CHECK-SAME: "version":"3.0.1"
+CHECK-SAME: "version":"3.1.0"
