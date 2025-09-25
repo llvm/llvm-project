@@ -17,8 +17,9 @@ entry:
 define void @two_fdivs(double %a0, double %a1, double %a2, ptr %res) {
 ; CHECK-LABEL: two_fdivs:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI1_0)(a1)
+; CHECK-NEXT:    li a1, 1023
+; CHECK-NEXT:    slli a1, a1, 52
+; CHECK-NEXT:    fmv.d.x fa5, a1
 ; CHECK-NEXT:    fdiv.d fa5, fa5, fa0
 ; CHECK-NEXT:    fmul.d fa4, fa1, fa5
 ; CHECK-NEXT:    fmul.d fa5, fa2, fa5
