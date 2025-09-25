@@ -24,16 +24,18 @@ llvm.func @cancel_parallel() {
 // CHECK:         %[[VAL_15:.*]] = icmp eq i32 %[[VAL_14]], 0
 // CHECK:         br i1 %[[VAL_15]], label %[[VAL_16:.*]], label %[[VAL_17:.*]]
 // CHECK:       omp.par.region1.cncl:                             ; preds = %[[VAL_12]]
+// CHECK:         br label %[[VAL_20:.*]]
+// CHECK:       .fini:
 // CHECK:         %[[VAL_18:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         %[[VAL_19:.*]] = call i32 @__kmpc_cancel_barrier(ptr @2, i32 %[[VAL_18]])
-// CHECK:         br label %[[VAL_20:.*]]
+// CHECK:         br label %[[EXIT_STUB:.*]]
 // CHECK:       omp.par.region1.split:                            ; preds = %[[VAL_12]]
 // CHECK:         br label %[[VAL_21:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_16]]
 // CHECK:         br label %[[VAL_22:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_21]]
 // CHECK:         br label %[[VAL_20]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_22]], %[[VAL_17]]
+// CHECK:       omp.par.exit.exitStub:
 // CHECK:         ret void
 
 llvm.func @cancel_parallel_if(%arg0 : i1) {
@@ -67,18 +69,20 @@ llvm.func @cancel_parallel_if(%arg0 : i1) {
 // CHECK:         br label %[[VAL_26:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_27:.*]]
-// CHECK:       5:                                                ; preds = %[[VAL_20]]
+// CHECK:       .fini:
+// CHECK:         %[[VAL_32:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK:         %[[VAL_33:.*]] = call i32 @__kmpc_cancel_barrier(ptr @2, i32 %[[VAL_32]])
+// CHECK:         br label %[[EXIT_STUB:.*]]
+// CHECK:       6:                                                ; preds = %[[VAL_20]]
 // CHECK:         %[[VAL_28:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         %[[VAL_29:.*]] = call i32 @__kmpc_cancel(ptr @1, i32 %[[VAL_28]], i32 1)
 // CHECK:         %[[VAL_30:.*]] = icmp eq i32 %[[VAL_29]], 0
 // CHECK:         br i1 %[[VAL_30]], label %[[VAL_24]], label %[[VAL_31:.*]]
 // CHECK:       .cncl:                                            ; preds = %[[VAL_21]]
-// CHECK:         %[[VAL_32:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         %[[VAL_33:.*]] = call i32 @__kmpc_cancel_barrier(ptr @2, i32 %[[VAL_32]])
 // CHECK:         br label %[[VAL_27]]
 // CHECK:       .split:                                           ; preds = %[[VAL_21]]
 // CHECK:         br label %[[VAL_23]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_31]], %[[VAL_26]]
+// CHECK:       omp.par.exit.exitStub:
 // CHECK:         ret void
 
 llvm.func @cancel_sections_if(%cond : i1) {
@@ -145,7 +149,7 @@ llvm.func @cancel_sections_if(%cond : i1) {
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_23]]
 // CHECK:         %[[VAL_15]] = add nuw i32 %[[VAL_14]], 1
 // CHECK:         br label %[[VAL_12]]
-// CHECK:       omp_section_loop.exit:                            ; preds = %[[VAL_33]], %[[VAL_16]]
+// CHECK:       omp_section_loop.exit:
 // CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_7]])
 // CHECK:         %[[VAL_36:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_36]])
@@ -232,7 +236,7 @@ llvm.func @cancel_wsloop_if(%lb : i32, %ub : i32, %step : i32, %cond : i1) {
 // CHECK:       omp_loop.inc:                                     ; preds = %[[VAL_52]]
 // CHECK:         %[[VAL_34]] = add nuw i32 %[[VAL_33]], 1
 // CHECK:         br label %[[VAL_31]]
-// CHECK:       omp_loop.exit:                                    ; preds = %[[VAL_50]], %[[VAL_35]]
+// CHECK:       omp_loop.exit:
 // CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_26]])
 // CHECK:         %[[VAL_53:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_53]])
