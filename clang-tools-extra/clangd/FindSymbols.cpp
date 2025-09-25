@@ -14,6 +14,7 @@
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "support/Logger.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -111,7 +112,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       *Req.Limit *= 5;
   }
   TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(
-      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
+      Req.Limit.value_or(std::numeric_limits<size_t>::max()));
   FuzzyMatcher Filter(Req.Query);
 
   Index->fuzzyFind(Req, [HintPath, &Top, &Filter, AnyScope = Req.AnyScope,
@@ -182,7 +183,6 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
     OS << (Method->isInstanceMethod() ? '-' : '+');
     Method->getSelector().print(OS);
 
-    OS.flush();
     return Name;
   }
   return printName(Ctx, ND);
@@ -390,6 +390,17 @@ private:
       // TemplatedDecl might be null, e.g. concepts.
       if (auto *TD = Templ->getTemplatedDecl())
         D = TD;
+    }
+
+    // FriendDecls don't act as DeclContexts, but they might wrap a function
+    // definition that won't be visible through other means in the AST. Hence
+    // unwrap it here instead.
+    if (auto *Friend = llvm::dyn_cast<FriendDecl>(D)) {
+      if (auto *Func =
+              llvm::dyn_cast_or_null<FunctionDecl>(Friend->getFriendDecl())) {
+        if (Func->isThisDeclarationADefinition())
+          D = Func;
+      }
     }
 
     VisitKind Visit = shouldVisit(D);

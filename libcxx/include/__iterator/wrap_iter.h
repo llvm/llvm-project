@@ -13,13 +13,17 @@
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
-#include <cstddef>
+#include <__type_traits/is_same.h>
+#include <__type_traits/make_const_lvalue_ref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,9 +49,14 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
-  template <class _Up, __enable_if_t<is_convertible<_Up, iterator_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_Up>& __u) _NOEXCEPT
-      : __i_(__u.base()) {}
+  template <
+      class _OtherIter,
+      __enable_if_t< _And< is_convertible<const _OtherIter&, _Iter>,
+                           _Or<is_same<reference, __iter_reference<_OtherIter> >,
+                               is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIter> > > > >::value,
+                     int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
+      : __i_(__u.__i_) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pointer operator->() const _NOEXCEPT {
     return std::__to_address(__i_);
@@ -103,11 +112,13 @@ private:
   template <class _CharT, class _Traits>
   friend class basic_string_view;
   template <class _Tp, class _Alloc>
-  friend class _LIBCPP_TEMPLATE_VIS vector;
+  friend class vector;
   template <class _Tp, size_t>
-  friend class _LIBCPP_TEMPLATE_VIS span;
+  friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
+  template <class _Tp>
+  friend class optional;
 };
 
 template <class _Iter1>
@@ -227,7 +238,7 @@ struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
 #endif
 
 template <class _It>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {
+struct pointer_traits<__wrap_iter<_It> > {
   typedef __wrap_iter<_It> pointer;
   typedef typename pointer_traits<_It>::element_type element_type;
   typedef typename pointer_traits<_It>::difference_type difference_type;

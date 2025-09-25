@@ -22,7 +22,6 @@ llvm.func @_QQmain() {
     %11 = omp.map.info var_ptr(%9 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) bounds(%10) -> !llvm.ptr
     %12 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.struct<(f32, array<10 x i32>, i32)>) map_clauses(tofrom) capture(ByRef) members(%7, %11 : [2], [1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {partial_map = true}
     omp.target map_entries(%7 -> %arg0, %11 -> %arg1, %12 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr):
       omp.terminator
     }
     llvm.return

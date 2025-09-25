@@ -30,11 +30,12 @@
 #include <memory>
 #include <string>
 #include <vector>
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) &&              \
+    !defined(_M_ARM64EC)
 #include <immintrin.h>
 #include <intrin.h>
 #endif
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
 #include <float.h> // For _clearfp in ~X86SavedState().
 #endif
 
@@ -468,7 +469,7 @@ static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
 }
 
 // Generates instruction to load an immediate value into a register.
-static MCInst loadImmediate(unsigned Reg, unsigned RegBitWidth,
+static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
                             const APInt &Value) {
   if (Value.getBitWidth() > RegBitWidth)
     llvm_unreachable("Value must fit in the Register");
@@ -500,7 +501,7 @@ static MCInst fillStackSpace(unsigned MovOpcode, unsigned OffsetBytes,
 }
 
 // Loads scratch memory into register `Reg` using opcode `RMOpcode`.
-static MCInst loadToReg(unsigned Reg, unsigned RMOpcode) {
+static MCInst loadToReg(MCRegister Reg, unsigned RMOpcode) {
   return MCInstBuilder(RMOpcode)
       .addReg(Reg)
       // Address = ESP
@@ -525,17 +526,19 @@ namespace {
 struct ConstantInliner {
   explicit ConstantInliner(const APInt &Constant) : Constant_(Constant) {}
 
-  std::vector<MCInst> loadAndFinalize(unsigned Reg, unsigned RegBitWidth,
+  std::vector<MCInst> loadAndFinalize(MCRegister Reg, unsigned RegBitWidth,
                                       unsigned Opcode);
 
-  std::vector<MCInst> loadX87STAndFinalize(unsigned Reg);
+  std::vector<MCInst> loadX87STAndFinalize(MCRegister Reg);
 
-  std::vector<MCInst> loadX87FPAndFinalize(unsigned Reg);
+  std::vector<MCInst> loadX87FPAndFinalize(MCRegister Reg);
 
   std::vector<MCInst> popFlagAndFinalize();
 
   std::vector<MCInst> loadImplicitRegAndFinalize(unsigned Opcode,
                                                  unsigned Value);
+
+  std::vector<MCInst> loadDirectionFlagAndFinalize();
 
 private:
   ConstantInliner &add(const MCInst &Inst) {
@@ -552,7 +555,7 @@ private:
 };
 } // namespace
 
-std::vector<MCInst> ConstantInliner::loadAndFinalize(unsigned Reg,
+std::vector<MCInst> ConstantInliner::loadAndFinalize(MCRegister Reg,
                                                      unsigned RegBitWidth,
                                                      unsigned Opcode) {
   assert((RegBitWidth & 7) == 0 && "RegBitWidth must be a multiple of 8 bits");
@@ -562,7 +565,7 @@ std::vector<MCInst> ConstantInliner::loadAndFinalize(unsigned Reg,
   return std::move(Instructions);
 }
 
-std::vector<MCInst> ConstantInliner::loadX87STAndFinalize(unsigned Reg) {
+std::vector<MCInst> ConstantInliner::loadX87STAndFinalize(MCRegister Reg) {
   initStack(kF80Bytes);
   add(MCInstBuilder(X86::LD_F80m)
           // Address = ESP
@@ -577,7 +580,7 @@ std::vector<MCInst> ConstantInliner::loadX87STAndFinalize(unsigned Reg) {
   return std::move(Instructions);
 }
 
-std::vector<MCInst> ConstantInliner::loadX87FPAndFinalize(unsigned Reg) {
+std::vector<MCInst> ConstantInliner::loadX87FPAndFinalize(MCRegister Reg) {
   initStack(kF80Bytes);
   add(MCInstBuilder(X86::LD_Fp80m)
           .addReg(Reg)
@@ -612,6 +615,15 @@ ConstantInliner::loadImplicitRegAndFinalize(unsigned Opcode, unsigned Value) {
   return std::move(Instructions);
 }
 
+std::vector<MCInst> ConstantInliner::loadDirectionFlagAndFinalize() {
+  if (Constant_.isZero())
+    add(MCInstBuilder(X86::CLD));
+  else if (Constant_.isOne())
+    add(MCInstBuilder(X86::STD));
+
+  return std::move(Instructions);
+}
+
 void ConstantInliner::initStack(unsigned Bytes) {
   assert(Constant_.getBitWidth() <= Bytes * 8 &&
          "Value does not have the correct size");
@@ -643,7 +655,7 @@ namespace {
 class X86SavedState : public ExegesisTarget::SavedState {
 public:
   X86SavedState() {
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
     _fxsave64(FPState);
     Eflags = __readeflags();
 #elif defined(__GNUC__) && defined(__x86_64__)
@@ -657,7 +669,7 @@ public:
   ~X86SavedState() {
     // Restoring the X87 state does not flush pending exceptions, make sure
     // these exceptions are flushed now.
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
     _clearfp();
     _fxrstor64(FPState);
     __writeeflags(Eflags);
@@ -671,7 +683,7 @@ public:
   }
 
 private:
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) && !defined(_M_ARM64EC)
   alignas(16) char FPState[512];
   uint64_t Eflags;
 #endif
@@ -718,9 +730,9 @@ public:
 private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override;
 
-  unsigned getScratchMemoryRegister(const Triple &TT) const override;
+  MCRegister getScratchMemoryRegister(const Triple &TT) const override;
 
-  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
+  MCRegister getDefaultLoopCounterRegister(const Triple &) const override;
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
@@ -728,15 +740,15 @@ private:
                                  MCOperand &AssignedValue,
                                  const BitVector &ForbiddenRegs) const override;
 
-  void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
+  void fillMemoryOperands(InstructionTemplate &IT, MCRegister Reg,
                           unsigned Offset) const override;
 
   void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                    MachineBasicBlock &TargetMBB,
                                    const MCInstrInfo &MII,
-                                   unsigned LoopRegister) const override;
+                                   MCRegister LoopRegister) const override;
 
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override;
 
 #ifdef __linux__
@@ -762,12 +774,12 @@ private:
 
   std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
 
-  std::vector<unsigned> getArgumentRegisters() const override;
+  std::vector<MCRegister> getArgumentRegisters() const override;
 
-  std::vector<unsigned> getRegistersNeedSaving() const override;
+  std::vector<MCRegister> getRegistersNeedSaving() const override;
 #endif // __linux__
 
-  ArrayRef<unsigned> getUnavailableRegisters() const override {
+  ArrayRef<MCPhysReg> getUnavailableRegisters() const override {
     if (DisableUpperSSERegisters)
       return ArrayRef(kUnavailableRegistersSSE);
 
@@ -813,8 +825,9 @@ private:
       // For now, only do the check if we see an Intel machine because
       // the counter uses some intel-specific magic and it could
       // be confuse and think an AMD machine actually has LBR support.
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
-    defined(_M_X64)
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
     using namespace sys::detail::x86;
 
     if (getVendorSignature() == VendorSignatures::GENUINE_INTEL)
@@ -833,25 +846,25 @@ private:
     return std::make_unique<X86SavedState>();
   }
 
-  static const unsigned kUnavailableRegisters[4];
-  static const unsigned kUnavailableRegistersSSE[12];
+  static const MCPhysReg kUnavailableRegisters[4];
+  static const MCPhysReg kUnavailableRegistersSSE[12];
 };
 
 // We disable a few registers that cannot be encoded on instructions with a REX
 // prefix.
-const unsigned ExegesisX86Target::kUnavailableRegisters[4] = {X86::AH, X86::BH,
-                                                              X86::CH, X86::DH};
+const MCPhysReg ExegesisX86Target::kUnavailableRegisters[4] = {
+    X86::AH, X86::BH, X86::CH, X86::DH};
 
 // Optionally, also disable the upper (x86_64) SSE registers to reduce frontend
 // decoder load.
-const unsigned ExegesisX86Target::kUnavailableRegistersSSE[12] = {
+const MCPhysReg ExegesisX86Target::kUnavailableRegistersSSE[12] = {
     X86::AH,    X86::BH,    X86::CH,    X86::DH,    X86::XMM8,  X86::XMM9,
     X86::XMM10, X86::XMM11, X86::XMM12, X86::XMM13, X86::XMM14, X86::XMM15};
 
 // We're using one of R8-R15 because these registers are never hardcoded in
 // instructions (e.g. MOVS writes to EDI, ESI, EDX), so they have less
 // conflicts.
-constexpr const unsigned kDefaultLoopCounterReg = X86::R8;
+constexpr const MCPhysReg kDefaultLoopCounterReg = X86::R8;
 
 } // namespace
 
@@ -860,19 +873,19 @@ void ExegesisX86Target::addTargetSpecificPasses(PassManagerBase &PM) const {
   PM.add(createX86FloatingPointStackifierPass());
 }
 
-unsigned ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {
+MCRegister ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {
   if (!TT.isArch64Bit()) {
     // FIXME: This would require popping from the stack, so we would have to
     // add some additional setup code.
-    return 0;
+    return MCRegister();
   }
   return TT.isOSWindows() ? X86::RCX : X86::RDI;
 }
 
-unsigned
+MCRegister
 ExegesisX86Target::getDefaultLoopCounterRegister(const Triple &TT) const {
   if (!TT.isArch64Bit()) {
-    return 0;
+    return MCRegister();
   }
   return kDefaultLoopCounterReg;
 }
@@ -899,7 +912,7 @@ Error ExegesisX86Target::randomizeTargetMCOperand(
 }
 
 void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
-                                           unsigned Reg,
+                                           MCRegister Reg,
                                            unsigned Offset) const {
   assert(!isInvalidMemoryInstr(IT.getInstr()) &&
          "fillMemoryOperands requires a valid memory instruction");
@@ -916,7 +929,7 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
 
 void ExegesisX86Target::decrementLoopCounterAndJump(
     MachineBasicBlock &MBB, MachineBasicBlock &TargetMBB,
-    const MCInstrInfo &MII, unsigned LoopRegister) const {
+    const MCInstrInfo &MII, MCRegister LoopRegister) const {
   BuildMI(&MBB, DebugLoc(), MII.get(X86::ADD64ri8))
       .addDef(LoopRegister)
       .addUse(LoopRegister)
@@ -977,7 +990,7 @@ static void restoreSyscallRegisters(std::vector<MCInst> &GeneratedCode,
 }
 #endif // __linux__
 
-static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
+static std::vector<MCInst> loadImmediateSegmentRegister(MCRegister Reg,
                                                         const APInt &Value) {
 #if defined(__x86_64__) && defined(__linux__)
   assert(Value.getBitWidth() <= 64 && "Value must fit in the register.");
@@ -1010,7 +1023,7 @@ static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
 }
 
 std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
-                                                unsigned Reg,
+                                                MCRegister Reg,
                                                 const APInt &Value) const {
   if (X86::SEGMENT_REGRegClass.contains(Reg))
     return loadImmediateSegmentRegister(Reg, Value);
@@ -1054,18 +1067,22 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
   ConstantInliner CI(Value);
   if (X86::VR64RegClass.contains(Reg))
     return CI.loadAndFinalize(Reg, 64, X86::MMX_MOVQ64rm);
-  if (X86::VR128XRegClass.contains(Reg)) {
-    if (STI.getFeatureBits()[X86::FeatureAVX512])
-      return CI.loadAndFinalize(Reg, 128, X86::VMOVDQU32Z128rm);
+  if (X86::VR128RegClass.contains(Reg)) {
     if (STI.getFeatureBits()[X86::FeatureAVX])
       return CI.loadAndFinalize(Reg, 128, X86::VMOVDQUrm);
     return CI.loadAndFinalize(Reg, 128, X86::MOVDQUrm);
   }
+  if (X86::VR128XRegClass.contains(Reg)) {
+    if (STI.getFeatureBits()[X86::FeatureAVX512])
+      return CI.loadAndFinalize(Reg, 128, X86::VMOVDQU32Z128rm);
+  }
+  if (X86::VR256RegClass.contains(Reg)) {
+    if (STI.getFeatureBits()[X86::FeatureAVX])
+      return CI.loadAndFinalize(Reg, 256, X86::VMOVDQUYrm);
+  }
   if (X86::VR256XRegClass.contains(Reg)) {
     if (STI.getFeatureBits()[X86::FeatureAVX512])
       return CI.loadAndFinalize(Reg, 256, X86::VMOVDQU32Z256rm);
-    if (STI.getFeatureBits()[X86::FeatureAVX])
-      return CI.loadAndFinalize(Reg, 256, X86::VMOVDQUYrm);
   }
   if (X86::VR512RegClass.contains(Reg))
     if (STI.getFeatureBits()[X86::FeatureAVX512])
@@ -1085,6 +1102,8 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
         0x1f80);
   if (Reg == X86::FPCW)
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
+  if (Reg == X86::DF)
+    return CI.loadDirectionFlagAndFinalize();
   return {}; // Not yet implemented.
 }
 
@@ -1281,11 +1300,11 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
   return ConfigurePerfCounterCode;
 }
 
-std::vector<unsigned> ExegesisX86Target::getArgumentRegisters() const {
+std::vector<MCRegister> ExegesisX86Target::getArgumentRegisters() const {
   return {X86::RDI, X86::RSI};
 }
 
-std::vector<unsigned> ExegesisX86Target::getRegistersNeedSaving() const {
+std::vector<MCRegister> ExegesisX86Target::getRegistersNeedSaving() const {
   return {X86::RAX, X86::RDI, X86::RSI, X86::RCX, X86::R11};
 }
 

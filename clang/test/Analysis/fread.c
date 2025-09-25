@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -triple x86_64-linux-gnu  \
-// RUN:   -analyzer-checker=core,unix.Stream,alpha.security.taint \
+// RUN:   -analyzer-checker=core,unix.Stream,optin.taint \
 // RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator-for-simple-stream.h"
@@ -113,9 +113,9 @@ void random_access_read1(int index) {
     case 0:
       // c[0] is not mutated by fread.
       if (success) {
-        char p = c[0]; // expected-warning {{Assigned value is garbage or undefined}} We kept the first byte intact.
+        char p = c[0]; // expected-warning {{Assigned value is uninitialized}} We kept the first byte intact.
       } else {
-        char p = c[0]; // expected-warning {{Assigned value is garbage or undefined}} We kept the first byte intact.
+        char p = c[0]; // expected-warning {{Assigned value is uninitialized}} We kept the first byte intact.
       }
       break;
 
@@ -147,9 +147,9 @@ void random_access_read1(int index) {
     case 3:
       // c[3] is not mutated by fread.
       if (success) {
-        long p = c[3]; // expected-warning {{Assigned value is garbage or undefined}}
+        long p = c[3]; // expected-warning {{Assigned value is uninitialized}}
       } else {
-        long p = c[3]; // expected-warning {{Assigned value is garbage or undefined}}
+        long p = c[3]; // expected-warning {{Assigned value is uninitialized}}
       }
       break;
     }
@@ -169,10 +169,10 @@ void random_access_read2(int b) {
         clang_analyzer_isTainted(p); // expected-warning {{YES}}
         clang_analyzer_dump(p); // expected-warning {{conj_}}
       } else {
-        int p = buffer[0]; // expected-warning {{Assigned value is garbage or undefined}}
+        int p = buffer[0]; // expected-warning {{Assigned value is uninitialized}}
       }
     } else {
-      int p = buffer[0]; // expected-warning {{Assigned value is garbage or undefined}}
+      int p = buffer[0]; // expected-warning {{Assigned value is uninitialized}}
     }
     fclose(fp);
   }
@@ -283,9 +283,9 @@ void compound_read2(void) {
   if (fp) {
     struct S s; // s.a is not touched by fread.
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
-      long p = s.a; // expected-warning {{Assigned value is garbage or undefined}}
+      long p = s.a; // expected-warning {{Assigned value is uninitialized}}
     } else {
-      long p = s.a; // expected-warning {{Assigned value is garbage or undefined}}
+      long p = s.a; // expected-warning {{Assigned value is uninitialized}}
     }
     fclose(fp);
   }
@@ -296,9 +296,9 @@ void var_read(void) {
   if (fp) {
     int a, b; // 'a' is not touched by fread.
     if (1 == fread(&b, sizeof(b), 1, fp)) {
-      long p = a; // expected-warning{{Assigned value is garbage or undefined}}
+      long p = a; // expected-warning{{Assigned value is uninitialized}}
     } else {
-      long p = a; // expected-warning{{Assigned value is garbage or undefined}}
+      long p = a; // expected-warning{{Assigned value is uninitialized}}
     }
     fclose(fp);
   }

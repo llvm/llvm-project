@@ -1,4 +1,4 @@
-//===--- NonConstParameterCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -119,13 +119,12 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
         T->getPointeeType()->isFloatingType()))
     return;
 
-  if (Parameters.find(Parm) != Parameters.end())
+  auto [It, Inserted] = Parameters.try_emplace(Parm);
+  if (!Inserted)
     return;
 
-  ParmInfo PI;
-  PI.IsReferenced = false;
-  PI.CanBeConst = true;
-  Parameters[Parm] = PI;
+  It->second.IsReferenced = false;
+  It->second.CanBeConst = true;
 }
 
 void NonConstParameterCheck::setReferenced(const DeclRefExpr *Ref) {

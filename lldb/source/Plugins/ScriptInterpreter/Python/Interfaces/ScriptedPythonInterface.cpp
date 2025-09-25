@@ -17,6 +17,7 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include <optional>
 
 using namespace lldb;
@@ -77,6 +78,20 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
       "Couldn't cast lldb::SBStream to lldb_private::Stream.");
 
   return nullptr;
+}
+
+template <>
+SymbolContext
+ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBSymbolContext *sb_symbol_context =
+          reinterpret_cast<lldb::SBSymbolContext *>(
+              python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_symbol_context);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
+
+  return {};
 }
 
 template <>
@@ -152,11 +167,31 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
   if (!sb_mem_reg_info) {
     error = Status::FromErrorStringWithFormat(
-        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+        "Couldn't cast lldb::SBMemoryRegionInfo to "
+        "lldb_private::MemoryRegionInfo.");
     return {};
   }
 
   return m_interpreter.GetOpaqueTypeFromSBMemoryRegionInfo(*sb_mem_reg_info);
+}
+
+template <>
+lldb::ExecutionContextRefSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error) {
+
+  lldb::SBExecutionContext *sb_exe_ctx =
+      reinterpret_cast<lldb::SBExecutionContext *>(
+          python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(p.get()));
+
+  if (!sb_exe_ctx) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBExecutionContext to "
+        "lldb::ExecutionContextRefSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
 }
 
 #endif

@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -434,7 +435,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
 
   llvm::Function *Fn = llvm::Function::Create(
-      LTy, llvm::GlobalValue::PrivateLinkage, FuncName, &CGM.getModule());
+      LTy, llvm::GlobalValue::InternalLinkage, FuncName, &CGM.getModule());
 
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
@@ -574,17 +575,19 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
     llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
     // See if we have a funclet bundle to associate coro.end with. (WinEH)
     auto Bundles = getBundlesForCoroEnd(CGF);
-    auto *CoroEnd =
-      CGF.Builder.CreateCall(CoroEndFn,
-                             {NullPtr, CGF.Builder.getTrue(),
-                              llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
-                             Bundles);
+    CGF.Builder.CreateCall(
+        CoroEndFn,
+        {NullPtr, CGF.Builder.getTrue(),
+         llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
+        Bundles);
     if (Bundles.empty()) {
       // Otherwise, (landingpad model), create a conditional branch that leads
       // either to a cleanup block or a block with EH resume instruction.
       auto *ResumeBB = CGF.getEHResumeBlock(/*isCleanup=*/true);
       auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
-      CGF.Builder.CreateCondBr(CoroEnd, ResumeBB, CleanupContBB);
+      auto *CoroIsInRampFn = CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
+      auto *CoroIsInRamp = CGF.Builder.CreateCall(CoroIsInRampFn);
+      CGF.Builder.CreateCondBr(CoroIsInRamp, CleanupContBB, ResumeBB);
       CGF.EmitBlock(CleanupContBB);
     }
   }
@@ -626,7 +629,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
 
     // Get back to the block we were originally and move coro.free there.
     auto *InsertPt = SaveInsertBlock->getTerminator();
-    CoroFree->moveBefore(InsertPt);
+    CoroFree->moveBefore(InsertPt->getIterator());
     CGF.Builder.SetInsertPoint(InsertPt);
 
     // Add if (auto *mem = coro.free) Deallocate;
@@ -706,11 +709,15 @@ struct GetReturnObjectManager {
     Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
 
     GroEmission = CGF.EmitAutoVarAlloca(*GroVarDecl);
-    auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
-        GroEmission.getOriginalAllocatedAddress().getPointer());
-    assert(GroAlloca && "expected alloca to be emitted");
-    GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
-                           llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
+
+    if (!GroVarDecl->isNRVOVariable()) {
+      // NRVO variables don't have allocas and won't have the same issue.
+      auto *GroAlloca = dyn_cast_or_null<llvm::AllocaInst>(
+          GroEmission.getOriginalAllocatedAddress().getPointer());
+      assert(GroAlloca && "expected alloca to be emitted");
+      GroAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                             llvm::MDNode::get(CGF.CGM.getLLVMContext(), {}));
+    }
 
     // Remember the top of EHStack before emitting the cleanup.
     auto old_top = CGF.EHStack.stable_begin();
@@ -855,6 +862,20 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe
     // parameter copies.
+    for (const ParmVarDecl *Parm : FnArgs) {
+      // If the original param is in an alloca, exclude it from the coroutine
+      // frame. The parameter copy will be part of the frame, but the original
+      // parameter memory should remain on the stack. This is necessary to
+      // ensure that parameters destroyed in callees, as with `trivial_abi` or
+      // in the MSVC C++ ABI, are appropriately destroyed after setting up the
+      // coroutine.
+      Address ParmAddr = GetAddrOfLocalVar(Parm);
+      if (auto *ParmAlloca =
+              dyn_cast<llvm::AllocaInst>(ParmAddr.getBasePointer())) {
+        ParmAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
+                                llvm::MDNode::get(CGM.getLLVMContext(), {}));
+      }
+    }
     for (auto *PM : S.getParamMoves()) {
       EmitStmt(PM);
       ParamReplacer.addCopy(cast<DeclStmt>(PM));
@@ -942,9 +963,16 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   if (Stmt *Ret = S.getReturnStmt()) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
-    if (GroManager.DirectEmit)
+    Expr *PreviousRetValue = nullptr;
+    if (GroManager.DirectEmit) {
+      PreviousRetValue = cast<ReturnStmt>(Ret)->getRetValue();
       cast<ReturnStmt>(Ret)->setRetValue(nullptr);
+    }
     EmitStmt(Ret);
+    // Set the return value back. The code generator, as the AST **Consumer**,
+    // shouldn't change the AST.
+    if (PreviousRetValue)
+      cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
   }
 
   // LLVM require the frontend to mark the coroutine.
@@ -980,15 +1008,15 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   }
   case llvm::Intrinsic::coro_size: {
     auto &Context = getContext();
-    CanQualType SizeTy = Context.getSizeType();
-    llvm::IntegerType *T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
+    llvm::IntegerType *T =
+        Builder.getIntNTy(Context.getTypeSize(Context.getSizeType()));
     llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::coro_size, T);
     return RValue::get(Builder.CreateCall(F));
   }
   case llvm::Intrinsic::coro_align: {
     auto &Context = getContext();
-    CanQualType SizeTy = Context.getSizeType();
-    llvm::IntegerType *T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
+    llvm::IntegerType *T =
+        Builder.getIntNTy(Context.getTypeSize(Context.getSizeType()));
     llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::coro_align, T);
     return RValue::get(Builder.CreateCall(F));
   }

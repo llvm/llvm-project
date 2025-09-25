@@ -91,6 +91,9 @@ public:
     int64_t           cfaExpression;      // CFA = expression
     uint32_t          spExtraArgSize;
     RegisterLocation  savedRegisters[kMaxRegisterNumber + 1];
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    pint_t ptrAuthDiversifier;
+#endif
     enum class InitializeTime { kLazy, kNormal };
 
     // When saving registers, this data structure is lazily initialized.
@@ -270,7 +273,7 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
           pint_t pcRange = addressSpace.getEncodedP(
               p, nextCFI, cieInfo->pointerEncoding & 0x0F);
           // Test if pc is within the function this FDE covers.
-          if ((pcStart < pc) && (pc <= pcStart + pcRange)) {
+          if ((pcStart <= pc) && (pc < pcStart + pcRange)) {
             // parse rest of info
             fdeInfo->lsda = 0;
             // check for augmentation length
@@ -798,6 +801,24 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
 #endif
         }
         break;
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+      case DW_CFA_AARCH64_negate_ra_state_with_pc: {
+        int64_t value =
+            results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x3;
+        results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
+                                  initialState);
+        // When calculating the value of the PC, it is assumed that the CFI
+        // instruction is placed before the signing instruction, however it is
+        // placed after. Because of this, we need to take into account the CFI
+        // instruction is one instruction call later than expected, and reduce
+        // the PC value by 4 bytes to compensate.
+        results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset - 0x4;
+        _LIBUNWIND_TRACE_DWARF(
+            "DW_CFA_AARCH64_negate_ra_state_with_pc(pc=0x%" PRIx64 ")\n",
+            static_cast<uint64_t>(results->ptrAuthDiversifier));
+      } break;
+#endif
 
 #else
         (void)arch;

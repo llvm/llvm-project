@@ -19,17 +19,17 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
   // Separate subtarget features by how often they must be recomputed.
   SubtargetFeatureInfoMap ModuleFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(ModuleFeatures, ModuleFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return !X.second.mustRecomputePerFunction();
-               });
+  llvm::copy_if(SubtargetFeatures,
+                std::inserter(ModuleFeatures, ModuleFeatures.end()),
+                [](const SubtargetFeatureInfoMap::value_type &X) {
+                  return !X.second.mustRecomputePerFunction();
+                });
   SubtargetFeatureInfoMap FunctionFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(FunctionFeatures, FunctionFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return X.second.mustRecomputePerFunction();
-               });
+  llvm::copy_if(SubtargetFeatures,
+                std::inserter(FunctionFeatures, FunctionFeatures.end()),
+                [](const SubtargetFeatureInfoMap::value_type &X) {
+                  return X.second.mustRecomputePerFunction();
+                });
 
   SubtargetFeatureInfo::emitComputeAvailableFeatures(
       getTarget().getName(), getClassName(), "computeAvailableModuleFeatures",
@@ -49,14 +49,14 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
   // Emit a table containing the PredicateBitsets objects needed by the matcher
   // and an enum for the matcher to reference them with.
-  std::vector<std::pair<std::vector<Record *>, int>> FeatureBitsets;
+  std::vector<std::pair<std::vector<const Record *>, int>> FeatureBitsets;
   FeatureBitsets.reserve(Rules.size());
   for (auto &Rule : Rules)
     FeatureBitsets.emplace_back(Rule.getRequiredFeatures(),
                                 Rule.getHwModeIdx());
   llvm::sort(FeatureBitsets,
-             [&](const std::pair<std::vector<Record *>, int> &A,
-                 const std::pair<std::vector<Record *>, int> &B) {
+             [&](const std::pair<std::vector<const Record *>, int> &A,
+                 const std::pair<std::vector<const Record *>, int> &B) {
                if (A.first.size() < B.first.size())
                  return true;
                if (A.first.size() > B.first.size())
@@ -103,7 +103,7 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitComplexPredicates(
-    raw_ostream &OS, ArrayRef<Record *> ComplexOperandMatchers) {
+    raw_ostream &OS, ArrayRef<const Record *> ComplexOperandMatchers) {
   // Emit complex predicate table and an enum to reference them with.
   OS << "// ComplexPattern predicates.\n"
      << "enum {\n"
@@ -174,13 +174,15 @@ void GlobalISelMatchTableExecutorEmitter::emitMatchTable(
 
 void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
     raw_ostream &OS, const MatchTable &Table, ArrayRef<LLTCodeGen> TypeObjects,
-    ArrayRef<RuleMatcher> Rules, ArrayRef<Record *> ComplexOperandMatchers,
+    ArrayRef<RuleMatcher> Rules,
+    ArrayRef<const Record *> ComplexOperandMatchers,
     ArrayRef<StringRef> CustomOperandRenderers, StringRef IfDefName) {
   OS << "#ifdef " << IfDefName << "\n";
   emitTypeObjects(OS, TypeObjects);
   emitSubtargetFeatureBitsetImpl(OS, Rules);
   emitComplexPredicates(OS, ComplexOperandMatchers);
   emitMIPredicateFns(OS);
+  emitLeafPredicateFns(OS);
   emitI64ImmPredicateFns(OS);
   emitAPFloatImmPredicateFns(OS);
   emitAPIntImmPredicateFns(OS);
@@ -232,6 +234,9 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
      << "  const uint8_t *getMatchTable() const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
+        "const override;\n"
+     << "  bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand "
+        "&MO, const MatcherState &State) "
         "const override;\n"
      << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
      << "  bool runCustomAction(unsigned FnID, const MatcherState &State, "

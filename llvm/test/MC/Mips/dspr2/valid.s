@@ -1,6 +1,5 @@
 # RUN: llvm-mc -show-encoding -triple=mips-unknown-unknown -mattr=dspr2 %s | FileCheck %s
 #
-# CHECK:   .text
   .set noat
   absq_s.ph       $1, $2          # CHECK: absq_s.ph        $1, $2          # encoding: [0x7c,0x02,0x0a,0x52]
   absq_s.qb       $3, $4          # CHECK: absq_s.qb        $3, $4          # encoding: [0x7c,0x04,0x18,0x52]

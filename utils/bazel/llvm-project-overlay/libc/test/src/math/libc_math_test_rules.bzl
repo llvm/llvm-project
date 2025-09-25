@@ -23,12 +23,13 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
     libc_test(
         name = test_name,
         srcs = [test_name + ".cpp"] + hdrs,
-        libc_function_deps = ["//libc:func_name".replace("func_name", name)],
-        deps = [
+        deps = ["//libc:func_name".replace("func_name", name)] + [
             "//libc:__support_cpp_algorithm",
             "//libc:__support_cpp_bit",
             "//libc:__support_cpp_limits",
+            "//libc:__support_cpp_type_traits",
             "//libc:__support_fputil_basic_operations",
+            "//libc:__support_fputil_cast",
             "//libc:__support_fputil_fenv_impl",
             "//libc:__support_fputil_fp_bits",
             "//libc:__support_fputil_manipulation_functions",
@@ -36,6 +37,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc:__support_fputil_normal_float",
             "//libc:__support_macros_properties_architectures",
             "//libc:__support_macros_properties_os",
+            "//libc:__support_macros_properties_types",
             "//libc:__support_math_extras",
             "//libc:__support_uint128",
             "//libc:hdr_errno_macros",

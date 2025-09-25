@@ -48,7 +48,7 @@ public:
 
 class LoopSnippetRepetitor : public SnippetRepetitor {
 public:
-  explicit LoopSnippetRepetitor(const LLVMState &State, unsigned LoopRegister)
+  explicit LoopSnippetRepetitor(const LLVMState &State, MCRegister LoopRegister)
       : SnippetRepetitor(State), LoopCounter(LoopRegister) {}
 
   // Loop over the snippet ceil(MinInstructions / Instructions.Size()) times.
@@ -97,12 +97,11 @@ public:
       Entry.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       Loop.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       // If the snippet setup completed, then we can track liveness.
-      if (Loop.MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::TracksLiveness)) {
+      if (Loop.MF.getProperties().hasTracksLiveness()) {
         // The live ins are: the loop counter, the registers that were setup by
         // the entry block, and entry block live ins.
         Loop.MBB->addLiveIn(LoopCounter);
-        for (unsigned Reg : Filler.getRegistersSetUp())
+        for (MCRegister Reg : Filler.getRegistersSetUp())
           Loop.MBB->addLiveIn(Reg);
         for (const auto &LiveIn : Entry.MBB->liveins())
           Loop.MBB->addLiveIn(LiveIn);
@@ -127,7 +126,7 @@ public:
   }
 
 private:
-  const unsigned LoopCounter;
+  const MCRegister LoopCounter;
 };
 
 } // namespace
@@ -136,7 +135,7 @@ SnippetRepetitor::~SnippetRepetitor() {}
 
 std::unique_ptr<const SnippetRepetitor>
 SnippetRepetitor::Create(Benchmark::RepetitionModeE Mode,
-                         const LLVMState &State, unsigned LoopRegister) {
+                         const LLVMState &State, MCRegister LoopRegister) {
   switch (Mode) {
   case Benchmark::Duplicate:
   case Benchmark::MiddleHalfDuplicate:

@@ -7,7 +7,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "sp"}
     %3 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr {name = "i"}
     omp.target map_entries(%2 -> %arg0, %3 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-      ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
       %4 = llvm.load %arg1 : !llvm.ptr -> i32
       llvm.store %4, %arg0 : i32, !llvm.ptr
       omp.terminator

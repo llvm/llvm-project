@@ -84,7 +84,7 @@ void OutlinedHashTree::insert(const HashSequencePair &SequencePair) {
       Current = I->second.get();
   }
   if (Count)
-    Current->Terminals = (Current->Terminals ? *Current->Terminals : 0) + Count;
+    Current->Terminals = Current->Terminals.value_or(0) + Count;
 }
 
 void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
@@ -98,8 +98,7 @@ void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
     if (!SrcNode)
       continue;
     if (SrcNode->Terminals)
-      DstNode->Terminals =
-          (DstNode->Terminals ? *DstNode->Terminals : 0) + *SrcNode->Terminals;
+      DstNode->Terminals = DstNode->Terminals.value_or(0) + *SrcNode->Terminals;
     for (auto &[Hash, NextSrcNode] : SrcNode->Successors) {
       HashNode *NextDstNode;
       auto I = DstNode->Successors.find(Hash);

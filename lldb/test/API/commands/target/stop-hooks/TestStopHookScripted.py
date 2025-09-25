@@ -32,7 +32,7 @@ class TestStopHooks(TestBase):
         self.interp.HandleCommand(command, result)
         self.assertFalse(result.Succeeded(), "Set the target stop hook")
         self.assertIn(
-            "Wrong number of args",
+            "has unexpected argument count",
             result.GetError(),
             "Got the wrong number of args error",
         )
@@ -43,30 +43,38 @@ class TestStopHooks(TestBase):
         self.interp.HandleCommand(command, result)
         self.assertFalse(result.Succeeded(), "Set the target stop hook")
         self.assertIn(
-            'Class "stop_hook.no_handle_stop" is missing the required handle_stop callback',
+            "Abstract method no_handle_stop.handle_stop not implemented",
             result.GetError(),
             "Got the right error",
         )
 
     def test_stop_hooks_scripted(self):
         """Test that a scripted stop hook works with no specifiers"""
-        self.stop_hooks_scripted(5)
+        self.stop_hooks_scripted(5, "-I false")
+
+    def test_stop_hooks_scripted_no_entry(self):
+        """Test that a scripted stop hook works with no specifiers"""
+        self.stop_hooks_scripted(10)
 
     def test_stop_hooks_scripted_right_func(self):
         """Test that a scripted stop hook fires when there is a function match"""
-        self.stop_hooks_scripted(5, "-n step_out_of_me")
+        self.stop_hooks_scripted(5, "-I 0 -n step_out_of_me")
 
     def test_stop_hooks_scripted_wrong_func(self):
         """Test that a scripted stop hook doesn't fire when the function does not match"""
-        self.stop_hooks_scripted(0, "-n main")
+        self.stop_hooks_scripted(0, "-I 0 -n main")
 
     def test_stop_hooks_scripted_right_lines(self):
         """Test that a scripted stop hook fires when there is a function match"""
-        self.stop_hooks_scripted(5, "-f main.c -l 1 -e %d" % (self.main_start_line))
+        self.stop_hooks_scripted(
+            5, "-I 0 -f main.c -l 1 -e %d" % (self.main_start_line)
+        )
 
     def test_stop_hooks_scripted_wrong_lines(self):
         """Test that a scripted stop hook doesn't fire when the function does not match"""
-        self.stop_hooks_scripted(0, "-f main.c -l %d -e 100" % (self.main_start_line))
+        self.stop_hooks_scripted(
+            0, "-I 0 -f main.c -l %d -e 100" % (self.main_start_line)
+        )
 
     def test_stop_hooks_scripted_auto_continue(self):
         """Test that the --auto-continue flag works"""
@@ -85,9 +93,9 @@ class TestStopHooks(TestBase):
         result = lldb.SBCommandReturnObject()
 
         if return_true:
-            command = "target stop-hook add -P stop_hook.stop_handler -k increment -v 5 -k return_false -v 1 -n step_out_of_me"
+            command = "target stop-hook add -I 0 -P stop_hook.stop_handler -k increment -v 5 -k return_false -v 1 -n step_out_of_me"
         else:
-            command = "target stop-hook add -G 1 -P stop_hook.stop_handler -k increment -v 5 -n step_out_of_me"
+            command = "target stop-hook add -I 0 -G 1 -P stop_hook.stop_handler -k increment -v 5 -n step_out_of_me"
 
         self.interp.HandleCommand(command, result)
         self.assertTrue(result.Succeeded(), "Set the target stop hook")

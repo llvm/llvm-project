@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -fp-contract=fast -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -fp-contract=fast -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; A Phi that depends on another Phi is loop carried.

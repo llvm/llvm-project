@@ -9,7 +9,7 @@
 // <forward_list>
 
 // template <class InputIterator>
-//     forward_list(InputIterator first, InputIterator last);
+//     forward_list(InputIterator first, InputIterator last); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -19,31 +19,39 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef int T;
-        typedef std::forward_list<T> C;
-        typedef cpp17_input_iterator<const T*> I;
-        const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        C c(I(std::begin(t)), I(std::end(t)));
-        int n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
-            assert(*i == n);
-        assert(n == std::end(t) - std::begin(t));
-    }
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    typedef int T;
+    typedef std::forward_list<T> C;
+    typedef cpp17_input_iterator<const T*> I;
+    const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    C c(I(std::begin(t)), I(std::end(t)));
+    int n = 0;
+    for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+      assert(*i == n);
+    assert(n == std::end(t) - std::begin(t));
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef int T;
-        typedef std::forward_list<T, min_allocator<T>> C;
-        typedef cpp17_input_iterator<const T*> I;
-        const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        C c(I(std::begin(t)), I(std::end(t)));
-        int n = 0;
-        for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
-            assert(*i == n);
-        assert(n == std::end(t) - std::begin(t));
-    }
+  {
+    typedef int T;
+    typedef std::forward_list<T, min_allocator<T>> C;
+    typedef cpp17_input_iterator<const T*> I;
+    const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    C c(I(std::begin(t)), I(std::end(t)));
+    int n = 0;
+    for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n)
+      assert(*i == n);
+    assert(n == std::end(t) - std::begin(t));
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

@@ -102,7 +102,9 @@ def : Pat<(add GPR:$rs1, (oimm8_neg:$im)),
 
 let isAdd = 1 in
 def ADDI16ZSP : I16_Z_8<0b011, (ins GPRSP:$sp, uimm8_2:$imm8),
-                        "addi16\t$rz, $sp, $imm8">;
+                        "addi16\t$rz, $sp, $imm8"> {
+  bits<0> sp;
+}
 
 let isAdd = 1 in
 def ADDI16SPSP : I16_SP_IMM7<0b000,"addi16">;
@@ -142,10 +144,14 @@ def ST16H : I16_XZ_LDST<AddrMode16H, 0b101, "st16.h",
 def ST16W : I16_XZ_LDST<AddrMode16W, 0b110, "st16.w",
   (outs), (ins mGPR:$rz, mGPR:$rx, uimm5_2:$imm)>;
 
-def LD16WSP : I16_ZSP_LDST<AddrMode16W, 0b011, "ld16.w",
-  (outs mGPR:$rz), (ins GPRSP:$sp, uimm8_2:$addr)>;
-def ST16WSP : I16_ZSP_LDST<AddrMode16W, 0b111, "st16.w",
-  (outs), (ins mGPR:$rz, GPRSP:$sp, uimm8_2:$addr)>;
+def LD16WSP : I16_ZSP_LDST<AddrMode16W, 0b011, "ld16.w", (outs mGPR:$rz),
+                           (ins GPRSP:$sp, uimm8_2:$addr)> {
+  bits<0> sp;
+}
+def ST16WSP : I16_ZSP_LDST<AddrMode16W, 0b111, "st16.w", (outs),
+                           (ins mGPR:$rz, GPRSP:$sp, uimm8_2:$addr)> {
+  bits<0> sp;
+}
 
 //===----------------------------------------------------------------------===//
 // Compare instructions.
@@ -187,8 +193,9 @@ def MOV16 : CSKY16Inst<AddrModeNone, (outs sGPR:$rz), (ins sGPR:$rx),
 }
 
 // MVC16 is not in "cskyv2 instructions reference manul"
-def MVCV16 : CSKY16Inst<AddrModeNone,
-  (outs sGPR:$rz), (ins CARRY:$ca), "mvcv16\t$rz", []> {
+def MVCV16 : CSKY16Inst<AddrModeNone, (outs sGPR:$rz), (ins CARRY:$ca),
+                        "mvcv16\t$rz", []> {
+  bits<0> ca;
   bits<4> rz;
   let Inst{15,14} = 0b01;
   let Inst{13 - 10} = 0b1001;
@@ -317,11 +324,14 @@ let Constraints = "$rZ = $rz" in {
 }
 
 let Predicates = [HasBTST16] in
-  def BTSTI16 : I16_Z_5<0b110, (outs CARRY:$ca), (ins mGPR:$rz, uimm5:$imm5),
-                        "btsti16">;
+def BTSTI16 : I16_Z_5<0b110, (outs CARRY:$ca), (ins mGPR:$rz, uimm5:$imm5),
+                      "btsti16"> {
+  bits<0> ca;
+}
 
 def TST16 : CSKY16Inst<AddrModeNone, (outs CARRY:$ca), (ins sGPR:$rx, sGPR:$ry),
-                        "tst16\t$rx, $ry", []> {
+                       "tst16\t$rx, $ry", []> {
+  bits<0> ca;
   bits<4> ry;
   bits<4> rx;
   let Inst{15,14} = 0b01;
@@ -334,6 +344,7 @@ def TST16 : CSKY16Inst<AddrModeNone, (outs CARRY:$ca), (ins sGPR:$rx, sGPR:$ry),
 
 def TSTNBZ16 : CSKY16Inst<AddrModeNone, (outs CARRY:$ca), (ins sGPR:$rx),
                           "tstnbz16\t$rx", []> {
+  bits<0> ca;
   bits<4> rx;
   let Inst{15,14} = 0b01;
   let Inst{13 - 10} = 0b1010;

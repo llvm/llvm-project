@@ -20,19 +20,19 @@
 ; The difference between test1 and test2 is test2 only set one loop metadata node for the second loop.
 
 ; CHECK-LABEL: test1:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB0_2: # %for.body
-; ALIGN: .p2align 9, 0x90
+; ALIGN: .p2align 9
 ; ALIGN-NEXT: .LBB0_3: # %for.body
 
-; ALIGN32: .p2align 6, 0x90
+; ALIGN32: .p2align 6
 ; ALIGN32-NEXT: .LBB0_2: # %for.body
-; ALIGN32: .p2align 9, 0x90
+; ALIGN32: .p2align 9
 ; ALIGN32-NEXT: .LBB0_3: # %for.body
 
-; ALIGN256: .p2align 8, 0x90
+; ALIGN256: .p2align 8
 ; ALIGN256-NEXT: .LBB0_2: # %for.body
-; ALIGN256: .p2align 9, 0x90
+; ALIGN256: .p2align 9
 ; ALIGN256-NEXT: .LBB0_3: # %for.body
 
 define void @test1(i32 %a) nounwind {
@@ -59,19 +59,19 @@ for.body5:                                        ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: test2:
-; ALIGN: .p2align 4, 0x90
+; ALIGN: .p2align 4
 ; ALIGN-NEXT: .LBB1_2: # %for.body
-; ALIGN: .p2align 9, 0x90
+; ALIGN: .p2align 9
 ; ALIGN-NEXT: .LBB1_3: # %for.body
 
-; ALIGN32: .p2align 5, 0x90
+; ALIGN32: .p2align 5
 ; ALIGN32-NEXT: .LBB1_2: # %for.body
-; ALIGN32: .p2align 9, 0x90
+; ALIGN32: .p2align 9
 ; ALIGN32-NEXT: .LBB1_3: # %for.body
 
-; ALIGN256: .p2align 8, 0x90
+; ALIGN256: .p2align 8
 ; ALIGN256-NEXT: .LBB1_2: # %for.body
-; ALIGN256: .p2align 9, 0x90
+; ALIGN256: .p2align 9
 ; ALIGN256-NEXT: .LBB1_3: # %for.body
 define void @test2(i32 %a) nounwind {
 entry:
@@ -111,7 +111,7 @@ for.body5:                                        ; preds = %for.body, %for.body
 ;     }
 ; }
 ; CHECK-LABEL: test3_multilatch:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB2_1: # %while.cond
 define dso_local i32 @test3_multilatch() #0 {
 entry:
@@ -147,7 +147,7 @@ while.end:                                        ; preds = %while.cond
 }
 
 ; CHECK-LABEL: test4_multilatch:
-; ALIGN: .p2align 6, 0x90
+; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB3_4: # %bb4
 define void @test4_multilatch(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 entry:
@@ -176,6 +176,48 @@ bb4:                                ; preds = %bb1
 exit:                               ; preds = %bb2, %bb3, %bb4
   ret void
 }
+
+; test5 is to check if .p2align can be correctly set on loops with a single
+; latch that's not the exiting block.
+; The test IR is generated from below simple C file:
+; $ clang -O0 -S -emit-llvm loop.c
+; $ cat loop.c
+; int test5(int n) {
+;     int i = 0;
+;     [[clang::code_align(64)]]
+;     while (i < n) {
+;         i++;
+;     }
+; }
+; CHECK-LABEL: test5:
+; ALIGN: .p2align 6
+; ALIGN-NEXT: .LBB4_1: # %while.cond
+define i32 @test5(i32 %n) #0 {
+entry:
+  %retval = alloca i32, align 4
+  %n.addr = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store i32 0, ptr %i, align 4
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.body, %entry
+  %i.val = load i32, ptr %i, align 4
+  %n.val = load i32, ptr %n.addr, align 4
+  %cmp = icmp slt i32 %i.val, %n.val
+  br i1 %cmp, label %while.body, label %while.end
+
+while.body:                                       ; preds = %while.cond
+  %tmp = load i32, ptr %i, align 4
+  %inc = add nsw i32 %tmp, 1
+  store i32 %inc, ptr %i, align 4
+  br label %while.cond, !llvm.loop !0
+
+while.end:                                        ; preds = %while.cond
+  %val = load i32, ptr %retval, align 4
+  ret i32 %val
+}
+
 
 declare void @bar()
 declare void @var()

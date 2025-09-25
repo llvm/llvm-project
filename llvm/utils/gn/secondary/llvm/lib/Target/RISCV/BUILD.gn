@@ -17,6 +17,7 @@ tablegen("RISCVGenCompressInstEmitter") {
 tablegen("RISCVGenMacroFusion") {
   visibility = [
     ":LLVMRISCVCodeGen",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
     "//llvm/unittests/Target/RISCV:RISCVTests",
   ]
   args = [ "-gen-macro-fusion-pred" ]
@@ -68,18 +69,19 @@ tablegen("RISCVGenPostLegalizeGICombiner") {
   td_file = "RISCVGISel.td"
 }
 
-tablegen("RISCVGenPostLegalizeGILowering") {
-  visibility = [ ":LLVMRISCVCodeGen" ]
-  args = [
-    "-gen-global-isel-combiner",
-    "-combiners=RISCVPostLegalizerLowering",
+tablegen("RISCVGenRegisterBank") {
+  visibility = [
+    ":LLVMRISCVCodeGen",
+    "MCA",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
   ]
-  td_file = "RISCVGISel.td"
+  args = [ "-gen-register-bank" ]
+  td_file = "RISCV.td"
 }
 
-tablegen("RISCVGenRegisterBank") {
+tablegen("RISCVGenSDNodeInfo") {
   visibility = [ ":LLVMRISCVCodeGen" ]
-  args = [ "-gen-register-bank" ]
+  args = [ "-gen-sd-node-info" ]
   td_file = "RISCV.td"
 }
 
@@ -92,9 +94,9 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenMacroFusion",
     ":RISCVGenO0PreLegalizeGICombiner",
     ":RISCVGenPostLegalizeGICombiner",
-    ":RISCVGenPostLegalizeGILowering",
     ":RISCVGenPreLegalizeGICombiner",
     ":RISCVGenRegisterBank",
+    ":RISCVGenSDNodeInfo",
 
     # See https://reviews.llvm.org/D69130
     "AsmParser:RISCVGenAsmMatcher",
@@ -107,6 +109,7 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -119,7 +122,6 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVLegalizerInfo.cpp",
     "GISel/RISCVO0PreLegalizerCombiner.cpp",
     "GISel/RISCVPostLegalizerCombiner.cpp",
-    "GISel/RISCVPostLegalizerLowering.cpp",
     "GISel/RISCVPreLegalizerCombiner.cpp",
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
@@ -129,6 +131,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
+    "RISCVFoldMemOffset.cpp",
     "RISCVFrameLowering.cpp",
     "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
@@ -138,7 +141,10 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVInsertVSETVLI.cpp",
     "RISCVInsertWriteVXRM.cpp",
     "RISCVInstrInfo.cpp",
+    "RISCVInterleavedAccess.cpp",
     "RISCVLandingPadSetup.cpp",
+    "RISCVLateBranchOpt.cpp",
+    "RISCVLoadStoreOptimizer.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
@@ -148,11 +154,16 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVPushPopOptimizer.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",
+    "RISCVSelectionDAGInfo.cpp",
     "RISCVSubtarget.cpp",
     "RISCVTargetMachine.cpp",
     "RISCVTargetObjectFile.cpp",
     "RISCVTargetTransformInfo.cpp",
+    "RISCVVLOptimizer.cpp",
+    "RISCVVMV0Elimination.cpp",
+    "RISCVVectorMaskDAGMutation.cpp",
     "RISCVVectorPeephole.cpp",
+    "RISCVZacasABIFix.cpp",
   ]
 }
 

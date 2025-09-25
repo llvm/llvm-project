@@ -22,6 +22,7 @@ DEFAULT_TARGETS = [
     "PowerPC",
     "RISCV",
     "Sparc",
+    "SPIRV",
     "SystemZ",
     "VE",
     "WebAssembly",
@@ -171,10 +172,19 @@ def _llvm_configure_impl(repository_ctx):
     )
 
     # Create a starlark file with the requested LLVM targets.
-    targets = repository_ctx.attr.targets
+    llvm_targets = repository_ctx.attr.targets
     repository_ctx.file(
         "llvm/targets.bzl",
-        content = "llvm_targets = " + str(targets),
+        content = "llvm_targets = " + str(llvm_targets),
+        executable = False,
+    )
+
+    # Create a starlark file with the requested BOLT targets.
+    bolt_targets = ["AArch64", "X86", "RISCV"]  # Supported targets.
+    bolt_targets = [t for t in llvm_targets if t in bolt_targets]
+    repository_ctx.file(
+        "bolt/targets.bzl",
+        content = "bolt_targets = " + str(bolt_targets),
         executable = False,
     )
 

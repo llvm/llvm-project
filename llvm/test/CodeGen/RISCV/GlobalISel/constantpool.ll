@@ -15,47 +15,37 @@
 define void @constpool_f32(ptr %p) {
 ; RV32-SMALL-LABEL: constpool_f32:
 ; RV32-SMALL:       # %bb.0:
-; RV32-SMALL-NEXT:    lui a1, %hi(.LCPI0_0)
-; RV32-SMALL-NEXT:    lw a1, %lo(.LCPI0_0)(a1)
+; RV32-SMALL-NEXT:    lui a1, 260096
 ; RV32-SMALL-NEXT:    sw a1, 0(a0)
 ; RV32-SMALL-NEXT:    ret
 ;
 ; RV32-MEDIUM-LABEL: constpool_f32:
 ; RV32-MEDIUM:       # %bb.0:
-; RV32-MEDIUM-NEXT:  .Lpcrel_hi0:
-; RV32-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.LCPI0_0)
-; RV32-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi0)(a1)
+; RV32-MEDIUM-NEXT:    lui a1, 260096
 ; RV32-MEDIUM-NEXT:    sw a1, 0(a0)
 ; RV32-MEDIUM-NEXT:    ret
 ;
 ; RV32-PIC-LABEL: constpool_f32:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .Lpcrel_hi0:
-; RV32-PIC-NEXT:    auipc a1, %pcrel_hi(.LCPI0_0)
-; RV32-PIC-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi0)(a1)
+; RV32-PIC-NEXT:    lui a1, 260096
 ; RV32-PIC-NEXT:    sw a1, 0(a0)
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-SMALL-LABEL: constpool_f32:
 ; RV64-SMALL:       # %bb.0:
-; RV64-SMALL-NEXT:    lui a1, %hi(.LCPI0_0)
-; RV64-SMALL-NEXT:    lw a1, %lo(.LCPI0_0)(a1)
+; RV64-SMALL-NEXT:    lui a1, 260096
 ; RV64-SMALL-NEXT:    sw a1, 0(a0)
 ; RV64-SMALL-NEXT:    ret
 ;
 ; RV64-MEDIUM-LABEL: constpool_f32:
 ; RV64-MEDIUM:       # %bb.0:
-; RV64-MEDIUM-NEXT:  .Lpcrel_hi0:
-; RV64-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.LCPI0_0)
-; RV64-MEDIUM-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi0)(a1)
+; RV64-MEDIUM-NEXT:    lui a1, 260096
 ; RV64-MEDIUM-NEXT:    sw a1, 0(a0)
 ; RV64-MEDIUM-NEXT:    ret
 ;
 ; RV64-PIC-LABEL: constpool_f32:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .Lpcrel_hi0:
-; RV64-PIC-NEXT:    auipc a1, %pcrel_hi(.LCPI0_0)
-; RV64-PIC-NEXT:    lw a1, %pcrel_lo(.Lpcrel_hi0)(a1)
+; RV64-PIC-NEXT:    lui a1, 260096
 ; RV64-PIC-NEXT:    sw a1, 0(a0)
 ; RV64-PIC-NEXT:    ret
   store float 1.0, ptr %p
@@ -75,9 +65,9 @@ define void @constpool_f64(ptr %p) {
 ;
 ; RV32-MEDIUM-LABEL: constpool_f64:
 ; RV32-MEDIUM:       # %bb.0:
-; RV32-MEDIUM-NEXT:  .Lpcrel_hi1:
+; RV32-MEDIUM-NEXT:  .Lpcrel_hi0:
 ; RV32-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
-; RV32-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi1)
+; RV32-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi0)
 ; RV32-MEDIUM-NEXT:    lw a2, 0(a1)
 ; RV32-MEDIUM-NEXT:    lw a1, 4(a1)
 ; RV32-MEDIUM-NEXT:    sw a2, 0(a0)
@@ -86,9 +76,9 @@ define void @constpool_f64(ptr %p) {
 ;
 ; RV32-PIC-LABEL: constpool_f64:
 ; RV32-PIC:       # %bb.0:
-; RV32-PIC-NEXT:  .Lpcrel_hi1:
+; RV32-PIC-NEXT:  .Lpcrel_hi0:
 ; RV32-PIC-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
-; RV32-PIC-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi1)
+; RV32-PIC-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi0)
 ; RV32-PIC-NEXT:    lw a2, 0(a1)
 ; RV32-PIC-NEXT:    lw a1, 4(a1)
 ; RV32-PIC-NEXT:    sw a2, 0(a0)
@@ -97,26 +87,124 @@ define void @constpool_f64(ptr %p) {
 ;
 ; RV64-SMALL-LABEL: constpool_f64:
 ; RV64-SMALL:       # %bb.0:
-; RV64-SMALL-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64-SMALL-NEXT:    ld a1, %lo(.LCPI1_0)(a1)
+; RV64-SMALL-NEXT:    li a1, 1023
+; RV64-SMALL-NEXT:    slli a1, a1, 52
 ; RV64-SMALL-NEXT:    sd a1, 0(a0)
 ; RV64-SMALL-NEXT:    ret
 ;
 ; RV64-MEDIUM-LABEL: constpool_f64:
 ; RV64-MEDIUM:       # %bb.0:
-; RV64-MEDIUM-NEXT:  .Lpcrel_hi1:
-; RV64-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
-; RV64-MEDIUM-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi1)(a1)
+; RV64-MEDIUM-NEXT:    li a1, 1023
+; RV64-MEDIUM-NEXT:    slli a1, a1, 52
 ; RV64-MEDIUM-NEXT:    sd a1, 0(a0)
 ; RV64-MEDIUM-NEXT:    ret
 ;
 ; RV64-PIC-LABEL: constpool_f64:
 ; RV64-PIC:       # %bb.0:
-; RV64-PIC-NEXT:  .Lpcrel_hi1:
-; RV64-PIC-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
-; RV64-PIC-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi1)(a1)
+; RV64-PIC-NEXT:    li a1, 1023
+; RV64-PIC-NEXT:    slli a1, a1, 52
 ; RV64-PIC-NEXT:    sd a1, 0(a0)
 ; RV64-PIC-NEXT:    ret
   store double 1.0, ptr %p
+  ret void
+}
+
+define void @constpool_f32_1234_5(ptr %p) {
+; RV32-SMALL-LABEL: constpool_f32_1234_5:
+; RV32-SMALL:       # %bb.0:
+; RV32-SMALL-NEXT:    lui a1, 280997
+; RV32-SMALL-NEXT:    sw a1, 0(a0)
+; RV32-SMALL-NEXT:    ret
+;
+; RV32-MEDIUM-LABEL: constpool_f32_1234_5:
+; RV32-MEDIUM:       # %bb.0:
+; RV32-MEDIUM-NEXT:    lui a1, 280997
+; RV32-MEDIUM-NEXT:    sw a1, 0(a0)
+; RV32-MEDIUM-NEXT:    ret
+;
+; RV32-PIC-LABEL: constpool_f32_1234_5:
+; RV32-PIC:       # %bb.0:
+; RV32-PIC-NEXT:    lui a1, 280997
+; RV32-PIC-NEXT:    sw a1, 0(a0)
+; RV32-PIC-NEXT:    ret
+;
+; RV64-SMALL-LABEL: constpool_f32_1234_5:
+; RV64-SMALL:       # %bb.0:
+; RV64-SMALL-NEXT:    lui a1, 280997
+; RV64-SMALL-NEXT:    sw a1, 0(a0)
+; RV64-SMALL-NEXT:    ret
+;
+; RV64-MEDIUM-LABEL: constpool_f32_1234_5:
+; RV64-MEDIUM:       # %bb.0:
+; RV64-MEDIUM-NEXT:    lui a1, 280997
+; RV64-MEDIUM-NEXT:    sw a1, 0(a0)
+; RV64-MEDIUM-NEXT:    ret
+;
+; RV64-PIC-LABEL: constpool_f32_1234_5:
+; RV64-PIC:       # %bb.0:
+; RV64-PIC-NEXT:    lui a1, 280997
+; RV64-PIC-NEXT:    sw a1, 0(a0)
+; RV64-PIC-NEXT:    ret
+  store float 1.234500e+03, ptr %p
+  ret void
+}
+
+define void @constpool_f64_1234_5(ptr %p) {
+; RV32-SMALL-LABEL: constpool_f64_1234_5:
+; RV32-SMALL:       # %bb.0:
+; RV32-SMALL-NEXT:    lui a1, %hi(.LCPI3_0)
+; RV32-SMALL-NEXT:    addi a1, a1, %lo(.LCPI3_0)
+; RV32-SMALL-NEXT:    lw a2, 0(a1)
+; RV32-SMALL-NEXT:    lw a1, 4(a1)
+; RV32-SMALL-NEXT:    sw a2, 0(a0)
+; RV32-SMALL-NEXT:    sw a1, 4(a0)
+; RV32-SMALL-NEXT:    ret
+;
+; RV32-MEDIUM-LABEL: constpool_f64_1234_5:
+; RV32-MEDIUM:       # %bb.0:
+; RV32-MEDIUM-NEXT:  .Lpcrel_hi1:
+; RV32-MEDIUM-NEXT:    auipc a1, %pcrel_hi(.LCPI3_0)
+; RV32-MEDIUM-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi1)
+; RV32-MEDIUM-NEXT:    lw a2, 0(a1)
+; RV32-MEDIUM-NEXT:    lw a1, 4(a1)
+; RV32-MEDIUM-NEXT:    sw a2, 0(a0)
+; RV32-MEDIUM-NEXT:    sw a1, 4(a0)
+; RV32-MEDIUM-NEXT:    ret
+;
+; RV32-PIC-LABEL: constpool_f64_1234_5:
+; RV32-PIC:       # %bb.0:
+; RV32-PIC-NEXT:  .Lpcrel_hi1:
+; RV32-PIC-NEXT:    auipc a1, %pcrel_hi(.LCPI3_0)
+; RV32-PIC-NEXT:    addi a1, a1, %pcrel_lo(.Lpcrel_hi1)
+; RV32-PIC-NEXT:    lw a2, 0(a1)
+; RV32-PIC-NEXT:    lw a1, 4(a1)
+; RV32-PIC-NEXT:    sw a2, 0(a0)
+; RV32-PIC-NEXT:    sw a1, 4(a0)
+; RV32-PIC-NEXT:    ret
+;
+; RV64-SMALL-LABEL: constpool_f64_1234_5:
+; RV64-SMALL:       # %bb.0:
+; RV64-SMALL-NEXT:    lui a1, 517
+; RV64-SMALL-NEXT:    addi a1, a1, -1627
+; RV64-SMALL-NEXT:    slli a1, a1, 41
+; RV64-SMALL-NEXT:    sd a1, 0(a0)
+; RV64-SMALL-NEXT:    ret
+;
+; RV64-MEDIUM-LABEL: constpool_f64_1234_5:
+; RV64-MEDIUM:       # %bb.0:
+; RV64-MEDIUM-NEXT:    lui a1, 517
+; RV64-MEDIUM-NEXT:    addi a1, a1, -1627
+; RV64-MEDIUM-NEXT:    slli a1, a1, 41
+; RV64-MEDIUM-NEXT:    sd a1, 0(a0)
+; RV64-MEDIUM-NEXT:    ret
+;
+; RV64-PIC-LABEL: constpool_f64_1234_5:
+; RV64-PIC:       # %bb.0:
+; RV64-PIC-NEXT:    lui a1, 517
+; RV64-PIC-NEXT:    addi a1, a1, -1627
+; RV64-PIC-NEXT:    slli a1, a1, 41
+; RV64-PIC-NEXT:    sd a1, 0(a0)
+; RV64-PIC-NEXT:    ret
+  store double 1.234500e+03, ptr %p
   ret void
 }

@@ -60,6 +60,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 FunctionPass *createSMEABIPass();
 FunctionPass *createSMEPeepholeOptPass();
+FunctionPass *createMachineSMEABIPass();
 ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
@@ -72,12 +73,12 @@ FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
 FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
 FunctionPass *createAArch64StackTaggingPreRAPass();
-ModulePass *createAArch64GlobalsTaggingPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
 void initializeAArch64A53Fix835769Pass(PassRegistry&);
 void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
 void initializeAArch64AdvSIMDScalarPass(PassRegistry&);
+void initializeAArch64AsmPrinterPass(PassRegistry &);
 void initializeAArch64PointerAuthPass(PassRegistry&);
 void initializeAArch64BranchTargetsPass(PassRegistry&);
 void initializeAArch64CFIFixupPass(PassRegistry&);
@@ -89,7 +90,6 @@ void initializeAArch64ConditionalComparesPass(PassRegistry &);
 void initializeAArch64DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry &);
-void initializeAArch64GlobalsTaggingPass(PassRegistry &);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptPass(PassRegistry &);
@@ -112,6 +112,7 @@ void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry&);
 void initializeSMEABIPass(PassRegistry &);
 void initializeSMEPeepholeOptPass(PassRegistry &);
+void initializeMachineSMEABIPass(PassRegistry &);
 void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 } // end namespace llvm

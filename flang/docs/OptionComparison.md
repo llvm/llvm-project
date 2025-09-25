@@ -53,7 +53,7 @@ eN
    </td>
    <td>fdec,
 <p>
-fall-instrinsics
+fall-intrinsics
    </td>
    <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=297">qxlf77</a>,
 <p>

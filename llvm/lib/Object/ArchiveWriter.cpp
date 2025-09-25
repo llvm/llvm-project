@@ -700,7 +700,7 @@ static bool isECObject(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isWindowsArm64EC() || T.getArch() == Triple::x86_64;
   }
 
@@ -719,7 +719,7 @@ static bool isAnyArm64COFF(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isOSWindows() && T.getArch() == Triple::aarch64;
   }
 
@@ -754,9 +754,8 @@ static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
       raw_string_ostream NameStream(Name);
       if (Error E = S.printName(NameStream))
         return std::move(E);
-      if (Map->find(Name) != Map->end())
+      if (!Map->try_emplace(Name, Index).second)
         continue; // ignore duplicated symbol
-      (*Map)[Name] = Index;
       if (Map == &SymMap->Map) {
         Ret.push_back(SymNames.tell());
         SymNames << Name << '\0';

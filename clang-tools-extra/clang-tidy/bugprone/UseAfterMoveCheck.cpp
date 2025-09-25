@@ -1,4 +1,4 @@
-//===--- UseAfterMoveCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -148,7 +148,7 @@ UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
 std::optional<UseAfterMove>
 UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
                                  const ValueDecl *MovedVariable) {
-  if (Visited.count(Block))
+  if (Visited.contains(Block))
     return std::nullopt;
 
   // Mark the block as visited (except if this is the block containing the
@@ -232,7 +232,7 @@ void UseAfterMoveFinder::getUsesAndReinits(
   // All references to the variable that aren't reinitializations are uses.
   Uses->clear();
   for (const DeclRefExpr *DeclRef : DeclRefs) {
-    if (!ReinitDeclRefs.count(DeclRef))
+    if (!ReinitDeclRefs.contains(DeclRef))
       Uses->push_back(DeclRef);
   }
 
@@ -242,7 +242,7 @@ void UseAfterMoveFinder::getUsesAndReinits(
   });
 }
 
-bool isStandardSmartPointer(const ValueDecl *VD) {
+static bool isStandardSmartPointer(const ValueDecl *VD) {
   const Type *TheType = VD->getType().getNonReferenceType().getTypePtrOrNull();
   if (!TheType)
     return false;
@@ -315,9 +315,10 @@ void UseAfterMoveFinder::getReinits(
           "::std::unordered_map", "::std::unordered_multiset",
           "::std::unordered_multimap"))))));
 
-  auto StandardSmartPointerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
-      recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
-          "::std::unique_ptr", "::std::shared_ptr", "::std::weak_ptr"))))));
+  auto StandardResettableOwnerTypeMatcher = hasType(
+      hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
+          hasAnyName("::std::unique_ptr", "::std::shared_ptr",
+                     "::std::weak_ptr", "::std::optional", "::std::any"))))));
 
   // Matches different types of reinitialization.
   auto ReinitMatcher =
@@ -340,7 +341,7 @@ void UseAfterMoveFinder::getReinits(
                    callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
                // reset() on standard smart pointers.
                cxxMemberCallExpr(
-                   on(expr(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
+                   on(expr(DeclRefMatcher, StandardResettableOwnerTypeMatcher)),
                    callee(cxxMethodDecl(hasName("reset")))),
                // Methods that have the [[clang::reinitializes]] attribute.
                cxxMemberCallExpr(

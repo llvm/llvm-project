@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=riscv64 -mcpu=sifive-x280 -run-pass=machine-scheduler      \
 # RUN:  -debug-only=machine-scheduler -misched-dump-schedule-trace             \
-# RUN:  -misched-topdown -o - %s 2>&1 | FileCheck %s
+# RUN:  -misched-prera-direction=topdown -o - %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # The purpose of this test is to show that the VADD instructions are issued so

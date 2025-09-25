@@ -10,12 +10,10 @@
 #include "IndexingContext.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 using namespace clang;

@@ -12,6 +12,7 @@
 // CHECK-NEXT:    [[U16:%.*]] = alloca <vscale x 8 x i16>, align 16
 // CHECK-NEXT:    [[U32:%.*]] = alloca <vscale x 4 x i32>, align 16
 // CHECK-NEXT:    [[U64:%.*]] = alloca <vscale x 2 x i64>, align 16
+// CHECK-NEXT:    [[MF8:%.*]] = alloca <vscale x 16 x i8>, align 16
 // CHECK-NEXT:    [[F16:%.*]] = alloca <vscale x 8 x half>, align 16
 // CHECK-NEXT:    [[F32:%.*]] = alloca <vscale x 4 x float>, align 16
 // CHECK-NEXT:    [[F64:%.*]] = alloca <vscale x 2 x double>, align 16
@@ -56,6 +57,9 @@
 // CHECK-NEXT:    [[B8X2:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
 // CHECK-NEXT:    [[B8X4:%.*]] = alloca { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> }, align 2
 // CHECK-NEXT:    [[CNT:%.*]] = alloca target("aarch64.svcount"), align 2
+// CHECK-NEXT:    [[MF8X2:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[MF8X3:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[MF8X4:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
 // CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[S8]], align 16
 // CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr [[S16]], align 16
 // CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[S32]], align 16
@@ -64,6 +68,7 @@
 // CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr [[U16]], align 16
 // CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[U32]], align 16
 // CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[U64]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[MF8]], align 16
 // CHECK-NEXT:    store <vscale x 8 x half> zeroinitializer, ptr [[F16]], align 16
 // CHECK-NEXT:    store <vscale x 4 x float> zeroinitializer, ptr [[F32]], align 16
 // CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[F64]], align 16
@@ -108,6 +113,9 @@
 // CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1> } zeroinitializer, ptr [[B8X2]], align 2
 // CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } zeroinitializer, ptr [[B8X4]], align 2
 // CHECK-NEXT:    store target("aarch64.svcount") zeroinitializer, ptr [[CNT]], align 2
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[MF8X2]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[MF8X3]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } zeroinitializer, ptr [[MF8X4]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_locals(void) {
@@ -119,6 +127,7 @@ void test_locals(void) {
   __SVUint16_t u16{};
   __SVUint32_t u32{};
   __SVUint64_t u64{};
+  __SVMfloat8_t mf8{};
   __SVFloat16_t f16{};
   __SVFloat32_t f32{};
   __SVFloat64_t f64{};
@@ -168,6 +177,10 @@ void test_locals(void) {
   __clang_svboolx4_t b8x4{};
 
   __SVCount_t cnt{};
+
+  __clang_svmfloat8x2_t mf8x2{};
+  __clang_svmfloat8x3_t mf8x3{};
+  __clang_svmfloat8x4_t mf8x4{};
 }
 
 // CHECK-LABEL: define dso_local void @_Z12test_copy_s8u10__SVInt8_t
@@ -280,6 +293,20 @@ void test_copy_u32(__SVUint32_t a) {
 //
 void test_copy_u64(__SVUint64_t a) {
   __SVUint64_t b{a};
+}
+
+// CHECK-LABEL: define dso_local void @_Z13test_copy_mf8u13__SVMfloat8_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[A]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[TMP0]], ptr [[B]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_mf8(__SVMfloat8_t a) {
+  __SVMfloat8_t b{a};
 }
 
 // CHECK-LABEL: define dso_local void @_Z13test_copy_f16u13__SVFloat16_t
@@ -1124,4 +1151,81 @@ void test_copy_b8x4(__clang_svboolx4_t a) {
 //
 void test_copy_cnt(__SVCount_t a) {
   __SVCount_t b{a};
+}
+
+// CHECK-LABEL: define dso_local void @_Z15test_copy_mf8x213svmfloat8x2_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP2:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], ptr [[B]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_mf8x2(__clang_svmfloat8x2_t a) {
+  __clang_svmfloat8x2_t b{a};
+}
+
+// CHECK-LABEL: define dso_local void @_Z15test_copy_mf8x313svmfloat8x3_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]], <vscale x 16 x i8> [[A_COERCE2:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[A_COERCE2]], 2
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], ptr [[B]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_mf8x3(__clang_svmfloat8x3_t a) {
+  __clang_svmfloat8x3_t b{a};
+}
+
+// CHECK-LABEL: define dso_local void @_Z15test_copy_mf8x413svmfloat8x4_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A_COERCE0:%.*]], <vscale x 16 x i8> [[A_COERCE1:%.*]], <vscale x 16 x i8> [[A_COERCE2:%.*]], <vscale x 16 x i8> [[A_COERCE3:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[B:%.*]] = alloca { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[A_COERCE0]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[A_COERCE1]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[A_COERCE2]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[A_COERCE3]], 3
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], ptr [[A]], align 16
+// CHECK-NEXT:    [[A1:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP4]], ptr [[B]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_mf8x4(__clang_svmfloat8x4_t a) {
+  __clang_svmfloat8x4_t b{a};
+}
+
+/// Reduced from: https://github.com/llvm/llvm-project/issues/107609
+using vec_t = __SVInt8_t;
+
+// CHECK-LABEL: define dso_local void @_Z20test_copy_s8_typedefu10__SVInt8_t
+// CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    [[VEC:%.*]] = alloca <vscale x 16 x i8>, align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[A]], ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[A_ADDR]], align 16
+// CHECK-NEXT:    store <vscale x 16 x i8> [[TMP0]], ptr [[VEC]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_copy_s8_typedef(__SVInt8_t a) {
+  vec_t vec{a};
 }

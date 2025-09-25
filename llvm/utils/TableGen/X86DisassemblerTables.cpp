@@ -603,8 +603,7 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_W_OPSIZE_KZ_B_U:
     return false;
   default:
-    errs() << "Unknown instruction class: "
-           << stringForContext((InstructionContext)parent) << "\n";
+    errs() << "Unknown instruction class: " << stringForContext(parent) << "\n";
     llvm_unreachable("Unknown instruction class");
   }
 }
@@ -746,8 +745,7 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
       ModRMDecision.push_back(decision.instructionIDs[index]);
     break;
   case MODRM_FULL:
-    for (unsigned short InstructionID : decision.instructionIDs)
-      ModRMDecision.push_back(InstructionID);
+    llvm::append_range(ModRMDecision, decision.instructionIDs);
     break;
   }
 
@@ -874,7 +872,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[Index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     unsigned &N = OperandSets[OperandList];
     if (N != 0)
@@ -883,9 +881,9 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     N = ++OperandSetNum;
 
     o << "  { /* " << (OperandSetNum - 1) << " */\n";
-    for (unsigned i = 0, e = OperandList.size(); i != e; ++i) {
-      const char *Encoding = stringForOperandEncoding(OperandList[i].first);
-      const char *Type = stringForOperandType(OperandList[i].second);
+    for (const auto &[Enc, Ty] : OperandList) {
+      const char *Encoding = stringForOperandEncoding(Enc);
+      const char *Type = stringForOperandType(Ty);
       o << "    { " << Encoding << ", " << Type << " },\n";
     }
     o << "  },\n";
@@ -906,7 +904,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";
 

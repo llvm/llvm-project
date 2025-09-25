@@ -40,6 +40,14 @@ private:
   void addPreprocessingOptions(const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Extract LTO options from the driver arguments and add them to
+  /// the command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void addLTOOptions(const llvm::opt::ArgList &Args,
+                     llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Extract PIC options from the driver arguments and add them to
   /// the command arguments.
   ///
@@ -70,6 +78,13 @@ private:
   void AddAMDGPUTargetArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Add specific options for LoongArch64 target.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddLoongArch64TargetArgs(const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Add specific options for RISC-V target.
   ///
   /// \param [in] Args The list of input driver arguments
@@ -83,6 +98,13 @@ private:
   /// \param [out] CmdArgs The list of output command arguments
   void AddX86_64TargetArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const;
+
+  /// Add specific options for PPC target.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddPPCTargetArgs(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const;
 
   /// Extract offload options from the driver arguments and add them to
   /// the command arguments.

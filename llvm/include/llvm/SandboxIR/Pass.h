@@ -12,9 +12,35 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace llvm::sandboxir {
+namespace llvm {
+
+class AAResults;
+class ScalarEvolution;
+class TargetTransformInfo;
+
+namespace sandboxir {
 
 class Function;
+class Region;
+
+class Analyses {
+  AAResults *AA = nullptr;
+  ScalarEvolution *SE = nullptr;
+  TargetTransformInfo *TTI = nullptr;
+
+  Analyses() = default;
+
+public:
+  Analyses(AAResults &AA, ScalarEvolution &SE, TargetTransformInfo &TTI)
+      : AA(&AA), SE(&SE), TTI(&TTI) {}
+
+public:
+  AAResults &getAA() const { return *AA; }
+  ScalarEvolution &getScalarEvolution() const { return *SE; }
+  TargetTransformInfo &getTTI() const { return *TTI; }
+  /// For use by unit tests.
+  static Analyses emptyForTesting() { return Analyses(); }
+};
 
 /// The base class of a Sandbox IR Pass.
 class Pass {
@@ -24,6 +50,7 @@ protected:
   const std::string Name;
 
 public:
+  /// \p Name can't contain any spaces or start with '-'.
   Pass(StringRef Name) : Name(Name) {
     assert(!Name.contains(' ') &&
            "A pass name should not contain whitespaces!");
@@ -41,17 +68,28 @@ public:
   LLVM_DUMP_METHOD virtual void dump() const;
 #endif
   /// Similar to print() but adds a newline. Used for testing.
-  void printPipeline(raw_ostream &OS) const { OS << Name << "\n"; }
+  virtual void printPipeline(raw_ostream &OS) const { OS << Name << "\n"; }
 };
 
 /// A pass that runs on a sandbox::Function.
 class FunctionPass : public Pass {
 public:
+  /// \p Name can't contain any spaces or start with '-'.
   FunctionPass(StringRef Name) : Pass(Name) {}
   /// \Returns true if it modifies \p F.
-  virtual bool runOnFunction(Function &F) = 0;
+  virtual bool runOnFunction(Function &F, const Analyses &A) = 0;
 };
 
-} // namespace llvm::sandboxir
+/// A pass that runs on a sandbox::Region.
+class RegionPass : public Pass {
+public:
+  /// \p Name can't contain any spaces or start with '-'.
+  RegionPass(StringRef Name) : Pass(Name) {}
+  /// \Returns true if it modifies \p R.
+  virtual bool runOnRegion(Region &R, const Analyses &A) = 0;
+};
+
+} // namespace sandboxir
+} // namespace llvm
 
 #endif // LLVM_SANDBOXIR_PASS_H

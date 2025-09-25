@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ZOS.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
@@ -36,6 +35,10 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  if (DriverArgs.hasFlag(options::OPT_fxl_pragma_pack,
+                         options::OPT_fno_xl_pragma_pack, true))
+    CC1Args.push_back("-fxl-pragma-pack");
 
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.
@@ -149,11 +152,10 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef OutputName = Output.getFilename();
     // Strip away the last file suffix in presence from output name and add
     // a new .x suffix.
-    size_t Suffix = OutputName.find_last_of('.');
-    const char *SideDeckName =
-        Args.MakeArgString(OutputName.substr(0, Suffix) + ".x");
+    SmallString<128> SideDeckName = OutputName;
+    llvm::sys::path::replace_extension(SideDeckName, "x");
     CmdArgs.push_back("-x");
-    CmdArgs.push_back(SideDeckName);
+    CmdArgs.push_back(Args.MakeArgString(SideDeckName));
   } else {
     // We need to direct side file to /dev/null to suppress linker warning when
     // the object file contains exported symbols, and -shared or

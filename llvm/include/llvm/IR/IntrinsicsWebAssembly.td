@@ -43,6 +43,10 @@ def int_wasm_ref_is_null_exn :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_exnref_ty], [IntrNoMem],
                         "llvm.wasm.ref.is_null.exn">;
 
+def int_wasm_ref_test_func
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_vararg_ty],
+                            [IntrNoMem]>;
+
 //===----------------------------------------------------------------------===//
 // Table intrinsics
 //===----------------------------------------------------------------------===//
@@ -202,14 +206,6 @@ def int_wasm_shuffle :
                          ImmArg<ArgIndex<12>>, ImmArg<ArgIndex<13>>,
                          ImmArg<ArgIndex<14>>, ImmArg<ArgIndex<15>>,
                          ImmArg<ArgIndex<16>>, ImmArg<ArgIndex<17>>]>;
-def int_wasm_sub_sat_signed :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_sub_sat_unsigned :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_avgr_unsigned :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>],

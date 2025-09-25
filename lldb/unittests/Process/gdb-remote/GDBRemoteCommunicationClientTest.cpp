@@ -8,6 +8,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "GDBRemoteTestUtils.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -63,8 +64,12 @@ std::string one_register_hex = "41424344";
 class GDBRemoteCommunicationClientTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
-                      llvm::Succeeded());
+    llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+    ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+    client.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->first)));
+    server.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   }
 
 protected:
@@ -344,6 +349,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
   EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.GetMemoryTagged());
   EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.IsStackMemory());
+  EXPECT_EQ(MemoryRegionInfo::eDontKnow, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -354,16 +360,18 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
+  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 
   HandlePacket(server, "qMemoryRegionInfo:a000",
-               "start:a000;size:2000;flags: mt  zz mt  ;type:ha,ha,stack;");
+               "start:a000;size:2000;flags: mt  zz mt ss  ;type:ha,ha,stack;");
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetMemoryTagged());
   EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsStackMemory());
+  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);

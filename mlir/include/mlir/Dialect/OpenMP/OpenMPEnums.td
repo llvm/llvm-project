@@ -108,14 +108,15 @@ def ClauseRequiresAttr : OpenMP_EnumAttr<ClauseRequires, "clause_requires">;
 def ClauseTaskDependIn : I32EnumAttrCase<"taskdependin", 0>;
 def ClauseTaskDependOut : I32EnumAttrCase<"taskdependout", 1>;
 def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
+def ClauseTaskDependMutexInOutSet
+    : I32EnumAttrCase<"taskdependmutexinoutset", 3>;
+def ClauseTaskDependInOutSet : I32EnumAttrCase<"taskdependinoutset", 4>;
 
-def ClauseTaskDepend : OpenMP_I32EnumAttr<
-    "ClauseTaskDepend",
-    "depend clause in a target or task construct", [
-      ClauseTaskDependIn,
-      ClauseTaskDependOut,
-      ClauseTaskDependInOut
-    ]>;
+def ClauseTaskDepend
+    : OpenMP_I32EnumAttr<
+          "ClauseTaskDepend", "depend clause in a target or task construct",
+          [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut,
+           ClauseTaskDependMutexInOutSet, ClauseTaskDependInOutSet]>;
 
 def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
                                            "clause_task_depend"> {
@@ -179,6 +180,27 @@ def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
                                     "order_mod">;
 
 //===----------------------------------------------------------------------===//
+// reduction_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierDefault : I32EnumAttrCase<"defaultmod", 0>;
+def ReductionModifierInscan : I32EnumAttrCase<"inscan", 1>;
+def ReductionModifierTask : I32EnumAttrCase<"task", 2>;
+
+def ReductionModifier : OpenMP_I32EnumAttr<
+    "ReductionModifier",
+    "reduction modifier", [
+      ReductionModifierDefault,
+      ReductionModifierInscan,
+      ReductionModifierTask
+    ]>;
+
+def ReductionModifierAttr : OpenMP_EnumAttr<ReductionModifier,
+                                            "reduction_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
 // sched_mod enum.
 //===----------------------------------------------------------------------===//
 
@@ -199,6 +221,24 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
     ]>;
 
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
+
+//===----------------------------------------------------------------------===//
+// target_region_flags enum.
+//===----------------------------------------------------------------------===//
+
+def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
+def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
+def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
+def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+
+def TargetRegionFlags : OpenMP_BitEnumAttr<
+    "TargetRegionFlags",
+    "target region property flags", [
+      TargetRegionFlagsNone,
+      TargetRegionFlagsGeneric,
+      TargetRegionFlagsSpmd,
+      TargetRegionFlagsTripCount
+    ]>;
 
 //===----------------------------------------------------------------------===//
 // variable_capture_kind enum.

@@ -87,6 +87,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_3A:
   case ArchKind::ARMV9_4A:
   case ArchKind::ARMV9_5A:
+  case ArchKind::ARMV9_6A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -125,6 +126,7 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_3A:
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
+  case ARM::ArchKind::ARMV9_6A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -401,13 +403,12 @@ static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
   if (!ARM::isDoublePrecision(InputFPU.Restriction))
     return InputFPUKind;
 
-  // Otherwise, look for an FPU entry with all the same fields, except
-  // that it does not support double precision.
+  // Otherwise, look for an FPU entry that has the same FPUVer
+  // and is not Double Precision. We want to allow for changing of
+  // NEON Support and Restrictions so CPU's such as Cortex-R52 can
+  // select between SP Only and Full DP modes.
   for (const ARM::FPUName &CandidateFPU : ARM::FPUNames) {
     if (CandidateFPU.FPUVer == InputFPU.FPUVer &&
-        CandidateFPU.NeonSupport == InputFPU.NeonSupport &&
-        ARM::has32Regs(CandidateFPU.Restriction) ==
-            ARM::has32Regs(InputFPU.Restriction) &&
         !ARM::isDoublePrecision(CandidateFPU.Restriction)) {
       return CandidateFPU.ID;
     }
@@ -534,9 +535,8 @@ void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   }
 }
 
-StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
-  StringRef ArchName =
-      CPU.empty() ? TT.getArchName() : getArchName(parseCPUArch(CPU));
+StringRef ARM::computeDefaultTargetABI(const Triple &TT) {
+  StringRef ArchName = TT.getArchName();
 
   if (TT.isOSBinFormatMachO()) {
     if (TT.getEnvironment() == Triple::EABI ||
@@ -554,7 +554,9 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   switch (TT.getEnvironment()) {
   case Triple::Android:
   case Triple::GNUEABI:
+  case Triple::GNUEABIT64:
   case Triple::GNUEABIHF:
+  case Triple::GNUEABIHFT64:
   case Triple::MuslEABI:
   case Triple::MuslEABIHF:
   case Triple::OpenHOS:
@@ -570,6 +572,22 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
       return "aapcs-linux";
     return "aapcs";
   }
+}
+
+ARM::ARMABI ARM::computeTargetABI(const Triple &TT, StringRef ABIName) {
+  if (ABIName.empty())
+    ABIName = ARM::computeDefaultTargetABI(TT);
+
+  if (ABIName == "aapcs16")
+    return ARM_ABI_AAPCS16;
+
+  if (ABIName.starts_with("aapcs"))
+    return ARM_ABI_AAPCS;
+
+  if (ABIName.starts_with("apcs"))
+    return ARM_ABI_APCS;
+
+  return ARM_ABI_UNKNOWN;
 }
 
 StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
@@ -628,13 +646,13 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     default:
       return "strongarm";
     }
-  case llvm::Triple::NaCl:
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
   default:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::GNUEABIHFT64:
     case llvm::Triple::MuslEABIHF:
       return "arm1176jzf-s";
     default:
@@ -653,6 +671,10 @@ void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.Feature.empty()) {
       std::string Description = DescMap[Ext.Name].str();
+      // With SIMD, this links to the NEON feature, so the description should be
+      // taken from here, as SIMD does not exist in TableGen.
+      if (Ext.Name == "simd")
+        Description = DescMap["neon"].str();
       outs() << "    "
              << format(Description.empty() ? "%s\n" : "%-20s%s\n",
                        Ext.Name.str().c_str(), Description.c_str());

@@ -123,7 +123,9 @@ void test() {
 
   // Make sure both types have the same triviality (that has ABI impact since
   // it determined how objects are passed). Both should be non-trivial.
-  static_assert(std::is_trivial<New>::value == std::is_trivial<Old>::value, "");
+  static_assert(std::is_trivially_copyable<New>::value == std::is_trivially_copyable<Old>::value, "");
+  static_assert(
+      std::is_trivially_default_constructible<New>::value == std::is_trivially_default_constructible<Old>::value, "");
 }
 
 // Object types to store in the control block
@@ -195,10 +197,12 @@ int main(int, char**) {
   test<TrivialEmptyType, FinalEmptyAlloc>();
   test<TrivialEmptyType, NonTrivialAlloc>();
 
+#if !defined(TEST_HAS_NO_ALIGNED_ALLOCATION)
   test<OveralignedEmptyType, TrivialEmptyAlloc>();
   test<OveralignedEmptyType, TrivialNonEmptyAlloc>();
   test<OveralignedEmptyType, FinalEmptyAlloc>();
   test<OveralignedEmptyType, NonTrivialAlloc>();
+#endif
 
   test<TrivialNonEmptyType, TrivialEmptyAlloc>();
   test<TrivialNonEmptyType, TrivialNonEmptyAlloc>();

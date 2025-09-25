@@ -203,9 +203,14 @@ public:
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
-  void
+  /// Returns true if the command was changed (including insertion and removal),
+  /// false if it was unchanged.
+  bool
   setCompileCommand(PathRef File,
                     std::optional<tooling::CompileCommand> CompilationCommand);
+
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
 
 private:
   mutable std::mutex Mutex;

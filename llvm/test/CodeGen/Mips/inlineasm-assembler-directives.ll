@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips < %s | FileCheck %s
 
 ; Check for the emission of appropriate assembler directives before and
 ; after the inline assembly code.

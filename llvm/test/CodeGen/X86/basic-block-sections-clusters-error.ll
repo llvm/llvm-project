@@ -57,6 +57,19 @@
 ; RUN: echo 'p 1 2 3 2' >> %t13
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t13 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR13
 ; CHECK-ERROR13: LLVM ERROR: invalid profile {{.*}} at line 4: duplicate cloned block in path: '2'
+; RUN: echo 'v1' > %t14
+; RUN: echo 'f dummy1' >> %t14
+; RUN: echo 'c 0 1' >> %t14
+; RUN: echo 'g 0,1:2' >> %t14
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t14 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR14
+; CHECK-ERROR14: LLVM ERROR: invalid profile {{.*}} at line 4: unsigned integer expected: ''
+; RUN: echo 'v1' > %t15
+; RUN: echo 'f dummy1' >> %t15
+; RUN: echo 'c 0 1' >> %t15
+; RUN: echo 'g 0:4,1:2:3' >> %t15
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t15 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR15
+; CHECK-ERROR15: LLVM ERROR: invalid profile {{.*}} at line 4: unsigned integer expected: '2:3'
+
 
 define i32 @dummy1(i32 %x, i32 %y, i32 %z) {
   entry:

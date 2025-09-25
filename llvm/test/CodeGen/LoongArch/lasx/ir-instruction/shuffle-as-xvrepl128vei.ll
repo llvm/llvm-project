@@ -12,6 +12,18 @@ define <32 x i8> @shufflevector_v32i8(<32 x i8> %a, <32 x i8> %b) {
     ret <32 x i8> %c
 }
 
+;; xvrepl128vei.b
+define <32 x i8> @shufflevector_v32i8_undef(<32 x i8> %a) {
+; CHECK-LABEL: shufflevector_v32i8_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvrepl128vei.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+    %c = shufflevector <32 x i8> %a, <32 x i8> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
+                                                                   i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33, i32 33>
+    ret <32 x i8> %c
+}
+
 ;; xvrepl128vei.h
 define <16 x i16> @shufflevector_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: shufflevector_v16i16:
@@ -20,6 +32,18 @@ define <16 x i16> @shufflevector_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-NEXT:    ret
     %c = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3,
                                                                  i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11, i32 11>
+    ret <16 x i16> %c
+}
+
+;; xvrepl128vei.h
+define <16 x i16> @shufflevector_v16i16_undef(<16 x i16> %a) {
+; CHECK-LABEL: shufflevector_v16i16_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvrepl128vei.h $xr0, $xr0, 3
+; CHECK-NEXT:    ret
+    %c = shufflevector <16 x i16> %a, <16 x i16> poison, <16 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3,
+                                                                     i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
     ret <16 x i16> %c
 }
 
@@ -34,6 +58,17 @@ define <8 x i32> @shufflevector_v8i32(<8 x i32> %a, <8 x i32> %b) {
     ret <8 x i32> %c
 }
 
+;; xvrepl128vei.w
+define <8 x i32> @shufflevector_v8i32_undef(<8 x i32> %a) {
+; CHECK-LABEL: shufflevector_v8i32_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvrepl128vei.w $xr0, $xr0, 2
+; CHECK-NEXT:    ret
+    %c = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 8, i32 8, i32 8, i32 8>
+    ret <8 x i32> %c
+}
+
 ;; xvrepl128vei.d
 define <4 x i64> @shufflevector_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: shufflevector_v4i64:
@@ -41,6 +76,17 @@ define <4 x i64> @shufflevector_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    xvrepl128vei.d $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
     %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+    ret <4 x i64> %c
+}
+
+;; xvrepl128vei.d
+define <4 x i64> @shufflevector_v4i64_undef(<4 x i64> %a) {
+; CHECK-LABEL: shufflevector_v4i64_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvrepl128vei.d $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+    %c = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> <i32 1, i32 1, i32 5, i32 5>
     ret <4 x i64> %c
 }
 
@@ -54,6 +100,17 @@ define <8 x float> @shufflevector_v8f32(<8 x float> %a, <8 x float> %b) {
     ret <8 x float> %c
 }
 
+;; xvrepl128vei.w
+define <8 x float> @shufflevector_v8f32_undef(<8 x float> %a) {
+; CHECK-LABEL: shufflevector_v8f32_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
+; CHECK-NEXT:    xvrepl128vei.w $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+    %c = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 9, i32 9, i32 9, i32 9>
+    ret <8 x float> %c
+}
+
 ;; xvrepl128vei.d
 define <4 x double> @shufflevector_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: shufflevector_v4f64:
@@ -61,5 +118,16 @@ define <4 x double> @shufflevector_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-NEXT:    xvrepl128vei.d $xr0, $xr1, 1
 ; CHECK-NEXT:    ret
     %c = shufflevector <4 x double> %a, <4 x double> %b, <4 x i32> <i32 5, i32 5, i32 7, i32 7>
+    ret <4 x double> %c
+}
+
+;; xvrepl128vei.d
+define <4 x double> @shufflevector_v4f64_undef(<4 x double> %a) {
+; CHECK-LABEL: shufflevector_v4f64_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvrepl128vei.d $xr0, $xr0, 0
+; CHECK-NEXT:    ret
+    %c = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 7, i32 7>
     ret <4 x double> %c
 }

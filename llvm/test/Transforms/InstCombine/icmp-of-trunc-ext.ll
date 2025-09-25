@@ -70,7 +70,7 @@ define i1 @icmp_trunc_x_trunc_y_2_illegal_anyways(i33 %x, i63 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i33 [[X]] to i63
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i63 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i63 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i33 %x, 512
@@ -90,7 +90,7 @@ define i1 @icmp_trunc_x_trunc_y_3(i64 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ule i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i64 %x, 123
@@ -152,7 +152,7 @@ define i1 @icmp_trunc_x_trunc_y_swap0(i33 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i33 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign uge i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i33 %x, 65536
@@ -172,7 +172,7 @@ define i1 @icmp_trunc_x_trunc_y_swap1(i33 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i33 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ule i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i33 %x, 65536
@@ -190,7 +190,7 @@ define i1 @icmp_trunc_x_zext_y(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[X_LB_ONLY:%.*]] = icmp ult i32 [[X:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ugt i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i32 %x, 65536
@@ -206,7 +206,7 @@ define i1 @icmp_trunc_x_zext_y_2(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[X_LB_ONLY:%.*]] = icmp ult i32 [[X:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ule i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i32 %x, 65536
@@ -407,6 +407,17 @@ define i1 @trunc_equality_either(i16 %x, i16 %y) {
   %yt = trunc nsw i16 %y to i8
   %c = icmp eq i8 %xt, %yt
   ret i1 %c
+}
+
+define i1 @trunc_equality_bool(i8 %a, i8 %b) {
+; CHECK-LABEL: @trunc_equality_bool(
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %at = trunc nuw i8 %a to i1
+  %bt = trunc nuw i8 %b to i1
+  %eq = icmp eq i1 %at, %bt
+  ret i1 %eq
 }
 
 define i1 @trunc_unsigned_nuw_zext(i32 %x, i8 %y) {

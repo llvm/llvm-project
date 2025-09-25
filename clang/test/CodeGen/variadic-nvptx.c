@@ -30,7 +30,7 @@ extern void varargs_simple(int, ...);
 // CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[F]], align 4
 // CHECK-NEXT:    [[CONV2:%.*]] = fpext float [[TMP4]] to double
 // CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[D]], align 8
-// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i32 noundef [[CONV]], i32 noundef [[CONV1]], i32 noundef [[TMP2]], i64 noundef [[TMP3]], double noundef [[CONV2]], double noundef [[TMP5]])
+// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i32 noundef [[CONV]], i32 noundef [[CONV1]], i32 noundef [[TMP2]], i64 noundef [[TMP3]], double noundef [[CONV2]], double noundef [[TMP5]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @__const.foo.a, i64 12, i1 false)
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
@@ -38,10 +38,10 @@ extern void varargs_simple(int, ...);
 // CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[A]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i32 [[TMP7]], i8 [[TMP9]], i32 [[TMP11]])
-// CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[V]], align 16
+// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i32 [[TMP7]], i8 [[TMP9]], i32 [[TMP11]]) #[[ATTR3]]
+// CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[V]], align 16
 // CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, ptr [[V]], align 16
-// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, <4 x i32> noundef [[TMP12]])
+// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, <4 x i32> noundef [[TMP12]]) #[[ATTR3]]
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[T]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP13]], align 1
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[T]], i32 0, i32 1
@@ -54,7 +54,7 @@ extern void varargs_simple(int, ...);
 // CHECK-NEXT:    [[TMP22:%.*]] = load i8, ptr [[TMP21]], align 1
 // CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_0]], ptr [[T]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP23]], align 1
-// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i8 [[TMP14]], i8 [[TMP16]], i8 [[TMP18]], i8 [[TMP20]], i32 noundef 0, i8 [[TMP22]], i8 [[TMP24]])
+// CHECK-NEXT:    call void (i32, ...) @varargs_simple(i32 noundef 0, i8 [[TMP14]], i8 [[TMP16]], i8 [[TMP18]], i8 [[TMP20]], i32 noundef 0, i8 [[TMP22]], i8 [[TMP24]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void foo() {
@@ -85,7 +85,7 @@ extern void varargs_complex(S, S, ...);
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[S]], ptr align 8 @__const.bar.s, i64 16, i1 false)
-// CHECK-NEXT:    call void (ptr, ptr, ...) @varargs_complex(ptr noundef byval([[STRUCT_S]]) align 8 [[S]], ptr noundef byval([[STRUCT_S]]) align 8 [[S]], i32 noundef 1, i64 noundef 1, double noundef 1.000000e+00)
+// CHECK-NEXT:    call void (ptr, ptr, ...) @varargs_complex(ptr noundef byval([[STRUCT_S]]) align 8 [[S]], ptr noundef byval([[STRUCT_S]]) align 8 [[S]], i32 noundef 1, i64 noundef 1, double noundef 1.000000e+00) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void bar() {

@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify=expected,not-cxx03,expected-cxx14 -fblocks %s
 // RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify=expected,not-cxx03 -ast-dump -fblocks %s | FileCheck %s
 
+// RUN: %clang_cc1 -std=c++11 -Wno-unused-value -fsyntax-only -verify=expected,not-cxx03,cxx03-cxx11,cxx11,expected-cxx14 -fblocks %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++03 -Wno-unused-value -fsyntax-only -verify=expected,cxx03,cxx03-cxx11,expected-cxx14 -fblocks %s -Ddecltype=__decltype -Dstatic_assert=_Static_assert -Wno-c++11-extensions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify=expected,not-cxx03,expected-cxx14 -fblocks %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify=expected,not-cxx03 -ast-dump -fblocks %s -fexperimental-new-constant-interpreter| FileCheck %s
+
 namespace std { class type_info; };
 
 namespace ExplicitCapture {
@@ -188,6 +193,11 @@ namespace ModifyingCapture {
     int n = 0;
     [=] {
       n = 1; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+    };
+    const int cn = 0;
+    // cxx03-cxx11-warning@+1 {{initialized lambda captures are a C++14 extension}}
+    [&cnr = cn]{ // expected-note {{variable 'cnr' declared const here}}
+      cnr = 1; // expected-error {{cannot assign to variable 'cnr' with const-qualified type 'const int &'}}
     };
   }
 }
@@ -447,6 +457,7 @@ void g(F f) {
 void f() {
   g([] {}); // cxx03-warning {{template argument uses local type}}
   // expected-note-re@-1 {{in instantiation of function template specialization 'PR20731::g<(lambda at {{.*}}>' requested here}}
+  // cxx03-note@-2 {{while substituting deduced template arguments}}
 }
 
 template <class _Rp> struct function {
@@ -498,6 +509,7 @@ namespace PR21857 {
   };
   template<typename Fn> fun<Fn> wrap(Fn fn); // cxx03-warning {{template argument uses unnamed type}}
   auto x = wrap([](){}); // cxx03-warning {{template argument uses unnamed type}} cxx03-note 2 {{unnamed type used in template argument was declared here}}
+                         // cxx03-note@-1 {{while substituting deduced template arguments into function template}}
 }
 
 namespace PR13987 {

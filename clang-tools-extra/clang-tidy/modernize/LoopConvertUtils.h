@@ -1,4 +1,4 @@
-//===--- LoopConvertUtils.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -353,6 +353,8 @@ private:
   bool VisitDeclRefExpr(DeclRefExpr *E);
   bool VisitDeclStmt(DeclStmt *S);
   bool TraverseStmt(Stmt *S);
+
+  bool TraverseStmtImpl(Stmt *S);
 
   /// Add an expression to the list of expressions on which the container
   /// expression depends.

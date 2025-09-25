@@ -73,8 +73,8 @@ void canonicalizeInstaniationReferences(TemplateClass<int, float> &object) {
 
   typedef TemplateClass<int, float> TT;
   TT::NestedType::SubNestedType subNestedType(0);
-// CHECK: [[@LINE-1]]:7 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
-// CHECK: [[@LINE-2]]:19 | class/C++ | SubNestedType | c:@ST>2#T#T@TemplateClass@S@NestedType@S@SubNestedType |
+// CHECK: [[@LINE-1]]:19 | class/C++ | SubNestedType | c:@ST>2#T#T@TemplateClass@S@NestedType@S@SubNestedType |
+// CHECK: [[@LINE-2]]:7 | struct/C++ | NestedType | c:@ST>2#T#T@TemplateClass@S@NestedType |
 
   TT::NestedType::TypeAlias nestedTypeAlias;
 // CHECK: [[@LINE-1]]:19 | type-alias/C++ | TypeAlias | c:@ST>2#T#T@TemplateClass@S@NestedType@TypeAlias |

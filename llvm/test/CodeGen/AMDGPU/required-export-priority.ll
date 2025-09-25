@@ -254,7 +254,7 @@ define amdgpu_ps void @test_export_pos_before_param_across_load(i32 %idx) #0 {
 ; GCN-NEXT:    s_endpgm
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float 1.0, i1 false, i1 false)
   call void @llvm.amdgcn.exp.f32(i32 33, i32 15, float 1.0, float 1.0, float 1.0, float 0.5, i1 false, i1 false)
-  %load = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0)
+  %load = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %load, i1 true, i1 false)
   ret void
 }
@@ -263,10 +263,10 @@ define amdgpu_ps void @test_export_across_store_load(i32 %idx, float %v) #0 {
 ; GCN-LABEL: test_export_across_store_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_setprio 2
-; GCN-NEXT:    v_mov_b32_e32 v2, 16
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 16, v2, vcc_lo
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    scratch_store_b32 v0, v1, off
 ; GCN-NEXT:    scratch_load_b32 v0, off, off
@@ -310,7 +310,7 @@ define amdgpu_ps void @test_export_in_callee(float %v) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GCN-NEXT:    s_endpgm
   %x = fadd float %v, 1.0
-  call void @test_export_gfx(float %x)
+  call amdgpu_gfx void @test_export_gfx(float %x)
   ret void
 }
 
@@ -330,7 +330,7 @@ define amdgpu_ps void @test_export_in_callee_prio(float %v) #0 {
 ; GCN-NEXT:    s_endpgm
   %x = fadd float %v, 1.0
   call void @llvm.amdgcn.s.setprio(i16 0)
-  call void @test_export_gfx(float %x)
+  call amdgpu_gfx void @test_export_gfx(float %x)
   ret void
 }
 

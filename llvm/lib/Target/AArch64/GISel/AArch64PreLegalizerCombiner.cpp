@@ -18,7 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -28,7 +28,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
 #include "AArch64GenPreLegalizeGICombiner.inc"
@@ -74,8 +73,8 @@ void applyFConstantToConstant(MachineInstr &MI) {
 /// are sign bits. In this case, we can transform the G_ICMP to directly compare
 /// the wide value with a zero.
 bool matchICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             GISelKnownBits *KB, Register &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_ICMP && KB);
+                             GISelValueTracking *VT, Register &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP && VT);
 
   auto Pred = (CmpInst::Predicate)MI.getOperand(1).getPredicate();
   if (!ICmpInst::isEquality(Pred))
@@ -94,7 +93,7 @@ bool matchICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
 
   LLT WideTy = MRI.getType(WideReg);
-  if (KB->computeNumSignBits(WideReg) <=
+  if (VT->computeNumSignBits(WideReg) <=
       WideTy.getSizeInBits() - LHSTy.getSizeInBits())
     return false;
 
@@ -229,12 +228,13 @@ void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildConstant(LLT::scalar(64), -static_cast<int64_t>(MinOffset)));
 }
 
-// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add(udot(x, y))
-// Or vecreduce_add(ext(x)) -> vecreduce_add(udot(x, 1))
+// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add([us]dot(x, y))
+// Or vecreduce_add(ext(mul(ext(x), ext(y)))) -> vecreduce_add([us]dot(x, y))
+// Or vecreduce_add(ext(x)) -> vecreduce_add([us]dot(x, 1))
 // Similar to performVecReduceAddCombine in SelectionDAG
-bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            const AArch64Subtarget &STI,
-                            std::tuple<Register, Register, bool> &MatchInfo) {
+bool matchExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           const AArch64Subtarget &STI,
+                           std::tuple<Register, Register, bool> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
   assert(STI.hasDotProd() && "Target should have Dot Product feature");
@@ -247,31 +247,59 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (DstTy.getScalarSizeInBits() != 32 || MidTy.getScalarSizeInBits() != 32)
     return false;
 
-  LLT SrcTy;
-  auto I1Opc = I1->getOpcode();
-  if (I1Opc == TargetOpcode::G_MUL) {
+  // Detect mul(ext, ext) with symmetric ext's. If I1Opc is G_ZEXT or G_SEXT
+  // then the ext's must match the same opcode. It is set to the ext opcode on
+  // output.
+  auto tryMatchingMulOfExt = [&MRI](MachineInstr *MI, Register &Out1,
+                                    Register &Out2, unsigned &I1Opc) {
     // If result of this has more than 1 use, then there is no point in creating
-    // udot instruction
-    if (!MRI.hasOneNonDBGUse(MidReg))
+    // a dot instruction
+    if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
       return false;
 
     MachineInstr *ExtMI1 =
-        getDefIgnoringCopies(I1->getOperand(1).getReg(), MRI);
+        getDefIgnoringCopies(MI->getOperand(1).getReg(), MRI);
     MachineInstr *ExtMI2 =
-        getDefIgnoringCopies(I1->getOperand(2).getReg(), MRI);
+        getDefIgnoringCopies(MI->getOperand(2).getReg(), MRI);
     LLT Ext1DstTy = MRI.getType(ExtMI1->getOperand(0).getReg());
     LLT Ext2DstTy = MRI.getType(ExtMI2->getOperand(0).getReg());
 
     if (ExtMI1->getOpcode() != ExtMI2->getOpcode() || Ext1DstTy != Ext2DstTy)
       return false;
+    if ((I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) &&
+        I1Opc != ExtMI1->getOpcode())
+      return false;
+    Out1 = ExtMI1->getOperand(1).getReg();
+    Out2 = ExtMI2->getOperand(1).getReg();
     I1Opc = ExtMI1->getOpcode();
-    SrcTy = MRI.getType(ExtMI1->getOperand(1).getReg());
-    std::get<0>(MatchInfo) = ExtMI1->getOperand(1).getReg();
-    std::get<1>(MatchInfo) = ExtMI2->getOperand(1).getReg();
+    return true;
+  };
+
+  LLT SrcTy;
+  unsigned I1Opc = I1->getOpcode();
+  if (I1Opc == TargetOpcode::G_MUL) {
+    Register Out1, Out2;
+    if (!tryMatchingMulOfExt(I1, Out1, Out2, I1Opc))
+      return false;
+    SrcTy = MRI.getType(Out1);
+    std::get<0>(MatchInfo) = Out1;
+    std::get<1>(MatchInfo) = Out2;
+  } else if (I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) {
+    Register I1Op = I1->getOperand(1).getReg();
+    MachineInstr *M = getDefIgnoringCopies(I1Op, MRI);
+    Register Out1, Out2;
+    if (M->getOpcode() == TargetOpcode::G_MUL &&
+        tryMatchingMulOfExt(M, Out1, Out2, I1Opc)) {
+      SrcTy = MRI.getType(Out1);
+      std::get<0>(MatchInfo) = Out1;
+      std::get<1>(MatchInfo) = Out2;
+    } else {
+      SrcTy = MRI.getType(I1Op);
+      std::get<0>(MatchInfo) = I1Op;
+      std::get<1>(MatchInfo) = 0;
+    }
   } else {
-    SrcTy = MRI.getType(I1->getOperand(1).getReg());
-    std::get<0>(MatchInfo) = I1->getOperand(1).getReg();
-    std::get<1>(MatchInfo) = 0;
+    return false;
   }
 
   if (I1Opc == TargetOpcode::G_ZEXT)
@@ -287,11 +315,11 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            MachineIRBuilder &Builder,
-                            GISelChangeObserver &Observer,
-                            const AArch64Subtarget &STI,
-                            std::tuple<Register, Register, bool> &MatchInfo) {
+void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &Builder,
+                           GISelChangeObserver &Observer,
+                           const AArch64Subtarget &STI,
+                           std::tuple<Register, Register, bool> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
   assert(STI.hasDotProd() && "Target should have Dot Product feature");
@@ -481,9 +509,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     // the values inside a small vec
     extractParts(SrcReg, SrcTy, MainTy, LeftoverTy, WorkingRegisters,
                  LeftoverRegs, B, MRI);
-    for (unsigned I = 0; I < LeftoverRegs.size(); I++) {
-      WorkingRegisters.push_back(LeftoverRegs[I]);
-    }
+    llvm::append_range(WorkingRegisters, LeftoverRegs);
   } else {
     WorkingRegisters.push_back(SrcReg);
     MainTy = SrcTy;
@@ -554,15 +580,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-// Pushes ADD/SUB through extend instructions to decrease the number of extend
-// instruction at the end by allowing selection of {s|u}addl sooner
-
+// Pushes ADD/SUB/MUL through extend instructions to decrease the number of
+// extend instruction at the end by allowing selection of {s|u}addl sooner
 // i32 add(i32 ext i8, i32 ext i8) => i32 ext(i16 add(i16 ext i8, i16 ext i8))
 bool matchPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
                         Register DstReg, Register SrcReg1, Register SrcReg2) {
   assert((MI.getOpcode() == TargetOpcode::G_ADD ||
-          MI.getOpcode() == TargetOpcode::G_SUB) &&
-         "Expected a G_ADD or G_SUB instruction\n");
+          MI.getOpcode() == TargetOpcode::G_SUB ||
+          MI.getOpcode() == TargetOpcode::G_MUL) &&
+         "Expected a G_ADD, G_SUB or G_MUL instruction\n");
 
   // Deal with vector types only
   LLT DstTy = MRI.getType(DstReg);
@@ -595,9 +621,10 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildInstr(MI.getOpcode(), {MidTy}, {Ext1Reg, Ext2Reg}).getReg(0);
 
   // G_SUB has to sign-extend the result.
-  // G_ADD needs to sext from sext and can sext or zext from zext, so the
-  // original opcode is used.
-  if (MI.getOpcode() == TargetOpcode::G_ADD)
+  // G_ADD needs to sext from sext and can sext or zext from zext, and G_MUL
+  // needs to use the original opcode so the original opcode is used for both.
+  if (MI.getOpcode() == TargetOpcode::G_ADD ||
+      MI.getOpcode() == TargetOpcode::G_MUL)
     B.buildInstr(Opc, {DstReg}, {AddReg});
   else
     B.buildSExt(DstReg, AddReg);
@@ -606,7 +633,8 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
-                        CombinerHelper &Helper, GISelChangeObserver &Observer) {
+                        const CombinerHelper &Helper,
+                        GISelChangeObserver &Observer) {
   // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
   // result is only used in the no-overflow case. It is restricted to cases
   // where we know that the high-bits of the operands are 0. If there's an
@@ -721,15 +749,14 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
 
 class AArch64PreLegalizerCombinerImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 
 public:
   AArch64PreLegalizerCombinerImpl(
       MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
       const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
       const AArch64Subtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -752,12 +779,12 @@ private:
 
 AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const AArch64PreLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI),
+    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPreLegalizeGICombiner.inc"
@@ -821,8 +848,8 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
@@ -832,15 +859,12 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64PreLegalizerCombiner::AArch64PreLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeAArch64PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
 
@@ -855,7 +879,8 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
@@ -867,7 +892,7 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB, CSEInfo,
+  AArch64PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT, CSEInfo,
                                        RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
@@ -877,7 +902,7 @@ INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                     "Combine AArch64 machine instrs before legalization", false,

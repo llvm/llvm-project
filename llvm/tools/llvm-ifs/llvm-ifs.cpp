@@ -59,12 +59,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +75,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class IFSOptTable : public opt::GenericOptTable {
 public:
-  IFSOptTable() : opt::GenericOptTable(InfoTable) {
+  IFSOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -441,12 +443,9 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     for (auto Symbol : TargetStub->Symbols) {
-      auto SI = SymbolMap.find(Symbol.Name);
-      if (SI == SymbolMap.end()) {
-        SymbolMap.insert(
-            std::pair<std::string, IFSSymbol>(Symbol.Name, Symbol));
+      auto [SI, Inserted] = SymbolMap.try_emplace(Symbol.Name, Symbol);
+      if (Inserted)
         continue;
-      }
 
       assert(Symbol.Name == SI->second.Name && "Symbol Names Must Match.");
 

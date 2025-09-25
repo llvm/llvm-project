@@ -21,13 +21,13 @@ static_library("Target") {
 
     #"//lldb/source/Breakpoint", # FIXME: Dependency cycle
     "//lldb/source/Core",
-    "//lldb/source/Core",
     "//lldb/source/Expression",
     "//lldb/source/Host",
     "//lldb/source/Interpreter",
     "//lldb/source/Plugins/Process/Utility",
     "//lldb/source/Symbol",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
   ]

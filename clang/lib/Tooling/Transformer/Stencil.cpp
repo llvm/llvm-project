@@ -19,7 +19,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include <atomic>
 #include <memory>
 #include <string>
 
@@ -75,7 +74,6 @@ public:
     OS << "\"";
     OS.write_escaped(Text);
     OS << "\"";
-    OS.flush();
     return Result;
   }
 

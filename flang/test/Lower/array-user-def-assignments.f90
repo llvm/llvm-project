@@ -442,7 +442,7 @@ end subroutine
 ! CHECK:     %[[V_6:[0-9]+]] = fir.do_loop %arg2 = %[[V_2]] to %[[V_3]] step %[[C_1]] unordered iter_args(%arg3 = %[[V_5]]) -> (!fir.array<10x!fir.logical<4>>) {
 ! CHECK:       %[[V_7:[0-9]+]] = fir.convert %arg2 : (index) -> i32
 ! CHECK:       fir.store %[[V_7]] to %[[V_1:[0-9]+]] : !fir.ref<i32>
-! CHECK:       %[[V_8:[0-9]+]] = fir.call @_QPreturns_alloc(%[[V_1]]) fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.heap<f32>>
+! CHECK:       %[[V_8:[0-9]+]] = fir.call @_QPreturns_alloc(%[[V_1]]) proc_attrs<pure> fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.heap<f32>>
 ! CHECK:       fir.save_result %[[V_8]] to %[[V_0:[0-9]+]] : !fir.box<!fir.heap<f32>>, !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:       %[[V_9:[0-9]+]] = fir.load %[[V_0:[0-9]+]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:       %[[V_10:[0-9]+]] = fir.box_addr %[[V_9:[0-9]+]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>

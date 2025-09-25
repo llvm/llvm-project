@@ -1,4 +1,4 @@
-//===--- LexerUtils.h - clang-tidy-------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -89,9 +89,11 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
   }
 }
 
-std::optional<Token>
+inline std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
-                               const LangOptions &LangOpts);
+                               const LangOptions &LangOpts) {
+  return Lexer::findNextToken(Start, SM, LangOpts, true);
+}
 
 // Finds next token that's not a comment.
 std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,

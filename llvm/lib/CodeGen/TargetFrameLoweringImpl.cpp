@@ -15,12 +15,12 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -36,7 +36,7 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
   return false;
 }
 
-bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return MF.needsFrameMoves() &&
          !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
@@ -103,15 +103,18 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // saved registers.
   SavedRegs.resize(TRI.getNumRegs());
 
-  // When interprocedural register allocation is enabled caller saved registers
-  // are preferred over callee saved registers.
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = nullptr;
+
+  // When interprocedural register allocation is enabled, callee saved register
+  // list should be empty, since caller saved registers are preferred over
+  // callee saved registers. Unless it has some risked CSR to be optimized out.
   if (MF.getTarget().Options.EnableIPRA &&
       isSafeForNoCSROpt(MF.getFunction()) &&
       isProfitableForNoCSROpt(MF.getFunction()))
-    return;
-
-  // Get the callee saved register list...
-  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+    CSRegs = TRI.getIPRACSRegs(&MF);
+  else
+    CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)
@@ -178,5 +181,39 @@ TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
 TargetFrameLowering::DwarfFrameBase
 TargetFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF)}};
+  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF).id()}};
+}
+
+void TargetFrameLowering::spillCalleeSavedRegister(
+    MachineBasicBlock &SaveBlock, MachineBasicBlock::iterator MI,
+    const CalleeSavedInfo &CS, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI) const {
+  // Insert the spill to the stack frame.
+  MCRegister Reg = CS.getReg();
+
+  if (CS.isSpilledToReg()) {
+    BuildMI(SaveBlock, MI, DebugLoc(), TII->get(TargetOpcode::COPY),
+            CS.getDstReg())
+        .addReg(Reg, getKillRegState(true));
+  } else {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII->storeRegToStackSlot(SaveBlock, MI, Reg, true, CS.getFrameIdx(), RC,
+                             TRI, Register());
+  }
+}
+
+void TargetFrameLowering::restoreCalleeSavedRegister(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    const CalleeSavedInfo &CS, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI) const {
+  MCRegister Reg = CS.getReg();
+  if (CS.isSpilledToReg()) {
+    BuildMI(MBB, MI, DebugLoc(), TII->get(TargetOpcode::COPY), Reg)
+        .addReg(CS.getDstReg(), getKillRegState(true));
+  } else {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII->loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
+                              Register());
+    assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
+  }
 }

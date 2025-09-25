@@ -14,7 +14,7 @@
 // power of two, its minimum value is 1 which means no alignment requirements.
 //
 // - MaybeAlign is an optional type, it may be undefined or set. When it's set
-// you can get the underlying Align type by using the getValue() method.
+// you can get the underlying Align type by using the value() method.
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,7 +94,7 @@ public:
 
   /// Allow constructions of constexpr Align.
   template <size_t kValue> constexpr static Align Constant() {
-    return LogValue{static_cast<uint8_t>(CTLog2<kValue>())};
+    return LogValue{static_cast<uint8_t>(ConstantLog2<kValue>())};
   }
 
   /// Allow constructions of constexpr Align from types.

@@ -1,4 +1,4 @@
-//===--- MisleadingBidirectional.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/ConvertUTF.h"
-#include <optional>
 
 using namespace clang;
 using namespace clang::tidy::misc;

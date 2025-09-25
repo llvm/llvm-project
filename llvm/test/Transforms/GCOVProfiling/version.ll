@@ -5,16 +5,16 @@
 ; RUN: cat %t/little.txt %s %t/version.txt > %t/2
 
 ; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/2
-; RUN: head -c8 %t/version.gcno | grep '^oncg.804'
+; RUN: head -c8 %t/version.gcno | grep '^oncg.11B'
 ; RUN: rm %t/version.gcno
 ; RUN: not opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t/2
-; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='402*' -disable-output < %t/2
-; RUN: head -c8 %t/version.gcno | grep '^oncg.204'
+; RUN: opt -passes=insert-gcov-profiling -default-gcov-version='B21*' -disable-output < %t/2
+; RUN: head -c8 %t/version.gcno | grep '^oncg.12B'
 ; RUN: rm %t/version.gcno
 
 ; RUN: cat %t/big.txt %s %t/version.txt > %t/big.ll
 ; RUN: opt -passes=insert-gcov-profiling -disable-output < %t/big.ll
-; RUN: head -c8 %t/version.gcno | grep '^gcno408.'
+; RUN: head -c8 %t/version.gcno | grep '^gcnoB11.'
 
 define void @test() !dbg !5 {
   ret void, !dbg !8

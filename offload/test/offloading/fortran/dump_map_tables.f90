@@ -1,6 +1,6 @@
-! Offloading test with runtine call to ompx_dump_mapping_tables
-! Fortran array writing some values and printing the variable mapped to device
-! correctly receives the updates made on the device.
+! Offloading test with runtime call to ompx_dump_mapping_tables Fortran array
+! writing some values and printing the variable mapped to device correctly
+! receives the updates made on the device.
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu

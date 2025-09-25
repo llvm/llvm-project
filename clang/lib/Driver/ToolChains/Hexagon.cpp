@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -294,9 +292,10 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseG0 = false;
-  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
-  bool UseLLD = (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
-                 llvm::sys::path::stem(Exec).equals_insensitive("ld.lld"));
+  bool UseLLD = false;
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
+  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+           llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
@@ -312,6 +311,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                                      // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_static_libgcc);
 
+  CmdArgs.push_back("--eh-frame-hdr");
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
@@ -378,9 +378,9 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
-      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
@@ -801,9 +801,7 @@ bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {
 // Returns the default CPU for Hexagon. This is the default compilation target
 // if no Hexagon processor is selected at the command-line.
 //
-StringRef HexagonToolChain::GetDefaultCPU() {
-  return "hexagonv60";
-}
+StringRef HexagonToolChain::GetDefaultCPU() { return "hexagonv68"; }
 
 StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   Arg *CpuArg = nullptr;

@@ -71,8 +71,8 @@ protected:
   spirv::GlobalVariableOp addGlobalVar(Type type, llvm::StringRef name) {
     OpBuilder builder(module->getRegion());
     auto ptrType = spirv::PointerType::get(type, spirv::StorageClass::Uniform);
-    return builder.create<spirv::GlobalVariableOp>(
-        UnknownLoc::get(&context), TypeAttr::get(ptrType),
+    return spirv::GlobalVariableOp::create(
+        builder, UnknownLoc::get(&context), TypeAttr::get(ptrType),
         builder.getStringAttr(name), nullptr);
   }
 
@@ -82,14 +82,14 @@ protected:
     auto loc = UnknownLoc::get(&context);
 
     if (auto intType = dyn_cast<IntegerType>(type)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type, builder.getIntegerAttr(type, val));
+      return spirv::ConstantOp::create(builder, loc, type,
+                                       builder.getIntegerAttr(type, val));
     }
     if (auto vectorType = dyn_cast<VectorType>(type)) {
       Type elemType = vectorType.getElementType();
       if (auto intType = dyn_cast<IntegerType>(elemType)) {
-        return builder.create<spirv::ConstantOp>(
-            loc, type,
+        return spirv::ConstantOp::create(
+            builder, loc, type,
             DenseElementsAttr::get(vectorType,
                                    IntegerAttr::get(elemType, val).getValue()));
       }
@@ -176,7 +176,7 @@ TEST_F(SerializationTest, SignlessVsSignedIntegerConstantBitExtension) {
       IntegerType::get(&context, 16, IntegerType::Signless);
   auto signedInt16Type = IntegerType::get(&context, 16, IntegerType::Signed);
   // Check the bit extension of same value under different signedness semantics.
-  APInt signlessIntConstVal(signlessInt16Type.getWidth(), -1,
+  APInt signlessIntConstVal(signlessInt16Type.getWidth(), 0xffff,
                             signlessInt16Type.getSignedness());
   APInt signedIntConstVal(signedInt16Type.getWidth(), -1,
                           signedInt16Type.getSignedness());

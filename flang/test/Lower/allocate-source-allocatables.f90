@@ -72,7 +72,7 @@ end
 ! CHECK:         %[[VAL_55:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_56:.*]] = fir.convert %[[VAL_49]] : (index) -> i64
 ! CHECK:         %[[VAL_57:.*]] = fir.convert %[[VAL_53]] : (index) -> i64
-! CHECK:         %[[VAL_58:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_55]], %[[VAL_54]], %[[VAL_56]], %[[VAL_57]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_55]], %[[VAL_54]], %[[VAL_56]], %[[VAL_57]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_59:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_60:.*]]:3 = fir.box_dims %[[VAL_41]], %[[VAL_59]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_61:.*]] = arith.addi %[[VAL_60]]#1, %[[VAL_49]] : index
@@ -81,16 +81,16 @@ end
 ! CHECK:         %[[VAL_64:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_65:.*]] = fir.convert %[[VAL_49]] : (index) -> i64
 ! CHECK:         %[[VAL_66:.*]] = fir.convert %[[VAL_62]] : (index) -> i64
-! CHECK:         %[[VAL_67:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_64]], %[[VAL_63]], %[[VAL_65]], %[[VAL_66]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_64]], %[[VAL_63]], %[[VAL_65]], %[[VAL_66]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_68:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_69:.*]] = fir.convert %[[VAL_41]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_71:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_68]], %[[VAL_69]], %[[VAL_36]], %[[VAL_37]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK:         %[[VAL_94:.*]] = fir.call @_FortranAAllocatableSetBounds(
-! CHECK:         %[[VAL_103:.*]] = fir.call @_FortranAAllocatableSetBounds(
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(
 ! CHECK:         %[[VAL_107:.*]] = fir.call @_FortranAAllocatableAllocateSource(
 ! CHECK:         %[[VAL_114:.*]] = arith.constant true
-! CHECK:         %[[VAL_149:.*]] = fir.call @_FortranAAllocatableSetBounds(
-! CHECK:         %[[VAL_158:.*]] = fir.call @_FortranAAllocatableSetBounds(
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(
 ! CHECK:         %[[VAL_162:.*]] = fir.call @_FortranAAllocatableAllocateSource(%{{.*}}, %{{.*}}, %[[VAL_114]]
 
 subroutine test_allocatable_2d_array(n, a)
@@ -139,7 +139,7 @@ end
 ! CHECK:         %[[VAL_33:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (i32) -> i64
 ! CHECK:         %[[VAL_35:.*]] = fir.convert %[[VAL_31]] : (i32) -> i64
-! CHECK:         %[[VAL_36:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_33]], %[[VAL_32]], %[[VAL_34]], %[[VAL_35]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_33]], %[[VAL_32]], %[[VAL_34]], %[[VAL_35]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_37:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_38:.*]] = fir.convert %[[VAL_24]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_40:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_37]], %[[VAL_38]], %[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -162,7 +162,7 @@ end
 ! CHECK:         %[[VAL_53:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_54:.*]] = fir.convert %[[VAL_50]] : (index) -> i64
 ! CHECK:         %[[VAL_55:.*]] = fir.convert %[[VAL_51]] : (i32) -> i64
-! CHECK:         %[[VAL_56:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_53]], %[[VAL_52]], %[[VAL_54]], %[[VAL_55]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_53]], %[[VAL_52]], %[[VAL_54]], %[[VAL_55]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_57:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_58:.*]] = fir.convert %[[VAL_24]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_60:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_57]], %[[VAL_58]], %[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -218,7 +218,7 @@ end
 ! CHECK:         %[[VAL_41:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_42:.*]] = fir.convert %[[VAL_35]] : (index) -> i64
 ! CHECK:         %[[VAL_43:.*]] = fir.convert %[[VAL_39]] : (index) -> i64
-! CHECK:         %[[VAL_44:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_41]], %[[VAL_40]], %[[VAL_42]], %[[VAL_43]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_41]], %[[VAL_40]], %[[VAL_42]], %[[VAL_43]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_45:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_46:.*]] = fir.convert %[[VAL_29]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_48:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_45]], %[[VAL_46]], %[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -276,7 +276,7 @@ end
 ! CHECK:         %[[VAL_32:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_33:.*]] = fir.convert %[[VAL_26]] : (index) -> i64
 ! CHECK:         %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
-! CHECK:         %[[VAL_35:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_32]], %[[VAL_31]], %[[VAL_33]], %[[VAL_34]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_32]], %[[VAL_31]], %[[VAL_33]], %[[VAL_34]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_36:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_37:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_36]], %[[VAL_37]], %[[VAL_15]], %[[VAL_16]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -306,14 +306,14 @@ end
 ! CHECK:         %[[VAL_14:.*]] = fir.embox %[[VAL_13]] typeparams %[[VAL_12]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
 ! CHECK:         fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:         %[[VAL_15:.*]] = fir.box_elesize %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> index
-! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i64
-! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_19:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_20:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_21:.*]] = fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
-! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-DAG:         %[[VAL_16:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG:         %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i64
+! CHECK-DAG:         %[[VAL_18:.*]] = arith.constant 1 : i32
+! CHECK-DAG:         %[[VAL_19:.*]] = arith.constant 0 : i32
+! CHECK-DAG:         %[[VAL_20:.*]] = arith.constant 0 : i32
+! CHECK:         fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> ()
+! CHECK-DAG:         %[[VAL_22:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK-DAG:         %[[VAL_23:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_25:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_22]], %[[VAL_23]], %[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 subroutine test_allocatable_char(n, a)
@@ -354,7 +354,7 @@ end
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_27:.*]] = fir.convert %[[VAL_12]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_28:.*]] = fir.convert %[[VAL_24]] : (index) -> i64
-! CHECK:         %[[VAL_29:.*]] = fir.call @_FortranAAllocatableSetBounds(%[[VAL_26]], %[[VAL_25]], %[[VAL_27]], %[[VAL_28]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAAllocatableSetBounds(%[[VAL_26]], %[[VAL_25]], %[[VAL_27]], %[[VAL_28]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_30:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_31:.*]] = fir.convert %[[VAL_14]] : (!fir.box<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_33:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_30]], %[[VAL_31]], %[[VAL_6]], %[[VAL_7]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

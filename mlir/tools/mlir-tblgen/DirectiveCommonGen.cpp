@@ -21,9 +21,8 @@
 #include "llvm/TableGen/Record.h"
 
 using llvm::Clause;
-using llvm::ClauseVal;
+using llvm::EnumVal;
 using llvm::raw_ostream;
-using llvm::Record;
 using llvm::RecordKeeper;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about
@@ -42,7 +41,7 @@ using llvm::RecordKeeper;
 // Clause record in OMP.td. This name can be used to specify the type of the
 // OpenMP operation's operand. The allowedClauseValues field provides the list
 // of ClauseValues which are part of the enumeration.
-static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
+static bool emitDecls(const RecordKeeper &records, llvm::StringRef dialect,
                       raw_ostream &os) {
   // A dialect must be selected for the generated attributes.
   if (dialect.empty()) {
@@ -51,11 +50,10 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
   }
 
   const auto directiveLanguages =
-      recordKeeper.getAllDerivedDefinitions("DirectiveLanguage");
+      records.getAllDerivedDefinitions("DirectiveLanguage");
   assert(!directiveLanguages.empty() && "DirectiveLanguage missing.");
 
-  for (const Record *r : recordKeeper.getAllDerivedDefinitions("Clause")) {
-    Clause c{r};
+  for (const Clause c : records.getAllDerivedDefinitions("Clause")) {
     const auto &clauseVals = c.getClauseVals();
     if (clauseVals.empty())
       continue;
@@ -65,14 +63,13 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
 
     std::vector<std::string> cvDefs;
     for (const auto &it : llvm::enumerate(clauseVals)) {
-      ClauseVal cval{it.value()};
-      if (!cval.isUserVisible())
+      const EnumVal val{it.value()};
+      if (!val.isUserVisible())
         continue;
 
-      std::string name = cval.getFormattedName();
+      std::string name = val.getFormattedName();
       std::string enumValName(name.length(), ' ');
-      std::transform(name.begin(), name.end(), enumValName.begin(),
-                     llvm::toLower);
+      llvm::transform(name, enumValName.begin(), llvm::toLower);
       enumValName[0] = llvm::toUpper(enumValName[0]);
       std::string cvDef{(enumName + llvm::Twine(name)).str()};
       os << "def " << cvDef << " : I32EnumAttrCase<\"" << enumValName << "\", "
@@ -84,11 +81,7 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
     os << "  \"Clause" << enumName << "\",\n";
     os << "  \"" << enumName << " Clause\",\n";
     os << "  [";
-    for (unsigned int i = 0; i < cvDefs.size(); i++) {
-      os << cvDefs[i];
-      if (i != cvDefs.size() - 1)
-        os << ",";
-    }
+    llvm::interleaveComma(cvDefs, os);
     os << "]> {\n";
     os << "    let cppNamespace = \"::mlir::"
        << directiveLanguages[0]->getValueAsString("cppNamespace") << "\";\n";

@@ -2,7 +2,8 @@
 # RUN: llvm-objdump --no-print-imm-hex -dr %t | FileCheck %s
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
-# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR0=1 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR0 --implicit-check-not=error:
+# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR
 
 ## If a fixup symbol is equated to an undefined symbol, convert the fixup
 ## to be against the target symbol, even if there is a variant (@PLT).
@@ -16,7 +17,10 @@ movabsq $memcpy+2, %rax
 
 # CHECK:      movq (%rip), %rax
 # CHECK-NEXT:   R_X86_64_REX_GOTPCRELX  abs-0x4
+# CHECK:      movq (%rip), %r16
+# CHECK-NEXT:   R_X86_64_CODE_4_GOTPCRELX abs-0x4
 movq abs@GOTPCREL(%rip), %rax
+movq abs@GOTPCREL(%rip), %r16
 abs = 42
 
 # CHECK:      movabsq $0, %rbx
@@ -36,10 +40,18 @@ movabsq $data_alias_l, %rbx
 .globl data
 data:
 
+.ifdef ERR0
+# ERR0: {{.*}}.s:[[#@LINE+1]]:15: error: relocation specifier not permitted in symbol equating
+memcpy_spec = __GI_memcpy@PLT
+
+## Should be rejected as well
+memcpy_spec1 = __GI_memcpy@PLT+1
+.endif
+
 .ifdef ERR
 .text
 ## Note, GNU as emits a relocation for this erroneous fixup.
-# ERR: {{.*}}.s:[[#@LINE+2]]:1: error: expected relocatable expression
+# ERR: {{.*}}.s:[[#@LINE+2]]:6: error: expected relocatable expression
 memcpy_plus_1 = __GI_memcpy+1
 call memcpy_plus_1@PLT
 .endif

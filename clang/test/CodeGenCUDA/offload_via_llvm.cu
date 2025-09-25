@@ -7,7 +7,7 @@
 #define __OFFLOAD_VIA_LLVM__ 1
 #include "Inputs/cuda.h"
 
-// HST-LABEL: define dso_local void @_Z18__device_stub__fooisPvS_(
+// HST-LABEL: define dso_local ptx_kernel void @_Z18__device_stub__fooisPvS_(
 // HST-SAME: i32 noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], ptr noundef [[TMP3:%.*]]) #[[ATTR0:[0-9]+]] {
 // HST-NEXT:  [[ENTRY:.*:]]
 // HST-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
@@ -50,7 +50,7 @@
 // HST:       [[SETUP_END]]:
 // HST-NEXT:    ret void
 //
-// DEV-LABEL: define dso_local void @_Z3fooisPvS_(
+// DEV-LABEL: define dso_local ptx_kernel void @_Z3fooisPvS_(
 // DEV-SAME: i32 noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], ptr noundef [[TMP3:%.*]]) #[[ATTR0:[0-9]+]] {
 // DEV-NEXT:  [[ENTRY:.*:]]
 // DEV-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4

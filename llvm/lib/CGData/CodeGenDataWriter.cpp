@@ -19,29 +19,46 @@ using namespace llvm;
 void CGDataOStream::patch(ArrayRef<CGDataPatchItem> P) {
   using namespace support;
 
-  if (IsFDOStream) {
+  switch (Kind) {
+  case OStreamKind::fd: {
     raw_fd_ostream &FDOStream = static_cast<raw_fd_ostream &>(OS);
     const uint64_t LastPos = FDOStream.tell();
     for (const auto &K : P) {
       FDOStream.seek(K.Pos);
-      for (int I = 0; I < K.N; I++)
+      for (size_t I = 0; I < K.D.size(); ++I)
         write(K.D[I]);
     }
     // Reset the stream to the last position after patching so that users
     // don't accidentally overwrite data. This makes it consistent with
     // the string stream below which replaces the data directly.
     FDOStream.seek(LastPos);
-  } else {
+    break;
+  }
+  case OStreamKind::string: {
     raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
     std::string &Data = SOStream.str(); // with flush
     for (const auto &K : P) {
-      for (int I = 0; I < K.N; I++) {
+      for (size_t I = 0; I < K.D.size(); ++I) {
         uint64_t Bytes =
             endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
         Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                      reinterpret_cast<const char *>(&Bytes), sizeof(uint64_t));
       }
     }
+    break;
+  }
+  case OStreamKind::svector: {
+    raw_svector_ostream &VOStream = static_cast<raw_svector_ostream &>(OS);
+    for (const auto &K : P) {
+      for (size_t I = 0; I < K.D.size(); ++I) {
+        uint64_t Bytes =
+            endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+        VOStream.pwrite(reinterpret_cast<const char *>(&Bytes),
+                        sizeof(uint64_t), K.Pos + I * sizeof(uint64_t));
+      }
+    }
+    break;
+  }
   }
 }
 
@@ -50,6 +67,13 @@ void CodeGenDataWriter::addRecord(OutlinedHashTreeRecord &Record) {
   HashTreeRecord.HashTree = std::move(Record.HashTree);
 
   DataKind |= CGDataKind::FunctionOutlinedHashTree;
+}
+
+void CodeGenDataWriter::addRecord(StableFunctionMapRecord &Record) {
+  assert(Record.FunctionMap && "empty function map in the record");
+  FunctionMapRecord.FunctionMap = std::move(Record.FunctionMap);
+
+  DataKind |= CGDataKind::StableFunctionMergingMap;
 }
 
 Error CodeGenDataWriter::write(raw_fd_ostream &OS) {
@@ -68,8 +92,11 @@ Error CodeGenDataWriter::writeHeader(CGDataOStream &COS) {
   if (static_cast<bool>(DataKind & CGDataKind::FunctionOutlinedHashTree))
     Header.DataKind |=
         static_cast<uint32_t>(CGDataKind::FunctionOutlinedHashTree);
-
+  if (static_cast<bool>(DataKind & CGDataKind::StableFunctionMergingMap))
+    Header.DataKind |=
+        static_cast<uint32_t>(CGDataKind::StableFunctionMergingMap);
   Header.OutlinedHashTreeOffset = 0;
+  Header.StableFunctionMapOffset = 0;
 
   // Only write up to the CGDataKind. We need to remember the offset of the
   // remaining fields to allow back-patching later.
@@ -83,6 +110,12 @@ Error CodeGenDataWriter::writeHeader(CGDataOStream &COS) {
   // Reserve the space for OutlinedHashTreeOffset field.
   COS.write(0);
 
+  // Save the location of Header.StableFunctionMapOffset field in \c COS.
+  StableFunctionMapOffset = COS.tell();
+
+  // Reserve the space for StableFunctionMapOffset field.
+  COS.write(0);
+
   return Error::success();
 }
 
@@ -90,13 +123,20 @@ Error CodeGenDataWriter::writeImpl(CGDataOStream &COS) {
   if (Error E = writeHeader(COS))
     return E;
 
+  std::vector<CGDataPatchItem> PatchItems;
+
   uint64_t OutlinedHashTreeFieldStart = COS.tell();
   if (hasOutlinedHashTree())
     HashTreeRecord.serialize(COS.OS);
+  uint64_t StableFunctionMapFieldStart = COS.tell();
+  if (hasStableFunctionMap())
+    FunctionMapRecord.serialize(COS.OS, PatchItems);
 
   // Back patch the offsets.
-  CGDataPatchItem PatchItems[] = {
-      {OutlinedHashTreeOffset, &OutlinedHashTreeFieldStart, 1}};
+  PatchItems.emplace_back(OutlinedHashTreeOffset, &OutlinedHashTreeFieldStart,
+                          1);
+  PatchItems.emplace_back(StableFunctionMapOffset, &StableFunctionMapFieldStart,
+                          1);
   COS.patch(PatchItems);
 
   return Error::success();
@@ -105,6 +145,9 @@ Error CodeGenDataWriter::writeImpl(CGDataOStream &COS) {
 Error CodeGenDataWriter::writeHeaderText(raw_fd_ostream &OS) {
   if (hasOutlinedHashTree())
     OS << "# Outlined stable hash tree\n:outlined_hash_tree\n";
+
+  if (hasStableFunctionMap())
+    OS << "# Stable function map\n:stable_function_map\n";
 
   // TODO: Add more data types in this header
 
@@ -118,6 +161,9 @@ Error CodeGenDataWriter::writeText(raw_fd_ostream &OS) {
   yaml::Output YOS(OS);
   if (hasOutlinedHashTree())
     HashTreeRecord.serializeYAML(YOS);
+
+  if (hasStableFunctionMap())
+    FunctionMapRecord.serializeYAML(YOS);
 
   // TODO: Write more yaml cgdata in order
 

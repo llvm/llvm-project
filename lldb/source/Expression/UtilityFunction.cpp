@@ -83,19 +83,19 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
   m_caller_up.reset(process_sp->GetTarget().GetFunctionCallerForLanguage(
       Language().AsLanguageType(), return_type, impl_code_address,
       arg_value_list, name.c_str(), error));
-  if (error.Fail()) {
-
+  if (error.Fail())
     return nullptr;
-  }
+
   if (m_caller_up) {
     DiagnosticManager diagnostics;
 
     unsigned num_errors =
         m_caller_up->CompileFunction(thread_to_use_sp, diagnostics);
     if (num_errors) {
-      error = Status::FromErrorStringWithFormat(
-          "Error compiling %s caller function: \"%s\".",
-          m_function_name.c_str(), diagnostics.GetString().c_str());
+      error = Status::FromError(diagnostics.GetAsError(
+          lldb::eExpressionParseError,
+          "Error compiling " + m_function_name + " caller function:"));
+
       m_caller_up.reset();
       return nullptr;
     }
@@ -104,9 +104,9 @@ FunctionCaller *UtilityFunction::MakeFunctionCaller(
     ExecutionContext exe_ctx(process_sp);
 
     if (!m_caller_up->WriteFunctionWrapper(exe_ctx, diagnostics)) {
-      error = Status::FromErrorStringWithFormat(
-          "Error inserting caller function for %s: \"%s\".",
-          m_function_name.c_str(), diagnostics.GetString().c_str());
+      error = Status::FromError(diagnostics.GetAsError(
+          lldb::eExpressionSetupError,
+          "Error inserting " + m_function_name + " caller function:"));
       m_caller_up.reset();
       return nullptr;
     }

@@ -3,7 +3,7 @@
 // linkage. In this case, a function whose argument
 // is not legally usable outside this TU.
 
-// XFAIL: system-windows
+// XFAIL: target-windows
 
 // RUN: %build %s -o %t
 // RUN: %lldb %t -o run -o "expression func(a)" -o exit | FileCheck %s

@@ -1,4 +1,4 @@
-; RUN: opt -Os -march=hexagon -S < %s | FileCheck %s
+; RUN: opt -Os -S < %s | FileCheck %s
 ; Don't reset the alignment on the struct to 1.
 ; CHECK: align 4
 

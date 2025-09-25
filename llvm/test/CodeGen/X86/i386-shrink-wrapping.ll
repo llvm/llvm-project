@@ -30,7 +30,7 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-NEXT:    movl (%eax), %eax
 ; ENABLE-NEXT:    testl %eax, %eax
 ; ENABLE-NEXT:    je LBB0_4
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB0_3: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB0_3
@@ -70,7 +70,7 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; DISABLE-NEXT:    movl (%eax), %eax
 ; DISABLE-NEXT:    testl %eax, %eax
 ; DISABLE-NEXT:    je LBB0_4
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB0_3: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    jmp LBB0_3

@@ -2,6 +2,9 @@
 
 // RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=use_sigaltstack=1 not %run %t 2>&1 | FileCheck %s
 
+// Issue #109771
+// XFAIL: target={{sparc.*-.*-linux.*}}
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

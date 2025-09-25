@@ -327,7 +327,7 @@ public:
 
   /// find_prev_unset - Returns the index of the first unset bit that precedes
   /// the bit at \p PriorTo.  Returns -1 if all previous bits are set.
-  int find_prev_unset(unsigned PriorTo) {
+  int find_prev_unset(unsigned PriorTo) const {
     return find_last_unset_in(0, PriorTo);
   }
 
@@ -769,11 +769,6 @@ private:
     std::fill(Bits.begin() + NumWords - Count, Bits.begin() + NumWords, 0);
   }
 
-  int next_unset_in_word(int WordIndex, BitWord Word) const {
-    unsigned Result = WordIndex * BITWORD_SIZE + llvm::countr_one(Word);
-    return Result < size() ? Result : -1;
-  }
-
   unsigned NumBitWords(unsigned S) const {
     return (S + BITWORD_SIZE-1) / BITWORD_SIZE;
   }
@@ -795,9 +790,7 @@ private:
     set_unused_bits(false);
   }
 
-  void init_words(bool t) {
-    std::fill(Bits.begin(), Bits.end(), 0 - (BitWord)t);
-  }
+  void init_words(bool t) { llvm::fill(Bits, 0 - (BitWord)t); }
 
   template<bool AddBits, bool InvertMask>
   void applyMask(const uint32_t *Mask, unsigned MaskWords) {

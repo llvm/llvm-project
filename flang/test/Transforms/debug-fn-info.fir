@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %0 = fir.alloca i32 {bindc_name = "i4", uniq_name = "_QFEi4"}
     %1 = fircg.ext_declare %0 {uniq_name = "_QFEi4"} : (!fir.ref<i32>) -> !fir.ref<i32>
@@ -76,7 +76,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK: #[[TY3:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #di_null_type, #[[INT4]]>
 
 // Line numbers should match the number in corresponding loc entry.
-// CHECK: #llvm.di_subprogram<{{.*}}name = "_QQmain", linkageName = "_QQmain", file = {{.*}}, line = 15, scopeLine = 15, subprogramFlags = Definition, type = #[[TY0]]>
+// CHECK: #llvm.di_subprogram<{{.*}}name = "mn", linkageName = "_QQmain", file = {{.*}}, line = 15, scopeLine = 15, subprogramFlags = "Definition|MainSubprogram", type = #[[TY0]]>
 // CHECK: #llvm.di_subprogram<{{.*}}name = "fn1", linkageName = "_QFPfn1", file = {{.*}}, line = 26, scopeLine = 26, subprogramFlags = Definition, type = #[[TY1]]>
 // CHECK: #llvm.di_subprogram<{{.*}}name = "fn2", linkageName = "_QFPfn2", file = {{.*}}, line = 43, scopeLine = 43, subprogramFlags = Definition, type = #[[TY2]]>
 // CHECK: #llvm.di_subprogram<{{.*}}name = "fn3", linkageName = "_QFPfn3", file = {{.*}}, line = 53, scopeLine = 53, subprogramFlags = Definition, type = #[[TY3]]>

@@ -246,10 +246,9 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ;
 ; X64-LABEL: ctlz_i8_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    bsrl %eax, %ecx
+; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movl $15, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %ecx, %eax
 ; X64-NEXT:    xorl $7, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -317,9 +316,8 @@ define i16 @ctlz_i16_zero_test(i16 %n) {
 ;
 ; X64-LABEL: ctlz_i16_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrw %di, %cx
 ; X64-NEXT:    movw $31, %ax
-; X64-NEXT:    cmovnew %cx, %ax
+; X64-NEXT:    bsrw %di, %ax
 ; X64-NEXT:    xorl $15, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -372,9 +370,8 @@ define i32 @ctlz_i32_zero_test(i32 %n) {
 ;
 ; X64-LABEL: ctlz_i32_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    movl $63, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    xorl $31, %eax
 ; X64-NEXT:    retq
 ;
@@ -402,27 +399,33 @@ define i32 @ctlz_i32_zero_test(i32 %n) {
 }
 
 ; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
-define i64 @ctlz_i64_zero_test(i64 %n) {
+define i64 @ctlz_i64_zero_test(i64 %n) nounwind {
 ; X86-NOCMOV-LABEL: ctlz_i64_zero_test:
 ; X86-NOCMOV:       # %bb.0:
+; X86-NOCMOV-NEXT:    pushl %esi
+; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOCMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %edx
-; X86-NOCMOV-NEXT:    movl $63, %eax
-; X86-NOCMOV-NEXT:    je .LBB7_2
-; X86-NOCMOV-NEXT:  # %bb.1:
-; X86-NOCMOV-NEXT:    movl %edx, %eax
-; X86-NOCMOV-NEXT:  .LBB7_2:
-; X86-NOCMOV-NEXT:    testl %ecx, %ecx
-; X86-NOCMOV-NEXT:    jne .LBB7_3
-; X86-NOCMOV-NEXT:  # %bb.4:
-; X86-NOCMOV-NEXT:    xorl $31, %eax
-; X86-NOCMOV-NEXT:    addl $32, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
-; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB7_3:
+; X86-NOCMOV-NEXT:    movl %ecx, %esi
+; X86-NOCMOV-NEXT:    orl %eax, %esi
+; X86-NOCMOV-NEXT:    je .LBB7_1
+; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
+; X86-NOCMOV-NEXT:    testl %eax, %eax
+; X86-NOCMOV-NEXT:    jne .LBB7_3
+; X86-NOCMOV-NEXT:  # %bb.4: # %cond.false
 ; X86-NOCMOV-NEXT:    bsrl %ecx, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
-; X86-NOCMOV-NEXT:    xorl %edx, %edx
+; X86-NOCMOV-NEXT:    orl $32, %eax
+; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    retl
+; X86-NOCMOV-NEXT:  .LBB7_1:
+; X86-NOCMOV-NEXT:    movl $64, %eax
+; X86-NOCMOV-NEXT:    popl %esi
+; X86-NOCMOV-NEXT:    retl
+; X86-NOCMOV-NEXT:  .LBB7_3:
+; X86-NOCMOV-NEXT:    bsrl %eax, %eax
+; X86-NOCMOV-NEXT:    xorl $31, %eax
+; X86-NOCMOV-NEXT:    popl %esi
 ; X86-NOCMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: ctlz_i64_zero_test:
@@ -442,9 +445,8 @@ define i64 @ctlz_i64_zero_test(i64 %n) {
 ;
 ; X64-LABEL: ctlz_i64_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrq %rdi, %rcx
 ; X64-NEXT:    movl $127, %eax
-; X64-NEXT:    cmovneq %rcx, %rax
+; X64-NEXT:    bsrq %rdi, %rax
 ; X64-NEXT:    xorq $63, %rax
 ; X64-NEXT:    retq
 ;
@@ -613,9 +615,8 @@ define i32 @ctlz_bsr_zero_test(i32 %n) {
 ;
 ; X64-LABEL: ctlz_bsr_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    movl $63, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlz_bsr_zero_test:
@@ -983,10 +984,9 @@ define i8 @ctlz_xor7_i8_false(i8 %x) {
 ;
 ; X64-LABEL: ctlz_xor7_i8_false:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    bsrl %eax, %ecx
+; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movl $15, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -1094,9 +1094,8 @@ define i32 @ctlz_xor31_i32_false(i32 %x) {
 ;
 ; X64-LABEL: ctlz_xor31_i32_false:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    movl $63, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlz_xor31_i32_false:
@@ -1239,9 +1238,8 @@ define i64 @ctlz_i32_sext(i32 %x) {
 ;
 ; X64-LABEL: ctlz_i32_sext:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    movl $63, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlz_i32_sext:
@@ -1302,9 +1300,8 @@ define i64 @ctlz_i32_zext(i32 %x) {
 ;
 ; X64-LABEL: ctlz_i32_zext:
 ; X64:       # %bb.0:
-; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    movl $63, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlz_i32_zext:

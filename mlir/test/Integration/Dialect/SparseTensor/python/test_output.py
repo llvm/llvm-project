@@ -129,6 +129,10 @@ def main():
         prop = st.LevelProperty
         levels = [
             [builder(fmt.compressed, [prop.non_unique]), builder(fmt.singleton)],
+            [
+                builder(fmt.compressed, [prop.non_unique]),
+                builder(fmt.singleton, [prop.soa]),
+            ],
             [builder(fmt.dense), builder(fmt.compressed)],
             [builder(fmt.dense), builder(fmt.loose_compressed)],
             [builder(fmt.compressed), builder(fmt.compressed)],
@@ -179,7 +183,7 @@ def main():
         build_compile_and_run_output(attr, compiler, expected(2))
         count = count + 1
 
-    # CHECK: Passed 17 tests
+    # CHECK: Passed 21 tests
     print("Passed", count, "tests")
 
 

@@ -18,7 +18,7 @@ struct X { int i, j, k; };
 struct X { int i, j, k = 42; };
 #endif
 
-template<int N> 
+template<int N>
 void f1(const X(&)[N]); // #cwg2149-f1
 
 template<int N>
@@ -30,7 +30,7 @@ void f() {
   X b[2] = { { 1, 2, 3 }, { 4, 5, 6 } };
   X c[][2] = { 1, 2, 3, 4, 5, 6 };
   static_assert(sizeof(c) / sizeof(X[2]) == 1, "");
-  
+
   #if __cplusplus >= 201103L
   constexpr X ca[] = { 1, 2, 3, 4, 5, 6 };
   constexpr X cb[2] = { { 1, 2, 3 }, { 4, 5, 6 } };
@@ -56,22 +56,22 @@ void f() {
 
 // CXX98:       VarDecl {{.+}} a 'X[2]'
 // CXX98-NEXT:  `-InitListExpr {{.+}} 'X[2]'
-// CXX98-NEXT:    |-InitListExpr {{.+}} 'X':'cwg2149::X'
+// CXX98-NEXT:    |-InitListExpr {{.+}} 'X'{{$}}
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 1
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 2
 // CXX98-NEXT:    | `-IntegerLiteral {{.+}} 'int' 3
-// CXX98-NEXT:    `-InitListExpr {{.+}} 'X':'cwg2149::X'
+// CXX98-NEXT:    `-InitListExpr {{.+}} 'X'{{$}}
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 4
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 5
 // CXX98-NEXT:      `-IntegerLiteral {{.+}} 'int' 6
 
 // CXX98:       VarDecl {{.+}} b 'X[2]'
 // CXX98-NEXT:  `-InitListExpr {{.+}} 'X[2]'
-// CXX98-NEXT:    |-InitListExpr {{.+}} 'X':'cwg2149::X'
+// CXX98-NEXT:    |-InitListExpr {{.+}} 'X'{{$}}
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 1
 // CXX98-NEXT:    | |-IntegerLiteral {{.+}} 'int' 2
 // CXX98-NEXT:    | `-IntegerLiteral {{.+}} 'int' 3
-// CXX98-NEXT:    `-InitListExpr {{.+}} 'X':'cwg2149::X'
+// CXX98-NEXT:    `-InitListExpr {{.+}} 'X'{{$}}
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 4
 // CXX98-NEXT:      |-IntegerLiteral {{.+}} 'int' 5
 // CXX98-NEXT:      `-IntegerLiteral {{.+}} 'int' 6

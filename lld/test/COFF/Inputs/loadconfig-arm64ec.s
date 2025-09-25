@@ -26,6 +26,7 @@ __guard_dispatch_icall_fptr:
         .xword 0
 __os_arm64x_dispatch_call_no_redirect:
         .xword 0
+        .globl __os_arm64x_dispatch_ret
 __os_arm64x_dispatch_ret:
         .xword 0
 __os_arm64x_check_call:
@@ -41,12 +42,6 @@ __os_arm64x_set_x64_information:
 __os_arm64x_check_icall_cfg:
         .xword 0
 __os_arm64x_dispatch_fptr:
-        .xword 0
-__os_arm64x_helper0:
-        .xword 0
-__os_arm64x_helper1:
-        .xword 0
-__os_arm64x_helper2:
         .xword 0
 __os_arm64x_helper3:
         .xword 0
@@ -65,7 +60,7 @@ __os_arm64x_helper8:
         .globl __chpe_metadata
         .p2align 3, 0
 __chpe_metadata:
-        .word 1
+        .word 2
         .rva __hybrid_code_map
         .word __hybrid_code_map_count
         .rva __x64_code_ranges_to_entry_points
@@ -75,7 +70,7 @@ __chpe_metadata:
         .rva __os_arm64x_check_call
         .rva __os_arm64x_check_icall
         .rva __os_arm64x_check_icall_cfg
-        .word 0 // __arm64x_native_entrypoint
+        .rva __arm64x_native_entrypoint
         .rva __hybrid_auxiliary_iat
         .word __x64_code_ranges_to_entry_points_count
         .word __arm64x_redirection_metadata_count
@@ -85,9 +80,9 @@ __chpe_metadata:
         .word __arm64x_extra_rfe_table_size
         .rva __os_arm64x_dispatch_fptr
         .rva __hybrid_auxiliary_iat_copy
-        .rva __os_arm64x_helper0
-        .rva __os_arm64x_helper1
-        .rva __os_arm64x_helper2
+        .rva __hybrid_auxiliary_delayload_iat
+        .rva __hybrid_auxiliary_delayload_iat_copy
+        .word __hybrid_image_info_bitfield
         .rva __os_arm64x_helper3
         .rva __os_arm64x_helper4
         .rva __os_arm64x_helper5

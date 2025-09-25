@@ -12,12 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceDistinctMetadata.h"
-#include "Delta.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/InstIterator.h"
-#include <algorithm>
 #include <queue>
 
 using namespace llvm;
@@ -39,12 +35,10 @@ reduceNodes(MDNode *Root,
     // Mark the nodes for removal
     for (unsigned int I = 0; I < CurrentNode->getNumOperands(); ++I) {
       if (MDNode *Operand =
-              dyn_cast<MDNode>(CurrentNode->getOperand(I).get())) {
+              dyn_cast_or_null<MDNode>(CurrentNode->getOperand(I).get())) {
         // Check whether node has been visited
-        if (!VisitedNodes.contains(Operand)) {
+        if (VisitedNodes.insert(Operand))
           NodesToTraverse.push(Operand);
-          VisitedNodes.insert(Operand);
-        }
         // Delete the node only if it is distinct
         if (Operand->isDistinct()) {
           // Add to removal list
@@ -73,11 +67,9 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
   for (auto I = NamedNode.op_begin(); I != NamedNode.op_end(); ++I) {
     // If the node hasn't been traversed yet, add it to the queue of nodes to
     // traverse.
-    if (MDTuple *TupleI = dyn_cast<MDTuple>((*I))) {
-      if (!VisitedNodes.contains(TupleI)) {
+    if (MDTuple *TupleI = dyn_cast_or_null<MDTuple>((*I))) {
+      if (VisitedNodes.insert(TupleI))
         NodesToTraverse.push(TupleI);
-        VisitedNodes.insert(TupleI);
-      }
     }
   }
 
@@ -112,19 +104,18 @@ static void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
 
     // Push the remaining nodes into the queue
     for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
-      MDTuple *Operand = dyn_cast<MDTuple>(CurrentTuple->getOperand(I).get());
-      if (Operand && !VisitedNodes.contains(Operand)) {
-        NodesToTraverse.push(Operand);
+      MDTuple *Operand =
+          dyn_cast_or_null<MDTuple>(CurrentTuple->getOperand(I).get());
+      if (Operand && VisitedNodes.insert(Operand))
         // If the node hasn't been traversed yet, add it to the queue of nodes
         // to traverse.
-        VisitedNodes.insert(Operand);
-      }
+        NodesToTraverse.push(Operand);
     }
   }
 }
 
-static void extractDistinctMetadataFromModule(Oracle &O,
-                                              ReducerWorkItem &WorkItem) {
+void llvm::reduceDistinctMetadataDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   MDTuple *TemporaryTuple =
       MDTuple::getDistinct(Program.getContext(), SmallVector<Metadata *, 1>{});
@@ -133,15 +124,10 @@ static void extractDistinctMetadataFromModule(Oracle &O,
        Program.named_metadata()) { // Iterate over the named nodes
     for (unsigned int I = 0; I < NamedNode.getNumOperands();
          ++I) { // Iterate over first level unnamed nodes..
-      if (MDTuple *Operand = dyn_cast<MDTuple>(NamedNode.getOperand(I)))
+      if (MDTuple *Operand = dyn_cast_or_null<MDTuple>(NamedNode.getOperand(I)))
         reduceNodes(Operand, NodesToDelete, TemporaryTuple, O, Program);
     }
   }
   for (NamedMDNode &NamedNode : Program.named_metadata())
     cleanUpTemporaries(NamedNode, TemporaryTuple, Program);
-}
-
-void llvm::reduceDistinctMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDistinctMetadataFromModule,
-               "Reducing Distinct Metadata");
 }

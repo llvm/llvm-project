@@ -190,11 +190,11 @@ define void @test16elt(ptr noalias nocapture sret(<16 x i32>) %agg.result, ptr n
 ; CHECK-P8-NEXT:    xvcvdpuxws v3, vs0
 ; CHECK-P8-NEXT:    vmrgew v4, v5, v4
 ; CHECK-P8-NEXT:    xvcvdpuxws v5, vs1
+; CHECK-P8-NEXT:    stxvd2x v4, r3, r6
+; CHECK-P8-NEXT:    stxvd2x v2, r3, r5
 ; CHECK-P8-NEXT:    vmrgew v3, v3, v0
 ; CHECK-P8-NEXT:    xvcvdpuxws v0, vs4
 ; CHECK-P8-NEXT:    stxvd2x v3, r3, r7
-; CHECK-P8-NEXT:    stxvd2x v4, r3, r6
-; CHECK-P8-NEXT:    stxvd2x v2, r3, r5
 ; CHECK-P8-NEXT:    vmrgew v5, v0, v5
 ; CHECK-P8-NEXT:    stxvd2x v5, 0, r3
 ; CHECK-P8-NEXT:    blr
@@ -458,11 +458,11 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x i32>) %agg.result
 ; CHECK-P8-NEXT:    xvcvdpsxws v3, vs0
 ; CHECK-P8-NEXT:    vmrgew v4, v5, v4
 ; CHECK-P8-NEXT:    xvcvdpsxws v5, vs1
+; CHECK-P8-NEXT:    stxvd2x v4, r3, r6
+; CHECK-P8-NEXT:    stxvd2x v2, r3, r5
 ; CHECK-P8-NEXT:    vmrgew v3, v3, v0
 ; CHECK-P8-NEXT:    xvcvdpsxws v0, vs4
 ; CHECK-P8-NEXT:    stxvd2x v3, r3, r7
-; CHECK-P8-NEXT:    stxvd2x v4, r3, r6
-; CHECK-P8-NEXT:    stxvd2x v2, r3, r5
 ; CHECK-P8-NEXT:    vmrgew v5, v0, v5
 ; CHECK-P8-NEXT:    stxvd2x v5, 0, r3
 ; CHECK-P8-NEXT:    blr

@@ -9,7 +9,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzbl (%edx), %eax
 ; CHECK-32-NEXT:    jmp .LBB0_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB0_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgb %ah, (%edx)
@@ -29,7 +29,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-64-LABEL: atomicrmw_usub_cond_i8:
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movzbl (%rdi), %eax
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movzbl %al, %ecx
@@ -55,7 +55,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzwl (%edx), %eax
 ; CHECK-32-NEXT:    jmp .LBB1_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB1_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-32-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -80,7 +80,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-64-LABEL: atomicrmw_usub_cond_i16:
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movzwl (%rdi), %eax
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB1_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movl %eax, %ecx
@@ -107,7 +107,7 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movl (%edx), %eax
 ; CHECK-32-NEXT:    jmp .LBB2_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB2_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgl %esi, (%edx)
@@ -129,7 +129,7 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; CHECK-64-LABEL: atomicrmw_usub_cond_i32:
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movl (%rdi), %eax
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB2_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movl %eax, %ecx
@@ -164,7 +164,7 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl (%ebp), %eax
 ; CHECK-32-NEXT:    movl 4(%ebp), %edx
 ; CHECK-32-NEXT:    jmp .LBB3_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB3_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchg8b (%ebp)
@@ -195,7 +195,7 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-64-LABEL: atomicrmw_usub_cond_i64:
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movq (%rdi), %rax
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB3_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movq %rax, %rcx
@@ -219,7 +219,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzbl (%edx), %eax
 ; CHECK-32-NEXT:    jmp .LBB4_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB4_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB4_1 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgb %bl, (%edx)
@@ -241,7 +241,7 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movzbl (%rdi), %eax
 ; CHECK-64-NEXT:    xorl %ecx, %ecx
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movl %eax, %edx
@@ -269,7 +269,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzwl (%edx), %eax
 ; CHECK-32-NEXT:    jmp .LBB5_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB5_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB5_1 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgw %si, (%edx)
@@ -295,7 +295,7 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movzwl (%rdi), %eax
 ; CHECK-64-NEXT:    xorl %ecx, %ecx
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB5_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movl %eax, %edx
@@ -322,7 +322,7 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movl (%edx), %eax
 ; CHECK-32-NEXT:    jmp .LBB6_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB6_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB6_1 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgl %esi, (%edx)
@@ -348,7 +348,7 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movl (%rdi), %eax
 ; CHECK-64-NEXT:    xorl %ecx, %ecx
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB6_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movl %eax, %edx
@@ -381,7 +381,7 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl (%ebp), %esi
 ; CHECK-32-NEXT:    movl 4(%ebp), %edi
 ; CHECK-32-NEXT:    jmp .LBB7_1
-; CHECK-32-NEXT:    .p2align 4, 0x90
+; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB7_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB7_1 Depth=1
 ; CHECK-32-NEXT:    movl %esi, %eax
@@ -421,7 +421,7 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    movq (%rdi), %rax
 ; CHECK-64-NEXT:    xorl %ecx, %ecx
-; CHECK-64-NEXT:    .p2align 4, 0x90
+; CHECK-64-NEXT:    .p2align 4
 ; CHECK-64-NEXT:  .LBB7_1: # %atomicrmw.start
 ; CHECK-64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-64-NEXT:    movq %rax, %rdx

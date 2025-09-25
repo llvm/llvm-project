@@ -67,6 +67,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,11 +77,6 @@
 #include <string>
 
 using namespace llvm;
-
-static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
-static cl::opt<bool>
-    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
-                     cl::desc("In the Lint pass, abort on errors."));
 
 namespace {
 namespace MemRef {
@@ -102,6 +98,8 @@ class Lint : public InstVisitor<Lint> {
   void visitReturnInst(ReturnInst &I);
   void visitLoadInst(LoadInst &I);
   void visitStoreInst(StoreInst &I);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  void visitAtomicRMWInst(AtomicRMWInst &I);
   void visitXor(BinaryOperator &I);
   void visitSub(BinaryOperator &I);
   void visitLShr(BinaryOperator &I);
@@ -124,6 +122,7 @@ class Lint : public InstVisitor<Lint> {
 
 public:
   Module *Mod;
+  const Triple &TT;
   const DataLayout *DL;
   AliasAnalysis *AA;
   AssumptionCache *AC;
@@ -135,8 +134,8 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), DL(DL), AA(AA), AC(AC), DT(DT), TLI(TLI),
-        MessagesStr(Messages) {}
+      : Mod(Mod), TT(Mod->getTargetTriple()), DL(DL), AA(AA), AC(AC), DT(DT),
+        TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {
@@ -262,6 +261,30 @@ void Lint::visitCallBase(CallBase &I) {
           visitMemoryReference(I, Loc, DL->getABITypeAlign(Ty), Ty,
                                MemRef::Read | MemRef::Write);
         }
+
+        // Check that ABI attributes for the function and call-site match.
+        unsigned ArgNo = AI->getOperandNo();
+        Attribute::AttrKind ABIAttributes[] = {
+            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
+            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
+            Attribute::Preallocated, Attribute::StructRet};
+        AttributeList CallAttrs = I.getAttributes();
+        for (Attribute::AttrKind Attr : ABIAttributes) {
+          Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
+          Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
+          Check(CallAttr.isValid() == FnAttr.isValid(),
+                Twine("Undefined behavior: ABI attribute ") +
+                    Attribute::getNameFromAttrKind(Attr) +
+                    " not present on both function and call-site",
+                &I);
+          if (CallAttr.isValid() && FnAttr.isValid()) {
+            Check(CallAttr == FnAttr,
+                  Twine("Undefined behavior: ABI attribute ") +
+                      Attribute::getNameFromAttrKind(Attr) +
+                      " does not have same argument for function and call-site",
+                  &I);
+          }
+        }
       }
     }
   }
@@ -321,19 +344,13 @@ void Lint::visitCallBase(CallBase &I) {
                            MMI->getSourceAlign(), nullptr, MemRef::Read);
       break;
     }
-    case Intrinsic::memset: {
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
       visitMemoryReference(I, MemoryLocation::getForDest(MSI),
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
-    case Intrinsic::memset_inline: {
-      MemSetInlineInst *MSII = cast<MemSetInlineInst>(&I);
-      visitMemoryReference(I, MemoryLocation::getForDest(MSII),
-                           MSII->getDestAlign(), nullptr, MemRef::Write);
-      break;
-    }
-
     case Intrinsic::vastart:
       // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
@@ -356,13 +373,6 @@ void Lint::visitCallBase(CallBase &I) {
       // at any time, so check it for both readability and writeability.
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
-      break;
-    case Intrinsic::get_active_lane_mask:
-      if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
-        Check(!TripCount->isZero(),
-              "get_active_lane_mask: operand #2 "
-              "must be greater than 0",
-              &I);
       break;
     }
 }
@@ -401,6 +411,11 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
         "Unusual: Address one pointer dereference", &I);
 
   if (Flags & MemRef::Write) {
+    if (TT.isAMDGPU())
+      Check(!AMDGPU::isConstantAddressSpace(
+                UnderlyingObject->getType()->getPointerAddressSpace()),
+            "Undefined behavior: Write to memory in const addrspace", &I);
+
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(UnderlyingObject))
       Check(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
             &I);
@@ -480,6 +495,16 @@ void Lint::visitStoreInst(StoreInst &I) {
                        I.getOperand(0)->getType(), MemRef::Write);
 }
 
+void Lint::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicRMWInst(AtomicRMWInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
 void Lint::visitXor(BinaryOperator &I) {
   Check(!isa<UndefValue>(I.getOperand(0)) || !isa<UndefValue>(I.getOperand(1)),
         "Undefined result: xor(undef, undef)", &I);
@@ -519,8 +544,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    KnownBits Known =
-        computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    KnownBits Known = computeKnownBits(V, DL, AC, dyn_cast<Instruction>(V), DT);
     return Known.isZero();
   }
 
@@ -704,11 +728,17 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
-  if (LintAbortOnError && !L.MessagesStr.str().empty())
-    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
-                           LintAbortOnErrorArgName + ")",
-                       false);
+  if (AbortOnError && !L.MessagesStr.str().empty())
+    report_fatal_error(
+        "linter found errors, aborting. (enabled by abort-on-error)", false);
   return PreservedAnalyses::all();
+}
+
+void LintPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  PassInfoMixin<LintPass>::printPipeline(OS, MapClassName2PassName);
+  if (AbortOnError)
+    OS << "<abort-on-error>";
 }
 
 //===----------------------------------------------------------------------===//
@@ -717,7 +747,7 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 /// lintFunction - Check a function for errors, printing messages on stderr.
 ///
-void llvm::lintFunction(const Function &f) {
+void llvm::lintFunction(const Function &f, bool AbortOnError) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot lint external functions");
 
@@ -732,14 +762,14 @@ void llvm::lintFunction(const Function &f) {
     AA.registerFunctionAnalysis<TypeBasedAA>();
     return AA;
   });
-  LintPass().run(F, FAM);
+  LintPass(AbortOnError).run(F, FAM);
 }
 
 /// lintModule - Check a module for errors, printing messages on stderr.
 ///
-void llvm::lintModule(const Module &M) {
+void llvm::lintModule(const Module &M, bool AbortOnError) {
   for (const Function &F : M) {
     if (!F.isDeclaration())
-      lintFunction(F);
+      lintFunction(F, AbortOnError);
   }
 }

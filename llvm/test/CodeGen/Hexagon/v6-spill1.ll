@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -pipeliner-max-mii=10 < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -pipeliner-max-mii=10 < %s -verify-machineinstrs | FileCheck %s
 ; CHECK-NOT: vmemu
 
 ; Function Attrs: nounwind

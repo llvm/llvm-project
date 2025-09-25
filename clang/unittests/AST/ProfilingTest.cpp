@@ -63,11 +63,11 @@ TEST(Profiling, DeducedTemplateSpecializationType_Name) {
   ASTContext &Ctx = AST->getASTContext();
 
   auto *T1 = cast<DeducedTemplateSpecializationType>(
-      Ctx.getDeducedTemplateSpecializationType(TemplateName(CTD1), QualType(),
-                                               false));
+      Ctx.getDeducedTemplateSpecializationType(
+          ElaboratedTypeKeyword::None, TemplateName(CTD1), QualType(), false));
   auto *T2 = cast<DeducedTemplateSpecializationType>(
-      Ctx.getDeducedTemplateSpecializationType(TemplateName(CTD2), QualType(),
-                                               false));
+      Ctx.getDeducedTemplateSpecializationType(
+          ElaboratedTypeKeyword::None, TemplateName(CTD2), QualType(), false));
   testTypeNode(T1, T2);
 }
 

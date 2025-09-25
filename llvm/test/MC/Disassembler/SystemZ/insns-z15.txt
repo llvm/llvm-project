@@ -1,4 +1,4 @@
-# Test z15 instructions that don't have PC-relative operands.
+# Test z15 instructions.
 # RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu -mcpu=z15 \
 # RUN:   | FileCheck %s
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-uninitialized -std=c++14 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -Wno-uninitialized -std=c++14 -fsyntax-only -verify -fexperimental-new-constant-interpreter
 
 // expected-no-diagnostics
 

@@ -1,5 +1,4 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
 // clang-repl can be called from the prompt in non-interactive mode as a
 // calculator in shell scripts, for example. In that case if there is an error
 // we should set the exit code as failure.
@@ -18,4 +17,11 @@ extern "C" int printf(const char *, ...);
 int i = 42;
 auto r1 = printf("i = %d\n", i);
 // CHECK: i = 42
+
+1aap = 42; // expected-error {{invalid digit 'a' in decimal constant}}
+1aap = 42; i = 5; // expected-error {{invalid digit 'a' in decimal constant}}
+
+printf("i = %d\n", i);
+// CHECK: i = 42
+
 %quit

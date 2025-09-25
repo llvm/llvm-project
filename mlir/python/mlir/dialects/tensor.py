@@ -1,6 +1,7 @@
 #  Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+from typing import Optional
 
 from ._tensor_ops_gen import *
 from ._tensor_ops_gen import _Dialect
@@ -25,6 +26,7 @@ class EmptyOp(EmptyOp):
         sizes: Sequence[Union[int, Value]],
         element_type: Type,
         *,
+        encoding: Optional[Attribute] = None,
         loc=None,
         ip=None,
     ):
@@ -40,7 +42,7 @@ class EmptyOp(EmptyOp):
             else:
                 static_sizes.append(ShapedType.get_dynamic_size())
                 dynamic_sizes.append(s)
-        result_type = RankedTensorType.get(static_sizes, element_type)
+        result_type = RankedTensorType.get(static_sizes, element_type, encoding)
         super().__init__(result_type, dynamic_sizes, loc=loc, ip=ip)
 
 
@@ -48,11 +50,14 @@ def empty(
     sizes: Sequence[Union[int, Value]],
     element_type: Type,
     *,
+    encoding: Optional[Attribute] = None,
     loc=None,
     ip=None,
 ) -> _ods_cext.ir.Value:
     return _get_op_result_or_op_results(
-        EmptyOp(sizes=sizes, element_type=element_type, loc=loc, ip=ip)
+        EmptyOp(
+            sizes=sizes, element_type=element_type, encoding=encoding, loc=loc, ip=ip
+        )
     )
 
 

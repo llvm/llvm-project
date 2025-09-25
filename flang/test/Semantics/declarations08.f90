@@ -5,4 +5,10 @@ pointer(p,y)
 !ERROR: Cray pointee 'x' may not be a member of a COMMON block
 common x
 equivalence(y,z)
+!ERROR: Cray pointee 'v' may not be initialized
+real :: v = 42.0
+pointer(p,v)
+!ERROR: Cray pointee 'u' may not have the SAVE attribute
+save u
+pointer(p, u)
 end

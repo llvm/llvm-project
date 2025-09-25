@@ -83,8 +83,10 @@ public:
   ///
   /// \return
   ///     Whatever SetExternalVisibleDeclsForName returns.
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override;
+  bool
+  FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
+                                 clang::DeclarationName Name,
+                                 const clang::DeclContext *OriginalDC) override;
 
   /// Enumerate all Decls in a given lexical context.
   ///
@@ -211,9 +213,10 @@ public:
   public:
     ClangASTSourceProxy(ClangASTSource &original) : m_original(original) {}
 
-    bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                        clang::DeclarationName Name) override {
-      return m_original.FindExternalVisibleDeclsByName(DC, Name);
+    bool FindExternalVisibleDeclsByName(
+        const clang::DeclContext *DC, clang::DeclarationName Name,
+        const clang::DeclContext *OriginalDC) override {
+      return m_original.FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
     }
 
     void FindExternalLexicalDecls(
@@ -250,8 +253,8 @@ public:
     ClangASTSource &m_original;
   };
 
-  clang::ExternalASTSource *CreateProxy() {
-    return new ClangASTSourceProxy(*this);
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> CreateProxy() {
+    return llvm::makeIntrusiveRefCnt<ClangASTSourceProxy>(*this);
   }
 
 protected:

@@ -19,8 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace clang;
 using namespace ento;
@@ -223,7 +221,7 @@ void CheckerRegistry::initializeRegistry(const CheckerManager &Mgr) {
       continue;
     }
 
-    Tmp.insert(Deps.begin(), Deps.end());
+    Tmp.insert_range(Deps);
 
     // Enable the checker.
     Tmp.insert(&Checker);

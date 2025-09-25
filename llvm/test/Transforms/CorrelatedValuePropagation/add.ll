@@ -311,7 +311,7 @@ exit:
 
 @limit = external global i32
 define i32 @test11(ptr %p, i32 %i) {
-; CHECK-LABEL: define i32 @test11(
+; CHECK-LABEL: define range(i32 0, 2147483645) i32 @test11(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[WITHIN_1:%.*]] = icmp ugt i32 [[LIMIT]], [[I]]

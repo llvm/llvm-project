@@ -149,7 +149,7 @@ RValue XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Type *ArgTy = CGT.ConvertType(Ty);
   if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
     AI.setCoerceToType(ArgTy);
-  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy);
+  llvm::Type *ArgPtrTy = llvm::PointerType::getUnqual(ArgTy->getContext());
 
   Address Val = Address::invalid();
   CharUnits ArgSize = CharUnits::Zero();
@@ -157,6 +157,7 @@ RValue XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   case ABIArgInfo::Expand:
   case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
+  case ABIArgInfo::TargetSpecific:
     llvm_unreachable("Unsupported ABI kind for va_arg");
   case ABIArgInfo::Ignore:
     Val = Address(llvm::UndefValue::get(ArgPtrTy), ArgTy, TypeAlign);
@@ -343,7 +344,7 @@ static bool extractFieldType(SmallVectorImpl<FieldEncoding> &FE,
     if (Field->isBitField()) {
       Enc += "b(";
       llvm::raw_svector_ostream OS(Enc);
-      OS << Field->getBitWidthValue(CGM.getContext());
+      OS << Field->getBitWidthValue();
       Enc += ':';
     }
     if (!appendType(Enc, Field->getType(), CGM, TSC))
@@ -379,7 +380,7 @@ static bool appendRecordType(SmallStringEnc &Enc, const RecordType *RT,
 
   // We collect all encoded fields and order as necessary.
   bool IsRecursive = false;
-  const RecordDecl *RD = RT->getDecl()->getDefinition();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
   if (RD && !RD->field_empty()) {
     // An incomplete TypeString stub is placed in the cache for this RecordType
     // so that recursive calls to this RecordType will use it whilst building a
@@ -428,7 +429,7 @@ static bool appendEnumType(SmallStringEnc &Enc, const EnumType *ET,
   Enc += "){";
 
   // We collect all encoded enumerations and order them alphanumerically.
-  if (const EnumDecl *ED = ET->getDecl()->getDefinition()) {
+  if (const EnumDecl *ED = ET->getOriginalDecl()->getDefinition()) {
     SmallVector<FieldEncoding, 16> FE;
     for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E;
          ++I) {
@@ -614,13 +615,10 @@ static bool appendType(SmallStringEnc &Enc, QualType QType,
   if (const PointerType *PT = QT->getAs<PointerType>())
     return appendPointerType(Enc, PT, CGM, TSC);
 
-  if (const EnumType *ET = QT->getAs<EnumType>())
+  if (const EnumType *ET = QT->getAsCanonical<EnumType>())
     return appendEnumType(Enc, ET, TSC, QT.getBaseTypeIdentifier());
 
-  if (const RecordType *RT = QT->getAsStructureType())
-    return appendRecordType(Enc, RT, CGM, TSC, QT.getBaseTypeIdentifier());
-
-  if (const RecordType *RT = QT->getAsUnionType())
+  if (const RecordType *RT = QT->getAsCanonical<RecordType>())
     return appendRecordType(Enc, RT, CGM, TSC, QT.getBaseTypeIdentifier());
 
   if (const FunctionType *FT = QT->getAs<FunctionType>())

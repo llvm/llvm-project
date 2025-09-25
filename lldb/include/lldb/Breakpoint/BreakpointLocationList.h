@@ -204,8 +204,7 @@ protected:
   BreakpointLocationCollection *m_new_location_recorder;
 
 public:
-  typedef AdaptedIterable<collection, lldb::BreakpointLocationSP,
-                          vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       BreakpointLocationIterable;
 
   BreakpointLocationIterable BreakpointLocations() {

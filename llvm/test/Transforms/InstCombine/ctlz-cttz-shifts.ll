@@ -64,7 +64,7 @@ define i32 @shl_cttz_true(i32) {
 define <2 x i32> @vec2_lshr_ctlz_true(<2 x i32>) {
 ; CHECK-LABEL: define <2 x i32> @vec2_lshr_ctlz_true(
 ; CHECK-SAME: <2 x i32> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = add <2 x i32> [[TMP0]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CTLZ:%.*]] = add <2 x i32> [[TMP0]], splat (i32 9)
 ; CHECK-NEXT:    ret <2 x i32> [[CTLZ]]
 ;
   %div = lshr <2 x i32> <i32 8387584, i32 4276440>, %0
@@ -75,7 +75,7 @@ define <2 x i32> @vec2_lshr_ctlz_true(<2 x i32>) {
 define <2 x i32> @vec2_shl_nuw_ctlz_true(<2 x i32>) {
 ; CHECK-LABEL: define <2 x i32> @vec2_shl_nuw_ctlz_true(
 ; CHECK-SAME: <2 x i32> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = sub <2 x i32> <i32 9, i32 9>, [[TMP0]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = sub <2 x i32> splat (i32 9), [[TMP0]]
 ; CHECK-NEXT:    ret <2 x i32> [[CTLZ]]
 ;
   %shl = shl nuw <2 x i32> <i32 8387584, i32 4276440>, %0
@@ -86,7 +86,7 @@ define <2 x i32> @vec2_shl_nuw_ctlz_true(<2 x i32>) {
 define <2 x i32> @vec2_shl_nuw_nsw_ctlz_true(<2 x i32>) {
 ; CHECK-LABEL: define <2 x i32> @vec2_shl_nuw_nsw_ctlz_true(
 ; CHECK-SAME: <2 x i32> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = sub <2 x i32> <i32 9, i32 9>, [[TMP0]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = sub <2 x i32> splat (i32 9), [[TMP0]]
 ; CHECK-NEXT:    ret <2 x i32> [[CTLZ]]
 ;
   %shl = shl nuw nsw <2 x i32> <i32 8387584, i32 4276440>, %0

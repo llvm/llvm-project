@@ -59,7 +59,7 @@ define i8 @fold_select_trunc_negative(i8 %x, i8 %y) {
 define <2 x i8> @fold_select_trunc_vector(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @fold_select_trunc_vector(
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[TRUNC]], <2 x i8> <i8 1, i8 1>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[TRUNC]], <2 x i8> splat (i8 1), <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %trunc = trunc nuw <2 x i8> %x to <2 x i1>

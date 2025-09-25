@@ -33,9 +33,9 @@ pclmulqdq     $11, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -     0.33   0.33    -     2.00    -      -      -      -      -     0.33    -
+# CHECK-NEXT:  -      -     0.33   0.33    -     2.00    -      -      -      -     0.33    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     pclmulqdq	$11, %xmm0, %xmm2
-# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -      -     0.33    -     pclmulqdq	$11, (%rax), %xmm2
+# CHECK-NEXT:  -      -     0.33   0.33    -     1.00    -      -      -      -     0.33    -      -     pclmulqdq	$11, (%rax), %xmm2

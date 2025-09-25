@@ -177,6 +177,49 @@ TEST(raw_ostreamTest, Justify) {
   EXPECT_EQ("none",    printToString(center_justify("none", 1), 1));
 }
 
+TEST(raw_ostreamTest, Indent) {
+  indent Indent(4);
+  auto Spaces = [](int N) { return std::string(N, ' '); };
+  EXPECT_EQ(Spaces(4), printToString(Indent));
+  EXPECT_EQ("", printToString(indent(0)));
+  EXPECT_EQ(Spaces(5), printToString(Indent + 1));
+  EXPECT_EQ(Spaces(3), printToString(Indent - 1));
+  Indent += 1;
+  EXPECT_EQ(Spaces(5), printToString(Indent));
+  Indent -= 1;
+  EXPECT_EQ(Spaces(4), printToString(Indent));
+
+  // Scaled indent.
+  indent Scaled(4, 2);
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+  EXPECT_EQ(Spaces(10), printToString(Scaled + 1));
+  EXPECT_EQ(Spaces(6), printToString(Scaled - 1));
+  Scaled += 1;
+  EXPECT_EQ(Spaces(10), printToString(Scaled));
+  Scaled -= 1;
+  EXPECT_EQ(Spaces(8), printToString(Scaled));
+
+  // Operators.
+  Indent = 10;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+
+  indent Temp = Indent++;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
+
+  Temp = Indent--;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = ++Indent;
+  EXPECT_EQ(Spaces(11), printToString(Indent));
+  EXPECT_EQ(Spaces(11), printToString(Temp));
+
+  Temp = --Indent;
+  EXPECT_EQ(Spaces(10), printToString(Indent));
+  EXPECT_EQ(Spaces(10), printToString(Temp));
+}
+
 TEST(raw_ostreamTest, FormatHex) {  
   EXPECT_EQ("0x1234",     printToString(format_hex(0x1234, 6), 6));
   EXPECT_EQ("0x001234",   printToString(format_hex(0x1234, 8), 8));

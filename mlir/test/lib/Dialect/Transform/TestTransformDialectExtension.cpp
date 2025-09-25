@@ -346,8 +346,11 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
-  for (Operation *op : state.getPayloadOps(getTarget()))
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    if (!op->getUses().empty())
+      return emitSilenceableError() << "cannot erase an op that has uses";
     rewriter.eraseOp(op);
+  }
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
@@ -793,8 +796,8 @@ DiagnosedSilenceableFailure mlir::test::TestProduceInvalidIR::applyToOne(
     transform::TransformState &state) {
   // Provide some IR that does not verify.
   rewriter.setInsertionPointToStart(&target->getRegion(0).front());
-  rewriter.create<TestDummyPayloadOp>(target->getLoc(), TypeRange(),
-                                      ValueRange(), /*failToVerify=*/true);
+  TestDummyPayloadOp::create(rewriter, target->getLoc(), TypeRange(),
+                             ValueRange(), /*failToVerify=*/true);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -871,10 +874,11 @@ public:
     });
     auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
                                        ValueRange inputs,
-                                       Location loc) -> std::optional<Value> {
+                                       Location loc) -> Value {
       if (inputs.size() != 1)
-        return std::nullopt;
-      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        return Value();
+      return UnrealizedConversionCastOp::create(builder, loc, resultType,
+                                                inputs)
           .getResult(0);
     };
     addSourceMaterialization(unrealizedCastConverter);

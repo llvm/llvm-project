@@ -15,18 +15,14 @@
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -34,16 +30,13 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
+namespace {
 
 class SPIRVMergeRegionExitTargets : public FunctionPass {
 public:
   static char ID;
 
-  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {
-    initializeSPIRVMergeRegionExitTargetsPass(*PassRegistry::getPassRegistry());
-  };
+  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {}
 
   // Gather all the successors of |BB|.
   // This function asserts if the terminator neither a branch, switch or return.
@@ -87,12 +80,8 @@ public:
       BasicBlock *RHSTarget =
           BI->isConditional() ? BI->getSuccessor(1) : nullptr;
 
-      Value *LHS = TargetToValue.count(LHSTarget) != 0
-                       ? TargetToValue.at(LHSTarget)
-                       : nullptr;
-      Value *RHS = TargetToValue.count(RHSTarget) != 0
-                       ? TargetToValue.at(RHSTarget)
-                       : nullptr;
+      Value *LHS = TargetToValue.lookup(LHSTarget);
+      Value *RHS = TargetToValue.lookup(RHSTarget);
 
       if (LHS == nullptr || RHS == nullptr)
         return LHS == nullptr ? RHS : LHS;
@@ -130,10 +119,17 @@ public:
     assert(false && "Unhandled terminator type.");
   }
 
+  AllocaInst *CreateVariable(Function &F, Type *Type,
+                             BasicBlock::iterator Position) {
+    const DataLayout &DL = F.getDataLayout();
+    return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
+                          Position);
+  }
+
   // Run the pass on the given convergence region, ignoring the sub-regions.
   // Returns true if the CFG changed, false otherwise.
   bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
-                                       const SPIRV::ConvergenceRegion *CR) {
+                                       SPIRV::ConvergenceRegion *CR) {
     // Gather all the exit targets for this region.
     SmallPtrSet<BasicBlock *, 4> ExitTargets;
     for (BasicBlock *Exit : CR->Exits) {
@@ -151,6 +147,9 @@ public:
     auto F = CR->Entry->getParent();
     auto NewExitTarget = BasicBlock::Create(F->getContext(), "new.exit", F);
     IRBuilder<> Builder(NewExitTarget);
+
+    AllocaInst *Variable = CreateVariable(*F, Builder.getInt32Ty(),
+                                          F->begin()->getFirstInsertionPt());
 
     // CodeGen output needs to be stable. Using the set as-is would order
     // the targets differently depending on the allocation pattern.
@@ -176,18 +175,16 @@ public:
     std::vector<std::pair<BasicBlock *, Value *>> ExitToVariable;
     for (auto Exit : SortedExits) {
       llvm::Value *Value = createExitVariable(Exit, TargetToValue);
+      IRBuilder<> B2(Exit);
+      B2.SetInsertPoint(Exit->getFirstInsertionPt());
+      B2.CreateStore(Value, Variable);
       ExitToVariable.emplace_back(std::make_pair(Exit, Value));
     }
 
-    // Gather the correct value depending on the exit we came from.
-    llvm::PHINode *node =
-        Builder.CreatePHI(Builder.getInt32Ty(), ExitToVariable.size());
-    for (auto [BB, Value] : ExitToVariable) {
-      node->addIncoming(Value, BB);
-    }
+    llvm::Value *Load = Builder.CreateLoad(Builder.getInt32Ty(), Variable);
 
     // Creating the switch to jump to the correct exit target.
-    llvm::SwitchInst *Sw = Builder.CreateSwitch(node, SortedExitTargets[0],
+    llvm::SwitchInst *Sw = Builder.CreateSwitch(Load, SortedExitTargets[0],
                                                 SortedExitTargets.size() - 1);
     for (size_t i = 1; i < SortedExitTargets.size(); i++) {
       BasicBlock *BB = SortedExitTargets[i];
@@ -198,14 +195,19 @@ public:
     for (auto Exit : CR->Exits)
       replaceBranchTargets(Exit, ExitTargets, NewExitTarget);
 
+    CR = CR->Parent;
+    while (CR) {
+      CR->Blocks.insert(NewExitTarget);
+      CR = CR->Parent;
+    }
+
     return true;
   }
 
   /// Run the pass on the given convergence region and sub-regions (DFS).
   /// Returns true if a region/sub-region was modified, false otherwise.
   /// This returns as soon as one region/sub-region has been modified.
-  bool runOnConvergenceRegion(LoopInfo &LI,
-                              const SPIRV::ConvergenceRegion *CR) {
+  bool runOnConvergenceRegion(LoopInfo &LI, SPIRV::ConvergenceRegion *CR) {
     for (auto *Child : CR->Children)
       if (runOnConvergenceRegion(LI, Child))
         return true;
@@ -235,10 +237,10 @@ public:
 
   virtual bool runOnFunction(Function &F) override {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    const auto *TopLevelRegion =
+    auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
             .getRegionInfo()
-            .getTopLevelRegion();
+            .getWritableTopLevelRegion();
 
     // FIXME: very inefficient method: each time a region is modified, we bubble
     // back up, and recompute the whole convergence region tree. Once the
@@ -246,9 +248,6 @@ public:
     // to be efficient instead of simple.
     bool modified = false;
     while (runOnConvergenceRegion(LI, TopLevelRegion)) {
-      TopLevelRegion = getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
-                           .getRegionInfo()
-                           .getTopLevelRegion();
       modified = true;
     }
 
@@ -262,10 +261,12 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
+
+    AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };
-} // namespace llvm
+} // namespace
 
 char SPIRVMergeRegionExitTargets::ID = 0;
 

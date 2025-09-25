@@ -122,7 +122,7 @@ define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; CHECK-LABEL: mul_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; CHECK-NEXT:    vpand %ymm1, %ymm2, %ymm3
+; CHECK-NEXT:    vpand %ymm2, %ymm1, %ymm3
 ; CHECK-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
 ; CHECK-NEXT:    vpand %ymm2, %ymm3, %ymm3
 ; CHECK-NEXT:    vpandn %ymm1, %ymm2, %ymm1
@@ -260,3 +260,31 @@ define <4 x i32> @mul_const11(<4 x i32> %x) {
   %m = mul <4 x i32> %x, <i32 2155905152, i32 2155905152, i32 2155905152, i32 2155905152>
   ret <4 x i32> %m
 }
+
+; check we will zero both vectors.
+define void @multi_freeze(<2 x double> %x, <2 x double> %y) nounwind {
+; X86-LABEL: multi_freeze:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovaps %xmm0, %xmm0
+; X86-NEXT:    vmovaps %xmm1, %xmm1
+; X86-NEXT:    calll foo@PLT
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: multi_freeze:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    vmovaps %xmm0, %xmm0
+; X64-NEXT:    vmovaps %xmm1, %xmm1
+; X64-NEXT:    callq foo@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = freeze <2 x double> poison
+  %2 = shufflevector <2 x double> %x, <2 x double> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = shufflevector <2 x double> %y, <2 x double> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @foo(<4 x double> %2, <4 x double> %3)
+  ret void
+}
+
+declare void @foo(<4 x double>, <4 x double>)

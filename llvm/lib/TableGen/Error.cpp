@@ -24,7 +24,7 @@ namespace llvm {
 SourceMgr SrcMgr;
 unsigned ErrorsPrinted = 0;
 
-static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
+static void PrintMessage(ArrayRef<SMLoc> Locs, SourceMgr::DiagKind Kind,
                          const Twine &Msg) {
   // Count the total number of errors printed.
   // This is used to exit with an error code if there were any errors.
@@ -32,11 +32,11 @@ static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
     ++ErrorsPrinted;
 
   SMLoc NullLoc;
-  if (Loc.empty())
-    Loc = NullLoc;
-  SrcMgr.PrintMessage(Loc.front(), Kind, Msg);
-  for (unsigned i = 1; i < Loc.size(); ++i)
-    SrcMgr.PrintMessage(Loc[i], SourceMgr::DK_Note,
+  if (Locs.empty())
+    Locs = NullLoc;
+  SrcMgr.PrintMessage(Locs.consume_front(), Kind, Msg);
+  for (SMLoc Loc : Locs)
+    SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note,
                         "instantiated from multiclass");
 }
 
@@ -160,28 +160,29 @@ void PrintFatalError(const RecordVal *RecVal, const Twine &Msg) {
 
 // Check an assertion: Obtain the condition value and be sure it is true.
 // If not, print a nonfatal error along with the message.
-void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
+bool CheckAssert(SMLoc Loc, const Init *Condition, const Init *Message) {
   auto *CondValue = dyn_cast_or_null<IntInit>(Condition->convertInitializerTo(
       IntRecTy::get(Condition->getRecordKeeper())));
-  if (!CondValue)
+  if (!CondValue) {
     PrintError(Loc, "assert condition must of type bit, bits, or int.");
-  else if (!CondValue->getValue()) {
-    PrintError(Loc, "assertion failed");
-    if (auto *MessageInit = dyn_cast<StringInit>(Message))
-      PrintNote(MessageInit->getValue());
-    else
-      PrintNote("(assert message is not a string)");
+    return true;
   }
+  if (!CondValue->getValue()) {
+    auto *MessageInit = dyn_cast<StringInit>(Message);
+    StringRef AssertMsg = MessageInit ? MessageInit->getValue()
+                                      : "(assert message is not a string)";
+    PrintError(Loc, "assertion failed: " + AssertMsg);
+    return true;
+  }
+  return false;
 }
 
 // Dump a message to stderr.
-void dumpMessage(SMLoc Loc, Init *Message) {
-  auto *MessageInit = dyn_cast<StringInit>(Message);
-  if (!MessageInit) {
-    PrintError(Loc, "dump value is not of type string");
-  } else {
+void dumpMessage(SMLoc Loc, const Init *Message) {
+  if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(Loc, MessageInit->getValue());
-  }
+  else
+    PrintError(Loc, "dump value is not of type string");
 }
 
 } // end namespace llvm

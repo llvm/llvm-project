@@ -14,7 +14,6 @@ static_library("MCParser") {
     "DarwinAsmParser.cpp",
     "ELFAsmParser.cpp",
     "GOFFAsmParser.cpp",
-    "MCAsmLexer.cpp",
     "MCAsmParser.cpp",
     "MCAsmParserExtension.cpp",
     "MCTargetAsmParser.cpp",

@@ -1,4 +1,4 @@
-// REQUIRES: system-linux, native
+// REQUIRES: system-linux, native, python
 
 // This test verifies that loading an ELF file from memory works and the new
 // features that were added when loading from memory work like:

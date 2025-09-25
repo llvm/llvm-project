@@ -494,9 +494,9 @@ static std::vector<llvm::StringRef> semanticTokenModifiers() {
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<llvm::json::Value> Reply) {
   // Determine character encoding first as it affects constructed ClangdServer.
-  if (Params.capabilities.offsetEncoding && !Opts.Encoding) {
+  if (Params.capabilities.PositionEncodings && !Opts.Encoding) {
     Opts.Encoding = OffsetEncoding::UTF16; // fallback
-    for (OffsetEncoding Supported : *Params.capabilities.offsetEncoding)
+    for (OffsetEncoding Supported : *Params.capabilities.PositionEncodings)
       if (Supported != OffsetEncoding::UnsupportedEncoding) {
         Opts.Encoding = Supported;
         break;
@@ -591,7 +591,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
            {"save", true},
        }},
       {"documentFormattingProvider", true},
-      {"documentRangeFormattingProvider", true},
+      {"documentRangeFormattingProvider",
+       llvm::json::Object{
+           {"rangesSupport", true},
+       }},
       {"documentOnTypeFormattingProvider",
        llvm::json::Object{
            {"firstTriggerCharacter", "\n"},
@@ -683,6 +686,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
 
+  if (Opts.Encoding)
+    ServerCaps["positionEncoding"] = *Opts.Encoding;
+
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{
@@ -690,6 +696,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"version", llvm::formatv("{0} {1} {2}", versionString(),
                                       featureString(), platformString())}}},
        {"capabilities", std::move(ServerCaps)}}};
+
+  // TODO: offsetEncoding capability is a deprecated clangd extension and should
+  // be deleted.
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;
   Reply(std::move(Result));
@@ -952,9 +961,17 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
 void ClangdLSPServer::onDocumentRangeFormatting(
     const DocumentRangeFormattingParams &Params,
     Callback<std::vector<TextEdit>> Reply) {
+  onDocumentRangesFormatting(
+      DocumentRangesFormattingParams{Params.textDocument, {Params.range}},
+      std::move(Reply));
+}
+
+void ClangdLSPServer::onDocumentRangesFormatting(
+    const DocumentRangesFormattingParams &Params,
+    Callback<std::vector<TextEdit>> Reply) {
   auto File = Params.textDocument.uri.file();
   auto Code = Server->getDraft(File);
-  Server->formatFile(File, Params.range,
+  Server->formatFile(File, Params.ranges,
                      [Code = std::move(Code), Reply = std::move(Reply)](
                          llvm::Expected<tooling::Replacements> Result) mutable {
                        if (Result)
@@ -970,7 +987,7 @@ void ClangdLSPServer::onDocumentFormatting(
   auto File = Params.textDocument.uri.file();
   auto Code = Server->getDraft(File);
   Server->formatFile(File,
-                     /*Rng=*/std::nullopt,
+                     /*Rngs=*/{},
                      [Code = std::move(Code), Reply = std::move(Reply)](
                          llvm::Expected<tooling::Replacements> Result) mutable {
                        if (Result)
@@ -1262,11 +1279,9 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                       R.contents.kind = HoverContentFormat;
                       R.range = (*H)->SymRange;
                       switch (HoverContentFormat) {
-                      case MarkupKind::PlainText:
-                        R.contents.value = (*H)->present().asPlainText();
-                        return Reply(std::move(R));
                       case MarkupKind::Markdown:
-                        R.contents.value = (*H)->present().asMarkdown();
+                      case MarkupKind::PlainText:
+                        R.contents.value = (*H)->present(HoverContentFormat);
                         return Reply(std::move(R));
                       };
                       llvm_unreachable("unhandled MarkupKind");
@@ -1415,19 +1430,22 @@ void ClangdLSPServer::onInlayHint(const InlayHintsParams &Params,
                      std::move(Reply));
 }
 
+void ClangdLSPServer::onCallHierarchyOutgoingCalls(
+    const CallHierarchyOutgoingCallsParams &Params,
+    Callback<std::vector<CallHierarchyOutgoingCall>> Reply) {
+  Server->outgoingCalls(Params.item, std::move(Reply));
+}
+
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
   llvm::StringSet<> ModifiedFiles;
-  for (auto &Entry : Settings.compilationDatabaseChanges) {
-    PathRef File = Entry.first;
-    auto Old = CDB->getCompileCommand(File);
-    auto New =
-        tooling::CompileCommand(std::move(Entry.second.workingDirectory), File,
-                                std::move(Entry.second.compilationCommand),
+  for (auto &[File, Command] : Settings.compilationDatabaseChanges) {
+    auto Cmd =
+        tooling::CompileCommand(std::move(Command.workingDirectory), File,
+                                std::move(Command.compilationCommand),
                                 /*Output=*/"");
-    if (Old != New) {
-      CDB->setCompileCommand(File, std::move(New));
+    if (CDB->setCompileCommand(File, std::move(Cmd))) {
       ModifiedFiles.insert(File);
     }
   }
@@ -1663,6 +1681,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("shutdown", this, &ClangdLSPServer::onShutdown);
   Bind.method("sync", this, &ClangdLSPServer::onSync);
   Bind.method("textDocument/rangeFormatting", this, &ClangdLSPServer::onDocumentRangeFormatting);
+  Bind.method("textDocument/rangesFormatting", this, &ClangdLSPServer::onDocumentRangesFormatting);
   Bind.method("textDocument/onTypeFormatting", this, &ClangdLSPServer::onDocumentOnTypeFormatting);
   Bind.method("textDocument/formatting", this, &ClangdLSPServer::onDocumentFormatting);
   Bind.method("textDocument/codeAction", this, &ClangdLSPServer::onCodeAction);
@@ -1696,6 +1715,8 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("typeHierarchy/subtypes", this, &ClangdLSPServer::onSubTypes);
   Bind.method("textDocument/prepareCallHierarchy", this, &ClangdLSPServer::onPrepareCallHierarchy);
   Bind.method("callHierarchy/incomingCalls", this, &ClangdLSPServer::onCallHierarchyIncomingCalls);
+  if (Opts.EnableOutgoingCalls)
+    Bind.method("callHierarchy/outgoingCalls", this, &ClangdLSPServer::onCallHierarchyOutgoingCalls);
   Bind.method("textDocument/selectionRange", this, &ClangdLSPServer::onSelectionRange);
   Bind.method("textDocument/documentLink", this, &ClangdLSPServer::onDocumentLink);
   Bind.method("textDocument/semanticTokens/full", this, &ClangdLSPServer::onSemanticTokens);

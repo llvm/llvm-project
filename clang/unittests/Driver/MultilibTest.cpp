@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Multilib.h"
-#include "../../lib/Driver/ToolChains/CommonArgs.h"
 #include "SimpleDiagnosticConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/CommonArgs.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -282,7 +282,7 @@ Variants:
 )"));
   EXPECT_TRUE(
       StringRef(Diagnostic)
-          .contains("one of the 'Dir' and 'FatalError' keys must be specified"))
+          .contains("one of the 'Dir' and 'Error' keys must be specified"))
       << Diagnostic;
 
   EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(

@@ -37,7 +37,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstdint>
@@ -117,8 +116,9 @@ FileSystem::~FileSystem() = default;
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
-                             bool RequiresNullTerminator, bool IsVolatile) {
-  auto F = openFileForRead(Name);
+                             bool RequiresNullTerminator, bool IsVolatile,
+                             bool IsText) {
+  auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
 
@@ -279,6 +279,8 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadBinary(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
@@ -300,6 +302,17 @@ private:
     Path.toVector(Storage);
     sys::fs::make_absolute(WD->get().Resolved, Storage);
     return Storage;
+  }
+
+  ErrorOr<std::unique_ptr<File>>
+  openFileForReadWithFlags(const Twine &Name, sys::fs::OpenFlags Flags) {
+    SmallString<256> RealName, Storage;
+    Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
+        adjustPath(Name, Storage), Flags, &RealName);
+    if (!FDOrErr)
+      return errorToErrorCode(FDOrErr.takeError());
+    return std::unique_ptr<File>(
+        new RealFile(*FDOrErr, Name.str(), RealName.str()));
   }
 
   struct WorkingDirectory {
@@ -324,13 +337,12 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
-  SmallString<256> RealName, Storage;
-  Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
-  if (!FDOrErr)
-    return errorToErrorCode(FDOrErr.takeError());
-  return std::unique_ptr<File>(
-      new RealFile(*FDOrErr, Name.str(), RealName.str()));
+  return openFileForReadWithFlags(Name, sys::fs::OF_Text);
+}
+
+ErrorOr<std::unique_ptr<File>>
+RealFileSystem::openFileForReadBinary(const Twine &Name) {
+  return openFileForReadWithFlags(Name, sys::fs::OF_None);
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
@@ -385,7 +397,8 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
-  static IntrusiveRefCntPtr<FileSystem> FS(new RealFileSystem(true));
+  static IntrusiveRefCntPtr<FileSystem> FS =
+      makeIntrusiveRefCnt<RealFileSystem>(true);
   return FS;
 }
 
@@ -750,7 +763,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
+  std::map<std::string, std::unique_ptr<InMemoryNode>, std::less<>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)
@@ -766,7 +779,7 @@ public:
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
   InMemoryNode *getChild(StringRef Name) const {
-    auto I = Entries.find(Name.str());
+    auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
     return nullptr;
@@ -1696,11 +1709,12 @@ class llvm::vfs::RedirectingFileSystemParser {
   // false on error
   bool checkDuplicateOrUnknownKey(yaml::Node *KeyNode, StringRef Key,
                                   DenseMap<StringRef, KeyStatus> &Keys) {
-    if (!Keys.count(Key)) {
+    auto It = Keys.find(Key);
+    if (It == Keys.end()) {
       error(KeyNode, "unknown key");
       return false;
     }
-    KeyStatus &S = Keys[Key];
+    KeyStatus &S = It->second;
     if (S.Seen) {
       error(KeyNode, Twine("duplicate key '") + Key + "'");
       return false;
@@ -2204,9 +2218,9 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
 
 std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
-    bool UseExternalNames, FileSystem &ExternalFS) {
+    bool UseExternalNames, llvm::IntrusiveRefCntPtr<FileSystem> ExternalFS) {
   std::unique_ptr<RedirectingFileSystem> FS(
-      new RedirectingFileSystem(&ExternalFS));
+      new RedirectingFileSystem(ExternalFS));
   FS->UseExternalNames = UseExternalNames;
 
   StringMap<RedirectingFileSystem::Entry *> Entries;
@@ -2215,7 +2229,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     SmallString<128> From = StringRef(Mapping.first);
     SmallString<128> To = StringRef(Mapping.second);
     {
-      auto EC = ExternalFS.makeAbsolute(From);
+      auto EC = ExternalFS->makeAbsolute(From);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2237,7 +2251,7 @@ std::unique_ptr<RedirectingFileSystem> RedirectingFileSystem::create(
     }
     assert(Parent && "File without a directory?");
     {
-      auto EC = ExternalFS.makeAbsolute(To);
+      auto EC = ExternalFS->makeAbsolute(To);
       (void)EC;
       assert(!EC && "Could not make absolute path");
     }
@@ -2693,19 +2707,9 @@ static void getVFSEntries(RedirectingFileSystem::Entry *SrcE,
   Entries.push_back(YAMLVFSEntry(VPath.c_str(), FE->getExternalContentsPath()));
 }
 
-void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
-                             SourceMgr::DiagHandlerTy DiagHandler,
-                             StringRef YAMLFilePath,
-                             SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-                             void *DiagContext,
-                             IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
-      std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
-      std::move(ExternalFS));
-  if (!VFS)
-    return;
-  ErrorOr<RedirectingFileSystem::LookupResult> RootResult =
-      VFS->lookupPath("/");
+void vfs::collectVFSEntries(RedirectingFileSystem &VFS,
+                            SmallVectorImpl<YAMLVFSEntry> &CollectedEntries) {
+  ErrorOr<RedirectingFileSystem::LookupResult> RootResult = VFS.lookupPath("/");
   if (!RootResult)
     return;
   SmallVector<StringRef, 8> Components;

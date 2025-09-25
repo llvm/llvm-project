@@ -23,7 +23,8 @@ into:
 
 The check uses the same format-string-conversion algorithm as
 `modernize-use-std-print <../modernize/use-std-print.html>`_ and its
-shortcomings are described in the documentation for that check.
+shortcomings and behaviour in combination with macros are described in the
+documentation for that check.
 
 Options
 -------

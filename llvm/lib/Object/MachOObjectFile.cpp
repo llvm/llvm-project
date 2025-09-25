@@ -192,7 +192,8 @@ static Expected<MachOObjectFile::LoadCommandInfo>
 getLoadCommandInfo(const MachOObjectFile &Obj, const char *Ptr,
                    uint32_t LoadCommandIndex) {
   if (auto CmdOrErr = getStructOrErr<MachO::load_command>(Obj, Ptr)) {
-    if (CmdOrErr->cmdsize + Ptr > Obj.getData().end())
+    assert(Ptr <= Obj.getData().end() && "Start must be before end");
+    if (CmdOrErr->cmdsize > (uintptr_t)(Obj.getData().end() - Ptr))
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " extends past end of file");
     if (CmdOrErr->cmdsize < 8)
@@ -1270,7 +1271,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                                  size_t MachOFilesetEntryOffset)
     : ObjectFile(getMachOType(IsLittleEndian, Is64bits), Object),
       MachOFilesetEntryOffset(MachOFilesetEntryOffset) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   uint64_t SizeOfHeaders;
   uint32_t cputype;
   if (is64Bit()) {
@@ -3114,7 +3115,7 @@ void ExportEntry::pushNode(uint64_t offset) {
   }
   State.ChildCount = *Children;
   if (State.ChildCount != 0 && Children + 1 >= Trie.end()) {
-    *E = malformedError("byte for count of childern in export trie data at "
+    *E = malformedError("byte for count of children in export trie data at "
                         "node: 0x" +
                         Twine::utohexstr(offset) +
                         " extends past end of trie data");
@@ -3156,7 +3157,7 @@ void ExportEntry::pushDownUntilBottom() {
     }
     for (const NodeState &node : nodes()) {
       if (node.Start == Trie.begin() + childNodeIndex){
-        *E = malformedError("loop in childern in export trie data at node: 0x" +
+        *E = malformedError("loop in children in export trie data at node: 0x" +
                             Twine::utohexstr(Top.Start - Trie.begin()) +
                             " back to node: 0x" +
                             Twine::utohexstr(childNodeIndex));
@@ -4906,12 +4907,12 @@ MachOObjectFile::getLinkOptHintsLoadCommand() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.rebase_off));
@@ -4920,12 +4921,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoRebaseOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.bind_off));
@@ -4934,12 +4935,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
     getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.weak_bind_off));
@@ -4948,12 +4949,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoWeakBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.lazy_bind_off));
@@ -4962,12 +4963,12 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   if (!DyldInfoLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldInfoOrErr =
       getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
-    return std::nullopt;
+    return {};
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldInfo.export_off));
@@ -5248,12 +5249,12 @@ MachOObjectFile::getDyldChainedFixupTargets() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldExportsTrie() const {
   if (!DyldExportsTrieLoadCmd)
-    return std::nullopt;
+    return {};
 
   auto DyldExportsTrieOrError = getStructOrErr<MachO::linkedit_data_command>(
       *this, DyldExportsTrieLoadCmd);
   if (!DyldExportsTrieOrError)
-    return std::nullopt;
+    return {};
   MachO::linkedit_data_command DyldExportsTrie = DyldExportsTrieOrError.get();
   const uint8_t *Ptr =
       reinterpret_cast<const uint8_t *>(getPtr(*this, DyldExportsTrie.dataoff));
@@ -5277,7 +5278,7 @@ SmallVector<uint64_t> MachOObjectFile::getFunctionStarts() const {
 
 ArrayRef<uint8_t> MachOObjectFile::getUuid() const {
   if (!UuidLoadCmd)
-    return std::nullopt;
+    return {};
   // Returning a pointer is fine as uuid doesn't need endian swapping.
   const char *Ptr = UuidLoadCmd + offsetof(MachO::uuid_command, uuid);
   return ArrayRef(reinterpret_cast<const uint8_t *>(Ptr), 16);

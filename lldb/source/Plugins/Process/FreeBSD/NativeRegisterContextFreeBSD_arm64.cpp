@@ -44,7 +44,8 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     NativeProcessFreeBSD &process = native_thread.GetProcess();
     g_register_flags_detector.DetectFields(
         process.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
-        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0));
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0),
+        /*hwcap3=*/0);
   }
 
   return new NativeRegisterContextFreeBSD_arm64(target_arch, native_thread);
@@ -119,17 +120,15 @@ NativeRegisterContextFreeBSD_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                  RegisterValue &reg_value) {
   Status error;
 
-  if (!reg_info) {
-    error = Status::FromErrorString("reg_info NULL");
-    return error;
-  }
+  if (!reg_info)
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
   error = ReadRegisterSet(set);
@@ -147,14 +146,14 @@ Status NativeRegisterContextFreeBSD_arm64::WriteRegister(
   Status error;
 
   if (!reg_info)
-    return Status("reg_info NULL");
+    return Status::FromErrorString("reg_info NULL");
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
   if (reg == LLDB_INVALID_REGNUM)
-    return Status("no lldb regnum for %s", reg_info && reg_info->name
-                                               ? reg_info->name
-                                               : "<unknown register>");
+    return Status::FromErrorStringWithFormat(
+        "no lldb regnum for %s",
+        reg_info && reg_info->name ? reg_info->name : "<unknown register>");
 
   uint32_t set = GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg);
   error = ReadRegisterSet(set);

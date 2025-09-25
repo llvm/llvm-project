@@ -121,7 +121,7 @@ template <typename T> struct TypeListContainsSuperOf<EmptyTypeList, T> {
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
 struct VariadicFunction {
-  ResultT operator()() const { return Func(std::nullopt); }
+  ResultT operator()() const { return Func({}); }
 
   template <typename... ArgsT>
   ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
@@ -160,6 +160,9 @@ inline QualType getUnderlyingType(const FriendDecl &Node) {
 }
 inline QualType getUnderlyingType(const CXXBaseSpecifier &Node) {
   return Node.getType();
+}
+inline QualType getUnderlyingType(const ObjCInterfaceDecl &Node) {
+  return Node.getTypeForDecl()->getPointeeType();
 }
 
 /// Unifies obtaining a `TypeSourceInfo` from different node types.
@@ -669,9 +672,13 @@ private:
   DynTypedMatcher Implementation;
 };  // class Matcher
 
-/// A convenient helper for creating a Matcher<T> without specifying
-/// the template type argument.
+// Deduction guide for Matcher.
+template <typename T> Matcher(MatcherInterface<T> *) -> Matcher<T>;
+
+// TODO: Remove in LLVM 23.
 template <typename T>
+[[deprecated(
+    "Use CTAD constructor instead, 'makeMatcher' will be removed in LLVM 23.")]]
 inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
   return Matcher<T>(Implementation);
 }
@@ -868,30 +875,19 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return End;
 }
 
-template <typename T, std::enable_if_t<!std::is_base_of<FunctionDecl, T>::value>
-                          * = nullptr>
-inline bool isDefaultedHelper(const T *) {
+template <typename T> inline bool isDefaultedHelper(const T *FD) {
+  if constexpr (std::is_base_of_v<FunctionDecl, T>)
+    return FD->isDefaulted();
   return false;
-}
-inline bool isDefaultedHelper(const FunctionDecl *FD) {
-  return FD->isDefaulted();
 }
 
 // Metafunction to determine if type T has a member called getDecl.
-template <typename Ty>
-class has_getDecl {
-  using yes = char[1];
-  using no = char[2];
+template <typename T>
+using check_has_getDecl = decltype(std::declval<T &>().getDecl());
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->getDecl()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
+template <typename T>
+static constexpr bool has_getDecl =
+    llvm::is_detected<check_has_getDecl, T>::value;
 
 /// Matches overloaded operators with a specific name.
 ///
@@ -1021,10 +1017,7 @@ private:
     // First, for any types that have a declaration, extract the declaration and
     // match on it.
     if (const auto *S = dyn_cast<TagType>(&Node)) {
-      return matchesDecl(S->getDecl(), Finder, Builder);
-    }
-    if (const auto *S = dyn_cast<InjectedClassNameType>(&Node)) {
-      return matchesDecl(S->getDecl(), Finder, Builder);
+      return matchesDecl(S->getOriginalDecl(), Finder, Builder);
     }
     if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
@@ -1035,6 +1028,9 @@ private:
     if (const auto *S = dyn_cast<UnresolvedUsingType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
     }
+    if (const auto *S = dyn_cast<UsingType>(&Node)) {
+      return matchesDecl(S->getDecl(), Finder, Builder);
+    }
     if (const auto *S = dyn_cast<ObjCObjectType>(&Node)) {
       return matchesDecl(S->getInterface(), Finder, Builder);
     }
@@ -1042,7 +1038,7 @@ private:
     // A SubstTemplateTypeParmType exists solely to mark a type substitution
     // on the instantiated template. As users usually want to match the
     // template parameter on the uninitialized template, we can always desugar
-    // one level without loss of expressivness.
+    // one level without loss of expressiveness.
     // For example, given:
     //   template<typename T> struct X { T t; } class A {}; X<A> a;
     // The following matcher will match, which otherwise would not:
@@ -1070,12 +1066,6 @@ private:
                          Builder);
     }
 
-    // FIXME: We desugar elaborated types. This makes the assumption that users
-    // do never want to match on whether a type is elaborated - there are
-    // arguments for both sides; for now, continue desugaring.
-    if (const auto *S = dyn_cast<ElaboratedType>(&Node)) {
-      return matchesSpecialized(S->desugar(), Finder, Builder);
-    }
     // Similarly types found via using declarations.
     // These are *usually* meaningless sugar, and this matches the historical
     // behavior prior to the introduction of UsingType.
@@ -1111,6 +1101,11 @@ private:
                           ASTMatchFinder *Finder,
                           BoundNodesTreeBuilder *Builder) const {
     return matchesDecl(Node.getDecl(), Finder, Builder);
+  }
+
+  bool matchesSpecialized(const ObjCInterfaceDecl &Node, ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    return matchesDecl(Node.getCanonicalDecl(), Finder, Builder);
   }
 
   /// Extracts the operator new of the new call and returns whether the
@@ -1210,10 +1205,10 @@ using AdaptativeDefaultToTypes =
 /// All types that are supported by HasDeclarationMatcher above.
 using HasDeclarationSupportedTypes =
     TypeList<CallExpr, CXXConstructExpr, CXXNewExpr, DeclRefExpr, EnumType,
-             ElaboratedType, InjectedClassNameType, LabelStmt, AddrLabelExpr,
-             MemberExpr, QualType, RecordType, TagType,
+             InjectedClassNameType, LabelStmt, AddrLabelExpr, MemberExpr,
+             QualType, RecordType, TagType, UsingType,
              TemplateSpecializationType, TemplateTypeParmType, TypedefType,
-             UnresolvedUsingType, ObjCIvarRefExpr>;
+             UnresolvedUsingType, ObjCIvarRefExpr, ObjCInterfaceDecl>;
 
 /// A Matcher that allows binding the node it matches to an id.
 ///
@@ -1725,9 +1720,10 @@ public:
 template <typename T, typename ValueT>
 class ValueEqualsMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_base_of<CharacterLiteral, T>::value ||
-                std::is_base_of<CXXBoolLiteralExpr, T>::value ||
-                std::is_base_of<FloatingLiteral, T>::value ||
-                std::is_base_of<IntegerLiteral, T>::value,
+                    std::is_base_of<CXXBoolLiteralExpr, T>::value ||
+                    std::is_base_of<FloatingLiteral, T>::value ||
+                    std::is_base_of<IntegerLiteral, T>::value ||
+                    std::is_base_of<FixedPointLiteral, T>::value,
                 "the node must have a getValue method");
 
 public:
@@ -1787,7 +1783,7 @@ public:
 
 private:
   static DynTypedNode extract(const NestedNameSpecifierLoc &Loc) {
-    return DynTypedNode::create(*Loc.getNestedNameSpecifier());
+    return DynTypedNode::create(Loc.getNestedNameSpecifier());
   }
 };
 
@@ -1796,7 +1792,7 @@ private:
 ///
 /// Used to implement the \c loc() matcher.
 class TypeLocTypeMatcher : public MatcherInterface<TypeLoc> {
-  DynTypedMatcher InnerMatcher;
+  Matcher<QualType> InnerMatcher;
 
 public:
   explicit TypeLocTypeMatcher(const Matcher<QualType> &InnerMatcher)
@@ -1806,8 +1802,7 @@ public:
                BoundNodesTreeBuilder *Builder) const override {
     if (!Node)
       return false;
-    return this->InnerMatcher.matches(DynTypedNode::create(Node.getType()),
-                                      Finder, Builder);
+    return this->InnerMatcher.matches(Node.getType(), Finder, Builder);
   }
 };
 
@@ -1949,35 +1944,35 @@ inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const FunctionDecl &FD) {
   if (const auto* TemplateArgs = FD.getTemplateSpecializationArgs())
     return TemplateArgs->asArray();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
   if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
   if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const FunctionDecl &FD) {
   if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
     return Args->arguments();
-  return std::nullopt;
+  return {};
 }
 
 inline ArrayRef<TemplateArgumentLoc>
 getTemplateArgsWritten(const DeclRefExpr &DRE) {
   if (const auto *Args = DRE.getTemplateArgs())
     return {Args, DRE.getNumTemplateArgs()};
-  return std::nullopt;
+  return {};
 }
 
 inline SmallVector<TemplateArgumentLoc>
@@ -2164,8 +2159,10 @@ inline const Expr *getSubExpr(const NodeType &Node) {
 template <>
 inline const Expr *
 getSubExpr<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
-  if (!internal::equivalentUnaryOperator(Node))
+  if (!internal::equivalentUnaryOperator(Node) &&
+      Node.getOperator() != OO_Arrow) {
     return nullptr;
+  }
   return Node.getArg(0);
 }
 
@@ -2226,14 +2223,9 @@ inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
 inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-  auto optBinaryOpcode = equivalentBinaryOperator(Node);
-  if (!optBinaryOpcode) {
-    auto optUnaryOpcode = equivalentUnaryOperator(Node);
-    if (!optUnaryOpcode)
-      return std::nullopt;
-    return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-  }
-  return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+  if (const char *Str = getOperatorSpelling(Node.getOperator()))
+    return Str;
+  return std::nullopt;
 }
 inline StringRef getOpName(const CXXFoldExpr &Node) {
   return BinaryOperator::getOpcodeStr(Node.getOperator());
@@ -2274,14 +2266,9 @@ private:
     return Node.getOpcodeStr();
   }
   static std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-    auto optBinaryOpcode = equivalentBinaryOperator(Node);
-    if (!optBinaryOpcode) {
-      auto optUnaryOpcode = equivalentUnaryOperator(Node);
-      if (!optUnaryOpcode)
-        return std::nullopt;
-      return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-    }
-    return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+    if (const char *Str = getOperatorSpelling(Node.getOperator()))
+      return Str;
+    return std::nullopt;
   }
 
   std::vector<std::string> Names;
@@ -2333,6 +2320,14 @@ MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
                       internal::BoundNodesTreeBuilder *Builder) {
   return !Node.isNull() && Index < Node.getNumArgs() &&
          InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
+}
+
+inline std::string getDependentName(const DependentScopeDeclRefExpr &node) {
+  return node.getDeclName().getAsString();
+}
+
+inline std::string getDependentName(const DependentNameType &node) {
+  return node.getIdentifier()->getName().str();
 }
 
 } // namespace internal

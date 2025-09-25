@@ -93,6 +93,22 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_TRUE(V->getType()->isVectorTy());
   ASSERT_TRUE(isa<ConstantDataVector>(V));
 
+  V = parseConstantValue("<4 x i32> splat (i32 -2)", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<ConstantDataVector>(V));
+
+  V = parseConstantValue("<4 x i32> zeroinitializer", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<Constant>(V));
+  EXPECT_TRUE(cast<Constant>(V)->isNullValue());
+
+  V = parseConstantValue("<4 x i32> poison", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isVectorTy());
+  ASSERT_TRUE(isa<PoisonValue>(V));
+
   V = parseConstantValue("i32 add (i32 1, i32 2)", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantInt>(V));
@@ -104,6 +120,10 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   V = parseConstantValue("ptr undef", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<UndefValue>(V));
+
+  V = parseConstantValue("ptr poison", Error, M);
+  ASSERT_TRUE(V);
+  ASSERT_TRUE(isa<PoisonValue>(V));
 
   EXPECT_FALSE(parseConstantValue("duble 3.25", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected type");

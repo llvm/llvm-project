@@ -21,7 +21,7 @@ namespace {
 
 TEST(ValueMapperTest, mapMDNode) {
   LLVMContext Context;
-  auto *U = MDTuple::get(Context, std::nullopt);
+  auto *U = MDTuple::get(Context, {});
 
   // The node should be unchanged.
   ValueToValueMapTy VM;
@@ -107,7 +107,7 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
 
 TEST(ValueMapperTest, mapMDNodeUnresolved) {
   LLVMContext Context;
-  TempMDTuple T = MDTuple::getTemporary(Context, std::nullopt);
+  TempMDTuple T = MDTuple::getTemporary(Context, {});
 
   ValueToValueMapTy VM;
   EXPECT_EQ(T.get(), ValueMapper(VM, RF_NoModuleLevelChanges).mapMDNode(*T));
@@ -115,7 +115,7 @@ TEST(ValueMapperTest, mapMDNodeUnresolved) {
 
 TEST(ValueMapperTest, mapMDNodeDistinct) {
   LLVMContext Context;
-  auto *D = MDTuple::getDistinct(Context, std::nullopt);
+  auto *D = MDTuple::getDistinct(Context, {});
 
   {
     // The node should be cloned.
@@ -131,11 +131,11 @@ TEST(ValueMapperTest, mapMDNodeDistinct) {
 
 TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
   LLVMContext Context;
-  Metadata *Old = MDTuple::getDistinct(Context, std::nullopt);
+  Metadata *Old = MDTuple::getDistinct(Context, {});
   auto *D = MDTuple::getDistinct(Context, Old);
   ASSERT_EQ(Old, D->getOperand(0));
 
-  Metadata *New = MDTuple::getDistinct(Context, std::nullopt);
+  Metadata *New = MDTuple::getDistinct(Context, {});
   ValueToValueMapTy VM;
   VM.MD()[Old].reset(New);
 
@@ -146,7 +146,7 @@ TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
 
 TEST(ValueMapperTest, mapMDNodeSeeded) {
   LLVMContext Context;
-  auto *D = MDTuple::getDistinct(Context, std::nullopt);
+  auto *D = MDTuple::getDistinct(Context, {});
 
   // The node should be moved.
   ValueToValueMapTy VM;
@@ -159,7 +159,7 @@ TEST(ValueMapperTest, mapMDNodeSeeded) {
 
 TEST(ValueMapperTest, mapMDNodeSeededWithNull) {
   LLVMContext Context;
-  auto *D = MDTuple::getDistinct(Context, std::nullopt);
+  auto *D = MDTuple::getDistinct(Context, {});
 
   // The node should be moved.
   ValueToValueMapTy VM;
@@ -199,7 +199,7 @@ TEST(ValueMapperTest, mapMetadataMDString) {
 
 TEST(ValueMapperTest, mapMetadataGetMappedMD) {
   LLVMContext C;
-  auto *N0 = MDTuple::get(C, std::nullopt);
+  auto *N0 = MDTuple::get(C, {});
   auto *N1 = MDTuple::get(C, N0);
 
   // Make sure hasMD and getMappedMD work correctly.
@@ -216,7 +216,7 @@ TEST(ValueMapperTest, mapMetadataGetMappedMD) {
 
 TEST(ValueMapperTest, mapMetadataNoModuleLevelChanges) {
   LLVMContext C;
-  auto *N0 = MDTuple::get(C, std::nullopt);
+  auto *N0 = MDTuple::get(C, {});
   auto *N1 = MDTuple::get(C, N0);
 
   // Nothing should be memoized when RF_NoModuleLevelChanges.
@@ -246,7 +246,7 @@ TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
     EXPECT_FALSE(VM.MD().count(CAM));
 
     // But it should respect a mapping that gets seeded.
-    auto *N = MDTuple::get(C, std::nullopt);
+    auto *N = MDTuple::get(C, {});
     VM.MD()[CAM].reset(N);
     EXPECT_EQ(N, ValueMapper(VM).mapMetadata(*CAM));
     EXPECT_EQ(N, ValueMapper(VM, RF_IgnoreMissingLocals).mapMetadata(*CAM));
@@ -303,7 +303,7 @@ TEST(ValueMapperTest, mapValueLocalAsMetadata) {
   // property.  To keep RemapInstruction from crashing we need a non-null
   // return here, but we also shouldn't reference the unmapped local.  Use
   // "metadata !{}".
-  auto *N0 = MDTuple::get(C, std::nullopt);
+  auto *N0 = MDTuple::get(C, {});
   auto *N0AV = MetadataAsValue::get(C, N0);
   ValueToValueMapTy VM;
   EXPECT_EQ(N0AV, ValueMapper(VM).mapValue(*MAV));
@@ -347,8 +347,8 @@ TEST(ValueMapperTest, mapValueLocalInArgList) {
   // such as "metadata i32 %x" don't currently successfully maintain that
   // property.  To keep RemapInstruction from crashing we need a non-null
   // return here, but we also shouldn't reference the unmapped local.  Use
-  // undef for uses in a DIArgList.
-  auto *N0 = UndefValue::get(Type::getInt8Ty(C));
+  // poison for uses in a DIArgList.
+  auto *N0 = PoisonValue::get(Type::getInt8Ty(C));
   auto *N0AM = ValueAsMetadata::get(N0);
   std::vector<ValueAsMetadata*> N0Elts;
   N0Elts.push_back(N0AM);
@@ -434,6 +434,36 @@ TEST(ValueMapperTest, mapValueConstantTargetNoneToLayoutTypeNullValue) {
   auto *OldConstant = ConstantTargetNone::get(OldTy);
   auto *NewConstant = Constant::getNullValue(NewTy);
   EXPECT_EQ(NewConstant, Mapper.mapValue(*OldConstant));
+}
+
+TEST(ValueMapperTest, mapValuePtrAuth) {
+  LLVMContext C;
+  Type *PtrTy = PointerType::get(C, 0);
+  IntegerType *Int32Ty = Type::getInt32Ty(C);
+  IntegerType *Int64Ty = Type::getInt64Ty(C);
+
+  std::unique_ptr<GlobalVariable> Var0 = std::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "Var0");
+  std::unique_ptr<GlobalVariable> Var1 = std::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "Var1");
+  std::unique_ptr<GlobalVariable> Storage0 = std::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "Storage0");
+  std::unique_ptr<GlobalVariable> Storage1 = std::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "Storage1");
+
+  ConstantInt *ConstKey = ConstantInt::get(Int32Ty, 1);
+  ConstantInt *ConstDisc = ConstantInt::get(Int64Ty, 1234);
+
+  ValueToValueMapTy VM;
+  VM[Var0.get()] = Var1.get();
+  VM[Storage0.get()] = Storage1.get();
+
+  ConstantPtrAuth *Value =
+      ConstantPtrAuth::get(Var0.get(), ConstKey, ConstDisc, Storage0.get());
+  ConstantPtrAuth *MappedValue =
+      ConstantPtrAuth::get(Var1.get(), ConstKey, ConstDisc, Storage1.get());
+
+  EXPECT_EQ(ValueMapper(VM).mapValue(*Value), MappedValue);
 }
 
 } // end namespace

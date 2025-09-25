@@ -16,8 +16,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/TimeProfiler.h"
 
-#include "mach-o/compact_unwind_encoding.h"
-
 namespace lld::macho {
 
 using namespace llvm;
@@ -160,7 +158,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s, entry);
         else
-          enqueue(r.referent.get<InputSection *>(), r.addend, entry);
+          enqueue(cast<InputSection *>(r.referent), r.addend, entry);
       }
       for (Defined *d : getInputSection(entry)->symbols)
         addSym(d, entry);
@@ -183,7 +181,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
           }
         } else {
-          auto *referentIsec = r.referent.get<InputSection *>();
+          auto *referentIsec = cast<InputSection *>(r.referent);
           if (referentIsec->isLive(r.addend))
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
         }

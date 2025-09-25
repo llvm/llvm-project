@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#0)
 
 target triple = "hexagon"
@@ -112,7 +112,7 @@ declare <16 x i32> @llvm.hexagon.V6.lo(<32 x i32>) #1
 ; Function Attrs: nounwind readnone
 declare <32 x i32> @llvm.hexagon.V6.vunpackub(<16 x i32>) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
+attributes #0 = { null_pointer_is_valid nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0}

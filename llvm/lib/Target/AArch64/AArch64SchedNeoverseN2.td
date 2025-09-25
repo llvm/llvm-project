@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseN2Model : SchedMachineModel {
-  let IssueWidth            =  10; // Micro-ops dispatched at a time.
+  let IssueWidth            =   5; // Micro-ops dispatched at a time.
   let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.
@@ -512,6 +512,12 @@ def N2Write_8c_3L_4V : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL,
   let NumMicroOps = 7;
 }
 
+def N2Write_7c_7V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 7;
+  let NumMicroOps = 7;
+  let ReleaseAtCycles = [7];
+}
+
 //===----------------------------------------------------------------------===//
 // Define generic 8 micro-op types
 
@@ -548,6 +554,15 @@ def N2Write_9c_4L_4V : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL, N2UnitL,
 }
 
 //===----------------------------------------------------------------------===//
+// Define generic 9 micro-op types
+
+def N2Write_9c_9V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 9;
+  let NumMicroOps = 9;
+  let ReleaseAtCycles = [9];
+}
+
+//===----------------------------------------------------------------------===//
 // Define generic 10 micro-op types
 
 def N2Write_7c_5L01_5V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
@@ -555,6 +570,12 @@ def N2Write_7c_5L01_5V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
                                         N2UnitV, N2UnitV, N2UnitV, N2UnitV]> {
   let Latency     = 7;
   let NumMicroOps = 10;
+}
+
+def N2Write_10c_10V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 10;
+  let NumMicroOps = 10;
+  let ReleaseAtCycles = [10];
 }
 
 //===----------------------------------------------------------------------===//
@@ -578,6 +599,21 @@ def N2Write_7c_5L01_5S_5V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
                                            N2UnitV, N2UnitV, N2UnitV]> {
   let Latency     = 7;
   let NumMicroOps = 15;
+}
+
+def N2Write_15c_15V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 15;
+  let NumMicroOps = 15;
+  let ReleaseAtCycles = [15];
+}
+
+//===----------------------------------------------------------------------===//
+// Define generic 16 micro-op types
+
+def N2Write_16c_16V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 16;
+  let NumMicroOps = 16;
+  let ReleaseAtCycles = [16];
 }
 
 //===----------------------------------------------------------------------===//
@@ -795,22 +831,26 @@ def : SchedAlias<WriteF,     N2Write_2c_1V>;
 // FP compare
 def : SchedAlias<WriteFCmp,  N2Write_2c_1V0>;
 
+// FP divide and square root operations are performed using an iterative
+// algorithm and block subsequent similar operations to the same pipeline
+// until complete (Arm Neoverse N2 Software Optimization Guide, 3.14).
+
 // FP divide, square root
-def : SchedAlias<WriteFDiv,  N2Write_7c_1V0>;
+def : SchedAlias<WriteFDiv,  N2Write_7c_7V0>;
 
 // FP divide, H-form
-def : InstRW<[N2Write_7c_1V0],  (instrs FDIVHrr)>;
+def : InstRW<[N2Write_7c_7V0],  (instrs FDIVHrr)>;
 // FP divide, S-form
-def : InstRW<[N2Write_10c_1V0], (instrs FDIVSrr)>;
+def : InstRW<[N2Write_10c_10V0], (instrs FDIVSrr)>;
 // FP divide, D-form
-def : InstRW<[N2Write_15c_1V0], (instrs FDIVDrr)>;
+def : InstRW<[N2Write_15c_15V0], (instrs FDIVDrr)>;
 
 // FP square root, H-form
-def : InstRW<[N2Write_7c_1V0],  (instrs FSQRTHr)>;
+def : InstRW<[N2Write_7c_7V0],  (instrs FSQRTHr)>;
 // FP square root, S-form
-def : InstRW<[N2Write_9c_1V0],  (instrs FSQRTSr)>;
+def : InstRW<[N2Write_9c_9V0],  (instrs FSQRTSr)>;
 // FP square root, D-form
-def : InstRW<[N2Write_16c_1V0], (instrs FSQRTDr)>;
+def : InstRW<[N2Write_16c_16V0], (instrs FSQRTDr)>;
 
 // FP multiply
 def : WriteRes<WriteFMul, [N2UnitV]> { let Latency = 3; }
@@ -1724,13 +1764,13 @@ def : InstRW<[N2Write_20c_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                            "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[N2Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[N2Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[N2Write_3c_1V], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[N2Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[N2Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[N2Write_2c_1V], (instregex "^DUP_ZI_[BHSD]$",
@@ -1745,7 +1785,7 @@ def : InstRW<[N2Write_2c_1V1], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                           "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[N2Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[N2Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[N2Write_4c_1V1], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]$",
@@ -2078,7 +2118,7 @@ def : InstRW<[N2Write_3c_1V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[N2Write_4c_1V], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[N2Write_5c_1V], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[N2Write_5c_1V], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[N2Write_4c_1V], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;

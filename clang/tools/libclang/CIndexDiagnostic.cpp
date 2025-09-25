@@ -80,19 +80,19 @@ public:
 };    
     
 class CXDiagnosticRenderer : public DiagnosticNoteRenderer {
-public:  
-  CXDiagnosticRenderer(const LangOptions &LangOpts,
-                       DiagnosticOptions *DiagOpts,
+public:
+  CXDiagnosticRenderer(const LangOptions &LangOpts, DiagnosticOptions &DiagOpts,
                        CXDiagnosticSetImpl *mainSet)
-  : DiagnosticNoteRenderer(LangOpts, DiagOpts),
-    CurrentSet(mainSet), MainSet(mainSet) {}
+      : DiagnosticNoteRenderer(LangOpts, DiagOpts), CurrentSet(mainSet),
+        MainSet(mainSet) {}
 
   ~CXDiagnosticRenderer() override {}
 
   void beginDiagnostic(DiagOrStoredDiag D,
                        DiagnosticsEngine::Level Level) override {
 
-    const StoredDiagnostic *SD = D.dyn_cast<const StoredDiagnostic*>();
+    const StoredDiagnostic *SD =
+        dyn_cast_if_present<const StoredDiagnostic *>(D);
     if (!SD)
       return;
     
@@ -181,10 +181,10 @@ CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
   if (!TU->Diagnostics) {
     CXDiagnosticSetImpl *Set = new CXDiagnosticSetImpl();
     TU->Diagnostics = Set;
-    IntrusiveRefCntPtr<DiagnosticOptions> DOpts = new DiagnosticOptions;
-    CXDiagnosticRenderer Renderer(AU->getASTContext().getLangOpts(),
-                                  &*DOpts, Set);
-    
+    DiagnosticOptions DOpts;
+    CXDiagnosticRenderer Renderer(AU->getASTContext().getLangOpts(), DOpts,
+                                  Set);
+
     for (ASTUnit::stored_diag_iterator it = AU->stored_diag_begin(),
          ei = AU->stored_diag_end(); it != ei; ++it) {
       Renderer.emitStoredDiagnostic(*it);

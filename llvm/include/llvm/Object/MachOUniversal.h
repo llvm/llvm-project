@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -27,7 +28,7 @@ namespace object {
 class Archive;
 class IRObjectFile;
 
-class MachOUniversalBinary : public Binary {
+class LLVM_ABI MachOUniversalBinary : public Binary {
   virtual void anchor();
 
   uint32_t Magic;
@@ -44,7 +45,7 @@ public:
     MachO::fat_arch_64 Header64;
 
   public:
-    ObjectForArch(const MachOUniversalBinary *Parent, uint32_t Index);
+    LLVM_ABI ObjectForArch(const MachOUniversalBinary *Parent, uint32_t Index);
 
     void clear() {
       Parent = nullptr;
@@ -102,11 +103,11 @@ public:
       return ArchFlag ? ArchFlag : std::string();
     }
 
-    Expected<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;
-    Expected<std::unique_ptr<IRObjectFile>>
+    LLVM_ABI Expected<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;
+    LLVM_ABI Expected<std::unique_ptr<IRObjectFile>>
     getAsIRObject(LLVMContext &Ctx) const;
 
-    Expected<std::unique_ptr<Archive>> getAsArchive() const;
+    LLVM_ABI Expected<std::unique_ptr<Archive>> getAsArchive() const;
   };
 
   class object_iterator {
@@ -164,7 +165,6 @@ public:
   Expected<std::unique_ptr<Archive>>
   getArchiveForArch(StringRef ArchName) const;
 };
-
 }
 }
 

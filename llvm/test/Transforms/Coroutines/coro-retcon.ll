@@ -33,7 +33,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -43,8 +43,10 @@ define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @print(i32 4)
-; CHECK-NEXT:    tail call void @print(i32 5), !noalias !0
-; CHECK-NEXT:    tail call void @print(i32 6), !noalias !3
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]]
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META3]]
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CORO-LABEL: @main(
@@ -103,7 +105,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -137,14 +139,14 @@ cleanup:
   call void @use_var_ptr(ptr %a)
   %al = load i32, ptr %a
   call void @use_var(i32 %al)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare void @use_var(i32)

@@ -14,16 +14,16 @@
 #ifndef LLVM_CLANG_INTERPRETER_INTERPRETER_H
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
-#include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
-#include "clang/Sema/Ownership.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -37,9 +37,16 @@ class ThreadSafeContext;
 
 namespace clang {
 
+namespace driver {
+class ToolChain;
+} // namespace driver
+
 class CompilerInstance;
+class CXXRecordDecl;
+class Decl;
 class IncrementalExecutor;
 class IncrementalParser;
+class IncrementalCUDADeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
@@ -77,25 +84,28 @@ private:
   llvm::StringRef CudaSDKPath;
 };
 
-/// Generate glue code between the Interpreter's built-in runtime and user code.
-class RuntimeInterfaceBuilder {
-public:
-  virtual ~RuntimeInterfaceBuilder() = default;
-
-  using TransformExprFunction = ExprResult(RuntimeInterfaceBuilder *Builder,
-                                           Expr *, ArrayRef<Expr *>);
-  virtual TransformExprFunction *getPrintValueTransformer() = 0;
-};
+class IncrementalAction;
+class InProcessPrintingASTConsumer;
 
 /// Provides top-level interfaces for incremental compilation and execution.
 class Interpreter {
+  friend class Value;
+  friend InProcessPrintingASTConsumer;
+
   std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
+  /// Long-lived, incremental parsing action.
+  std::unique_ptr<IncrementalAction> Act;
   std::unique_ptr<IncrementalParser> IncrParser;
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
-  std::unique_ptr<RuntimeInterfaceBuilder> RuntimeIB;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalParser> DeviceParser;
+  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
+
+  // An optional action for CUDA offloading
+  std::unique_ptr<IncrementalAction> DeviceAct;
+
+  /// List containing information about each incrementally parsed piece of code.
+  std::list<PartialTranslationUnit> PTUs;
 
   unsigned InitPTUSize = 0;
 
@@ -104,38 +114,69 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
-  // Add a call to an Expr to report its result. We query the function from
-  // RuntimeInterfaceBuilder once and store it as a function pointer to avoid
-  // frequent virtual function calls.
-  RuntimeInterfaceBuilder::TransformExprFunction *AddPrintValueCall = nullptr;
+  /// Compiler instance performing the incremental compilation.
+  std::unique_ptr<CompilerInstance> CI;
+
+  /// An optional compiler instance for CUDA offloading
+  std::unique_ptr<CompilerInstance> DeviceCI;
+
+public:
+  struct JITConfig {
+    /// Indicates whether out-of-process JIT execution is enabled.
+    bool IsOutOfProcess = false;
+    /// Path to the out-of-process JIT executor.
+    std::string OOPExecutor = "";
+    std::string OOPExecutorConnect = "";
+    /// Indicates whether to use shared memory for communication.
+    bool UseSharedMemory = false;
+    /// Representing the slab allocation size for memory management in kb.
+    unsigned SlabAllocateSize = 0;
+    /// Path to the ORC runtime library.
+    std::string OrcRuntimePath = "";
+    /// PID of the out-of-process JIT executor.
+    uint32_t ExecutorPID = 0;
+    /// Custom lambda to be executed inside child process/executor
+    std::function<void()> CustomizeFork = nullptr;
+    /// An optional code model to provide to the JITTargetMachineBuilder
+    std::optional<llvm::CodeModel::Model> CM = std::nullopt;
+
+    JITConfig()
+        : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
+          UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
+          ExecutorPID(0), CustomizeFork(nullptr), CM(std::nullopt) {}
+  };
 
 protected:
   // Derived classes can use an extended interface of the Interpreter.
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err,
-              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
+  Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
+              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
+              JITConfig Config = JITConfig());
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
-  llvm::Error CreateExecutor();
+  llvm::Error CreateExecutor(JITConfig Config = JITConfig());
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
   void ResetExecutor();
 
-  // Lazily construct the RuntimeInterfaceBuilder. The provided instance will be
-  // used for the entire lifetime of the interpreter. The default implementation
-  // targets the in-process __clang_Interpreter runtime. Override this to use a
-  // custom runtime.
-  virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
-
 public:
   virtual ~Interpreter();
-
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  create(std::unique_ptr<CompilerInstance> CI);
+  create(std::unique_ptr<CompilerInstance> CI, JITConfig Config = {});
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
+  static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+  createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+                     llvm::StringRef OrcRuntimePath);
+  static llvm::Expected<
+      std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
+  outOfProcessJITBuilder(JITConfig Config);
+  static llvm::Expected<std::string>
+  getOrcRuntimePath(const driver::ToolChain &TC);
+
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
@@ -145,7 +186,6 @@ public:
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
-  llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
@@ -167,23 +207,33 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  enum InterfaceKind { NoAlloc, WithAlloc, CopyArray, NewTag };
-
-  const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
-    return ValuePrintingInfo;
-  }
-
-  Expr *SynthesizeExpr(Expr *E);
+  uint32_t getOutOfProcessExecutorPID() const;
 
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
 
-  llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+  // A cache for the compiled destructors used to for de-allocation of managed
+  // clang::Values.
+  mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
+  std::array<Expr *, 4> ValuePrintingInfo = {0};
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
+
+  /// @}
+  /// @name Value and pretty printing support
+  /// @{
+
+  std::string ValueDataToString(const Value &V) const;
+  std::string ValueTypeToString(const Value &V) const;
+
+  llvm::Expected<Expr *> convertExprToValue(Expr *E);
+
+  // When we deallocate clang::Value we need to run the destructor of the type.
+  // This function forces emission of the needed dtor.
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  CompileDtorCall(CXXRecordDecl *CXXRD) const;
 };
 } // namespace clang
 

@@ -166,7 +166,7 @@ const ComparisonCategoryInfo &ComparisonCategories::getInfoForType(QualType Ty) 
 
 QualType ComparisonCategoryInfo::getType() const {
   assert(Record);
-  return QualType(Record->getTypeForDecl(), 0);
+  return Record->getASTContext().getCanonicalTagType(Record);
 }
 
 StringRef ComparisonCategories::getCategoryString(ComparisonCategoryType Kind) {

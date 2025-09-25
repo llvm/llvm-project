@@ -144,6 +144,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
 }
 
 TEST(StringExtrasTest, UINT64ToHex) {
+  EXPECT_EQ(utohexstr(0x0u, false, 2), "00");
   EXPECT_EQ(utohexstr(0xA0u), "A0");
   EXPECT_EQ(utohexstr(0xA0u, false, 4), "00A0");
   EXPECT_EQ(utohexstr(0xA0u, false, 8), "000000A0");
@@ -308,11 +309,11 @@ TEST(StringExtrasTest, toStringAPInt) {
   EXPECT_EQ(toString(APInt(8, 255, isSigned), 36, isSigned, false), "73");
 
   isSigned = true;
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 2, isSigned, true), "-0b1");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 8, isSigned, true), "-01");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 10, isSigned, true), "-1");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 16, isSigned, true), "-0x1");
-  EXPECT_EQ(toString(APInt(8, 255, isSigned), 36, isSigned, false), "-1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 2, isSigned, true), "-0b1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 8, isSigned, true), "-01");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 10, isSigned, true), "-1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 16, isSigned, true), "-0x1");
+  EXPECT_EQ(toString(APInt(8, -1, isSigned), 36, isSigned, false), "-1");
 }
 
 TEST(StringExtrasTest, toStringAPSInt) {

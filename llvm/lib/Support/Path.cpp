@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -562,7 +561,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       Path = PathHome;
     }
   } else {
-    std::replace(Path.begin(), Path.end(), '\\', '/');
+    llvm::replace(Path, '\\', '/');
   }
 }
 
@@ -571,7 +570,7 @@ std::string convert_to_slash(StringRef path, Style style) {
     return std::string(path);
 
   std::string s = path.str();
-  std::replace(s.begin(), s.end(), '\\', '/');
+  llvm::replace(s, '\\', '/');
   return s;
 }
 

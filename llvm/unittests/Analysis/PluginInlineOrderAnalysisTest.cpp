@@ -61,12 +61,6 @@ struct CompilerInstance {
                                   ThinOrFullLTOPhase::None));
   }
 
-  ~CompilerInstance() {
-    // Reset the static variable that tracks if the plugin has been registered.
-    // This is needed to allow the test to run multiple times.
-    PluginInlineOrderAnalysis::unregister();
-  }
-
   std::string Output;
   std::unique_ptr<Module> OutputM;
 

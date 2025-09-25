@@ -6,7 +6,7 @@ define void @PR93000(ptr %a0, ptr %a1, ptr %a2, <32 x i16> %a3) {
 ; CHECK:       # %bb.0: # %Entry
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    addq $4, %rdi
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %Loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    kmovd %eax, %k1

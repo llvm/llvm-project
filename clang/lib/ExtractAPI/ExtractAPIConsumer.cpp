@@ -43,7 +43,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -217,8 +216,8 @@ struct LocationFileChecker {
                       SmallVector<std::pair<SmallString<32>, bool>> &KnownFiles)
       : CI(CI), KnownFiles(KnownFiles), ExternalFileEntries() {
     for (const auto &KnownFile : KnownFiles)
-      if (auto FileEntry = CI.getFileManager().getFile(KnownFile.first))
-        KnownFileEntries.insert(*FileEntry);
+      if (auto FE = CI.getFileManager().getOptionalFileRef(KnownFile.first))
+        KnownFileEntries.insert(*FE);
   }
 
 private:
@@ -305,8 +304,7 @@ public:
 
       auto DefLoc = MI->getDefinitionLoc();
 
-      if (SM.isWrittenInBuiltinFile(DefLoc) ||
-          SM.isWrittenInCommandLineFile(DefLoc))
+      if (SM.isInPredefinedFile(DefLoc))
         continue;
 
       auto AssociatedModuleMacros = MD.getModuleMacros();

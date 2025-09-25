@@ -10,10 +10,12 @@
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 
 namespace mlir {
-namespace {
-
+namespace func {
 #define GEN_PASS_DEF_DUPLICATEFUNCTIONELIMINATIONPASS
 #include "mlir/Dialect/Func/Transforms/Passes.h.inc"
+} // namespace func
+
+namespace {
 
 // Define a notion of function equivalence that allows for reuse. Ignore the
 // symbol name for this purpose.
@@ -54,6 +56,10 @@ struct DuplicateFuncOpEquivalenceInfo
     if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
         rhs == getTombstoneKey() || rhs == getEmptyKey())
       return false;
+
+    if (lhs.isDeclaration() || rhs.isDeclaration())
+      return false;
+
     // Check discardable attributes equivalence
     if (lhs->getDiscardableAttrDictionary() !=
         rhs->getDiscardableAttrDictionary())
@@ -76,7 +82,7 @@ struct DuplicateFuncOpEquivalenceInfo
 };
 
 struct DuplicateFunctionEliminationPass
-    : public impl::DuplicateFunctionEliminationPassBase<
+    : public func::impl::DuplicateFunctionEliminationPassBase<
           DuplicateFunctionEliminationPass> {
 
   using DuplicateFunctionEliminationPassBase<
@@ -97,23 +103,18 @@ struct DuplicateFunctionEliminationPass
       }
     });
 
-    // Update call ops to call unique func op representants.
-    module.walk([&](func::CallOp callOp) {
-      func::FuncOp callee = getRepresentant[callOp.getCalleeAttr().getAttr()];
-      callOp.setCallee(callee.getSymName());
-    });
-
-    // Erase redundant func ops.
+    // Update all symbol uses to reference unique func op
+    // representants and erase redundant func ops.
+    SymbolTableCollection symbolTable;
+    SymbolUserMap userMap(symbolTable, module);
     for (auto it : toBeErased) {
+      StringAttr oldSymbol = it.getSymNameAttr();
+      StringAttr newSymbol = getRepresentant[oldSymbol].getSymNameAttr();
+      userMap.replaceAllUsesWith(it, newSymbol);
       it.erase();
     }
   }
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::func::createDuplicateFunctionEliminationPass() {
-  return std::make_unique<DuplicateFunctionEliminationPass>();
-}
-
 } // namespace mlir

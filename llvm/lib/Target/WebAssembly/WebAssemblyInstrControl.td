@@ -144,7 +144,7 @@ defm THROW_REF : I<(outs), (ins EXNREF:$exn), (outs), (ins), [],
                    "throw_ref \t$exn", "throw_ref", 0x0a>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
-// Region within which an exception is caught: try / end_try
+// Region within which an exception is caught: try_table / end_try_table
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
 defm TRY_TABLE : I<(outs), (ins Signature:$sig, variable_ops),
                    (outs), (ins Signature:$sig, catch_list:$cal), [],
@@ -168,7 +168,8 @@ defm CATCH_ALL_REF : I<(outs EXNREF:$dst), (ins), (outs), (ins), []>;
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isPseudo = 1, isEHScopeReturn = 1 in {
-  defm CLEANUPRET : NRI<(outs), (ins), [(cleanupret)], "cleanupret", 0>;
+  defm CLEANUPRET : NRI<(outs), (ins bb_op:$ehpad), [(cleanupret bb:$ehpad)],
+                        "cleanupret", 0>;
   defm CATCHRET : NRI<(outs), (ins bb_op:$dst, bb_op:$from),
                       [(catchret bb:$dst, bb:$from)], "catchret", 0>;
 } // isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
@@ -180,11 +181,9 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
 // Rethrowing an exception: rethrow
 // The new exnref proposal also uses this instruction as an interim pseudo
 // instruction before we convert it to a THROW_REF.
+// $ehpad is the EH pad where the exception to rethrow has been caught.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
-defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
-// The depth argument will be computed in CFGStackify. We set it to 0 here for
-// now.
-def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
+defm RETHROW : NRI<(outs), (ins bb_op:$ehpad), [], "rethrow \t$ehpad", 0x09>;
 
 // Region within which an exception is caught: try / end_try
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {

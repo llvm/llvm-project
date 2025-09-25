@@ -21,14 +21,14 @@ subroutine s3
   real :: a(10,10), b(10,10)
   type y; end type
   integer(8) :: x
-  !PORTABILITY: Index variable 'y' should be a scalar object or common block if it is present in the enclosing scope
+  !PORTABILITY: Index variable 'y' should be a scalar object or common block if it is present in the enclosing scope [-Wodd-index-variable-restrictions]
   !ERROR: Must have INTEGER type, but is REAL(4)
   forall(x=1:10, y=1:10)
     !ERROR: Must have INTEGER type, but is REAL(4)
     !ERROR: Must have INTEGER type, but is REAL(4)
     a(x, y) = b(x, y)
   end forall
-  !PORTABILITY: Index variable 'y' should be a scalar object or common block if it is present in the enclosing scope
+  !PORTABILITY: Index variable 'y' should be a scalar object or common block if it is present in the enclosing scope [-Wodd-index-variable-restrictions]
   !ERROR: Must have INTEGER type, but is REAL(4)
   !ERROR: Must have INTEGER type, but is REAL(4)
   !ERROR: Must have INTEGER type, but is REAL(4)
@@ -51,7 +51,7 @@ subroutine s4
     !ERROR: Must have INTEGER type, but is REAL(4)
     a(y) = b(y)
   end forall
-  !PORTABILITY: Index variable 'i' should be scalar in the enclosing scope
+  !PORTABILITY: Index variable 'i' should be scalar in the enclosing scope [-Wodd-index-variable-restrictions]
   forall(i=1:10)
     a(i) = b(i)
   end forall
@@ -61,7 +61,7 @@ subroutine s6
   integer, parameter :: n = 4
   real, dimension(n) :: x
   data(x(i), i=1, n) / n * 0.0 /
-  !PORTABILITY: Index variable 't' should be a scalar object or common block if it is present in the enclosing scope
+  !PORTABILITY: Index variable 't' should be a scalar object or common block if it is present in the enclosing scope [-Wodd-index-variable-restrictions]
   !ERROR: Must have INTEGER type, but is REAL(4)
   !ERROR: Must have INTEGER type, but is REAL(4)
   forall(t=1:n) x(t) = 0.0
@@ -86,7 +86,7 @@ subroutine s7
   do concurrent(integer::i=1:5) local(j, i) &
       !ERROR: 'j' is already declared in this scoping unit
       local_init(k, j) &
-      !WARNING: Variable 'a' with SHARED locality implicitly declared
+      !WARNING: Variable 'a' with SHARED locality implicitly declared [-Wimplicit-shared]
       shared(a)
     a = j + 1
   end do

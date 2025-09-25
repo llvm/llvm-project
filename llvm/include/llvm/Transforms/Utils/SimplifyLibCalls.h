@@ -189,6 +189,7 @@ private:
   Value *optimizeMemSet(CallInst *CI, IRBuilderBase &B);
   Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
   Value *optimizeNew(CallInst *CI, IRBuilderBase &B, LibFunc &Func);
+  Value *maybeOptimizeNoBuiltinOperatorNew(CallInst *CI, IRBuilderBase &B);
   Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
 
@@ -212,6 +213,7 @@ private:
   Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
   Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeFdim(CallInst *CI, IRBuilderBase &B);
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
                                       IRBuilderBase &B);

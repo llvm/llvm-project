@@ -1,4 +1,5 @@
 // UNSUPPORTED: target={{.*windows.*}}
+// XFAIL: target={{.*}}-aix{{.*}}
 // 1) Compile shared code into different object files and into an executable.
 
 // RUN: %clangxx_profgen -std=c++14 -fcoverage-mapping %s -c -o %t.v1.o \

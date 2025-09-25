@@ -17,8 +17,7 @@
 #error "Invalid include"
 #endif
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/sanitizer.h"
 
@@ -239,7 +238,7 @@ LIBC_INLINE int set_except(int excepts) {
   return 0;
 }
 
-LIBC_INLINE int raise_except(int excepts) {
+template <bool SKIP_X87_FPU = false> LIBC_INLINE int raise_except(int excepts) {
   uint16_t status_value = internal::get_status_value_for_except(excepts);
 
   // We set the status flag for exception one at a time and call the
@@ -256,13 +255,16 @@ LIBC_INLINE int raise_except(int excepts) {
   // when raising the next exception.
 
   auto raise_helper = [](uint16_t singleExceptFlag) {
-    internal::X87StateDescriptor state;
+    if constexpr (!SKIP_X87_FPU) {
+      internal::X87StateDescriptor state;
+      internal::get_x87_state_descriptor(state);
+      state.status_word |= singleExceptFlag;
+      internal::write_x87_state_descriptor(state);
+    }
+
     uint32_t mxcsr = 0;
-    internal::get_x87_state_descriptor(state);
     mxcsr = internal::get_mxcsr();
-    state.status_word |= singleExceptFlag;
     mxcsr |= singleExceptFlag;
-    internal::write_x87_state_descriptor(state);
     internal::write_mxcsr(mxcsr);
     internal::fwait();
   };

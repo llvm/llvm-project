@@ -106,14 +106,14 @@ Symbol &createELFGOTHeader(LinkGraph &G,
   Symbol *TOCSymbol = nullptr;
 
   for (Symbol *Sym : G.defined_symbols())
-    if (LLVM_UNLIKELY(Sym->getName() == ELFTOCSymbolName)) {
+    if (LLVM_UNLIKELY(Sym->hasName() && *Sym->getName() == ELFTOCSymbolName)) {
       TOCSymbol = Sym;
       break;
     }
 
   if (LLVM_LIKELY(TOCSymbol == nullptr)) {
     for (Symbol *Sym : G.external_symbols())
-      if (Sym->getName() == ELFTOCSymbolName) {
+      if (Sym->hasName() && *Sym->getName() == ELFTOCSymbolName) {
         TOCSymbol = Sym;
         break;
       }
@@ -393,10 +393,12 @@ private:
 
 public:
   ELFLinkGraphBuilder_ppc64(StringRef FileName,
-                            const object::ELFFile<ELFT> &Obj, Triple TT,
-                            SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, ppc64::getEdgeKindName) {}
+                            const object::ELFFile<ELFT> &Obj,
+                            std::shared_ptr<orc::SymbolStringPool> SSP,
+                            Triple TT, SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  ppc64::getEdgeKindName) {}
 };
 
 template <llvm::endianness Endianness>
@@ -417,7 +419,8 @@ private:
 
   Error defineTOCBase(LinkGraph &G) {
     for (Symbol *Sym : G.defined_symbols()) {
-      if (LLVM_UNLIKELY(Sym->getName() == ELFTOCSymbolName)) {
+      if (LLVM_UNLIKELY(Sym->hasName() &&
+                        *Sym->getName() == ELFTOCSymbolName)) {
         TOCSymbol = Sym;
         return Error::success();
       }
@@ -427,7 +430,7 @@ private:
            "TOCSymbol should not be defined at this point");
 
     for (Symbol *Sym : G.external_symbols()) {
-      if (Sym->getName() == ELFTOCSymbolName) {
+      if (Sym->hasName() && *Sym->getName() == ELFTOCSymbolName) {
         TOCSymbol = Sym;
         break;
       }
@@ -463,7 +466,8 @@ private:
 
 template <llvm::endianness Endianness>
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer,
+                                   std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -480,7 +484,7 @@ createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
   using ELFT = object::ELFType<Endianness, true>;
   auto &ELFObjFile = cast<object::ELFObjectFile<ELFT>>(**ELFObj);
   return ELFLinkGraphBuilder_ppc64<Endianness>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
@@ -517,15 +521,16 @@ void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer,
+                                   std::shared_ptr<orc::SymbolStringPool> SSP) {
   return createLinkGraphFromELFObject_ppc64<llvm::endianness::big>(
-      std::move(ObjectBuffer));
+      std::move(ObjectBuffer), std::move(SSP));
 }
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_ppc64le(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_ppc64le(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   return createLinkGraphFromELFObject_ppc64<llvm::endianness::little>(
-      std::move(ObjectBuffer));
+      std::move(ObjectBuffer), std::move(SSP));
 }
 
 /// jit-link the given object buffer, which must be a ELF ppc64 object file.
