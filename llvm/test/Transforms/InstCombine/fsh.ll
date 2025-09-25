@@ -1217,8 +1217,7 @@ define i31 @fshr_neg_amount_non_power_two(i31 %x, i31 %y) {
 
 define i32 @rot_const_consecutive(i32 %x) {
 ; CHECK-LABEL: @rot_const_consecutive(
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 13)
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.fshl.i32(i32 [[R]], i32 [[R]], i32 27)
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 8)
 ; CHECK-NEXT:    ret i32 [[R2]]
 ;
   %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 13)
@@ -1229,7 +1228,7 @@ define i32 @rot_const_consecutive(i32 %x) {
 define i32 @rot_const_consecutive_multi_use(i32 %x) {
 ; CHECK-LABEL: @rot_const_consecutive_multi_use(
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 7)
-; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.fshl.i32(i32 [[R]], i32 [[R]], i32 4)
+; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[X]], i32 11)
 ; CHECK-NEXT:    [[R2:%.*]] = and i32 [[R]], [[R3]]
 ; CHECK-NEXT:    ret i32 [[R2]]
 ;
@@ -1241,9 +1240,7 @@ define i32 @rot_const_consecutive_multi_use(i32 %x) {
 
 define i32 @rot_const_consecutive_cancel_out(i32 %x) {
 ; CHECK-LABEL: @rot_const_consecutive_cancel_out(
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X1:%.*]], i32 [[X1]], i32 7)
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.fshl.i32(i32 [[R]], i32 [[R]], i32 25)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 7)
   %r2 = call i32 @llvm.fshl.i32(i32 %r, i32 %r, i32 25)
