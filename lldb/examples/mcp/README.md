@@ -9,8 +9,8 @@ To load the backport use:
 (lldb) start_mcp
 ```
 
-Then you can use the `lldb-mcp` script in this directory to launch a client for
-the running server.
+Then you can use the `./lldb-mcp` script in this directory to launch a client
+for the running server.
 
 For example,
 

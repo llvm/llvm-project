@@ -126,9 +126,6 @@ class MCPServer(transport.MessageHandler):
         super().__init__(transport)
         self.tools = {tool.name: tool for tool in tools}
 
-    def __del__(self):
-        print("deleting MCPServer....")
-
     @protocol.initialize.handler()
     async def initialize(
         self, **params: protocol.InitializeParams
@@ -192,8 +189,10 @@ async def run(opts: argparse.Namespace, notify: Optional[queue.Queue] = None):
         await server.serve_forever()
 
 
-# A registration count, if this module is loaded for multiple debugger then we
-# should only stop the global server if all registrations have been removed
+# A registration count, if this module is loaded for multiple lldb.SBDebugger
+# instances then we should only stop the global server if all registrations have
+# been removed. This could happen with lldb-rpc-server or lldb-dap in server
+# mode.
 registration_count = 0
 
 
