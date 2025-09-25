@@ -1915,22 +1915,33 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     const APInt *C1, *C2;
     if (match(&I,
               m_Add(m_NNegZExt(m_Add(m_Value(X), m_APInt(C1))), m_APInt(C2)))) {
-      // Check if inner constant C1 is negative C1 < 0 and outer constant C2 >=
-      // 0
+      // Check if inner const C1 is negative C1 < 0 and outer const C2 >= 0
       if (!C1->isNegative() || C2->isNegative())
         return nullptr;
 
       APInt Sum = C1->sext(C2->getBitWidth()) + *C2;
-      APInt newSum = Sum.trunc(C1->getBitWidth());
 
       if (!Sum.isSignedIntN(C1->getBitWidth()))
         return nullptr;
 
-      // X if sum is zero, else X + newSum
-      Value *Inner =
-          Sum.isZero()
-              ? X
-              : Builder.CreateAdd(X, ConstantInt::get(X->getType(), newSum));
+      Value *Inner;
+
+      if (Sum.isZero()) {
+        Inner = X;
+      } else {
+        unsigned XWidth = X->getType()->getIntegerBitWidth();
+        APInt MinX = APInt::getSignedMinValue(XWidth);
+        if ((MinX + Sum.trunc(XWidth)).isNegative())
+          return nullptr;
+
+        auto *ZExt = cast<ZExtInst>(I.getOperand(0));
+        auto *InnerAdd = ZExt->getOperand(0);
+        if (!ZExt->hasOneUse() || !InnerAdd->hasOneUse())
+          return nullptr;
+
+        Inner = Builder.CreateAdd(
+            X, ConstantInt::get(X->getType(), Sum.trunc(C1->getBitWidth())));
+      }
 
       return new ZExtInst(Inner, I.getType());
     }

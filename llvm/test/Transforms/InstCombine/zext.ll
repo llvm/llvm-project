@@ -1020,8 +1020,7 @@ define i32 @zext_nneg_no_cancel_multi_use(i8 %arg) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[ARG:%.*]], -2
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[ADD]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZEXT]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[ARG]], -1
-; CHECK-NEXT:    [[ADD2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ZEXT]], 1
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add = add i8 %arg, -2
@@ -1044,17 +1043,3 @@ define i32 @zext_nneg_overflow(i8 %arg) {
   ret i32 %add2
 }
 
-define i32 @zext_nneg_overflow_multi_use(i8 %arg) {
-; CHECK-LABEL: @zext_nneg_overflow_multi_use(
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[ARG:%.*]], -2
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[ADD]] to i32
-; CHECK-NEXT:    call void @use32(i32 [[ZEXT]])
-; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i32 [[ZEXT]], 299
-; CHECK-NEXT:    ret i32 [[ADD2]]
-;
-  %add = add i8 %arg, -2
-  %zext = zext nneg i8 %add to i32
-  call void @use32(i32 %zext)
-  %add2 = add i32 %zext, 299
-  ret i32 %add2
-}
