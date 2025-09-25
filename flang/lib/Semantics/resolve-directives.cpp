@@ -2201,8 +2201,8 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
     auto boundExpr{semantics::AnalyzeExpr(context_, *bound)};
     if (!boundExpr)
       return;
-    semantics::UnorderedSymbolSet boundSyms =
-        evaluate::CollectSymbols(*boundExpr);
+    semantics::UnorderedSymbolSet boundSyms{
+        evaluate::CollectSymbols(*boundExpr)};
     if (boundSyms.empty())
       return;
     for (Symbol *iv : ivs) {
@@ -2215,24 +2215,26 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
     }
   };
 
-  // Skip over loop transformation directives
-  const parser::OpenMPLoopConstruct *innerMostLoop = &x;
-  const parser::NestedConstruct *innerMostNest = nullptr;
-  while (auto &optLoopCons{
-      std::get<std::optional<parser::NestedConstruct>>(innerMostLoop->t)}) {
-    innerMostNest = &(optLoopCons.value());
-    if (const auto *innerLoop{
+  // Find the associated region by skipping nested loop-associated constructs
+  // such as loop transformations
+  const parser::NestedConstruct *innermostAssocRegion{nullptr};
+  const parser::OpenMPLoopConstruct *innermostConstruct{&x};
+  while (const auto &innerAssocStmt{
+      std::get<std::optional<parser::NestedConstruct>>(
+          innermostConstruct->t)}) {
+    innermostAssocRegion = &(innerAssocStmt.value());
+    if (const auto *innerConstruct{
             std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                innerMostNest)}) {
-      innerMostLoop = &(innerLoop->value());
+                innermostAssocRegion)}) {
+      innermostConstruct = &innerConstruct->value();
     } else {
       break;
     }
   }
 
-  if (!innerMostNest)
+  if (!innermostAssocRegion)
     return;
-  const auto &outer{std::get_if<parser::DoConstruct>(innerMostNest)};
+  const auto &outer{std::get_if<parser::DoConstruct>(innermostAssocRegion)};
   if (!outer)
     return;
 
