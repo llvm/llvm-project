@@ -296,10 +296,10 @@ uint16_t BinaryFunction::getConstantIslandAlignment() const {
 
   // If the constant island itself is a binary function, get its alignment
   // based on its size, original address, and its owning section's alignment.
-  uint64_t MaxAlignment =
+  const uint64_t MaxAlignment =
       std::min(uint64_t(1) << llvm::countr_zero(getAddress()),
                OriginSection->getAlignment());
-  uint64_t MinAlignment =
+  const uint64_t MinAlignment =
       std::max((uint64_t)DefaultAlignment,
                uint64_t(1) << (63 - llvm::countl_zero(getSize())));
   uint64_t Alignment = std::min(MinAlignment, MaxAlignment);
