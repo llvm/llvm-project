@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(
       argc, argv, "Dump a YAML description from an object file", nullptr,
-      nullptr, /*LongOptionsUseDoubleDash=*/true);
+      nullptr, nullptr, /*LongOptionsUseDoubleDash=*/true);
 
   std::error_code EC;
   std::unique_ptr<ToolOutputFile> Out(

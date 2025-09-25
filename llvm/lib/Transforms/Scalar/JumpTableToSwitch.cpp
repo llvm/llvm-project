@@ -186,7 +186,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
                      /*IsExpected=*/false);
   } else
-    setExplicitlyUnknownBranchWeights(*Switch);
+    setExplicitlyUnknownBranchWeights(*Switch, DEBUG_TYPE);
   if (PHI)
     CB->replaceAllUsesWith(PHI);
   CB->eraseFromParent();

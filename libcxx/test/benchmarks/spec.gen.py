@@ -45,7 +45,7 @@ default:
     tune                 = base
     copies               = 1
     threads              = 1
-    CC                   = cc -O3
+    CC                   = cc -O3 -std=c18 -Wno-implicit-function-declaration
     CXX                  = {cxx} {compile_flags} {flags} {link_flags} -Wno-error
     CC_VERSION_OPTION    = --version
     CXX_VERSION_OPTION   = --version
@@ -74,5 +74,5 @@ for benchmark in spec_benchmarks:
 
     # Parse the results into a LNT-compatible format. This also errors out if there are no CSV files, which
     # means that the benchmark didn't run properly (the `runcpu` command above never reports a failure).
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %T/result/CPUv8.001.*.train.csv --output-format=lnt > %T/results.lnt')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %T/result/*.train.csv --output-format=lnt > %T/results.lnt || ! cat %T/result/*.log')
     print(f'RUN: cat %T/results.lnt')

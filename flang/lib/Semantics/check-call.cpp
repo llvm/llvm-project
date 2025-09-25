@@ -330,7 +330,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
     const characteristics::Procedure &procedure,
-    const evaluate::ActualArgument &arg) {
+    const evaluate::ActualArgument &arg,
+    const characteristics::DummyArgument &dummyArg) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -357,6 +358,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};
+  // Used to issue a general warning when we don't generate a specific warning
+  // or error for this case.
+  bool volatileOrAsyncNeedsTempDiagnosticIssued{false};
   if (typesCompatible) {
     if (const auto *constantChar{
             evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
@@ -742,6 +746,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         if (whyNot->IsFatal()) {
           if (auto *msg{messages.Say(*undefinableMessage, dummyName)}) {
             if (!msg->IsFatal()) {
+              volatileOrAsyncNeedsTempDiagnosticIssued = true;
               msg->set_languageFeature(common::LanguageFeature::
                       UndefinableAsynchronousOrVolatileActual);
             }
@@ -770,12 +775,16 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Cases when temporaries might be needed but must not be permitted.
   bool dummyIsAssumedShape{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedShape)};
-  if (!dummyIsValue && (dummyIsAsynchronous || dummyIsVolatile)) {
+  bool copyOutNeeded{
+      evaluate::MayNeedCopy(&arg, &dummyArg, foldingContext, true)};
+  if (copyOutNeeded && !dummyIsValue &&
+      (dummyIsAsynchronous || dummyIsVolatile)) {
     if (actualIsAsynchronous || actualIsVolatile) {
       if (actualCoarrayRef) { // F'2023 C1547
         messages.Say(
             "Coindexed ASYNCHRONOUS or VOLATILE actual argument may not be associated with %s with ASYNCHRONOUS or VOLATILE attributes unless VALUE"_err_en_US,
             dummyName);
+        volatileOrAsyncNeedsTempDiagnosticIssued = true;
       }
       if ((actualRank > 0 || actualIsAssumedRank) && !actualIsContiguous) {
         if (dummyIsContiguous ||
@@ -784,14 +793,48 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           messages.Say(
               "ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE %s"_err_en_US,
               dummyName);
+          volatileOrAsyncNeedsTempDiagnosticIssued = true;
         }
       }
-      // The vector subscript case is handled by the definability check above.
-      // The copy-in/copy-out cases are handled by the previous checks.
-      // Nag, GFortran, and NVFortran all error on this case, even though it is
-      // ok, prossibly as an over-restriction of C1548.
     } else if (!(dummyIsAssumedShape || dummyIsAssumedRank ||
                    (actualIsPointer && dummyIsPointer)) &&
+        evaluate::IsArraySection(actual) && !actualIsContiguous &&
+        !evaluate::HasVectorSubscript(actual)) {
+      context.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
+          messages.at(),
+          "The array section '%s' should not be associated with %s with %s attribute, unless the dummy is assumed-shape or assumed-rank"_warn_en_US,
+          actual.AsFortran(), dummyName,
+          dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
+      volatileOrAsyncNeedsTempDiagnosticIssued = true;
+    }
+  }
+  // General implementation of F'23 15.5.2.5 note 5
+  // Adds a less specific error message for any copy-out that could overwrite
+  // a unread value in the actual argument.
+  // Occurences of `volatileOrAsyncNeedsTempDiagnosticIssued = true` indicate a
+  // more specific error message has already been issued. We might be able to
+  // clean this up by switching the coding style of MayNeedCopy to be more like
+  // WhyNotDefinable.
+  if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
+    if ((actualIsVolatile || actualIsAsynchronous) &&
+        (dummyIsVolatile || dummyIsAsynchronous)) {
+      context.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
+          messages.at(),
+          "The actual argument '%s' with %s attribute should not be associated with %s with %s attribute, because a temporary copy is required during the call"_warn_en_US,
+          actual.AsFortran(), actualIsVolatile ? "VOLATILE" : "ASYNCHRONOUS",
+          dummyName, dummyIsVolatile ? "VOLATILE" : "ASYNCHRONOUS");
+    }
+  }
+  // If there are any cases where we don't need a copy and some other compiler
+  // does, we issue a portability warning here.
+  if (context.ShouldWarn(common::UsageWarning::Portability)) {
+    // 3 other compilers error on this case even though it is ok.
+    // Possibly as an over-restriction of F'23 C1548.
+    if (!copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued &&
+        (!dummyIsValue && (dummyIsAsynchronous || dummyIsVolatile)) &&
+        !(actualIsAsynchronous || actualIsVolatile) &&
+        !(dummyIsAssumedShape || dummyIsAssumedRank ||
+            (actualIsPointer && dummyIsPointer)) &&
         evaluate::IsArraySection(actual) &&
         !evaluate::HasVectorSubscript(actual)) {
       context.Warn(common::UsageWarning::Portability, messages.at(),
@@ -799,7 +842,18 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           actual.AsFortran(), dummyName,
           dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
     }
+    // Possibly an over-restriction of F'23 15.5.2.5 note 5
+    if (copyOutNeeded && !volatileOrAsyncNeedsTempDiagnosticIssued) {
+      if ((dummyIsVolatile && !actualIsVolatile && !actualIsAsynchronous) ||
+          (dummyIsAsynchronous && !actualIsVolatile && !actualIsAsynchronous)) {
+        context.Warn(common::UsageWarning::Portability, messages.at(),
+            "The actual argument '%s' should not be associated with %s with %s attribute, because a temporary copy is required during the call"_port_en_US,
+            actual.AsFortran(), dummyName,
+            dummyIsVolatile ? "VOLATILE" : "ASYNCHRONOUS");
+      }
+    }
   }
+
   // 15.5.2.6 -- dummy is ALLOCATABLE
   bool dummyIsOptional{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
@@ -1302,7 +1356,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       object.type.Rank() == 0 && proc.IsElemental()};
                   CheckExplicitDataArg(object, dummyName, *expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
-                      allowActualArgumentConversions, extentErrors, proc, arg);
+                      allowActualArgumentConversions, extentErrors, proc, arg,
+                      dummy);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(*expr)) {
                   // ok
@@ -1482,6 +1537,10 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
           if (IsAssumedSizeArray(*wholeSymbol)) {
             evaluate::SayWithDeclaration(messages, *wholeSymbol,
                 "Whole assumed-size array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
+                wholeSymbol->name());
+          } else if (IsAssumedRank(*wholeSymbol)) {
+            evaluate::SayWithDeclaration(messages, *wholeSymbol,
+                "Assumed-rank array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
                 wholeSymbol->name());
           }
         }

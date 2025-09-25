@@ -57,8 +57,25 @@ static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
-  Type i32 = rewriter.getI32Type();
-  return LLVM::ConstantOp::create(rewriter, loc, i32, value);
+  return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), value);
+}
+
+/// Convert an unsigned number `val` to i64.
+static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val) {
+  IntegerType i64 = rewriter.getI64Type();
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (i64 == valTy)
+    return val;
+  return valTy.getWidth() > 64
+             ? Value(LLVM::TruncOp::create(rewriter, loc, i64, val))
+             : Value(LLVM::ZExtOp::create(rewriter, loc, i64, val));
+}
+
+static Value createI64Constant(ConversionPatternRewriter &rewriter,
+                               Location loc, int64_t value) {
+  return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), value);
 }
 
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
@@ -95,7 +112,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefType memrefType,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides,
-                           uint32_t elementByteWidth) {
+                           int64_t elementByteWidth) {
   if (memrefType.hasStaticShape() &&
       !llvm::any_of(strides, ShapedType::isDynamic)) {
     int64_t size = memrefType.getRank() == 0 ? 1 : 0;
@@ -103,9 +120,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
     for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
       size = std::max(shape[i] * strides[i], size);
     size = size * elementByteWidth;
-    assert(size < std::numeric_limits<uint32_t>::max() &&
-           "the memref buffer is too large");
-    return createI32Constant(rewriter, loc, static_cast<int32_t>(size));
+    return createI64Constant(rewriter, loc, size);
   }
   Value maxIndex;
   for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
@@ -116,9 +131,9 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                    ? LLVM::UMaxOp::create(rewriter, loc, maxIndex, maxThisDim)
                    : maxThisDim;
   }
-  Value maxIndexI32 = convertUnsignedToI32(rewriter, loc, maxIndex);
-  Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
-  return LLVM::MulOp::create(rewriter, loc, maxIndexI32, byteWidthConst);
+  Value maxIndexI64 = convertUnsignedToI64(rewriter, loc, maxIndex);
+  Value byteWidthConst = createI64Constant(rewriter, loc, elementByteWidth);
+  return LLVM::MulOp::create(rewriter, loc, maxIndexI64, byteWidthConst);
 }
 
 static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
@@ -536,52 +551,49 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
   LogicalResult
   matchAndRewrite(LDSBarrierOp op, LDSBarrierOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    bool requiresInlineAsm = chipset < kGfx90a || chipset.majorVersion == 11;
+    Location loc = op.getLoc();
+    // This ensures that waits on global memory aren't introduced on
+    // chips that don't have the BackOffBarrier feature enabled in LLVM.
+    bool requiresInlineAsm = chipset < kGfx90a;
 
+    Attribute mmra =
+        rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
+    // Note: while there *is* a workgroup-one-as scope, this, when combined with
+    // the MMRA, will lead to the fence having no effect. This is because the
+    // codepaths for an atomic load or store will observe that a
+    // one-address-space atomic to LDS requires no synchronization because
+    // operations on LDS are totally ordered with respect to each other, and so
+    // will not emit the correct waitcnt operations that these fences are
+    // intended to produce. Therefore, we use a broader type of fence and rely
+    // on the MMRA to relax it to the semantics we want.
+    StringRef scope = "workgroup";
+
+    auto relFence = LLVM::FenceOp::create(rewriter, loc,
+                                          LLVM::AtomicOrdering::release, scope);
+    relFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
     if (requiresInlineAsm) {
       auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
                                                       LLVM::AsmDialect::AD_ATT);
-      const char *asmStr =
-          ";;;WARNING: BREAKS DEBUG WATCHES\ns_waitcnt lgkmcnt(0)\ns_barrier";
+      const char *asmStr = ";;;WARNING: BREAKS DEBUG WATCHES\ns_barrier";
       const char *constraints = "";
-      rewriter.replaceOpWithNewOp<LLVM::InlineAsmOp>(
-          op,
+      LLVM::InlineAsmOp::create(
+          rewriter, loc,
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
           /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
           /*is_align_stack=*/false, LLVM::TailCallKind::None,
           /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
-      return success();
-    }
-    if (chipset.majorVersion < 12) {
-      constexpr int32_t ldsOnlyBitsGfx6789 = ~(0x1f << 8);
-      constexpr int32_t ldsOnlyBitsGfx10 = ~(0x3f << 8);
-      // Left in place in case someone disables the inline ASM path or future
-      // chipsets use the same bit pattern.
-      constexpr int32_t ldsOnlyBitsGfx11 = ~(0x3f << 4);
-
-      int32_t ldsOnlyBits;
-      if (chipset.majorVersion == 11)
-        ldsOnlyBits = ldsOnlyBitsGfx11;
-      else if (chipset.majorVersion == 10)
-        ldsOnlyBits = ldsOnlyBitsGfx10;
-      else if (chipset.majorVersion <= 9)
-        ldsOnlyBits = ldsOnlyBitsGfx6789;
-      else
-        return op.emitOpError(
-                   "don't know how to lower this for chipset major version")
-               << chipset.majorVersion;
-
-      Location loc = op->getLoc();
-      ROCDL::SWaitcntOp::create(rewriter, loc, ldsOnlyBits);
-      rewriter.replaceOpWithNewOp<ROCDL::SBarrierOp>(op);
+    } else if (chipset.majorVersion < 12) {
+      ROCDL::SBarrierOp::create(rewriter, loc);
     } else {
-      Location loc = op->getLoc();
-      ROCDL::WaitDscntOp::create(rewriter, loc, 0);
       ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
-      rewriter.replaceOpWithNewOp<ROCDL::BarrierWaitOp>(op, -1);
+      ROCDL::BarrierWaitOp::create(rewriter, loc, -1);
     }
 
+    auto acqFence = LLVM::FenceOp::create(rewriter, loc,
+                                          LLVM::AtomicOrdering::acquire, scope);
+    acqFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
+    rewriter.replaceOp(op, acqFence);
     return success();
   }
 };
@@ -1915,7 +1927,16 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
       else
         llvm_unreachable("unsupported row length");
 
-      Value vdstNew = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      const Value vdst0 = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      const Value vdst1 = LLVM::ExtractValueOp::create(rewriter, loc, res, {1});
+
+      const Value isEqual =
+          rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, vdst0, v);
+
+      // Per `permlane(16|32)` semantics: if the first extracted element equals
+      // 'v', the result is the second element; otherwise it is the first.
+      Value vdstNew =
+          rewriter.create<LLVM::SelectOp>(loc, isEqual, vdst1, vdst0);
       permuted.emplace_back(vdstNew);
     }
 

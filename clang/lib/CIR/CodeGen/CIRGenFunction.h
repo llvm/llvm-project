@@ -66,8 +66,16 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  /// The temporary alloca to hold the return value. This is
+  /// invalid iff the function has no return value.
+  Address returnValue = Address::invalid();
+
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
+
+  llvm::DenseMap<const clang::ValueDecl *, clang::FieldDecl *>
+      lambdaCaptureFields;
+  clang::FieldDecl *lambdaThisCaptureField = nullptr;
 
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
@@ -87,6 +95,8 @@ public:
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
+  /// This is the inner-most code context, which includes blocks.
+  const clang::Decl *curCodeDecl = nullptr;
 
   /// The function for which code is currently being generated.
   cir::FuncOp curFn;
@@ -702,6 +712,14 @@ public:
   Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
                                    mlir::Type fieldType, unsigned index);
 
+  /// Given an opaque value expression, return its LValue mapping if it exists,
+  /// otherwise create one.
+  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+
+  /// Given an opaque value expression, return its RValue mapping if it exists,
+  /// otherwise create one.
+  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -725,6 +743,14 @@ public:
                                                 const CXXRecordDecl *derived,
                                                 const CXXRecordDecl *base,
                                                 bool baseIsVirtual);
+
+  /// Determine whether a return value slot may overlap some other object.
+  AggValueSlot::Overlap_t getOverlapForReturnValue() {
+    // FIXME: Assuming no overlap here breaks guaranteed copy elision for base
+    // class subobjects. These cases may need to be revisited depending on the
+    // resolution of the relevant core issue.
+    return AggValueSlot::DoesNotOverlap;
+  }
 
   /// Determine whether a base class initialization may overlap some other
   /// object.
@@ -1044,7 +1070,7 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
-  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+  void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
                         Destroyer *destroyer);
 
@@ -1248,6 +1274,8 @@ public:
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
 
+  void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
+
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
@@ -1266,6 +1294,9 @@ public:
                                      bool useCurrentScope);
 
   mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
+                                  CallArgList &callArgs);
 
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
@@ -1329,6 +1360,9 @@ public:
   mlir::LogicalResult emitLabel(const clang::LabelDecl &d);
   mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
 
+  void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
+  void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
+
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
@@ -1364,6 +1398,10 @@ public:
   LValue emitLValue(const clang::Expr *e);
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitLValueForLambdaField(const FieldDecl *field);
+  LValue emitLValueForLambdaField(const FieldDecl *field,
+                                  mlir::Value thisValue);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -1678,6 +1716,10 @@ private:
     ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
   };
 
+  // Keep track of the last place we inserted a 'recipe' so that we can insert
+  // the next one in lexical order.
+  mlir::OpBuilder::InsertPoint lastRecipeLocation;
+
 public:
   // Helper type used to store the list of important information for a 'data'
   // clause variable, or a 'cache' variable reference.
@@ -1685,9 +1727,17 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    // The type of the original variable reference: that is, after 'bounds' have
+    // removed pointers/array types/etc. So in the case of int arr[5], and a
+    // private(arr[1]), 'origType' is 'int', but 'baseType' is 'int[5]'.
+    QualType origType;
     QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
+    // The list of types that we found when going through the bounds, which we
+    // can use to properly set the alloca section.
+    llvm::SmallVector<QualType> boundTypes;
   };
+
   // Gets the collection of info required to lower and OpenACC clause or cache
   // construct variable reference.
   OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);
