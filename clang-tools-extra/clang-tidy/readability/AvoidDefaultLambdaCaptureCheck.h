@@ -13,11 +13,10 @@
 
 namespace clang::tidy::readability {
 
-/** Flags lambdas that use default capture modes
- *
- * For the user-facing documentation see:
- * https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-default-lambda-capture.html
- */
+/// Flags lambdas that use default capture modes
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-default-lambda-capture.html
 class AvoidDefaultLambdaCaptureCheck : public ClangTidyCheck {
 public:
   AvoidDefaultLambdaCaptureCheck(StringRef Name, ClangTidyContext *Context)
