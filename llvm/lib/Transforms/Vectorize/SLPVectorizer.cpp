@@ -17519,7 +17519,9 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
         all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) || E->isCopyableElement(V) ||
+          return isa<PoisonValue>(V) ||
+                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                 E->isCopyableElement(V) ||
                  (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
         }))
       Res = FindLastInst();
@@ -19119,7 +19121,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::InsertElement: {
       assert(E->ReuseShuffleIndices.empty() && "All inserts should be unique");
-      Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      if (const TreeEntry *OpE = getOperandEntry(E, 1);
+          OpE && !OpE->isGather() && OpE->hasState() &&
+          !OpE->hasCopyableElements())
+        Builder.SetInsertPoint(cast<Instruction>(E->Scalars.back()));
+      else
+        setInsertPointAfterBundle(E);
       Value *V = vectorizeOperand(E, 1);
       ArrayRef<Value *> Op = E->getOperand(1);
       Type *ScalarTy = Op.front()->getType();
