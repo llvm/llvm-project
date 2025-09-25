@@ -267,7 +267,7 @@ TEST(HLSLRootSignatureTest, DefaultStaticSamplerDump) {
                          "maxLOD = 3.402823e+38, "
                          "space = 0, "
                          "visibility = All, "
-                         "flags = 0x0"
+                         "flags = None"
                          ")";
   EXPECT_EQ(Out, Expected);
 }
@@ -308,7 +308,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
                          "maxLOD = 3.200000e+01, "
                          "space = 7, "
                          "visibility = Domain, "
-                         "flags = 0x2"
+                         "flags = NonNormalizedCoordinates"
                          ")";
   EXPECT_EQ(Out, Expected);
 }
