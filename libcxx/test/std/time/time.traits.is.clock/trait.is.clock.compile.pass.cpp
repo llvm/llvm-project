@@ -72,10 +72,98 @@ struct ValidSteadyClock {
 };
 
 struct ValidSystemClock {
-  using rep                       = int64_t;
+  using rep                       = long long;
   using period                    = std::micro;
   using duration                  = std::chrono::microseconds;
   using time_point                = std::chrono::time_point<ValidSystemClock>;
+  static constexpr bool is_steady = false;
+  static time_point now();
+};
+
+// Test clocks with invalid is_steady type
+struct WrongIsSteadyType {
+  using rep        = long;
+  using period     = std::ratio<1>;
+  using duration   = std::chrono::seconds;
+  using time_point = std::chrono::time_point<WrongIsSteadyType>;
+  static bool is_steady; // Not const bool
+  static time_point now();
+};
+
+struct WrongIsSteadyNonBool {
+  using rep                      = long;
+  using period                   = std::ratio<1>;
+  using duration                 = std::chrono::seconds;
+  using time_point               = std::chrono::time_point<WrongIsSteadyNonBool>;
+  static constexpr int is_steady = 1; // Not bool
+  static time_point now();
+};
+
+// Test clocks with invalid now() return type
+struct WrongNowReturnType {
+  using rep                       = long;
+  using period                    = std::ratio<1>;
+  using duration                  = std::chrono::seconds;
+  using time_point                = std::chrono::time_point<WrongNowReturnType>;
+  static constexpr bool is_steady = false;
+  static int now(); // Wrong return type
+};
+
+// Test clocks with invalid period type
+struct WrongPeriodType {
+  using rep                       = long;
+  using period                    = int; // Not a ratio
+  using duration                  = std::chrono::seconds;
+  using time_point                = std::chrono::time_point<WrongPeriodType>;
+  static constexpr bool is_steady = false;
+  static time_point now();
+};
+
+// Test clocks with invalid rep type (neither arithmetic nor numeric_limits specialized)
+struct InvalidRepType {
+  using rep                       = EmptyStruct; // Not arithmetic, no numeric_limits specialization
+  using period                    = std::ratio<1>;
+  using duration                  = std::chrono::duration<EmptyStruct>;
+  using time_point                = std::chrono::time_point<InvalidRepType, duration>;
+  static constexpr bool is_steady = false;
+  static time_point now();
+};
+
+// Test clocks with wrong duration type
+struct WrongDurationType {
+  using rep                       = long;
+  using period                    = std::ratio<1>;
+  using duration                  = std::chrono::milliseconds; // Should be duration<long, ratio<1>>
+  using time_point                = std::chrono::time_point<WrongDurationType>;
+  static constexpr bool is_steady = false;
+  static time_point now();
+};
+
+// Test clocks with wrong time_point type
+struct WrongTimePointType {
+  using rep                       = long;
+  using period                    = std::ratio<1>;
+  using duration                  = std::chrono::duration<long, std::ratio<1>>;
+  using time_point                = int; // Not a time_point
+  static constexpr bool is_steady = false;
+  static time_point now();
+};
+
+struct WrongTimePointClock {
+  using rep                       = long;
+  using period                    = std::ratio<1>;
+  using duration                  = std::chrono::duration<long, std::ratio<1>>;
+  using time_point                = std::chrono::time_point<ValidSystemClock>; // Wrong clock type
+  static constexpr bool is_steady = false;
+  static time_point now();
+};
+
+// Valid clock with time_point that has matching duration instead of matching clock
+struct ValidClockWithDurationMatch {
+  using rep                       = int;
+  using period                    = std::milli;
+  using duration                  = std::chrono::duration<int, std::milli>;
+  using time_point                = std::chrono::time_point<ValidSystemClock, duration>; // Valid: matches duration
   static constexpr bool is_steady = false;
   static time_point now();
 };
@@ -114,6 +202,27 @@ int main(int, char**) {
   // Test valid custom clocks
   static_assert(std::chrono::is_clock_v<ValidSteadyClock>);
   static_assert(std::chrono::is_clock_v<ValidSystemClock>);
+  static_assert(std::chrono::is_clock_v<ValidClockWithDurationMatch>);
+
+  // Test clocks with invalid is_steady type
+  static_assert(!std::chrono::is_clock_v<WrongIsSteadyType>);    // is_steady not const bool
+  static_assert(!std::chrono::is_clock_v<WrongIsSteadyNonBool>); // is_steady not bool type
+
+  // Test clocks with invalid now() return type
+  static_assert(!std::chrono::is_clock_v<WrongNowReturnType>); // now() doesn't return time_point
+
+  // Test clocks with invalid period type
+  static_assert(!std::chrono::is_clock_v<WrongPeriodType>); // period is not a ratio
+
+  // Test clocks with invalid rep type
+  static_assert(!std::chrono::is_clock_v<InvalidRepType>); // rep is not arithmetic and no numeric_limits
+
+  // Test clocks with wrong duration type
+  static_assert(!std::chrono::is_clock_v<WrongDurationType>); // duration doesn't match duration<rep, period>
+
+  // Test clocks with wrong time_point type
+  static_assert(!std::chrono::is_clock_v<WrongTimePointType>);  // time_point is not a time_point
+  static_assert(!std::chrono::is_clock_v<WrongTimePointClock>); // time_point has wrong clock and wrong duration
 
   // cv-qualified and reference types
   static_assert(std::chrono::is_clock_v<const std::chrono::system_clock>);
