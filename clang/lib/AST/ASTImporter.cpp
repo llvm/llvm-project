@@ -699,6 +699,7 @@ namespace clang {
     ExpectedStmt
     VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
     ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
+    ExpectedStmt VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -9304,6 +9305,24 @@ ExpectedStmt ASTNodeImporter::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
   }
   return PseudoObjectExpr::Create(Importer.getToContext(), ToSynt, ToSemantics,
                                   E->getResultExprIndex());
+}
+
+ExpectedStmt
+ASTNodeImporter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToInitLoc = importChecked(Err, E->getInitLoc());
+  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
+  auto ToEndLoc = importChecked(Err, E->getEndLoc());
+  if (Err)
+    return std::move(Err);
+
+  SmallVector<Expr *, 4> ToArgs(E->getInitExprs().size());
+  if (Error Err = ImportContainerChecked(E->getInitExprs(), ToArgs))
+    return std::move(Err);
+  return CXXParenListInitExpr::Create(Importer.getToContext(), ToArgs, ToType,
+                                      E->getUserSpecifiedInitExprs().size(),
+                                      ToInitLoc, ToBeginLoc, ToEndLoc);
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
