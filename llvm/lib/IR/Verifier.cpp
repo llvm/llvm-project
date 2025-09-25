@@ -807,7 +807,8 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
             "rename metadata must have no operands", GO, MDs[0]);
 
       Check(GO->hasSection(),
-            "global value with rename metadata must have section attribute", GO);
+            "global value with rename metadata must have section attribute",
+            GO);
     }
   }
 
