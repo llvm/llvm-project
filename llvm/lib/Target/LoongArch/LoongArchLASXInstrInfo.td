@@ -12,10 +12,14 @@
 
 def SDT_LoongArchXVPERM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                                SDTCisVec<2>, SDTCisInt<2>]>;
+def SDT_LoongArchXVREPLVE0 : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                                  SDTCisSameAs<0, 1>]>;
 
 // Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
 def loongarch_xvperm: SDNode<"LoongArchISD::XVPERM", SDT_LoongArchXVPERM>;
+def loongarch_xvreplve0: SDNode<"LoongArchISD::XVREPLVE0", SDT_LoongArchXVREPLVE0>;
+def loongarch_xvreplve0q: SDNode<"LoongArchISD::XVREPLVE0Q", SDT_LoongArchXVREPLVE0>;
 def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskgez: SDNode<"LoongArchISD::XVMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskeqz: SDNode<"LoongArchISD::XVMSKEQZ", SDT_LoongArchVMSKCOND>;
@@ -1886,11 +1890,26 @@ def : Pat<(loongarch_xvperm v8i32:$xj, v8i32:$xk),
 def : Pat<(loongarch_xvperm v8f32:$xj, v8i32:$xk),
           (XVPERM_W v8f32:$xj, v8i32:$xk)>;
 
-// XVREPLVE0_{W/D}
+// XVREPLVE0_{B/H/W/D/Q}
+def : Pat<(loongarch_xvreplve0 v32i8:$xj),
+          (XVREPLVE0_B v32i8:$xj)>;
+def : Pat<(loongarch_xvreplve0 v16i16:$xj),
+          (XVREPLVE0_H v16i16:$xj)>;
+def : Pat<(loongarch_xvreplve0 v8i32:$xj),
+          (XVREPLVE0_W v8i32:$xj)>;
+def : Pat<(loongarch_xvreplve0 v4i64:$xj),
+          (XVREPLVE0_D v4i64:$xj)>;
+def : Pat<(loongarch_xvreplve0 v8f32:$xj),
+          (XVREPLVE0_W v8f32:$xj)>;
+def : Pat<(loongarch_xvreplve0 v4f64:$xj),
+          (XVREPLVE0_D v4f64:$xj)>;
 def : Pat<(lasxsplatf32 FPR32:$fj),
           (XVREPLVE0_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32))>;
 def : Pat<(lasxsplatf64 FPR64:$fj),
           (XVREPLVE0_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64))>;
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
+  def : Pat<(vt (loongarch_xvreplve0q LASX256:$xj)),
+            (XVREPLVE0_Q LASX256:$xj)>;
 
 // VSTELM
 defm : VstelmPat<truncstorei8, v32i8, XVSTELM_B, simm8, uimm5>;

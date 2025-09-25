@@ -936,20 +936,18 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     pgoOpt = llvm::PGOOptions(opts.InstrProfileOutput.empty()
                                   ? llvm::driver::getDefaultProfileGenName()
                                   : opts.InstrProfileOutput,
-                              "", "", opts.MemoryProfileUsePath, nullptr,
+                              "", "", opts.MemoryProfileUsePath,
                               llvm::PGOOptions::IRInstr,
                               llvm::PGOOptions::NoCSAction,
                               llvm::PGOOptions::ColdFuncOpt::Default, false,
                               /*PseudoProbeForProfiling=*/false, false);
   } else if (opts.hasProfileIRUse()) {
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-        llvm::vfs::getRealFileSystem();
     // -fprofile-use.
     auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
                                              : llvm::PGOOptions::NoCSAction;
     pgoOpt = llvm::PGOOptions(
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
-        opts.MemoryProfileUsePath, VFS, llvm::PGOOptions::IRUse, CSAction,
+        opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, false);
   }
 
@@ -1352,7 +1350,7 @@ void CodeGenAction::executeAction() {
       std::make_unique<BackendRemarkConsumer>(remarkConsumer));
 
   // write optimization-record
-  llvm::Expected<std::unique_ptr<llvm::ToolOutputFile>> optRecordFileOrErr =
+  llvm::Expected<llvm::LLVMRemarkFileHandle> optRecordFileOrErr =
       setupLLVMOptimizationRemarks(
           llvmModule->getContext(), codeGenOpts.OptRecordFile,
           codeGenOpts.OptRecordPasses, codeGenOpts.OptRecordFormat,
@@ -1364,8 +1362,7 @@ void CodeGenAction::executeAction() {
     return;
   }
 
-  std::unique_ptr<llvm::ToolOutputFile> optRecordFile =
-      std::move(*optRecordFileOrErr);
+  llvm::LLVMRemarkFileHandle optRecordFile = std::move(*optRecordFileOrErr);
 
   if (optRecordFile) {
     optRecordFile->keep();

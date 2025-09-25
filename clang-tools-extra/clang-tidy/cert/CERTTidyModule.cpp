@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -28,11 +29,11 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidSetjmpLongjmpCheck.h"
 #include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "CommandProcessorCheck.h"
 #include "DefaultOperatorNewAlignmentCheck.h"
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
@@ -40,14 +41,13 @@
 #include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
-#include "SetLongJmpCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 
 namespace {
 
 // Checked functions for cert-err33-c.
-// The following functions are deliberately excluded because they can be called
-// with NULL argument and in this case the check is not applicable:
+// The following functions are deliberately excluded because they can be
+// called with NULL argument and in this case the check is not applicable:
 // `mblen, mbrlen, mbrtowc, mbtowc, wctomb, wctomb_s`.
 // FIXME: The check can be improved to handle such cases.
 const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
@@ -257,7 +257,8 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
+    CheckFactories.registerCheck<modernize::AvoidSetjmpLongjmpCheck>(
+        "cert-err52-cpp");
     CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
         "cert-err58-cpp");
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
@@ -295,7 +296,8 @@ public:
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl37-c");
     // ENV
-    CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    CheckFactories.registerCheck<bugprone::CommandProcessorCheck>(
+        "cert-env33-c");
     // ERR
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "cert-err33-c");
