@@ -48,7 +48,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; SSE41-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movw $0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movl $0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [271,271,271,271,271,u,u,u]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [271,271,271,271,271,0,0,0]
 ; SSE41-NEXT:    .p2align 4
 ; SSE41-NEXT:  .LBB0_1: # %forcond
 ; SSE41-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -3581,7 +3581,7 @@ define void @SpinningCube() {
 ; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [u,u,-2.0E+0,u]
 ; SSE2-NEXT:    movsd {{.*#+}} xmm4 = xmm3[0],xmm4[1]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,0]
-; SSE2-NEXT:    movq {{.*#+}} xmm3 = xmm3[0],zero
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm0[0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm1[2,0]
 ; SSE2-NEXT:    addps %xmm0, %xmm3
 ; SSE2-NEXT:    movaps %xmm3, (%rax)
@@ -3604,7 +3604,7 @@ define void @SpinningCube() {
 ; SSSE3-NEXT:    movapd {{.*#+}} xmm4 = [u,u,-2.0E+0,u]
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm4 = xmm3[0],xmm4[1]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,0]
-; SSSE3-NEXT:    movq {{.*#+}} xmm3 = xmm3[0],zero
+; SSSE3-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm0[0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm1[2,0]
 ; SSSE3-NEXT:    addps %xmm0, %xmm3
 ; SSSE3-NEXT:    movaps %xmm3, (%rax)
@@ -3618,20 +3618,21 @@ define void @SpinningCube() {
 ; SSE41-LABEL: SpinningCube:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,zero,mem[0]
-; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [0.0E+0,0.0E+0,-2.0E+0,u]
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE41-NEXT:    movaps %xmm1, %xmm3
-; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm2[0]
-; SSE41-NEXT:    movaps %xmm0, %xmm4
-; SSE41-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[2,3]
-; SSE41-NEXT:    addps %xmm3, %xmm4
-; SSE41-NEXT:    movaps %xmm4, (%rax)
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,2]
-; SSE41-NEXT:    mulps %xmm1, %xmm2
-; SSE41-NEXT:    addps %xmm0, %xmm2
-; SSE41-NEXT:    movaps %xmm2, (%rax)
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE41-NEXT:    insertps {{.*#+}} xmm1 = zero,zero,zero,xmm0[0]
+; SSE41-NEXT:    movaps {{.*#+}} xmm2 = [0.0E+0,0.0E+0,-2.0E+0,u]
+; SSE41-NEXT:    movss {{.*#+}} xmm3 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE41-NEXT:    movaps %xmm2, %xmm4
+; SSE41-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm3[0]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm0[0]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
+; SSE41-NEXT:    addps %xmm4, %xmm0
+; SSE41-NEXT:    movaps %xmm0, (%rax)
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,2]
+; SSE41-NEXT:    mulps %xmm2, %xmm0
+; SSE41-NEXT:    addps %xmm1, %xmm0
+; SSE41-NEXT:    movaps %xmm0, (%rax)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: SpinningCube:
@@ -3641,7 +3642,8 @@ define void @SpinningCube() {
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [0.0E+0,0.0E+0,-2.0E+0,u]
 ; AVX-NEXT:    vmovss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX-NEXT:    vblendps {{.*#+}} xmm4 = xmm0[0,1,2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm4[0],xmm2[0],zero,xmm4[3]
 ; AVX-NEXT:    vaddps %xmm2, %xmm3, %xmm2
 ; AVX-NEXT:    vmovaps %xmm2, (%rax)
 ; AVX-NEXT:    vbroadcastss (%rax), %xmm2
