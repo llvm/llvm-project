@@ -8,6 +8,7 @@
 // CHECK: ![[PACK4:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_locals<int, int>"
 // CHECK: ![[PACK5:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_this<int>"
 // CHECK: ![[PACK6:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_this<int, int>"
+// CHECK: ![[PACK7:[0-9]+]] = distinct !DISubprogram(name: "capture_binding_and_param_pack<int, int>"
 
 template<typename... Args>
 auto capture_pack(Args... args) {
@@ -155,11 +156,41 @@ struct Foo {
 // CHECK-NEXT: ![[PACK6c_THIS]] = !DIDerivedType(tag: DW_TAG_member, name: "this"
 // CHECK-NOT:  DW_TAG_member
 
+template<typename... Args>
+auto capture_binding_and_param_pack(Args... args) {
+  struct C { int x = 2; int y = 3; };
+
+  auto [x, ...e] = C();
+
+  return [&, args..., x, ...params = args,
+          ...es = e] {
+    return e...[0] + es...[0];
+  }();
+}
+
+// CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C"
+// CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK7]]
+// CHECK-SAME:                           elements: ![[PACK7_ELEMS:[0-9]+]]
+// CHECK-NEXT: ![[PACK7_ELEMS]] = !{![[PACK7_ARGS:[0-9]+]]
+// CHECK-SAME:                      ![[PACK7_ARGS]]
+// CHECK-SAME:                      ![[PACK7_X:[0-9]+]]
+// CHECK-SAME:                      ![[PACK7_PARAMS:[0-9]+]]
+// CHECK-SAME:                      ![[PACK7_PARAMS]]
+// CHECK-SAME:                      ![[PACK7_ES:[0-9]+]]
+// CHECK-SAME:                      ![[PACK7_E:[0-9]+]]}
+// CHECK-NEXT: ![[PACK7_ARGS]] = !DIDerivedType(tag: DW_TAG_member, name: "args"
+// CHECK-NEXT: ![[PACK7_X]] = !DIDerivedType(tag: DW_TAG_member, name: "x"
+// CHECK-NEXT: ![[PACK7_PARAMS]] = !DIDerivedType(tag: DW_TAG_member, name: "params"
+// CHECK-NEXT: ![[PACK7_ES]] = !DIDerivedType(tag: DW_TAG_member, name: "es"
+// CHECK-NEXT: ![[PACK7_E]] = !DIDerivedType(tag: DW_TAG_member, name: "e"
+// CHECK-NOT:  DW_TAG_member
+
 int main() {
   return capture_pack(1)
          + capture_pack(1, 2)
          + capture_pack_and_locals(1, 2)
          + capture_pack_and_locals(1, 2, 3)
          + f.capture_pack_and_this(1)
-         + f.capture_pack_and_this(1, 2);
+         + f.capture_pack_and_this(1, 2)
+         + capture_binding_and_param_pack(1, 2);
 }
