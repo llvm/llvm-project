@@ -2089,6 +2089,11 @@ public:
   // OpenMP Clauses & Directives
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
 
+  void Unparse(const OmpBaseVariantNames &x) {
+    Walk(std::get<0>(x.t)); // OmpObject
+    Put(":");
+    Walk(std::get<1>(x.t)); // OmpObject
+  }
   void Unparse(const OmpTypeNameList &x) { //
     Walk(x.v, ",");
   }
