@@ -17,6 +17,7 @@
 
 #include "test_macros.h"
 #include <cassert>
+#include <concepts>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -201,20 +202,21 @@ constexpr bool test() {
   return true;
 }
 
+#if TEST_STD_VER >= 26
 constexpr bool test_ref() {
   {
     std::optional<int&> opt1;
-    auto opt1r = opt1.transform([](int i) { return i + 2; });
+    std::same_as<std::optional<int>> decltype(auto) opt1r = opt1.transform([](int i) { return i + 2; });
     assert(!opt1);
-    ASSERT_SAME_TYPE(decltype(opt1r), std::optional<int>);
+    assert(!opt1r);
   }
 
   {
     int i = 42;
     std::optional<int&> opt{i};
-    auto o2 = opt.transform([](int j) { return j + 2; });
+    std::same_as<std::optional<int>> decltype(auto) o2 = opt.transform([](int i) { return i + 2; });
+
     assert(*o2 == 44);
-    ASSERT_SAME_TYPE(decltype(o2), std::optional<int>);
   }
   // Test & overload
   {
@@ -222,9 +224,9 @@ constexpr bool test_ref() {
     {
       int i = 42;
       std::optional<int&> opt{i};
-      auto o3 = opt.transform(LVal{});
+      std::same_as<std::optional<int>> decltype(auto) o3 = opt.transform(LVal{});
+
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
 
     //With & qualifier on F's operator()
@@ -232,9 +234,9 @@ constexpr bool test_ref() {
       int i = 42;
       std::optional<int&> opt{i};
       RefQual l{};
-      auto o3 = opt.transform(l);
+      std::same_as<std::optional<int>> decltype(auto) o3 = opt.transform(l);
+
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
   }
   // const& overload
@@ -243,9 +245,9 @@ constexpr bool test_ref() {
     {
       int i = 42;
       std::optional<const int&> opt{i};
-      auto o3 = std::as_const(opt).transform(CLVal{});
+      std::same_as<std::optional<int>> decltype(auto) o3 = std::as_const(opt).transform(CLVal{});
+
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
 
     //With & qualifier on F's operator()
@@ -253,9 +255,9 @@ constexpr bool test_ref() {
       int i = 42;
       const std::optional<int&> opt{i};
       const CRefQual l{};
-      auto o3 = opt.transform(l);
+      std::same_as<std::optional<int>> decltype(auto) o3 = opt.transform(l);
+
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
   }
 
@@ -265,18 +267,17 @@ constexpr bool test_ref() {
     {
       int i = 42;
       std::optional<int> opt{i};
-      auto o3 = std::move(opt).transform(RVal{});
+      std::same_as<std::optional<int>> decltype(auto) o3 = std::move(opt).transform(RVal{});
+
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
 
     //With & qualifier on F's operator()
     {
       int i = 42;
       std::optional<int&> opt{i};
-      auto o3 = std::move(opt).transform(RVRefQual{});
+      std::same_as<std::optional<int>> decltype(auto) o3 = std::move(opt).transform(RVRefQual{});
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
   }
 
@@ -287,9 +288,8 @@ constexpr bool test_ref() {
       int i = 42;
       std::optional<int&> opt{i};
       const RVCRefQual rvc{};
-      auto o3 = opt.transform(std::move(rvc));
+      std::same_as<std::optional<int>> decltype(auto) o3 = opt.transform(std::move(rvc));
       assert(*o3 == 1);
-      ASSERT_SAME_TYPE(decltype(o3), std::optional<int>);
     }
   }
   {
@@ -299,11 +299,14 @@ constexpr bool test_ref() {
   }
   return true;
 }
+#endif
 
 int main(int, char**) {
   test();
   static_assert(test());
+#if TEST_STD_VER >= 26
   test_ref();
   static_assert(test_ref());
+#endif
   return 0;
 }

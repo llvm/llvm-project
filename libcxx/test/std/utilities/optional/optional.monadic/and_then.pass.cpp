@@ -16,6 +16,7 @@
 // template<class F> constexpr auto and_then(F&&) const&&;
 
 #include <cassert>
+#include <concepts>
 #include <optional>
 
 #include "test_macros.h"
@@ -265,9 +266,10 @@ constexpr bool test_ref() {
     {
       int j = 42;
       std::optional<int&> i{j};
-      assert(i.and_then(LVal{}) == 1);
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(LVal{});
+
+      assert(r == 1);
       assert(i.and_then(NOLVal{}) == std::nullopt);
-      ASSERT_SAME_TYPE(decltype(i.and_then(LVal{})), std::optional<int>);
     }
 
     //With & qualifier on F's operator()
@@ -275,10 +277,11 @@ constexpr bool test_ref() {
       int j = 42;
       std::optional<int&> i{j};
       RefQual l{};
-      assert(i.and_then(l) == 1);
       NORefQual nl{};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(l);
+
+      assert(r == 1);
       assert(i.and_then(nl) == std::nullopt);
-      ASSERT_SAME_TYPE(decltype(i.and_then(l)), std::optional<int>);
     }
   }
 
@@ -288,9 +291,10 @@ constexpr bool test_ref() {
     {
       int j = 42;
       std::optional<const int&> i{j};
-      assert(i.and_then(CLVal{}) == 1);
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(CLVal{});
+
+      assert(r == 1);
       assert(i.and_then(NOCLVal{}) == std::nullopt);
-      ASSERT_SAME_TYPE(decltype(i.and_then(CLVal{})), std::optional<int>);
     }
 
     //With & qualifier on F's operator()
@@ -298,10 +302,11 @@ constexpr bool test_ref() {
       int j = 42;
       const std::optional<int&> i{j};
       const CRefQual l{};
-      assert(i.and_then(l) == 1);
       const NOCRefQual nl{};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(l);
+
+      assert(r == 1);
       assert(i.and_then(nl) == std::nullopt);
-      ASSERT_SAME_TYPE(decltype(i.and_then(l)), std::optional<int>);
     }
   }
   // Test && overload
@@ -310,9 +315,10 @@ constexpr bool test_ref() {
     {
       int j = 42;
       std::optional<int&> i{j};
-      assert(i.and_then(RVRefQual{}) == 1);
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(RVRefQual{});
+
+      assert(r == 1);
       assert(i.and_then(NORVRefQual{}) == std::nullopt);
-      ASSERT_SAME_TYPE(decltype(i.and_then(RVRefQual{})), std::optional<int>);
     }
   }
 
@@ -323,10 +329,11 @@ constexpr bool test_ref() {
       int j = 42;
       const std::optional<int&> i{j};
       const RVCRefQual l{};
-      assert(i.and_then(std::move(l)) == 1);
       const NORVCRefQual nl{};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(std::move(l));
+
+      assert(r == 1);
       assert(i.and_then(std::move(nl)) == std::nullopt);
-      ASSERT_SAME_TYPE(decltype(i.and_then(std::move(l))), std::optional<int>);
     }
   }
   return true;
@@ -336,7 +343,9 @@ constexpr bool test_ref() {
 int main(int, char**) {
   test();
   static_assert(test());
+#if TEST_STD_VER >= 26
   test_ref();
   static_assert(test_ref());
+#endif
   return 0;
 }
