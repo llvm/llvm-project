@@ -2,10 +2,8 @@
 
 subroutine sub0
 !ERROR: The name 'vsub1' should refer to a procedure
-!ERROR: The name 'vsub1' has been implicitly declared
   !$omp declare variant (sub:vsub1) match (construct={parallel})
 !ERROR: The name 'sub1' should refer to a procedure
-!ERROR: The name 'sub1' has been implicitly declared
   !$omp declare variant (sub1:vsub) match (construct={parallel})
 contains
   subroutine vsub
