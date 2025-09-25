@@ -3419,6 +3419,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!UO || isa<Argument>(UO))
           continue;
 
+        // Compute known bits for the pointer, passing nullptr as context to
+        // avoid computeKnownBits using the assumption we are about to remove
+        // for reasoning.
+        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(),
+                               Value::MaxAlignmentExponent);
+        if ((1ULL << TZ) > -RK.ArgValue)
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+
         auto *LI = dyn_cast<LoadInst>(OBU.Inputs[0]);
         if (LI  &&
             isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
@@ -3428,16 +3437,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                               Builder.getInt64(RK.ArgValue))));
         return CallBase::removeOperandBundle(II, OBU.getTagID());
         }
-
-        // Compute known bits for the pointer, passing nullptr as context to
-        // avoid computeKnownBits using the assumption we are about to remove
-        // for reasoning.
-        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
-        unsigned TZ = std::min(Known.countMinTrailingZeros(),
-                               Value::MaxAlignmentExponent);
-        if ((1ULL << TZ) < RK.ArgValue)
-          continue;
-        return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
     }
 
