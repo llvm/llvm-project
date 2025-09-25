@@ -2409,9 +2409,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // R = fshl(X, X, C2)
       // fshl(R, R, C1) --> fshl(X, X, (C1 + C2) % bitsize)
       Value *InnerOp;
-      Constant *ShAmtInnerC;
+      const APInt *ShAmtInnerC, *ShAmtOuterC;
       if (match(Op0, m_FShl(m_Value(InnerOp), m_Deferred(InnerOp),
-                            m_ImmConstant(ShAmtInnerC))) &&
+                            m_APInt(ShAmtInnerC))) && match(ShAmtC, m_APInt(ShAmtOuterC)) &&
           Op0 == Op1) {
         APInt Sum =
             *ShAmtOuterC + *ShAmtInnerC;
