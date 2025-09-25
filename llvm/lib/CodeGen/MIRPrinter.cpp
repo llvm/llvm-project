@@ -312,17 +312,6 @@ static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
-    // Print the anti-hints.
-    const auto &AntiHints = RegInfo.getRegAllocationAntiHints(Reg);
-    if (!AntiHints.empty()) {
-      std::vector<yaml::FlowStringValue> AntiHintStrings;
-      for (Register AntiHint : AntiHints) {
-        yaml::FlowStringValue AntiHintStr;
-        printRegMIR(AntiHint, AntiHintStr, TRI);
-        AntiHintStrings.push_back(std::move(AntiHintStr));
-      }
-      VReg.AntiHints = std::move(AntiHintStrings);
-    }
     YamlMF.VirtualRegisters.push_back(std::move(VReg));
   }
 
