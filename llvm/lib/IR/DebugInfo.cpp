@@ -376,6 +376,12 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
 }
 
 /// Recursively handle DILocations in followup metadata etc.
+///
+/// TODO: If for example a followup loop metadata would refence itself this
+/// function would go into infinite recursion. We do not expect such cycles in
+/// the loop metadata (except for the self-referencing first element
+/// "LoopID"). However, we could at least handle such situations more gracefully
+/// somehow (e.g. by keeping track of visited nodes and dropping metadata).
 static Metadata *updateLoopMetadataDebugLocationsRecursive(
     Metadata *MetadataIn, function_ref<Metadata *(Metadata *)> Updater) {
   const MDTuple *M = dyn_cast_or_null<MDTuple>(MetadataIn);
@@ -386,15 +392,15 @@ static Metadata *updateLoopMetadataDebugLocationsRecursive(
   bool Updated = false;
   SmallVector<Metadata *, 4> MDs{M->getOperand(0)};
   for (Metadata *MD : llvm::drop_begin(M->operands())) {
-    if (!MD)
+    if (!MD) {
       MDs.push_back(nullptr);
-    else {
-      Metadata *NewMD =
-          Updater(updateLoopMetadataDebugLocationsRecursive(MD, Updater));
-      if (NewMD)
-        MDs.push_back(NewMD);
-      Updated |= NewMD != MD;
+      continue;
     }
+    Metadata *NewMD =
+        Updater(updateLoopMetadataDebugLocationsRecursive(MD, Updater));
+    if (NewMD)
+      MDs.push_back(NewMD);
+    Updated |= NewMD != MD;
   }
 
   assert(!M->isDistinct() && "M should not be distinct.");
