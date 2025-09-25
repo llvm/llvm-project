@@ -80,6 +80,10 @@ class __compressed_pair_padding {
 template <class _ToPad>
 class __compressed_pair_padding<_ToPad, true> {};
 
+#  define _LIBCPP_COMPRESSED_ELEMENT(T1, Initializer1)                                                                 \
+    _LIBCPP_NO_UNIQUE_ADDRESS T1 Initializer1;                                                                         \
+    _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T1> _LIBCPP_CONCAT3(__padding_, __LINE__, _)
+
 // TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
 #  ifdef _LIBCPP_COMPILER_GCC
 #    define _LIBCPP_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)                                                \
@@ -121,6 +125,8 @@ class __compressed_pair_padding<_ToPad, true> {};
 #  endif
 
 #else
+#  define _LIBCPP_COMPRESSED_ELEMENT(T1, Initializer1) _LIBCPP_NO_UNIQUE_ADDRESS T1 Initializer1
+
 #  define _LIBCPP_COMPRESSED_PAIR(T1, Name1, T2, Name2)                                                                \
     _LIBCPP_NO_UNIQUE_ADDRESS T1 Name1;                                                                                \
     _LIBCPP_NO_UNIQUE_ADDRESS T2 Name2
