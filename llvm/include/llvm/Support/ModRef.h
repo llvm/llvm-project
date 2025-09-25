@@ -162,6 +162,29 @@ public:
     return FRMB;
   }
 
+  /// Create MemoryEffectsBase that can only access inaccessible or errno
+  /// memory.
+  static MemoryEffectsBase
+  inaccessibleOrErrnoMemOnly(ModRefInfo InaccessibleMR = ModRefInfo::ModRef,
+                             ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::InaccessibleMem, InaccessibleMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible, argument or
+  /// errno memory.
+  static MemoryEffectsBase inaccessibleOrArgOrErrnoMemOnly(
+      ModRefInfo InaccessibleOrArgMR = ModRefInfo::ModRef,
+      ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::InaccessibleMem, InaccessibleOrArgMR);
+    FRMB.setModRef(Location::ArgMem, InaccessibleOrArgMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
+    return FRMB;
+  }
+
   /// Create MemoryEffectsBase that can only access argument or errno memory.
   static MemoryEffectsBase
   argumentOrErrnoMemOnly(ModRefInfo ArgMR = ModRefInfo::ModRef,
