@@ -464,9 +464,9 @@ class EventPoolTy {
 
 public:
   /// Initialize context, flags, and mutex
-  void init(ze_context_handle_t _Context, uint32_t _Flags) {
-    Context = _Context;
-    Flags = _Flags;
+  void init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
+    Context = ContextIn;
+    Flags = FlagsIn;
     Mtx.reset(new std::mutex);
   }
 
@@ -496,7 +496,7 @@ class StagingBufferTy {
   /// Number of buffers allocated together
   size_t Count = L0StagingBufferCount;
   /// Buffers increasing by Count if a new buffer is required
-  std::list<void *> Buffers;
+  llvm::SmallVector<void *> Buffers;
   /// Next buffer location in the buffers
   size_t Offset = 0;
 
@@ -533,10 +533,10 @@ public:
 
   bool initialized() const { return Context != nullptr; }
 
-  void init(ze_context_handle_t _Context, size_t _Size, size_t _Count) {
-    Context = _Context;
-    Size = _Size;
-    Count = _Count;
+  void init(ze_context_handle_t ContextIn, size_t SizeIn, size_t CountIn) {
+    Context = ContextIn;
+    Size = SizeIn;
+    Count = CountIn;
   }
 
   void reset() { Offset = 0; }
