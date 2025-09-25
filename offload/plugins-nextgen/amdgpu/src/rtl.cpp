@@ -2537,6 +2537,38 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return true;
   }
 
+private:
+  template <typename FTy>
+  Error syncTransfer(AsyncInfoWrapperTy &AsyncInfoWrapper, void *HostPtr,
+                     size_t Size, FTy Op) {
+    if (AsyncInfoWrapper.hasQueue())
+      if (auto Err = synchronize(AsyncInfoWrapper))
+        return Err;
+
+    void *PinnedPtr = nullptr;
+    hsa_status_t Status;
+    Status = hsa_amd_memory_lock(HostPtr, Size, nullptr, 0, &PinnedPtr);
+    if (auto Err = Plugin::check(Status, "error in hsa_amd_memory_lock: %s\n"))
+      return Err;
+
+    AMDGPUSignalTy Signal;
+    if (auto Err = Signal.init())
+      return Err;
+
+    if (auto Err = Op(PinnedPtr, Signal))
+      return Err;
+
+    if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
+      return Err;
+
+    if (auto Err = Signal.deinit())
+      return Err;
+
+    Status = hsa_amd_memory_unlock(HostPtr);
+    return Plugin::check(Status, "error in hsa_amd_memory_unlock: %s\n");
+  }
+
+public:
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -2553,34 +2585,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     if (Size >= OMPX_MaxAsyncCopyBytes) {
-      if (AsyncInfoWrapper.hasQueue())
-        if (auto Err = synchronize(AsyncInfoWrapper))
-          return Err;
-
-      hsa_status_t Status;
-      Status = hsa_amd_memory_lock(const_cast<void *>(HstPtr), Size, nullptr, 0,
-                                   &PinnedPtr);
-      if (auto Err =
-              Plugin::check(Status, "error in hsa_amd_memory_lock: %s\n"))
-        return Err;
-
-      AMDGPUSignalTy Signal;
-      if (auto Err = Signal.init())
-        return Err;
-
-      if (auto Err = hsa_utils::asyncMemCopy(useMultipleSdmaEngines(), TgtPtr,
-                                             Agent, PinnedPtr, Agent, Size, 0,
-                                             nullptr, Signal.get()))
-        return Err;
-
-      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
-        return Err;
-
-      if (auto Err = Signal.deinit())
-        return Err;
-
-      Status = hsa_amd_memory_unlock(const_cast<void *>(HstPtr));
-      return Plugin::check(Status, "error in hsa_amd_memory_unlock: %s\n");
+      return syncTransfer(AsyncInfoWrapper, const_cast<void *>(HstPtr), Size,
+                          [&](void *PinnedPtr, AMDGPUSignalTy &Signal) {
+                            return hsa_utils::asyncMemCopy(
+                                useMultipleSdmaEngines(), TgtPtr, Agent,
+                                PinnedPtr, Agent, Size, 0, nullptr,
+                                Signal.get());
+                          });
     }
 
     // Otherwise, use two-step copy with an intermediate pinned host buffer.
@@ -2613,9 +2624,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                                    hsaHostToDevice);
     }
 
-    return Plugin::error(ErrorCode::INVALID_VALUE,
-                         "AMDGPU doesn't support 2D/3D copies involving memory "
-                         "not allocated with `olMemAlloc`");
+    auto BufferSize = HstRect.Slice * (HstRect.Offset[2] + Size[2]);
+    return syncTransfer(AsyncInfoWrapper, const_cast<void *>(HstRect.Base),
+                        BufferSize,
+                        [&](void *PinnedPtr, AMDGPUSignalTy &Signal) {
+                          HstRect.Base = PinnedPtr;
+                          return hsa_utils::asyncMemCopyRect(
+                              TgtRect, HstRect, Agent, hsaHostToDevice, Size, 0,
+                              nullptr, Signal.get());
+                        });
   }
 
   /// Retrieve data from the device (device to host transfer).
@@ -2635,34 +2652,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     if (Size >= OMPX_MaxAsyncCopyBytes) {
-      if (AsyncInfoWrapper.hasQueue())
-        if (auto Err = synchronize(AsyncInfoWrapper))
-          return Err;
-
-      hsa_status_t Status;
-      Status = hsa_amd_memory_lock(const_cast<void *>(HstPtr), Size, nullptr, 0,
-                                   &PinnedPtr);
-      if (auto Err =
-              Plugin::check(Status, "error in hsa_amd_memory_lock: %s\n"))
-        return Err;
-
-      AMDGPUSignalTy Signal;
-      if (auto Err = Signal.init())
-        return Err;
-
-      if (auto Err = hsa_utils::asyncMemCopy(useMultipleSdmaEngines(),
-                                             PinnedPtr, Agent, TgtPtr, Agent,
-                                             Size, 0, nullptr, Signal.get()))
-        return Err;
-
-      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
-        return Err;
-
-      if (auto Err = Signal.deinit())
-        return Err;
-
-      Status = hsa_amd_memory_unlock(const_cast<void *>(HstPtr));
-      return Plugin::check(Status, "error in hsa_amd_memory_unlock: %s\n");
+      return syncTransfer(AsyncInfoWrapper, const_cast<void *>(HstPtr), Size,
+                          [&](void *PinnedPtr, AMDGPUSignalTy &Signal) {
+                            return hsa_utils::asyncMemCopy(
+                                useMultipleSdmaEngines(), PinnedPtr, Agent,
+                                TgtPtr, Agent, Size, 0, nullptr, Signal.get());
+                          });
     }
 
     // Otherwise, use two-step copy with an intermediate pinned host buffer.
@@ -2694,9 +2689,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                                    hsaDeviceToHost);
     }
 
-    return Plugin::error(ErrorCode::INVALID_VALUE,
-                         "AMDGPU doesn't support 2D/3D copies involving memory "
-                         "not allocated with `olMemAlloc`");
+    auto BufferSize = HstRect.Slice * (HstRect.Offset[2] + Size[2]);
+    return syncTransfer(AsyncInfoWrapper, const_cast<void *>(HstRect.Base),
+                        BufferSize,
+                        [&](void *PinnedPtr, AMDGPUSignalTy &Signal) {
+                          HstRect.Base = PinnedPtr;
+                          return hsa_utils::asyncMemCopyRect(
+                              HstRect, TgtRect, Agent, hsaDeviceToHost, Size, 0,
+                              nullptr, Signal.get());
+                        });
   }
 
   /// Exchange data between two devices within the plugin.
