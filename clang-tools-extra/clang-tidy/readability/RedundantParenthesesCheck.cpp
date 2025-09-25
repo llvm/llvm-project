@@ -24,6 +24,12 @@ AST_MATCHER_P(ParenExpr, subExpr, ast_matchers::internal::Matcher<Expr>,
   return InnerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
 }
 
+AST_MATCHER(ParenExpr, isInMacro) {
+  const Expr *E = Node.getSubExpr();
+  return Node.getLParen().isMacroID() || Node.getRParen().isMacroID() ||
+         E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
+}
+
 } // namespace
 
 void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
@@ -31,20 +37,15 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
       parenExpr(subExpr(anyOf(parenExpr(), integerLiteral(), floatLiteral(),
                               characterLiteral(), cxxBoolLiteral(),
                               stringLiteral(), declRefExpr())),
-                unless(
-                    // sizeof(...) is common used.
-                    hasParent(unaryExprOrTypeTraitExpr())))
+                unless(anyOf(isInMacro(),
+                             // sizeof(...) is common used.
+                             hasParent(unaryExprOrTypeTraitExpr()))))
           .bind("dup"),
       this);
 }
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
-  assert(PE);
-  const Expr *E = PE->getSubExpr();
-  if (PE->getLParen().isMacroID() || PE->getRParen().isMacroID() ||
-      E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID())
-    return;
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
       << FixItHint::CreateRemoval(PE->getLParen())
       << FixItHint::CreateRemoval(PE->getRParen());
