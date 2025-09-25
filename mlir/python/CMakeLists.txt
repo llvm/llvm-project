@@ -326,7 +326,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/arith.py
   DIALECT_NAME arith
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIArith
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -846,8 +849,20 @@ endif()
 # once ready.
 ################################################################################
 
+set(MLIR_PYTHON_CAPI_DYLIB_NAME MLIRPythonCAPI)
+configure_file(
+  "${CMAKE_CURRENT_LIST_DIR}/mlir/_mlir_libs/_capi.py.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/_mlir_libs/_capi.py"
+  @ONLY
+)
+declare_mlir_python_sources(
+  MLIRPythonCAPICTypesBinding
+  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+  SOURCES _mlir_libs/_capi.py
+)
+
 set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
-add_mlir_python_common_capi_library(MLIRPythonCAPI
+add_mlir_python_common_capi_library(${MLIR_PYTHON_CAPI_DYLIB_NAME}
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
   OUTPUT_DIRECTORY "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
@@ -963,7 +978,10 @@ endif()
 # This must come last.
 ################################################################################
 
-set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
+set(_declared_sources
+  MLIRPythonSources
+  MLIRPythonExtension.RegisterEverything
+  MLIRPythonCAPICTypesBinding)
 if(NOT CMAKE_CROSSCOMPILING)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
