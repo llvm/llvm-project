@@ -3506,9 +3506,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OpenMPDeclarativeAllocate &declarativeAllocate) {
+       const parser::OmpAllocateDirective &allocate) {
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
+    TODO(converter.getCurrentLocation(), "OmpAllocateDirective");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -3897,14 +3897,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPDispatchConstruct &) {
   if (!semaCtx.langOptions().OpenMPSimd)
     TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
-}
-
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OpenMPExecutableAllocate &execAllocConstruct) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
