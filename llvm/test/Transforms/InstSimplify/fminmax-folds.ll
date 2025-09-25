@@ -43,10 +43,10 @@ define void @minmax_qnan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %mi
 ; Note that maxnum/minnum return qnan here for snan inputs, unlike maximumnum/minimumnum
 define void @minmax_snan_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_snan_f32(
+; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINNUM_RES:%.*]], align 4
+; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINIMUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXIMUM_RES:%.*]], align 4
-; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MINIMUM_RES1:%.*]], align 4
-; CHECK-NEXT:    store float 0x7FFC000000000000, ptr [[MAXIMUM_RES1:%.*]], align 4
 ; CHECK-NEXT:    store float [[X:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    store float [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -98,10 +98,10 @@ define void @minmax_qnan_nxv2f64_op0(<vscale x 2 x double> %x, ptr %minnum_res, 
 ; Note that maxnum/minnum return qnan here for snan inputs, unlike maximumnum/minimumnum
 define void @minmax_snan_nxv2f64_op1(<vscale x 2 x double> %x, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_snan_nxv2f64_op1(
+; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINNUM_RES:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINIMUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXIMUM_RES:%.*]], align 16
-; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MINIMUM_RES1:%.*]], align 16
-; CHECK-NEXT:    store <vscale x 2 x double> splat (double 0x7FFC00DEAD00DEAD), ptr [[MAXIMUM_RES1:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> [[X:%.*]], ptr [[MINIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    store <vscale x 2 x double> [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
