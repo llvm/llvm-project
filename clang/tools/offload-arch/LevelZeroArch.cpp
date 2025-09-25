@@ -19,8 +19,8 @@
 #define ZE_MAX_DEVICE_NAME 256
 #define ZE_MAX_DEVICE_UUID_SIZE 16
 
-typedef void *ze_driver_handle_t;
-typedef void *ze_device_handle_t;
+using ze_driver_handle_t = void *;
+using ze_device_handle_t = void *;
 
 enum ze_result_t {
   ZE_RESULT_SUCCESS = 0,
@@ -168,10 +168,10 @@ int printGPUsByLevelZero() {
     llvm::SmallVector<ze_device_handle_t> Devices(DeviceCount);
     CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, Devices.data());
 
-    for (auto device : Devices) {
+    for (auto Device : Devices) {
       ze_device_properties_t DeviceProperties{
           ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES, nullptr};
-      CALL_ZE_AND_CHECK(zeDeviceGetProperties, device, &DeviceProperties);
+      CALL_ZE_AND_CHECK(zeDeviceGetProperties, Device, &DeviceProperties);
       llvm::outs() << DeviceProperties.name << '\n';
     }
   }
