@@ -2878,7 +2878,7 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
   bool have_index_match = false;
   m_index->GetTypesWithQuery(query_full, [&](DWARFDIE die) {
     if (Type *matching_type = ResolveType(die, true, true)) {
-      if (!query.GetSearchByMangledName() && matching_type->IsTemplateType()) {
+      if (matching_type->IsTemplateType()) {
         // We have to watch out for case where we lookup a type by basename and
         // it matches a template with simple template names. Like looking up
         // "Foo" and if we have simple template names then we will match
@@ -2913,7 +2913,7 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
   // after, filtering out entries with template parameters that don't match.
-  if (!have_index_match && !query.GetSearchByMangledName()) {
+  if (!have_index_match) {
     // Create a type matcher with a compiler context that is tuned for
     // -gsimple-template-names. We will use this for the index lookup and the
     // context matching, but will use the original "match" to insert matches
