@@ -27,6 +27,7 @@ static_library("bugprone") {
     "CapturingThisInMemberVariableCheck.cpp",
     "CastingThroughVoidCheck.cpp",
     "ChainedComparisonCheck.cpp",
+    "CommandProcessorCheck.cpp",
     "ComparePointerToMemberVirtualFunctionCheck.cpp",
     "CopyConstructorInitCheck.cpp",
     "CrtpConstructorAccessibilityCheck.cpp",
