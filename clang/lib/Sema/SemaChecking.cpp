@@ -2285,9 +2285,8 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
   if (PointeeTy.isVolatileQualified() || PointeeTy->isAtomicType() ||
       (!AllowConst && PointeeTy.isConstQualified()) ||
       (!AllowAS && PointeeTy.hasAddressSpace())) {
-    QualType Target = S.Context.getPointerType(PointeeTy.getUnqualifiedType());
-    if (const auto *AT = dyn_cast<AtomicType>(PointeeTy))
-      Target = S.Context.getPointerType(AT->getValueType());
+    QualType Target =
+        S.Context.getPointerType(PointeeTy.getAtomicUnqualifiedType());
     return S.Diag(PtrArg->getExprLoc(),
                   diag::err_typecheck_convert_incompatible)
            << PtrTy << Target << /*different qualifiers=*/5
