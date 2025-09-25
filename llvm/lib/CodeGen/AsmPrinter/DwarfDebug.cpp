@@ -2212,11 +2212,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
       -> std::optional<std::pair<const MachineInstr *, bool>> {
     // Is this instruction trivial data shuffling or frame-setup?
     bool isCopy = (TII.isCopyInstr(MI) ? true : false);
-    bool isTrivRemat =
-        TII.isTriviallyReMaterializable(MI) &&
-        llvm::all_of(MI.all_uses(), [](const MachineOperand &MO) {
-          return MO.getReg().isVirtual();
-        });
+    bool isTrivRemat = TII.isTriviallyReMaterializable(MI);
     bool isFrameSetup = MI.getFlag(MachineInstr::FrameSetup);
 
     if (!isFrameSetup && MI.getDebugLoc()) {
