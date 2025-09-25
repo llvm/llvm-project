@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -309,4 +313,77 @@ TEST(ELFTest, Hash) {
   // when long is 64 bits -- but that was never the intent. The code was
   // presuming 32-bit long. Thus make sure that extra bit doesn't appear. 
   EXPECT_EQ(hashSysV("ZZZZZW9p"), 0U);
+}
+
+template <class ELFT>
+static Expected<ELFObjectFile<ELFT>> toBinary(SmallVectorImpl<char> &Storage,
+                                              StringRef Yaml) {
+  raw_svector_ostream OS(Storage);
+  yaml::Input YIn(Yaml);
+  if (!yaml::convertYAML(YIn, OS, [](const Twine &Msg) {}))
+    return createStringError(std::errc::invalid_argument,
+                             "unable to convert YAML");
+  return ELFObjectFile<ELFT>::create(MemoryBufferRef(OS.str(), "dummyELF"));
+}
+
+TEST(ELFObjectFileTest, ELFNoteIteratorOverflow) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS64
+  Data:           ELFDATA2LSB
+  Type:           ET_EXEC
+  Machine:        EM_X86_64
+ProgramHeaders:
+  - Type:         PT_NOTE
+    FileSize:     0xffffffffffffff88
+    FirstSec:     .note.gnu.build-id
+    LastSec:      .note.gnu.build-id
+
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    AddressAlign: 0x04
+    ShOffset:     0xffffffffffffff88
+    Notes:
+      - Name:     "GNU"
+        Desc:     "abb50d82b6bdc861"
+        Type:     3
+)");
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  ELFFile<ELF64LE> Obj = ElfOrErr.get().getELFFile();
+
+  auto PhdrsOrErr = Obj.program_headers();
+  EXPECT_FALSE(!PhdrsOrErr);
+  std::string ErrMessage;
+  Error PErr = Error::success();
+  for (auto P : *PhdrsOrErr) {
+    if (P.p_type == ELF::PT_NOTE) {
+      Obj.notes(P, PErr);
+      handleAllErrors(std::move(PErr), [&](const ErrorInfoBase &EI) {
+        ErrMessage = EI.message();
+      });
+      EXPECT_EQ(ErrMessage,
+                ("invalid offset (0x" + Twine::utohexstr(P.p_offset) +
+                 ") or size (0x" + Twine::utohexstr(P.p_filesz) + ")")
+                    .str());
+    }
+  }
+
+  auto ShdrsOrErr = Obj.sections();
+  EXPECT_FALSE(!ShdrsOrErr);
+  Error SErr = Error::success();
+  for (auto S : *ShdrsOrErr) {
+    if (S.sh_type == ELF::SHT_NOTE) {
+      Obj.notes(S, SErr);
+      handleAllErrors(std::move(SErr), [&](const ErrorInfoBase &EI) {
+        ErrMessage = EI.message();
+      });
+      EXPECT_EQ(ErrMessage,
+                ("invalid offset (0x" + Twine::utohexstr(S.sh_offset) +
+                 ") or size (0x" + Twine::utohexstr(S.sh_size) + ")")
+                    .str());
+    }
+  }
 }
