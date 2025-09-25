@@ -466,7 +466,6 @@ void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
   });
 }
 
-// Custom lowering for math.sincos to __nv_sincosf/__nv_sincos libdevice calls
 struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
   using ConvertOpToLLVMPattern<math::SincosOp>::ConvertOpToLLVMPattern;
 
