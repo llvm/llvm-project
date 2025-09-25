@@ -68,7 +68,7 @@ private:
   // Allow Function to renumber blocks.
   friend class Function;
   /// Per-function unique number.
-  unsigned Number = -1u;
+  unsigned Number = ~0u;
 
   friend class BlockAddress;
   friend class SymbolTableListTraits<BasicBlock>;

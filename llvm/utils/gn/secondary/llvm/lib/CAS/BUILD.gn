@@ -1,0 +1,12 @@
+static_library("CAS") {
+  output_name = "LLVMCAS"
+  sources = [
+    "ActionCache.cpp",
+    "ActionCaches.cpp",
+    "BuiltinCAS.cpp",
+    "InMemoryCAS.cpp",
+    "MappedFileRegionArena.cpp",
+    "ObjectStore.cpp",
+    "OnDiskCommon.cpp",
+  ]
+}

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_DECL _CLC_OVERLOAD __CLC_GENTYPE __clc_exp_helper(__CLC_GENTYPE x,
-                                                       __CLC_GENTYPE x_min,
-                                                       __CLC_GENTYPE x_max,
-                                                       __CLC_GENTYPE r,
-                                                       __CLC_INTN n);
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
+__clc_exp_helper(__CLC_GENTYPE x, __CLC_GENTYPE x_min, __CLC_GENTYPE x_max,
+                 __CLC_GENTYPE r, __CLC_INTN n);

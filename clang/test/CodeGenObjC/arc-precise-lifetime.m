@@ -7,7 +7,7 @@ void test0(void) {
   PRECISE_LIFETIME id x = test0_helper();
   x = 0;
   // CHECK:      [[X:%.*]] = alloca ptr
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[X]])
   // CHECK-NEXT: [[CALL:%.*]] = call ptr @test0_helper()
   // CHECK-NEXT: store ptr [[CALL]], ptr [[X]]
 
@@ -20,7 +20,7 @@ void test0(void) {
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T1]]) [[NUW:#[0-9]+]]
   // CHECK-NOT:  clang.imprecise_release
 
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[X]])
   // CHECK-NEXT: ret void
 }
 
@@ -37,20 +37,20 @@ extern Test1 *test1_helper(void);
 void test1a_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[C:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retainAutorelease(ptr [[T0]])
   // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T6:%.*]] = call ptr
   // CHECK-NEXT: store ptr [[T6]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]], !clang.imprecise_release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   Test1 *ptr = test1_helper();
   char *c = [(ptr) interior];
@@ -61,20 +61,20 @@ void test1a_message(void) {
 void test1a_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[C:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retainAutorelease(ptr [[T0]])
   // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T6:%.*]] = call ptr
   // CHECK-NEXT: store ptr [[T6]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]], !clang.imprecise_release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   Test1 *ptr = test1_helper();
   char *c = ptr.interior;
@@ -85,20 +85,20 @@ void test1a_property(void) {
 void test1b_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[C:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T3:%.*]] = call ptr
   // CHECK-NEXT: store ptr [[T3]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]]
   // CHECK-NOT:  clang.imprecise_release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   PRECISE_LIFETIME Test1 *ptr = test1_helper();
   char *c = [ptr interior];
@@ -108,20 +108,20 @@ void test1b_message(void) {
 void test1b_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[C:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T3:%.*]] = call ptr
   // CHECK-NEXT: store ptr [[T3]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[C]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[C]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]]
   // CHECK-NOT:  clang.imprecise_release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   PRECISE_LIFETIME Test1 *ptr = test1_helper();
   char *c = ptr.interior;
@@ -131,20 +131,20 @@ void test1b_property(void) {
 void test1c_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[PC:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[PC]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retainAutorelease(ptr [[T0]])
   // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T6:%.*]] = call ptr
   // CHECK-NEXT: store ptr [[T6]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PC]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]], !clang.imprecise_release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   Test1 *ptr = test1_helper();
   char *pc = [ptr PropertyReturnsInnerPointer];
@@ -154,20 +154,20 @@ void test1c_message(void) {
 void test1c_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[PC:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[PC]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.retainAutorelease(ptr [[T0]])
   // CHECK-NEXT: [[T4:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T6:%.*]] = call ptr
   // CHECK-NEXT: store ptr [[T6]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PC]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]], !clang.imprecise_release
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   Test1 *ptr = test1_helper();
   char *pc = ptr.PropertyReturnsInnerPointer;
@@ -177,19 +177,19 @@ void test1c_property(void) {
 void test1d_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[PC:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[PC]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[CALL1:%.*]] = call ptr @objc_msgSend(ptr noundef [[T0]], ptr noundef [[SEL]])
   // CHECK-NEXT: store ptr [[CALL1]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PC]])
   // CHECK-NEXT: [[NINE:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[NINE]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   PRECISE_LIFETIME Test1 *ptr = test1_helper();
   char *pc = [ptr PropertyReturnsInnerPointer];
@@ -199,19 +199,19 @@ void test1d_message(void) {
 void test1d_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca ptr, align 8
   // CHECK:      [[PC:%.*]] = alloca ptr, align 8
-  // CHECK:      call void @llvm.lifetime.start.p0(i64 8, ptr [[PTR]])
+  // CHECK:      call void @llvm.lifetime.start.p0(ptr [[PTR]])
   // CHECK:      [[T0:%.*]] = call ptr @test1_helper() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T0]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[PC]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr
   // CHECK-NEXT: [[SEL:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[CALL1:%.*]] = call ptr @objc_msgSend(ptr noundef [[T0]], ptr noundef [[SEL]])
   // CHECK-NEXT: store ptr [[CALL1]], ptr
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PC]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PC]])
   // CHECK-NEXT: [[NINE:%.*]] = load ptr, ptr
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[NINE]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[PTR]])
   // CHECK-NEXT: ret void
   PRECISE_LIFETIME Test1 *ptr = test1_helper();
   char *pc = ptr.PropertyReturnsInnerPointer;

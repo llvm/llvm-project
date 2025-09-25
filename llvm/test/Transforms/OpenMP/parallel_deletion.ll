@@ -282,46 +282,46 @@ define void @delete_parallel_2() {
 ; CHECK-LABEL: define {{[^@]+}}@delete_parallel_2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR18:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR18:[0-9]+]]
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..5, ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..6, ptr noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@delete_parallel_2() {
 ; CHECK1-NEXT:  entry:
 ; CHECK1-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR0]]
+; CHECK1-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR0]]
 ; CHECK1-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..3, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..5, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..6, ptr nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A]])
+; CHECK1-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[A]])
 ; CHECK1-NEXT:    ret void
 ; CHECK2-LABEL: define {{[^@]+}}@delete_parallel_2() {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR0]]
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR0]]
 ; CHECK2-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..3, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..5, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
 ; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 noundef 1, ptr noundef @.omp_outlined..6, ptr nocapture noundef nonnull align 4 dereferenceable(4) [[A]])
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[A]])
 ; CHECK2-NEXT:    ret void
 entry:
   %a = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   store i32 0, ptr %a, align 4
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 1, ptr @.omp_outlined..3, ptr nonnull %a)
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 1, ptr @.omp_outlined..4, ptr nonnull %a)
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 1, ptr @.omp_outlined..5, ptr nonnull %a)
   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @0, i32 1, ptr @.omp_outlined..6, ptr nonnull %a)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret void
 }
 
@@ -445,7 +445,7 @@ omp_if.end:                                       ; preds = %entry, %omp_if.then
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare i32 @omp_get_thread_num() inaccessiblememonly nofree nosync nounwind readonly
 
@@ -531,7 +531,7 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 [[A1]]) #[[ATTR20:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 [[A1]]) #[[ATTR20:[0-9]+]]
 ; CHECK-NEXT:    store i32 1, ptr [[A1]], align 4
 ; CHECK-NEXT:    store ptr [[A1]], ptr [[DOTOMP_REDUCTION_RED_LIST]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
@@ -552,7 +552,7 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-NEXT:    [[TMP8:%.*]] = atomicrmw add ptr [[A]], i32 [[TMP7]] monotonic, align 4
 ; CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 ; CHECK:       .omp.reduction.default:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[A1]])
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..6
@@ -560,7 +560,7 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK1-NEXT:  entry:
 ; CHECK1-NEXT:    [[A1:%.*]] = alloca i32, align 4
 ; CHECK1-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
-; CHECK1-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 [[A1]]) #[[ATTR0]]
+; CHECK1-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 [[A1]]) #[[ATTR0]]
 ; CHECK1-NEXT:    store i32 1, ptr [[A1]], align 4
 ; CHECK1-NEXT:    store ptr [[A1]], ptr [[DOTOMP_REDUCTION_RED_LIST]], align 8
 ; CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
@@ -581,14 +581,14 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK1-NEXT:    [[TMP8:%.*]] = atomicrmw add ptr [[A]], i32 [[TMP7]] monotonic, align 4
 ; CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 ; CHECK1:       .omp.reduction.default:
-; CHECK1-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A1]])
+; CHECK1-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[A1]])
 ; CHECK1-NEXT:    ret void
 ; CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..6
 ; CHECK2-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr nocapture noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) {
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A1:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x ptr], align 8
-; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noundef nonnull align 4 [[A1]]) #[[ATTR0]]
+; CHECK2-NEXT:    call void @llvm.lifetime.start.p0(ptr noundef nonnull align 4 [[A1]]) #[[ATTR0]]
 ; CHECK2-NEXT:    store i32 1, ptr [[A1]], align 4
 ; CHECK2-NEXT:    store ptr [[A1]], ptr [[DOTOMP_REDUCTION_RED_LIST]], align 8
 ; CHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
@@ -609,12 +609,12 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK2-NEXT:    [[TMP8:%.*]] = atomicrmw add ptr [[A]], i32 [[TMP7]] monotonic, align 4
 ; CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 ; CHECK2:       .omp.reduction.default:
-; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noundef nonnull [[A1]])
+; CHECK2-NEXT:    call void @llvm.lifetime.end.p0(ptr noundef nonnull [[A1]])
 ; CHECK2-NEXT:    ret void
 entry:
   %a1 = alloca i32, align 4
   %.omp.reduction.red_list = alloca [1 x ptr], align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a1)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a1)
   store i32 1, ptr %a1, align 4
   store ptr %a1, ptr %.omp.reduction.red_list, align 8
   %tmp2 = load i32, ptr %.global_tid., align 4
@@ -638,7 +638,7 @@ entry:
   br label %.omp.reduction.default
 
 .omp.reduction.default:                           ; preds = %.omp.reduction.case2, %.omp.reduction.case1, %entry
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %a1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a1)
   ret void
 }
 
@@ -696,7 +696,7 @@ declare i32 @__kmpc_reduce_nowait(ptr, i32, i32, i64, ptr, ptr, ptr)
 
 declare void @__kmpc_end_reduce_nowait(ptr, i32, ptr)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare !callback !2 void @__kmpc_fork_call(ptr, i32, ptr, ...)
 

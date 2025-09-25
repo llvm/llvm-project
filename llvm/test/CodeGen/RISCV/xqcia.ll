@@ -11,7 +11,7 @@ define i32 @addsat(i32 %a, i32 %b) {
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    slt a2, a0, a2
-; RV32I-NEXT:    slti a1, a1, 0
+; RV32I-NEXT:    srli a1, a1, 31
 ; RV32I-NEXT:    beq a1, a2, .LBB0_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    srai a0, a0, 31

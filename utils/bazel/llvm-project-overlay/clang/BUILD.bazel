@@ -58,6 +58,7 @@ gentbl_cc_library(
         "Refactoring",
         "Sema",
         "Serialization",
+        "Trap",
     ] for out in [
         (
             "include/clang/Basic/Diagnostic%sKinds.inc" % c,
@@ -278,6 +279,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsRISCVXMIPSTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsRISCVXMIPS.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsX86BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsX86Base.td"],
     includes = ["include"],
@@ -357,6 +364,7 @@ gentbl_cc_library(
         ":BuiltinsBaseTdFiles",
         ":BuiltinsRISCVXAndesTdFiles",
         ":BuiltinsRISCVXCVTdFiles",
+        ":BuiltinsRISCVXMIPSTdFiles",
     ],
 )
 
@@ -1529,6 +1537,7 @@ cc_library(
         ":basic",
         ":config",
         ":driver_options_inc_gen",
+        ":lex",
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",

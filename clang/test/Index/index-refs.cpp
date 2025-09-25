@@ -81,13 +81,13 @@ int ginitlist[] = {EnumVal};
 // CHECK-NEXT: [indexDeclaration]: kind: enum
 // CHECK-NEXT: [indexDeclaration]: kind: enumerator | name: EnumVal
 // CHECK-NEXT: [indexDeclaration]: kind: variable | name: gx
-// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS
 // CHECK-NEXT: [indexEntityReference]: kind: typedef | name: MyInt
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS
 // CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS
 // CHECK-NEXT: [indexEntityReference]: kind: enumerator | name: EnumVal
 // CHECK-NEXT: [indexDeclaration]: kind: function | name: foo
-// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS
 // CHECK-NEXT: [indexEntityReference]: kind: typedef | name: MyInt
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS
 // CHECK-NEXT: [indexDeclaration]: kind: enum
 // CHECK-NEXT: [indexDeclaration]: kind: enumerator | name: SecondVal
 // CHECK-NEXT: [indexEntityReference]: kind: enumerator | name: EnumVal

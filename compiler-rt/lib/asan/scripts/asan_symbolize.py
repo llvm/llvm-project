@@ -507,20 +507,29 @@ class SymbolizationLoop(object):
         assert result
         return result
 
-    def get_symbolized_lines(self, symbolized_lines, inc_frame_counter=True):
+    def get_symbolized_lines(self, symbolized_lines):
         if not symbolized_lines:
-            if inc_frame_counter:
-                self.frame_no += 1
-            return [self.current_line]
-        else:
-            assert inc_frame_counter
-            result = []
-            for symbolized_frame in symbolized_lines:
-                result.append(
-                    "    #%s %s" % (str(self.frame_no), symbolized_frame.rstrip())
+            # If it is an unparsable frame, but contains a frame counter and address
+            # replace the frame counter so the stack is still consistent.
+            unknown_stack_frame_format = r"^( *#([0-9]+) +)(0x[0-9a-f]+) +.*"
+            match = re.match(unknown_stack_frame_format, self.current_line)
+            if match:
+                rewritten_line = (
+                    self.current_line[: match.start(2)]
+                    + str(self.frame_no)
+                    + self.current_line[match.end(2) :]
                 )
                 self.frame_no += 1
-            return result
+                return [rewritten_line]
+            # Not a frame line so don't increment the frame counter.
+            return [self.current_line]
+        result = []
+        for symbolized_frame in symbolized_lines:
+            result.append(
+                "    #%s %s" % (str(self.frame_no), symbolized_frame.rstrip())
+            )
+            self.frame_no += 1
+        return result
 
     def process_logfile(self):
         self.frame_no = 0
@@ -546,8 +555,7 @@ class SymbolizationLoop(object):
         match = re.match(stack_trace_line_format, line)
         if not match:
             logging.debug('Line "{}" does not match regex'.format(line))
-            # Not a frame line so don't increment the frame counter.
-            return self.get_symbolized_lines(None, inc_frame_counter=False)
+            return self.get_symbolized_lines(None)
         logging.debug(line)
         _, frameno_str, addr, binary, offset = match.groups()
 

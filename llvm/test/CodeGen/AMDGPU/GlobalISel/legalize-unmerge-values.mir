@@ -1090,3 +1090,24 @@ body: |
     $vgpr9_vgpr10_vgpr11 = COPY %8
 
 ...
+
+---
+name: test_unmerge_through_copy
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_unmerge_through_copy
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16), %2:_(s16) = G_UNMERGE_VALUES %0:_(s32)
+    %3:_(s16) = COPY %1:_(s16)
+    %4:_(s8), %5:_(s8) = G_UNMERGE_VALUES %3:_(s16)
+    %6:_(s32) = G_ZEXT %4:_(s8)
+    $vgpr0 = COPY %6:_(s32)
+...

@@ -1,8 +1,8 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=obj -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx600 -filetype=obj -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx600 -filetype=obj -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx600 -filetype=obj -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -o - %s | FileCheck -check-prefix=HSA-DEFAULT %s
-; RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx600 -filetype=obj -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx600 -filetype=obj -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; Flat instructions should not select if the target device doesn't
 ; support them. The default device should be able to select for HSA.

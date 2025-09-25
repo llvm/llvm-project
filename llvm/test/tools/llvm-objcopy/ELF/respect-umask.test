@@ -1,10 +1,8 @@
 ## This tests that the umask is respected when
 ## assigning permissions of output files.
 
-## Windows has no umask so this test makes no sense, nor would
-## it work because there is no umask(1) in a Windows environment
+## Windows has no umask so this test makes no sense.
 # UNSUPPORTED: system-windows
-# REQUIRES: shell
 
 # RUN: rm -f %t
 # RUN: touch %t

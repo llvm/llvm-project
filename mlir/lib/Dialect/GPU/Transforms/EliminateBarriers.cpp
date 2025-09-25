@@ -25,6 +25,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_GPUELIMINATEBARRIERS
@@ -36,9 +37,6 @@ using namespace mlir::gpu;
 
 #define DEBUG_TYPE "gpu-erase-barriers"
 #define DEBUG_TYPE_ALIAS "gpu-erase-barries-alias"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
 
 // The functions below provide interface-like verification, but are too specific
 // to barrier elimination to become interfaces.
@@ -424,27 +422,18 @@ static bool maybeCaptured(Value v) {
 /// everything. This seems sufficient to achieve barrier removal in structured
 /// control flow, more complex cases would require a proper dataflow analysis.
 static bool mayAlias(Value first, Value second) {
-  DEBUG_WITH_TYPE(DEBUG_TYPE_ALIAS, {
-    DBGS_ALIAS() << "checking aliasing between ";
-    DBGS_ALIAS() << first << "\n";
-    DBGS_ALIAS() << "                      and ";
-    DBGS_ALIAS() << second << "\n";
-  });
+  LDBG(DEBUG_TYPE_ALIAS, 1)
+      << "checking aliasing between " << first << " and " << second;
 
   first = getBase(first);
   second = getBase(second);
 
-  DEBUG_WITH_TYPE(DEBUG_TYPE_ALIAS, {
-    DBGS_ALIAS() << "base ";
-    DBGS_ALIAS() << first << "\n";
-    DBGS_ALIAS() << " and ";
-    DBGS_ALIAS() << second << "\n";
-  });
+  LDBG(DEBUG_TYPE_ALIAS, 1) << "base " << first << " and " << second;
 
   // Values derived from the same base memref do alias (unless we do a more
   // advanced analysis to prove non-overlapping accesses).
   if (first == second) {
-    DEBUG_WITH_TYPE(DEBUG_TYPE_ALIAS, DBGS_ALIAS() << "-> do alias!\n");
+    LDBG(DEBUG_TYPE_ALIAS, 1) << "-> do alias!";
     return true;
   }
 
@@ -493,7 +482,7 @@ static bool mayAlias(Value first, Value second) {
     return false;
 
   // Otherwise, conservatively assume aliasing.
-  DEBUG_WITH_TYPE(DEBUG_TYPE_ALIAS, DBGS_ALIAS() << "-> may alias!\n");
+  LDBG(DEBUG_TYPE_ALIAS, 1) << "-> may alias!";
   return true;
 }
 
@@ -567,20 +556,16 @@ haveConflictingEffects(ArrayRef<MemoryEffects::EffectInstance> beforeEffects,
         continue;
 
       // Other kinds of effects create a conflict, e.g. read-after-write.
-      LLVM_DEBUG(
-          DBGS() << "found a conflict between (before): " << before.getValue()
-                 << " read:" << isa<MemoryEffects::Read>(before.getEffect())
-                 << " write:" << isa<MemoryEffects::Write>(before.getEffect())
-                 << " alloc:"
-                 << isa<MemoryEffects::Allocate>(before.getEffect()) << " free:"
-                 << isa<MemoryEffects::Free>(before.getEffect()) << "\n");
-      LLVM_DEBUG(
-          DBGS() << "and (after):                " << after.getValue()
-                 << " read:" << isa<MemoryEffects::Read>(after.getEffect())
-                 << " write:" << isa<MemoryEffects::Write>(after.getEffect())
-                 << " alloc:" << isa<MemoryEffects::Allocate>(after.getEffect())
-                 << " free:" << isa<MemoryEffects::Free>(after.getEffect())
-                 << "\n");
+      LDBG() << "found a conflict between (before): " << before.getValue()
+             << " read:" << isa<MemoryEffects::Read>(before.getEffect())
+             << " write:" << isa<MemoryEffects::Write>(before.getEffect())
+             << " alloc:" << isa<MemoryEffects::Allocate>(before.getEffect())
+             << " free:" << isa<MemoryEffects::Free>(before.getEffect());
+      LDBG() << "and (after):                " << after.getValue()
+             << " read:" << isa<MemoryEffects::Read>(after.getEffect())
+             << " write:" << isa<MemoryEffects::Write>(after.getEffect())
+             << " alloc:" << isa<MemoryEffects::Allocate>(after.getEffect())
+             << " free:" << isa<MemoryEffects::Free>(after.getEffect());
       return true;
     }
   }
@@ -595,8 +580,8 @@ public:
 
   LogicalResult matchAndRewrite(BarrierOp barrier,
                                 PatternRewriter &rewriter) const override {
-    LLVM_DEBUG(DBGS() << "checking the necessity of: " << barrier << " "
-                      << barrier.getLoc() << "\n");
+    LDBG() << "checking the necessity of: " << barrier << " "
+           << barrier.getLoc();
 
     SmallVector<MemoryEffects::EffectInstance> beforeEffects;
     getEffectsBefore(barrier, beforeEffects, /*stopAtBarrier=*/true);
@@ -605,14 +590,12 @@ public:
     getEffectsAfter(barrier, afterEffects, /*stopAtBarrier=*/true);
 
     if (!haveConflictingEffects(beforeEffects, afterEffects)) {
-      LLVM_DEBUG(DBGS() << "the surrounding barriers are sufficient, removing "
-                        << barrier << "\n");
+      LDBG() << "the surrounding barriers are sufficient, removing " << barrier;
       rewriter.eraseOp(barrier);
       return success();
     }
 
-    LLVM_DEBUG(DBGS() << "barrier is necessary: " << barrier << " "
-                      << barrier.getLoc() << "\n");
+    LDBG() << "barrier is necessary: " << barrier << " " << barrier.getLoc();
     return failure();
   }
 };

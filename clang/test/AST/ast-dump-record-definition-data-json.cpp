@@ -2516,7 +2516,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "IsTrivial",
 // CHECK-NEXT:    "tagUsed": "struct"
 // CHECK-NEXT:   },
@@ -2646,7 +2645,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "IsNotTrivial",
 // CHECK-NEXT:    "tagUsed": "struct"
 // CHECK-NEXT:   },
@@ -3980,7 +3978,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "HasUserDeclaredConstructor",
 // CHECK-NEXT:    "tagUsed": "struct"
 // CHECK-NEXT:   },
@@ -4234,7 +4231,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "HasConstexprNonCopyMoveConstructor",
 // CHECK-NEXT:    "tagUsed": "struct"
 // CHECK-NEXT:   },
@@ -4381,7 +4377,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "HasNoConstexprNonCopyMoveConstructor",
 // CHECK-NEXT:    "tagUsed": "struct"
 // CHECK-NEXT:   },

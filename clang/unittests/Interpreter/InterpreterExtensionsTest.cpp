@@ -75,9 +75,14 @@ struct OutOfProcInterpreter : public Interpreter {
 };
 
 TEST_F(InterpreterExtensionsTest, FindRuntimeInterface) {
+// FIXME : WebAssembly doesn't currently support Jit (see
+// https: // github.com/llvm/llvm-project/pull/150977#discussion_r2237521095).
+// so this check of HostSupportsJIT has been skipped
+// over until support is added, and HostSupportsJIT can return true.
+#ifndef __EMSCRIPTEN__
   if (!HostSupportsJIT())
     GTEST_SKIP();
-
+#endif
   clang::IncrementalCompilerBuilder CB;
   llvm::Error ErrOut = llvm::Error::success();
   auto CI = cantFail(CB.CreateCpp());

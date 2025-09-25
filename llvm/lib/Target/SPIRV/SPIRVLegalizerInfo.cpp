@@ -203,6 +203,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allIntScalarsAndVectors,
                                 allFloatScalarsAndVectors);
 
+  getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+      .legalForCartesianProduct(allIntScalarsAndVectors,
+                                allFloatScalarsAndVectors);
+
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allScalarsAndVectors);
@@ -271,6 +275,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(
       {G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_UMULO, G_SMULO})
       .alwaysLegal();
+
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                allIntScalarsAndVectors);
 
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})

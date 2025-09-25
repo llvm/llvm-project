@@ -2234,7 +2234,8 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
 PlatformSP PlatformList::Create(llvm::StringRef name) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   PlatformSP platform_sp = Platform::Create(name);
-  m_platforms.push_back(platform_sp);
+  if (platform_sp)
+    m_platforms.push_back(platform_sp);
   return platform_sp;
 }
 

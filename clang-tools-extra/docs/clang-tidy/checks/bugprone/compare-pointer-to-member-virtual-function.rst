@@ -56,6 +56,7 @@ virtual functions, thereby improving the overall stability and maintainability
 of your code. In scenarios involving pointers to member virtual functions, it's
 only advisable to employ ``nullptr`` for comparisons.
 
+
 Limitations
 -----------
 

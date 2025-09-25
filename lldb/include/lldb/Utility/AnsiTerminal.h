@@ -260,6 +260,11 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
   return result;
 }
 
+inline size_t ColumnWidth(llvm::StringRef str) {
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
+}
+
 } // namespace ansi
 } // namespace lldb_private
 

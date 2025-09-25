@@ -28,11 +28,18 @@ end
 
 subroutine f03
   integer :: x, y
+  real :: xr, yr
 
+  !With integer type the reassociation should be able to bring the `x` to
+  !the top of the + operator. Expect no diagnostics.
   !$omp atomic update
-  !ERROR: The atomic variable x cannot be a proper subexpression of an argument (here: (x+y)) in the update operation
-  !ERROR: The atomic variable x should appear as an argument of the top-level + operator
   x = (x + y) + 1
+
+  !Real variables cannot be reassociated (unless fastmath options are present).
+  !$omp atomic update
+  !ERROR: The atomic variable xr cannot be a proper subexpression of an argument (here: (xr+yr)) in the update operation
+  !ERROR: The atomic variable xr should appear as an argument of the top-level + operator
+  xr = (xr + yr) + 1
 end
 
 subroutine f04

@@ -68,16 +68,6 @@ Register LiveRangeEdit::createFrom(Register OldReg) {
   return VReg;
 }
 
-bool LiveRangeEdit::checkRematerializable(VNInfo *VNI,
-                                          const MachineInstr *DefMI) {
-  assert(DefMI && "Missing instruction");
-  ScannedRemattable = true;
-  if (!TII.isTriviallyReMaterializable(*DefMI))
-    return false;
-  Remattable.insert(VNI);
-  return true;
-}
-
 void LiveRangeEdit::scanRemattable() {
   for (VNInfo *VNI : getParent().valnos) {
     if (VNI->isUnused())
@@ -90,7 +80,8 @@ void LiveRangeEdit::scanRemattable() {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (!DefMI)
       continue;
-    checkRematerializable(OrigVNI, DefMI);
+    if (TII.isReMaterializable(*DefMI))
+      Remattable.insert(OrigVNI);
   }
   ScannedRemattable = true;
 }
@@ -190,9 +181,12 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
   Rematted.insert(RM.ParentVNI);
   ++NumReMaterialization;
 
+  bool EarlyClobber = MI->getOperand(0).isEarlyClobber();
   if (ReplaceIndexMI)
-    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI).getRegSlot();
-  return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot();
+    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI)
+        .getRegSlot(EarlyClobber);
+  return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot(
+      EarlyClobber);
 }
 
 void LiveRangeEdit::eraseVirtReg(Register Reg) {
@@ -393,7 +387,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // register uses. That may provoke RA to split an interval at the KILL
     // and later result in an invalid live segment end.
     if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
-        TII.isTriviallyReMaterializable(*MI)) {
+        TII.isReMaterializable(*MI)) {
       LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
       VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
       VNInfo *VNI = NewLI.getNextValue(Idx, Alloc);

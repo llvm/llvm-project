@@ -13,7 +13,6 @@
 // This debugging facility is only available in debug builds.
 //
 // REQUIRES: asserts
-// REQUIRES: shell
 
 void test_unclaimed_use(int *p) { // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   p++;           //  expected-note{{used in pointer arithmetic here}} \

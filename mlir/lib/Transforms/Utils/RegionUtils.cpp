@@ -23,11 +23,14 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 
 #include <deque>
 #include <iterator>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "region-utils"
 
 void mlir::replaceAllUsesInRegionWith(Value orig, Value replacement,
                                       Region &region) {
@@ -182,19 +185,34 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
 // TODO: We could likely merge this with the DCE algorithm below.
 LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
                                            MutableArrayRef<Region> regions) {
+  LDBG() << "Starting eraseUnreachableBlocks with " << regions.size()
+         << " regions";
+
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
-  bool erasedDeadBlocks = false;
+  int erasedDeadBlocks = 0;
 
   SmallVector<Region *, 1> worklist;
   worklist.reserve(regions.size());
   for (Region &region : regions)
     worklist.push_back(&region);
+
+  LDBG(2) << "Initial worklist size: " << worklist.size();
+
   while (!worklist.empty()) {
     Region *region = worklist.pop_back_val();
-    if (region->empty())
+    if (region->empty()) {
+      LDBG(2) << "Skipping empty region";
       continue;
+    }
+
+    LDBG(2) << "Processing region with " << region->getBlocks().size()
+            << " blocks";
+    if (region->getParentOp())
+      LDBG(2) << " -> for operation:  "
+              << OpWithFlags(region->getParentOp(),
+                             OpPrintingFlags().skipRegions());
 
     // If this is a single block region, just collect the nested regions.
     if (region->hasOneBlock()) {
@@ -209,13 +227,17 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
     for (Block *block : depth_first_ext(&region->front(), reachable))
       (void)block /* Mark all reachable blocks */;
 
+    LDBG(2) << "Found " << reachable.size() << " reachable blocks out of "
+            << region->getBlocks().size() << " total blocks";
+
     // Collect all of the dead blocks and push the live regions onto the
     // worklist.
     for (Block &block : llvm::make_early_inc_range(*region)) {
       if (!reachable.count(&block)) {
+        LDBG() << "Erasing unreachable block: " << &block;
         block.dropAllDefinedValueUses();
         rewriter.eraseBlock(&block);
-        erasedDeadBlocks = true;
+        ++erasedDeadBlocks;
         continue;
       }
 
@@ -226,7 +248,10 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
     }
   }
 
-  return success(erasedDeadBlocks);
+  LDBG() << "Finished eraseUnreachableBlocks, erased " << erasedDeadBlocks
+         << " dead blocks";
+
+  return success(erasedDeadBlocks > 0);
 }
 
 //===----------------------------------------------------------------------===//

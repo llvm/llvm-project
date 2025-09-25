@@ -46,9 +46,8 @@ body:             |
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
-    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[DEF]]
-    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, implicit $exec
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vreg_64 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1
@@ -148,9 +147,8 @@ body:             |
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
-    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_96 = IMPLICIT_DEF
-    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vreg_96_align2 = COPY killed [[DEF]]
-    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, implicit $exec
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]], 0, 0, implicit $exec
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vreg_96 = IMPLICIT_DEF
     %2:vreg_96_align2 = COPY killed %1
@@ -326,11 +324,59 @@ body:             |
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
-    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
-    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY killed [[DEF]]
-    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[DEF]], 0, 0, implicit $exec
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vreg_128 = IMPLICIT_DEF
     %2:vreg_128_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec
+...
+
+# Make sure the alignment requirement is respected for VS_64 operand
+# uses.
+---
+name:            aligned_vgpr_vs_64_constraint
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0, $sgpr8_sgpr9
+
+    ; GFX908-LABEL: name: aligned_vgpr_vs_64_constraint
+    ; GFX908: liveins: $vgpr0, $sgpr8_sgpr9
+    ; GFX908-NEXT: {{  $}}
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+    ; GFX908-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX908-NEXT: [[GLOBAL_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3_SADDR [[COPY]], [[COPY1]], 16, 0, implicit $exec :: (load (s96), align 4, addrspace 1)
+    ; GFX908-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX3_SADDR]].sub0
+    ; GFX908-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX908-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
+    ; GFX908-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed [[REG_SEQUENCE]], 0, [[GLOBAL_LOAD_DWORDX3_SADDR]].sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX908-NEXT: DS_WRITE_B64_gfx9 [[V_MOV_B32_e32_]], killed [[V_PK_ADD_F32_]], 0, 0, implicit $exec :: (store (s64), addrspace 3)
+    ; GFX908-NEXT: S_ENDPGM 0
+    ;
+    ; GFX90A-LABEL: name: aligned_vgpr_vs_64_constraint
+    ; GFX90A: liveins: $vgpr0, $sgpr8_sgpr9
+    ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX90A-NEXT: [[GLOBAL_LOAD_DWORDX3_SADDR:%[0-9]+]]:vreg_96_align2 = GLOBAL_LOAD_DWORDX3_SADDR [[COPY]], [[COPY1]], 16, 0, implicit $exec :: (load (s96), align 4, addrspace 1)
+    ; GFX90A-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX3_SADDR]].sub0
+    ; GFX90A-NEXT: [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY killed [[GLOBAL_LOAD_DWORDX3_SADDR]].sub1_sub2
+    ; GFX90A-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX90A-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
+    ; GFX90A-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed [[REG_SEQUENCE]], 0, killed [[COPY3]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: DS_WRITE_B64_gfx9 [[V_MOV_B32_e32_]], killed [[V_PK_ADD_F32_]], 0, 0, implicit $exec :: (store (s64), addrspace 3)
+    ; GFX90A-NEXT: S_ENDPGM 0
+    %0:sgpr_64 = COPY $sgpr8_sgpr9
+    %1:vgpr_32 = COPY $vgpr0
+    %2:vreg_96_align2 = GLOBAL_LOAD_DWORDX3_SADDR %0, %1, 16, 0, implicit $exec :: (load (s96), align 4, addrspace 1)
+    %3:vgpr_32 = COPY %2.sub0
+    %4:vreg_64_align2 = COPY killed %2.sub1_sub2
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %6:vreg_64_align2 = REG_SEQUENCE %3, %subreg.sub0, %5, %subreg.sub1
+    %7:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, killed %6, 0, killed %4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    DS_WRITE_B64_gfx9 %5, killed %7, 0, 0, implicit $exec :: (store (s64), addrspace 3)
+    S_ENDPGM 0
+
 ...

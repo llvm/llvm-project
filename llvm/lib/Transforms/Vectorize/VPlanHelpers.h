@@ -351,10 +351,10 @@ struct VPCostContext {
   TargetTransformInfo::TargetCostKind CostKind;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM,
+                const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind)
-      : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM), CostKind(CostKind) {}
+      : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
+        CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -371,6 +371,13 @@ struct VPCostContext {
   /// legacy cost model for \p VF. Only used to check for additional VPlan
   /// simplifications.
   bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
+
+  /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
+  /// and \p Operands with \p VF. This is a convenience wrapper for the
+  /// type-based getScalarizationOverhead API.
+  InstructionCost getScalarizationOverhead(Type *ResultTy,
+                                           ArrayRef<const VPValue *> Operands,
+                                           ElementCount VF);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -112,14 +113,15 @@ public:
       // to resolve the fixup directly.  Emit a relocation and leave
       // resolution of the final target address to the linker.
       if (const auto *A = Target.getAddSym()) {
-        if (const auto *S = dyn_cast<MCSymbolELF>(A)) {
+        if (getContext().isELF()) {
           // The "other" values are stored in the last 6 bits of the second
           // byte. The traditional defines for STO values assume the full byte
           // and thus the shift to pack it.
-          unsigned Other = S->getOther() << 2;
+          unsigned Other = static_cast<const MCSymbolELF *>(A)->getOther() << 2;
           if ((Other & ELF::STO_PPC64_LOCAL_MASK) != 0)
             return true;
-        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(A)) {
+        } else if (getContext().isXCOFF()) {
+          auto *S = static_cast<const MCSymbolXCOFF *>(A);
           return !Target.isAbsolute() && S->isExternal() &&
                  S->getStorageClass() == XCOFF::C_WEAKEXT;
         }

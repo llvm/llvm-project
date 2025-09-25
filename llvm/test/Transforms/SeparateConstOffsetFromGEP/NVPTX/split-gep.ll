@@ -372,8 +372,8 @@ define ptr @trunk_explicit(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: define ptr @trunk_explicit(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 3216
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3216
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:
@@ -389,8 +389,8 @@ define ptr @trunk_long_idx(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: define ptr @trunk_long_idx(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 3216
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3216
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:
