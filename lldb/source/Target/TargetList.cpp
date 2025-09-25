@@ -256,6 +256,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   Status error;
   const bool is_dummy_target = false;
 
+  static uint32_t g_target_unique_id = 0;
+
   ArchSpec arch(specified_arch);
 
   if (arch.IsValid()) {
@@ -344,6 +346,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   if (!target_sp)
     return error;
 
+  target_sp->m_target_unique_id = ++g_target_unique_id;
+
   // Set argv0 with what the user typed, unless the user specified a
   // directory. If the user specified a directory, then it is probably a
   // bundle that was resolved and we need to use the resolved bundle path
@@ -426,6 +430,18 @@ TargetSP TargetList::FindTargetWithProcess(Process *process) const {
     target_sp = *it;
 
   return target_sp;
+}
+
+TargetSP TargetList::FindTargetWithUniqueID(uint32_t id) const {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = llvm::find_if(m_target_list, [id](const TargetSP &item) {
+    return item->GetUniqueID() == id;
+  });
+
+  if (it != m_target_list.end())
+    return *it;
+
+  return TargetSP();
 }
 
 TargetSP TargetList::GetTargetSP(Target *target) const {

@@ -159,6 +159,8 @@ public:
 
   lldb::TargetSP FindTargetWithProcess(lldb_private::Process *process) const;
 
+  lldb::TargetSP FindTargetWithUniqueID(uint32_t id) const;
+
   lldb::TargetSP GetTargetSP(Target *target) const;
 
   /// Send an async interrupt to one or all processes.

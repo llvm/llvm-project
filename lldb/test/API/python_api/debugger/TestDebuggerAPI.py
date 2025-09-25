@@ -294,3 +294,106 @@ class DebuggerAPITestCase(TestBase):
 
         self.assertEqual(instance_str, class_str)
         self.assertEqual(class_str, property_str)
+
+    def test_find_target_with_unique_id(self):
+        """Test SBDebugger.FindTargetWithUniqueID() functionality."""
+
+        # Test with invalid ID - should return invalid target
+        invalid_target = self.dbg.FindTargetWithUniqueID(999999)
+        self.assertFalse(invalid_target.IsValid())
+
+        # Test with ID 0 - should return invalid target
+        zero_target = self.dbg.FindTargetWithUniqueID(0)
+        self.assertFalse(zero_target.IsValid())
+
+        # Build a real executable and create target with it
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target.IsValid())
+
+        # Find the target using its unique ID
+        unique_id = target.GetUniqueID()
+        self.assertNotEqual(unique_id, 0)
+        found_target = self.dbg.FindTargetWithUniqueID(unique_id)
+        self.assertTrue(found_target.IsValid())
+        self.assertEqual(
+            self.dbg.GetIndexOfTarget(target), self.dbg.GetIndexOfTarget(found_target)
+        )
+        self.assertEqual(found_target.GetUniqueID(), unique_id)
+
+    def test_target_unique_id_uniqueness(self):
+        """Test that Target.GetUniqueID() returns unique values across multiple targets."""
+
+        # Create multiple targets and verify they all have unique IDs
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        targets = []
+        unique_ids = set()
+
+        for i in range(10):
+            target = self.dbg.CreateTarget(exe)
+            self.assertTrue(target.IsValid())
+
+            unique_id = target.GetUniqueID()
+            self.assertNotEqual(unique_id, 0)
+
+            # Verify this ID hasn't been used before
+            self.assertNotIn(
+                unique_id, unique_ids, f"Duplicate unique ID found: {unique_id}"
+            )
+
+            unique_ids.add(unique_id)
+            targets.append(target)
+
+        # Verify all targets can still be found by their IDs
+        for target in targets:
+            unique_id = target.GetUniqueID()
+            found = self.dbg.FindTargetWithUniqueID(unique_id)
+            self.assertTrue(found.IsValid())
+            self.assertEqual(found.GetUniqueID(), unique_id)
+
+    def test_target_unique_id_uniqueness_after_deletion(self):
+        """Test finding targets have unique ID after target deletion."""
+        # Create two targets
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target1 = self.dbg.CreateTarget(exe)
+        target2 = self.dbg.CreateTarget(exe)
+        self.assertTrue(target1.IsValid())
+        self.assertTrue(target2.IsValid())
+
+        unique_id1 = target1.GetUniqueID()
+        unique_id2 = target2.GetUniqueID()
+        self.assertNotEqual(unique_id1, 0)
+        self.assertNotEqual(unique_id2, 0)
+        self.assertNotEqual(unique_id1, unique_id2)
+
+        # Verify we can find them initially
+        found_target1 = self.dbg.FindTargetWithUniqueID(unique_id1)
+        found_target2 = self.dbg.FindTargetWithUniqueID(unique_id2)
+        self.assertTrue(found_target1.IsValid())
+        self.assertTrue(found_target2.IsValid())
+        target2_index = self.dbg.GetIndexOfTarget(target2)
+
+        # Delete target 2
+        deleted = self.dbg.DeleteTarget(target2)
+        self.assertTrue(deleted)
+
+        # Try to find the deleted target - should not be found
+        not_found_target = self.dbg.FindTargetWithUniqueID(unique_id2)
+        self.assertFalse(not_found_target.IsValid())
+
+        # Create a new target
+        target3 = self.dbg.CreateTarget(exe)
+        self.assertTrue(target3.IsValid())
+        # Target list index of target3 should be the same as target2's
+        # since it was deleted, but it should have a distinct unique ID
+        target3_index = self.dbg.GetIndexOfTarget(target3)
+        unique_id3 = target3.GetUniqueID()
+        self.assertEqual(target3_index, target2_index)
+        self.assertNotEqual(unique_id3, unique_id2)
+        self.assertNotEqual(unique_id3, unique_id1)
+        # Make sure we can find the new target
+        found_target3 = self.dbg.FindTargetWithUniqueID(target3.GetUniqueID())
+        self.assertTrue(found_target3.IsValid())

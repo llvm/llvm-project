@@ -357,6 +357,8 @@ public:
 
   const char *GetLabel() const;
 
+  uint32_t GetUniqueID() const;
+
   SBError SetLabel(const char *label);
 
   /// Architecture opcode byte size width accessor
