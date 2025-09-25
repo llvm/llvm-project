@@ -843,6 +843,7 @@ struct StaticSampler : public v1::StaticSampler {
 enum class RootSignatureVersion {
   V1_0 = 0x1,
   V1_1 = 0x2,
+  V1_2 = 0x3,
 };
 
 } // namespace dxbc

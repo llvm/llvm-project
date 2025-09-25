@@ -21,13 +21,13 @@
 #define SampleUAV "UAV(u0)"
 
 // CMD: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[CMD_DECL:__hlsl_rootsig_decl_\d*]]
-// CMD-SAME: version: 1.1, RootElements{
+// CMD-SAME: version: 1.2, RootElements{
 // CMD-SAME: RootSRV(t0,
 // CMD-SAME:   space = 0, visibility = All, flags = DataStaticWhileSetAtExecute
 // CMD-SAME: )}
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[CBV_DECL:__hlsl_rootsig_decl_\d*]]
-// CHECK-SAME: version: 1.1, RootElements{
+// CHECK-SAME: version: 1.2, RootElements{
 // CHECK-SAME: RootCBV(b0,
 // CHECK-SAME:   space = 0, visibility = All, flags = DataStaticWhileSetAtExecute
 // CHECK-SAME: )}
@@ -41,7 +41,7 @@
 void cbv_main() {}
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[UAV_DECL:__hlsl_rootsig_decl_\d*]]
-// CHECK-SAME: version: 1.1, RootElements{
+// CHECK-SAME: version: 1.2, RootElements{
 // CHECK-SAME: RootUAV(u0,
 // CHECK-SAME:   space = 0, visibility = All, flags = DataVolatile
 // CHECK-SAME: )}

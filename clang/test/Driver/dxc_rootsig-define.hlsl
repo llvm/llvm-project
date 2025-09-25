@@ -18,7 +18,7 @@
 #define NotEmptyRS "CBV(b0)"
 
 // CHECK: !dx.rootsignatures = !{![[#ENTRY:]]}
-// CHECK: ![[#ENTRY]] = !{ptr @main, ![[#RS:]], i32 2}
+// CHECK: ![[#ENTRY]] = !{ptr @main, ![[#RS:]], i32 3}
 
 // REG: ![[#RS]] = !{![[#CBV:]]}
 // REG: ![[#CBV]] = !{!"RootCBV"

@@ -64,7 +64,7 @@ bool isLegalShaderModel(Triple &T) {
   } break;
   case Triple::EnvironmentType::RootSignature:
     VersionTuple MinVer(1, 0);
-    VersionTuple MaxVer(1, 1);
+    VersionTuple MaxVer(1, 2);
     return MinVer <= Version && Version <= MaxVer;
   }
   return false;
