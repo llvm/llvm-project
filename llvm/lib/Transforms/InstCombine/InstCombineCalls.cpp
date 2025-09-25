@@ -3667,6 +3667,39 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // Optimize AMDGPU ballot uniformity assumptions:
+    // assume(icmp eq (ballot(cmp), -1)) implies that cmp is uniform and true
+    // This allows us to optimize away the ballot and replace cmp with true
+    Value *BallotInst;
+    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(BallotInst),
+                                        m_AllOnes()))) {
+      // Check if this is an AMDGPU ballot intrinsic
+      if (auto *BallotCall = dyn_cast<IntrinsicInst>(BallotInst)) {
+        if (BallotCall->getIntrinsicID() == Intrinsic::amdgcn_ballot) {
+          Value *BallotCondition = BallotCall->getArgOperand(0);
+
+          // If ballot(cmp) == -1, then cmp is uniform across all lanes and
+          // evaluates to true We can safely replace BallotCondition with true
+          // since ballot == -1 implies all lanes are true
+          if (BallotCondition->getType()->isIntOrIntVectorTy(1) &&
+              !isa<Constant>(BallotCondition)) {
+
+            // Add the condition to the worklist for further optimization
+            Worklist.pushValue(BallotCondition);
+
+            // Replace BallotCondition with true
+            BallotCondition->replaceAllUsesWith(
+                ConstantInt::getTrue(BallotCondition->getType()));
+
+            // The assumption is now always true, so we can simplify it
+            replaceUse(II->getOperandUse(0),
+                       ConstantInt::getTrue(II->getContext()));
+            return II;
+          }
+        }
+      }
+    }
+
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
