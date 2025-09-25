@@ -134,7 +134,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
   // If MI has register uses, it will only be rematerializable if its uses are
   // also live at the indices it will be rematerialized at.
   for (MachineOperand &MO : MRI.reg_nodbg_operands(LI.reg())) {
-    if (MO.isUndef() || !MO.readsReg())
+    if (!MO.readsReg())
       continue;
     SlotIndex UseIdx = LIS.getInstructionIndex(*MO.getParent());
     MachineInstr *Def = VNIDefs[LI.getVNInfoAt(UseIdx)->id];
