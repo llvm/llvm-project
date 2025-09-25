@@ -396,14 +396,31 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
   return {};
 }
 
-/// Converts an IntegerAttr to have the specified type if needed.
-/// This handles cases where integer constant attributes have a different type
-/// than the target element type.
-static IntegerAttr convertIntegerAttr(IntegerAttr intAttr, Type expectedType) {
-  if (intAttr.getType() == expectedType)
-    return intAttr; // Already correct type
+/// Converts numeric attributes to the expected type. Supports
+/// integer-to-integer and float-to-integer conversions. Returns the original
+/// attribute if no conversion is needed or supported.
+static Attribute convertNumericAttr(Attribute attr, Type expectedType) {
+  // Integer-to-integer conversion
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    if (auto intType = dyn_cast<IntegerType>(expectedType)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
+  }
 
-  return IntegerAttr::get(expectedType, intAttr.getInt());
+  // Float-to-integer bitcast (preserves bit representation)
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    auto intType = dyn_cast<IntegerType>(expectedType);
+    if (!intType)
+      return attr;
+
+    APFloat floatVal = floatAttr.getValue();
+    APInt intVal = floatVal.bitcastToAPInt();
+    return IntegerAttr::get(expectedType, intVal);
+  }
+
+  return attr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2473,16 +2490,11 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
     return {};
 
-  // Convert integer attributes to the target type if needed, leave others
-  // unchanged.
-  auto convertedElements =
-      llvm::map_to_vector(elements, [&](Attribute attr) -> Attribute {
-        if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
-          return convertIntegerAttr(intAttr, destEltType);
-        }
-        return attr; // Non-integer attributes (FloatAttr, etc.) returned
-                     // unchanged
-      });
+  // Constant attributes might have a different type than the return type.
+  // Convert them before creating the dense elements attribute.
+  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
+    return convertNumericAttr(attr, destEltType);
+  });
 
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
@@ -3503,19 +3515,13 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   SmallVector<Attribute> insertedValues;
   Type destEltType = destTy.getElementType();
 
-  /// Converts integer attributes to the expected type if there's a mismatch.
-  /// Non-integer attributes are left unchanged.
+  /// Converts attribute to the expected type if there's
+  /// a mismatch.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
     for (auto value : denseSource.getValues<Attribute>())
-      if (auto intAttr = dyn_cast<IntegerAttr>(value))
-        insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-      else
-        insertedValues.push_back(value); // Non-integer attributes unchanged
+      insertedValues.push_back(convertNumericAttr(value, destEltType));
   } else {
-    if (auto intAttr = dyn_cast<IntegerAttr>(srcAttr))
-      insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-    else
-      insertedValues.push_back(srcAttr); // Non-integer attributes unchanged
+    insertedValues.push_back(convertNumericAttr(srcAttr, destEltType));
   }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
