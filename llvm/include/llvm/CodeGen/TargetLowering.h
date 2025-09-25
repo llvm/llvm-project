@@ -3505,9 +3505,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
-  /// Should we expand [US]CMP nodes using two selects and two compares, or by
-  /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
+  /// Should we prefer selects to doing arithmetic on boolean types
+  virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
+    return false;
+  }
 
   /// True if target has some particular form of dealing with pointer arithmetic
   /// semantics for pointers with the given value type. False if pointer
