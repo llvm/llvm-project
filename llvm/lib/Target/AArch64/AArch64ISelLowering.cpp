@@ -29388,7 +29388,7 @@ bool AArch64TargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
   return TargetLowering::shouldConvertFpToSat(Op, FPVT, VT);
 }
 
-bool AArch64TargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+bool AArch64TargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   // Expand scalar and SVE operations using selects. Neon vectors prefer sub to
   // avoid vselect becoming bsl / unrolling.
   return !VT.isFixedLengthVector();
