@@ -55,9 +55,9 @@ void test_masked_scatter(int *p, v8i idx, v8b mask, v2b mask2, v8i val) {
   __builtin_masked_scatter(mask, idx, val, &idx); // expected-error {{3rd argument must be a scalar pointer}}
 }
 
-void a(v8b mask, v8i val, const int *ptr) {
-  __builtin_masked_load(mask, ptr, val);
-  (void)__builtin_masked_load(mask, (volatile int *)ptr, val); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
+void a(v8b mask, v8i v, const int *ptr) {
+  __builtin_masked_load(mask, ptr, v);
+  (void)__builtin_masked_load(mask, (volatile int *)ptr, v); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
 }
 
 void b(v8b mask, v8i idx, const int *ptr) {
@@ -65,23 +65,23 @@ void b(v8b mask, v8i idx, const int *ptr) {
   (void)__builtin_masked_gather(mask, idx, (volatile int *)ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
 }
 
-void c(v8b mask, const v8i val, int *ptr) {
-  __builtin_masked_store(mask, val, ptr);
+void c(v8b mask, const v8i v, int *ptr) {
+  __builtin_masked_store(mask, v, ptr);
 }
 
-void readonly(v8b mask, v8i val, const int *ptr, const int *s) {
-  __builtin_masked_store(mask, val, ptr); // expected-error {{sending 'const int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('const int *' vs 'int *')}}
-  __builtin_masked_compress_store(mask, val, ptr); // expected-error {{sending 'const int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('const int *' vs 'int *')}}
-  __builtin_masked_scatter(mask, val, val, s); // expected-error {{sending 'const int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('const int *' vs 'int *')}}
+void readonly(v8b mask, v8i v, const int *ptr, const int *s) {
+  (void)__builtin_masked_store(mask, v, ptr); // expected-error {{sending 'const int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('const int *' vs 'int *')}}
+  (void)__builtin_masked_compress_store(mask, v, ptr); // expected-error {{sending 'const int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('const int *' vs 'int *')}}
+  (void)__builtin_masked_scatter(mask, v, v, s); // expected-error {{sending 'const int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('const int *' vs 'int *')}}
 }
 
-void vol(v8b mask, v8i val, volatile int *ptr, volatile int *s) {
-  __builtin_masked_store(mask, val, ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
-  __builtin_masked_compress_store(mask, val, ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
-  __builtin_masked_scatter(mask, val, val, s); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
-}
-
-v8i [[clang::address_space(999)]] load(v8b mask, int [[clang::address_space(999)]] * ptr) {
+void vol(v8b mask, v8i v, volatile int *ptr, volatile int *s) {
+  (void)__builtin_masked_load(mask, ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
+  (void)__builtin_masked_store(mask, v, ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
+  (void)__builtin_masked_expand_load(mask, ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
+  (void)__builtin_masked_compress_store(mask, v, ptr); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
+  (void)__builtin_masked_gather(mask, v, ptr);// expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
+  (void)__builtin_masked_scatter(mask, v, v, s); // expected-error {{sending 'volatile int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('volatile int *' vs 'int *')}}
 }
 
 void as(v8b mask, int [[clang::address_space(999)]] * ptr, v8i v) {
@@ -89,8 +89,8 @@ void as(v8b mask, int [[clang::address_space(999)]] * ptr, v8i v) {
   (void)__builtin_masked_store(mask, v, ptr);
   (void)__builtin_masked_expand_load(mask, ptr); // expected-error {{sending '__attribute__((address_space(999))) int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('__attribute__((address_space(999))) int *' vs 'int *')}}
   (void)__builtin_masked_compress_store(mask, v, ptr); // expected-error {{sending '__attribute__((address_space(999))) int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('__attribute__((address_space(999))) int *' vs 'int *')}}
-  (void)__builtin_masked_gather(mask, v, ptr); // expected-error {{sending '__attribute__((address_space(999))) int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('__attribute__((address_space(999))) int *' vs 'int *')}}
-  (void)__builtin_masked_scatter(mask, v, v, ptr); // expected-error {{sending '__attribute__((address_space(999))) int *' to parameter of incompatible type 'int *': type mismatch at 2nd parameter ('__attribute__((address_space(999))) int *' vs 'int *')}}
+  (void)__builtin_masked_gather(mask, v, ptr);
+  (void)__builtin_masked_scatter(mask, v, v, ptr);
 }
 
 void atom(v8b mask, _Atomic int * ptr, v8i v) {
