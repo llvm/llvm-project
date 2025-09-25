@@ -225,11 +225,16 @@ StringRef ArgList::getSubcommand(
     if (SubCommands.size() == OldSize)
       OtherPositionals.push_back(A->getValue());
   }
+
   // Invoke callbacks if necessary.
-  if (SubCommands.size() > 1)
+  if (SubCommands.size() > 1) {
     HandleMultipleSubcommands(SubCommands);
-  if (!OtherPositionals.empty())
+    return {};
+  }
+  if (!OtherPositionals.empty()) {
     HandleOtherPositionals(OtherPositionals);
+    return {};
+  }
 
   if (SubCommands.size() == 1)
     return SubCommands.front();
