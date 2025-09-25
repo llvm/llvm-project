@@ -395,3 +395,20 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %a) {
   %result = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
 }
+
+define { fp128, fp128 } @test_modf_fp128(fp128 %a) {
+; CHECK-LABEL: test_modf_fp128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    bl modfl
+; CHECK-NEXT:    ldr q1, [sp]
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %result = call { fp128, fp128 } @llvm.modf.fp128(fp128 %a)
+  ret { fp128, fp128 } %result
+}
