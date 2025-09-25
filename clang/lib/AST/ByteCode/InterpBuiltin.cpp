@@ -8,7 +8,6 @@
 #include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "EvalEmitter.h"
-#include "FixedPoint.h"
 #include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "PrimType.h"
