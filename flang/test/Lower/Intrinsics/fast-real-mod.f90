@@ -41,7 +41,8 @@ end subroutine mod_real8
 ! CHECK-LABEL: @_QPmod_real10
 subroutine mod_real10(r, a, p)
     implicit none
-    real(kind=10) :: r, a, p
+    integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+    real(kind=kind10) :: r, a, p
 ! CHECK-KIND10: %[[A:.*]] = fir.declare{{.*}}a"
 ! CHECK-KIND10: %[[P:.*]] = fir.declare{{.*}}p"
 ! CHECK-KIND10: %[[R:.*]] = fir.declare{{.*}}r"
@@ -59,7 +60,8 @@ end subroutine mod_real10
 ! CHECK-LABEL: @_QPmod_real16
 subroutine mod_real16(r, a, p)
     implicit none
-    real(kind=16) :: r, a, p
+    integer, parameter :: kind16 = merge(16, 4, selected_real_kind(p=33).eq.16)
+    real(kind=kind16) :: r, a, p
 ! CHECK-KIND16: %[[A:.*]] = fir.declare{{.*}}a"
 ! CHECK-KIND16: %[[P:.*]] = fir.declare{{.*}}p"
 ! CHECK-KIND16: %[[R:.*]] = fir.declare{{.*}}r"
