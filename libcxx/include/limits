@@ -455,9 +455,9 @@ class numeric_limits : private __libcpp_numeric_limits<_Tp> {
 
 public:
   static inline _LIBCPP_CONSTEXPR const bool is_specialized = __base::is_specialized;
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type min() _NOEXCEPT { return __base::min(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type max() _NOEXCEPT { return __base::max(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type lowest() _NOEXCEPT { return __base::lowest(); }
+  using __base::lowest;
+  using __base::max;
+  using __base::min;
 
   static inline _LIBCPP_CONSTEXPR const int digits       = __base::digits;
   static inline _LIBCPP_CONSTEXPR const int digits10     = __base::digits10;
@@ -466,12 +466,8 @@ public:
   static inline _LIBCPP_CONSTEXPR const bool is_integer  = __base::is_integer;
   static inline _LIBCPP_CONSTEXPR const bool is_exact    = __base::is_exact;
   static inline _LIBCPP_CONSTEXPR const int radix        = __base::radix;
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type epsilon() _NOEXCEPT {
-    return __base::epsilon();
-  }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type round_error() _NOEXCEPT {
-    return __base::round_error();
-  }
+  using __base::epsilon;
+  using __base::round_error;
 
   static inline _LIBCPP_CONSTEXPR const int min_exponent   = __base::min_exponent;
   static inline _LIBCPP_CONSTEXPR const int min_exponent10 = __base::min_exponent10;
@@ -485,18 +481,10 @@ public:
   static inline _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const float_denorm_style has_denorm = __base::has_denorm;
   static inline _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_CONSTEXPR const bool has_denorm_loss = __base::has_denorm_loss;
   _LIBCPP_SUPPRESS_DEPRECATED_POP
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type infinity() _NOEXCEPT {
-    return __base::infinity();
-  }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type quiet_NaN() _NOEXCEPT {
-    return __base::quiet_NaN();
-  }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type signaling_NaN() _NOEXCEPT {
-    return __base::signaling_NaN();
-  }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR type denorm_min() _NOEXCEPT {
-    return __base::denorm_min();
-  }
+  using __base::denorm_min;
+  using __base::infinity;
+  using __base::quiet_NaN;
+  using __base::signaling_NaN;
 
   static inline _LIBCPP_CONSTEXPR const bool is_iec559  = __base::is_iec559;
   static inline _LIBCPP_CONSTEXPR const bool is_bounded = __base::is_bounded;
