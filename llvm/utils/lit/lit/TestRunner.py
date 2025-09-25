@@ -103,7 +103,7 @@ class ShellEnvironment(object):
         if os.path.isabs(newdir):
             self.cwd = newdir
         else:
-            self.cwd = lit.util.abs_path_preserve_drive(os.path.join(self.cwd, newdir))
+            self.cwd = os.path.realpath(os.path.join(self.cwd, newdir))
 
 
 class TimeoutHelper(object):
@@ -466,7 +466,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
         dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(dir):
-            dir = lit.util.abs_path_preserve_drive(os.path.join(cwd, dir))
+            dir = os.path.realpath(os.path.join(cwd, dir))
         if parent:
             lit.util.mkdir_p(dir)
         else:
@@ -512,7 +512,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
         path = to_unicode(path) if kIsWindows else to_bytes(path)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
-            path = lit.util.abs_path_preserve_drive(os.path.join(cwd, path))
+            path = os.path.realpath(os.path.join(cwd, path))
         if force and not os.path.exists(path):
             continue
         try:
@@ -1519,11 +1519,19 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     tmpBaseName = os.path.basename(tmpBase)
     sourceBaseName = os.path.basename(sourcepath)
 
-    substitutions.append(("%{pathsep}", os.pathsep))
-    substitutions.append(("%basename_t", tmpBaseName))
-
-    substitutions.append(("%{s:basename}", sourceBaseName))
-    substitutions.append(("%{t:stem}", tmpBaseName))
+    substitutions.extend(
+        [
+            ("%s", sourcepath),
+            ("%S", sourcedir),
+            ("%p", sourcedir),
+            ("%{pathsep}", os.pathsep),
+            ("%t", tmpName),
+            ("%basename_t", tmpBaseName),
+            ("%T", tmpDir),
+            ("%{s:basename}", sourceBaseName),
+            ("%{t:stem}", tmpBaseName),
+        ]
+    )
 
     substitutions.extend(
         [
@@ -1533,47 +1541,49 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         ]
     )
 
-    substitutions.append(("%/et", tmpName.replace("\\", "\\\\\\\\\\\\\\\\")))
+    # "%/[STpst]" should be normalized.
+    substitutions.extend(
+        [
+            ("%/s", sourcepath.replace("\\", "/")),
+            ("%/S", sourcedir.replace("\\", "/")),
+            ("%/p", sourcedir.replace("\\", "/")),
+            ("%/t", tmpBase.replace("\\", "/") + ".tmp"),
+            ("%/T", tmpDir.replace("\\", "/")),
+            ("%/et", tmpName.replace("\\", "\\\\\\\\\\\\\\\\")),
+        ]
+    )
 
+    # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're
+    # also in a regex replacement context of a s@@@ regex.
     def regex_escape(s):
         s = s.replace("@", r"\@")
         s = s.replace("&", r"\&")
         return s
 
-    path_substitutions = [
-        ("s", sourcepath), ("S", sourcedir), ("p", sourcedir),
-        ("t", tmpName), ("T", tmpDir)
-    ]
-    for path_substitution in path_substitutions:
-        letter = path_substitution[0]
-        path = path_substitution[1]
+    substitutions.extend(
+        [
+            ("%{/s:regex_replacement}", regex_escape(sourcepath.replace("\\", "/"))),
+            ("%{/S:regex_replacement}", regex_escape(sourcedir.replace("\\", "/"))),
+            ("%{/p:regex_replacement}", regex_escape(sourcedir.replace("\\", "/"))),
+            (
+                "%{/t:regex_replacement}",
+                regex_escape(tmpBase.replace("\\", "/")) + ".tmp",
+            ),
+            ("%{/T:regex_replacement}", regex_escape(tmpDir.replace("\\", "/"))),
+        ]
+    )
 
-        # Original path variant
-        substitutions.append(("%" + letter, path))
-
-        # Normalized path separator variant
-        substitutions.append(("%/" + letter, path.replace("\\", "/")))
-
-        # realpath variants
-        # Windows paths with substitute drives are not expanded by default
-        # as they are used to avoid MAX_PATH issues, but sometimes we do
-        # need the fully expanded path.
-        real_path = os.path.realpath(path)
-        substitutions.append(("%{" + letter + ":real}", real_path))
-        substitutions.append(("%{/" + letter + ":real}",
-            real_path.replace("\\", "/")))
-
-        # "%{/[STpst]:regex_replacement}" should be normalized like
-        # "%/[STpst]" but we're also in a regex replacement context
-        # of a s@@@ regex.
-        substitutions.append(
-            ("%{/" + letter + ":regex_replacement}",
-            regex_escape(path.replace("\\", "/"))))
-
-        # "%:[STpst]" are normalized paths without colons and without
-        # a leading slash.
-        substitutions.append(("%:" + letter, colonNormalizePath(path)))
-
+    # "%:[STpst]" are normalized paths without colons and without a leading
+    # slash.
+    substitutions.extend(
+        [
+            ("%:s", colonNormalizePath(sourcepath)),
+            ("%:S", colonNormalizePath(sourcedir)),
+            ("%:p", colonNormalizePath(sourcedir)),
+            ("%:t", colonNormalizePath(tmpBase + ".tmp")),
+            ("%:T", colonNormalizePath(tmpDir)),
+        ]
+    )
     return substitutions
 
 
