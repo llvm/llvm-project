@@ -72,7 +72,12 @@ for benchmark in spec_benchmarks:
     print(f'RUN: %{{spec_dir}}/bin/runcpu --config %T/spec-config.cfg --size train --output-root %T --rebuild {benchmark}')
     print(f'RUN: rm -rf %T/benchspec') # remove the temporary directory, which can become quite large
 
-    # Parse the results into a LNT-compatible format. This also errors out if there are no CSV files, which
-    # means that the benchmark didn't run properly (the `runcpu` command above never reports a failure).
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %T/result/*.train.csv --output-format=lnt > %T/results.lnt || ! cat %T/result/*.log')
+    # The `runcpu` command above doesn't fail even if the benchmark fails to run. To determine failure, parse the CSV
+    # results and ensure there are no compilation errors or runtime errors in the status row. Also print the logs and
+    # fail if there are no CSV files at all, which implies a SPEC error.
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results --extract "Base Status" --keep-failed %T/result/*.train.csv > %T/status || ! cat %T/result/*.log')
+    print(f'RUN: ! grep -E "CE|RE" %T/status || ! cat %T/result/*.log')
+
+    # If there were no errors, parse the results into LNT-compatible format and print them.
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %T/result/*.train.csv --output-format=lnt > %T/results.lnt')
     print(f'RUN: cat %T/results.lnt')
