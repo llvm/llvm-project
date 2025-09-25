@@ -698,6 +698,7 @@ namespace clang {
     ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
     ExpectedStmt
     VisitSubstNonTypeTemplateParmPackExpr(SubstNonTypeTemplateParmPackExpr *E);
+    ExpectedStmt VisitPseudoObjectExpr(PseudoObjectExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -9288,6 +9289,21 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmPackExpr(
   return new (Importer.getToContext()) SubstNonTypeTemplateParmPackExpr(
       ToType, E->getValueKind(), ToNameLoc, ToArgPack, ToAssociatedDecl,
       E->getIndex(), E->getFinal());
+}
+
+ExpectedStmt ASTNodeImporter::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
+  SmallVector<Expr *, 4> ToSemantics(E->getNumSemanticExprs());
+  if (Error Err = ImportContainerChecked(E->semantics(), ToSemantics))
+    return std::move(Err);
+  Expr *ToSynt = nullptr;
+  if (const Expr *FromSynt = E->getSyntacticForm()) {
+    if (auto ToSyntOrErr = import(FromSynt))
+      ToSynt = *ToSyntOrErr;
+    else
+      return ToSyntOrErr.takeError();
+  }
+  return PseudoObjectExpr::Create(Importer.getToContext(), ToSynt, ToSemantics,
+                                  E->getResultExprIndex());
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
