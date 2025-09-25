@@ -108,7 +108,7 @@ typedef uint_t uint;
 #endif
 
 #if defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__) ||       \
-    defined(__MVS__)
+    defined(__MVS__) || defined(__serenity__)
 #define STATVFS_F_FLAG(vfs) (vfs).f_flag
 #else
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
@@ -510,6 +510,9 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   return true;
 #elif defined(__HAIKU__)
   // Haiku doesn't expose this information.
+  return false;
+#elif defined(__serenity__)
+  // Serenity doesn't yet support remote filesystem mounts.
   return false;
 #elif defined(__sun)
   // statvfs::f_basetype contains a null-terminated FSType name of the mounted

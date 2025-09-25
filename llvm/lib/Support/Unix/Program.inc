@@ -337,7 +337,7 @@ namespace sys {
 
 #if defined(_AIX)
 static pid_t(wait4)(pid_t pid, int *status, int options, struct rusage *usage);
-#elif !defined(__Fuchsia__)
+#elif !defined(__Fuchsia__) && !defined(__serenity__)
 using ::wait4;
 #endif
 
@@ -375,6 +375,12 @@ pid_t(llvm::sys::wait4)(pid_t pid, int *status, int options,
   // absence of indiscriminate `wait` calls from the current process (which
   // would cause the call here to fail with ECHILD).
   return ::wait4(pid, status, options & ~WNOHANG, usage);
+}
+#endif
+
+#ifdef __serenity__
+pid_t(llvm::sys::wait4)(pid_t pid, int *status, int options, struct *rusage) {
+  return ::waitpid(pid, status, options);
 }
 #endif
 
