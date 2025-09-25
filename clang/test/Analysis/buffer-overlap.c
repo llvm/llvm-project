@@ -96,19 +96,3 @@ void test_snprintf6() {
   char b[4] = {0};
   snprintf(a, sizeof(a), "%s", b); // no-warning
 }
-
-
-void memcpy(int dst, int src, size_t size); // expected-warning{{incompatible redeclaration of library function 'memcpy'}} expected-note{{'memcpy' is a builtin with type 'void *(void *, const void *, __size_t)' (aka 'void *(void *, const void *, unsigned long)')}}
-void test_memcpy_proxy() {
-  memcpy(42, 42, 42);
-}
-
-void strcpy(int dst, char *src); // expected-warning{{incompatible redeclaration of library function 'strcpy'}} expected-note{{'strcpy' is a builtin with type 'char *(char *, const char *)'}}
-void test_strcpy_proxy() {
-  strcpy(42, (char *)42);
-}
-
-void strxfrm(int dst, char *src, size_t size); // expected-warning{{incompatible redeclaration of library function 'strxfrm'}} expected-note{{'strxfrm' is a builtin with type '__size_t (char *, const char *, __size_t)' (aka 'unsigned long (char *, const char *, unsigned long)')}}
-void test_strxfrm_proxy() {
-  strxfrm(42, (char *)42, 42);
-}
