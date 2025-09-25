@@ -482,29 +482,35 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
     StringRef sincosFunc;
     if (isa<Float32Type>(computeType)) {
       const arith::FastMathFlags flag = op.getFastmath();
-      const bool useApprox = ((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag);
+      const bool useApprox =
+          ((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag);
       sincosFunc = useApprox ? "__nv_fast_sincosf" : "__nv_sincosf";
     } else if (isa<Float64Type>(computeType)) {
       sincosFunc = "__nv_sincos";
     } else {
-      return rewriter.notifyMatchFailure(op, "unsupported operand type for sincos");
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported operand type for sincos");
     }
 
     auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
-    
+
     Value sinPtr, cosPtr;
     {
       OpBuilder::InsertionGuard guard(rewriter);
-      auto *scope = op->getParentWithTrait<mlir::OpTrait::AutomaticAllocationScope>();
+      auto *scope =
+          op->getParentWithTrait<mlir::OpTrait::AutomaticAllocationScope>();
       assert(scope && "Expected op to be inside automatic allocation scope");
       rewriter.setInsertionPointToStart(&scope->getRegion(0).front());
       auto one = rewriter.create<LLVM::ConstantOp>(
           loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(1));
-      sinPtr = rewriter.create<LLVM::AllocaOp>(loc, ptrType, computeType, one, 0);
-      cosPtr = rewriter.create<LLVM::AllocaOp>(loc, ptrType, computeType, one, 0);
+      sinPtr =
+          rewriter.create<LLVM::AllocaOp>(loc, ptrType, computeType, one, 0);
+      cosPtr =
+          rewriter.create<LLVM::AllocaOp>(loc, ptrType, computeType, one, 0);
     }
 
-    createSincosCall(rewriter, loc, sincosFunc, convertedInput, sinPtr, cosPtr, op);
+    createSincosCall(rewriter, loc, sincosFunc, convertedInput, sinPtr, cosPtr,
+                     op);
 
     auto sinResult = rewriter.create<LLVM::LoadOp>(loc, computeType, sinPtr);
     auto cosResult = rewriter.create<LLVM::LoadOp>(loc, computeType, cosPtr);
@@ -517,7 +523,8 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
 private:
   Value maybeExt(Value operand, PatternRewriter &rewriter) const {
     if (isa<Float16Type, BFloat16Type>(operand.getType())) {
-      return rewriter.create<LLVM::FPExtOp>(operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
+      return rewriter.create<LLVM::FPExtOp>(
+          operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
     }
     return operand;
   }
@@ -529,26 +536,27 @@ private:
   }
 
   void createSincosCall(ConversionPatternRewriter &rewriter, Location loc,
-                        StringRef funcName, Value input, Value sinPtr, Value cosPtr,
-                        Operation *op) const {
+                        StringRef funcName, Value input, Value sinPtr,
+                        Value cosPtr, Operation *op) const {
     auto voidType = LLVM::LLVMVoidType::get(rewriter.getContext());
     auto ptrType = sinPtr.getType();
-    
+
     SmallVector<Type> operandTypes = {input.getType(), ptrType, ptrType};
     auto funcType = LLVM::LLVMFunctionType::get(voidType, operandTypes);
-    
+
     auto funcAttr = StringAttr::get(op->getContext(), funcName);
-    auto funcOp = SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(op, funcAttr);
-    
+    auto funcOp =
+        SymbolTable::lookupNearestSymbolFrom<LLVM::LLVMFuncOp>(op, funcAttr);
+
     if (!funcOp) {
       auto parentFunc = op->getParentOfType<FunctionOpInterface>();
       assert(parentFunc && "expected there to be a parent function");
       OpBuilder b(parentFunc);
-      
+
       auto globalloc = loc->findInstanceOfOrUnknown<FileLineColLoc>();
       funcOp = LLVM::LLVMFuncOp::create(b, globalloc, funcName, funcType);
     }
-    
+
     SmallVector<Value> callOperands = {input, sinPtr, cosPtr};
     rewriter.create<LLVM::CallOp>(loc, funcOp, callOperands);
   }
