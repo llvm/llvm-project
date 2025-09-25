@@ -194,7 +194,7 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
 
-def TuneZilsd4ByteAlign
+def FeatureZilsd4ByteAlign
     : SubtargetFeature<"zilsd-4byte-align", "AllowZilsd4ByteAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
 
@@ -1830,7 +1830,6 @@ def TunePreferVsetvliOverReadVLENB
                        "PreferVsetvliOverReadVLENB",
                        "true",
                        "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
-
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

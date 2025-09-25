@@ -16,6 +16,8 @@
 // 2. Post-allocation: Fixes invalid LD/SD instructions if register allocation
 //    didn't provide suitable consecutive registers.
 //
+// Note: second phase is integrated into RISCVLoadStoreOptimizer
+//
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
@@ -45,12 +47,14 @@ using namespace llvm;
 
 STATISTIC(NumLDFormed, "Number of LD instructions formed");
 STATISTIC(NumSDFormed, "Number of SD instructions formed");
-STATISTIC(NumLD2LW, "Number of LD instructions split back to LW");
-STATISTIC(NumSD2SW, "Number of SD instructions split back to SW");
 
 static cl::opt<bool>
     DisableZilsdOpt("disable-riscv-zilsd-opt", cl::Hidden, cl::init(false),
                     cl::desc("Disable Zilsd load/store optimization"));
+
+static cl::opt<unsigned> MaxRescheduleDistance(
+    "riscv-zilsd-max-reschedule-distance", cl::Hidden, cl::init(10),
+    cl::desc("Maximum distance for rescheduling load/store instructions"));
 
 namespace {
 
@@ -84,7 +88,7 @@ private:
                        Register &BaseReg, int &Offset);
   bool rescheduleOps(MachineBasicBlock *MBB,
                      SmallVectorImpl<MachineInstr *> &Ops, unsigned Base,
-                     bool isLoad,
+                     bool IsLoad,
                      DenseMap<MachineInstr *, unsigned> &MI2LocMap);
   bool isSafeToMove(MachineInstr *MI, MachineInstr *Target, bool MoveForward);
   int getMemoryOpOffset(const MachineInstr &MI);
@@ -97,43 +101,9 @@ private:
   MachineDominatorTree *DT;
 };
 
-//===----------------------------------------------------------------------===//
-// Post-allocation Zilsd optimization pass
-//===----------------------------------------------------------------------===//
-class RISCVPostAllocZilsdOpt : public MachineFunctionPass {
-public:
-  static char ID;
-
-  RISCVPostAllocZilsdOpt() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "RISC-V post-allocation Zilsd load/store optimization";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-private:
-  bool fixInvalidRegPairOp(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator &MBBI);
-  bool isConsecutiveRegPair(Register First, Register Second);
-  void splitLdSdIntoTwo(MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator &MBBI, bool isLoad);
-
-  const RISCVSubtarget *STI;
-  const RISCVInstrInfo *TII;
-  const RISCVRegisterInfo *TRI;
-  MachineRegisterInfo *MRI;
-};
-
 } // end anonymous namespace
 
 char RISCVPreAllocZilsdOpt::ID = 0;
-char RISCVPostAllocZilsdOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RISCVPreAllocZilsdOpt, "riscv-prera-zilsd-opt",
                       "RISC-V pre-allocation Zilsd optimization", false, false)
@@ -141,9 +111,6 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(RISCVPreAllocZilsdOpt, "riscv-prera-zilsd-opt",
                     "RISC-V pre-allocation Zilsd optimization", false, false)
-
-INITIALIZE_PASS(RISCVPostAllocZilsdOpt, "riscv-postra-zilsd-opt",
-                "RISC-V post-allocation Zilsd optimization", false, false)
 
 //===----------------------------------------------------------------------===//
 // Pre-allocation pass implementation
@@ -200,13 +167,12 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
   if (Opcode != Op1->getOpcode())
     return false;
 
-  if (Opcode == RISCV::LW) {
+  if (Opcode == RISCV::LW)
     NewOpc = RISCV::PseudoLD_RV32_OPT;
-  } else if (Opcode == RISCV::SW) {
+  else if (Opcode == RISCV::SW)
     NewOpc = RISCV::PseudoSD_RV32_OPT;
-  } else {
+  else
     return false;
-  }
 
   if (!Op0->hasOneMemOperand() || !Op1->hasOneMemOperand())
     return false;
@@ -243,8 +209,8 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
     return false;
 
   // For loads, check that neither destination register is the same as the base
-  // register This prevents register reuse issues where the first load
-  // overwrites the base
+  // register. This prevents register reuse issues where the first load
+  // overwrites the base.
   if (Opcode == RISCV::LW) {
     if (FirstReg == BaseReg || SecondReg == BaseReg)
       return false;
@@ -255,15 +221,12 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
 
 bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
                                          bool MoveForward) {
-  // Enhanced safety check with call and terminator handling
-
   MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::iterator Start = MI->getIterator();
   MachineBasicBlock::iterator End = Target->getIterator();
 
-  if (!MoveForward) {
+  if (!MoveForward)
     std::swap(Start, End);
-  }
 
   // Increment Start to skip the current instruction
   if (Start != MBB->end())
@@ -322,13 +285,9 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
 
 bool RISCVPreAllocZilsdOpt::rescheduleOps(
     MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops, unsigned Base,
-    bool isLoad, DenseMap<MachineInstr *, unsigned> &MI2LocMap) {
-
-  if (Ops.size() < 2)
-    return false;
-
+    bool IsLoad, DenseMap<MachineInstr *, unsigned> &MI2LocMap) {
   // Sort by offset
-  std::sort(Ops.begin(), Ops.end(), [this](MachineInstr *A, MachineInstr *B) {
+  llvm::sort(Ops.begin(), Ops.end(), [this](MachineInstr *A, MachineInstr *B) {
     return getMemoryOpOffset(*A) < getMemoryOpOffset(*B);
   });
 
@@ -364,7 +323,7 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     // For loads: move later instruction up (backwards) to earlier instruction
     // For stores: move earlier instruction down (forwards) to later instruction
     MachineInstr *MoveInstr, *TargetInstr;
-    if (isLoad) {
+    if (IsLoad) {
       // For loads: move the later instruction to the earlier one
       MoveInstr = Op1IsLater ? Op1 : Op0;
       TargetInstr = Op1IsLater ? Op0 : Op1;
@@ -376,8 +335,8 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
 
     unsigned Distance = Op1IsLater ? MI2LocMap[Op1] - MI2LocMap[Op0]
                                    : MI2LocMap[Op0] - MI2LocMap[Op1];
-    // FIXME: Decide what's maximum distance
-    if (!isSafeToMove(MoveInstr, TargetInstr, !isLoad) || Distance > 10)
+    if (!isSafeToMove(MoveInstr, TargetInstr, !IsLoad) ||
+        Distance > MaxRescheduleDistance)
       continue;
 
     // Move the instruction to the target position
@@ -385,15 +344,14 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     ++InsertPos;
 
     // If we need to move an instruction, do it now
-    if (MoveInstr != TargetInstr) {
+    if (MoveInstr != TargetInstr)
       MBB->splice(InsertPos, MBB, MoveInstr->getIterator());
-    }
 
     // Create the paired instruction
     MachineInstrBuilder MIB;
     DebugLoc DL = Op0->getDebugLoc();
 
-    if (isLoad) {
+    if (IsLoad) {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(NewOpc))
                 .addReg(FirstReg, RegState::Define)
                 .addReg(SecondReg, RegState::Define)
@@ -454,7 +412,10 @@ bool RISCVPreAllocZilsdOpt::isMemoryOp(const MachineInstr &MI) {
   const MachineMemOperand *MMO = *MI.memoperands_begin();
 
   // Check alignment: default is 8-byte, but allow 4-byte with tune feature
-  Align RequiredAlign = STI->allowZilsd4ByteAlign() ? Align(4) : Align(8);
+  // If unaligned scalar memory is enabled, allow any alignment
+  Align RequiredAlign = STI->enableUnalignedScalarMem() ? Align(1)
+                        : STI->allowZilsd4ByteAlign()   ? Align(4)
+                                                        : Align(8);
   if (MMO->getAlign() < RequiredAlign)
     return false;
 
@@ -514,7 +475,7 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       if (!isMemoryOp(MI))
         continue;
 
-      bool isLd = (MI.getOpcode() == RISCV::LW);
+      bool IsLd = (MI.getOpcode() == RISCV::LW);
       Register Base = MI.getOperand(1).getReg();
       int Offset = getMemoryOpOffset(MI);
       bool StopHere = false;
@@ -540,7 +501,7 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
           BI->second.push_back(&MI);
       };
 
-      if (isLd)
+      if (IsLd)
         FindBases(Base2LdsMap, LdBases);
       else
         FindBases(Base2StsMap, StBases);
@@ -568,188 +529,9 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
         Modified |= rescheduleOps(MBB, Sts, Base, false, MI2LocMap);
       }
     }
-
-    // Clear all buffers before processing next window
-    Base2LdsMap.clear();
-    Base2StsMap.clear();
-    LdBases.clear();
-    StBases.clear();
-    MI2LocMap.clear();
-
-    // If we stopped at a duplicate, move past it for the next window
-    if (MBBI != E && !MBBI->isCall() && !MBBI->isTerminator()) {
-      ++MBBI;
-    }
   }
 
   return Modified;
-}
-
-//===----------------------------------------------------------------------===//
-// Post-allocation pass implementation
-//===----------------------------------------------------------------------===//
-
-bool RISCVPostAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (DisableZilsdOpt || skipFunction(MF.getFunction()))
-    return false;
-
-  STI = &MF.getSubtarget<RISCVSubtarget>();
-
-  // Only run on RV32 with Zilsd extension
-  if (STI->is64Bit() || !STI->hasStdExtZilsd())
-    return false;
-
-  TII = STI->getInstrInfo();
-  TRI = STI->getRegisterInfo();
-  MRI = &MF.getRegInfo();
-
-  bool Modified = false;
-
-  for (auto &MBB : MF) {
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E;) {
-      if (fixInvalidRegPairOp(MBB, MBBI)) {
-        Modified = true;
-        // Iterator was updated by fixInvalidRegPairOp
-      } else {
-        ++MBBI;
-      }
-    }
-  }
-
-  return Modified;
-}
-
-bool RISCVPostAllocZilsdOpt::isConsecutiveRegPair(Register First,
-                                                  Register Second) {
-  // Special case: both registers are zero register - this is valid for storing zeros
-  if (First == RISCV::X0 && Second == RISCV::X0)
-    return true;
-
-  // Check if registers form a valid even/odd pair for Zilsd
-  unsigned FirstNum = TRI->getEncodingValue(First);
-  unsigned SecondNum = TRI->getEncodingValue(Second);
-
-  // Must be consecutive and first must be even
-  return (FirstNum % 2 == 0) && (SecondNum == FirstNum + 1);
-}
-
-void RISCVPostAllocZilsdOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator &MBBI,
-                                              bool isLoad) {
-  MachineInstr *MI = &*MBBI;
-  DebugLoc DL = MI->getDebugLoc();
-
-  Register FirstReg = MI->getOperand(0).getReg();
-  Register SecondReg = MI->getOperand(1).getReg();
-  Register BaseReg = MI->getOperand(2).getReg();
-  int Offset = MI->getOperand(3).getImm();
-
-  unsigned Opc = isLoad ? RISCV::LW : RISCV::SW;
-
-  // Create two separate instructions
-  if (isLoad) {
-    auto MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                    .addReg(FirstReg, RegState::Define)
-                    .addReg(BaseReg)
-                    .addImm(Offset);
-
-    auto MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                    .addReg(SecondReg, RegState::Define)
-                    .addReg(BaseReg)
-                    .addImm(Offset + 4);
-
-    // Copy memory operands if the original instruction had them
-    // FIXME: This is overly conservative; the new instruction accesses 4 bytes,
-    // not 8.
-    if (MI->memoperands_begin() != MI->memoperands_end()) {
-      MIB1.cloneMemRefs(*MI);
-      MIB2.cloneMemRefs(*MI);
-    }
-
-    ++NumLD2LW;
-    LLVM_DEBUG(dbgs() << "Split LD back to two LW instructions\n");
-  } else {
-    auto MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                    .addReg(FirstReg)
-                    .addReg(BaseReg)
-                    .addImm(Offset);
-
-    auto MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                    .addReg(SecondReg)
-                    .addReg(BaseReg)
-                    .addImm(Offset + 4);
-
-    // Copy memory operands if the original instruction had them
-    // FIXME: This is overly conservative; the new instruction accesses 4 bytes,
-    // not 8.
-    if (MI->memoperands_begin() != MI->memoperands_end()) {
-      MIB1.cloneMemRefs(*MI);
-      MIB2.cloneMemRefs(*MI);
-    }
-
-    ++NumSD2SW;
-    LLVM_DEBUG(dbgs() << "Split SD back to two SW instructions\n");
-  }
-
-  // Remove the original paired instruction and update iterator
-  MBBI = MBB.erase(MBBI);
-}
-
-bool RISCVPostAllocZilsdOpt::fixInvalidRegPairOp(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) {
-  MachineInstr *MI = &*MBBI;
-  unsigned Opcode = MI->getOpcode();
-
-  // Check if this is a Zilsd pseudo that needs fixing
-  if (Opcode != RISCV::PseudoLD_RV32_OPT && Opcode != RISCV::PseudoSD_RV32_OPT)
-    return false;
-
-  bool isLoad = (Opcode == RISCV::PseudoLD_RV32_OPT);
-
-  Register FirstReg = MI->getOperand(0).getReg();
-  Register SecondReg = MI->getOperand(1).getReg();
-
-  // Check if we have valid consecutive registers
-  if (!isConsecutiveRegPair(FirstReg, SecondReg)) {
-    // Need to split back into two instructions
-    splitLdSdIntoTwo(MBB, MBBI, isLoad);
-    return true;
-  }
-
-  // Registers are valid, convert to real LD/SD instruction
-  Register BaseReg = MI->getOperand(2).getReg();
-  int Offset = MI->getOperand(3).getImm();
-  DebugLoc DL = MI->getDebugLoc();
-
-  unsigned RealOpc = isLoad ? RISCV::LD_RV32 : RISCV::SD_RV32;
-
-  // Create register pair from the two individual registers
-  unsigned RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
-                                              &RISCV::GPRPairRegClass);
-  // Create the real LD/SD instruction with register pair
-  MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(RealOpc));
-
-  if (isLoad) {
-    // For LD, the register pair is the destination
-    MIB.addReg(RegPair, RegState::Define);
-  } else {
-    // For SD, the register pair is the source
-    MIB.addReg(RegPair);
-  }
-
-  MIB.addReg(BaseReg).addImm(Offset);
-
-  // Copy memory operands if the original instruction had them
-  if (MI->memoperands_begin() != MI->memoperands_end())
-    MIB.cloneMemRefs(*MI);
-
-  LLVM_DEBUG(dbgs() << "Converted pseudo to real instruction: " << *MIB
-                    << "\n");
-
-  // Remove the pseudo instruction and update iterator
-  MBBI = MBB.erase(MBBI);
-
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -758,8 +540,4 @@ bool RISCVPostAllocZilsdOpt::fixInvalidRegPairOp(
 
 FunctionPass *llvm::createRISCVPreAllocZilsdOptPass() {
   return new RISCVPreAllocZilsdOpt();
-}
-
-FunctionPass *llvm::createRISCVPostAllocZilsdOptPass() {
-  return new RISCVPostAllocZilsdOpt();
 }

@@ -1055,9 +1055,8 @@ void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
 
       // If NewReg is virtual, set up the reciprocal hint
       // NewReg takes over Reg's role, so it gets the SAME hint type as Reg
-      if (NewReg.isVirtual()) {
+      if (NewReg.isVirtual())
         MRI->setRegAllocationHint(NewReg, Hint.first, Partner);
-      }
     }
   }
 }

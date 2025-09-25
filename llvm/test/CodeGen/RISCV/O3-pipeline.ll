@@ -182,7 +182,6 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V post-regalloc pseudo instruction expansion pass
-; CHECK-NEXT:       RISC-V post-allocation Zilsd load/store optimization
 ; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       RISC-V Load / Store Optimizer
 ; CHECK-NEXT:       MachineDominator Tree Construction
