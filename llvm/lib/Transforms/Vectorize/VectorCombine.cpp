@@ -2487,10 +2487,8 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
-  // Check whether this is a unary shuffle.
-  // TODO: check if this can be extended to match undef or unused values,
-  // perhaps using ShuffleVectorInst::isSingleSource.
-  bool IsBinaryShuffle = !isa<PoisonValue>(V1);
+  // Check whether this is a binary shuffle.
+  bool IsBinaryShuffle = !isa<UndefValue>(V1);
 
   auto *C0 = dyn_cast<CastInst>(V0);
   auto *C1 = dyn_cast<CastInst>(V1);
@@ -2501,9 +2499,8 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
 
   // If this is allowed, foldShuffleOfCastops can get stuck in a loop
   // with foldBitcastOfShuffle. Reject in favor of foldBitcastOfShuffle.
-  if (!IsBinaryShuffle && Opcode == Instruction::BitCast) {
+  if (!IsBinaryShuffle && Opcode == Instruction::BitCast)
     return false;
-  }
 
   if (IsBinaryShuffle) {
     if (C0->getSrcTy() != C1->getSrcTy())
