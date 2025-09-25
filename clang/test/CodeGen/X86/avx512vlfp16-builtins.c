@@ -86,6 +86,8 @@ __m128h test_mm_set1_pch(_Float16 _Complex h) {
   return _mm_set1_pch(h);
 }
 
+TEST_CONSTEXPR(match_m128h(_mm_set1_pch(1.0), 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0));
+
 __m256h test_mm256_set1_pch(_Float16 _Complex h) {
   // CHECK-LABEL: test_mm256_set1_pch
   // CHECK: insertelement <8 x float> {{.*}}, i32 0
@@ -98,6 +100,8 @@ __m256h test_mm256_set1_pch(_Float16 _Complex h) {
   // CHECK: insertelement <8 x float> {{.*}}, i32 7
   return _mm256_set1_pch(h);
 }
+
+TEST_CONSTEXPR(match_m256h(_mm256_set1_pch(1.0), 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0));
 
 __m128h test_mm_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                        _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8) {
