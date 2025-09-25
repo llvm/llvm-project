@@ -1525,8 +1525,6 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
       auto *UserI = cast<Instruction>(U.getUser());
       BasicBlock *UseBB = UserI->getParent();
       if (auto *PN = dyn_cast<PHINode>(UserI)) {
-        unsigned OpIdx =
-            PHINode::getIncomingValueNumForOperand(U.getOperandNo());
         UseBB = PN->getIncomingBlock(U);
       }
       if (UseBB == Preheader || L->contains(UseBB)) {
