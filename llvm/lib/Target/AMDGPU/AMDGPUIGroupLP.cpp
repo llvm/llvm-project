@@ -2619,8 +2619,14 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
+  // When given, specific bits overrule the more general ALU type.
+  bool HasConcreteClassSpecified =
+      (Mask & (SchedGroupMask::SALU | SchedGroupMask::VALU |
+               SchedGroupMask::MFMA)) != SchedGroupMask::NONE;
+
   // ALU implies VALU, SALU, MFMA, TRANS.
-  if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
+  if (!HasConcreteClassSpecified &&
+      (InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
                     ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS;
   // VALU, SALU, MFMA, TRANS implies ALU.
