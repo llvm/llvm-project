@@ -3430,11 +3430,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(
       S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {        
         unsigned Width = LHS.getBitWidth();
-
         APInt Mul = llvm::APIntOps::mulhs(LHS, RHS);
         Mul = Mul.relativeLShr(14);
-        Mul = Mul.sadd_sat(APInt(Width, 1, true));
-        return APInt(Mul.relativeLShr(1));
+        Mul = Mul + APInt(Width, 1, true);
+        return Mul.relativeLShr(1);
       });
 
   case clang::X86::BI__builtin_ia32_pavgb128:

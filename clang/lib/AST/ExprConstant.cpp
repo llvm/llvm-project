@@ -67,7 +67,6 @@
 #include <cstring>
 #include <functional>
 #include <limits>
-#include <llvm/ADT/APSInt.h>
 #include <optional>
 
 #define DEBUG_TYPE "exprconstant"
@@ -11733,8 +11732,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       unsigned Width = LHS.getBitWidth();
       APInt Mul = llvm::APIntOps::mulhs(LHS, RHS);
       Mul = Mul.relativeLShr(14);
-      Mul = Mul.sadd_sat(APInt(Width, 1, true));
-      return APInt(Mul.relativeLShr(1));
+      Mul = Mul + APInt(Width, 1, true);
+      return Mul.relativeLShr(1);
     });
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:

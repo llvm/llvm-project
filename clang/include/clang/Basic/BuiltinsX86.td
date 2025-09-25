@@ -1355,12 +1355,9 @@ let Features = "avx512bitalg", Attributes = [NoThrow, Const, RequiredVectorWidth
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
-  def pmulhrsw512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>)">;
-}
-
-let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def pavgb512 : X86Builtin<"_Vector<64, unsigned char>(_Vector<64, unsigned char>, _Vector<64, unsigned char>)">;
   def pavgw512 : X86Builtin<"_Vector<32, unsigned short>(_Vector<32, unsigned short>, _Vector<32, unsigned short>)">;
+  def pmulhrsw512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>)">;
   def pmulhuw512 : X86Builtin<"_Vector<32, unsigned short>(_Vector<32, unsigned short>, _Vector<32, unsigned short>)">;
   def pmulhw512 : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>)">;
 }
