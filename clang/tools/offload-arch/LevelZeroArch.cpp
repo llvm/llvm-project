@@ -154,14 +154,14 @@ int printGPUsByLevelZero() {
   DriverType.pNext = nullptr;
   uint32_t DriverCount{0};
 
-  // Initialize and find all drivers
+  // Initialize and find all drivers.
   CALL_ZE_AND_CHECK(zeInitDrivers, &DriverCount, nullptr, &DriverType);
 
   llvm::SmallVector<ze_driver_handle_t> Drivers(DriverCount);
   CALL_ZE_AND_CHECK(zeInitDrivers, &DriverCount, Drivers.data(), &DriverType);
 
   for (auto Driver : Drivers) {
-    // Discover all the devices for a given driver
+    // Discover all the devices for a given driver.
     uint32_t DeviceCount = 0;
     CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, nullptr);
 

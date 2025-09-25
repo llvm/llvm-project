@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  // Support legacy binaries
+  // Support legacy binaries.
   if (sys::path::stem(argv[0]).starts_with("amdgpu-arch"))
     Only = VendorName::amdgpu;
   if (sys::path::stem(argv[0]).starts_with("nvptx-arch"))
