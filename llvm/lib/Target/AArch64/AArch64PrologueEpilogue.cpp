@@ -1350,29 +1350,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     --SEHEpilogueStartI;
   }
 
-  if (HasFP && AFI->hasSwiftAsyncContext())
-    emitSwiftAsyncContextFramePointer(EpilogueEndI, DL);
-
   const StackOffset &SVEStackSize = AFL.getSVEStackSize(MF);
-
-  // If there is a single SP update, insert it before the ret and we're done.
-  if (CombineSPBump) {
-    assert(!SVEStackSize && "Cannot combine SP bump with SVE");
-
-    // When we are about to restore the CSRs, the CFA register is SP again.
-    if (EmitCFI && HasFP)
-      CFIInstBuilder(MBB, FirstGPRRestoreI, MachineInstr::FrameDestroy)
-          .buildDefCFA(AArch64::SP, NumBytes);
-
-    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(NumBytes + AfterCSRPopSize), TII,
-                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI,
-                    EmitCFI, StackOffset::getFixed(NumBytes));
-    return;
-  }
-
-  NumBytes -= PrologueSaveSize;
-  assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
   // Process the SVE callee-saves to determine what space needs to be
   // deallocated.
@@ -1396,6 +1374,28 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     DeallocateBefore = SVEStackSize - CalleeSavedSizeAsOffset;
     DeallocateAfter = CalleeSavedSizeAsOffset;
   }
+
+  if (HasFP && AFI->hasSwiftAsyncContext())
+    emitSwiftAsyncContextFramePointer(EpilogueEndI, DL);
+
+  // If there is a single SP update, insert it before the ret and we're done.
+  if (CombineSPBump) {
+    assert(!SVEStackSize && "Cannot combine SP bump with SVE");
+
+    // When we are about to restore the CSRs, the CFA register is SP again.
+    if (EmitCFI && HasFP)
+      CFIInstBuilder(MBB, FirstGPRRestoreI, MachineInstr::FrameDestroy)
+          .buildDefCFA(AArch64::SP, NumBytes);
+
+    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
+                    StackOffset::getFixed(NumBytes + AfterCSRPopSize), TII,
+                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI,
+                    EmitCFI, StackOffset::getFixed(NumBytes));
+    return;
+  }
+
+  NumBytes -= PrologueSaveSize;
+  assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
   // Deallocate the SVE area.
   if (FPAfterSVECalleeSaves) {
