@@ -18905,9 +18905,15 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   uint64_t Result;
   std::string StringResult;
 
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateString(Info, this, StringResult))
+      return std::nullopt;
+    return StringResult;
+  }
+
   if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
     return StringResult;
-  return {};
+  return std::nullopt;
 }
 
 template <typename T>
