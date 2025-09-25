@@ -1046,18 +1046,12 @@ struct WgToSgMultiDimReductionOp
       return failure();
 
     auto srcShape = srcType.getShape();
-    auto dstShape = dstType.getShape();
-    if (srcShape.size() != 2 || dstShape.size() != 1)
-      return failure();
-
     xegpu::DistributeLayoutAttr layout =
         xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
     auto reductionDims = llvm::to_vector(op.getReductionDims());
-    if (reductionDims.size() != 1)
-      return failure();
 
     SmallVector<int64_t> sgLayout = llvm::cast<xegpu::SliceAttr>(layout)
                                         .getParent()
@@ -1068,11 +1062,13 @@ struct WgToSgMultiDimReductionOp
 
     // Check that the sgLayout in the reduced dimension is 1 and
     // each sg gets the entire slice to reduce.
-    if (sgLayout[reductionDims[0]] != 1 ||
-        sgData[reductionDims[0]] != srcShape[reductionDims[0]])
-      return rewriter.notifyMatchFailure(
-          op, "sgLayout in reduced dimension must be 1 and sgData in the "
-              "reduced dim must match srcShape in that dim");
+    for (int64_t dim : reductionDims) {
+      if (sgLayout[dim] != 1 || sgData[dim] != srcShape[dim])
+        return rewriter.notifyMatchFailure(
+            op,
+            "sgLayout in each reduced dimension must be 1 and sgData in the "
+            "reduced dim must match srcShape in that dim");
+    }
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
 

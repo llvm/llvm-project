@@ -395,6 +395,18 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: @vector_reduce_4D
+   gpu.func @vector_reduce_4D(%src: ui64) {
+      %cst_acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>, dims = [3]>} dense<0.0> : vector<4x2x6xf16>
+      %offset = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>} dense<0>  : vector<4x2x6x32xindex>
+      %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>} dense<true> : vector<4x2x6x32xi1>
+      %load = xegpu.load %src[%offset], %mask  {layout_result_0 = #xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>} : ui64, vector<4x2x6x32xindex>, vector<4x2x6x32xi1> -> vector<4x2x6x32xf16>
+      // CHECK: vector.multi_reduction <add>, {{.*}}, {{.*}} [3] : vector<1x1x1x32xf16> to vector<1x1x1xf16>
+      %reduce = vector.multi_reduction <add>, %load, %cst_acc {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2, 6, 1], sg_data = [1, 1, 1, 32]>, dims = [3]>} [3]
+      : vector<4x2x6x32xf16> to vector<4x2x6xf16>
+      gpu.return
+    }
+
   // CHECK-LABEL: vector_step_op
   gpu.func @vector_step_op_slice_attr() {
     //CHECK: [[sgId:%.+]] = gpu.subgroup_id : index
