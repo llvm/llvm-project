@@ -260,9 +260,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.push_back('I');
         }
 
-        // If there is a direction vector with all entries being '*', we cannot
-        // prove the legality of the interchange for arbitrary pairs of loops.
-        // Exit early in this case to save compile time.
+        // If all the elements of any direction vector have only '*', legality
+        // can't be proven. Exit early to save compile time.
         if (all_of(Dep, [](char C) { return C == '*'; })) {
           ORE->emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "Dependence",
