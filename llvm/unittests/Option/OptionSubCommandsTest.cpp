@@ -147,9 +147,25 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     EXPECT_TRUE(SC.empty());
     // Expect the multiple subcommands error message.
     EXPECT_NE(std::string::npos, ErrMsg.find("Multiple subcommands passed"));
+    EXPECT_NE(std::string::npos, ErrMsg.find("foo"));
+    EXPECT_NE(std::string::npos, ErrMsg.find("bar"));
     // Do not expect the rnregistered subcommands error message.
     EXPECT_EQ(std::string::npos,
               ErrMsg.find("Unregistered positionals passed"));
+  }
+
+  {
+    // Test case 5: Check invalid use of passing unregistered subcommands.
+    const char *Args[] = {"foobar"};
+    InputArgList AL = T.ParseArgs(Args, MAI, MAC);
+    StringRef SC = AL.getSubcommand(
+        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    // No valid subcommand should be returned as this is an invalid invocation.
+    EXPECT_TRUE(SC.empty());
+    // Expect the rnregistered subcommands error message.
+    EXPECT_NE(std::string::npos,
+              ErrMsg.find("Unregistered positionals passed"));
+    EXPECT_NE(std::string::npos, ErrMsg.find("foobar"));
   }
 }
 
