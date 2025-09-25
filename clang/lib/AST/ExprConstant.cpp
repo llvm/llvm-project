@@ -11729,13 +11729,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_pmulhrsw128:
   case clang::X86::BI__builtin_ia32_pmulhrsw256:
   case clang::X86::BI__builtin_ia32_pmulhrsw512:
-    return EvaluateBinOpExpr([](const APSInt &LHs, const APSInt& RHS) -> {
-      QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
-      unsigned width = Info.Ctx.getIntWidth(DestEltTy);
-      APInt mul = llvm::APIntOps::mulhs(LHS, RHS);
-      mul = mul.relativeLShr(14);
-      mul = mul.sadd_sat(APInt(width, 1, true));
-      return APInt(mul.relativeLShr(1));
+    return EvaluateBinOpExpr([](const APSInt &LHS, const APSInt& RHS) {
+      unsigned Width = LHS.getBitWidth();
+      APInt Mul = llvm::APIntOps::mulhs(LHS, RHS);
+      Mul = Mul.relativeLShr(14);
+      Mul = Mul.sadd_sat(APInt(Width, 1, true));
+      return APInt(Mul.relativeLShr(1));
     });
 
   case clang::X86::BI__builtin_ia32_pmulhuw128:
