@@ -1023,7 +1023,7 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-static unsigned getReverseOpcode(unsigned Opcode){
+static unsigned getReverseOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected Opcode");
