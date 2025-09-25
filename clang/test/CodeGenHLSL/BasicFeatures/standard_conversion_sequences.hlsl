@@ -43,7 +43,7 @@ void d4_to_f2() {
 // CHECK: [[i2:%.*]] = alloca <2 x i32>
 // CHECK: store <2 x float> splat (float 4.000000e+00), ptr [[f2]]
 // CHECK: [[vecf2:%.*]] = load <2 x float>, ptr [[f2]]
-// CHECK: [[veci2:%.*]] = fptosi <2 x float> [[vecf2]] to <2 x i32>
+// CHECK: [[veci2:%.*]] = fptosi reassoc nnan ninf nsz arcp afn <2 x float> [[vecf2]] to <2 x i32>
 // CHECK: store <2 x i32> [[veci2]], ptr [[i2]]
 void f2_to_i2() {
   vector<float,2> f2 = 4.0;
@@ -55,7 +55,7 @@ void f2_to_i2() {
 // CHECK: [[i2:%.*]] = alloca <2 x i32>
 // CHECK: store <4 x double> splat (double 5.000000e+00), ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[veci4:%.*]] = fptosi <4 x double> [[vecd4]] to <4 x i32>
+// CHECK: [[veci4:%.*]] = fptosi reassoc nnan ninf nsz arcp afn <4 x double> [[vecd4]] to <4 x i32>
 // CHECK: [[veci2:%.*]] = shufflevector <4 x i32> [[veci4]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 // CHECK: store <2 x i32> [[veci2]], ptr [[i2]]
 void d4_to_i2() {
@@ -68,7 +68,7 @@ void d4_to_i2() {
 // CHECK: [[l4:%.*]] = alloca <4 x i64>
 // CHECK: store <4 x double> splat (double 6.000000e+00), ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
-// CHECK: [[vecl4:%.*]] = fptosi <4 x double> [[vecd4]] to <4 x i64>
+// CHECK: [[vecl4:%.*]] = fptosi reassoc nnan ninf nsz arcp afn <4 x double> [[vecd4]] to <4 x i64>
 // CHECK: store <4 x i64> [[vecl4]], ptr [[l4]]
 void d4_to_l4() {
   vector<double,4> d4 = 6.0;

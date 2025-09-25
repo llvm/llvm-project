@@ -56,6 +56,24 @@ entry:
   %h_vec = fptrunc <3 x float> %vec to <3 x half>
 ; CHECK: %h_scalable = fptrunc <vscale x 3 x float> %scalable to <vscale x 3 x half>
   %h_scalable = fptrunc <vscale x 3 x float> %scalable to <vscale x 3 x half>
+; CHECK: %i = fptoui float %x to i32
+  %i = fptoui float %x to i32
+; CHECK: %i_vec = fptoui <3 x float> %vec to <3 x i32>
+  %i_vec = fptoui <3 x float> %vec to <3 x i32>
+; CHECK: %i_scalable = fptoui <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+  %i_scalable = fptoui <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+; CHECK: %j = fptosi float %x to i32
+  %j = fptosi float %x to i32
+; CHECK: %j_vec = fptosi <3 x float> %vec to <3 x i32>
+  %j_vec = fptosi <3 x float> %vec to <3 x i32>
+; CHECK: %j_scalable = fptosi <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+  %j_scalable = fptosi <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+; CHECK: %k = sitofp i32 %j to float
+  %k = sitofp i32 %j to float
+; CHECK: %k_vec = sitofp <3 x i32> %j_vec to <3 x float>
+  %k_vec = sitofp <3 x i32> %j_vec to <3 x float>
+; CHECK: %k_scalable = sitofp <vscale x 3 x i32> %j_scalable to <vscale x 3 x float>
+  %k_scalable = sitofp <vscale x 3 x i32> %j_scalable to <vscale x 3 x float>
 ; CHECK:  ret float %f
   ret  float %f
 }
@@ -108,6 +126,24 @@ entry:
   %h_vec = fptrunc nnan <3 x float> %vec to <3 x half>
 ; CHECK: %h_scalable = fptrunc nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
   %h_scalable = fptrunc nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
+; CHECK: %i = fptoui nnan float %x to i32
+  %i = fptoui nnan float %x to i32
+; CHECK: %i_vec = fptoui nnan <3 x float> %vec to <3 x i32>
+  %i_vec = fptoui nnan <3 x float> %vec to <3 x i32>
+; CHECK: %i_scalable = fptoui nnan <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+  %i_scalable = fptoui nnan <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+; CHECK: %j = fptosi nnan float %x to i32
+  %j = fptosi nnan float %x to i32
+; CHECK: %j_vec = fptosi nnan <3 x float> %vec to <3 x i32>
+  %j_vec = fptosi nnan <3 x float> %vec to <3 x i32>
+; CHECK: %j_scalable = fptosi nnan <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+  %j_scalable = fptosi nnan <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+; CHECK: %k = sitofp nnan i32 %j to float
+  %k = sitofp nnan i32 %j to float
+; CHECK: %k_vec = sitofp nnan <3 x i32> %j_vec to <3 x float>
+  %k_vec = sitofp nnan <3 x i32> %j_vec to <3 x float>
+; CHECK: %k_scalable = sitofp nnan <vscale x 3 x i32> %j_scalable to <vscale x 3 x float>
+  %k_scalable = sitofp nnan <vscale x 3 x i32> %j_scalable to <vscale x 3 x float>
 ; CHECK:  ret float %f
   ret float %f
 }
@@ -125,6 +161,12 @@ entry:
   %d = fpext contract float %x to double
 ; CHECK: %e = fptrunc contract float %x to half
   %e = fptrunc contract float %x to half
+; CHECK: %f = fptoui contract float %x to i32
+  %f = fptoui contract float %x to i32
+; CHECK: %g = fptosi contract float %x to i32
+  %g = fptosi contract float %x to i32
+; CHECK: %h = sitofp contract i32 %g to float
+  %h = sitofp contract i32 %g to float
   ret float %c
 }
 
@@ -140,6 +182,12 @@ define float @reassoc(float %x, float %y) {
   %d = fpext reassoc float %x to double
 ; CHECK: %e = fptrunc reassoc float %x to half
   %e = fptrunc reassoc float %x to half
+; CHECK: %f = fptoui reassoc float %x to i32
+  %f = fptoui reassoc float %x to i32
+; CHECK: %g = fptosi reassoc float %x to i32
+  %g = fptosi reassoc float %x to i32
+; CHECK: %h = sitofp reassoc i32 %g to float
+  %h = sitofp reassoc i32 %g to float
   ret float %c
 }
 
@@ -198,6 +246,24 @@ entry:
   %g_vec = fptrunc ninf nnan <3 x float> %vec to <3 x half>
 ; CHECK: %g_scalable = fptrunc nnan ninf <vscale x 3 x float> %scalable to <vscale x 3 x half>
   %g_scalable = fptrunc ninf nnan <vscale x 3 x float> %scalable to <vscale x 3 x half>
+; CHECK: %i = fptoui nnan ninf float %x to i32
+  %i = fptoui ninf nnan float %x to i32
+; CHECK: %i_vec = fptoui nnan ninf <3 x float> %vec to <3 x i32>
+  %i_vec = fptoui ninf nnan <3 x float> %vec to <3 x i32>
+; CHECK: %i_scalable = fptoui nnan ninf <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+  %i_scalable = fptoui ninf nnan <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+; CHECK: %j = fptosi nnan ninf float %x to i32
+  %j = fptosi ninf nnan float %x to i32
+; CHECK: %j_vec = fptosi nnan ninf <3 x float> %vec to <3 x i32>
+  %j_vec = fptosi ninf nnan <3 x float> %vec to <3 x i32>
+; CHECK: %j_scalable = fptosi nnan ninf <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+  %j_scalable = fptosi ninf nnan <vscale x 3 x float> %scalable to <vscale x 3 x i32>
+; CHECK: %k = sitofp nnan ninf i32 %j to float
+  %k = sitofp ninf nnan i32 %j to float
+; CHECK: %k_vec = sitofp nnan ninf <3 x i32> %j_vec to <3 x float>
+  %k_vec = sitofp ninf nnan <3 x i32> %j_vec to <3 x float>
+; CHECK: %k_scalable = sitofp nnan ninf <vscale x 3 x i32> %j_scalable to <vscale x 3 x float>
+  %k_scalable = sitofp ninf nnan <vscale x 3 x i32> %j_scalable to <vscale x 3 x float>
 ; CHECK:  ret float %e
   ret float %e
 }

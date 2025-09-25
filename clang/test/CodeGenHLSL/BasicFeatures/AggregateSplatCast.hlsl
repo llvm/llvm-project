@@ -38,7 +38,7 @@ export void call8() {
 // CHECK-NEXT: store <1 x float> splat (float 1.000000e+00), ptr [[B]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x float>, ptr [[B]], align 4
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x float> [[L]], i32 0
-// CHECK-NEXT: [[C:%.*]] = fptosi float [[VL]] to i32
+// CHECK-NEXT: [[C:%.*]] = fptosi reassoc nnan ninf nsz arcp afn float [[VL]] to i32
 // CHECK-NEXT: [[SI:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
 // CHECK-NEXT: [[S:%.*]] = shufflevector <4 x i32> [[SI]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT: store <4 x i32> [[S]], ptr [[A]], align 16
@@ -62,7 +62,7 @@ struct S {
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call3() {
   int1 A = {1};
@@ -79,7 +79,7 @@ export void call3() {
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call5() {
   int1 A = {1};

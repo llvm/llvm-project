@@ -3518,35 +3518,35 @@ extern "C" __device__ double test_lgamma(double x) {
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_llrintf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_llrintf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_llrintf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_llrintf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.rint.f32(float [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long long int test_llrintf(float x) {
@@ -3557,35 +3557,35 @@ extern "C" __device__ long long int test_llrintf(float x) {
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_llrint(
 // FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_llrint(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_llrint(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_llrint(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) double @llvm.rint.f64(double [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long long int test_llrint(double x) {
@@ -3596,35 +3596,35 @@ extern "C" __device__ long long int test_llrint(double x) {
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.round.f32(float [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_llroundf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.round.f32(float nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_llroundf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.round.f32(float [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_llroundf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.round.f32(float [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_llroundf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.round.f32(float [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long long int test_llroundf(float x) {
@@ -3635,35 +3635,35 @@ extern "C" __device__ long long int test_llroundf(float x) {
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.round.f64(double [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_llround(
 // FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.round.f64(double nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_llround(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.round.f64(double [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_llround(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.round.f64(double [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_llround(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) double @llvm.round.f64(double [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long long int test_llround(double x) {
@@ -3980,35 +3980,35 @@ extern "C" __device__ float test_logf(float x) {
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_lrintf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_lrintf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_lrintf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.rint.f32(float [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_lrintf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.rint.f32(float [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long int test_lrintf(float x) {
@@ -4019,35 +4019,35 @@ extern "C" __device__ long int test_lrintf(float x) {
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_lrint(
 // FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_lrint(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_lrint(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.rint.f64(double [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_lrint(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) double @llvm.rint.f64(double [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long int test_lrint(double x) {
@@ -4058,35 +4058,35 @@ extern "C" __device__ long int test_lrint(double x) {
 // DEFAULT-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.round.f32(float [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_lroundf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.round.f32(float nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi  nnan ninf contract float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_lroundf(
 // APPROX-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.round.f32(float [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_lroundf(
 // NCRDIV-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.round.f32(float [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_lroundf(
 // AMDGCNSPIRV-SAME: float noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.round.f32(float [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract float [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long int test_lroundf(float x) {
@@ -4097,35 +4097,35 @@ extern "C" __device__ long int test_lroundf(float x) {
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.round.f64(double [[X]])
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // DEFAULT-NEXT:    ret i64 [[CONV_I]]
 //
 // FINITEONLY-LABEL: define dso_local i64 @test_lround(
 // FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.round.f64(double nofpclass(nan inf) [[X]])
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi nnan ninf contract double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
 // APPROX-LABEL: define dso_local i64 @test_lround(
 // APPROX-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // APPROX-NEXT:  [[ENTRY:.*:]]
 // APPROX-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.round.f64(double [[X]])
-// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// APPROX-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // APPROX-NEXT:    ret i64 [[CONV_I]]
 //
 // NCRDIV-LABEL: define dso_local i64 @test_lround(
 // NCRDIV-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NCRDIV-NEXT:  [[ENTRY:.*:]]
 // NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.round.f64(double [[X]])
-// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// NCRDIV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // NCRDIV-NEXT:    ret i64 [[CONV_I]]
 //
 // AMDGCNSPIRV-LABEL: define spir_func i64 @test_lround(
 // AMDGCNSPIRV-SAME: double noundef [[X:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) double @llvm.round.f64(double [[X]])
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = fptosi contract double [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    ret i64 [[CONV_I]]
 //
 extern "C" __device__ long int test_lround(double x) {
