@@ -502,7 +502,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
   std::optional<unsigned> OriginalTripCount =
       llvm::getLoopEstimatedTripCount(L);
-  std::optional<double> OriginalLoopProb = llvm::getLoopProbability(L);
+  BranchProbability OriginalLoopProb = llvm::getLoopProbability(L);
 
   // Effectively "DCE" unrolled iterations that are beyond the max tripcount
   // and will never be executed.
@@ -1161,10 +1161,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // the unrolled loop as a whole without considering the branch weights for
     // each unrolled iteration's latch within it, we store the new trip count as
     // separate metadata.
-    if (OriginalLoopProb && ULO.Runtime && EpilogProfitability) {
+    if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
       // Where p is always the probability of executing at least 1 more
       // iteration, the probability for at least n more iterations is p^n.
-      setLoopProbability(L, pow(*OriginalLoopProb, ULO.Count));
+      setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));
     }
     if (OriginalTripCount) {
       unsigned NewTripCount = *OriginalTripCount / ULO.Count;

@@ -48,11 +48,13 @@ for.end:
 ; Original estimated trip count: (1+9999)/1 = 10000
 ; Unroll count: 4
 
-; Probability of >=3 iterations after first: p^3 = 0.9970003
-; CHECK: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 29997, i32 99970003}
+; Probability of >=3 iterations after first: p^3 = 0.9970003 =~
+; 2146839468 / (644180 + 2146839468).
+; CHECK: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 644180, i32 2146839468}
 
-; Probability of >=4 more iterations: p^4 = 0.99960006
-; CHECK: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 39994, i32 99960006}
+; Probability of >=4 more iterations: p^4 = 0.99960006 =~
+; 2146624784 / (858864 + 2146624784).
+; CHECK: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 858864, i32 2146624784}
 
 ; 10000//4 = 2500
 ; CHECK: ![[#LOOP_UR_LATCH]] = distinct !{![[#LOOP_UR_LATCH]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}
@@ -61,15 +63,16 @@ for.end:
 ; CHECK: ![[#DISABLE]] = !{!"llvm.loop.unroll.disable"}
 
 ; Probability of 1 to 3 more of 3 more remainder iterations:
-; (p-p^4)/(1-p^4) = 0.749962497
-; CHECK: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 74996250, i32 25003750}
+; (p-p^4)/(1-p^4) = 0.749962497 =~ 1610532724 / (1610532724 + 536950924).
+; CHECK: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1610532724, i32 536950924}
 
 ; Frequency of first remainder iter:  r1 =                      1
 ; Frequency of second remainder iter: r2 = r1*(p-p^3)/(1-p^3) = 0.666633331
 ; Frequency of third remainder iter:  r3 = r2*(p-p^2)/(1-p^2) = 0.333299999
 ; Solve for loop probability that produces that frequency: f = 1/(1-p') =>
-; p' = 1-1/f = 1-1/(r1+r2+r3) = 0.499983332.
-; CHECK: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 49998333, i32 50001667}
+; p' = 1-1/f = 1-1/(r1+r2+r3) = 0.499983332 =~
+; 1073706403 / (1073706403 + 1073777245).
+; CHECK: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1073706403, i32 1073777245}
 
 ; 10000%4 = 0
 ; CHECK: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}

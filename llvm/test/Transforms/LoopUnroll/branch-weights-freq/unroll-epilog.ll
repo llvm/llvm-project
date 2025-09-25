@@ -113,17 +113,17 @@ do.end:
 ; ------------------------------------------------------------------------------
 ; Check branch weight metadata and estimated trip count metadata.
 ;
-;  UR2: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 9090909, i32 90909091}
-;  UR4: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 24868520, i32 75131480}
-; UR10: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 57590238, i32 42409762}
-; UR11: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 61445671, i32 38554329}
-; UR12: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 64950610, i32 35049390}
+;  UR2: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 195225786, i32 1952257862}
+;  UR4: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 534047398, i32 1613436250}
+; UR10: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 1236740947, i32 910742701}
+; UR11: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 1319535738, i32 827947910}
+; UR12: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 1394803730, i32 752679918}
 ;
-;  UR2: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 17355372, i32 82644628}
-;  UR4: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 31698654, i32 68301346}
-; UR10: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 61445671, i32 38554329}
-; UR11: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 64950610, i32 35049390}
-; UR12: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 68136918, i32 31863082}
+;  UR2: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 372703773, i32 1774779875}
+;  UR4: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 680723421, i32 1466760227}
+; UR10: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 1319535738, i32 827947910}
+; UR11: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 1394803730, i32 752679918}
+; UR12: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 1463229177, i32 684254471}
 ;
 ;  UR2: ![[#LOOP_UR_LATCH]] = distinct !{![[#LOOP_UR_LATCH]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}
 ;  UR4: ![[#LOOP_UR_LATCH]] = distinct !{![[#LOOP_UR_LATCH]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}
@@ -138,16 +138,16 @@ do.end:
 ; UR12: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ;   UR: ![[#DISABLE]] = !{!"llvm.loop.unroll.disable"}
 ;
-;  UR2: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 47619048, i32 52380952}
-;  UR4: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 71320836, i32 28679164}
-; UR10: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 85204964, i32 14795036}
-; UR11: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 86003351, i32 13996649}
-; UR12: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 86657880, i32 13342120}
+;  UR2: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1022611260, i32 1124872388}
+;  UR4: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1531603292, i32 615880356}
+; UR10: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1829762672, i32 317720976}
+; UR11: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1846907894, i32 300575754}
+; UR12: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1860963812, i32 286519836}
 ;
-;  UR4: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 48361934, i32 51638066}
-; UR10: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 77129012, i32 22870988}
-; UR11: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 78838041, i32 21161959}
-; UR12: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 80252977, i32 19747023}
+;  UR4: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1038564635, i32 1108919013}
+; UR10: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1656332913, i32 491150735}
+; UR11: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1693034047, i32 454449601}
+; UR12: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1723419551, i32 424064097}
 
 ;  UR4: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
 ; UR10: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}

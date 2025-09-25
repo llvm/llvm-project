@@ -200,13 +200,14 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
 /// from 0 to \p N more iterations can possibly execute.  Among such cases in
 /// the original loop (with loop probability \p OriginalLoopProb), what is the
 /// probability of executing at least one more iteration?
-static double probOfNextInRemainder(double OriginalLoopProb, unsigned N) {
+static BranchProbability
+probOfNextInRemainder(BranchProbability OriginalLoopProb, unsigned N) {
   // Each of these variables holds the original loop's probability that the
   // number of iterations it will execute is some m in the specified range.
-  double ProbOne = OriginalLoopProb;                // 1 <= m
-  double ProbTooMany = pow(ProbOne, N + 1);         // N + 1 <= m
-  double ProbNotTooMany = 1 - ProbTooMany;          // 0 <= m <= N
-  double ProbOneNotTooMany = ProbOne - ProbTooMany; // 1 <= m <= N
+  BranchProbability ProbOne = OriginalLoopProb;                // 1 <= m
+  BranchProbability ProbTooMany = ProbOne.pow(N + 1);          // N + 1 <= m
+  BranchProbability ProbNotTooMany = ProbTooMany.getCompl();   // 0 <= m <= N
+  BranchProbability ProbOneNotTooMany = ProbOne - ProbTooMany; // 1 <= m <= N
   return ProbOneNotTooMany / ProbNotTooMany;
 }
 
@@ -237,7 +238,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
                           LoopInfo *LI, bool PreserveLCSSA, ScalarEvolution &SE,
                           unsigned Count, AssumptionCache &AC,
-                          std::optional<double> OriginalLoopProb) {
+                          BranchProbability OriginalLoopProb) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *EpilogLatch = cast<BasicBlock>(VMap[Latch]);
@@ -348,16 +349,17 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the epilog loop)
   MDNode *BranchWeights = nullptr;
-  if (!OriginalLoopProb && hasBranchWeightMD(*Latch->getTerminator())) {
+  if (OriginalLoopProb.isUnknown() &&
+      hasBranchWeightMD(*Latch->getTerminator())) {
     // Assume equal distribution in interval [0, Count).
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(1, Count - 1);
   }
   BranchInst *RemainderLoopGuard =
       B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
-  if (OriginalLoopProb) {
+  if (!OriginalLoopProb.isUnknown()) {
     setBranchProbability(RemainderLoopGuard,
-                         probOfNextInRemainder(*OriginalLoopProb, Count - 1),
+                         probOfNextInRemainder(OriginalLoopProb, Count - 1),
                          /*ForFirstTarget=*/true);
   }
   InsertPt->eraseFromParent();
@@ -387,7 +389,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
                              LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
                              DominatorTree *DT, LoopInfo *LI, unsigned Count,
                              std::optional<unsigned> OriginalTripCount,
-                             std::optional<double> OriginalLoopProb) {
+                             BranchProbability OriginalLoopProb) {
   StringRef suffix = UseEpilogRemainder ? "epil" : "prol";
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
@@ -442,7 +444,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
           Builder.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
       Value *IdxCmp = Builder.CreateICmpNE(IdxNext, NewIter, NewIdx->getName() + ".cmp");
       MDNode *BranchWeights = nullptr;
-      if (!(OriginalLoopProb && UseEpilogRemainder) &&
+      if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
           hasBranchWeightMD(*LatchBR)) {
         uint32_t ExitWeight;
         uint32_t BackEdgeWeight;
@@ -463,21 +465,25 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
       }
       BranchInst *RemainderLoopLatch =
           Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
-      if (OriginalLoopProb && UseEpilogRemainder) {
+      if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
         // Compute the total frequency of the original loop body from the
         // remainder iterations.  Once we've reached them, the first of them
-        // always executes, so it's frequency and probability are 1.
+        // always executes, so its frequency and probability are 1.
         double FreqRemIters = 1;
         if (Count > 2) {
-          double ProbReaching = 1;
+          BranchProbability ProbReaching = BranchProbability::getOne();
           for (unsigned N = Count - 2; N >= 1; --N) {
-            ProbReaching *= probOfNextInRemainder(*OriginalLoopProb, N);
-            FreqRemIters += ProbReaching;
+            ProbReaching *= probOfNextInRemainder(OriginalLoopProb, N);
+            FreqRemIters += double(ProbReaching.getNumerator()) /
+                            ProbReaching.getDenominator();
           }
         }
         // Solve for the loop probability that would produce that frequency.
         // Sum(i=0..inf)(Prob^i) = 1/(1-Prob) = FreqRemIters.
-        double Prob = 1 - 1 / FreqRemIters;
+        double ProbDouble = 1 - 1 / FreqRemIters;
+        BranchProbability Prob = BranchProbability::getBranchProbability(
+            std::round(ProbDouble * BranchProbability::getDenominator()),
+            BranchProbability::getDenominator());
         setBranchProbability(RemainderLoopLatch, Prob, /*ForFirstTarget=*/true);
       }
       NewIdx->addIncoming(Zero, InsertTop);
@@ -648,7 +654,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
     Loop **ResultLoop, std::optional<unsigned> OriginalTripCount,
-    std::optional<double> OriginalLoopProb) {
+    BranchProbability OriginalLoopProb) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -868,7 +874,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   BasicBlock *UnrollingLoop = UseEpilogRemainder ? NewPreHeader : PrologExit;
   // Branch to either remainder (extra iterations) loop or unrolling loop.
   MDNode *BranchWeights = nullptr;
-  if (!(OriginalLoopProb && UseEpilogRemainder) &&
+  if ((OriginalLoopProb.isUnknown() || !UseEpilogRemainder) &&
       hasBranchWeightMD(*Latch->getTerminator())) {
     // Assume loop is nearly always entered.
     MDBuilder MDB(B.getContext());
@@ -876,12 +882,12 @@ bool llvm::UnrollRuntimeLoopRemainder(
   }
   BranchInst *UnrollingLoopGuard =
       B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
-  if (OriginalLoopProb && UseEpilogRemainder) {
+  if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
     // The original loop's first iteration always happens.  Compute the
     // probability of the original loop executing Count-1 iterations after that
     // to complete the first iteration of the unrolled loop.
-    double ProbOne = *OriginalLoopProb;
-    double ProbRest = pow(ProbOne, Count - 1);
+    BranchProbability ProbOne = OriginalLoopProb;
+    BranchProbability ProbRest = ProbOne.pow(Count - 1);
     setBranchProbability(UnrollingLoopGuard, ProbRest,
                          /*ForFirstTarget=*/false);
   }

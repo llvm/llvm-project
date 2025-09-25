@@ -973,15 +973,15 @@ bool llvm::setLoopEstimatedTripCount(
   return true;
 }
 
-std::optional<double> llvm::getLoopProbability(Loop *L) {
+BranchProbability llvm::getLoopProbability(Loop *L) {
   BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
-    return std::nullopt;
+    return BranchProbability::getUnknown();
   bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
   return getBranchProbability(LatchBranch, FirstTargetIsLoop);
 }
 
-bool llvm::setLoopProbability(Loop *L, double P) {
+bool llvm::setLoopProbability(Loop *L, BranchProbability P) {
   BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
   if (!LatchBranch)
     return false;
@@ -989,34 +989,30 @@ bool llvm::setLoopProbability(Loop *L, double P) {
   return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
 }
 
-std::optional<double> llvm::getBranchProbability(BranchInst *B,
-                                                 bool ForFirstTarget) {
+BranchProbability llvm::getBranchProbability(BranchInst *B,
+                                             bool ForFirstTarget) {
   if (B->getNumSuccessors() != 2)
-    return std::nullopt;
+    return BranchProbability::getUnknown();
   uint64_t Weight0, Weight1;
   if (!extractBranchWeights(*B, Weight0, Weight1))
-    return std::nullopt;
+    return BranchProbability::getUnknown();
   if (!ForFirstTarget)
     std::swap(Weight0, Weight1);
-  return double(Weight0) / (double(Weight0) + double(Weight1));
+  return BranchProbability::getBranchProbability(Weight0, Weight0 + Weight1);
 }
 
-bool llvm::setBranchProbability(BranchInst *B, double P, bool ForFirstTarget) {
+bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
+                                bool ForFirstTarget) {
   if (B->getNumSuccessors() != 2)
     return false;
-
-  // Sum should be some large number so that the weights accurately encode P,
-  // but it should not be so large that some branch weights will print as
-  // negative in LLVM IR as that makes LLVM tests harder to maintain.
-  const uint64_t Sum = 100000000;
-  uint64_t Weight0 = round(P * Sum);
-  uint64_t Weight1 = round((1 - P) * Sum);
+  BranchProbability Prob0 = P;
+  BranchProbability Prob1 = P.getCompl();
   if (!ForFirstTarget)
-    std::swap(Weight0, Weight1);
-
+    std::swap(Prob0, Prob1);
   MDBuilder MDB(B->getContext());
-  B->setMetadata(LLVMContext::MD_prof,
-                 MDB.createBranchWeights(Weight0, Weight1));
+  B->setMetadata(
+      LLVMContext::MD_prof,
+      MDB.createBranchWeights(Prob0.getNumerator(), Prob1.getNumerator()));
   return true;
 }
 

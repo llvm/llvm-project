@@ -77,19 +77,21 @@ loop.end:
 ; Original estimated trip count: (1+1000)/1 = 1001
 ; Unroll count: 8
 
-; Probability of >=7 iterations after first: p^7 = 0.993027916
-; CHECK: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 697208, i32 99302792}
+; Probability of >=7 iterations after first: p^7 = 0.993027916 =~
+; 2132511214 / (14972434 + 2132511214).
+; CHECK: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 14972434, i32 2132511214}
 
-; Probability of >=8 more iterations: p^8 = 0.99203588
-; CHECK: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 796412, i32 99203588}
+; Probability of >=8 more iterations: p^8 = 0.99203588 =~
+; 2130380833 / (17102815 + 2130380833).
+; CHECK: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 17102815, i32 2130380833}
 
 ; 1001//8 = 125
 ; CHECK: ![[#LOOP_UR_LATCH]] = distinct !{![[#LOOP_UR_LATCH]], ![[#LOOP_UR_TC:]]}
 ; CHECK: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 125}
 
 ; Probability of 1 to 7 more of 7 more remainder iterations:
-; (p-p^8)/(1-p^8) = 0.874562282
-; CHECK: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 87456228, i32 12543772}
+; (p-p^8)/(1-p^8) = 0.874562282 =~ 1878108210 / (1878108210 + 269375438).
+; CHECK: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 1878108210, i32 269375438}
 
 ; Frequency of first remainder iter:   r1 =                      1
 ; Frequency of second remainder iter:  r2 = r1*(p-p^7)/(1-p^7) = 0.856714143
@@ -99,8 +101,9 @@ loop.end:
 ; Frequency of sixth remainder iter:   r6 = r2*(p-p^3)/(1-p^3) = 0.285000715
 ; Frequency of seventh remainder iter: r7 = r2*(p-p^2)/(1-p^2) = 0.142429143
 ; Solve for loop probability that produces that frequency: f = 1/(1-p') =>
-; p' = 1-1/f = 1-1/(r1+r2+r3+r4+r5+r6+r7) = 0.749749875.
-; CHECK: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 74974988, i32 25025012}
+; p' = 1-1/f = 1-1/(r1+r2+r3+r4+r5+r6+r7) = 0.749749875 =~
+; 1610075606 / (1610075606 + 537408042).
+; CHECK: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 1610075606, i32 537408042}
 
 ; Remainder estimated trip count: 1001%8 = 1
 ; CHECK: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
