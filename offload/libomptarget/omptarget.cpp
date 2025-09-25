@@ -1914,7 +1914,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
       void *HstPteeBegin = nullptr;
       if (IsAttach) {
         // For corresponding-pointer-initialization, Args[I] is HstPteeBegin,
-        // ArgBases[I] is HstPtrBase
+        // and ArgBases[I] is both HstPtrBase/HstPtrBegin.
         HstPteeBase = *reinterpret_cast<void **>(HstPtrBase);
         HstPteeBegin = Args[I];
         HstPtrBegin = ArgBases[I];
