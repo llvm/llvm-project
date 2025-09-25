@@ -120,7 +120,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-
 raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags) {
   OS << "RootFlags(";
   printFlags(OS, Flags, dxbc::getRootFlags());
