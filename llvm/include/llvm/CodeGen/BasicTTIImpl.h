@@ -1797,7 +1797,6 @@ public:
 
       if (ICA.getID() == Intrinsic::vp_load_ff) {
         Type *RetTy = ICA.getReturnType();
-        assert(RetTy->isStructTy() && "expected struct return");
         Type *DataTy = cast<StructType>(RetTy)->getElementType(0);
         Align Alignment;
         if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
