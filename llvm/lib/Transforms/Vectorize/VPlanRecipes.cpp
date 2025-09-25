@@ -3270,7 +3270,7 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
     auto *VecI = cast<Instruction>(State.get(getOperand(0)));
     assert(isa<InsertElementInst>(VecI) ||
            isa<InsertValueInst>(VecI) &&
-               "Packed recipes must generate an insertelement or insertvalue");
+               "Packed operands must generate an insertelement or insertvalue");
 
     // If VectorI is a struct, it will be a sequence like:
     // %1       = insertvalue %unmodified, %x, 0
