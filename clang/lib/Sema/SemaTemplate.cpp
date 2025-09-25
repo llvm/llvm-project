@@ -5482,9 +5482,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     if (NTTP->isParameterPack() && NTTP->isExpandedParameterPack())
       NTTPType = NTTP->getExpansionType(ArgumentPackIndex);
 
-    if (NTTPType->isInstantiationDependentType() &&
-        !isa<TemplateTemplateParmDecl>(Template) &&
-        !Template->getDeclContext()->isDependentContext()) {
+    if (NTTPType->isInstantiationDependentType()) {
       // Do substitution on the type of the non-type template parameter.
       InstantiatingTemplate Inst(*this, TemplateLoc, Template, NTTP,
                                  CTAI.SugaredConverted,
@@ -5494,6 +5492,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
 
       MultiLevelTemplateArgumentList MLTAL(Template, CTAI.SugaredConverted,
                                            /*Final=*/true);
+      MLTAL.addOuterRetainedLevels(NTTP->getDepth());
       // If the parameter is a pack expansion, expand this slice of the pack.
       if (auto *PET = NTTPType->getAs<PackExpansionType>()) {
         Sema::ArgPackSubstIndexRAII SubstIndex(*this, ArgumentPackIndex);
