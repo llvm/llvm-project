@@ -248,9 +248,6 @@ static constexpr const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
-
-    {eByteOrderLittle, 8, 4, 4, llvm::Triple::nvsass, ArchSpec::eCore_nvsass,
-     "nvsass"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -415,7 +412,6 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_riscv64,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv64}, // riscv64
     {ArchSpec::eCore_loongarch32,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch32}, // loongarch32
     {ArchSpec::eCore_loongarch64,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch64}, // loongarch64
-    {ArchSpec::eCore_nvsass,          llvm::ELF::EM_CUDA,       }, // nvsass
 };
 // clang-format on
 
