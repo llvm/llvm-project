@@ -1917,8 +1917,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
         // ArgBases[I] is HstPtrBase
         HstPteeBase = *reinterpret_cast<void **>(HstPtrBase);
         HstPteeBegin = Args[I];
-        HstPtrBegin =
-            ArgBases[I]; // Allocate memory for the pointer variable itself
+        HstPtrBegin = ArgBases[I];
       }
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
       // Corresponding-pointer-initialization is a special case of firstprivate,
