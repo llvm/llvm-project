@@ -628,10 +628,10 @@ define void @minmax_x_minmax_xy(<2 x float> %x, <2 x float> %y, ptr %minnum_res,
 ; CHECK-NEXT:    store <2 x float> [[MINIMUM_XY]], ptr [[MINIMUM_RES:%.*]], align 8
 ; CHECK-NEXT:    [[MAXIMUM_XY:%.*]] = call <2 x float> @llvm.maximum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
 ; CHECK-NEXT:    store <2 x float> [[MAXIMUM_XY]], ptr [[MAXIMUM_RES:%.*]], align 8
-; CHECK-NEXT:    [[MINIMUMNUM_NESTED:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
-; CHECK-NEXT:    store <2 x float> [[MINIMUMNUM_NESTED]], ptr [[MINIMUMNUM_RES:%.*]], align 8
-; CHECK-NEXT:    [[MAXIMUMNUM_NESTED:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
-; CHECK-NEXT:    store <2 x float> [[MAXIMUMNUM_NESTED]], ptr [[MAXIMUMNUM_RES:%.*]], align 8
+; CHECK-NEXT:    [[MINIMUMNUM_XY:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
+; CHECK-NEXT:    store <2 x float> [[MINIMUMNUM_XY]], ptr [[MINIMUMNUM_RES:%.*]], align 8
+; CHECK-NEXT:    [[MAXIMUMNUM_XY:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
+; CHECK-NEXT:    store <2 x float> [[MAXIMUMNUM_XY]], ptr [[MAXIMUMNUM_RES:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %minnum_xy = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> %y)
@@ -724,10 +724,10 @@ define void @minmax_minmax_xy_minmax_yx(half %x, half %y, ptr %minnum_res, ptr %
 ; CHECK-NEXT:    store half [[MINIMUM_XY]], ptr [[MINIMUM_RES:%.*]], align 2
 ; CHECK-NEXT:    [[MAXIMUM_XY:%.*]] = call half @llvm.maximum.f16(half [[X]], half [[Y]])
 ; CHECK-NEXT:    store half [[MAXIMUM_XY]], ptr [[MAXIMUM_RES:%.*]], align 2
-; CHECK-NEXT:    [[FINAL_MINIMUMNUM:%.*]] = call half @llvm.minimumnum.f16(half [[X]], half [[Y]])
-; CHECK-NEXT:    store half [[FINAL_MINIMUMNUM]], ptr [[MINIMUMNUM_RES:%.*]], align 2
-; CHECK-NEXT:    [[FINAL_MAXIMUMNUM:%.*]] = call half @llvm.maximumnum.f16(half [[X]], half [[Y]])
-; CHECK-NEXT:    store half [[FINAL_MAXIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 2
+; CHECK-NEXT:    [[MINIMUMNUM_XY:%.*]] = call half @llvm.minimumnum.f16(half [[X]], half [[Y]])
+; CHECK-NEXT:    store half [[MINIMUMNUM_XY]], ptr [[MINIMUMNUM_RES:%.*]], align 2
+; CHECK-NEXT:    [[MAXIMUMNUM_XY:%.*]] = call half @llvm.maximumnum.f16(half [[X]], half [[Y]])
+; CHECK-NEXT:    store half [[MAXIMUMNUM_XY]], ptr [[MAXIMUMNUM_RES:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %minnum_xy = call half @llvm.minnum.f16(half %x, half %y)
@@ -774,10 +774,10 @@ define void @minmax_minmax_xy_maxmin_yx(double %x, double %y, ptr %minnum_res, p
 ; CHECK-NEXT:    store double [[MINIMUM_XY]], ptr [[MINIMUM_RES:%.*]], align 8
 ; CHECK-NEXT:    [[MAXIMUM_XY:%.*]] = call double @llvm.maximum.f64(double [[Y]], double [[X]])
 ; CHECK-NEXT:    store double [[MAXIMUM_XY]], ptr [[MAXIMUM_RES:%.*]], align 8
-; CHECK-NEXT:    [[FINAL_MINIMUMNUM:%.*]] = call double @llvm.minimumnum.f64(double [[Y]], double [[X]])
-; CHECK-NEXT:    store double [[FINAL_MINIMUMNUM]], ptr [[MINIMUMNUM_RES:%.*]], align 8
-; CHECK-NEXT:    [[FINAL_MAXIMUMNUM:%.*]] = call double @llvm.maximumnum.f64(double [[Y]], double [[X]])
-; CHECK-NEXT:    store double [[FINAL_MAXIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 8
+; CHECK-NEXT:    [[MINIMUMNUM_XY:%.*]] = call double @llvm.minimumnum.f64(double [[Y]], double [[X]])
+; CHECK-NEXT:    store double [[MINIMUMNUM_XY]], ptr [[MINIMUMNUM_RES:%.*]], align 8
+; CHECK-NEXT:    [[MAXIMUMNUM_XY:%.*]] = call double @llvm.maximumnum.f64(double [[Y]], double [[X]])
+; CHECK-NEXT:    store double [[MAXIMUMNUM_XY]], ptr [[MAXIMUMNUM_RES:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %minnum_xy = call double @llvm.minnum.f64(double %x, double %y)
