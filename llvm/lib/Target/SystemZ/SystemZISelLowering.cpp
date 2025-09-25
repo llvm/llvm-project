@@ -8804,7 +8804,6 @@ SmallVector<SDValue, 4> static simplifyAssumingCCVal(SDValue &Val, SDValue &CC,
   default:
     return {};
   case ISD::Constant:
-  case ISD::CopyFromReg:
     return {Val, Val, Val, Val};
   case SystemZISD::IPM: {
     SDValue IPMOp0 = Val.getOperand(0);
@@ -9035,12 +9034,38 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
 
   bool IsCombinedCCReg = combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG);
 
+  // Populate SDVals vector for each condition code ccval for given Val, which
+  // can again be another nested select_ccmask with the same CC.
+  const auto constructCCSDValsFromSELECT = [&CCReg](SDValue &Val) {
+    if (Val.getOpcode() == SystemZISD::SELECT_CCMASK) {
+      SmallVector<SDValue, 4> Res;
+      if (Val.getOperand(4) != CCReg)
+        return SmallVector<SDValue, 4>{};
+      SDValue TrueVal = Val.getOperand(0), FalseVal = Val.getOperand(1);
+      auto *CCMask = dyn_cast<ConstantSDNode>(Val.getOperand(3));
+      if (!CCMask)
+        return SmallVector<SDValue, 4>{};
+
+      int CCMaskVal = CCMask->getZExtValue();
+      for (auto &CC : {0, 1, 2, 3})
+        Res.emplace_back(((CCMaskVal & (1 << (3 - CC))) != 0) ? TrueVal
+                                                              : FalseVal);
+      return Res;
+    }
+    return SmallVector<SDValue, 4>{Val, Val, Val, Val};
+  };
   // Attempting to optimize TrueVal/FalseVal in outermost select_ccmask either
   // with CCReg found by combineCCMask or original CCReg.
   SDValue TrueVal = N->getOperand(0);
   SDValue FalseVal = N->getOperand(1);
-  const auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CCReg, DAG);
-  const auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CCReg, DAG);
+  auto &&TrueSDVals = simplifyAssumingCCVal(TrueVal, CCReg, DAG);
+  auto &&FalseSDVals = simplifyAssumingCCVal(FalseVal, CCReg, DAG);
+  // TrueSDVals/FalseSDVals might be empty in case of non-constant
+  // TrueVal/FalseVal for select_ccmask, which can not be optimized further.
+  if (TrueSDVals.empty())
+    TrueSDVals = constructCCSDValsFromSELECT(TrueVal);
+  if (FalseSDVals.empty())
+    FalseSDVals = constructCCSDValsFromSELECT(FalseVal);
   if (!TrueSDVals.empty() && !FalseSDVals.empty()) {
     SmallSet<SDValue, 4> MergedSDValsSet;
     // Ignoring CC values outside CCValiid.
