@@ -194,21 +194,14 @@ exit:
 define void @possibly_zero_dist_diff_typesz(ptr %p) {
 ; CHECK-LABEL: 'possibly_zero_dist_diff_typesz'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %ld.p = load i32, ptr %gep.p.iv.i32, align 1 ->
+; CHECK-NEXT:            store i16 %trunc, ptr %gep.p.iv.i16, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.p.iv.i16 = getelementptr inbounds nuw i16, ptr %p, i16 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.p.iv.i32 = getelementptr inbounds nuw i32, ptr %p, i16 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %p High: (64 + %p))
-; CHECK-NEXT:            Member: {%p,+,2}<nuw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %p High: (128 + %p))
-; CHECK-NEXT:            Member: {%p,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
