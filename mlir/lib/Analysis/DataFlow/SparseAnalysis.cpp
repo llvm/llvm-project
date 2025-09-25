@@ -514,8 +514,8 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
       MutableArrayRef<OpOperand> argOpOperands =
           operandsToOpOperands(argOperands);
       Region *region = callable.getCallableRegion();
-      bool isPublicFunc = isa<FunctionOpInterface>(callableOp)
-                       && cast<FunctionOpInterface>(callableOp).isPublic();
+      bool isPublicFunc = isa<FunctionOpInterface>(callableOp) &&
+                          cast<FunctionOpInterface>(callableOp).isPublic();
       if (!region || region->empty() ||
           !getSolverConfig().isInterprocedural() || isPublicFunc) {
         visitExternalCallImpl(call, operandLattices, resultLattices);
