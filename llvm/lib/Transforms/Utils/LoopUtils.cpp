@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include <cmath>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;

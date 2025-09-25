@@ -65,7 +65,6 @@
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
-#include <cmath>
 #include <numeric>
 #include <type_traits>
 #include <vector>
