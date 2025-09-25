@@ -898,18 +898,18 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
                                    ? llvm::CodeGenFileType::AssemblyFile
                                    : llvm::CodeGenFileType::ObjectFile;
-  std::unique_ptr<llvm::ToolOutputFile> DwoOS;
+  std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
-    std::error_code EC;
-    DwoOS = std::make_unique<llvm::ToolOutputFile>(codeGenOpts.SplitDwarfOutput,
-                                                   EC, llvm::sys::fs::OF_None);
-    if (EC) {
+    std::error_code ec;
+    dwoOS = std::make_unique<llvm::ToolOutputFile>(codeGenOpts.SplitDwarfOutput,
+                                                   ec, llvm::sys::fs::OF_None);
+    if (ec) {
       diags.Report(clang::diag::err_fe_unable_to_open_output)
-          << codeGenOpts.SplitDwarfOutput << EC.message();
+          << codeGenOpts.SplitDwarfOutput << ec.message();
       return;
     }
   }
-  if (tm.addPassesToEmitFile(codeGenPasses, os, DwoOS ? &DwoOS->os() : nullptr,
+  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
                              cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -921,8 +921,8 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   // Run the passes
   codeGenPasses.run(llvmModule);
 
-  if (DwoOS)
-    DwoOS->keep();
+  if (dwoOS)
+    dwoOS->keep();
 
   // Cleanup
   delete tlii;

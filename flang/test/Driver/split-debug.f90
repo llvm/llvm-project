@@ -31,13 +31,15 @@
 
 ! Invoke objcopy if not using the integrated assembler.
 ! RUN: %flang -### -c -target x86_64-unknown-linux-gnu -fno-integrated-as -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=OBJCOPY
-! OBJCOPY:      objcopy{{(.exe)?}}" "--extract-dwo"
-! OBJCOPY-NEXT: objcopy{{(.exe)?}}" "--strip-dwo"
+! OBJCOPY:      objcopy{{(.exe)?}}
+! OBJCOPY-SAME: --extract-dwo
+! OBJCOPY-NEXT: objcopy{{(.exe)?}}
+! OBJCOPY-SAME: --strip-dwo
 
 ! RUN: not %flang -target powerpc-ibm-aix -gdwarf-4 -gsplit-dwarf %s 2>&1 \
 ! RUN: | FileCheck %s --check-prefix=UNSUP_OPT_AIX
 ! RUN: not %flang -target powerpc64-ibm-aix -gdwarf-4 -gsplit-dwarf %s 2>&1 \
 ! RUN: | FileCheck %s --check-prefix=UNSUP_OPT_AIX64
 
-// UNSUP_OPT_AIX: error: unsupported option '-gsplit-dwarf' for target 'powerpc-ibm-aix'
-// UNSUP_OPT_AIX64: error: unsupported option '-gsplit-dwarf' for target 'powerpc64-ibm-aix'
+! UNSUP_OPT_AIX: error: unsupported option '-gsplit-dwarf' for target 'powerpc-ibm-aix'
+! UNSUP_OPT_AIX64: error: unsupported option '-gsplit-dwarf' for target 'powerpc64-ibm-aix'
