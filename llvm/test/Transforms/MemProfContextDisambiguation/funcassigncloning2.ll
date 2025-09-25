@@ -3,8 +3,8 @@
 ;; doesn't need cloning, but calls a cloned allocating function, and is in a
 ;; function that gets cloned multiple times for a different callsite. This test
 ;; makes sure the non-cloned callsite is correctly updated in all function
-;; clones. This case was missed because due to context pruning we don't have any
-;; caller edges for the first callsite, so the handling that kicks in to
+;; clones. This case was missed because, due to context pruning, we don't have
+;; any caller edges for the first callsite, so the handling that kicks in to
 ;; "reclone" other callsites in cloned functions was being missed.
 
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \

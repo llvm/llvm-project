@@ -4526,6 +4526,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 //             If Clone not already assigned to a function clone:
 //                Assign to first function clone without assignment
 //             Assign caller to selected function clone
+//   For each call with graph Node having clones:
+//     If number func clones > number call's callsite Node clones:
+//        Record func CallInfo clones without Node clone in UnassignedCallClones
+//   For callsite Nodes in DFS order from allocations:
+//     If IsAllocation:
+//        Update allocation with alloc type
+//     Else:
+//        For Call, all MatchingCalls, and associated UnnassignedCallClones:
+//           Update call to call recorded callee clone
+//
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
   bool Changed = false;
@@ -5050,24 +5060,24 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         // clone.
         auto &CallVector = UnassignedCallClones[Node][I];
         DenseMap<CallInfo, CallInfo> &CallMap = FC.CallMap;
-        CallInfo CallClone(Call);
-        if (auto It = CallMap.find(Call); It != CallMap.end())
-          CallClone = It->second;
-        else
+        if (auto It = CallMap.find(Call); It != CallMap.end()) {
+          CallInfo CallClone = It->second;
+          CallVector.push_back(CallClone);
+        } else {
           // All but the original clone (skipped earlier) should have an entry
           // for all calls.
           assert(false && "Expected to find call in CallMap");
-        CallVector.push_back(CallClone);
+        }
         // Need to do the same for all matching calls.
         for (auto &MatchingCall : Node->MatchingCalls) {
-          CallInfo CallClone(MatchingCall);
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
-            CallClone = It->second;
-          else
+          if (auto It = CallMap.find(MatchingCall); It != CallMap.end()) {
+            CallInfo CallClone = It->second;
+            CallVector.push_back(CallClone);
+          } else {
             // All but the original clone (skipped earlier) should have an entry
             // for all calls.
             assert(false && "Expected to find call in CallMap");
-          CallVector.push_back(CallClone);
+          }
         }
       }
     }
@@ -5140,6 +5150,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     DenseSet<unsigned> NodeCallClones;
     for (auto *C : Node->Clones)
       NodeCallClones.insert(C->Call.cloneNo());
+    // Note that we already confirmed Node is in this map a few lines above.
     auto &ClonedCalls = UnassignedCallClones[Node];
     for (auto &[CloneNo, CallVector] : ClonedCalls) {
       // Should start at 1 as we never create an entry for original node.
