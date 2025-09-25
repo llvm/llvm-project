@@ -1474,7 +1474,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   //
   // The implicit-def of the super register may have been reduced to
   // subregisters depending on the uses.
-  SmallVector<std::pair<unsigned, MCRegister>, 4> NewMIImplDefs;
+  SmallVector<std::pair<unsigned, Register>, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
        i != e; ++i) {
@@ -1489,7 +1489,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
                    MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
                   TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
                                        MO.getReg())))));
-        NewMIImplDefs.push_back({i, MO.getReg().asMCReg()});
+        NewMIImplDefs.push_back({i, MO.getReg()});
       } else {
         assert(MO.getReg() == NewMI.getOperand(0).getReg());
 
@@ -1643,7 +1643,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
     bool HasDefMatchingCopy = false;
     for (auto [OpIndex, Reg] : NewMIImplDefs) {
-      if (Reg != DstReg.asMCReg())
+      if (Reg != DstReg)
         continue;
       // Also, if CopyDstReg is a sub-register of DstReg (and it is defined), we
       // must mark DstReg as dead since it is not going to used as a result of
@@ -1688,8 +1688,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     NewMI.addOperand(MO);
 
   SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
-  for (MCRegister Reg : make_second_range(NewMIImplDefs)) {
-    for (MCRegUnit Unit : TRI->regunits(Reg))
+  for (Register Reg : make_second_range(NewMIImplDefs)) {
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
       if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
