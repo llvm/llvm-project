@@ -33,10 +33,11 @@ AST_MATCHER(ParenExpr, isInMacro) {
 } // namespace
 
 void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
+  const auto ConstantExpr =
+      expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
+                 cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
   Finder->addMatcher(
-      parenExpr(subExpr(anyOf(parenExpr(), integerLiteral(), floatLiteral(),
-                              characterLiteral(), cxxBoolLiteral(),
-                              stringLiteral(), declRefExpr())),
+      parenExpr(subExpr(anyOf(parenExpr(), ConstantExpr, declRefExpr())),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()))))

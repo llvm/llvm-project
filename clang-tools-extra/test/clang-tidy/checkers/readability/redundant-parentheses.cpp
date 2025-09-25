@@ -44,6 +44,9 @@ void constant() {
   ("v4");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant parentheses around expression [readability-redundant-parentheses]
   // CHECK-FIXES:    "v4";
+  (nullptr);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    nullptr;
 }
 
 void declRefExpr(int a) {
@@ -55,4 +58,7 @@ void declRefExpr(int a) {
 void exceptions() {
   sizeof(1);
   alignof(2);
+  alignof((3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    alignof(3);
 }
