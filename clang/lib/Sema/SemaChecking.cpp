@@ -2296,14 +2296,21 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
   return false;
 }
 
-static bool CheckMaskedBuiltinPtr(Sema &S, CallExpr *TheCall, unsigned ArgNum) {
-  ExprResult ConvertedPtr =
-      S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(ArgNum));
-  if (ConvertedPtr.isInvalid())
-    return true;
-  TheCall->setArg(ArgNum, ConvertedPtr.get());
+static bool ConvertMaskedBuiltinArgs(Sema &S, CallExpr *TheCall,
+                                     unsigned PtrArg) {
+  bool TypeDependent = false;
+  for (unsigned Arg = 0, E = TheCall->getNumArgs(); Arg != E; ++Arg) {
+    ExprResult Converted =
+        Arg == PtrArg
+            ? S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(Arg))
+            : S.DefaultLvalueConversion(TheCall->getArg(Arg));
+    if (Converted.isInvalid())
+      return true;
+    TheCall->setArg(Arg, Converted.get());
+    TypeDependent |= Converted.get()->isTypeDependent();
+  }
 
-  if (ConvertedPtr.get()->isTypeDependent())
+  if (TypeDependent)
     TheCall->setType(S.Context.DependentTy);
   return false;
 }
@@ -2312,12 +2319,12 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 2, 3))
     return ExprError();
 
-  if (CheckMaskedBuiltinPtr(S, TheCall, /*PtrArg=*/1))
+  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/1))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
   Expr *PtrArg = TheCall->getArg(1);
-  if (PtrArg->isTypeDependent())
+  if (TheCall->isTypeDependent())
     return TheCall;
 
   if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 2, /*AllowConst=*/true,
@@ -2348,13 +2355,13 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
 
-  if (CheckMaskedBuiltinPtr(S, TheCall, /*PtrArg=*/2))
+  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/2))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
   Expr *ValArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
-  if (PtrArg->isTypeDependent())
+  if (TheCall->isTypeDependent())
     return TheCall;
 
   if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/false,
@@ -2390,13 +2397,13 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 3, 4))
     return ExprError();
 
-  if (CheckMaskedBuiltinPtr(S, TheCall, /*PtrArg=*/2))
+  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/2))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
-  if (PtrArg->isTypeDependent())
+  if (TheCall->isTypeDependent())
     return TheCall;
 
   if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/true,
@@ -2440,17 +2447,17 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 4))
     return ExprError();
 
-  if (CheckMaskedBuiltinPtr(S, TheCall, /*PtrArg=*/3))
+  if (ConvertMaskedBuiltinArgs(S, TheCall, /*PtrArg=*/3))
     return ExprError();
 
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *ValArg = TheCall->getArg(2);
   Expr *PtrArg = TheCall->getArg(3);
-  if (PtrArg->isTypeDependent())
+  if (TheCall->isTypeDependent())
     return TheCall;
 
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/false,
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 4, /*AllowConst=*/false,
                              /*AllowAS=*/true))
     return ExprError();
 
