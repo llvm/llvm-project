@@ -5,7 +5,7 @@ readability-redundant-parentheses
 
 Detect redundant parentheses.
 
-When modifying the code, one often forgets to remove the corresponding parentheses.
+When modifying code, one often forgets to remove the corresponding parentheses.
 This results in overly lengthy code. When the expression is complex, finding
 the matching parentheses becomes particularly difficult.
 
