@@ -549,10 +549,18 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
   TpiStream &stream = m_index->tpi();
 
   std::string name;
+
+  if ((mr.Modifiers & ModifierOptions::Const) != ModifierOptions::None)
+    name += "const ";
+  if ((mr.Modifiers & ModifierOptions::Volatile) != ModifierOptions::None)
+    name += "volatile ";
+  if ((mr.Modifiers & ModifierOptions::Unaligned) != ModifierOptions::None)
+    name += "__unaligned ";
+
   if (mr.ModifiedType.isSimple())
-    name = std::string(GetSimpleTypeName(mr.ModifiedType.getSimpleKind()));
+    name += GetSimpleTypeName(mr.ModifiedType.getSimpleKind());
   else
-    name = computeTypeName(stream.typeCollection(), mr.ModifiedType);
+    name += computeTypeName(stream.typeCollection(), mr.ModifiedType);
   Declaration decl;
   lldb::TypeSP modified_type = GetOrCreateType(mr.ModifiedType);
 
@@ -1054,7 +1062,44 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
   return TranslateLanguage(item->m_compile_opts->getLanguage());
 }
 
-void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {}
+void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
+  auto *section_list = m_objfile_sp->GetSectionList();
+  if (!section_list)
+    return;
+
+  for (auto pid : m_index->publics().getPublicsTable()) {
+    PdbGlobalSymId global{pid, true};
+    CVSymbol sym = m_index->ReadSymbolRecord(global);
+    auto kind = sym.kind();
+    if (kind != S_PUB32)
+      continue;
+    PublicSym32 pub =
+        llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+
+    auto section_sp = section_list->FindSectionByID(pub.Segment);
+    if (!section_sp)
+      continue;
+
+    lldb::SymbolType type = eSymbolTypeData;
+    if ((pub.Flags & PublicSymFlags::Function) != PublicSymFlags::None ||
+        (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
+      type = eSymbolTypeCode;
+
+    symtab.AddSymbol(Symbol(/*symID=*/pid,
+                            /*name=*/pub.Name,
+                            /*type=*/type,
+                            /*external=*/true,
+                            /*is_debug=*/true,
+                            /*is_trampoline=*/false,
+                            /*is_artificial=*/false,
+                            /*section_sp=*/section_sp,
+                            /*value=*/pub.Offset,
+                            /*size=*/0,
+                            /*size_is_valid=*/false,
+                            /*contains_linker_annotations=*/false,
+                            /*flags=*/0));
+  }
+}
 
 size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1624,6 +1669,8 @@ size_t SymbolFileNativePDB::ParseBlocksRecursive(Function &func) {
   for (uint64_t uid : remove_uids) {
     m_inline_sites.erase(uid);
   }
+
+  func.GetBlock(false).SetBlockInfoHasBeenParsed(true, true);
   return count;
 }
 
@@ -1644,7 +1691,8 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
   return count;
 }
 
-void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                       bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -1652,7 +1700,7 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->GetNativePDBParser()->Dump(s, filter);
+  clang->GetNativePDBParser()->Dump(s, filter, show_color);
 }
 
 void SymbolFileNativePDB::CacheGlobalBaseNames() {

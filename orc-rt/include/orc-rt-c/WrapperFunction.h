@@ -160,6 +160,13 @@ orc_rt_WrapperFunctionBufferData(orc_rt_WrapperFunctionBuffer *B) {
   return B->Size > sizeof(B->Data.Value) ? B->Data.ValuePtr : B->Data.Value;
 }
 
+static inline const char *
+orc_rt_WrapperFunctionBufferConstData(const orc_rt_WrapperFunctionBuffer *B) {
+  assert((B->Size != 0 || B->Data.ValuePtr == NULL) &&
+         "Cannot get data for out-of-band error value");
+  return B->Size > sizeof(B->Data.Value) ? B->Data.ValuePtr : B->Data.Value;
+}
+
 /**
  * Safely get the size of the given orc_rt_WrapperFunctionBuffer.
  *

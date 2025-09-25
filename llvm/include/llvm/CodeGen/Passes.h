@@ -31,6 +31,7 @@ class ModulePass;
 class Pass;
 class TargetMachine;
 class raw_ostream;
+enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
 namespace vfs {
@@ -520,7 +521,7 @@ LLVM_ABI ModulePass *createGlobalMergeFuncPass();
 
 /// This pass performs outlining on machine instructions directly before
 /// printing assembly.
-LLVM_ABI ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
+LLVM_ABI ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode);
 
 /// This pass expands the reduction intrinsics into sequences of shuffles.
 LLVM_ABI FunctionPass *createExpandReductionsPass();

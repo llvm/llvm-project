@@ -303,7 +303,8 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
          O.mapOptional("runInTerminal", LRA.console) &&
-         O.mapOptional("console", LRA.console) && parseEnv(Params, LRA.env, P);
+         O.mapOptional("console", LRA.console) &&
+         O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
