@@ -4821,8 +4821,51 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
   auto getUndefReplacement = [&](Type *Ty) {
-    Value *BestValue = nullptr;
+    auto pickCommonConstantFromPHI = [](PHINode &PN) -> Value * {
+      // phi(freeze(undef), C, C). Choose C for freeze so the PHI can be
+      // removed.
+      Constant *BestValue = nullptr;
+      Constant *C = nullptr;
+      for (Value *V : PN.incoming_values()) {
+        if (match(V, m_Freeze(m_Undef())))
+          continue;
+
+        if (!isa<Constant>(V))
+          return nullptr;
+
+        C = cast<Constant>(V);
+
+        if (BestValue && BestValue != C)
+          return nullptr;
+
+        BestValue = C;
+      }
+      return BestValue;
+    };
+
     Value *NullValue = Constant::getNullValue(Ty);
+
+    bool OnlyPHIUsers =
+        all_of(I.users(), [](const User *U) { return isa<PHINode>(U); });
+    if (OnlyPHIUsers) {
+      Value *BestValue = nullptr;
+      for (auto *U : I.users()) {
+        Value *V = pickCommonConstantFromPHI(*cast<PHINode>(U));
+        if (!V)
+          continue;
+
+        if (!BestValue) {
+          BestValue = V;
+        } else if (BestValue && BestValue == NullValue) {
+          BestValue = NullValue;
+        }
+      }
+
+      if (BestValue)
+        return BestValue;
+    }
+
+    Value *BestValue = nullptr;
     for (const auto *U : I.users()) {
       Value *V = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
