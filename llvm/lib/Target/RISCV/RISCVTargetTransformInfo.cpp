@@ -1070,11 +1070,11 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 }
 
 InstructionCost
-RISCVTTIImpl::getFaultOnlyFirstLoadCost(Type *DataTy, Align Alignment,
-                                        TTI::TargetCostKind CostKind) const {
+RISCVTTIImpl::getFaultFirstLoadCost(Type *DataTy, Align Alignment,
+                                    TTI::TargetCostKind CostKind) const {
   EVT DataTypeVT = TLI->getValueType(DL, DataTy);
   if (!TLI->isLegalFaultOnlyFirstLoad(DataTypeVT, Alignment))
-    return BaseT::getFaultOnlyFirstLoadCost(DataTy, Alignment, CostKind);
+    return BaseT::getFaultFirstLoadCost(DataTy, Alignment, CostKind);
 
   return getMemoryOpCost(Instruction::Load, DataTy, Alignment, 0, CostKind,
                          {TTI::OK_AnyValue, TTI::OP_None}, nullptr);

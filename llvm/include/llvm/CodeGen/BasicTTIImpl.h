@@ -1801,7 +1801,7 @@ public:
         Align Alignment;
         if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
           Alignment = VPI->getPointerAlignment().valueOrOne();
-        return thisT()->getFaultOnlyFirstLoadCost(DataTy, Alignment, CostKind);
+        return thisT()->getFaultFirstLoadCost(DataTy, Alignment, CostKind);
       }
       if (ICA.getID() == Intrinsic::vp_scatter) {
         if (ICA.isTypeBasedOnly()) {

@@ -189,8 +189,8 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
   InstructionCost
-  getFaultOnlyFirstLoadCost(Type *DataTy, Align Alignment,
-                            TTI::TargetCostKind CostKind) const override;
+  getFaultFirstLoadCost(Type *DataTy, Align Alignment,
+                        TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,

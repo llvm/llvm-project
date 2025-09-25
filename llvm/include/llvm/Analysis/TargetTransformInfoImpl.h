@@ -886,8 +886,8 @@ public:
   }
 
   virtual InstructionCost
-  getFaultOnlyFirstLoadCost(Type *DataTy, Align Alignment,
-                            TTI::TargetCostKind CostKind) const {
+  getFaultFirstLoadCost(Type *DataTy, Align Alignment,
+                        TTI::TargetCostKind CostKind) const {
     return InstructionCost::getInvalid();
   }
 
