@@ -58,18 +58,16 @@ namespace __asan {
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
-  if (REAL(strnlen)) {
+  if (REAL(strnlen))
     return REAL(strnlen)(s, maxlen);
-  }
 #endif
   return internal_strnlen(s, maxlen);
 }
 
 static inline uptr MaybeRealWcsnlen(const wchar_t *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_WCSNLEN
-  if (REAL(wcsnlen)) {
+  if (REAL(wcsnlen))
     return REAL(wcsnlen)(s, maxlen);
-  }
 #endif
   return internal_wcsnlen(s, maxlen);
 }
