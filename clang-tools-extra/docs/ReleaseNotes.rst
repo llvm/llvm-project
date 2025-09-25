@@ -211,6 +211,11 @@ New check aliases
   <clang-tidy/checks/modernize/avoid-variadic-functions>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
+  :doc:`bugprone-command-processor
+  <clang-tidy/checks/bugprone/command-processor>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
   :doc:`bugprone-unchecked-string-to-number-conversion
   <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
