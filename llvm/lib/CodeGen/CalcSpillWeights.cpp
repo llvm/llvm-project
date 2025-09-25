@@ -125,7 +125,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
       assert(MI && "Dead valno in interval");
     }
 
-    if (!TII.isTriviallyReMaterializable(*MI))
+    if (!TII.isReMaterializable(*MI))
       return false;
 
     VNIDefs[OrigVNI->id] = MI;
