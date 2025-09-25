@@ -1028,8 +1028,7 @@ struct WgToSgVectorShapeCastOp
 };
 
 /// Pattern for lowering vector.multi_reduction op to subgroup level.
-/// Current limitation: only support 2D->1D reduction with single reduction
-/// dimension, and the sg_layout in the reduced dimension being 1
+/// Current limitation: the sg_layout in the reduced dimension being 1
 /// so that reduction is local to subgroup & no cross-subgroup communication is
 /// needed.
 /// TODO: Add cases to handle more general situations which require SLM access.
