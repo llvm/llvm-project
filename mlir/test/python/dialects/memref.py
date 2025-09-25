@@ -179,6 +179,10 @@ def testSubViewOpInferReturnTypeSemantics():
             # CHECK: %{{.*}} = memref.subview %[[DYNAMICALLOC]][1, 1] [3, 3] [1, 1] : memref<10x10xi32, strided<[10, 1], offset: ?>> to memref<3x3xi32, strided<[10, 1], offset: ?>>
             print(y.owner)
 
+            # CHECK: %subview_10 = memref.subview
+            # CHECK: %0 = arith.addi %c3_2, %c4_3 : index
+            print_live_ops()
+
 
 # CHECK-LABEL: TEST: testSubViewOpInferReturnTypeExtensiveSlicing
 @run
