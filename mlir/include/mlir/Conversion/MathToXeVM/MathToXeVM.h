@@ -20,7 +20,7 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate the given list with patterns that convert from Math to XeVM calls.
-void populateMathToXeVMConversionPatterns(RewritePatternSet &patterns);
+void populateMathToXeVMConversionPatterns(RewritePatternSet &patterns, bool convertArith);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOXEVM_MATHTOXEVM_H_

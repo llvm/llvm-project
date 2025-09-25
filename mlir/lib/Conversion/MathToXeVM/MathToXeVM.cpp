@@ -46,8 +46,6 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // TODO: OCL doesn't provide native int intrinsics, but check what happens
-    // when IGC receives a native_exp on ints anyway
     if (!isSPIRVCompatibleFloatOrVec(op.getType()))
       return failure();
 
@@ -55,10 +53,11 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     if (!((uint32_t)fastFlags & (uint32_t)arith::FastMathFlags::afn))
       return failure();
 
-    // FIXME: Implement handling for vector sizes/dimensions that are not
-    // supported by SPIRV.
     SmallVector<Type, 1> operandTypes;
     for (auto operand : adaptor.getOperands()) {
+      // This pass only supports operations on vectors that are already in SPIRV
+      // supported vector sizes: Distributing unsupported vector sizes to SPIRV
+      // supported vetor sizes are done in other blocking optimization passes.
       if (!isSPIRVCompatibleFloatOrVec(operand.getType()))
         return failure();
       operandTypes.push_back(operand.getType());
@@ -128,7 +127,7 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     OpBuilder b(parentFunc);
 
     // Create a valid global location removing any metadata attached to the
-    // location as debug info metadata inside of a function cannot be used
+    // location, as debug info metadata inside of a function cannot be used
     // outside of that function.
     auto funcType = LLVM::LLVMFunctionType::get(op.getType(), operandTypes);
     auto globalloc =
@@ -139,7 +138,7 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
   const StringRef nativeFunc;
 };
 
-void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns) {
+void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns, bool convertArith) {
   patterns.add<ConvertNativeFuncPattern<math::ExpOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_exp");
   patterns.add<ConvertNativeFuncPattern<math::CosOp>>(patterns.getContext(),
@@ -162,22 +161,24 @@ void mlir::populateMathToXeVMConversionPatterns(RewritePatternSet &patterns) {
                                                       "__spirv_ocl_native_sqrt");
   patterns.add<ConvertNativeFuncPattern<math::TanOp>>(patterns.getContext(),
                                                       "__spirv_ocl_native_tan");
+  if (convertArith)
+    patterns.add<ConvertNativeFuncPattern<arith::DivFOp>>(patterns.getContext(),
+                                                          "__spirv_ocl_native_divide");
 }
 
 namespace {
 struct ConvertMathToXeVMPass
     : public impl::ConvertMathToXeVMBase<ConvertMathToXeVMPass> {
-  ConvertMathToXeVMPass() = default;
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
 
 void ConvertMathToXeVMPass::runOnOperation() {
   auto m = getOperation();
-  // MLIRContext *ctx = m.getContext();
 
   RewritePatternSet patterns(&getContext());
-  populateMathToXeVMConversionPatterns(patterns);
+  populateMathToXeVMConversionPatterns(patterns, convertArith);
   ConversionTarget target(getContext());
   target.addLegalDialect<BuiltinDialect, func::FuncDialect,
                          vector::VectorDialect, LLVM::LLVMDialect>();

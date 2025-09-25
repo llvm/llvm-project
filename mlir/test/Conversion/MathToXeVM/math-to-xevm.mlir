@@ -1,4 +1,7 @@
-// RUN: mlir-opt %s -convert-math-to-xevm | FileCheck %s
+// RUN: mlir-opt %s -convert-math-to-xevm \
+// RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-ARITH' 
+// RUN: mlir-opt %s -convert-math-to-xevm='convert-arith=false' \
+// RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-NO-ARITH'
 
 module @test_module {
   // CHECK: llvm.func @_Z22__spirv_ocl_native_expDh(f16) -> f16
@@ -23,6 +26,7 @@ module @test_module {
   // CHECK: llvm.func @_Z22__spirv_ocl_native_sinDh(f16) -> f16
   // CHECK: llvm.func @_Z23__spirv_ocl_native_sqrtf(f32) -> f32
   // CHECK: llvm.func @_Z22__spirv_ocl_native_tand(f64) -> f64
+  // CHECK-ARITH: llvm.func @_Z25__spirv_ocl_native_divideff(f32, f32) -> f32
 
   // CHECK-LABEL: func @math_ops
   func.func @math_ops() {
@@ -141,6 +145,13 @@ module @test_module {
 
     // CHECK: llvm.call @_Z22__spirv_ocl_native_tand(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %tan_afn_f64 = math.tan %c1_f64 fastmath<afn> : f64
+
+    %c6_9_f32 = arith.constant 6.9 : f32
+    %c7_f32 = arith.constant 7. : f32
+
+    // CHECK-ARITH: llvm.call @_Z25__spirv_ocl_native_divideff(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+    // CHECK-NO-ARITH: arith.divf
+    %divf_afn_f32 = arith.divf %c6_9_f32, %c7_f32 fastmath<afn> : f32
 
     return
   }

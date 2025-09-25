@@ -89,10 +89,12 @@ module @test_ocl_intrinsics attributes {gpu.container_module} {
       %sqrt_afn_f32 = llvm.call @_Z23__spirv_ocl_native_sqrtf(%c0_f32) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> f32
       // CHECK: OpExtInst %[[F64T]] %{{.+}} native_tan %[[ZERO_F64]]
       %tan_afn_f64 = llvm.call @_Z22__spirv_ocl_native_tand(%c0_f64) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
+      // CHECK: OpExtInst %[[F32T]] %{{.+}} native_divide %[[ZERO_F32]] %[[ZERO_F32]]
+      %divide_afn_f32 = llvm.call @_Z25__spirv_ocl_native_divideff(%c0_f32, %c0_f32) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
 
       llvm.return
     }
-    
+
     llvm.func @_Z22__spirv_ocl_native_expDh(f16) -> f16
     llvm.func @_Z22__spirv_ocl_native_expf(f32) -> f32
     llvm.func @_Z22__spirv_ocl_native_expd(f64) -> f64
@@ -111,5 +113,6 @@ module @test_ocl_intrinsics attributes {gpu.container_module} {
     llvm.func @_Z22__spirv_ocl_native_sinDh(f16) -> f16
     llvm.func @_Z23__spirv_ocl_native_sqrtf(f32) -> f32
     llvm.func @_Z22__spirv_ocl_native_tand(f64) -> f64
+    llvm.func @_Z25__spirv_ocl_native_divideff(f32, f32) -> f32
   }
 }
