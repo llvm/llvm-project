@@ -84,14 +84,14 @@ def testAlternativesOp(target):
     left_or_right = tune.AlternativesOp(
         [transform.AnyParamType.get()], "left_or_right", 2
     )
-    with ir.InsertionPoint(left_or_right.alternatives[_left := 0].blocks[0]):
+    with ir.InsertionPoint(left_or_right.alternatives[_left:=0].blocks[0]):
         # CHECK: %[[C0:.*]] = transform.param.constant 0
         i32_0 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 0)
         c0 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_0)
         # CHECK: transform.yield %[[C0]]
         transform.yield_(c0)
     # CHECK-NEXT: }, {
-    with ir.InsertionPoint(left_or_right.alternatives[_right := 1].blocks[0]):
+    with ir.InsertionPoint(left_or_right.alternatives[_right:=1].blocks[0]):
         # CHECK: %[[C1:.*]] = transform.param.constant 1
         i32_1 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 1)
         c1 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_1)
@@ -104,14 +104,14 @@ def testAlternativesOp(target):
     fork_in_the_road = tune.AlternativesOp(
         [transform.AnyParamType.get()], "fork_in_the_road", 2, selected_region=0
     )
-    with ir.InsertionPoint(fork_in_the_road.alternatives[_left := 0].blocks[0]):
+    with ir.InsertionPoint(fork_in_the_road.alternatives[_left:=0].blocks[0]):
         # CHECK: %[[C0:.*]] = transform.param.constant 0
         i32_0 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 0)
         c0 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_0)
         # CHECK: transform.yield %[[C0]]
         transform.yield_(c0)
     # CHECK-NEXT: }, {
-    with ir.InsertionPoint(fork_in_the_road.alternatives[_right := 1].blocks[0]):
+    with ir.InsertionPoint(fork_in_the_road.alternatives[_right:=1].blocks[0]):
         # CHECK: %[[C1:.*]] = transform.param.constant 1
         i32_1 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 1)
         c1 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_1)
@@ -126,7 +126,7 @@ def testAlternativesOp(target):
         2,
         selected_region=outcome_of_left_or_right_decision,
     )
-    with ir.InsertionPoint(left_or_right_as_before.alternatives[_left := 0].blocks[0]):
+    with ir.InsertionPoint(left_or_right_as_before.alternatives[_left:=0].blocks[0]):
         # CHECK: transform.param.constant 1337
         i32_1337 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 1337)
         c1337 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_1337)
@@ -134,7 +134,7 @@ def testAlternativesOp(target):
         debug.emit_param_as_remark(c1337)
         transform.yield_([])
     # CHECK-NEXT: }, {
-    with ir.InsertionPoint(left_or_right_as_before.alternatives[_right := 1].blocks[0]):
+    with ir.InsertionPoint(left_or_right_as_before.alternatives[_right:=1].blocks[0]):
         # CHECK: transform.param.constant 42
         i32_42 = ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 42)
         c42 = transform.ParamConstantOp(transform.AnyParamType.get(), i32_42)
