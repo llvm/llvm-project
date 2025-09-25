@@ -12,8 +12,6 @@ and reviewers to know what is being captured. And knowing is half the battle.
 Coding guidelines that recommend against defaulted lambda captures include:
 
 * Item 31 of Effective Modern C++ by Scott Meyers
-* `AUTOSAR C++ Rule A5-1-2 <https://www.mathworks.com/help//releases/
-  R2021a/bugfinder/ref/autosarc14rulea512.html>`__
 
 Example
 -------
