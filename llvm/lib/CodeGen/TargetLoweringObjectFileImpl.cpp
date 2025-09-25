@@ -2443,8 +2443,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
           XCOFF::CsectProperties(/*MappingClass*/ XCOFF::XMC_TD, XCOFF::XTY_SD),
           /* MultiSymbolsAllowed*/ true);
 
-    if (TM.getFunctionSections() &&
-        GVar->hasMetadata(LLVMContext::MD_rename_key)) {
+    if (TM.getFunctionSections() && GVar->hasMetadata(LLVMContext::MD_rename)) {
       SectionName += ".";
       SectionName += GO->getName();
     }

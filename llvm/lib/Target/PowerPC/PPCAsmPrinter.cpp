@@ -3045,7 +3045,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     return;
 
   for (const GlobalVariable &GV : M.globals()) {
-    if (GV.hasMetadata(LLVMContext::MD_rename_key)) {
+    if (GV.hasMetadata(LLVMContext::MD_rename)) {
       // Get orginal csect.
       SectionKind GVKind = getObjFileLowering().getKindForGlobal(&GV, TM);
       auto *CSect = static_cast<MCSectionXCOFF *>(

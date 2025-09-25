@@ -8762,7 +8762,7 @@ Example:
     !1 = !{ptr @b}
 
 
-'``rename.key``' Metadata
+'``rename``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 The rename key may be attached to a global variable definition that has an
 explicit section attribute. It is used as a flag so the associated node
@@ -8782,7 +8782,7 @@ Example:
 
 .. code-block:: llvm
 
-    @a = global i32 1, section "abc", !rename.key !0
+    @a = global i32 1, section "abc", !rename !0
     !0 = !{}
 
 Module Flags Metadata

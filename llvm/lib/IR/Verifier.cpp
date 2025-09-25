@@ -798,9 +798,9 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
       }
     }
 
-    if (GO->hasMetadata(LLVMContext::MD_rename_key)) {
+    if (GO->hasMetadata(LLVMContext::MD_rename)) {
       SmallVector<MDNode *, 1> MDs;
-      GO->getMetadata(LLVMContext::MD_rename_key, MDs);
+      GO->getMetadata(LLVMContext::MD_rename, MDs);
       Check(MDs.size() == 1,
             "global value cannot have more then 1 rename metadata", GO);
       Check(MDs[0]->getNumOperands() == 0,

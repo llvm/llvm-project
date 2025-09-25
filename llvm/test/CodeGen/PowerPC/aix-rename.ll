@@ -1,10 +1,10 @@
 ; RUN: llc --function-sections -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefix=NOFUNCSECT %s
 
-@a = global i32 1, section "abcd", !rename.key !0
-@b = global i32 2, section "abcd", !rename.key !0
-@c = global i32 3, section "abcd", !rename.key !0
-@d = global i32 4, section "abcd", !rename.key !0
+@a = global i32 1, section "abcd", !rename !0
+@b = global i32 2, section "abcd", !rename !0
+@c = global i32 3, section "abcd", !rename !0
+@d = global i32 4, section "abcd", !rename !0
 
 !0 = !{}
 

@@ -1,6 +1,6 @@
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
 
-@a = global i32 1, section "abc", !rename.key !0, !rename.key !1
+@a = global i32 1, section "abc", !rename !0, !rename !1
 
 !0 = !{}
 !1 = !{}
