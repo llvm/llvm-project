@@ -280,6 +280,8 @@ public:
     basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr in C++20, removed in C++23
     basic_string substr(size_type pos = 0, size_type n = npos) const&;                          // since C++23
     constexpr basic_string substr(size_type pos = 0, size_type n = npos) &&;                    // since C++23
+    constexpr basic_string_view<charT, traits> subview(size_type pos = 0,
+                                                       size_type n = npos) const;               // since C++26
     void swap(basic_string& str)
         noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
                  allocator_traits<allocator_type>::is_always_equal::value);                     // C++17, constexpr since C++20
@@ -598,6 +600,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__debug_utils/sanitizers.h>
 #  include <__format/enable_insertable.h>
 #  include <__functional/hash.h>
+#  include <__functional/is_transparent.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/string.h>
 #  include <__iterator/bounded_iter.h>
@@ -626,6 +629,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_array.h>
 #  include <__type_traits/is_convertible.h>
+#  include <__type_traits/is_generic_transparent_comparator.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_replaceable.h>
@@ -1055,13 +1059,13 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s) {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "basic_string(const char*) detected nullptr");
     __init(__s, traits_type::length(__s));
   }
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s, const _Allocator& __a)
       : __alloc_(__a) {
@@ -1110,7 +1114,7 @@ public:
   }
 #  endif
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a)
       : __alloc_(__a) {
     __init(__n, __c);
@@ -1756,6 +1760,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string substr(size_type __pos = 0, size_type __n = npos) && {
     return basic_string(std::move(*this), __pos, __n);
+  }
+#  endif
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __self_view subview(size_type __pos = 0, size_type __n = npos) const {
+    return __self_view(*this).subview(__pos, __n);
   }
 #  endif
 
@@ -2560,26 +2569,40 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
 };
 #  endif
 
+template <class _Comparator, class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  const _CharT*,
+                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
+    true;
+
+template <class _Comparator, class _CharT, class _Traits, class _Alloc, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  _CharT[_Np],
+                                                  __enable_if_t<__is_generic_transparent_comparator_v<_Comparator> > > =
+    true;
+
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
           class _CharT     = __iter_value_type<_InputIterator>,
           class _Allocator = allocator<_CharT>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value> >
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
     -> basic_string<_CharT, char_traits<_CharT>, _Allocator>;
 
 template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value> >
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
     -> basic_string<_CharT, _Traits, _Allocator>;
 
 template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
           class _Sz        = typename allocator_traits<_Allocator>::size_type >
 basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _Allocator())
     -> basic_string<_CharT, _Traits, _Allocator>;
@@ -2588,7 +2611,7 @@ basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _
 #  if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value> >
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
     -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif

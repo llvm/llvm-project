@@ -346,3 +346,43 @@
            xxgfmul128gcm 7, 5, 4
 #CHECK-BE: xxgfmul128gcm 7, 5, 4          # encoding: [0xf0,0xe5,0x26,0xd0]
 #CHECK-LE: xxgfmul128gcm 7, 5, 4          # encoding: [0xd0,0x26,0xe5,0xf0]
+
+           xvadduwm 4, 5, 7
+#CHECK-BE: xvadduwm 4, 5, 7              # encoding: [0xf0,0x85,0x3c,0x18]
+#CHECK-LE: xvadduwm 4, 5, 7              # encoding: [0x18,0x3c,0x85,0xf0]
+
+           xvadduhm 4, 5, 7
+#CHECK-BE: xvadduhm 4, 5, 7              # encoding: [0xf0,0x85,0x3c,0x58]
+#CHECK-LE: xvadduhm 4, 5, 7              # encoding: [0x58,0x3c,0x85,0xf0]
+
+           xvsubuwm 4, 5, 7
+#CHECK-BE: xvsubuwm 4, 5, 7              # encoding: [0xf0,0x85,0x3c,0x98]
+#CHECK-LE: xvsubuwm 4, 5, 7              # encoding: [0x98,0x3c,0x85,0xf0]
+
+           xvsubuhm 4, 5, 7
+#CHECK-BE: xvsubuhm 4, 5, 7              # encoding: [0xf0,0x85,0x3c,0xd8]
+#CHECK-LE: xvsubuhm 4, 5, 7              # encoding: [0xd8,0x3c,0x85,0xf0]
+
+           xvmuluwm 4, 5, 7
+#CHECK-BE: xvmuluwm 4, 5, 7              # encoding: [0xf0,0x85,0x3d,0x18]
+#CHECK-LE: xvmuluwm 4, 5, 7              # encoding: [0x18,0x3d,0x85,0xf0]
+
+           xvmuluhm 4, 5, 7
+#CHECK-BE: xvmuluhm 4, 5, 7              # encoding: [0xf0,0x85,0x3d,0x58]
+#CHECK-LE: xvmuluhm 4, 5, 7              # encoding: [0x58,0x3d,0x85,0xf0]
+
+           xvmulhsw 4, 5, 7
+#CHECK-BE: xvmulhsw 4, 5, 7              # encoding: [0xf0,0x85,0x3d,0x98]
+#CHECK-LE: xvmulhsw 4, 5, 7              # encoding: [0x98,0x3d,0x85,0xf0]
+
+           xvmulhsh 4, 5, 7
+#CHECK-BE: xvmulhsh 4, 5, 7              # encoding: [0xf0,0x85,0x3d,0xd8]
+#CHECK-LE: xvmulhsh 4, 5, 7              # encoding: [0xd8,0x3d,0x85,0xf0]
+
+           xvmulhuw 4, 5, 7
+#CHECK-BE: xvmulhuw 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0x90]
+#CHECK-LE: xvmulhuw 4, 5, 7              # encoding: [0x90,0x3b,0x85,0xf0]
+
+           xvmulhuh 4, 5, 7
+#CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
+#CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
