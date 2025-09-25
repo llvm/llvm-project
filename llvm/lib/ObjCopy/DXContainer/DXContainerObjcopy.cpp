@@ -49,10 +49,19 @@ static Error dumpPartToFile(StringRef PartName, StringRef Filename,
   for (const Part &P : Obj.Parts) {
     if (P.Name == PartName) {
       ArrayRef<uint8_t> Contents = P.Data;
-      // For parts containing llvm bitcode, don't dump the program headers so
-      // that we get a valid .bc file.
+      // The DXContainer format is a bit odd because the part-specific headers
+      // are contained inside the part data itself. For parts that contain LLVM
+      // bitcode when we dump the part we want to skip the part-specific header
+      // so that we get a valid .bc file that we can inspect. All the data
+      // contained inside the program header is pulled out of the bitcode, so
+      // the header can be reconstructed if needed from the bitcode itself.
+      // More comprehensive documentation on the DXContainer format can be found
+      // at https://llvm.org/docs/DirectX/DXContainer.html.
       if (PartName == "DXIL" || PartName == "STAT")
         Contents = Contents.drop_front(sizeof(llvm::dxbc::ProgramHeader));
+      if (Contents.empty())
+        return createFileError(Filename, object_error::parse_failed,
+                               "part '%s' is empty", PartName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Contents.size());
       if (!BufferOrErr)

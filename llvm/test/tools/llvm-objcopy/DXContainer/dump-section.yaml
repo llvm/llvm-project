@@ -1,14 +1,14 @@
 # RUN: yaml2obj %s -o %t.dxbc
 # RUN: llvm-objcopy --dump-section=DXIL=%t.bc %t.dxbc
-# RUN: llvm-dis %t.bc -o - | FileCheck %s
+# RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=BITCODE
 # RUN: wc -c %t.bc | FileCheck %s --check-prefix=DXIL-SIZE
 
-# Verify that when dumping the DXIL part we get a valid bitcode file.
-# CHECK: define void @main()
-# Verify the size of the bitcode data.
+## Verify that when dumping the DXIL part we get a valid bitcode file.
+# BITCODE: define void @main()
+## Verify the size of the bitcode data.
 # DXIL-SIZE: 1708
 
-# Dump the PSV0 part and verify its size.
+## Dump the PSV0 part and verify its size.
 # RUN: llvm-objcopy --dump-section=PSV0=%t.psv0 %t.dxbc
 # RUN: wc -c %t.psv0 | FileCheck %s --check-prefix=PSV0-SIZE
 # PSV0-SIZE: 76
