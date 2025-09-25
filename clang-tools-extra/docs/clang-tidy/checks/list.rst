@@ -377,7 +377,7 @@ Clang-Tidy Checks
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
    :doc:`readability-container-size-empty <readability/container-size-empty>`, "Yes"
    :doc:`readability-convert-member-functions-to-static <readability/convert-member-functions-to-static>`, "Yes"
-   :doc:`readability-default-lambda-capture <readability/default-lambda-capture>`,
+   :doc:`readability-avoid-default-lambda-capture <readability/avoid-default-lambda-capture>`,
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"

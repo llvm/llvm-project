@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangTidyReadabilityModule STATIC
   AmbiguousSmartptrResetCallCheck.cpp
   AvoidConstParamsInDecls.cpp
+  AvoidDefaultLambdaCaptureCheck.cpp
   AvoidNestedConditionalOperatorCheck.cpp
   AvoidReturnWithVoidValueCheck.cpp
   AvoidUnconditionalPreprocessorIfCheck.cpp
@@ -15,7 +16,6 @@ add_clang_library(clangTidyReadabilityModule STATIC
   ContainerDataPointerCheck.cpp
   ContainerSizeEmptyCheck.cpp
   ConvertMemberFunctionsToStatic.cpp
-  DefaultLambdaCaptureCheck.cpp
   DeleteNullPointerCheck.cpp
   DuplicateIncludeCheck.cpp
   ElseAfterReturnCheck.cpp

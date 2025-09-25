@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DefaultLambdaCaptureCheck.h"
+#include "AvoidDefaultLambdaCaptureCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -20,11 +20,12 @@ AST_MATCHER(LambdaExpr, hasDefaultCapture) {
 
 } // namespace
 
-void DefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
+void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
 }
 
-void DefaultLambdaCaptureCheck::check(const MatchFinder::MatchResult &Result) {
+void AvoidDefaultLambdaCaptureCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   assert(Lambda);
 

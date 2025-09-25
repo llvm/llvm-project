@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DEFAULTLAMBDACAPTURECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DEFAULTLAMBDACAPTURECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDDEFAULTLAMBDACAPTURECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDDEFAULTLAMBDACAPTURECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,11 +16,11 @@ namespace clang::tidy::readability {
 /** Flags lambdas that use default capture modes
  *
  * For the user-facing documentation see:
- * https://clang.llvm.org/extra/clang-tidy/checks/readability/default-lambda-capture.html
+ * https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-default-lambda-capture.html
  */
-class DefaultLambdaCaptureCheck : public ClangTidyCheck {
+class AvoidDefaultLambdaCaptureCheck : public ClangTidyCheck {
 public:
-  DefaultLambdaCaptureCheck(StringRef Name, ClangTidyContext *Context)
+  AvoidDefaultLambdaCaptureCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -31,4 +31,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DEFAULTLAMBDACAPTURECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDDEFAULTLAMBDACAPTURECHECK_H

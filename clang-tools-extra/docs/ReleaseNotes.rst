@@ -351,8 +351,8 @@ Changes in existing checks
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
 
-- New :doc:`readability-default-lambda-capture
-  <clang-tidy/checks/readability/default-lambda-capture>` check.
+- New :doc:`readability-avoid-default-lambda-capture
+  <clang-tidy/checks/readability/avoid-default-lambda-capture>` check.
 
   Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``)
 
