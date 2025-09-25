@@ -2897,6 +2897,36 @@ maybeGetTracebackLocation(const std::optional<PyLocation> &location) {
 // Populates the core exports of the 'ir' submodule.
 //------------------------------------------------------------------------------
 
+#include "nb_internals.h"
+
+auto print_live_op = [](void *k, PyObject *v) {
+  nb::handle op_py_type = nb::type<PyOperation>();
+  nb::handle maybe_op_inst{v};
+  nb::str end{" "};
+  if (maybe_op_inst.type().is(op_py_type)) {
+    nb::print("found live operation:", end);
+    nb::print(maybe_op_inst);
+  }
+};
+
+void print_live_ops() noexcept {
+  nanobind::detail::nb_internals *p = nanobind::detail::internals;
+  for (size_t i = 0; i < p->shard_count; ++i) {
+    nanobind::detail::nb_shard &s = p->shards[i];
+    nanobind::detail::lock_shard lock(s);
+    for (auto [k, v] : s.inst_c2p) {
+      if (NB_UNLIKELY(nanobind::detail::nb_is_seq(v))) {
+        nanobind::detail::nb_inst_seq *seq = nanobind::detail::nb_get_seq(v);
+        for (; seq != nullptr; seq = seq->next) {
+          print_live_op(k, seq->inst);
+        }
+      } else {
+        print_live_op(k, (PyObject *)v);
+      }
+    }
+  }
+}
+
 void mlir::python::populateIRCore(nb::module_ &m) {
   // disable leak warnings which tend to be false positives.
   nb::set_leak_warnings(false);
@@ -4475,4 +4505,6 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       PyErr_SetObject(PyExc_Exception, obj.ptr());
     }
   });
+
+  m.def("print_live_ops", &print_live_ops);
 }

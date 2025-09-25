@@ -152,3 +152,6 @@ if(NOT EXTERNAL_PROJECT_BUILD)
   add_dependencies(StandalonePythonModules "${_mlir_typestub_gen_target}")
 endif()
 add_dependencies(StandalonePythonModules "${_standaloneDialectsNanobind_typestub_gen_target}")
+
+target_include_directories(StandalonePythonModules.extension._mlir.dso PRIVATE ${NB_DIR}/ext/robin_map/include)
+target_include_directories(StandalonePythonModules.extension._mlir.dso PRIVATE ${NB_DIR}/src)
