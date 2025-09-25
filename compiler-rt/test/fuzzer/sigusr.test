@@ -1,15 +1,15 @@
 # FIXME: Disabled on Windows for now because of reliance on posix only features
 # (eg: export, "&", pkill).
-REQUIRES: shell
 UNSUPPORTED: darwin, target={{.*windows.*}}
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
 
-RUN: %run %t/LFSIGUSR 2> %t/log & export PID=$!
+RUN: bash -c "nohup %run %t/LFSIGUSR 2> %t/log &"| env
+RUN: ps auxx | grep LFSIGUSR | grep -v "grep" | awk '{print $2}' | tr -d '\n' > %t2
 RUN: sleep 2
-RUN: kill -SIGUSR1 $PID
+RUN: kill -SIGUSR1 %{readfile:%t2}
 RUN: sleep 3
 RUN: cat %t/log | FileCheck %s
 
