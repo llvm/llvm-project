@@ -689,8 +689,7 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP23]]
 ; AVX512-NEXT:    [[TMP38:%.*]] = mul i64 [[N_VEC]], 64
 ; AVX512-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[DEST]], i64 [[TMP38]]
-; AVX512-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP3]], [[N_VEC]]
-; AVX512-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
+; AVX512-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; AVX512-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF17:![0-9]+]]
 ; AVX512:       vec.epilog.ph:
 ; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
