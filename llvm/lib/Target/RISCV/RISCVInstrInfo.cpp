@@ -4031,7 +4031,7 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::QC_MVLTUI:
   case RISCV::QC_MVGEUI: {
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(getReverseOpcode(MI.getOpcode())));
+    WorkingMI.setDesc(get(getInverseXqcicmOpcode(MI.getOpcode())));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
