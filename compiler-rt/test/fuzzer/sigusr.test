@@ -6,8 +6,11 @@ RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
 
+# The line below needs the " | env" at the end, in order to make the
+# script continue executing, rather than waiting (forever) for the
+# 'nohup run...' command to finish.
 RUN: bash -c "nohup %run %t/LFSIGUSR 2> %t/log &"| env
-RUN: ps auxx | grep LFSIGUSR | grep -v "grep" | awk '{print $2}' | tr -d '\n' > %t2
+RUN: ps aux | grep LFSIGUSR | grep -v "grep" | awk '{print $2}' | tr -d '\n' > %t2
 RUN: sleep 2
 RUN: kill -SIGUSR1 %{readfile:%t2}
 RUN: sleep 3
