@@ -708,7 +708,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                                  unsigned Size, Type *OpType,
                                  LostDebugLocObserver &LocObserver) {
-  MachineFunction &MF = *MI.getMF();
+  MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   Register DstFrac = MI.getOperand(0).getReg();
