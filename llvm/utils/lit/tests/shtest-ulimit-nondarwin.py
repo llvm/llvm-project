@@ -2,7 +2,7 @@
 
 # ulimit does not work on non-POSIX platforms.
 # These tests are specific to options that Darwin does not support.
-# UNSUPPORTED: system-windows, system-darwin
+# UNSUPPORTED: system-windows, system-darwin, system-aix
 
 # RUN: not %{lit} -a -v %{inputs}/shtest-ulimit-nondarwin | FileCheck %s
 
