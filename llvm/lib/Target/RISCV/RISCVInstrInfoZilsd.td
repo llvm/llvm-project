@@ -50,7 +50,7 @@ def PseudoSD_RV32 : PseudoStore<"sd", GPRPairRV32>;
 // Pseudo instructions for load/store optimization with 2 separate registers
 def PseudoLD_RV32_OPT :
     Pseudo<(outs GPR:$rd1, GPR:$rd2),
-           (ins GPR:$rs1, simm12:$imm12), [], "", ""> {
+           (ins GPR:$rs1, simm12_lo:$imm12), [], "", ""> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -58,7 +58,7 @@ def PseudoLD_RV32_OPT :
 
 def PseudoSD_RV32_OPT :
     Pseudo<(outs),
-           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3, simm12:$imm12), [], "", ""> {
+           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3, simm12_lo:$imm12), [], "", ""> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 1;
