@@ -504,7 +504,7 @@ public:
   /// Enqueue copy command
   int32_t enqueueMemCopy(void *Dst, const void *Src, size_t Size,
                          __tgt_async_info *AsyncInfo = nullptr,
-                         bool Locked = false, bool UseCopyEngine = true);
+                         bool UseCopyEngine = true);
 
   /// Enqueue asynchronous copy command
   int32_t enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,

@@ -529,8 +529,7 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
       return Plugin::error(ErrorCode::UNKNOWN, "dataExchangeImpl failed");
   } else {
     if (enqueueMemCopy(DstPtr, SrcPtr, Size,
-                       /* AsyncInfo */ nullptr,
-                       /* Locked */ false, UseCopyEngine))
+                       /* AsyncInfo */ nullptr, UseCopyEngine))
       return Plugin::error(ErrorCode::UNKNOWN, "dataExchangeImpl failed");
   }
   return Plugin::success();
@@ -693,7 +692,7 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
 }
 
 int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
-                                   __tgt_async_info *AsyncInfo, bool Locked,
+                                   __tgt_async_info *AsyncInfo,
                                    bool UseCopyEngine) {
   ze_command_list_handle_t CmdList = nullptr;
   ze_command_queue_handle_t CmdQueue = nullptr;
@@ -717,13 +716,8 @@ int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                      Event, 0, nullptr);
     CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
-    if (Locked) {
-      CALL_ZE_RET_FAIL(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                       nullptr);
-    } else {
-      CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
-                           CmdQueue, 1, &CmdList, nullptr);
-    }
+    CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
+                         CmdQueue, 1, &CmdList, nullptr);
     CALL_ZE_RET_FAIL(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
     CALL_ZE_RET_FAIL(zeCommandListReset, CmdList);
   }
