@@ -279,19 +279,12 @@ private:
 
 /// SmallPtrSetIteratorImpl - This is the common base class shared between all
 /// instances of SmallPtrSetIterator.
-class SmallPtrSetIteratorImpl {
-protected:
-  using BucketItTy =
-      std::conditional_t<shouldReverseIterate(),
-                         std::reverse_iterator<const void *const *>,
-                         const void *const *>;
-
-  BucketItTy Bucket;
-  BucketItTy End;
-
+class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIteratorImpl
+    : public DebugEpochBase::HandleBase {
 public:
-  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E)
-      : Bucket(BP), End(E) {
+  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E,
+                                   const DebugEpochBase &Epoch)
+      : DebugEpochBase::HandleBase(&Epoch), Bucket(BP), End(E) {
     AdvanceIfNotValid();
   }
 
@@ -303,6 +296,18 @@ public:
   }
 
 protected:
+  void *dereference() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    assert(Bucket < End);
+    return const_cast<void *>(*Bucket);
+  }
+  void increment() {
+    assert(isHandleInSync() && "invalid iterator access!");
+    ++Bucket;
+    AdvanceIfNotValid();
+  }
+
+private:
   /// AdvanceIfNotValid - If the current bucket isn't valid, advance to a bucket
   /// that is.   This is guaranteed to stop because the end() bucket is marked
   /// valid.
@@ -313,13 +318,19 @@ protected:
             *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
       ++Bucket;
   }
+
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate(),
+                         std::reverse_iterator<const void *const *>,
+                         const void *const *>;
+
+  BucketItTy Bucket;
+  BucketItTy End;
 };
 
 /// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
 template <typename PtrTy>
-class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
-    : public SmallPtrSetIteratorImpl,
-      DebugEpochBase::HandleBase {
+class SmallPtrSetIterator : public SmallPtrSetIteratorImpl {
   using PtrTraits = PointerLikeTypeTraits<PtrTy>;
 
 public:
@@ -329,28 +340,22 @@ public:
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
 
-  explicit SmallPtrSetIterator(const void *const *BP, const void *const *E,
-                               const DebugEpochBase &Epoch)
-      : SmallPtrSetIteratorImpl(BP, E), DebugEpochBase::HandleBase(&Epoch) {}
+  using SmallPtrSetIteratorImpl::SmallPtrSetIteratorImpl;
 
   // Most methods are provided by the base class.
 
   const PtrTy operator*() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Bucket < End);
-    return PtrTraits::getFromVoidPointer(const_cast<void *>(*Bucket));
+    return PtrTraits::getFromVoidPointer(dereference());
   }
 
   inline SmallPtrSetIterator &operator++() { // Preincrement
-    assert(isHandleInSync() && "invalid iterator access!");
-    ++Bucket;
-    AdvanceIfNotValid();
+    increment();
     return *this;
   }
 
   SmallPtrSetIterator operator++(int) { // Postincrement
     SmallPtrSetIterator tmp = *this;
-    ++*this;
+    increment();
     return tmp;
   }
 };
