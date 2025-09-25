@@ -13,12 +13,12 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
-#include "src/__support/libc_assert.h"
 
 #include "fx_rep.h"
 
@@ -266,7 +266,8 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   //  E0 = 1/17 = 0.059 (5.9%)
   long accum initial_approx = a - (b * d_scaled_val);
   // Since, 0.5 <= d_scaled_val <= 1.0, 0.9412 <= initial_approx <= 1.88235
-  LIBC_ASSERT((initial_approx >= 0x0.78793dd9p0lk) && (initial_approx <= 0x1.f0f0d845p0lk));
+  LIBC_ASSERT((initial_approx >= 0x0.78793dd9p0lk) &&
+              (initial_approx <= 0x1.f0f0d845p0lk));
   // Each newton-raphson iteration will square the error, due
   // to quadratic convergence. So,
   // E1 = (0.059)^2 = 0.0034

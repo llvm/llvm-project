@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/stdfix-macros.h" // fract
 #include "rdivi.h"
-#include "src/__support/common.h"              // LLVM_LIBC_FUNCTION
-#include "src/__support/fixed_point/fx_bits.h" // fixed_point
-#include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
+#include "include/llvm-libc-macros/stdfix-macros.h" // fract
+#include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION
+#include "src/__support/fixed_point/fx_bits.h"      // fixed_point
+#include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
 
