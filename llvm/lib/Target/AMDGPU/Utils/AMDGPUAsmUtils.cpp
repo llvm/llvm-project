@@ -25,11 +25,6 @@ template <size_t N>
 static StringRef getNameFromOperandTable(const CustomOperand (&Table)[N],
                                          unsigned Encoding,
                                          const MCSubtargetInfo &STI) {
-  auto IsValid = [&](const CustomOperand &Entry) {
-    return Entry.Encoding == Encoding && !Entry.Name.empty() &&
-           (!Entry.Cond || Entry.Cond(STI));
-  };
-
   // Find the first entry with the target encoding
   auto First =
       std::lower_bound(Table, Table + N, Encoding,
@@ -39,7 +34,7 @@ static StringRef getNameFromOperandTable(const CustomOperand (&Table)[N],
 
   // Search through entries with the same encoding to find the first valid one
   for (auto It = First; It != Table + N && It->Encoding == Encoding; ++It)
-    if (IsValid(*It))
+    if (It->Encoding == Encoding && (!It->Cond || It->Cond(STI)))
       return It->Name;
 
   return "";
