@@ -171,8 +171,11 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
 
     if (!TC.getTriple().isOSBinFormatELF() &&
         !TC.getTriple().isOSBinFormatWasm() &&
-        !TC.getTriple().isOSBinFormatCOFF())
+        !TC.getTriple().isOSBinFormatCOFF()) {
+      D.Diag(diag::warn_drv_unsupported_debug_info_opt_for_target)
+          << SplitDWARFArg->getSpelling() << TC.getTriple().str();
       return;
+    }
 
     if (!isa<AssembleJobAction>(JA) && !isa<CompileJobAction>(JA) &&
         isa<BackendJobAction>(JA))

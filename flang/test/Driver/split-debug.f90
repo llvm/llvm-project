@@ -6,10 +6,9 @@
 
 ! SPLIT: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"
 
-! -gsplit-dwarf is a no-op on a non-ELF platform.
-! RUN: %flang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=DARWIN
-! DARWIN-NOT: "-split-dwarf
-
+! Check warning on non-supported platforms.
+! RUN: %flang -### -c -target x86_64-apple-darwin  -gsplit-dwarf -g %s 2>&1 | FileCheck %s --check-prefix=WARN
+! WARN: warning: debug information option '-gsplit-dwarf' is not supported for target 'x86_64-apple-darwin'
 
 ! -gno-split-dwarf disables debug fission.
 ! RUN: %flang -### -c -target x86_64 -gsplit-dwarf -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
