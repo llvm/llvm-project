@@ -1736,9 +1736,8 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   Constant *Zero = ConstantInt::getNullValue(BO.getType());
   Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
   Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
-  SelectInst *SI = SelectInst::Create(X, TVal, FVal);
-  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, BO, DEBUG_TYPE);
-  return SI;
+  return createSelectInstMaybeWithUnknownBranchWeights(X, TVal, FVal,
+                                                       BO.getFunction());
 }
 
 static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,

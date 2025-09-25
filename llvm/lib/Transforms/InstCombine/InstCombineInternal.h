@@ -23,6 +23,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -468,6 +469,18 @@ private:
   /// same object checks.
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
+
+  static SelectInst *createSelectInstMaybeWithUnknownBranchWeights(
+      Value *C, Value *S1, Value *S2, Function *F, const Twine &NameStr = "",
+      InsertPosition InsertBefore = nullptr, Instruction *MDFrom = nullptr) {
+    SelectInst *SI =
+        SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
+    if (!SI) {
+      assert(F && "provided parent function is nullptr!");
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, *F, DEBUG_TYPE);
+    }
+    return SI;
+  }
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable

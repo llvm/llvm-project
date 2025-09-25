@@ -882,13 +882,14 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   SelectInst *SI = nullptr;
   if (match(Op0, m_ZExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    SI = SelectInst::Create(X, InstCombiner::AddOne(Op1C), Op1);
+    SI = createSelectInstMaybeWithUnknownBranchWeights(
+        X, InstCombiner::AddOne(Op1C), Op1, Add.getFunction());
   // sext(bool) + C -> bool ? C - 1 : C
   if (!SI && match(Op0, m_SExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    SI = SelectInst::Create(X, InstCombiner::SubOne(Op1C), Op1);
+    SI = createSelectInstMaybeWithUnknownBranchWeights(
+        X, InstCombiner::SubOne(Op1C), Op1, Add.getFunction());
   if (SI) {
-    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, Add, DEBUG_TYPE);
     return SI;
   }
 
