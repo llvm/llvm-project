@@ -699,6 +699,37 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   return success();
 }
 
+template <typename OpAdaptor>
+static FailureOr<SmallVector<Value>>
+extractLoadCoordsForComposite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                              ConversionPatternRewriter &rewriter) {
+  // Texel coordinates are ordered from inner most to outer most dimension
+  // i.e. u, v, w, a where:
+  // u: Coordinate in the first dimension of an image.
+  // v: Coordinate in the second dimension of an image.
+  // w: Coordinate in the third dimension of an image.
+  // a: Coordinate for array layer.
+  //
+  // The memrefs layout determines the dimension ordering so we need to invert
+  // the map to get the ordering.
+  SmallVector<Value> indices = adaptor.getIndices();
+  auto map = loadOp.getMemRefType().getLayout().getAffineMap();
+  if (!map.isPermutation())
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "Cannot lower memrefs with memory layout which is not a permutation");
+
+  const unsigned dimCount = map.getNumDims();
+  SmallVector<Value, 3> coords(dimCount);
+  for (unsigned dim = 0; dim < dimCount; ++dim)
+    coords[map.getDimPosition(dim)] = indices[dim];
+
+  // We need to do a final reversal since the image fetch op expects the first
+  // dimension in the 0th element position, 2nd dimension in the 1st element
+  // position etc. which is the opposite to the ordering in the map.
+  return llvm::to_vector(llvm::reverse(coords));
+}
+
 LogicalResult
 ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
@@ -755,14 +786,16 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 
   // Build a vector of coordinates or just a scalar index if we have a 1D image.
   Value coords;
-  if (memrefType.getRank() != 1) {
+  if (memrefType.getRank() == 1) {
+    coords = adaptor.getIndices()[0];
+  } else {
+    auto maybeCoords = extractLoadCoordsForComposite(loadOp, adaptor, rewriter);
+    if (failed(maybeCoords))
+      return failure();
     auto coordVectorType = VectorType::get({loadOp.getMemRefType().getRank()},
                                            adaptor.getIndices().getType()[0]);
-    auto indicesReversed = llvm::to_vector(llvm::reverse(adaptor.getIndices()));
     coords = spirv::CompositeConstructOp::create(rewriter, loc, coordVectorType,
-                                                 indicesReversed);
-  } else {
-    coords = adaptor.getIndices()[0];
+                                                 maybeCoords.value());
   }
 
   // Fetch the value out of the image.
